@@ -1,0 +1,57 @@
+/* Lindenweg16 ERP – Frontend-Styles */
+
+.lw16-copy-row { display: flex; gap: 8px; margin-bottom: 16px; max-width: 520px; }
+.lw16-ref-input { flex: 1; padding: 6px 10px; }
+
+.lw16-balances { display: flex; gap: 16px; margin: 16px 0 24px; flex-wrap: wrap; }
+.lw16-balance {
+	background: #f6f7f7;
+	border-radius: 8px;
+	padding: 14px 20px;
+	min-width: 140px;
+	display: flex;
+	flex-direction: column;
+}
+.lw16-balance-label { font-size: 13px; color: #50575e; }
+.lw16-balance-value { font-size: 26px; font-weight: 700; }
+
+.lw16-redeem {
+	background: #f6f7f7;
+	border-radius: 8px;
+	padding: 12px 16px;
+	margin: 8px 0;
+}
+.lw16-redeem p { margin: 8px 0; }
+.lw16-points-euro { font-weight: 600; margin-left: 6px; }
+
+/* Wunschliste / Warteliste */
+.lw16-wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.lw16-wishlist-card { border: 1px solid #e2e4e7; border-radius: 8px; padding: 12px; }
+.lw16-wishlist-card img { max-width: 100%; height: auto; border-radius: 6px; }
+
+.lw16-wishlist-btn, .lw16-notify-btn { cursor: pointer; }
+.lw16-heart { font-size: 20px; line-height: 1; }
+
+/* Sendungsverfolgung Timeline */
+.lw16-timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid #c3c4c7; }
+.lw16-timeline li { position: relative; padding: 0 0 18px 22px; }
+.lw16-timeline li::before {
+	content: '';
+	position: absolute;
+	left: -8px;
+	top: 2px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #2271b1;
+}
+.lw16-timeline .lw16-event-time { font-size: 12px; color: #646970; }
+
+/* Ladeplatzhalter (Skeleton) */
+.lw16-skeleton { background: linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%); background-size: 400% 100%; animation: lw16-shimmer 1.4s ease infinite; border-radius: 6px; height: 16px; margin: 8px 0; }
+@keyframes lw16-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+@media (max-width: 600px) {
+	.lw16-copy-row { flex-direction: column; }
+	.lw16-balances { flex-direction: column; }
+}
