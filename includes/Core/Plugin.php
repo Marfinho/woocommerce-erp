@@ -16,6 +16,8 @@ use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
 use Lindenweg16\Modules\Pricing\PricingModule;
 use Lindenweg16\Modules\Production\ProductionModule;
+use Lindenweg16\Modules\Retention\RetentionModule;
+use Lindenweg16\Modules\Support\SupportModule;
 
 /**
  * Singleton, das den Lebenszyklus des Plugins verwaltet.
@@ -71,6 +73,8 @@ class Plugin {
 			'loyalty'    => new LoyaltyModule(),
 			'pricing'    => new PricingModule(),
 			'production' => new ProductionModule(),
+			'retention'  => new RetentionModule(),
+			'support'    => new SupportModule(),
 		);
 
 		foreach ( $this->modules as $module ) {

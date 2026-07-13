@@ -43,57 +43,55 @@ assets/                      admin.css, admin.js
 
 ## Umsetzungsstand
 
-Das Plugin ist **lauffähig** und deckt das Grundgerüst (Phase 1) sowie die Kerne
-der Module 1–5 ab. Der Aufbau folgt der im Prompt vorgeschlagenen Build-Reihenfolge.
-
-### Umgesetzt
+Das Plugin ist **lauffähig** und setzt alle im Prompt beschriebenen Phasen 1–9 um.
 
 - **Phase 1 – Grundgerüst:** Aktivierung/Deaktivierung, alle Datenbanktabellen
   inkl. Indizes, Rolle/Capability, Admin-Menü „Lindenweg16", Action-Scheduler-Anbindung,
-  Audit-Log-Baustein, Einstellungsseite.
+  Audit-Log, Einstellungsseite, geschützte Datei-Verzeichnisse.
 - **Modul 2 – Lagerverwaltung:** Produkt-/Stücklisten-/Rezepturverwaltung,
   Echtzeit-Lagerabzug bei `woocommerce_order_status_completed` (Set → Modul →
-  Rohmaterial, idempotent per Order-Meta), Wareneingang mit Einkaufseinheit-Umrechnung
-  und automatischer Beleg-Verknüpfung bei Kaufteilen, manuelle Produktion,
-  Bewegungshistorie (paginiert), Ampel-Übersicht, E-Mail bei Mindestbestand.
-- **Modul 1 – Buchhaltung:** Belegerfassung (geschützter Upload außerhalb des
-  öffentlichen Uploads-Verzeichnisses, serverseitige Verkleinerung, authentifizierte
-  Auslieferung), GoBD-Festschreibung, automatische Einnahmenberechnung aus
-  WooCommerce, EÜR-Übersicht nach Kategorie mit Zeitraumfilter (Transient-Cache),
-  Steuer-Rücklage-Anzeige im Dashboard, §19-UStG-Hinweis.
-- **Modul 3 – Loyalty:** Referral-Code-Generierung, Cookie-Tracking (nur beim
-  ersten Aufruf, Stuffing-Schutz), Reward-Berechnung (Marge nur Backend), harte
-  Blockierregeln + weiche Signale mit `review`-Warteschlange (Ein-Klick Freigeben/
-  Ablehnen), Punktevergabe pro Euro, täglicher Reifeprozess (Wartezeit → Gutschrift),
-  Reversal bei Storno/Rückgabe.
-- **Modul 5 – Preiskalkulation:** globale Annahmen, editierbare Kostenfelder je
-  Modul/Set, Kosten-/Preis-/Margenberechnung, „Preis übernehmen" schreibt
-  `_regular_price` und `_lw16_margin_percent` (Konsistenz mit dem Referral-Programm),
-  Audit-Log-Eintrag.
-- **Modul 4 (Kern) – Druck-Queue:** aus offenen Bestellungen (Status `processing`),
-  aufgelöst in Module inkl. Bestandsabgleich und fehlender Menge.
+  Rohmaterial, idempotent), Wareneingang mit Einkaufseinheit-Umrechnung und
+  automatischer Beleg-Verknüpfung bei Kaufteilen, manuelle Produktion,
+  Bewegungshistorie (paginiert), Ampel-Übersicht, Mindestbestand-Mail.
+- **Modul 1 – Buchhaltung:** geschützte Belegerfassung (Upload außerhalb Uploads,
+  Verkleinerung, authentifizierte Auslieferung), GoBD-Festschreibung, Einnahmen
+  automatisch aus WooCommerce, EÜR nach Kategorie (Transient-Cache),
+  **EÜR-PDF-Export inkl. Beleg-Fotos**, **automatische lückenlose PDF-Rechnungen**
+  (Konvention `JJJJ-NNNN`, pro Jahr neu; im Admin und Kundenkonto abrufbar),
+  Steuer-Rücklage im Dashboard, §19-UStG-Hinweis.
+- **Modul 3 – Loyalty:** Referral-Codes, Cookie-Tracking (Stuffing-Schutz),
+  Reward-Berechnung (Marge nur Backend), harte Blockregeln + weiche Signale mit
+  `review`-Warteschlange (Ein-Klick), Punktevergabe, täglicher Reifeprozess,
+  Reversal, **Checkout-Einlösung** (Guthaben + Punkte, gedeckelt) und
+  **Mein-Konto-Tab „Prämien"**.
+- **Modul 4 – Produktionsplanung:** Druck-Queue aus offenen Bestellungen,
+  **Packliste/Versandschein-PDF** (Sets aufgelöst), **DHL-Label-Verlinkung**,
+  **DHL-Sendungsverfolgung** (Cron + Cache + Zeitleiste im Konto), Druckauftrags-
+  Status, **Ist-Zeit-Erfassung** + Ist-vs-Plan-Auswertung, **Mengenvorschläge**.
+- **Modul 5 – Preiskalkulation:** globale Annahmen, editierbare Kostenfelder,
+  Kosten-/Preis-/Margenberechnung, „Preis übernehmen" schreibt `_regular_price`
+  und `_lw16_margin_percent`, Audit-Log.
+- **Modul 6 – Kundenbindung:** Warenkorbabbrecher-Mails (nur mit bekannter E-Mail,
+  zwei Stufen), Wunschliste (Merken-Button, Konto-Tab, Meistgewünscht-Report),
+  Post-Purchase-Sequenz (Dankeschön + Bewertungsanfrage, Punkte-Bonus **nur bei
+  echter Bewertung**), „Wieder verfügbar"-Warteliste (einmalige Benachrichtigung).
+- **Modul 7 – Support & Reporting:** Reklamations-Tickets im Konto, Admin-Ansicht
+  mit Gutschrift aufs Guthabenkonto (Audit-Log), Status-Benachrichtigung,
+  VIP-Kunden-Report, Wochen-Digest per E-Mail.
+- **Phase 9 – Absicherung:** wöchentlicher CSV-Datenexport per E-Mail (+ Sofort-
+  Button), Audit-Log für kritische Aktionen samt Anzeige.
 
-### Noch offen (klar abgegrenzt, Datenmodell steht bereits)
+### Bewusste Vereinfachungen
 
-Folgende Punkte sind im Datenmodell und in der Menüstruktur vorbereitet, aber noch
-nicht ausprogrammiert:
-
-- **Modul 1:** PDF-Export der EÜR inkl. Beleg-Anhänge, automatische PDF-Rechnung
-  je Bestellung (lückenlose Rechnungsnummern – Tabelle `lw16_rechnungen` vorhanden;
-  vorgesehene Konvention: `JJJJ-NNNN`, pro Kalenderjahr neu beginnend).
-- **Modul 3:** Checkout-Einlösung (Guthaben + Punkte) und Mein-Konto-Tab „Prämien".
-- **Modul 4:** Packliste/Versandschein-PDF, DHL-Label-Verlinkung, DHL-Sendungs-
-  verfolgung (Cron + `lw16_tracking_cache` + Zeitleiste), Ist-Zeit-Erfassung
-  (`lw16_produktion_log`), vorausschauende Mengenvorschläge.
-- **Modul 6:** Warenkorbabbrecher-Mail, Wunschliste, Post-Purchase-Sequenz,
-  „Wieder verfügbar"-Warteliste (Hook `lw16_stock_replenished` wird bereits
-  ausgelöst).
-- **Modul 7:** Reklamations-Workflow, VIP-Report, Wochen-Digest.
-- **Phase 9:** wöchentlicher Datenexport per E-Mail, PHPUnit-Tests.
-
-Die vorhandenen Repositories, der `Scheduler` (Hooks bereits definiert) und die
-ausgelösten Actions (`lw16_stock_replenished`, `lw16_movement_recorded`,
-`lw16_dashboard_widgets`) bilden die Andockpunkte für diese Phasen.
+- **OCR** für Belege ist nicht enthalten (setzt Shell-/Tesseract-Zugriff voraus,
+  der zunächst zu prüfen ist); das Erfassungsformular ist so gebaut, dass OCR
+  später leicht ergänzt werden kann.
+- Der PDF-Generator (`includes/Core/Pdf.php`) ist bewusst schlank und bettet
+  Belegfotos als JPEG ein (PNG-Belege erscheinen im Export ohne Bild).
+- Die DHL-Sendungsverfolgung erwartet einen API-Key in den Einstellungen; ohne
+  Key ruht der Cron.
+- Automatisierte Tests (Phase 9, Punkt 31) sind noch nicht enthalten; die Logik
+  ist jedoch in testbare Repositories/Kalkulatoren gekapselt.
 
 ## Sicherheit
 
