@@ -29,6 +29,39 @@ class AccountingModule {
 
 		// Geschützte Beleg-Foto-Auslieferung (nur mit Capability).
 		add_action( 'admin_post_lw16_beleg_datei', array( $this, 'serve_beleg_file' ) );
+
+		// Automatische Rechnungserstellung: bei Abschluss asynchron einreihen.
+		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( $this, 'generate_invoice' ), 10, 1 );
+
+		// EÜR-PDF-Export.
+		add_action( 'admin_post_lw16_euer_pdf', array( $this, 'export_euer_pdf' ) );
+
+		// Rechnungs-Download (Admin + Kunde).
+		add_action( 'admin_post_lw16_rechnung', array( $this, 'serve_invoice' ) );
+		add_action( 'admin_post_nopriv_lw16_rechnung', array( $this, 'serve_invoice' ) );
+
+		// Rechnung in der Bestellansicht (Admin) und im Kundenkonto verlinken.
+		add_action( 'woocommerce_admin_order_data_after_order_details', array( $this, 'admin_order_invoice_link' ) );
+		add_filter( 'woocommerce_my_account_my_orders_actions', array( $this, 'account_order_invoice_action' ), 10, 2 );
+	}
+
+	/**
+	 * Rechnungserzeugung asynchron einreihen (nicht im Kunden-Request).
+	 *
+	 * @param int $order_id Bestell-ID.
+	 */
+	public function enqueue_invoice( $order_id ) {
+		\Lindenweg16\Core\Scheduler::enqueue_async( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( 'order_id' => (int) $order_id ) );
+	}
+
+	/**
+	 * Rechnung asynchron erzeugen (Action-Scheduler-Callback).
+	 *
+	 * @param int $order_id Bestell-ID.
+	 */
+	public function generate_invoice( $order_id ) {
+		InvoiceGenerator::generate_for_order( (int) $order_id );
 	}
 
 	/* --------------------------------------------------------------------
@@ -188,7 +221,11 @@ class AccountingModule {
 		if ( (int) Settings::get( 'kleinunternehmer', 1 ) === 1 ) {
 			echo '<p class="description">' . esc_html__( 'Kleinunternehmer §19 UStG: keine Umsatzsteuer ausgewiesen, alle Beträge brutto.', 'lindenweg16' ) . '</p>';
 		}
-		echo '<p class="description">' . esc_html__( 'PDF-Export inkl. Beleg-Fotos: in Vorbereitung.', 'lindenweg16' ) . '</p>';
+		$pdf_url = wp_nonce_url(
+			admin_url( 'admin-post.php?action=lw16_euer_pdf&from=' . rawurlencode( $from ) . '&to=' . rawurlencode( $to ) ),
+			'lw16_euer_pdf'
+		);
+		echo '<p><a class="button button-primary" href="' . esc_url( $pdf_url ) . '">' . esc_html__( 'EÜR als PDF exportieren (inkl. Belege)', 'lindenweg16' ) . '</a></p>';
 	}
 
 	/* --------------------------------------------------------------------
@@ -268,6 +305,144 @@ class AccountingModule {
 		header( 'X-Content-Type-Options: nosniff' );
 		readfile( $real_file ); // phpcs:ignore
 		exit;
+	}
+
+	/* --------------------------------------------------------------------
+	 * Rechnungen & EÜR-Export
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * EÜR als PDF exportieren (inkl. Beleg-Fotos als Anhang).
+	 */
+	public function export_euer_pdf() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_euer_pdf' );
+
+		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : gmdate( 'Y' ) . '-01-01';
+		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : gmdate( 'Y' ) . '-12-31';
+		$notiz = isset( $_GET['notiz'] ) ? sanitize_text_field( wp_unslash( $_GET['notiz'] ) ) : '';
+
+		$rep = EuerCalculator::report( $from, $to );
+		$pdf = new \Lindenweg16\Core\Pdf();
+
+		$pdf->text( __( 'Einnahmen-Überschuss-Rechnung', 'lindenweg16' ), 16, true );
+		$pdf->text( (string) Settings::get( 'firma_name' ), 11 );
+		$pdf->row( __( 'Zeitraum:', 'lindenweg16' ), $from . ' – ' . $to, 11 );
+		$pdf->space( 8 );
+		$pdf->hr();
+		$pdf->row( __( 'Einnahmen (WooCommerce, abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
+		$pdf->space( 6 );
+		$pdf->text( __( 'Ausgaben nach EÜR-Kategorie:', 'lindenweg16' ), 11, true );
+		foreach ( $rep['ausgaben_kategorien'] as $kat => $summe ) {
+			$pdf->row( $kat, self::euro( $summe ), 11, false );
+		}
+		$pdf->hr();
+		$pdf->row( __( 'Ausgaben gesamt', 'lindenweg16' ), self::euro( $rep['ausgaben_summe'] ), 11, true );
+		$pdf->row( __( 'Gewinn', 'lindenweg16' ), self::euro( $rep['gewinn'] ), 13, true );
+		if ( (int) Settings::get( 'kleinunternehmer', 1 ) === 1 ) {
+			$pdf->space( 6 );
+			$pdf->text( __( 'Kleinunternehmer §19 UStG: keine Umsatzsteuer, Beträge brutto.', 'lindenweg16' ), 9 );
+		}
+		if ( $notiz ) {
+			$pdf->space( 6 );
+			$pdf->text( __( 'Notiz: ', 'lindenweg16' ) . $notiz, 10 );
+		}
+
+		// Beleg-Fotos als Anhang (nur JPEG einbettbar).
+		$belege = BelegRepository::query( array( 'from' => $from, 'to' => $to, 'per_page' => 500, 'page' => 1 ) );
+		foreach ( $belege as $b ) {
+			if ( empty( $b->datei_pfad ) ) {
+				continue;
+			}
+			$path = BelegRepository::file_path( $b->datei_pfad );
+			$pdf->add_page();
+			$pdf->text( __( 'Beleg', 'lindenweg16' ) . ' #' . $b->id . ' – ' . $b->datum . ' – ' . self::euro( $b->betrag ) . ' – ' . $b->haendler, 11, true );
+			$pdf->space( 6 );
+			$pdf->image_jpeg( $path, 480, 640 );
+		}
+
+		$content = $pdf->output();
+		nocache_headers();
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Disposition: attachment; filename="euer-' . $from . '_' . $to . '.pdf"' );
+		header( 'Content-Length: ' . strlen( $content ) );
+		echo $content; // phpcs:ignore
+		exit;
+	}
+
+	/**
+	 * Rechnung ausliefern – für Manager oder den Bestell-Eigentümer.
+	 */
+	public function serve_invoice() {
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_rechnung_' . $id );
+
+		$rechnung = InvoiceGenerator::get( $id );
+		if ( ! $rechnung || empty( $rechnung->datei_pfad ) ) {
+			wp_die( esc_html__( 'Rechnung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		// Berechtigung: Manager ODER Eigentümer der Bestellung.
+		$erlaubt = current_user_can( LW16_CAPABILITY );
+		if ( ! $erlaubt ) {
+			$order = wc_get_order( $rechnung->order_id );
+			if ( $order && get_current_user_id() && (int) $order->get_customer_id() === get_current_user_id() ) {
+				$erlaubt = true;
+			}
+		}
+		if ( ! $erlaubt ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+
+		$path      = trailingslashit( \Lindenweg16\Core\Installer::docs_dir() ) . $rechnung->datei_pfad;
+		$real_base = realpath( \Lindenweg16\Core\Installer::docs_dir() );
+		$real_file = realpath( $path );
+		if ( ! $real_file || ! $real_base || strpos( $real_file, $real_base ) !== 0 || ! is_file( $real_file ) ) {
+			wp_die( esc_html__( 'Datei nicht verfügbar.', 'lindenweg16' ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Length: ' . filesize( $real_file ) );
+		header( 'Content-Disposition: inline; filename="rechnung-' . $rechnung->rechnungsnummer . '.pdf"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		readfile( $real_file ); // phpcs:ignore
+		exit;
+	}
+
+	/**
+	 * Rechnungs-Link in der Admin-Bestellansicht.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 */
+	public function admin_order_invoice_link( $order ) {
+		$rechnung = InvoiceGenerator::get_by_order( $order->get_id() );
+		if ( ! $rechnung ) {
+			return;
+		}
+		$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_rechnung&id=' . $rechnung->id ), 'lw16_rechnung_' . $rechnung->id );
+		echo '<p class="form-field form-field-wide"><strong>' . esc_html__( 'Lindenweg16-Rechnung', 'lindenweg16' ) . ':</strong> ';
+		echo '<a href="' . esc_url( $url ) . '" target="_blank">' . esc_html( $rechnung->rechnungsnummer ) . '</a></p>';
+	}
+
+	/**
+	 * Rechnungs-Aktion in der Bestellliste des Kundenkontos.
+	 *
+	 * @param array     $actions Aktionen.
+	 * @param \WC_Order $order   Bestellung.
+	 * @return array
+	 */
+	public function account_order_invoice_action( $actions, $order ) {
+		$rechnung = InvoiceGenerator::get_by_order( $order->get_id() );
+		if ( $rechnung ) {
+			$actions['lw16_invoice'] = array(
+				'url'  => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_rechnung&id=' . $rechnung->id ), 'lw16_rechnung_' . $rechnung->id ),
+				'name' => __( 'Rechnung', 'lindenweg16' ),
+			);
+		}
+		return $actions;
 	}
 
 	/* --------------------------------------------------------------------

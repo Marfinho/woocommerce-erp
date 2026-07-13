@@ -76,24 +76,35 @@ class Installer {
 	}
 
 	/**
+	 * Absoluter Pfad zum geschützten Rechnungs-/Dokumentenverzeichnis.
+	 *
+	 * @return string
+	 */
+	public static function docs_dir() {
+		$upload = wp_upload_dir();
+		return trailingslashit( $upload['basedir'] ) . 'lw16-dokumente';
+	}
+
+	/**
 	 * Beleg-Verzeichnis außerhalb des öffentlichen Zugriffs absichern.
 	 */
 	protected static function protect_belege_directory() {
-		$dir = self::belege_dir();
-		if ( ! file_exists( $dir ) ) {
-			wp_mkdir_p( $dir );
-		}
+		foreach ( array( self::belege_dir(), self::docs_dir() ) as $dir ) {
+			if ( ! file_exists( $dir ) ) {
+				wp_mkdir_p( $dir );
+			}
 
-		// Apache: direkter Zugriff verbieten.
-		$htaccess = trailingslashit( $dir ) . '.htaccess';
-		if ( ! file_exists( $htaccess ) ) {
-			file_put_contents( $htaccess, "Order deny,allow\nDeny from all\n" ); // phpcs:ignore
-		}
+			// Apache: direkter Zugriff verbieten.
+			$htaccess = trailingslashit( $dir ) . '.htaccess';
+			if ( ! file_exists( $htaccess ) ) {
+				file_put_contents( $htaccess, "Order deny,allow\nDeny from all\n" ); // phpcs:ignore
+			}
 
-		// Verzeichnislisting verhindern.
-		$index = trailingslashit( $dir ) . 'index.php';
-		if ( ! file_exists( $index ) ) {
-			file_put_contents( $index, "<?php // Silence is golden.\n" ); // phpcs:ignore
+			// Verzeichnislisting verhindern.
+			$index = trailingslashit( $dir ) . 'index.php';
+			if ( ! file_exists( $index ) ) {
+				file_put_contents( $index, "<?php // Silence is golden.\n" ); // phpcs:ignore
+			}
 		}
 	}
 

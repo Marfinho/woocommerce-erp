@@ -45,6 +45,9 @@ class LoyaltyModule {
 		// Admin: Prüf-Warteschlange.
 		add_action( 'lw16_render_page_lw16_loyalty', array( $this, 'render_admin' ) );
 		add_action( 'admin_post_lw16_referral_decision', array( $this, 'handle_review_decision' ) );
+
+		// Frontend: Checkout-Einlösung + Mein-Konto-Tab.
+		( new LoyaltyFrontend() )->register();
 	}
 
 	/* --------------------------------------------------------------------
@@ -121,9 +124,6 @@ class LoyaltyModule {
 
 		$order->update_meta_data( '_lw16_loyalty_done', current_time( 'mysql' ) );
 		$order->save();
-
-		// Langsames (Rechnung, Mails) asynchron.
-		Scheduler::enqueue_async( Scheduler::HOOK_GENERATE_INVOICE, array( 'order_id' => $order_id ) );
 	}
 
 	/**
