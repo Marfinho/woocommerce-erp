@@ -1,0 +1,57 @@
+/* Lindenweg16 ERP – Admin-Styles */
+
+.lw16-wrap .lw16-tabs {
+	margin: 12px 0 18px;
+	border-bottom: 1px solid #c3c4c7;
+	padding-bottom: 6px;
+}
+.lw16-wrap .lw16-tabs a {
+	display: inline-block;
+	padding: 6px 12px;
+	text-decoration: none;
+	border-radius: 4px 4px 0 0;
+}
+.lw16-wrap .lw16-tabs a.active {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-bottom: none;
+	font-weight: 600;
+}
+
+/* Ampel-Status */
+.lw16-ampel {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: #ccc;
+}
+.lw16-ampel-gruen { background: #46b450; }
+.lw16-ampel-gelb  { background: #ffb900; }
+.lw16-ampel-rot   { background: #dc3232; }
+
+.lw16-fehlend { color: #dc3232; font-weight: 600; }
+.lw16-locked  { color: #2271b1; font-weight: 600; }
+
+/* Dashboard-Karten */
+.lw16-cards {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+	margin-top: 16px;
+}
+.lw16-card {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	padding: 16px 20px;
+	min-width: 260px;
+}
+.lw16-card-highlight { border-left: 4px solid #2271b1; }
+.lw16-card .lw16-big { font-size: 30px; font-weight: 700; margin: 6px 0; }
+.lw16-card .lw16-sub { margin: 2px 0; }
+.lw16-card .lw16-hint { color: #646970; font-size: 12px; margin-top: 8px; }
+
+.lw16-inline-form label { display: inline-block; margin: 0 6px 4px 0; font-size: 12px; }
+.lw16-euer-filter { margin: 12px 0; }
+.lw16-euer-result th, .lw16-euer-result td { border-top: 2px solid #2271b1; }
