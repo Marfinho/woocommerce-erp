@@ -60,6 +60,9 @@ class Plugin {
 		// Hintergrundjobs sicherstellen.
 		add_action( 'init', array( Scheduler::class, 'ensure_recurring' ) );
 
+		// Einmaliger Rewrite-Flush nach Aktivierung.
+		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );
+
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
 			( new Menu() )->register();
@@ -84,6 +87,16 @@ class Plugin {
 		}
 
 		do_action( 'lw16_booted', $this );
+	}
+
+	/**
+	 * Einmaliger Rewrite-Flush nach Aktivierung, damit Endpoints funktionieren.
+	 */
+	public function maybe_flush_rewrite() {
+		if ( get_option( 'lw16_flush_rewrite' ) ) {
+			delete_option( 'lw16_flush_rewrite' );
+			flush_rewrite_rules();
+		}
 	}
 
 	/**

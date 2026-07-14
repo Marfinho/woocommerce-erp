@@ -208,10 +208,16 @@ class InventoryModule {
 				<tr><th><?php esc_html_e( 'Mindestbestand (Basis-Einheit)', 'lindenweg16' ); ?></th><td><input type="number" step="any" name="mindestbestand" class="small-text" value="0"></td></tr>
 			</tbody></table>
 
-			<h2><?php esc_html_e( 'Stückliste (nur bei Set): Modul → Menge', 'lindenweg16' ); ?></h2>
-			<table class="widefat striped"><tbody>
+			<h2><?php esc_html_e( 'Stückliste (nur bei Set): enthaltene Module', 'lindenweg16' ); ?></h2>
+			<table class="widefat striped"><thead><tr>
+				<th></th><th><?php esc_html_e( 'Modul', 'lindenweg16' ); ?></th><th><?php esc_html_e( 'Anzahl', 'lindenweg16' ); ?></th>
+			</tr></thead><tbody>
 			<?php foreach ( $module_liste as $m ) : ?>
-				<tr><td><?php echo esc_html( $m->name ); ?></td><td><input type="number" step="any" name="stueckliste[<?php echo (int) $m->id; ?>]" value="0" class="small-text"></td></tr>
+				<tr>
+					<td><input type="checkbox" name="stueckliste_aktiv[<?php echo (int) $m->id; ?>]" value="1" class="lw16-set-check"></td>
+					<td><?php echo esc_html( $m->name ); ?></td>
+					<td><input type="number" step="1" min="1" name="stueckliste[<?php echo (int) $m->id; ?>]" value="1" class="small-text"></td>
+				</tr>
 			<?php endforeach; ?>
 			</tbody></table>
 
@@ -313,12 +319,22 @@ class InventoryModule {
 			</tbody></table>
 
 			<?php if ( 'set' === $produkt->typ ) : ?>
-			<h2><?php esc_html_e( 'Stückliste: Modul → Menge', 'lindenweg16' ); ?></h2>
-			<table class="widefat striped"><tbody>
-			<?php foreach ( $module_liste as $m ) : ?>
-				<tr><td><?php echo esc_html( $m->name ); ?></td><td><input type="number" step="any" name="stueckliste[<?php echo (int) $m->id; ?>]" value="<?php echo esc_attr( $stueckliste[ $m->id ] ?? 0 ); ?>" class="small-text"></td></tr>
+			<h2><?php esc_html_e( 'Stückliste: enthaltene Module', 'lindenweg16' ); ?></h2>
+			<table class="widefat striped"><thead><tr>
+				<th></th><th><?php esc_html_e( 'Modul', 'lindenweg16' ); ?></th><th><?php esc_html_e( 'Anzahl', 'lindenweg16' ); ?></th>
+			</tr></thead><tbody>
+			<?php foreach ( $module_liste as $m ) :
+				$aktiv = isset( $stueckliste[ $m->id ] ) && $stueckliste[ $m->id ] > 0;
+				$menge = $aktiv ? $stueckliste[ $m->id ] : 1;
+			?>
+				<tr>
+					<td><input type="checkbox" name="stueckliste_aktiv[<?php echo (int) $m->id; ?>]" value="1" <?php checked( $aktiv ); ?> class="lw16-set-check"></td>
+					<td><?php echo esc_html( $m->name ); ?></td>
+					<td><input type="number" step="1" min="1" name="stueckliste[<?php echo (int) $m->id; ?>]" value="<?php echo esc_attr( $menge ); ?>" class="small-text"></td>
+				</tr>
 			<?php endforeach; ?>
 			</tbody></table>
+			<p class="description"><?php esc_html_e( 'Den Set-Rabatt legst du in der Preiskalkulation fest.', 'lindenweg16' ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( 'modul' === $produkt->typ ) : ?>
@@ -459,9 +475,12 @@ class InventoryModule {
 		$id = Repository::create_product( $data );
 
 		if ( 'set' === $typ && ! empty( $_POST['stueckliste'] ) && is_array( $_POST['stueckliste'] ) ) {
-			$pos = array();
+			$aktiv = isset( $_POST['stueckliste_aktiv'] ) && is_array( $_POST['stueckliste_aktiv'] ) ? wp_unslash( $_POST['stueckliste_aktiv'] ) : array();
+			$pos   = array();
 			foreach ( wp_unslash( $_POST['stueckliste'] ) as $modul_id => $menge ) {
-				$pos[ (int) $modul_id ] = (float) $menge;
+				if ( ! empty( $aktiv[ $modul_id ] ) ) {
+					$pos[ (int) $modul_id ] = max( 1, (float) $menge );
+				}
 			}
 			Repository::set_stueckliste( $id, $pos );
 		}
@@ -584,9 +603,12 @@ class InventoryModule {
 		Repository::update_product( $id, $data );
 
 		if ( 'set' === $produkt->typ && ! empty( $_POST['stueckliste'] ) && is_array( $_POST['stueckliste'] ) ) {
-			$pos = array();
+			$aktiv = isset( $_POST['stueckliste_aktiv'] ) && is_array( $_POST['stueckliste_aktiv'] ) ? wp_unslash( $_POST['stueckliste_aktiv'] ) : array();
+			$pos   = array();
 			foreach ( wp_unslash( $_POST['stueckliste'] ) as $modul_id => $menge ) {
-				$pos[ (int) $modul_id ] = (float) $menge;
+				if ( ! empty( $aktiv[ $modul_id ] ) ) {
+					$pos[ (int) $modul_id ] = max( 1, (float) $menge );
+				}
 			}
 			Repository::set_stueckliste( $id, $pos );
 		}

@@ -37,7 +37,13 @@ class Installer {
 		// Standard-Einstellungen setzen, falls noch nicht vorhanden.
 		Settings::maybe_set_defaults();
 
+		// Endpoints registrieren, damit der anschließende Flush sie kennt.
+		add_rewrite_endpoint( 'praemien', EP_ROOT | EP_PAGES );
+		add_rewrite_endpoint( 'wunschliste', EP_ROOT | EP_PAGES );
 		flush_rewrite_rules();
+
+		// Sicherheitshalber nochmal beim nächsten init flushen.
+		update_option( 'lw16_flush_rewrite', 1 );
 	}
 
 	/**
