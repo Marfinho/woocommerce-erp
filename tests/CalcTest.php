@@ -217,4 +217,114 @@ class CalcTest extends TestCase {
 			$prev = $lauf;
 		}
 	}
+
+	/* ----------------------------------------------------------------
+	 * Lagerabzug bei Sets/Stücklisten (Kaskade)
+	 * -------------------------------------------------------------- */
+
+	public function test_cascade_deductions_set_to_modules() {
+		$stueckliste = array(
+			array( 'modul_id' => 10, 'menge' => 1 ),
+			array( 'modul_id' => 20, 'menge' => 2 ),
+		);
+		$rezepturen = array();
+		$result = Calc::cascade_deductions( 3, $stueckliste, $rezepturen );
+		$this->assertSame( -3.0, $result[10] );
+		$this->assertSame( -6.0, $result[20] );
+	}
+
+	public function test_cascade_deductions_modules_to_raw_materials() {
+		$stueckliste = array(
+			array( 'modul_id' => 10, 'menge' => 1 ),
+		);
+		$rezepturen = array(
+			10 => array(
+				array( 'rohmaterial_id' => 100, 'menge' => 0.5 ),
+				array( 'rohmaterial_id' => 200, 'menge' => 0.1 ),
+			),
+		);
+		$result = Calc::cascade_deductions( 2, $stueckliste, $rezepturen );
+		// Modul 10: -2.
+		$this->assertSame( -2.0, $result[10] );
+		// Rohmaterial 100: 2 × 0.5 = -1.0.
+		$this->assertSame( -1.0, $result[100] );
+		// Rohmaterial 200: 2 × 0.1 = -0.2.
+		$this->assertEqualsWithDelta( -0.2, $result[200], 0.0001 );
+	}
+
+	public function test_cascade_deductions_full_chain() {
+		// Set enthält 2× Modul A; Modul A braucht 50g Rohmaterial R.
+		$stueckliste = array(
+			array( 'modul_id' => 5, 'menge' => 2 ),
+		);
+		$rezepturen = array(
+			5 => array(
+				array( 'rohmaterial_id' => 50, 'menge' => 50 ),
+			),
+		);
+		// Verkauf von 1 Set.
+		$result = Calc::cascade_deductions( 1, $stueckliste, $rezepturen );
+		$this->assertSame( -2.0, $result[5] );
+		$this->assertSame( -100.0, $result[50] );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Bewertungs-Punkte nur bei echter Bewertung
+	 * -------------------------------------------------------------- */
+
+	public function test_review_bonus_eligible_real_review() {
+		$this->assertTrue( Calc::review_bonus_eligible( 'product', 20, 15, 42, false ) );
+	}
+
+	public function test_review_bonus_not_eligible_wrong_type() {
+		$this->assertFalse( Calc::review_bonus_eligible( 'post', 20, 15, 42, false ) );
+	}
+
+	public function test_review_bonus_not_eligible_too_short() {
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 10, 15, 42, false ) );
+	}
+
+	public function test_review_bonus_not_eligible_guest() {
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 0, false ) );
+	}
+
+	public function test_review_bonus_not_eligible_already_awarded() {
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 42, true ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Warteliste: nur einmal benachrichtigen
+	 * -------------------------------------------------------------- */
+
+	public function test_waitlist_should_notify_first_time() {
+		$this->assertTrue( Calc::waitlist_should_notify( false ) );
+	}
+
+	public function test_waitlist_should_not_notify_again() {
+		$this->assertFalse( Calc::waitlist_should_notify( true ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Warenkorb-Tracking nur mit bekannter E-Mail
+	 * -------------------------------------------------------------- */
+
+	public function test_cart_should_track_with_email() {
+		$this->assertTrue( Calc::cart_should_track( 'test@example.com', false, false ) );
+	}
+
+	public function test_cart_should_not_track_without_email() {
+		$this->assertFalse( Calc::cart_should_track( '', false, false ) );
+	}
+
+	public function test_cart_should_not_track_invalid_email() {
+		$this->assertFalse( Calc::cart_should_track( 'not-an-email', false, false ) );
+	}
+
+	public function test_cart_should_not_track_empty_cart() {
+		$this->assertFalse( Calc::cart_should_track( 'test@example.com', true, false ) );
+	}
+
+	public function test_cart_should_not_track_admin_request() {
+		$this->assertFalse( Calc::cart_should_track( 'test@example.com', false, true ) );
+	}
 }

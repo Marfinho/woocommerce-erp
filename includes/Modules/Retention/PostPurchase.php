@@ -164,7 +164,7 @@ class PostPurchase {
 				'user_id' => $user_id,
 				'order_id' => null,
 				'points'  => $bonus,
-				'type'    => 'manual_adjustment',
+				'type'    => 'review_bonus',
 				'status'  => 'available',
 				'notiz'   => __( 'Bonus für Produktbewertung', 'lindenweg16' ),
 			)

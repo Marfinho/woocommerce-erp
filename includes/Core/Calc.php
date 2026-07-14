@@ -172,6 +172,100 @@ class Calc {
 	}
 
 	/**
+	 * Kaskadierte Bestandsabzüge für ein Set berechnen.
+	 * Gibt ein Array von [ produkt_id => abzug_menge ] zurück.
+	 *
+	 * @param float $menge       Verkaufte Menge.
+	 * @param array $stueckliste Array von [ 'modul_id' => int, 'menge' => float ].
+	 * @param array $rezepturen  Map modul_id => [ [ 'rohmaterial_id' => int, 'menge' => float ], ... ].
+	 * @return array produkt_id => total_abzug (negative Werte).
+	 */
+	public static function cascade_deductions( $menge, array $stueckliste, array $rezepturen ) {
+		$result = array();
+		$menge  = abs( (float) $menge );
+
+		foreach ( $stueckliste as $pos ) {
+			$modul_id    = (int) $pos['modul_id'];
+			$modul_menge = $menge * (float) $pos['menge'];
+
+			if ( ! isset( $result[ $modul_id ] ) ) {
+				$result[ $modul_id ] = 0.0;
+			}
+			$result[ $modul_id ] -= $modul_menge;
+
+			if ( isset( $rezepturen[ $modul_id ] ) ) {
+				foreach ( $rezepturen[ $modul_id ] as $rez ) {
+					$roh_id    = (int) $rez['rohmaterial_id'];
+					$roh_menge = $modul_menge * (float) $rez['menge'];
+					if ( ! isset( $result[ $roh_id ] ) ) {
+						$result[ $roh_id ] = 0.0;
+					}
+					$result[ $roh_id ] -= $roh_menge;
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Prüfen, ob ein Review-Bonus vergeben werden darf.
+	 *
+	 * @param string $post_type      Post-Type des Kommentar-Ziels.
+	 * @param int    $content_length Zeichenlänge des Kommentartexts.
+	 * @param int    $min_length     Mindestlänge.
+	 * @param int    $user_id        Benutzer-ID (0 = Gast).
+	 * @param bool   $already_awarded Ob bereits ein Bonus für dieses Produkt vergeben wurde.
+	 * @return bool
+	 */
+	public static function review_bonus_eligible( $post_type, $content_length, $min_length, $user_id, $already_awarded ) {
+		if ( 'product' !== $post_type ) {
+			return false;
+		}
+		if ( $content_length < $min_length ) {
+			return false;
+		}
+		if ( ! $user_id ) {
+			return false;
+		}
+		if ( $already_awarded ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Prüfen, ob eine Wartelisten-Benachrichtigung gesendet werden soll.
+	 *
+	 * @param bool $already_notified Ob bereits benachrichtigt wurde.
+	 * @return bool
+	 */
+	public static function waitlist_should_notify( $already_notified ) {
+		return ! $already_notified;
+	}
+
+	/**
+	 * Prüfen, ob ein Warenkorb getrackt werden darf (nur mit bekannter E-Mail).
+	 *
+	 * @param string $email      Kunden-E-Mail.
+	 * @param bool   $cart_empty Ob der Warenkorb leer ist.
+	 * @param bool   $is_admin   Ob es ein Admin-Request ist.
+	 * @return bool
+	 */
+	public static function cart_should_track( $email, $cart_empty, $is_admin ) {
+		if ( $is_admin ) {
+			return false;
+		}
+		if ( $cart_empty ) {
+			return false;
+		}
+		if ( ! $email || ! filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Steuer-Rücklage-Empfehlung.
 	 *
 	 * @param float $gewinn             Gewinn.

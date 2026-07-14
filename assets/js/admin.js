@@ -44,9 +44,23 @@
 				var $form = $( this ).closest( '.lw16-inline-form' );
 				var $row  = $form.closest( 'tr' );
 
+				// Set-Zeile: Rabatt-Feld vorhanden, aber keine Modul-Felder.
+				var $rabatt = $form.find( '[name="rabatt_prozent"]' );
+				if ( $rabatt.length ) {
+					var rabatt = parseFloat( $rabatt.val() ) || 0;
+					var $cells = $row.find( 'td' );
+					var einzelsumme = parseFloat( $cells.eq( 2 ).text().replace( /[^0-9,.-]/g, '' ).replace( ',', '.' ) ) || 0;
+					var vorschlag = Math.round( einzelsumme * ( 1 - rabatt / 100 ) );
+					var aktuell = parseFloat( $cells.eq( 4 ).text().replace( /[^0-9,.-]/g, '' ).replace( ',', '.' ) ) || 0;
+					var marge = aktuell > 0 ? ( ( aktuell - einzelsumme * ( 1 - rabatt / 100 ) ) / aktuell * 100 ) : 0;
+					$cells.eq( 3 ).html( '<strong>' + vorschlag + ' €</strong>' );
+					$cells.eq( 5 ).text( marge.toFixed( 1 ).replace( '.', ',' ) + ' %' );
+					return;
+				}
+
 				var fg = parseFloat( $form.find( '[name="filament_gramm"]' ).val() );
 				if ( isNaN( fg ) ) {
-					return; // Set-Zeile, keine Modul-Felder.
+					return;
 				}
 
 				var dz  = parseFloat( $form.find( '[name="druckzeit_stunden"]' ).val() ) || 0;
@@ -65,7 +79,6 @@
 				var vorschlag = zielmarge < 1 ? kosten / ( 1 - zielmarge ) : kosten;
 				vorschlag = Math.round( vorschlag );
 
-				// Aktuellen Preis aus der Zeile auslesen.
 				var $cells = $row.find( 'td' );
 				var aktuell = parseFloat( $cells.eq( 4 ).text().replace( /[^0-9,.-]/g, '' ).replace( ',', '.' ) ) || 0;
 				var marge = aktuell > 0 ? ( ( aktuell - kosten ) / aktuell * 100 ) : 0;

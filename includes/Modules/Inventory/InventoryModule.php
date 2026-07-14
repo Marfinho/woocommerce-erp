@@ -115,10 +115,12 @@ class InventoryModule {
 	 */
 	protected function render_overview() {
 		$produkte = Repository::get_products();
+		$base     = admin_url( 'admin.php?page=lw16-lager' );
 		echo '<table class="widefat striped"><thead><tr>';
 		echo '<th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Name', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Typ', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'WooCommerce', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Bestand', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Mindestbestand', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Aktion', 'lindenweg16' ) . '</th>';
@@ -131,6 +133,17 @@ class InventoryModule {
 			echo '<td><span class="lw16-ampel lw16-ampel-' . esc_attr( $ampel ) . '" title="' . esc_attr( $ampel ) . '"></span></td>';
 			echo '<td>' . esc_html( $p->name ) . '</td>';
 			echo '<td>' . esc_html( $p->typ ) . '</td>';
+			// WooCommerce-Verknüpfung anzeigen.
+			echo '<td>';
+			if ( $p->woo_product_id ) {
+				$wc = function_exists( 'wc_get_product' ) ? wc_get_product( $p->woo_product_id ) : null;
+				$wc_name = $wc ? $wc->get_name() : '#' . $p->woo_product_id;
+				$wc_edit = admin_url( 'post.php?post=' . (int) $p->woo_product_id . '&action=edit' );
+				echo '<a href="' . esc_url( $wc_edit ) . '" title="' . esc_attr__( 'WooCommerce-Produkt bearbeiten', 'lindenweg16' ) . '">' . esc_html( $wc_name ) . '</a>';
+			} else {
+				echo '<span class="description">' . esc_html__( 'nicht verknüpft', 'lindenweg16' ) . '</span>';
+			}
+			echo '</td>';
 			echo '<td>' . esc_html( $this->fmt( $bestand ) . ' ' . $p->basis_einheit ) . '</td>';
 			echo '<td>' . esc_html( $this->fmt( $p->mindestbestand ) ) . '</td>';
 			$edit = add_query_arg( array( 'view' => 'edit', 'id' => $p->id ), $base );
@@ -147,6 +160,11 @@ class InventoryModule {
 	protected function render_product_form() {
 		$module_liste = Repository::get_products( 'modul' );
 		$roh_liste    = Repository::get_products( 'rohmaterial' );
+
+		$wc_products = array();
+		if ( function_exists( 'wc_get_products' ) ) {
+			$wc_products = wc_get_products( array( 'limit' => 200, 'status' => 'publish', 'orderby' => 'title', 'order' => 'ASC', 'return' => 'objects' ) );
+		}
 		?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="lw16_save_product">
@@ -160,7 +178,17 @@ class InventoryModule {
 						<option value="rohmaterial"><?php esc_html_e( 'Rohmaterial', 'lindenweg16' ); ?></option>
 					</select>
 				</td></tr>
-				<tr><th><?php esc_html_e( 'WooCommerce-Produkt-ID', 'lindenweg16' ); ?></th><td><input type="number" name="woo_product_id" class="small-text"> <span class="description"><?php esc_html_e( 'optional, für Sets/Module', 'lindenweg16' ); ?></span></td></tr>
+				<tr><th><?php esc_html_e( 'WooCommerce-Produkt', 'lindenweg16' ); ?></th><td>
+					<select name="woo_product_id">
+						<option value=""><?php esc_html_e( '— kein WooCommerce-Produkt —', 'lindenweg16' ); ?></option>
+						<?php foreach ( $wc_products as $wc ) : ?>
+							<option value="<?php echo (int) $wc->get_id(); ?>">
+								<?php echo esc_html( $wc->get_name() . ' (#' . $wc->get_id() . ')' ); ?>
+							</option>
+						<?php endforeach; ?>
+					</select>
+					<span class="description"><?php esc_html_e( 'optional, für Sets/Module', 'lindenweg16' ); ?></span>
+				</td></tr>
 				<tr class="lw16-roh-only"><th><?php esc_html_e( 'Rohmaterial-Kategorie', 'lindenweg16' ); ?></th><td>
 					<select name="rohmaterial_kategorie">
 						<option value="kaufteil"><?php esc_html_e( 'Kaufteil (mit Beleg)', 'lindenweg16' ); ?></option>
@@ -232,6 +260,12 @@ class InventoryModule {
 		foreach ( Repository::get_rezeptur( $id ) as $r ) {
 			$rezeptur[ (int) $r->rohmaterial_id ] = (float) $r->menge;
 		}
+
+		// WooCommerce-Produkte laden für den Picker.
+		$wc_products = array();
+		if ( function_exists( 'wc_get_products' ) ) {
+			$wc_products = wc_get_products( array( 'limit' => 200, 'status' => 'publish', 'orderby' => 'title', 'order' => 'ASC', 'return' => 'objects' ) );
+		}
 		?>
 		<h2><?php echo esc_html( sprintf( /* translators: %s: Produktname */ __( 'Produkt bearbeiten: %s', 'lindenweg16' ), $produkt->name ) ); ?></h2>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
@@ -241,7 +275,22 @@ class InventoryModule {
 			<table class="form-table"><tbody>
 				<tr><th><?php esc_html_e( 'Name', 'lindenweg16' ); ?></th><td><input type="text" name="name" class="regular-text" value="<?php echo esc_attr( $produkt->name ); ?>" required></td></tr>
 				<tr><th><?php esc_html_e( 'Typ', 'lindenweg16' ); ?></th><td><strong><?php echo esc_html( $produkt->typ ); ?></strong> <span class="description"><?php esc_html_e( '(nicht änderbar)', 'lindenweg16' ); ?></span></td></tr>
-				<tr><th><?php esc_html_e( 'WooCommerce-Produkt-ID', 'lindenweg16' ); ?></th><td><input type="number" name="woo_product_id" class="small-text" value="<?php echo esc_attr( $produkt->woo_product_id ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'WooCommerce-Produkt', 'lindenweg16' ); ?></th><td>
+					<select name="woo_product_id">
+						<option value=""><?php esc_html_e( '— kein WooCommerce-Produkt —', 'lindenweg16' ); ?></option>
+						<?php foreach ( $wc_products as $wc ) : ?>
+							<option value="<?php echo (int) $wc->get_id(); ?>" <?php selected( (int) $produkt->woo_product_id, $wc->get_id() ); ?>>
+								<?php echo esc_html( $wc->get_name() . ' (#' . $wc->get_id() . ')' ); ?>
+							</option>
+						<?php endforeach; ?>
+						<?php if ( $produkt->woo_product_id && ! in_array( (int) $produkt->woo_product_id, array_map( function ( $w ) { return $w->get_id(); }, $wc_products ), true ) ) : ?>
+							<option value="<?php echo (int) $produkt->woo_product_id; ?>" selected>
+								<?php echo esc_html( '#' . $produkt->woo_product_id . ' (' . __( 'nicht gefunden', 'lindenweg16' ) . ')' ); ?>
+							</option>
+						<?php endif; ?>
+					</select>
+					<span class="description"><?php esc_html_e( 'Verknüpft das Lagerprodukt mit einem WooCommerce-Shop-Produkt.', 'lindenweg16' ); ?></span>
+				</td></tr>
 				<?php if ( 'rohmaterial' === $produkt->typ ) : ?>
 				<tr><th><?php esc_html_e( 'Rohmaterial-Kategorie', 'lindenweg16' ); ?></th><td>
 					<select name="rohmaterial_kategorie">
