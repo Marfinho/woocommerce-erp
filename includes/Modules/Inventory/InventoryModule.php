@@ -29,6 +29,7 @@ class InventoryModule {
 		add_action( 'admin_post_lw16_save_product', array( $this, 'handle_save_product' ) );
 		add_action( 'admin_post_lw16_wareneingang', array( $this, 'handle_wareneingang' ) );
 		add_action( 'admin_post_lw16_produktion', array( $this, 'handle_produktion' ) );
+		add_action( 'admin_post_lw16_update_product', array( $this, 'handle_update_product' ) );
 		add_action( 'admin_post_lw16_delete_product', array( $this, 'handle_delete_product' ) );
 	}
 
@@ -77,6 +78,7 @@ class InventoryModule {
 		echo '<nav class="lw16-tabs">';
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( $base ), 'overview' === $view ? 'active' : '', esc_html__( 'Übersicht', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'produkt', $base ) ), 'produkt' === $view ? 'active' : '', esc_html__( 'Produkt anlegen', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'edit', $base ) ), 'edit' === $view ? 'active' : '', esc_html__( 'Produkt bearbeiten', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'wareneingang', $base ) ), 'wareneingang' === $view ? 'active' : '', esc_html__( 'Wareneingang', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'produktion', $base ) ), 'produktion' === $view ? 'active' : '', esc_html__( 'Produktion', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'bewegungen', $base ) ), 'bewegungen' === $view ? 'active' : '', esc_html__( 'Bewegungen', 'lindenweg16' ) );
@@ -89,6 +91,9 @@ class InventoryModule {
 		switch ( $view ) {
 			case 'produkt':
 				$this->render_product_form();
+				break;
+			case 'edit':
+				$this->render_edit_form();
 				break;
 			case 'wareneingang':
 				$this->render_wareneingang_form();
@@ -128,8 +133,9 @@ class InventoryModule {
 			echo '<td>' . esc_html( $p->typ ) . '</td>';
 			echo '<td>' . esc_html( $this->fmt( $bestand ) . ' ' . $p->basis_einheit ) . '</td>';
 			echo '<td>' . esc_html( $this->fmt( $p->mindestbestand ) ) . '</td>';
-			$del = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_delete_product&id=' . $p->id ), 'lw16_delete_product_' . $p->id );
-			echo '<td><a href="' . esc_url( $del ) . '" onclick="return confirm(\'' . esc_attr__( 'Produkt wirklich löschen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Löschen', 'lindenweg16' ) . '</a></td>';
+			$edit = add_query_arg( array( 'view' => 'edit', 'id' => $p->id ), $base );
+			$del  = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_delete_product&id=' . $p->id ), 'lw16_delete_product_' . $p->id );
+			echo '<td><a href="' . esc_url( $edit ) . '">' . esc_html__( 'Bearbeiten', 'lindenweg16' ) . '</a> | <a href="' . esc_url( $del ) . '" onclick="return confirm(\'' . esc_attr__( 'Produkt wirklich löschen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Löschen', 'lindenweg16' ) . '</a></td>';
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
@@ -189,6 +195,93 @@ class InventoryModule {
 			</tbody></table>
 
 			<?php submit_button( __( 'Produkt speichern', 'lindenweg16' ) ); ?>
+		</form>
+		<?php
+	}
+
+	/**
+	 * Formular zum Bearbeiten eines bestehenden Produkts inkl. Stückliste/Rezeptur.
+	 */
+	protected function render_edit_form() {
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( ! $id ) {
+			$produkte = Repository::get_products();
+			echo '<h2>' . esc_html__( 'Produkt auswählen', 'lindenweg16' ) . '</h2>';
+			echo '<ul>';
+			$base = admin_url( 'admin.php?page=lw16-lager&view=edit' );
+			foreach ( $produkte as $p ) {
+				echo '<li><a href="' . esc_url( add_query_arg( 'id', $p->id, $base ) ) . '">' . esc_html( $p->name ) . ' (' . esc_html( $p->typ ) . ')</a></li>';
+			}
+			echo '</ul>';
+			return;
+		}
+
+		$produkt = Repository::get_product( $id );
+		if ( ! $produkt ) {
+			echo '<p>' . esc_html__( 'Produkt nicht gefunden.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		$module_liste = Repository::get_products( 'modul' );
+		$roh_liste    = Repository::get_products( 'rohmaterial' );
+		$stueckliste  = array();
+		foreach ( Repository::get_stueckliste( $id ) as $s ) {
+			$stueckliste[ (int) $s->modul_id ] = (float) $s->menge;
+		}
+		$rezeptur = array();
+		foreach ( Repository::get_rezeptur( $id ) as $r ) {
+			$rezeptur[ (int) $r->rohmaterial_id ] = (float) $r->menge;
+		}
+		?>
+		<h2><?php echo esc_html( sprintf( /* translators: %s: Produktname */ __( 'Produkt bearbeiten: %s', 'lindenweg16' ), $produkt->name ) ); ?></h2>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_update_product">
+			<input type="hidden" name="id" value="<?php echo (int) $id; ?>">
+			<?php wp_nonce_field( 'lw16_update_product_' . $id ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Name', 'lindenweg16' ); ?></th><td><input type="text" name="name" class="regular-text" value="<?php echo esc_attr( $produkt->name ); ?>" required></td></tr>
+				<tr><th><?php esc_html_e( 'Typ', 'lindenweg16' ); ?></th><td><strong><?php echo esc_html( $produkt->typ ); ?></strong> <span class="description"><?php esc_html_e( '(nicht änderbar)', 'lindenweg16' ); ?></span></td></tr>
+				<tr><th><?php esc_html_e( 'WooCommerce-Produkt-ID', 'lindenweg16' ); ?></th><td><input type="number" name="woo_product_id" class="small-text" value="<?php echo esc_attr( $produkt->woo_product_id ); ?>"></td></tr>
+				<?php if ( 'rohmaterial' === $produkt->typ ) : ?>
+				<tr><th><?php esc_html_e( 'Rohmaterial-Kategorie', 'lindenweg16' ); ?></th><td>
+					<select name="rohmaterial_kategorie">
+						<option value="kaufteil" <?php selected( $produkt->rohmaterial_kategorie, 'kaufteil' ); ?>><?php esc_html_e( 'Kaufteil (mit Beleg)', 'lindenweg16' ); ?></option>
+						<option value="gefertigt" <?php selected( $produkt->rohmaterial_kategorie, 'gefertigt' ); ?>><?php esc_html_e( 'Gefertigt (ohne Beleg)', 'lindenweg16' ); ?></option>
+					</select>
+				</td></tr>
+				<?php endif; ?>
+				<tr><th><?php esc_html_e( 'Basis-Einheit', 'lindenweg16' ); ?></th><td>
+					<select name="basis_einheit">
+						<option value="stueck" <?php selected( $produkt->basis_einheit, 'stueck' ); ?>><?php esc_html_e( 'Stück', 'lindenweg16' ); ?></option>
+						<option value="gramm" <?php selected( $produkt->basis_einheit, 'gramm' ); ?>>Gramm</option>
+						<option value="milliliter" <?php selected( $produkt->basis_einheit, 'milliliter' ); ?>>Milliliter</option>
+						<option value="zentimeter" <?php selected( $produkt->basis_einheit, 'zentimeter' ); ?>>Zentimeter</option>
+					</select>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Einkaufseinheit-Name', 'lindenweg16' ); ?></th><td><input type="text" name="einkaufseinheit_name" class="regular-text" value="<?php echo esc_attr( $produkt->einkaufseinheit_name ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Umrechnung (Basis je Einkaufseinheit)', 'lindenweg16' ); ?></th><td><input type="number" step="any" name="einkaufseinheit_umrechnung" class="small-text" value="<?php echo esc_attr( $produkt->einkaufseinheit_umrechnung ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Mindestbestand (Basis-Einheit)', 'lindenweg16' ); ?></th><td><input type="number" step="any" name="mindestbestand" class="small-text" value="<?php echo esc_attr( $produkt->mindestbestand ); ?>"></td></tr>
+			</tbody></table>
+
+			<?php if ( 'set' === $produkt->typ ) : ?>
+			<h2><?php esc_html_e( 'Stückliste: Modul → Menge', 'lindenweg16' ); ?></h2>
+			<table class="widefat striped"><tbody>
+			<?php foreach ( $module_liste as $m ) : ?>
+				<tr><td><?php echo esc_html( $m->name ); ?></td><td><input type="number" step="any" name="stueckliste[<?php echo (int) $m->id; ?>]" value="<?php echo esc_attr( $stueckliste[ $m->id ] ?? 0 ); ?>" class="small-text"></td></tr>
+			<?php endforeach; ?>
+			</tbody></table>
+			<?php endif; ?>
+
+			<?php if ( 'modul' === $produkt->typ ) : ?>
+			<h2><?php esc_html_e( 'Rezeptur: Rohmaterial → Menge (Basis-Einheit)', 'lindenweg16' ); ?></h2>
+			<table class="widefat striped"><tbody>
+			<?php foreach ( $roh_liste as $r ) : ?>
+				<tr><td><?php echo esc_html( $r->name ); ?></td><td><input type="number" step="any" name="rezeptur[<?php echo (int) $r->id; ?>]" value="<?php echo esc_attr( $rezeptur[ $r->id ] ?? 0 ); ?>" class="small-text"> <?php echo esc_html( $r->basis_einheit ); ?></td></tr>
+			<?php endforeach; ?>
+			</tbody></table>
+			<?php endif; ?>
+
+			<?php submit_button( __( 'Änderungen speichern', 'lindenweg16' ) ); ?>
 		</form>
 		<?php
 	}
@@ -410,6 +503,54 @@ class InventoryModule {
 		}
 
 		$this->redirect( 'lager', __( 'Produktion gebucht.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Bestehendes Produkt aktualisieren.
+	 */
+	public function handle_update_product() {
+		$id = (int) ( $_POST['id'] ?? 0 );
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_update_product_' . $id );
+
+		$produkt = Repository::get_product( $id );
+		if ( ! $produkt ) {
+			$this->redirect( 'lager', __( 'Produkt nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		$data = array(
+			'name'                       => sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
+			'woo_product_id'             => ! empty( $_POST['woo_product_id'] ) ? (int) $_POST['woo_product_id'] : null,
+			'basis_einheit'              => sanitize_key( wp_unslash( $_POST['basis_einheit'] ?? 'stueck' ) ),
+			'einkaufseinheit_name'       => sanitize_text_field( wp_unslash( $_POST['einkaufseinheit_name'] ?? '' ) ) ?: null,
+			'einkaufseinheit_umrechnung' => ! empty( $_POST['einkaufseinheit_umrechnung'] ) ? (float) $_POST['einkaufseinheit_umrechnung'] : null,
+			'mindestbestand'             => (float) ( $_POST['mindestbestand'] ?? 0 ),
+		);
+		if ( 'rohmaterial' === $produkt->typ ) {
+			$data['rohmaterial_kategorie'] = sanitize_key( wp_unslash( $_POST['rohmaterial_kategorie'] ?? 'kaufteil' ) );
+		}
+
+		Repository::update_product( $id, $data );
+
+		if ( 'set' === $produkt->typ && ! empty( $_POST['stueckliste'] ) && is_array( $_POST['stueckliste'] ) ) {
+			$pos = array();
+			foreach ( wp_unslash( $_POST['stueckliste'] ) as $modul_id => $menge ) {
+				$pos[ (int) $modul_id ] = (float) $menge;
+			}
+			Repository::set_stueckliste( $id, $pos );
+		}
+
+		if ( 'modul' === $produkt->typ && ! empty( $_POST['rezeptur'] ) && is_array( $_POST['rezeptur'] ) ) {
+			$pos = array();
+			foreach ( wp_unslash( $_POST['rezeptur'] ) as $roh_id => $menge ) {
+				$pos[ (int) $roh_id ] = (float) $menge;
+			}
+			Repository::set_rezeptur( $id, $pos );
+		}
+
+		$this->redirect( 'lager', __( 'Produkt aktualisiert.', 'lindenweg16' ) );
 	}
 
 	/**

@@ -35,6 +35,7 @@ class ProductionModule {
 		// Druckauftrag-Status + Ist-Zeit-Erfassung.
 		add_action( 'admin_post_lw16_job_status', array( $this, 'handle_job_status' ) );
 		add_action( 'admin_post_lw16_job_complete', array( $this, 'handle_job_complete' ) );
+		add_action( 'admin_post_lw16_save_excluded_weeks', array( $this, 'handle_save_excluded_weeks' ) );
 
 		// Dashboard: vorausschauende Mengenvorschläge.
 		add_action( 'lw16_dashboard_widgets', array( $this, 'render_forecast_widget' ) );
@@ -184,8 +185,14 @@ class ProductionModule {
 		foreach ( $orders as $order ) {
 			echo '<tr><td>#' . esc_html( $order->get_order_number() ) . '</td>';
 			echo '<td>' . esc_html( $order->get_formatted_billing_full_name() ) . '</td><td>';
-			$pl = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $order->get_id() ), 'lw16_packliste_' . $order->get_id() );
-			echo '<a class="button button-small" href="' . esc_url( $pl ) . '" target="_blank">' . esc_html__( 'Packliste', 'lindenweg16' ) . '</a> ';
+			$pl_base = admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $order->get_id() );
+			$pl = wp_nonce_url( $pl_base, 'lw16_packliste_' . $order->get_id() );
+			echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form" style="display:inline" target="_blank">';
+			echo '<input type="hidden" name="action" value="lw16_packliste"><input type="hidden" name="order_id" value="' . (int) $order->get_id() . '">';
+			echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( 'lw16_packliste_' . $order->get_id() ) ) . '">';
+			echo '<input type="text" name="notiz" placeholder="' . esc_attr__( 'Notiz…', 'lindenweg16' ) . '" class="small-text" style="width:120px"> ';
+			echo '<button type="submit" class="button button-small">' . esc_html__( 'Packliste', 'lindenweg16' ) . '</button>';
+			echo '</form> ';
 			$label = admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' );
 			echo '<a class="button button-small" href="' . esc_url( $label ) . '#dhl">' . esc_html__( 'DHL-Label erstellen', 'lindenweg16' ) . '</a>';
 			echo '</td></tr>';
@@ -260,6 +267,18 @@ class ProductionModule {
 		}
 		echo '</tbody></table>';
 		echo '<p class="description">' . esc_html__( 'Empfehlung, keine automatische Anpassung – die Kalkulationswerte änderst Du bewusst selbst.', 'lindenweg16' ) . '</p>';
+
+		// Ausgeschlossene Wochen für saisonale Ausreißer.
+		echo '<h2>' . esc_html__( 'Ausgeschlossene Wochen (Mengenvorschläge)', 'lindenweg16' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Wochen im Format JJJJ-WW, die bei der Berechnung der vorausschauenden Mengenvorschläge als saisonale Ausreißer übersprungen werden.', 'lindenweg16' ) . '</p>';
+		$excluded = get_option( 'lw16_excluded_weeks', '' );
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="lw16_save_excluded_weeks">';
+		wp_nonce_field( 'lw16_save_excluded_weeks' );
+		echo '<p><input type="text" name="excluded_weeks" value="' . esc_attr( $excluded ) . '" class="regular-text" placeholder="2026-51, 2026-52">';
+		echo ' ';
+		submit_button( __( 'Speichern', 'lindenweg16' ), 'secondary', '', false );
+		echo '</p></form>';
 	}
 
 	/**
@@ -270,26 +289,46 @@ class ProductionModule {
 		if ( false === $cache ) {
 			$cache  = '';
 			$module = Repository::get_products( 'modul' );
-			$rows   = '';
+
+			// Ausgeschlossene Wochen aus Option.
+			$excluded_raw = (string) get_option( 'lw16_excluded_weeks', '' );
+			$excluded     = array_filter( array_map( 'trim', explode( ',', $excluded_raw ) ) );
+
+			// Wunschlisten-Nachfrage als zusätzliches Signal.
+			$wished = \Lindenweg16\Modules\Retention\Wishlist::most_wished( 100 );
+
+			$rows = '';
 			foreach ( $module as $m ) {
-				$schnitt = ProductionRepository::weekly_average( $m->id, 6 );
-				if ( $schnitt <= 0 ) {
+				$schnitt = ProductionRepository::weekly_average( $m->id, 6, $excluded );
+
+				// Wunschlisten-Aufschlag: Wenn ein verknüpftes WC-Produkt häufig gewünscht ist, Nachfrage anteilig erhöhen.
+				$wish_boost = 0;
+				if ( $m->woo_product_id && isset( $wished[ (int) $m->woo_product_id ] ) ) {
+					$wish_boost = (float) $wished[ (int) $m->woo_product_id ] * 0.1;
+				}
+				$effektiv = $schnitt + $wish_boost;
+
+				if ( $effektiv <= 0 ) {
 					continue;
 				}
-				$bestand   = Repository::get_stock( $m->id );
-				$tage_reicht = $schnitt > 0 ? floor( $bestand / ( $schnitt / 7 ) ) : 0;
-				$vorschlag = max( 0, ceil( $schnitt * 2 - $bestand ) ); // Puffer für ~2 Wochen.
+				$bestand     = Repository::get_stock( $m->id );
+				$tage_reicht = $effektiv > 0 ? floor( $bestand / ( $effektiv / 7 ) ) : 0;
+				$vorschlag   = max( 0, ceil( $effektiv * 2 - $bestand ) );
 				if ( $vorschlag <= 0 ) {
 					continue;
 				}
+				$hint = sprintf( /* translators: %d: Tage */ __( 'Bestand reicht noch ~%d Tage', 'lindenweg16' ), (int) $tage_reicht );
+				if ( $wish_boost > 0 ) {
+					$hint .= ' ' . sprintf( /* translators: %d: Wünsche */ __( '(+%d Wunschliste)', 'lindenweg16' ), (int) $wished[ (int) $m->woo_product_id ] );
+				}
 				$rows .= '<tr><td>' . esc_html( $m->name ) . '</td>';
 				$rows .= '<td>' . esc_html( number_format( $vorschlag, 0, ',', '.' ) ) . '</td>';
-				$rows .= '<td>' . esc_html( sprintf( /* translators: %d: Tage */ __( 'Bestand reicht noch ~%d Tage', 'lindenweg16' ), (int) $tage_reicht ) ) . '</td></tr>';
+				$rows .= '<td>' . esc_html( $hint ) . '</td></tr>';
 			}
 			if ( $rows ) {
 				$cache = '<div class="lw16-card"><h2>' . esc_html__( 'Vorproduktions-Vorschläge', 'lindenweg16' ) . '</h2>';
 				$cache .= '<table class="widefat"><thead><tr><th>' . esc_html__( 'Modul', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Vorschlag (Stück)', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Begründung', 'lindenweg16' ) . '</th></tr></thead><tbody>' . $rows . '</tbody></table>';
-				$cache .= '<p class="lw16-hint">' . esc_html__( 'Reine Empfehlung auf Basis des gleitenden 6-Wochen-Durchschnitts – keine automatische Produktion.', 'lindenweg16' ) . '</p></div>';
+				$cache .= '<p class="lw16-hint">' . esc_html__( 'Reine Empfehlung auf Basis des gleitenden 6-Wochen-Durchschnitts + Wunschlisten-Nachfrage – keine automatische Produktion.', 'lindenweg16' ) . '</p></div>';
 			}
 			set_transient( 'lw16_forecast_widget', $cache, HOUR_IN_SECONDS );
 		}
@@ -362,6 +401,20 @@ class ProductionModule {
 
 		ProductionRepository::set_job_status( $job_id, 'verpackt' );
 		$this->redirect( 'jobs', __( 'Druckauftrag abgeschlossen und Ist-Zeit erfasst.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Ausgeschlossene Wochen speichern.
+	 */
+	public function handle_save_excluded_weeks() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_save_excluded_weeks' );
+		$value = sanitize_text_field( wp_unslash( $_POST['excluded_weeks'] ?? '' ) );
+		update_option( 'lw16_excluded_weeks', $value );
+		delete_transient( 'lw16_forecast_widget' );
+		$this->redirect( 'auswertung', __( 'Ausgeschlossene Wochen gespeichert.', 'lindenweg16' ) );
 	}
 
 	/* --------------------------------------------------------------------

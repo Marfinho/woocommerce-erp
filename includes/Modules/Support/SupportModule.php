@@ -316,6 +316,13 @@ class SupportModule {
 			$geloest  = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_ticket_action&id=' . $t->id . '&do=geloest' ), 'lw16_ticket_' . $t->id );
 			echo '<a class="button button-small" href="' . esc_url( $in_bearb ) . '">' . esc_html__( 'In Bearbeitung', 'lindenweg16' ) . '</a> ';
 			echo '<a class="button button-small" href="' . esc_url( $geloest ) . '">' . esc_html__( 'Gelöst', 'lindenweg16' ) . '</a>';
+			// Antwort an den Kunden.
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form" style="margin-top:6px">';
+			echo '<input type="hidden" name="action" value="lw16_ticket_action"><input type="hidden" name="id" value="' . (int) $t->id . '"><input type="hidden" name="do" value="antwort">';
+			wp_nonce_field( 'lw16_ticket_' . $t->id );
+			echo '<textarea name="antwort_text" rows="2" cols="40" placeholder="' . esc_attr__( 'Antwort an den Kunden…', 'lindenweg16' ) . '" required></textarea> ';
+			submit_button( __( 'Antwort senden', 'lindenweg16' ), 'small', '', false );
+			echo '</form>';
 			// Gutschrift.
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form" style="margin-top:6px">';
 			echo '<input type="hidden" name="action" value="lw16_ticket_action"><input type="hidden" name="id" value="' . (int) $t->id . '"><input type="hidden" name="do" value="gutschrift">';
@@ -344,6 +351,27 @@ class SupportModule {
 		$ticket = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', $id ) ); // phpcs:ignore
 		if ( ! $ticket ) {
 			$this->redirect( __( 'Ticket nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( 'antwort' === $do ) {
+			$text = sanitize_textarea_field( wp_unslash( $_POST['antwort_text'] ?? '' ) );
+			if ( $text ) {
+				$wpdb->update(
+					self::table(),
+					array( 'status' => 'in_bearbeitung', 'beantwortet_am' => current_time( 'mysql' ) ),
+					array( 'id' => $id )
+				);
+				$this->notify_customer(
+					$ticket,
+					sprintf(
+						/* translators: 1: Betreff, 2: Antworttext */
+						__( "Betreff: %1\$s\n\n%2\$s", 'lindenweg16' ),
+						$ticket->betreff,
+						$text
+					)
+				);
+			}
+			$this->redirect( __( 'Antwort gesendet.', 'lindenweg16' ) );
 		}
 
 		if ( 'gutschrift' === $do ) {
@@ -495,9 +523,16 @@ class SupportModule {
 		global $wpdb;
 		$neue_refs = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . $wpdb->prefix . 'lw16_referrals WHERE created_at >= %s', $seit ) ); // phpcs:ignore
 
+		// Neue Produktbewertungen.
+		$neue_reviews = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->comments} WHERE comment_type = 'review' AND comment_approved = '1' AND comment_date >= %s",
+			$seit
+		) ); // phpcs:ignore
+
 		$body  = __( 'Wochen-Digest Lindenweg16', 'lindenweg16' ) . "\n\n";
 		$body .= sprintf( /* translators: 1: Anzahl, 2: Umsatz */ __( "Neue Bestellungen (7 Tage): %1\$d (Umsatz %2\$s €)\n", 'lindenweg16' ), $anzahl, number_format( $umsatz, 2, ',', '.' ) );
 		$body .= sprintf( /* translators: %d: Anzahl */ __( "Neue Referrals: %d\n", 'lindenweg16' ), $neue_refs );
+		$body .= sprintf( /* translators: %d: Anzahl */ __( "Neue Produktbewertungen: %d\n", 'lindenweg16' ), $neue_reviews );
 		$body .= "\n" . __( 'Lagerwarnungen:', 'lindenweg16' ) . "\n";
 		$body .= $warnungen ? $warnungen : __( 'keine', 'lindenweg16' );
 

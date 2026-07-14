@@ -127,9 +127,12 @@ class LoyaltyFrontend {
 			echo '</tbody></table>';
 		}
 
-		// Punkte-Verlauf.
+		// Punkte-Verlauf (paginiert).
 		echo '<h3>' . esc_html__( 'Punkte-Verlauf', 'lindenweg16' ) . '</h3>';
-		$ledger = LoyaltyRepository::ledger_of( $user_id, 25, 1 );
+		$per_page    = 15;
+		$ledger_page = isset( $_GET['lp'] ) ? max( 1, (int) $_GET['lp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
+		$ledger      = LoyaltyRepository::ledger_of( $user_id, $per_page, $ledger_page );
+		$ledger_total = LoyaltyRepository::ledger_count( $user_id );
 		if ( empty( $ledger ) ) {
 			echo '<p>' . esc_html__( 'Noch keine Punktebewegungen.', 'lindenweg16' ) . '</p>';
 		} else {
@@ -145,6 +148,19 @@ class LoyaltyFrontend {
 				echo '</tr>';
 			}
 			echo '</tbody></table>';
+			$total_pages = (int) ceil( $ledger_total / $per_page );
+			if ( $total_pages > 1 ) {
+				$endpoint_url = wc_get_account_endpoint_url( self::ENDPOINT );
+				echo '<div class="lw16-pagination">';
+				for ( $i = 1; $i <= $total_pages; $i++ ) {
+					if ( $i === $ledger_page ) {
+						echo '<span class="current">' . (int) $i . '</span> ';
+					} else {
+						echo '<a href="' . esc_url( add_query_arg( 'lp', $i, $endpoint_url ) ) . '">' . (int) $i . '</a> ';
+					}
+				}
+				echo '</div>';
+			}
 		}
 		echo '</div>';
 	}
@@ -165,13 +181,18 @@ class LoyaltyFrontend {
 		}
 		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
 		wp_enqueue_script( 'lw16-loyalty', LW16_PLUGIN_URL . 'assets/js/loyalty.js', array( 'jquery' ), LW16_VERSION, true );
+		$credit_balance = 0;
+		if ( is_user_logged_in() ) {
+			$credit_balance = LoyaltyRepository::get_credit( get_current_user_id() );
+		}
 		wp_localize_script(
 			'lw16-loyalty',
 			'LW16Loyalty',
 			array(
-				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
-				'nonce'        => wp_create_nonce( 'lw16_redeem' ),
+				'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+				'nonce'         => wp_create_nonce( 'lw16_redeem' ),
 				'pointsPerEuro' => (int) Settings::get( 'punkte_einloesewert', 100 ),
+				'creditBalance' => (string) $credit_balance,
 			)
 		);
 	}
