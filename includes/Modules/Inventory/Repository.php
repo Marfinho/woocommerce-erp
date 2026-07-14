@@ -226,4 +226,154 @@ class Repository {
 			)
 		);
 	}
+
+	/* --------------------------------------------------------------------
+	 * Lagerorte
+	 * ------------------------------------------------------------------ */
+
+	public static function create_lagerort( array $data ) {
+		global $wpdb;
+		$data['erstellt_am'] = current_time( 'mysql' );
+		$wpdb->insert( self::table( 'lagerorte' ), $data );
+		return (int) $wpdb->insert_id;
+	}
+
+	public static function update_lagerort( $id, array $data ) {
+		global $wpdb;
+		$wpdb->update( self::table( 'lagerorte' ), $data, array( 'id' => (int) $id ) );
+	}
+
+	public static function get_lagerort( $id ) {
+		global $wpdb;
+		$t = self::table( 'lagerorte' );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE id = %d", $id ) ); // phpcs:ignore
+	}
+
+	public static function get_lagerorte( $nur_aktiv = true ) {
+		global $wpdb;
+		$t = self::table( 'lagerorte' );
+		if ( $nur_aktiv ) {
+			return $wpdb->get_results( "SELECT * FROM {$t} WHERE aktiv = 1 ORDER BY kuerzel ASC" ); // phpcs:ignore
+		}
+		return $wpdb->get_results( "SELECT * FROM {$t} ORDER BY kuerzel ASC" ); // phpcs:ignore
+	}
+
+	public static function delete_lagerort( $id ) {
+		global $wpdb;
+		$wpdb->delete( self::table( 'lagerorte' ), array( 'id' => (int) $id ) );
+		$wpdb->delete( self::table( 'lagerbestand_ort' ), array( 'lagerort_id' => (int) $id ) );
+	}
+
+	/* --------------------------------------------------------------------
+	 * Lagerbestand pro Ort
+	 * ------------------------------------------------------------------ */
+
+	public static function get_stock_by_location( $produkt_id ) {
+		global $wpdb;
+		$tb = self::table( 'lagerbestand_ort' );
+		$tl = self::table( 'lagerorte' );
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT bo.*, l.kuerzel, l.name AS lagerort_name FROM {$tb} bo LEFT JOIN {$tl} l ON l.id = bo.lagerort_id WHERE bo.produkt_id = %d ORDER BY l.kuerzel", // phpcs:ignore
+			$produkt_id
+		) );
+	}
+
+	public static function set_stock_at_location( $produkt_id, $lagerort_id, $menge ) {
+		global $wpdb;
+		if ( $menge <= 0 ) {
+			$wpdb->delete( self::table( 'lagerbestand_ort' ), array( 'produkt_id' => (int) $produkt_id, 'lagerort_id' => (int) $lagerort_id ) );
+			return;
+		}
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO " . self::table( 'lagerbestand_ort' ) . " (produkt_id, lagerort_id, menge, aktualisiert_am) VALUES (%d, %d, %f, %s)
+				 ON DUPLICATE KEY UPDATE menge = VALUES(menge), aktualisiert_am = VALUES(aktualisiert_am)", // phpcs:ignore
+				(int) $produkt_id,
+				(int) $lagerort_id,
+				(float) $menge,
+				current_time( 'mysql' )
+			)
+		);
+	}
+
+	public static function get_stock_at_location( $produkt_id, $lagerort_id ) {
+		global $wpdb;
+		$t = self::table( 'lagerbestand_ort' );
+		$v = $wpdb->get_var( $wpdb->prepare( "SELECT menge FROM {$t} WHERE produkt_id = %d AND lagerort_id = %d", $produkt_id, $lagerort_id ) ); // phpcs:ignore
+		return null === $v ? 0.0 : (float) $v;
+	}
+
+	/* --------------------------------------------------------------------
+	 * Picklisten
+	 * ------------------------------------------------------------------ */
+
+	public static function create_pickliste( array $data ) {
+		global $wpdb;
+		$data['erstellt_am'] = current_time( 'mysql' );
+		$wpdb->insert( self::table( 'pickliste' ), $data );
+		return (int) $wpdb->insert_id;
+	}
+
+	public static function get_pickliste( $id ) {
+		global $wpdb;
+		$t = self::table( 'pickliste' );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE id = %d", $id ) ); // phpcs:ignore
+	}
+
+	public static function get_picklisten( $status = null, $limit = 50, $offset = 0 ) {
+		global $wpdb;
+		$t = self::table( 'pickliste' );
+		if ( $status ) {
+			return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = %s ORDER BY id DESC LIMIT %d OFFSET %d", $status, $limit, $offset ) ); // phpcs:ignore
+		}
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} ORDER BY id DESC LIMIT %d OFFSET %d", $limit, $offset ) ); // phpcs:ignore
+	}
+
+	public static function count_picklisten( $status = null ) {
+		global $wpdb;
+		$t = self::table( 'pickliste' );
+		if ( $status ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE status = %s", $status ) ); // phpcs:ignore
+		}
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t}" ); // phpcs:ignore
+	}
+
+	public static function update_pickliste( $id, array $data ) {
+		global $wpdb;
+		$wpdb->update( self::table( 'pickliste' ), $data, array( 'id' => (int) $id ) );
+	}
+
+	public static function add_pickliste_pos( $pickliste_id, array $pos ) {
+		global $wpdb;
+		$pos['pickliste_id'] = (int) $pickliste_id;
+		$wpdb->insert( self::table( 'pickliste_pos' ), $pos );
+		return (int) $wpdb->insert_id;
+	}
+
+	public static function get_pickliste_positionen( $pickliste_id ) {
+		global $wpdb;
+		$tp  = self::table( 'pickliste_pos' );
+		$tpr = self::table( 'produkte' );
+		$tl  = self::table( 'lagerorte' );
+		return $wpdb->get_results( $wpdb->prepare(
+			"SELECT pp.*, pr.name AS produkt_name, pr.basis_einheit, l.kuerzel AS lagerort_kuerzel, l.name AS lagerort_name
+			 FROM {$tp} pp
+			 LEFT JOIN {$tpr} pr ON pr.id = pp.produkt_id
+			 LEFT JOIN {$tl} l ON l.id = pp.lagerort_id
+			 WHERE pp.pickliste_id = %d
+			 ORDER BY l.kuerzel, pr.name", // phpcs:ignore
+			$pickliste_id
+		) );
+	}
+
+	public static function update_pickliste_pos( $id, array $data ) {
+		global $wpdb;
+		$wpdb->update( self::table( 'pickliste_pos' ), $data, array( 'id' => (int) $id ) );
+	}
+
+	public static function get_pickliste_by_order( $order_id ) {
+		global $wpdb;
+		$t = self::table( 'pickliste' );
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE order_id = %d ORDER BY id DESC LIMIT 1", $order_id ) ); // phpcs:ignore
+	}
 }
