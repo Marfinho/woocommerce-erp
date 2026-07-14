@@ -32,20 +32,60 @@
 .lw16-wishlist-btn, .lw16-notify-btn { cursor: pointer; }
 .lw16-heart { font-size: 20px; line-height: 1; }
 
-/* Sendungsverfolgung Timeline */
-.lw16-timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid #c3c4c7; }
-.lw16-timeline li { position: relative; padding: 0 0 18px 22px; }
-.lw16-timeline li::before {
-	content: '';
-	position: absolute;
-	left: -8px;
-	top: 2px;
-	width: 12px;
-	height: 12px;
-	border-radius: 50%;
-	background: #2271b1;
+/* Sendungsverfolgung – Amazon/Temu-Style */
+.lw16-tracking-page { background: #fff; border: 1px solid #e2e4e7; border-radius: 12px; padding: 24px 28px; margin: 24px 0; }
+.lw16-tracking-page h2 { font-size: 20px; font-weight: 700; margin: 0 0 16px; }
+
+.lw16-tp-eta { background: #f0f7ff; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px; }
+.lw16-tp-eta-label { display: block; font-size: 13px; color: #50575e; margin-bottom: 2px; }
+.lw16-tp-eta-date { font-size: 18px; font-weight: 700; color: #1d2327; }
+.lw16-tp-delivered { background: #edf7ed; }
+.lw16-tp-delivered .lw16-tp-eta-date { color: #2e7d32; }
+
+/* Fortschrittsbalken */
+.lw16-tp-progress { display: flex; align-items: flex-start; margin: 28px 0 20px; }
+.lw16-tp-step { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; min-width: 60px; }
+.lw16-tp-dot {
+	width: 20px; height: 20px; border-radius: 50%;
+	background: #e2e4e7; border: 3px solid #e2e4e7;
+	position: relative; z-index: 1;
+	transition: background .3s, border-color .3s;
 }
-.lw16-timeline .lw16-event-time { font-size: 12px; color: #646970; }
+.lw16-tp-done .lw16-tp-dot { background: #2e7d32; border-color: #2e7d32; }
+.lw16-tp-current .lw16-tp-dot { background: #fff; border-color: #2e7d32; box-shadow: 0 0 0 4px rgba(46,125,50,.18); }
+.lw16-tp-label { font-size: 11px; margin-top: 6px; text-align: center; color: #646970; white-space: nowrap; }
+.lw16-tp-done .lw16-tp-label { color: #2e7d32; font-weight: 600; }
+.lw16-tp-bar { flex: 1; height: 4px; background: #e2e4e7; align-self: center; margin-top: -14px; min-width: 20px; transition: background .3s; }
+.lw16-tp-bar.lw16-tp-done { background: #2e7d32; }
+
+.lw16-tp-nr { font-size: 13px; color: #646970; margin: 16px 0 0; }
+
+/* Sendungsverlauf */
+.lw16-tp-details { margin-top: 24px; border-top: 1px solid #e2e4e7; padding-top: 20px; }
+.lw16-tp-details h3 { font-size: 15px; font-weight: 600; margin: 0 0 14px; }
+.lw16-tp-events { position: relative; padding-left: 24px; }
+.lw16-tp-events::before { content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: #e2e4e7; }
+.lw16-tp-event { position: relative; padding-bottom: 18px; }
+.lw16-tp-event:last-child { padding-bottom: 0; }
+.lw16-tp-event-dot {
+	position: absolute; left: -20px; top: 4px;
+	width: 10px; height: 10px; border-radius: 50%;
+	background: #c3c4c7; z-index: 1;
+}
+.lw16-tp-event-latest .lw16-tp-event-dot { background: #2e7d32; width: 12px; height: 12px; left: -21px; top: 3px; }
+.lw16-tp-event-status { font-weight: 600; color: #1d2327; font-size: 14px; }
+.lw16-tp-event-latest .lw16-tp-event-status { color: #2e7d32; }
+.lw16-tp-event-loc { font-size: 13px; color: #50575e; margin-top: 2px; }
+.lw16-tp-event-time { font-size: 12px; color: #8c8f94; margin-top: 2px; }
+
+.lw16-tp-pending { color: #50575e; font-style: italic; margin-top: 8px; }
+
+@media (max-width: 480px) {
+	.lw16-tracking-page { padding: 16px; }
+	.lw16-tp-label { font-size: 9px; }
+	.lw16-tp-step { min-width: 44px; }
+	.lw16-tp-dot { width: 16px; height: 16px; }
+}
 
 /* Ladeplatzhalter (Skeleton) */
 .lw16-skeleton { background: linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%); background-size: 400% 100%; animation: lw16-shimmer 1.4s ease infinite; border-radius: 6px; height: 16px; margin: 8px 0; }
