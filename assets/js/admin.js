@@ -91,9 +91,14 @@
 
 		// Barcode-Rendering (Code 128B) für Lagerorte.
 		$( '.lw16-barcode' ).each( function () {
-			var svg = this;
-			var text = $( svg ).data( 'value' ) || '';
+			var container = this;
+			var text = $( container ).data( 'value' ) || '';
 			if ( ! text ) return;
+			var svg = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			svg.style.display = 'block';
+			svg.style.maxWidth = '180px';
+			svg.style.height = 'auto';
+			container.appendChild( svg );
 			renderCode128( svg, text );
 		} );
 
@@ -140,13 +145,25 @@
 		svg.setAttribute( 'width', w );
 		svg.setAttribute( 'height', barH + 16 );
 		svg.setAttribute( 'viewBox', '0 0 ' + w + ' ' + ( barH + 16 ) );
-		var bars = '';
+		var ns = 'http://www.w3.org/2000/svg';
 		for ( var j = 0; j < binary.length; j++ ) {
 			if ( binary[ j ] === '1' ) {
-				bars += '<rect x="' + ( 10 + j * barW ) + '" y="0" width="' + barW + '" height="' + barH + '" fill="#000"/>';
+				var rect = document.createElementNS( ns, 'rect' );
+				rect.setAttribute( 'x', 10 + j * barW );
+				rect.setAttribute( 'y', 0 );
+				rect.setAttribute( 'width', barW );
+				rect.setAttribute( 'height', barH );
+				rect.setAttribute( 'fill', '#000' );
+				svg.appendChild( rect );
 			}
 		}
-		bars += '<text x="' + ( w / 2 ) + '" y="' + ( barH + 12 ) + '" text-anchor="middle" font-size="10" font-family="monospace">' + text.replace( /&/g, '&amp;' ).replace( /</g, '&lt;' ) + '</text>';
-		svg.innerHTML = bars;
+		var label = document.createElementNS( ns, 'text' );
+		label.setAttribute( 'x', w / 2 );
+		label.setAttribute( 'y', barH + 12 );
+		label.setAttribute( 'text-anchor', 'middle' );
+		label.setAttribute( 'font-size', '10' );
+		label.setAttribute( 'font-family', 'monospace' );
+		label.textContent = text;
+		svg.appendChild( label );
 	}
 } )( jQuery );

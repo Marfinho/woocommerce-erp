@@ -376,4 +376,29 @@ class Repository {
 		$t = self::table( 'pickliste' );
 		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE order_id = %d ORDER BY id DESC LIMIT 1", $order_id ) ); // phpcs:ignore
 	}
+
+	public static function get_unpicked_order_ids() {
+		global $wpdb;
+		$t = self::table( 'pickliste' );
+
+		if ( class_exists( \Automattic\WooCommerce\Utilities\OrderUtil::class ) && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ) {
+			$ot = $wpdb->prefix . 'wc_orders';
+			return $wpdb->get_col(
+				"SELECT o.id FROM {$ot} o
+				 LEFT JOIN {$t} p ON p.order_id = o.id
+				 WHERE o.status IN ('wc-processing','wc-on-hold','wc-pending')
+				   AND p.id IS NULL
+				 ORDER BY o.id DESC"
+			); // phpcs:ignore
+		}
+
+		return $wpdb->get_col(
+			"SELECT p.ID FROM {$wpdb->posts} p
+			 LEFT JOIN {$t} pk ON pk.order_id = p.ID
+			 WHERE p.post_type = 'shop_order'
+			   AND p.post_status IN ('wc-processing','wc-on-hold','wc-pending')
+			   AND pk.id IS NULL
+			 ORDER BY p.ID DESC"
+		); // phpcs:ignore
+	}
 }

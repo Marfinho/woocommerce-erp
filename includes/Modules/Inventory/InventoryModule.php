@@ -722,7 +722,7 @@ class InventoryModule {
 				<td><strong><?php echo esc_html( $lo->kuerzel ); ?></strong></td>
 				<td><?php echo esc_html( $lo->name ); ?></td>
 				<td><?php echo esc_html( $lo->beschreibung ); ?></td>
-				<td><svg class="lw16-barcode" data-value="<?php echo esc_attr( $lo->kuerzel ); ?>"></svg></td>
+				<td><div class="lw16-barcode" data-value="<?php echo esc_attr( $lo->kuerzel ); ?>"></div></td>
 				<td><?php echo $lo->aktiv ? '&#10003;' : '&#10007;'; ?></td>
 				<td>
 					<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'lagerort_edit', 'id' => $lo->id ), $base ) ); ?>"><?php esc_html_e( 'Bearbeiten', 'lindenweg16' ); ?></a> |
@@ -823,16 +823,32 @@ class InventoryModule {
 		?>
 		<h2><?php esc_html_e( 'Picklisten', 'lindenweg16' ); ?></h2>
 
+		<?php $unpicked = Repository::get_unpicked_order_ids(); ?>
 		<div style="margin-bottom:16px">
 			<h3><?php esc_html_e( 'Neue Pickliste erstellen', 'lindenweg16' ); ?></h3>
+			<?php if ( empty( $unpicked ) ) : ?>
+				<p><?php esc_html_e( 'Alle offenen Bestellungen haben bereits eine Pickliste.', 'lindenweg16' ); ?></p>
+			<?php else : ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;align-items:center;gap:8px">
 				<input type="hidden" name="action" value="lw16_create_pickliste">
 				<?php wp_nonce_field( 'lw16_create_pickliste' ); ?>
-				<label><?php esc_html_e( 'Bestell-Nr.:', 'lindenweg16' ); ?>
-					<input type="number" name="order_id" class="small-text" required min="1">
+				<label><?php esc_html_e( 'Bestellung:', 'lindenweg16' ); ?>
+					<select name="order_id" required>
+						<option value=""><?php esc_html_e( '— Bestellung wählen —', 'lindenweg16' ); ?></option>
+						<?php foreach ( $unpicked as $oid ) :
+							$o = wc_get_order( $oid );
+							if ( ! $o ) continue;
+							$kunde = trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() );
+							$datum  = $o->get_date_created() ? $o->get_date_created()->date_i18n( 'd.m.Y' ) : '';
+							$label  = sprintf( '#%s – %s – %s (%s)', $o->get_order_number(), $kunde, $o->get_formatted_order_total(), $datum );
+						?>
+						<option value="<?php echo (int) $oid; ?>"><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
 				</label>
 				<?php submit_button( __( 'Pickliste erstellen', 'lindenweg16' ), 'primary', 'submit', false ); ?>
 			</form>
+			<?php endif; ?>
 		</div>
 
 		<table class="widefat striped"><thead><tr>
