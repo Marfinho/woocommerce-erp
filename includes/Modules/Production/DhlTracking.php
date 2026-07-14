@@ -357,7 +357,27 @@ class DhlTracking {
 	}
 
 	/**
-	 * Sendungsverfolgung im Kundenkonto.
+	 * Versandstatus-Stufe aus dem aktuellen Status ableiten (0–4).
+	 */
+	protected static function status_step( $status ) {
+		$s = strtolower( $status );
+		if ( in_array( $s, array( 'zugestellt', 'delivered' ), true ) ) {
+			return 4;
+		}
+		if ( false !== strpos( $s, 'zustellung' ) || false !== strpos( $s, 'delivery' ) || false !== strpos( $s, 'out for' ) ) {
+			return 3;
+		}
+		if ( false !== strpos( $s, 'transit' ) || false !== strpos( $s, 'transport' ) || false !== strpos( $s, 'sort' ) || false !== strpos( $s, 'hub' ) || false !== strpos( $s, 'center' ) ) {
+			return 2;
+		}
+		if ( false !== strpos( $s, 'angenommen' ) || false !== strpos( $s, 'picked' ) || false !== strpos( $s, 'shipment' ) || false !== strpos( $s, 'electronic' ) ) {
+			return 1;
+		}
+		return 1;
+	}
+
+	/**
+	 * Sendungsverfolgung im Kundenkonto – Amazon/Temu-Style.
 	 */
 	public function render_tracking( $order ) {
 		global $wpdb;
@@ -366,37 +386,70 @@ class DhlTracking {
 			return;
 		}
 
-		echo '<section class="lw16-tracking"><h2>' . esc_html__( 'Sendungsverfolgung', 'lindenweg16' ) . '</h2>';
-		echo '<p><strong>' . esc_html__( 'Tracking-Nummer:', 'lindenweg16' ) . '</strong> ' . esc_html( $row->tracking_nummer ) . '</p>';
-
 		$events = json_decode( (string) $row->events, true );
-		if ( empty( $events ) ) {
-			if ( $row->aktueller_status && strpos( $row->aktueller_status, 'Fehler' ) !== false ) {
-				echo '<p>' . esc_html__( 'Versandbestätigung erhalten, Sendungsdetails folgen in Kürze.', 'lindenweg16' ) . '</p>';
-			} else {
-				echo '<p>' . esc_html__( 'Versandbestätigung erhalten, Sendungsdetails folgen in Kürze.', 'lindenweg16' ) . '</p>';
-			}
-			echo '</section>';
-			return;
-		}
+		$step   = $events ? self::status_step( $row->aktueller_status ) : 0;
+		$steps  = array(
+			__( 'Bestellt', 'lindenweg16' ),
+			__( 'Versendet', 'lindenweg16' ),
+			__( 'Unterwegs', 'lindenweg16' ),
+			__( 'In Zustellung', 'lindenweg16' ),
+			__( 'Zugestellt', 'lindenweg16' ),
+		);
+		?>
+		<section class="lw16-tracking-page">
+			<h2><?php esc_html_e( 'Wo ist mein Paket?', 'lindenweg16' ); ?></h2>
 
-		if ( $row->voraussichtliches_lieferdatum ) {
-			echo '<p class="lw16-eta"><strong>' . esc_html__( 'Voraussichtliche Zustellung:', 'lindenweg16' ) . '</strong> ' . esc_html( date_i18n( 'd.m.Y', strtotime( $row->voraussichtliches_lieferdatum ) ) ) . '</p>';
-		}
+			<?php if ( $row->voraussichtliches_lieferdatum && $step < 4 ) : ?>
+				<div class="lw16-tp-eta">
+					<span class="lw16-tp-eta-label"><?php esc_html_e( 'Voraussichtliche Lieferung', 'lindenweg16' ); ?></span>
+					<span class="lw16-tp-eta-date"><?php echo esc_html( date_i18n( 'l, d. F Y', strtotime( $row->voraussichtliches_lieferdatum ) ) ); ?></span>
+				</div>
+			<?php elseif ( 4 === $step ) : ?>
+				<div class="lw16-tp-eta lw16-tp-delivered">
+					<span class="lw16-tp-eta-date"><?php esc_html_e( 'Dein Paket wurde zugestellt!', 'lindenweg16' ); ?></span>
+				</div>
+			<?php endif; ?>
 
-		echo '<ul class="lw16-timeline">';
-		foreach ( array_reverse( $events ) as $ev ) {
-			echo '<li>';
-			echo '<div>' . esc_html( $ev['status'] );
-			if ( ! empty( $ev['ort'] ) ) {
-				echo ' – ' . esc_html( $ev['ort'] );
-			}
-			echo '</div>';
-			if ( ! empty( $ev['zeitstempel'] ) ) {
-				echo '<div class="lw16-event-time">' . esc_html( date_i18n( 'd.m.Y H:i', strtotime( $ev['zeitstempel'] ) ) ) . '</div>';
-			}
-			echo '</li>';
-		}
-		echo '</ul></section>';
+			<div class="lw16-tp-progress">
+				<?php foreach ( $steps as $i => $label ) : ?>
+					<div class="lw16-tp-step <?php echo $i <= $step ? 'lw16-tp-done' : ''; ?> <?php echo $i === $step ? 'lw16-tp-current' : ''; ?>">
+						<div class="lw16-tp-dot"></div>
+						<span class="lw16-tp-label"><?php echo esc_html( $label ); ?></span>
+					</div>
+					<?php if ( $i < count( $steps ) - 1 ) : ?>
+						<div class="lw16-tp-bar <?php echo $i < $step ? 'lw16-tp-done' : ''; ?>"></div>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</div>
+
+			<p class="lw16-tp-nr">
+				<?php echo esc_html( sprintf( __( 'Sendungsnummer: %s', 'lindenweg16' ), $row->tracking_nummer ) ); ?>
+			</p>
+
+			<?php if ( ! empty( $events ) ) : ?>
+			<div class="lw16-tp-details">
+				<h3><?php esc_html_e( 'Sendungsverlauf', 'lindenweg16' ); ?></h3>
+				<div class="lw16-tp-events">
+					<?php foreach ( $events as $i => $ev ) : ?>
+						<div class="lw16-tp-event <?php echo 0 === $i ? 'lw16-tp-event-latest' : ''; ?>">
+							<div class="lw16-tp-event-dot"></div>
+							<div class="lw16-tp-event-content">
+								<div class="lw16-tp-event-status"><?php echo esc_html( $ev['status'] ); ?></div>
+								<?php if ( ! empty( $ev['ort'] ) ) : ?>
+									<div class="lw16-tp-event-loc"><?php echo esc_html( $ev['ort'] ); ?></div>
+								<?php endif; ?>
+								<?php if ( ! empty( $ev['zeitstempel'] ) ) : ?>
+									<div class="lw16-tp-event-time"><?php echo esc_html( date_i18n( 'd.m.Y, H:i \U\h\r', strtotime( $ev['zeitstempel'] ) ) ); ?></div>
+								<?php endif; ?>
+							</div>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+			<?php elseif ( ! $events ) : ?>
+				<p class="lw16-tp-pending"><?php esc_html_e( 'Dein Paket wurde soeben versendet. Die Sendungsdetails werden in Kürze aktualisiert.', 'lindenweg16' ); ?></p>
+			<?php endif; ?>
+		</section>
+		<?php
 	}
 }
