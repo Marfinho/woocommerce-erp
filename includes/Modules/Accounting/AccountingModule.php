@@ -129,8 +129,10 @@ class AccountingModule {
 	 * Belegliste (paginiert) mit Festschreibungs-Aktion.
 	 */
 	protected function render_belege_list() {
-		$page   = isset( $_GET['bp'] ) ? max( 1, (int) $_GET['bp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
-		$belege = BelegRepository::query( array( 'per_page' => 50, 'page' => $page ) );
+		$per_page = 50;
+		$page     = isset( $_GET['bp'] ) ? max( 1, (int) $_GET['bp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
+		$total    = BelegRepository::count();
+		$belege   = BelegRepository::query( array( 'per_page' => $per_page, 'page' => $page ) );
 
 		echo '<table class="widefat striped"><thead><tr>';
 		echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Händler', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Quelle', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Foto', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
@@ -162,6 +164,21 @@ class AccountingModule {
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
+
+		// Pagination.
+		$total_pages = (int) ceil( $total / $per_page );
+		if ( $total_pages > 1 ) {
+			$base = admin_url( 'admin.php?page=lw16-buchhaltung' );
+			echo '<div class="lw16-pagination">';
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				if ( $i === $page ) {
+					echo '<span class="current">' . (int) $i . '</span> ';
+				} else {
+					echo '<a href="' . esc_url( add_query_arg( 'bp', $i, $base ) ) . '">' . (int) $i . '</a> ';
+				}
+			}
+			echo '</div>';
+		}
 	}
 
 	/**

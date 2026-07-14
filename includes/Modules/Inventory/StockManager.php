@@ -30,29 +30,36 @@ class StockManager {
 	public static function record_movement( $produkt_id, $menge, $typ, array $args = array() ) {
 		global $wpdb;
 
-		$produkt_id = (int) $produkt_id;
-		$menge      = (float) $menge;
+		$produkt_id  = (int) $produkt_id;
+		$menge       = (float) $menge;
+		$lagerort_id = isset( $args['lagerort_id'] ) ? (int) $args['lagerort_id'] : null;
 
 		$bestand_vorher = Repository::get_stock( $produkt_id );
 
 		$wpdb->insert(
 			Repository::table( 'lagerbewegung' ),
 			array(
-				'produkt_id'  => $produkt_id,
-				'menge'       => $menge,
-				'typ'         => $typ,
-				'referenz'    => isset( $args['referenz'] ) ? $args['referenz'] : null,
-				'beleg_id'    => isset( $args['beleg_id'] ) ? (int) $args['beleg_id'] : null,
-				'notiz'       => isset( $args['notiz'] ) ? $args['notiz'] : null,
+				'produkt_id'   => $produkt_id,
+				'lagerort_id'  => $lagerort_id,
+				'menge'        => $menge,
+				'typ'          => $typ,
+				'referenz'     => isset( $args['referenz'] ) ? $args['referenz'] : null,
+				'beleg_id'     => isset( $args['beleg_id'] ) ? (int) $args['beleg_id'] : null,
+				'notiz'        => isset( $args['notiz'] ) ? $args['notiz'] : null,
 				'erstellt_von' => get_current_user_id(),
-				'erstellt_am' => current_time( 'mysql' ),
+				'erstellt_am'  => current_time( 'mysql' ),
 			),
-			array( '%d', '%f', '%s', '%s', '%d', '%s', '%d', '%s' )
+			array( '%d', '%d', '%f', '%s', '%s', '%d', '%s', '%d', '%s' )
 		);
 		$bewegung_id = (int) $wpdb->insert_id;
 
 		$neuer_bestand = $bestand_vorher + $menge;
 		Repository::set_stock( $produkt_id, $neuer_bestand );
+
+		if ( $lagerort_id ) {
+			$ort_bestand = Repository::get_stock_at_location( $produkt_id, $lagerort_id );
+			Repository::set_stock_at_location( $produkt_id, $lagerort_id, $ort_bestand + $menge );
+		}
 
 		// Mindestbestand-Prüfung bei Abgang.
 		if ( $menge < 0 ) {

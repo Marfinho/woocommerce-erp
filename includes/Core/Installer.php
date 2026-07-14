@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '1';
+	const DB_VERSION = '2';
 
 	/**
 	 * Aktivierungsroutine.
@@ -37,7 +37,13 @@ class Installer {
 		// Standard-Einstellungen setzen, falls noch nicht vorhanden.
 		Settings::maybe_set_defaults();
 
+		// Endpoints registrieren, damit der anschließende Flush sie kennt.
+		add_rewrite_endpoint( 'praemien', EP_ROOT | EP_PAGES );
+		add_rewrite_endpoint( 'wunschliste', EP_ROOT | EP_PAGES );
 		flush_rewrite_rules();
+
+		// Sicherheitshalber nochmal beim nächsten init flushen.
+		update_option( 'lw16_flush_rewrite', 1 );
 	}
 
 	/**
@@ -171,9 +177,56 @@ class Installer {
 			PRIMARY KEY  (produkt_id)
 		) {$charset_collate};";
 
+		$tables[] = "CREATE TABLE {$p}lagerbestand_ort (
+			produkt_id BIGINT UNSIGNED NOT NULL,
+			lagerort_id BIGINT UNSIGNED NOT NULL,
+			menge DECIMAL(14,4) NOT NULL DEFAULT 0,
+			aktualisiert_am DATETIME NOT NULL,
+			PRIMARY KEY  (produkt_id, lagerort_id),
+			KEY lagerort_id (lagerort_id)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}lagerorte (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			kuerzel VARCHAR(20) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			beschreibung TEXT NULL,
+			aktiv TINYINT(1) NOT NULL DEFAULT 1,
+			erstellt_am DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY kuerzel (kuerzel)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}pickliste (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			order_id BIGINT UNSIGNED NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'offen',
+			datei_pfad VARCHAR(255) NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			erstellt_am DATETIME NOT NULL,
+			abgeschlossen_am DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY order_id (order_id),
+			KEY status (status)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}pickliste_pos (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			pickliste_id BIGINT UNSIGNED NOT NULL,
+			produkt_id BIGINT UNSIGNED NOT NULL,
+			lagerort_id BIGINT UNSIGNED NULL,
+			soll_menge DECIMAL(14,4) NOT NULL DEFAULT 0,
+			ist_menge DECIMAL(14,4) NULL,
+			gepickt TINYINT(1) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY pickliste_id (pickliste_id),
+			KEY produkt_id (produkt_id)
+		) {$charset_collate};";
+
 		$tables[] = "CREATE TABLE {$p}lagerbewegung (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			produkt_id BIGINT UNSIGNED NOT NULL,
+			lagerort_id BIGINT UNSIGNED NULL,
 			menge DECIMAL(14,4) NOT NULL,
 			typ VARCHAR(20) NOT NULL,
 			referenz VARCHAR(191) NULL,
@@ -183,6 +236,7 @@ class Installer {
 			erstellt_am DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY produkt_id (produkt_id),
+			KEY lagerort_id (lagerort_id),
 			KEY typ (typ),
 			KEY beleg_id (beleg_id),
 			KEY erstellt_am (erstellt_am)

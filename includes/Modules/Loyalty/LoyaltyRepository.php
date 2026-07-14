@@ -184,6 +184,18 @@ class LoyaltyRepository {
 	}
 
 	/**
+	 * Anzahl der Ledger-Einträge eines Nutzers.
+	 *
+	 * @param int $user_id Nutzer.
+	 * @return int
+	 */
+	public static function ledger_count( $user_id ) {
+		global $wpdb;
+		$t = self::table( 'points_ledger' );
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE user_id = %d", $user_id ) ); // phpcs:ignore
+	}
+
+	/**
 	 * Fällige, noch nicht verfügbare Punkte-Einträge.
 	 *
 	 * @return array

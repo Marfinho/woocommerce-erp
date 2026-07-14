@@ -29,10 +29,11 @@
 
 		// Einlösung anwenden.
 		$( document ).on( 'click', '#lw16-apply-redeem', function () {
+			var creditBalance = parseFloat( LW16Loyalty.creditBalance ) || 0;
 			var data = {
 				action: 'lw16_set_redeem',
 				nonce: LW16Loyalty.nonce,
-				use_credit: $( '#lw16-use-credit' ).is( ':checked' ) ? 1 : 0,
+				use_credit: $( '#lw16-use-credit' ).is( ':checked' ) ? creditBalance : 0,
 				use_points: parseInt( $( '#lw16-use-points' ).val(), 10 ) || 0
 			};
 			$.post( LW16Loyalty.ajaxUrl, data, function () {

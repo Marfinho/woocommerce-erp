@@ -13,6 +13,7 @@ use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\Calc;
 
 /**
  * Verdrahtet Referral-Tracking, Reward-Berechnung mit Betrugsprüfung,
@@ -102,7 +103,7 @@ class LoyaltyModule {
 		// --- Punkte: 1 Punkt pro vollem Euro (nur eingeloggte Kunden). ----
 		if ( $user_id ) {
 			$punkte_pro_euro = (float) Settings::get( 'punkte_pro_euro', 1 );
-			$punkte          = (int) floor( (float) $order->get_total() * $punkte_pro_euro );
+			$punkte          = Calc::points_for_amount( (float) $order->get_total(), $punkte_pro_euro );
 			if ( $punkte > 0 ) {
 				$wartezeit = (int) Settings::get( 'punkte_wartezeit_tage', 14 );
 				LoyaltyRepository::add_ledger(
@@ -142,15 +143,10 @@ class LoyaltyModule {
 		}
 		$referred_id = (int) $order->get_customer_id();
 
-		// --- Harte Regeln: automatisch blocken. --------------------------
-		// Werber == Geworbener (per User-ID).
-		if ( $referred_id && $referrer_id === $referred_id ) {
-			return;
-		}
-		// Per E-Mail-Abgleich.
+		// --- Harte Regeln: automatisch blocken (Selbstwerbung). ----------
 		$referrer      = get_userdata( $referrer_id );
 		$referred_mail = $order->get_billing_email();
-		if ( $referrer && strtolower( $referrer->user_email ) === strtolower( (string) $referred_mail ) ) {
+		if ( Calc::is_self_referral( $referrer_id, $referred_id, $referrer ? $referrer->user_email : '', (string) $referred_mail ) ) {
 			return;
 		}
 
@@ -187,16 +183,16 @@ class LoyaltyModule {
 	 * @return float
 	 */
 	protected function calculate_reward( $order ) {
-		$referral_prozent = (float) Settings::get( 'referral_prozent', 5 ) / 100;
-		$margin_fallback  = (float) Settings::get( 'referral_margin_fallback', 40 ) / 100;
+		$referral_prozent_wert = (float) Settings::get( 'referral_prozent', 5 );
+		$margin_fallback_wert  = (float) Settings::get( 'referral_margin_fallback', 40 );
 
 		$reward = 0.0;
 		foreach ( $order->get_items() as $item ) {
 			$line_total = (float) $item->get_total();
 			$product_id = $item->get_product_id();
 			$margin     = get_post_meta( $product_id, '_lw16_margin_percent', true );
-			$margin     = ( '' === $margin || null === $margin ) ? $margin_fallback : (float) $margin / 100;
-			$reward    += $line_total * $margin * $referral_prozent;
+			$margin     = ( '' === $margin || null === $margin ) ? $margin_fallback_wert : (float) $margin;
+			$reward    += Calc::referral_reward( $line_total, $margin, $referral_prozent_wert );
 		}
 		return round( $reward, 2 );
 	}

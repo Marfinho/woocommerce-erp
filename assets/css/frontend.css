@@ -51,6 +51,14 @@
 .lw16-skeleton { background: linear-gradient(90deg,#eee 25%,#f5f5f5 37%,#eee 63%); background-size: 400% 100%; animation: lw16-shimmer 1.4s ease infinite; border-radius: 6px; height: 16px; margin: 8px 0; }
 @keyframes lw16-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
 
+/* Pagination */
+.lw16-pagination { margin: 16px 0; }
+.lw16-pagination a, .lw16-pagination span { display: inline-block; padding: 4px 10px; margin: 0 2px; border: 1px solid #c3c4c7; border-radius: 4px; text-decoration: none; }
+.lw16-pagination .current { background: #2271b1; color: #fff; border-color: #2271b1; }
+
+.lw16-instock { color: #46b450; font-weight: 600; }
+.lw16-outofstock { color: #dc3232; font-weight: 600; }
+
 @media (max-width: 600px) {
 	.lw16-copy-row { flex-direction: column; }
 	.lw16-balances { flex-direction: column; }

@@ -90,8 +90,24 @@ Das Plugin ist **lauffähig** und setzt alle im Prompt beschriebenen Phasen 1–
   Belegfotos als JPEG ein (PNG-Belege erscheinen im Export ohne Bild).
 - Die DHL-Sendungsverfolgung erwartet einen API-Key in den Einstellungen; ohne
   Key ruht der Cron.
-- Automatisierte Tests (Phase 9, Punkt 31) sind noch nicht enthalten; die Logik
-  ist jedoch in testbare Repositories/Kalkulatoren gekapselt.
+- Die DHL-Sendungsverfolgung erwartet einen API-Key in den Einstellungen; ohne
+  Key ruht der Cron.
+
+## Tests
+
+Die reinen Rechenregeln sind in `Lindenweg16\Core\Calc` gekapselt und werden von
+den Modulen (Preiskalkulation, Loyalty, Rechnungen, EÜR) genutzt. Die Unit-Tests
+laufen ohne volle WordPress-Testsuite:
+
+```
+composer install
+composer test        # oder: php vendor/phpunit/phpunit/phpunit
+```
+
+Abgedeckt (Phase 9, Punkt 31): Reward-Berechnung, Selbstwerbungs-Schutz,
+Punkte-Rundung, Einlöse-Deckelung, EÜR-/Rücklagen-Rechnung, Preiskalkulations-
+Rundung, „Preis übernehmen"-/Referral-Margen-Konsistenz und die lückenlose
+Rechnungsnummern-Konvention (28 Tests).
 
 ## Sicherheit
 

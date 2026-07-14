@@ -147,6 +147,34 @@ class BelegRepository {
 	}
 
 	/**
+	 * Gesamtanzahl der Belege (für Pagination).
+	 *
+	 * @param array $args from, to.
+	 * @return int
+	 */
+	public static function count( array $args = array() ) {
+		global $wpdb;
+		$t = self::table();
+
+		$where  = '1=1';
+		$params = array();
+		if ( ! empty( $args['from'] ) ) {
+			$where   .= ' AND datum >= %s';
+			$params[] = $args['from'];
+		}
+		if ( ! empty( $args['to'] ) ) {
+			$where   .= ' AND datum <= %s';
+			$params[] = $args['to'];
+		}
+
+		$sql = "SELECT COUNT(*) FROM {$t} WHERE {$where}";
+		if ( $params ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( $sql, $params ) ); // phpcs:ignore
+		}
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t}" ); // phpcs:ignore
+	}
+
+	/**
 	 * Summe festgeschriebener Belege je EÜR-Kategorie in einem Zeitraum.
 	 *
 	 * @param string $from Startdatum (Y-m-d).

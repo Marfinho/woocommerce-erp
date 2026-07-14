@@ -26,6 +26,35 @@ class PricingModule {
 		add_action( 'admin_post_lw16_save_kalk_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'admin_post_lw16_save_kalk_produkt', array( $this, 'handle_save_produkt' ) );
 		add_action( 'admin_post_lw16_preis_uebernehmen', array( $this, 'handle_uebernehmen' ) );
+		add_action( 'admin_post_lw16_preis_alle_uebernehmen', array( $this, 'handle_alle_uebernehmen' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_kalk_data' ) );
+	}
+
+	/**
+	 * Kalkulationsdaten für Live-JS-Recalculation auf der Preiskalkulationsseite.
+	 *
+	 * @param string $hook Admin-Page-Hook.
+	 */
+	public function enqueue_kalk_data( $hook ) {
+		if ( false === strpos( (string) $hook, 'lw16' ) ) {
+			return;
+		}
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( 'lw16-preiskalkulation' !== $page ) {
+			return;
+		}
+		$s = PricingCalculator::settings();
+		wp_localize_script(
+			'lw16-admin',
+			'LW16Kalk',
+			array(
+				'druckerKostenH'  => PricingCalculator::drucker_kosten_pro_stunde(),
+				'filamentPreisKg' => (float) $s['filamentpreis_pro_kg'],
+				'stundenlohn'     => (float) $s['stundenlohn'],
+				'ausschuss'       => (float) $s['ausschuss_prozent'],
+				'zielmarge'       => (float) $s['zielmarge_module_prozent'],
+			)
+		);
 	}
 
 	/**
@@ -66,6 +95,11 @@ class PricingModule {
 
 		$this->render_module_table();
 		$this->render_set_table();
+
+		// "Alle übernehmen"-Button.
+		$alle_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_preis_alle_uebernehmen' ), 'lw16_alle_uebernehmen' );
+		echo '<hr><p><a class="button button-primary button-hero" href="' . esc_url( $alle_url ) . '" onclick="return confirm(\'' . esc_attr__( 'Alle Preise übernehmen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Alle Preise übernehmen', 'lindenweg16' ) . '</a>';
+		echo ' <span class="description">' . esc_html__( 'Schreibt den kalkulierten Preis und die Marge in alle WooCommerce-Produkte.', 'lindenweg16' ) . '</span></p>';
 
 		echo '</div>';
 	}
@@ -222,6 +256,38 @@ class PricingModule {
 		AuditLog::record( 'preis_uebernommen', 'produkt', $id, array( 'preis' => $preis, 'marge' => $marge ) );
 
 		$this->redirect( sprintf( /* translators: 1: Preis, 2: Marge */ __( 'Preis übernommen: %1$s € (Marge %2$s %%).', 'lindenweg16' ), number_format( $preis, 0, ',', '.' ), number_format( $marge, 1, ',', '.' ) ) );
+	}
+
+	/**
+	 * Alle kalkulierten Preise in die WooCommerce-Produkte schreiben.
+	 */
+	public function handle_alle_uebernehmen() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_alle_uebernehmen' );
+
+		$count    = 0;
+		$products = Repository::get_products();
+		foreach ( $products as $produkt ) {
+			if ( empty( $produkt->woo_product_id ) ) {
+				continue;
+			}
+			$wc = wc_get_product( $produkt->woo_product_id );
+			if ( ! $wc ) {
+				continue;
+			}
+			$calc  = 'set' === $produkt->typ ? PricingCalculator::calc_set( $produkt ) : PricingCalculator::calc_modul( $produkt );
+			$preis = (float) $calc['vorschlag'];
+			$wc->set_regular_price( (string) $preis );
+			$wc->save();
+			$marge = PricingCalculator::marge_prozent( $calc['kosten'], $preis );
+			update_post_meta( $produkt->woo_product_id, '_lw16_margin_percent', $marge );
+			AuditLog::record( 'preis_uebernommen', 'produkt', $produkt->id, array( 'preis' => $preis, 'marge' => $marge, 'batch' => true ) );
+			$count++;
+		}
+
+		$this->redirect( sprintf( /* translators: %d: Anzahl */ __( '%d Preise übernommen.', 'lindenweg16' ), $count ) );
 	}
 
 	/**

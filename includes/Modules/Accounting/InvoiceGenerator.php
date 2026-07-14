@@ -56,11 +56,10 @@ class InvoiceGenerator {
 		$modus = Settings::get( 'rechnungsnummer_modus', 'jahr' );
 		if ( 'durchlaufend' === $modus ) {
 			$laufnummer = 1 + (int) $wpdb->get_var( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() ); // phpcs:ignore
-			$nummer     = sprintf( 'RE-%05d', $laufnummer );
 		} else {
 			$laufnummer = 1 + (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() . ' WHERE jahr = %d', $jahr ) ); // phpcs:ignore
-			$nummer     = sprintf( '%d-%04d', $jahr, $laufnummer );
 		}
+		$nummer = \Lindenweg16\Core\Calc::rechnungsnummer( $modus, $jahr, $laufnummer );
 
 		// Datensatz zuerst anlegen (UNIQUE schützt vor Doppelnummern).
 		$ok = $wpdb->insert(

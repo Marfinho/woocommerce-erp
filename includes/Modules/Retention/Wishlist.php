@@ -94,7 +94,7 @@ class Wishlist {
 		if ( ! is_user_logged_in() ) {
 			return;
 		}
-		if ( ! ( is_shop() || is_product() || is_product_category() || is_account_page() ) ) {
+		if ( ! ( is_shop() || is_product() || is_product_category() || is_product_tag() || is_account_page() || is_woocommerce() ) ) {
 			return;
 		}
 		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
