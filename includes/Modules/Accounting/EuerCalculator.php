@@ -84,7 +84,7 @@ class EuerCalculator {
 		$gewinn = max( 0, $rep['gewinn'] );
 		return array(
 			'gewinn'    => $gewinn,
-			'ruecklage' => round( $gewinn * ( (float) $steuersatz_prozent / 100 ), 2 ),
+			'ruecklage' => \Lindenweg16\Core\Calc::ruecklage( $gewinn, $steuersatz_prozent ),
 		);
 	}
 }

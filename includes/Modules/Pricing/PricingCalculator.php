@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Pricing;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Inventory\Repository;
+use Lindenweg16\Core\Calc;
 
 /**
  * Kapselt die Kalkulationsformeln. Identische Logik wie im JS-Frontend,
@@ -59,11 +60,13 @@ class PricingCalculator {
 	 */
 	public static function drucker_kosten_pro_stunde() {
 		$s = self::settings();
-		$lebensdauer = (float) $s['drucker_lebensdauer_stunden'];
-		$abschreibung = $lebensdauer > 0 ? (float) $s['drucker_anschaffungspreis'] / $lebensdauer : 0;
-		return $abschreibung
-			+ (float) $s['drucker_ersatzteile_pro_stunde']
-			+ (float) $s['drucker_leistung_kw'] * (float) $s['strompreis_pro_kwh'];
+		return Calc::drucker_kosten_pro_stunde(
+			$s['drucker_anschaffungspreis'],
+			$s['drucker_lebensdauer_stunden'],
+			$s['drucker_ersatzteile_pro_stunde'],
+			$s['drucker_leistung_kw'],
+			$s['strompreis_pro_kwh']
+		);
 	}
 
 	/**
@@ -75,21 +78,24 @@ class PricingCalculator {
 	public static function calc_modul( $produkt ) {
 		$s = self::settings();
 
-		$filament_kosten = ( (float) $produkt->filament_gramm / 1000 ) * (float) $s['filamentpreis_pro_kg'];
-		$drucker_kosten  = self::drucker_kosten_pro_stunde() * (float) $produkt->druckzeit_stunden;
-		$arbeit_kosten   = ( (float) $produkt->arbeitszeit_minuten / 60 ) * (float) $s['stundenlohn'];
+		$kosten = Calc::modul_kosten(
+			array(
+				'filament_gramm'        => (float) $produkt->filament_gramm,
+				'filamentpreis_pro_kg'  => (float) $s['filamentpreis_pro_kg'],
+				'drucker_kosten_h'      => self::drucker_kosten_pro_stunde(),
+				'druckzeit_stunden'     => (float) $produkt->druckzeit_stunden,
+				'arbeitszeit_minuten'   => (float) $produkt->arbeitszeit_minuten,
+				'stundenlohn'           => (float) $s['stundenlohn'],
+				'verpackung_euro'       => (float) $produkt->verpackung_euro,
+				'zusatzmaterial_euro'   => (float) $produkt->zusatzmaterial_euro,
+				'ausschuss_prozent'     => (float) $s['ausschuss_prozent'],
+			)
+		);
 
-		$zwischensumme = $filament_kosten + $drucker_kosten + $arbeit_kosten
-			+ (float) $produkt->verpackung_euro + (float) $produkt->zusatzmaterial_euro;
-
-		$kosten = $zwischensumme * ( 1 + (float) $s['ausschuss_prozent'] / 100 );
-
-		$zielmarge = (float) $s['zielmarge_module_prozent'] / 100;
-		$vorschlag = $zielmarge < 1 ? $kosten / ( 1 - $zielmarge ) : $kosten;
-		$vorschlag = round( $vorschlag ); // ganze Euro.
+		$vorschlag = Calc::preis_aus_marge( $kosten, $s['zielmarge_module_prozent'] );
 
 		return array(
-			'kosten'    => round( $kosten, 2 ),
+			'kosten'    => $kosten,
 			'vorschlag' => $vorschlag,
 			'marge'     => self::marge_prozent( $kosten, $vorschlag ),
 		);
@@ -115,8 +121,7 @@ class PricingCalculator {
 			$kosten_summe += $mc['kosten'] * (float) $pos->menge;
 		}
 
-		$rabatt    = (float) $produkt->rabatt_prozent / 100;
-		$vorschlag = round( $einzelsumme * ( 1 - $rabatt ) );
+		$vorschlag = Calc::set_preis( $einzelsumme, $produkt->rabatt_prozent );
 
 		return array(
 			'einzelsumme' => round( $einzelsumme, 2 ),
@@ -160,9 +165,6 @@ class PricingCalculator {
 	 * @return float
 	 */
 	public static function marge_prozent( $kosten, $preis ) {
-		if ( $preis <= 0 ) {
-			return 0.0;
-		}
-		return round( ( $preis - $kosten ) / $preis * 100, 2 );
+		return Calc::marge_prozent( $kosten, $preis );
 	}
 }

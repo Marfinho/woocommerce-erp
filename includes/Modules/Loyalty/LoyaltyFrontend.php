@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Loyalty;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\Calc;
 
 /**
  * Bindet Guthaben-/Punkte-Einlösung im Checkout ein und stellt den
@@ -253,16 +254,10 @@ class LoyaltyFrontend {
 		$einloesewert = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
 		$credit       = isset( $session['credit'] ) ? (float) $session['credit'] : 0;
 		$points       = isset( $session['points'] ) ? (int) $session['points'] : 0;
-		$points_euro  = floor( $points / $einloesewert * 100 ) / 100;
-
-		$rabatt = $credit + $points_euro;
-		if ( $rabatt <= 0 ) {
-			return;
-		}
+		$points_euro  = Calc::points_to_euro( $points, $einloesewert );
 
 		// Deckeln auf die Warenkorbsumme (nie unter 0 €).
-		$summe  = (float) $cart->get_subtotal();
-		$rabatt = min( $rabatt, $summe );
+		$rabatt = Calc::cap_redemption( $credit + $points_euro, (float) $cart->get_subtotal() );
 		if ( $rabatt > 0 ) {
 			$cart->add_fee( __( 'Guthaben/Punkte eingelöst', 'lindenweg16' ), -1 * $rabatt );
 		}
