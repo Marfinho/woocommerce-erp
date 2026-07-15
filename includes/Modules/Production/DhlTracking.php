@@ -20,8 +20,10 @@ class DhlTracking {
 	public function register() {
 		add_action( Scheduler::HOOK_DHL_TRACKING, array( $this, 'refresh_all' ) );
 
-		// Mein-Konto: Tracking in der Bestell-Detailansicht.
+		// Mein-Konto: Tracking in der Bestell-Detailansicht und Sendungsseite.
 		add_action( 'woocommerce_order_details_after_order_table', array( $this, 'render_tracking' ) );
+		add_action( 'woocommerce_gzd_shipment_details', array( $this, 'render_tracking_for_shipment' ), 5 );
+		add_action( 'woocommerce_gzd_view_shipment', array( $this, 'render_tracking_for_shipment' ), 5 );
 
 		// Tracking-Status in der Bestell-Übersicht (Bestellliste).
 		add_filter( 'woocommerce_my_account_my_orders_columns', array( $this, 'add_tracking_column' ) );
@@ -32,6 +34,13 @@ class DhlTracking {
 
 		// Externes DHL-Plugin Tracking-Anzeige im Kundenkonto entfernen.
 		add_action( 'wp', array( $this, 'remove_external_dhl_tracking' ) );
+		add_action( 'template_redirect', array( $this, 'remove_external_dhl_tracking' ) );
+		add_action( 'woocommerce_before_account_orders', array( $this, 'remove_external_dhl_tracking_late' ) );
+		add_action( 'woocommerce_order_details_before_order_table', array( $this, 'remove_external_dhl_tracking_late' ) );
+
+		// Externe Tracking-Spalten und Actions in der Bestellliste entfernen.
+		add_filter( 'woocommerce_my_account_my_orders_columns', array( $this, 'remove_external_tracking_columns' ), 999 );
+		add_filter( 'woocommerce_my_account_my_orders_actions', array( $this, 'remove_external_tracking_actions' ), 999, 2 );
 
 		// Tracking-Nummer aus DHL-Label-Plugin übernehmen.
 		add_action( 'woocommerce_order_status_changed', array( $this, 'maybe_capture_tracking' ), 10, 3 );
@@ -43,69 +52,161 @@ class DhlTracking {
 	}
 
 	public function enqueue_frontend_assets() {
-		if ( is_account_page() || is_order_received_page() ) {
+		if ( is_account_page() || is_order_received_page() || $this->is_view_shipment_page() ) {
 			wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
 		}
 	}
 
 	public function remove_external_dhl_tracking() {
-		if ( ! is_account_page() ) {
+		if ( ! is_account_page() && ! $this->is_view_shipment_page() ) {
 			return;
 		}
+		$this->strip_external_tracking_hooks();
+	}
 
+	public function remove_external_dhl_tracking_late() {
+		$this->strip_external_tracking_hooks();
+	}
+
+	protected function is_view_shipment_page() {
+		global $wp;
+		if ( isset( $wp->query_vars['view-shipment'] ) ) {
+			return true;
+		}
+		if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( $_SERVER['REQUEST_URI'], 'view-shipment' ) !== false ) {
+			return true;
+		}
+		return false;
+	}
+
+	protected function strip_external_tracking_hooks() {
 		// DHL for WooCommerce (PR DHL).
 		if ( function_exists( 'PR_DHL' ) ) {
 			$dhl = PR_DHL();
 			if ( is_object( $dhl ) && isset( $dhl->front_end ) ) {
 				remove_action( 'woocommerce_order_details_after_order_table', array( $dhl->front_end, 'display_tracking_info' ) );
 				remove_action( 'woocommerce_order_details_after_order_table', array( $dhl->front_end, 'add_tracking_info' ) );
+				remove_action( 'woocommerce_view_order', array( $dhl->front_end, 'display_tracking_info' ) );
+				remove_action( 'woocommerce_view_order', array( $dhl->front_end, 'add_tracking_info' ) );
 			}
 		}
 
-		// DHL Paket (Flexible Shipping DHL).
-		$this->remove_hook_by_class( 'woocommerce_order_details_after_order_table', 'display_tracking', 'tracking' );
-		$this->remove_hook_by_class( 'woocommerce_order_details_after_order_table', 'render_tracking', 'dhl' );
+		$hooks_to_clean = array(
+			'woocommerce_order_details_after_order_table',
+			'woocommerce_order_details_before_order_table',
+			'woocommerce_view_order',
+			'woocommerce_after_order_details',
+			'woocommerce_order_details_after_order_table_items',
+			'woocommerce_order_item_meta_end',
+			'woocommerce_email_after_order_table',
+			'woocommerce_gzd_shipment_details',
+			'woocommerce_gzd_shipment_details_after_table',
+			'woocommerce_gzd_view_shipment',
+			'woocommerce_gzd_shipments_after_order_table',
+		);
 
-		// Germanized DHL tracking.
-		$this->remove_hook_by_class( 'woocommerce_order_details_after_order_table', 'display_shipment_tracking', 'shipment' );
+		$keywords = array( 'tracking', 'shipment', 'dhl', 'sendungsverfolgung', 'versand' );
 
-		// Allgemein: Alle fremden Callbacks am selben Hook mit "tracking" / "dhl" / "shipment" im Methodennamen.
 		global $wp_filter;
-		if ( empty( $wp_filter['woocommerce_order_details_after_order_table'] ) ) {
-			return;
-		}
-		foreach ( $wp_filter['woocommerce_order_details_after_order_table']->callbacks as $priority => $hooks ) {
-			foreach ( $hooks as $key => $hook ) {
-				if ( is_array( $hook['function'] ) && is_object( $hook['function'][0] ) ) {
-					$class  = get_class( $hook['function'][0] );
-					$method = $hook['function'][1];
-					if ( $hook['function'][0] === $this ) {
+		foreach ( $hooks_to_clean as $tag ) {
+			if ( empty( $wp_filter[ $tag ] ) ) {
+				continue;
+			}
+			foreach ( $wp_filter[ $tag ]->callbacks as $priority => $hooks ) {
+				foreach ( $hooks as $key => $hook ) {
+					if ( $this->is_own_callback( $hook['function'] ) ) {
 						continue;
 					}
-					if ( stripos( $class . $method, 'tracking' ) !== false || stripos( $class . $method, 'shipment' ) !== false ) {
-						unset( $wp_filter['woocommerce_order_details_after_order_table']->callbacks[ $priority ][ $key ] );
+					if ( $this->callback_matches_keywords( $hook['function'], $keywords ) ) {
+						unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $key ] );
+					}
+				}
+			}
+		}
+
+		// Germanized: Shipment-Tabelle auf der Bestelldetailseite ausblenden.
+		foreach ( array( 'woocommerce_order_details_after_order_table', 'woocommerce_view_order' ) as $tag ) {
+			if ( empty( $wp_filter[ $tag ] ) ) {
+				continue;
+			}
+			foreach ( $wp_filter[ $tag ]->callbacks as $priority => $hooks ) {
+				foreach ( $hooks as $key => $hook ) {
+					if ( $this->is_own_callback( $hook['function'] ) ) {
+						continue;
+					}
+					if ( is_array( $hook['function'] ) && is_object( $hook['function'][0] ) ) {
+						$class = strtolower( get_class( $hook['function'][0] ) );
+						if ( strpos( $class, 'germanized' ) !== false || strpos( $class, 'gzd' ) !== false ) {
+							$method = strtolower( $hook['function'][1] );
+							if ( strpos( $method, 'shipment' ) !== false || strpos( $method, 'tracking' ) !== false ) {
+								unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $key ] );
+							}
+						}
 					}
 				}
 			}
 		}
 	}
 
-	protected function remove_hook_by_class( $tag, $method_fragment, $class_fragment ) {
-		global $wp_filter;
-		if ( empty( $wp_filter[ $tag ] ) ) {
-			return;
+	protected function is_own_callback( $function ) {
+		if ( is_array( $function ) && is_object( $function[0] ) ) {
+			return $function[0] === $this;
 		}
-		foreach ( $wp_filter[ $tag ]->callbacks as $priority => $hooks ) {
-			foreach ( $hooks as $key => $hook ) {
-				if ( is_array( $hook['function'] ) && is_object( $hook['function'][0] ) ) {
-					$class  = strtolower( get_class( $hook['function'][0] ) );
-					$method = strtolower( $hook['function'][1] );
-					if ( strpos( $method, $method_fragment ) !== false && strpos( $class, $class_fragment ) !== false ) {
-						unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $key ] );
-					}
+		return false;
+	}
+
+	protected function callback_matches_keywords( $function, $keywords ) {
+		$haystack = '';
+		if ( is_array( $function ) && is_object( $function[0] ) ) {
+			$haystack = strtolower( get_class( $function[0] ) . $function[1] );
+		} elseif ( is_array( $function ) && is_string( $function[0] ) ) {
+			$haystack = strtolower( $function[0] . $function[1] );
+		} elseif ( is_string( $function ) ) {
+			$haystack = strtolower( $function );
+		}
+		if ( ! $haystack ) {
+			return false;
+		}
+		foreach ( $keywords as $kw ) {
+			if ( strpos( $haystack, $kw ) !== false ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	public function remove_external_tracking_actions( $actions, $order ) {
+		$external_keys = array( 'shipment', 'tracking', 'dhl', 'sendungsverfolgung', 'view-shipment' );
+		foreach ( $actions as $key => $action ) {
+			foreach ( $external_keys as $kw ) {
+				if ( stripos( $key, $kw ) !== false ) {
+					unset( $actions[ $key ] );
+					break;
+				}
+				if ( isset( $action['url'] ) && stripos( $action['url'], 'view-shipment' ) !== false ) {
+					unset( $actions[ $key ] );
+					break;
 				}
 			}
 		}
+		return $actions;
+	}
+
+	public function remove_external_tracking_columns( $columns ) {
+		$external_keys = array( 'shipment', 'tracking', 'dhl', 'sendungsverfolgung' );
+		foreach ( $columns as $key => $label ) {
+			if ( 'lw16-tracking' === $key ) {
+				continue;
+			}
+			foreach ( $external_keys as $kw ) {
+				if ( stripos( $key, $kw ) !== false ) {
+					unset( $columns[ $key ] );
+					break;
+				}
+			}
+		}
+		return $columns;
 	}
 
 	public function add_tracking_column( $columns ) {
@@ -477,6 +578,43 @@ class DhlTracking {
 			return 1;
 		}
 		return 1;
+	}
+
+	/**
+	 * Tracking auf der Germanized view-shipment Seite.
+	 */
+	public function render_tracking_for_shipment( $shipment = null ) {
+		$this->strip_external_tracking_hooks();
+
+		$order_id = 0;
+		if ( is_object( $shipment ) && method_exists( $shipment, 'get_order_id' ) ) {
+			$order_id = $shipment->get_order_id();
+		} elseif ( is_object( $shipment ) && method_exists( $shipment, 'get_order' ) ) {
+			$parent = $shipment->get_order();
+			$order_id = $parent ? $parent->get_id() : 0;
+		}
+
+		if ( ! $order_id ) {
+			global $wp;
+			if ( isset( $wp->query_vars['view-shipment'] ) ) {
+				$shipment_id = absint( $wp->query_vars['view-shipment'] );
+				if ( $shipment_id && function_exists( 'wc_gzd_get_shipment' ) ) {
+					$s = wc_gzd_get_shipment( $shipment_id );
+					if ( $s ) {
+						$order_id = $s->get_order_id();
+					}
+				}
+			}
+		}
+
+		if ( ! $order_id ) {
+			return;
+		}
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+		$this->render_tracking( $order );
 	}
 
 	/**
