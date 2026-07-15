@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '2';
+	const DB_VERSION = '3';
 
 	/**
 	 * Aktivierungsroutine.
@@ -424,6 +424,42 @@ class Installer {
 			KEY aktion (aktion),
 			KEY objekt (objekt_typ, objekt_id),
 			KEY erstellt_am (erstellt_am)
+		) {$charset_collate};";
+
+		// --- Modul 8: Marktkasse (POS) -----------------------------------
+		$tables[] = "CREATE TABLE {$p}kasse_tage (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			markt_name VARCHAR(255) NOT NULL,
+			datum DATE NOT NULL,
+			kassenbestand_anfang DECIMAL(12,2) NOT NULL DEFAULT 0,
+			kassenbestand_ende DECIMAL(12,2) NULL,
+			umsatz_gesamt DECIMAL(12,2) NOT NULL DEFAULT 0,
+			notiz TEXT NULL,
+			beleg_id BIGINT UNSIGNED NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'offen',
+			erstellt_von BIGINT UNSIGNED NULL,
+			erstellt_am DATETIME NOT NULL,
+			abgeschlossen_am DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY datum (datum),
+			KEY status (status),
+			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}kasse_positionen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			tag_id BIGINT UNSIGNED NOT NULL,
+			produkt_id BIGINT UNSIGNED NULL,
+			artikel_name VARCHAR(255) NOT NULL,
+			menge INT NOT NULL DEFAULT 1,
+			einzelpreis DECIMAL(12,2) NOT NULL DEFAULT 0,
+			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			erstellt_am DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY tag_id (tag_id),
+			KEY produkt_id (produkt_id),
+			KEY storniert (storniert)
 		) {$charset_collate};";
 
 		foreach ( $tables as $sql ) {

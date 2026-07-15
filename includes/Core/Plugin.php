@@ -20,6 +20,7 @@ use Lindenweg16\Modules\Pricing\PricingModule;
 use Lindenweg16\Modules\Production\ProductionModule;
 use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
+use Lindenweg16\Modules\POS\POSModule;
 
 /**
  * Singleton, das den Lebenszyklus des Plugins verwaltet.
@@ -82,6 +83,7 @@ class Plugin {
 			'production' => new ProductionModule(),
 			'retention'  => new RetentionModule(),
 			'support'    => new SupportModule(),
+			'pos'        => new POSModule(),
 		);
 
 		foreach ( $this->modules as $module ) {
