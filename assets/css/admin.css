@@ -48,6 +48,8 @@
 	min-width: 260px;
 }
 .lw16-card-highlight { border-left: 4px solid #2271b1; }
+.lw16-card-warn { border-left: 4px solid #dc3232; background: #fef7f7; }
+.lw16-card-success { border-left: 4px solid #46b450; }
 .lw16-card .lw16-big { font-size: 30px; font-weight: 700; margin: 6px 0; }
 .lw16-card .lw16-sub { margin: 2px 0; }
 .lw16-card .lw16-hint { color: #646970; font-size: 12px; margin-top: 8px; }

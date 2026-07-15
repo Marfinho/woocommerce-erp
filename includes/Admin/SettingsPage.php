@@ -61,6 +61,10 @@ class SettingsPage {
 				'review_bonus_punkte'       => array( __( 'Bonus-Punkte für Bewertung', 'lindenweg16' ), 'number' ),
 				'review_min_zeichen'        => array( __( 'Mindestlänge Bewertung (Zeichen)', 'lindenweg16' ), 'number' ),
 			),
+			__( 'E-Mail', 'lindenweg16' )           => array(
+				'email_absender_name' => array( __( 'Absendername', 'lindenweg16' ), 'text' ),
+				'email_footer'        => array( __( 'E-Mail-Footer-Text', 'lindenweg16' ), 'text' ),
+			),
 			__( 'Reporting & DHL', 'lindenweg16' ) => array(
 				'export_email'         => array( __( 'E-Mail für Datenexport', 'lindenweg16' ), 'text' ),
 				'dhl_tracking_api_key' => array( __( 'DHL Sendungsverfolgung API-Key', 'lindenweg16' ), 'text' ),

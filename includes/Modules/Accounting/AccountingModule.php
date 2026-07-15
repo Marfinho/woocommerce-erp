@@ -21,7 +21,6 @@ class AccountingModule {
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_action( 'lw16_render_dashboard', array( $this, 'render_dashboard' ) );
 		add_action( 'lw16_render_page_lw16_buchhaltung', array( $this, 'render_admin' ) );
 
 		add_action( 'admin_post_lw16_save_beleg', array( $this, 'handle_save_beleg' ) );
@@ -62,35 +61,6 @@ class AccountingModule {
 	 */
 	public function generate_invoice( $order_id ) {
 		InvoiceGenerator::generate_for_order( (int) $order_id );
-	}
-
-	/* --------------------------------------------------------------------
-	 * Dashboard
-	 * ------------------------------------------------------------------ */
-
-	/**
-	 * Dashboard mit Steuer-Rücklage-Empfehlung rendern.
-	 */
-	public function render_dashboard() {
-		$steuersatz = (float) Settings::get( 'steuersatz_ruecklage', 25 );
-		$ruecklage  = EuerCalculator::ruecklage( $steuersatz );
-
-		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Lindenweg16 Dashboard', 'lindenweg16' ) . '</h1>';
-
-		echo '<div class="lw16-cards">';
-		printf(
-			'<div class="lw16-card lw16-card-highlight"><h2>%s</h2><p class="lw16-big">%s</p><p class="lw16-sub">%s <strong>%s</strong></p><p class="lw16-hint">%s</p></div>',
-			esc_html__( 'Steuer-Rücklage (laufendes Jahr)', 'lindenweg16' ),
-			esc_html( self::euro( $ruecklage['ruecklage'] ) ),
-			esc_html__( 'Aktueller Gewinn:', 'lindenweg16' ),
-			esc_html( self::euro( $ruecklage['gewinn'] ) ),
-			esc_html__( 'Richtwert – ersetzt keine steuerliche Beratung, dient nur der eigenen Orientierung.', 'lindenweg16' )
-		);
-		echo '</div>';
-
-		do_action( 'lw16_dashboard_widgets' );
-
-		echo '</div>';
 	}
 
 	/* --------------------------------------------------------------------

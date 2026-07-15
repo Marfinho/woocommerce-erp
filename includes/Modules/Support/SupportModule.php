@@ -440,6 +440,9 @@ class SupportModule {
 		echo '</tbody></table>';
 		echo '<p class="description">' . esc_html__( 'Reine Lese-Ansicht als Grundlage für persönliche Gesten.', 'lindenweg16' ) . '</p>';
 
+		// Bestellstatistiken.
+		$this->render_order_statistics();
+
 		// Datenexport.
 		echo '<h2>' . esc_html__( 'Datensicherung', 'lindenweg16' ) . '</h2>';
 		$export_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_export_now' ), 'lw16_export_now' );
@@ -450,6 +453,53 @@ class SupportModule {
 		$this->render_audit_log();
 
 		echo '</div>';
+	}
+
+	/**
+	 * Bestellstatistiken: Tages-/Wochen-/Monatsumsatz.
+	 */
+	protected function render_order_statistics() {
+		$now   = current_time( 'timestamp' );
+		$today = gmdate( 'Y-m-d', $now );
+		$week  = gmdate( 'Y-m-d', $now - 7 * DAY_IN_SECONDS );
+		$month = gmdate( 'Y-m-d', $now - 30 * DAY_IN_SECONDS );
+
+		$periods = array(
+			__( 'Heute', 'lindenweg16' )           => $today,
+			__( 'Letzte 7 Tage', 'lindenweg16' )   => $week,
+			__( 'Letzte 30 Tage', 'lindenweg16' )  => $month,
+		);
+
+		echo '<h2>' . esc_html__( 'Bestellstatistiken', 'lindenweg16' ) . '</h2>';
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Zeitraum', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Bestellungen', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Umsatz', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Durchschnitt', 'lindenweg16' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $periods as $label => $since ) {
+			$orders = wc_get_orders( array(
+				'status'       => array( 'wc-completed', 'wc-processing' ),
+				'date_created' => '>=' . strtotime( $since ),
+				'limit'        => -1,
+				'return'       => 'objects',
+			) );
+			$count  = count( $orders );
+			$umsatz = 0;
+			foreach ( $orders as $o ) {
+				$umsatz += (float) $o->get_total();
+			}
+			$avg = $count > 0 ? $umsatz / $count : 0;
+
+			echo '<tr>';
+			echo '<td><strong>' . esc_html( $label ) . '</strong></td>';
+			echo '<td>' . (int) $count . '</td>';
+			echo '<td>' . esc_html( number_format( $umsatz, 2, ',', '.' ) ) . ' &euro;</td>';
+			echo '<td>' . esc_html( number_format( $avg, 2, ',', '.' ) ) . ' &euro;</td>';
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
 	}
 
 	/**

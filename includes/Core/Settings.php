@@ -53,6 +53,9 @@ class Settings {
 			// Reporting.
 			'digest_wochentag'          => 1, // Montag.
 			'export_email'              => get_bloginfo( 'admin_email' ),
+			// E-Mail.
+			'email_absender_name'       => get_bloginfo( 'name' ),
+			'email_footer'              => '',
 			// DHL Tracking.
 			'dhl_tracking_api_key'      => '',
 			'dhl_tracking_sandbox'      => 1,

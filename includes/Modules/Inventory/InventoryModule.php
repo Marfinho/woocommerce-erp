@@ -42,6 +42,18 @@ class InventoryModule {
 		add_action( 'admin_post_lw16_create_pickliste', array( $this, 'handle_create_pickliste' ) );
 		add_action( 'admin_post_lw16_complete_pickliste', array( $this, 'handle_complete_pickliste' ) );
 		add_action( 'admin_post_lw16_download_pickliste', array( $this, 'handle_download_pickliste' ) );
+
+		// Retouren.
+		add_action( 'admin_post_lw16_retoure', array( $this, 'handle_retoure' ) );
+
+		// WooCommerce-Produktsync.
+		add_action( 'admin_post_lw16_wc_import', array( $this, 'handle_wc_import' ) );
+
+		// Inventur.
+		add_action( 'admin_post_lw16_inventur', array( $this, 'handle_inventur' ) );
+
+		// Täglicher Bestandsreport.
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_STOCK, array( $this, 'send_daily_stock_report' ) );
 	}
 
 	/**
@@ -94,7 +106,11 @@ class InventoryModule {
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'produktion', $base ) ), 'produktion' === $view ? 'active' : '', esc_html__( 'Produktion', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'lagerorte', $base ) ), 'lagerorte' === $view ? 'active' : '', esc_html__( 'Lagerorte', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'picklisten', $base ) ), 'picklisten' === $view ? 'active' : '', esc_html__( 'Picklisten', 'lindenweg16' ) );
-		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'bewegungen', $base ) ), 'bewegungen' === $view ? 'active' : '', esc_html__( 'Bewegungen', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'bewegungen', $base ) ), 'bewegungen' === $view ? 'active' : '', esc_html__( 'Bewegungen', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'retouren', $base ) ), 'retouren' === $view ? 'active' : '', esc_html__( 'Retouren', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'wc_import', $base ) ), 'wc_import' === $view ? 'active' : '', esc_html__( 'WC Import', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'inventur', $base ) ), 'inventur' === $view ? 'active' : '', esc_html__( 'Inventur', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'historie', $base ) ), 'historie' === $view ? 'active' : '', esc_html__( 'Historie', 'lindenweg16' ) );
 		echo '</nav>';
 
 		if ( isset( $_GET['msg'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
@@ -131,6 +147,18 @@ class InventoryModule {
 				break;
 			case 'bewegungen':
 				$this->render_movements();
+				break;
+			case 'retouren':
+				$this->render_retouren();
+				break;
+			case 'wc_import':
+				$this->render_wc_import();
+				break;
+			case 'inventur':
+				$this->render_inventur();
+				break;
+			case 'historie':
+				$this->render_historie();
 				break;
 			default:
 				$this->render_overview();
@@ -1088,6 +1116,389 @@ class InventoryModule {
 		</html>
 		<?php
 		exit;
+	}
+
+	/* --------------------------------------------------------------------
+	 * Retouren
+	 * ------------------------------------------------------------------ */
+
+	protected function render_retouren() {
+		$orders = wc_get_orders( array(
+			'status' => array( 'wc-completed' ),
+			'limit'  => 50,
+			'return' => 'objects',
+			'orderby' => 'date',
+			'order'   => 'DESC',
+		) );
+		?>
+		<h2><?php esc_html_e( 'Retoure verbuchen', 'lindenweg16' ); ?></h2>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_retoure">
+			<?php wp_nonce_field( 'lw16_retoure' ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Bestellung', 'lindenweg16' ); ?></th><td>
+					<select name="order_id" id="lw16-ret-order" required>
+						<option value=""><?php esc_html_e( '— Bestellung wählen —', 'lindenweg16' ); ?></option>
+						<?php foreach ( $orders as $o ) :
+							$kunde = trim( $o->get_billing_first_name() . ' ' . $o->get_billing_last_name() );
+							$datum  = $o->get_date_created() ? $o->get_date_created()->date_i18n( 'd.m.Y' ) : '';
+						?>
+						<option value="<?php echo (int) $o->get_id(); ?>"><?php echo esc_html( '#' . $o->get_order_number() . ' – ' . $kunde . ' (' . $datum . ')' ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Artikel & Mengen', 'lindenweg16' ); ?></th><td>
+					<p class="description"><?php esc_html_e( 'Gib die Retourenmengen je Produkt ein (nur Produkte mit ERP-Verknüpfung werden zurückgebucht).', 'lindenweg16' ); ?></p>
+					<div id="lw16-ret-items">
+						<?php
+						$all_products = Repository::get_products();
+						foreach ( $all_products as $p ) :
+						?>
+						<label style="display:block;margin:4px 0">
+							<input type="number" step="any" min="0" name="retoure_menge[<?php echo (int) $p->id; ?>]" value="0" class="small-text">
+							<?php echo esc_html( $p->name . ' (' . $p->typ . ', ' . $p->basis_einheit . ')' ); ?>
+						</label>
+						<?php endforeach; ?>
+					</div>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Grund', 'lindenweg16' ); ?></th><td>
+					<input type="text" name="grund" class="regular-text" placeholder="<?php esc_attr_e( 'z. B. Defekt, Falschlieferung', 'lindenweg16' ); ?>">
+				</td></tr>
+			</tbody></table>
+			<?php submit_button( __( 'Retoure buchen', 'lindenweg16' ) ); ?>
+		</form>
+
+		<?php
+		global $wpdb;
+		$tb = Repository::table( 'lagerbewegung' );
+		$tp = Repository::table( 'produkte' );
+		$recent = $wpdb->get_results( $wpdb->prepare(
+			"SELECT b.*, p.name AS produkt_name, p.basis_einheit FROM {$tb} b LEFT JOIN {$tp} p ON p.id = b.produkt_id WHERE b.typ = 'retoure' ORDER BY b.id DESC LIMIT %d", 20
+		) ); // phpcs:ignore
+		if ( $recent ) :
+		?>
+		<h3><?php esc_html_e( 'Letzte Retouren', 'lindenweg16' ); ?></h3>
+		<table class="widefat striped"><thead><tr>
+			<th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th>
+			<th><?php esc_html_e( 'Produkt', 'lindenweg16' ); ?></th>
+			<th><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></th>
+			<th><?php esc_html_e( 'Referenz', 'lindenweg16' ); ?></th>
+		</tr></thead><tbody>
+		<?php foreach ( $recent as $r ) : ?>
+			<tr>
+				<td><?php echo esc_html( $r->erstellt_am ); ?></td>
+				<td><?php echo esc_html( $r->produkt_name ); ?></td>
+				<td><?php echo esc_html( $this->fmt( $r->menge ) . ' ' . $r->basis_einheit ); ?></td>
+				<td><?php echo esc_html( (string) $r->referenz ); ?></td>
+			</tr>
+		<?php endforeach; ?>
+		</tbody></table>
+		<?php endif;
+	}
+
+	public function handle_retoure() {
+		$this->guard( 'lw16_retoure' );
+
+		$order_id = (int) ( $_POST['order_id'] ?? 0 );
+		$grund    = sanitize_text_field( wp_unslash( $_POST['grund'] ?? '' ) );
+		$mengen   = isset( $_POST['retoure_menge'] ) && is_array( $_POST['retoure_menge'] ) ? wp_unslash( $_POST['retoure_menge'] ) : array();
+		$referenz = sprintf( __( 'Retoure Bestellung #%d', 'lindenweg16' ), $order_id );
+		if ( $grund ) {
+			$referenz .= ' – ' . $grund;
+		}
+
+		$gebucht = 0;
+		foreach ( $mengen as $produkt_id => $menge ) {
+			$menge = (float) $menge;
+			if ( $menge <= 0 ) {
+				continue;
+			}
+			StockManager::record_movement( (int) $produkt_id, abs( $menge ), 'retoure', array( 'referenz' => $referenz ) );
+			$gebucht++;
+		}
+
+		$msg = $gebucht > 0
+			? sprintf( __( 'Retoure gebucht: %d Produkte zurückgebucht.', 'lindenweg16' ), $gebucht )
+			: __( 'Keine Mengen angegeben.', 'lindenweg16' );
+		$this->redirect( 'lager&view=retouren', $msg );
+	}
+
+	/* --------------------------------------------------------------------
+	 * WooCommerce-Produktimport
+	 * ------------------------------------------------------------------ */
+
+	protected function render_wc_import() {
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			echo '<p>' . esc_html__( 'WooCommerce nicht verfügbar.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		$wc_products = wc_get_products( array( 'limit' => 200, 'status' => 'publish', 'orderby' => 'title', 'order' => 'ASC', 'return' => 'objects' ) );
+
+		$erp_woo_ids = array();
+		foreach ( Repository::get_products() as $p ) {
+			if ( $p->woo_product_id ) {
+				$erp_woo_ids[] = (int) $p->woo_product_id;
+			}
+		}
+
+		$unlinked = array();
+		foreach ( $wc_products as $wc ) {
+			if ( ! in_array( $wc->get_id(), $erp_woo_ids, true ) ) {
+				$unlinked[] = $wc;
+			}
+		}
+		?>
+		<h2><?php esc_html_e( 'WooCommerce-Produkte importieren', 'lindenweg16' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Alle WooCommerce-Produkte, die noch nicht im ERP-Lager verknüpft sind. Ausgewählte Produkte werden als Modul angelegt.', 'lindenweg16' ); ?></p>
+
+		<?php if ( empty( $unlinked ) ) : ?>
+			<p><?php esc_html_e( 'Alle WooCommerce-Produkte sind bereits im ERP verknüpft.', 'lindenweg16' ); ?></p>
+		<?php else : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_wc_import">
+			<?php wp_nonce_field( 'lw16_wc_import' ); ?>
+			<table class="widefat striped"><thead><tr>
+				<th style="width:30px"><input type="checkbox" id="lw16-import-all"></th>
+				<th><?php esc_html_e( 'WC-ID', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Produktname', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Preis', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Typ im ERP', 'lindenweg16' ); ?></th>
+			</tr></thead><tbody>
+			<?php foreach ( $unlinked as $wc ) : ?>
+				<tr>
+					<td><input type="checkbox" name="import_ids[]" value="<?php echo (int) $wc->get_id(); ?>" class="lw16-import-check"></td>
+					<td><?php echo (int) $wc->get_id(); ?></td>
+					<td><?php echo esc_html( $wc->get_name() ); ?></td>
+					<td><?php echo esc_html( $wc->get_price() ? number_format( (float) $wc->get_price(), 2, ',', '.' ) . ' €' : '–' ); ?></td>
+					<td>
+						<select name="import_typ[<?php echo (int) $wc->get_id(); ?>]">
+							<option value="modul"><?php esc_html_e( 'Modul', 'lindenweg16' ); ?></option>
+							<option value="set"><?php esc_html_e( 'Set', 'lindenweg16' ); ?></option>
+							<option value="rohmaterial"><?php esc_html_e( 'Rohmaterial', 'lindenweg16' ); ?></option>
+						</select>
+					</td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody></table>
+			<?php submit_button( __( 'Ausgewählte importieren', 'lindenweg16' ) ); ?>
+		</form>
+		<script>
+		document.getElementById('lw16-import-all').addEventListener('change',function(){
+			var cbs=document.querySelectorAll('.lw16-import-check');
+			for(var i=0;i<cbs.length;i++) cbs[i].checked=this.checked;
+		});
+		</script>
+		<?php endif;
+	}
+
+	public function handle_wc_import() {
+		$this->guard( 'lw16_wc_import' );
+
+		$ids  = isset( $_POST['import_ids'] ) && is_array( $_POST['import_ids'] ) ? array_map( 'intval', $_POST['import_ids'] ) : array();
+		$typs = isset( $_POST['import_typ'] ) && is_array( $_POST['import_typ'] ) ? wp_unslash( $_POST['import_typ'] ) : array();
+
+		$count = 0;
+		foreach ( $ids as $wc_id ) {
+			$wc = wc_get_product( $wc_id );
+			if ( ! $wc ) {
+				continue;
+			}
+			$typ = isset( $typs[ $wc_id ] ) ? sanitize_key( $typs[ $wc_id ] ) : 'modul';
+			if ( ! in_array( $typ, array( 'set', 'modul', 'rohmaterial' ), true ) ) {
+				$typ = 'modul';
+			}
+			Repository::create_product( array(
+				'name'           => sanitize_text_field( $wc->get_name() ),
+				'typ'            => $typ,
+				'woo_product_id' => $wc_id,
+				'basis_einheit'  => 'stueck',
+				'mindestbestand' => 0,
+			) );
+			$count++;
+		}
+
+		$this->redirect( 'lager&view=wc_import', sprintf( __( '%d Produkte importiert.', 'lindenweg16' ), $count ) );
+	}
+
+	/* --------------------------------------------------------------------
+	 * Inventur
+	 * ------------------------------------------------------------------ */
+
+	protected function render_inventur() {
+		$produkte = Repository::get_products();
+		?>
+		<h2><?php esc_html_e( 'Inventur durchführen', 'lindenweg16' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Trage die tatsächlichen Bestände ein. Die Differenz wird automatisch als Korrektur-Bewegung gebucht.', 'lindenweg16' ); ?></p>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_inventur">
+			<?php wp_nonce_field( 'lw16_inventur' ); ?>
+			<table class="widefat striped"><thead><tr>
+				<th><?php esc_html_e( 'Produkt', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Typ', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'System-Bestand', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Ist-Bestand', 'lindenweg16' ); ?></th>
+				<th><?php esc_html_e( 'Einheit', 'lindenweg16' ); ?></th>
+			</tr></thead><tbody>
+			<?php foreach ( $produkte as $p ) :
+				$bestand = Repository::get_stock( $p->id );
+			?>
+				<tr>
+					<td><?php echo esc_html( $p->name ); ?></td>
+					<td><?php echo esc_html( $p->typ ); ?></td>
+					<td><?php echo esc_html( $this->fmt( $bestand ) ); ?></td>
+					<td>
+						<input type="number" step="any" name="ist_bestand[<?php echo (int) $p->id; ?>]" value="<?php echo esc_attr( $bestand ); ?>" class="small-text">
+						<input type="hidden" name="soll_bestand[<?php echo (int) $p->id; ?>]" value="<?php echo esc_attr( $bestand ); ?>">
+					</td>
+					<td><?php echo esc_html( $p->basis_einheit ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody></table>
+			<?php submit_button( __( 'Inventur buchen', 'lindenweg16' ) ); ?>
+		</form>
+		<?php
+	}
+
+	public function handle_inventur() {
+		$this->guard( 'lw16_inventur' );
+
+		$ist  = isset( $_POST['ist_bestand'] ) && is_array( $_POST['ist_bestand'] ) ? wp_unslash( $_POST['ist_bestand'] ) : array();
+		$soll = isset( $_POST['soll_bestand'] ) && is_array( $_POST['soll_bestand'] ) ? wp_unslash( $_POST['soll_bestand'] ) : array();
+
+		$korrekturen = 0;
+		foreach ( $ist as $produkt_id => $ist_menge ) {
+			$produkt_id = (int) $produkt_id;
+			$ist_menge  = (float) $ist_menge;
+			$soll_menge = isset( $soll[ $produkt_id ] ) ? (float) $soll[ $produkt_id ] : 0;
+			$diff       = $ist_menge - $soll_menge;
+
+			if ( abs( $diff ) < 0.001 ) {
+				continue;
+			}
+
+			StockManager::record_movement( $produkt_id, $diff, 'inventur', array(
+				'referenz' => sprintf( __( 'Inventur: Soll %s, Ist %s', 'lindenweg16' ), $this->fmt( $soll_menge ), $this->fmt( $ist_menge ) ),
+			) );
+			$korrekturen++;
+		}
+
+		$msg = $korrekturen > 0
+			? sprintf( __( 'Inventur abgeschlossen: %d Korrekturen gebucht.', 'lindenweg16' ), $korrekturen )
+			: __( 'Keine Abweichungen festgestellt.', 'lindenweg16' );
+		$this->redirect( 'lager&view=inventur', $msg );
+	}
+
+	/* --------------------------------------------------------------------
+	 * Historie (Bewegungsverlauf pro Produkt)
+	 * ------------------------------------------------------------------ */
+
+	protected function render_historie() {
+		$produkte   = Repository::get_products();
+		$produkt_id = isset( $_GET['produkt_id'] ) ? (int) $_GET['produkt_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		$base       = admin_url( 'admin.php?page=lw16-lager&view=historie' );
+		?>
+		<h2><?php esc_html_e( 'Bestandsverlauf', 'lindenweg16' ); ?></h2>
+		<form method="get" style="margin-bottom:16px">
+			<input type="hidden" name="page" value="lw16-lager">
+			<input type="hidden" name="view" value="historie">
+			<select name="produkt_id">
+				<option value=""><?php esc_html_e( '— Produkt wählen —', 'lindenweg16' ); ?></option>
+				<?php foreach ( $produkte as $p ) : ?>
+					<option value="<?php echo (int) $p->id; ?>" <?php selected( $produkt_id, $p->id ); ?>><?php echo esc_html( $p->name . ' (' . $p->typ . ')' ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<?php submit_button( __( 'Anzeigen', 'lindenweg16' ), 'secondary', '', false ); ?>
+		</form>
+		<?php
+
+		if ( ! $produkt_id ) {
+			echo '<p class="description">' . esc_html__( 'Wähle ein Produkt, um den Bestandsverlauf zu sehen.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		$produkt = Repository::get_product( $produkt_id );
+		if ( ! $produkt ) {
+			echo '<p>' . esc_html__( 'Produkt nicht gefunden.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		global $wpdb;
+		$tb   = Repository::table( 'lagerbewegung' );
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			"SELECT * FROM {$tb} WHERE produkt_id = %d ORDER BY id ASC", $produkt_id
+		) ); // phpcs:ignore
+
+		$bestand_aktuell = Repository::get_stock( $produkt_id );
+		echo '<h3>' . esc_html( sprintf( __( '%s – Aktueller Bestand: %s %s', 'lindenweg16' ), $produkt->name, $this->fmt( $bestand_aktuell ), $produkt->basis_einheit ) ) . '</h3>';
+
+		if ( empty( $rows ) ) {
+			echo '<p>' . esc_html__( 'Noch keine Bewegungen für dieses Produkt.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Typ', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Menge', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Bestand danach', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Referenz', 'lindenweg16' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		$laufender_bestand = 0;
+		foreach ( $rows as $r ) {
+			$laufender_bestand += (float) $r->menge;
+			$sign_class = (float) $r->menge >= 0 ? 'color:#46b450' : 'color:#dc3232';
+			$sign       = (float) $r->menge >= 0 ? '+' : '';
+			echo '<tr>';
+			echo '<td>' . esc_html( $r->erstellt_am ) . '</td>';
+			echo '<td>' . esc_html( $r->typ ) . '</td>';
+			echo '<td style="' . $sign_class . ';font-weight:600">' . esc_html( $sign . $this->fmt( $r->menge ) ) . '</td>';
+			echo '<td>' . esc_html( $this->fmt( $laufender_bestand ) ) . '</td>';
+			echo '<td>' . esc_html( (string) $r->referenz ) . '</td>';
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+	}
+
+	/* --------------------------------------------------------------------
+	 * Täglicher Bestandsreport
+	 * ------------------------------------------------------------------ */
+
+	public function send_daily_stock_report() {
+		$produkte = Repository::get_products();
+		$warnings = array();
+
+		foreach ( $produkte as $p ) {
+			if ( (float) $p->mindestbestand <= 0 ) {
+				continue;
+			}
+			$bestand = Repository::get_stock( $p->id );
+			if ( $bestand < (float) $p->mindestbestand ) {
+				$warnings[] = sprintf(
+					'- %s: %s %s (Mindestbestand: %s)',
+					$p->name,
+					rtrim( rtrim( number_format( $bestand, 2, ',', '.' ), '0' ), ',' ),
+					$p->basis_einheit,
+					rtrim( rtrim( number_format( (float) $p->mindestbestand, 2, ',', '.' ), '0' ), ',' )
+				);
+			}
+		}
+
+		if ( empty( $warnings ) ) {
+			return;
+		}
+
+		$emails = \Lindenweg16\Core\Roles::get_manager_emails();
+		if ( empty( $emails ) ) {
+			return;
+		}
+
+		$body  = __( 'Täglicher Bestandsreport – folgende Produkte liegen unter dem Mindestbestand:', 'lindenweg16' ) . "\n\n";
+		$body .= implode( "\n", $warnings );
+		$body .= "\n\n" . __( 'Bitte zeitnah nachbestellen.', 'lindenweg16' );
+
+		wp_mail( $emails, __( '[Lindenweg16] Täglicher Bestandsreport', 'lindenweg16' ), $body );
 	}
 
 	/* --------------------------------------------------------------------

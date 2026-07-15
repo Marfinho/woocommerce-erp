@@ -11,6 +11,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Admin\Menu;
 use Lindenweg16\Admin\SettingsPage;
+use Lindenweg16\Admin\Dashboard;
+use Lindenweg16\Admin\GlobalSearch;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
@@ -67,6 +69,8 @@ class Plugin {
 		if ( is_admin() ) {
 			( new Menu() )->register();
 			( new SettingsPage() )->register();
+			( new Dashboard() )->register();
+			( new GlobalSearch() )->register();
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.

@@ -24,6 +24,7 @@ class Scheduler {
 	const HOOK_POSTPURCHASE    = 'lw16_postpurchase_mails';
 	const HOOK_WEEKLY_DIGEST   = 'lw16_weekly_digest';
 	const HOOK_WEEKLY_EXPORT   = 'lw16_weekly_export';
+	const HOOK_DAILY_STOCK     = 'lw16_daily_stock_report';
 
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
@@ -42,6 +43,7 @@ class Scheduler {
 			self::HOOK_POSTPURCHASE,
 			self::HOOK_WEEKLY_DIGEST,
 			self::HOOK_WEEKLY_EXPORT,
+			self::HOOK_DAILY_STOCK,
 			self::HOOK_GENERATE_INVOICE,
 			self::HOOK_GENERATE_PACKING,
 		);
@@ -65,6 +67,7 @@ class Scheduler {
 			self::HOOK_POSTPURCHASE   => DAY_IN_SECONDS,
 			self::HOOK_WEEKLY_DIGEST  => WEEK_IN_SECONDS,
 			self::HOOK_WEEKLY_EXPORT  => WEEK_IN_SECONDS,
+			self::HOOK_DAILY_STOCK   => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {
