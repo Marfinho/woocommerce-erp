@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Inventory;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Accounting\BelegRepository;
 
 /**
@@ -1494,11 +1495,9 @@ class InventoryModule {
 			return;
 		}
 
-		$body  = __( 'Täglicher Bestandsreport – folgende Produkte liegen unter dem Mindestbestand:', 'lindenweg16' ) . "\n\n";
-		$body .= implode( "\n", $warnings );
-		$body .= "\n\n" . __( 'Bitte zeitnah nachbestellen.', 'lindenweg16' );
-
-		wp_mail( $emails, __( '[Lindenweg16] Täglicher Bestandsreport', 'lindenweg16' ), $body );
+		MailTemplate::send( $emails, 'bestandsreport', array(
+			'{warnungen}' => implode( "\n", $warnings ),
+		) );
 	}
 
 	/* --------------------------------------------------------------------

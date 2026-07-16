@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
+use Lindenweg16\Core\MailTemplate;
 
 /**
  * Erfasst nur Warenkörbe mit bekannter E-Mail (kein anonymes Tracking) und
@@ -189,15 +190,10 @@ class CartTracking {
 		foreach ( $items as $it ) {
 			$liste .= '- ' . $it['name'] . ' x' . $it['qty'] . "\n";
 		}
-		$subject = 1 === $stufe
-			? __( 'Du hast etwas in Deinem Warenkorb vergessen', 'lindenweg16' )
-			: __( 'Dein Warenkorb wartet noch auf Dich', 'lindenweg16' );
-		$body = sprintf(
-			/* translators: 1: Artikelliste, 2: Shop-Link */
-			__( "Hallo,\n\nin Deinem Warenkorb liegen noch:\n\n%1\$s\nJetzt bestellen: %2\$s\n\nViele Grüße\nLindenweg16", 'lindenweg16' ),
-			$liste,
-			wc_get_cart_url()
-		);
-		wp_mail( $row->email, $subject, $body );
+		$template_key = 1 === $stufe ? 'cart_erinnerung_1' : 'cart_erinnerung_2';
+		MailTemplate::send( $row->email, $template_key, array(
+			'{artikelliste}' => $liste,
+			'{shop_url}'     => wc_get_cart_url(),
+		) );
 	}
 }

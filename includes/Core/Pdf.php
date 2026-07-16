@@ -58,10 +58,60 @@ class Pdf {
 	protected $img_counter = 0;
 
 	/**
+	 * CI-Header/Footer aktiviert?
+	 *
+	 * @var bool
+	 */
+	protected $ci_enabled = false;
+
+	/**
 	 * Neues Dokument – erste Seite anlegen.
 	 */
 	public function __construct() {
 		$this->add_page();
+	}
+
+	/**
+	 * CI-Header und -Footer für alle Seiten aktivieren.
+	 * Rendert den Header sofort auf der aktuellen (ersten) Seite.
+	 */
+	public function enable_ci() {
+		$this->ci_enabled = true;
+		$this->render_ci_header();
+	}
+
+	/**
+	 * CI-Firmenkopf auf der aktuellen Seite rendern.
+	 */
+	protected function render_ci_header() {
+		$logo_id = (int) Settings::get( 'ci_logo_id' );
+		if ( $logo_id ) {
+			$path = get_attached_file( $logo_id );
+			if ( $path && is_readable( $path ) ) {
+				$this->image_jpeg( $path, 160, 50 );
+			}
+		}
+
+		$firma = (string) Settings::get( 'firma_name' );
+		if ( $firma ) {
+			$this->text( $firma, 14, true );
+		}
+
+		$strasse = (string) Settings::get( 'firma_strasse' );
+		$plz_ort = (string) Settings::get( 'firma_plz_ort' );
+		$steuer  = (string) Settings::get( 'firma_steuernummer' );
+
+		$zeile2 = implode( ' · ', array_filter( array( $strasse, $plz_ort ) ) );
+		if ( $zeile2 ) {
+			$this->text( $zeile2, 9 );
+		}
+		if ( $steuer ) {
+			$this->text( __( 'Steuernummer: ', 'lindenweg16' ) . $steuer, 9 );
+		}
+
+		$this->space( 6 );
+		$this->hr();
+		$this->space( 8 );
 	}
 
 	/**
@@ -73,6 +123,10 @@ class Pdf {
 		}
 		$this->buffer = '';
 		$this->y      = self::MARGIN;
+
+		if ( $this->ci_enabled ) {
+			$this->render_ci_header();
+		}
 	}
 
 	/**
@@ -94,7 +148,8 @@ class Pdf {
 	 * @param float $needed Benötigte Höhe.
 	 */
 	protected function ensure_space( $needed ) {
-		if ( $this->y + $needed > self::PAGE_HEIGHT - self::MARGIN ) {
+		$footer_reserve = $this->ci_enabled ? 30 : 0;
+		if ( $this->y + $needed > self::PAGE_HEIGHT - self::MARGIN - $footer_reserve ) {
 			$this->add_page();
 		}
 	}
@@ -243,6 +298,61 @@ class Pdf {
 		}
 		if ( empty( $this->pages ) ) {
 			$this->pages[] = '';
+		}
+
+		// CI-Footer auf jede Seite stempeln.
+		if ( $this->ci_enabled ) {
+			$n_pages  = count( $this->pages );
+			$firma    = $this->enc( (string) Settings::get( 'firma_name' ) );
+			$strasse  = (string) Settings::get( 'firma_strasse' );
+			$plz_ort  = (string) Settings::get( 'firma_plz_ort' );
+			$email    = (string) Settings::get( 'firma_email' );
+			$footer_parts = array_filter( array( $strasse, $plz_ort, $email ) );
+			$footer_info  = $this->enc( implode( ' · ', $footer_parts ) );
+
+			foreach ( $this->pages as $i => &$stream ) {
+				$page_str = $this->enc( sprintf( __( 'Seite %1$d von %2$d', 'lindenweg16' ), $i + 1, $n_pages ) );
+
+				// Trennlinie oberhalb des Footers.
+				$line_y = 42;
+				$stream .= sprintf(
+					"%.2F %.2F m %.2F %.2F l 0.3 w 0.7 0.7 0.7 RG S 0 0 0 RG\n",
+					self::MARGIN,
+					$line_y,
+					self::PAGE_WIDTH - self::MARGIN,
+					$line_y
+				);
+
+				// Firmenname links.
+				$stream .= sprintf(
+					"BT /F2 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					self::MARGIN,
+					30.0,
+					$firma
+				);
+
+				// Adresse/Kontakt Mitte.
+				if ( $footer_info ) {
+					$info_w = strlen( $footer_info ) * 3.5;
+					$info_x = ( self::PAGE_WIDTH - $info_w ) / 2;
+					$stream .= sprintf(
+						"BT /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+						$info_x,
+						30.0,
+						$footer_info
+					);
+				}
+
+				// Seitenzahl rechts.
+				$page_w = strlen( $page_str ) * 3.5;
+				$stream .= sprintf(
+					"BT /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					self::PAGE_WIDTH - self::MARGIN - $page_w,
+					30.0,
+					$page_str
+				);
+			}
+			unset( $stream );
 		}
 
 		$objects   = array();

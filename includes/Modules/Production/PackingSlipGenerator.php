@@ -34,9 +34,9 @@ class PackingSlipGenerator {
 		}
 
 		$pdf = new Pdf();
+		$pdf->enable_ci();
 		$pdf->text( __( 'Packliste / Lieferschein', 'lindenweg16' ), 16, true );
-		$pdf->text( (string) Settings::get( 'firma_name' ), 10 );
-		$pdf->space( 8 );
+		$pdf->space( 4 );
 
 		$pdf->row( __( 'Bestellnummer:', 'lindenweg16' ), '#' . $order->get_order_number(), 11, true );
 		$datum = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd.m.Y' ) : gmdate( 'd.m.Y' );

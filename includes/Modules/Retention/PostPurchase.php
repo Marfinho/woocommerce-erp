@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
+use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 
 /**
@@ -88,13 +89,9 @@ class PostPurchase {
 		if ( ! is_email( $to ) ) {
 			return;
 		}
-		$subject = __( 'Danke für Deinen Einkauf bei Lindenweg16', 'lindenweg16' );
-		$body    = sprintf(
-			/* translators: %s: Vorname */
-			__( "Hallo %s,\n\nvielen Dank für Deine Bestellung! Wir hoffen, Du hast Freude an Deinen Produkten.\n\nHerzliche Grüße\nLindenweg16", 'lindenweg16' ),
-			$order->get_billing_first_name()
-		);
-		wp_mail( $to, $subject, $body );
+		MailTemplate::send( $to, 'danke', array(
+			'{vorname}' => $order->get_billing_first_name(),
+		) );
 	}
 
 	/**
@@ -117,15 +114,11 @@ class PostPurchase {
 			}
 		}
 
-		$subject = __( 'Wie zufrieden bist Du? Jetzt bewerten und Punkte sichern', 'lindenweg16' );
-		$body    = sprintf(
-			/* translators: 1: Vorname, 2: Bonus, 3: Produktlinks */
-			__( "Hallo %1\$s,\n\nDu hast Deine Bestellung sicher schon ausprobiert. Über eine ehrliche Bewertung würden wir uns sehr freuen – als Dankeschön schreiben wir Dir %2\$d Punkte gut, sobald Deine Bewertung online ist.\n\n%3\$s\n\nDanke und viele Grüße\nLindenweg16", 'lindenweg16' ),
-			$order->get_billing_first_name(),
-			$bonus,
-			implode( "\n", $links )
-		);
-		wp_mail( $to, $subject, $body );
+		MailTemplate::send( $to, 'review_anfrage', array(
+			'{vorname}'       => $order->get_billing_first_name(),
+			'{bonus_punkte}'  => (string) $bonus,
+			'{produktlinks}'  => implode( "\n", $links ),
+		) );
 	}
 
 	/**

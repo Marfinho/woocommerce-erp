@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Retention;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Inventory\Repository;
 
 /**
@@ -129,15 +130,11 @@ class Waitlist {
 		$name = $wc ? $wc->get_name() : $produkt->name;
 		$link = $wc ? get_permalink( $produkt->woo_product_id ) : home_url();
 
-		$subject = sprintf( /* translators: %s: Produktname */ __( '%s ist wieder verfügbar', 'lindenweg16' ), $name );
 		foreach ( $rows as $row ) {
-			$body = sprintf(
-				/* translators: 1: Produktname, 2: Link */
-				__( "Gute Nachricht! \"%1\$s\" ist wieder auf Lager.\n\nHier ansehen: %2\$s", 'lindenweg16' ),
-				$name,
-				$link
-			);
-			wp_mail( $row->email, $subject, $body );
+			MailTemplate::send( $row->email, 'wieder_verfuegbar', array(
+				'{produktname}' => $name,
+				'{produktlink}' => $link,
+			) );
 			$wpdb->update( self::table(), array( 'benachrichtigt' => 1 ), array( 'id' => $row->id ) );
 		}
 	}

@@ -140,11 +140,10 @@ class PickListGenerator {
 		$positionen = Repository::get_pickliste_positionen( $pickliste_id );
 
 		$pdf = new Pdf();
+		$pdf->enable_ci();
 
 		$pdf->text( __( 'Pickliste', 'lindenweg16' ), 18, true );
-		$pdf->space( 4 );
-		$pdf->text( (string) Settings::get( 'firma_name' ), 10 );
-		$pdf->space( 10 );
+		$pdf->space( 6 );
 
 		$pdf->row( __( 'Pickliste Nr.:', 'lindenweg16' ), '#' . $pickliste_id, 11, true );
 		$pdf->row( __( 'Bestellung:', 'lindenweg16' ), '#' . $order->get_order_number(), 11 );
