@@ -21,11 +21,7 @@ use Lindenweg16\Modules\Inventory\Repository;
 class PackingSlipGenerator {
 
 	/**
-	 * Packliste erzeugen und geschützt ablegen. Immer neu generierbar.
-	 *
-	 * @param int    $order_id Bestell-ID.
-	 * @param string $notiz    Optionale Notiz aufs Dokument.
-	 * @return string|false Dateiname oder false.
+	 * Packliste erzeugen und geschützt ablegen.
 	 */
 	public static function generate( $order_id, $notiz = '' ) {
 		$order = wc_get_order( $order_id );
@@ -35,17 +31,33 @@ class PackingSlipGenerator {
 
 		$pdf = new Pdf();
 		$pdf->enable_ci();
-		$pdf->text( __( 'Packliste / Lieferschein', 'lindenweg16' ), 16, true );
-		$pdf->space( 4 );
 
-		$pdf->row( __( 'Bestellnummer:', 'lindenweg16' ), '#' . $order->get_order_number(), 11, true );
-		$datum = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd.m.Y' ) : gmdate( 'd.m.Y' );
-		$pdf->row( __( 'Bestelldatum:', 'lindenweg16' ), $datum, 11 );
-		$pdf->space( 6 );
+		$datum = $order->get_date_created()
+			? $order->get_date_created()->date_i18n( 'd.m.Y' )
+			: gmdate( 'd.m.Y' );
+
+		// Titel + Meta rechts.
+		$start_y = $pdf->get_y();
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->text( __( 'Lieferschein', 'lindenweg16' ), 22, true );
+
+		$meta_x = Pdf::PAGE_WIDTH - Pdf::MARGIN;
+		$pdf->set_color( '#6E7882' );
+		$pdf->text_xy_right( __( 'Bestellnr.', 'lindenweg16' ) . ' #' . $order->get_order_number(), $meta_x, $start_y, 10 );
+		$pdf->text_xy_right( __( 'Datum', 'lindenweg16' ) . ' ' . $datum, $meta_x, $start_y + 16, 10 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->space( 12 );
 
 		// Lieferadresse.
-		$pdf->text( __( 'Lieferadresse:', 'lindenweg16' ), 10, true );
-		$pdf->text( trim( $order->get_formatted_shipping_full_name() ?: $order->get_formatted_billing_full_name() ), 11 );
+		$pdf->set_color( Pdf::COLOR_COGNAC );
+		$pdf->text( mb_strtoupper( __( 'Lieferadresse', 'lindenweg16' ) ), 8, true );
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->space( 2 );
+
+		$name = trim( $order->get_formatted_shipping_full_name() ?: $order->get_formatted_billing_full_name() );
+		if ( $name ) {
+			$pdf->text( $name, 11 );
+		}
 		$adr = array(
 			$order->get_shipping_address_1() ?: $order->get_billing_address_1(),
 			trim( ( $order->get_shipping_postcode() ?: $order->get_billing_postcode() ) . ' ' . ( $order->get_shipping_city() ?: $order->get_billing_city() ) ),
@@ -53,32 +65,70 @@ class PackingSlipGenerator {
 		foreach ( array_filter( $adr ) as $line ) {
 			$pdf->text( $line, 11 );
 		}
-		$pdf->space( 8 );
-		$pdf->hr();
+		$pdf->space( 12 );
 
-		$pdf->row( __( 'Artikel', 'lindenweg16' ), __( 'Menge', 'lindenweg16' ), 11, true );
-		$pdf->hr();
+		// Tabellenkopf.
+		$widths = array( 30, 350, 60 );
+		$aligns = array( 'l', 'l', 'r' );
 
+		$pdf->set_color( '#6E7882' );
+		$pdf->table_cols(
+			array(
+				mb_strtoupper( __( 'Pos', 'lindenweg16' ) ),
+				mb_strtoupper( __( 'Artikel', 'lindenweg16' ) ),
+				mb_strtoupper( __( 'Menge', 'lindenweg16' ) ),
+			),
+			$widths,
+			$aligns,
+			8,
+			true
+		);
+		$pdf->set_draw_color( Pdf::COLOR_TINTE );
+		$pdf->hr( 1.5 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
+
+		// Positionen.
+		$pos_nr = 0;
 		foreach ( $order->get_items() as $item ) {
+			$pos_nr++;
 			$qty     = (float) $item->get_quantity();
 			$produkt = Repository::get_by_woo_id( $item->get_product_id() );
 
-			$pdf->row( $item->get_name(), self::fmt( $qty ) . ' x', 11, true );
+			$pdf->table_cols(
+				array( (string) $pos_nr, $item->get_name(), self::fmt( $qty ) ),
+				$widths,
+				$aligns,
+				10,
+				true
+			);
+			$pdf->set_draw_color( '#E0E0E0' );
+			$pdf->hr( 0.3 );
 
-			// Set in Einzelmodule auflösen.
 			if ( $produkt && 'set' === $produkt->typ ) {
-				foreach ( self::resolve_modules( $produkt, $qty ) as $name => $menge ) {
-					$pdf->row( '— ' . $name, self::fmt( $menge ) . ' x', 10, false );
+				foreach ( self::resolve_modules( $produkt, $qty ) as $mod_name => $menge ) {
+					$pdf->set_color( '#6E7882' );
+					$pdf->table_cols(
+						array( '', "\xE2\x80\x94 " . $mod_name, self::fmt( $menge ) ),
+						$widths,
+						$aligns,
+						9
+					);
+					$pdf->set_color( Pdf::COLOR_TINTE );
 				}
 			}
 		}
 
-		$pdf->space( 12 );
+		$pdf->space( 20 );
+
 		if ( $notiz ) {
+			$pdf->set_color( '#6E7882' );
 			$pdf->text( __( 'Hinweis: ', 'lindenweg16' ) . $notiz, 10 );
+			$pdf->set_color( Pdf::COLOR_TINTE );
 		}
-		$pdf->space( 6 );
-		$pdf->text( __( 'Vielen Dank für Deine Bestellung!', 'lindenweg16' ), 10 );
+		$pdf->space( 8 );
+		$pdf->set_color( '#6E7882' );
+		$pdf->text( __( 'Bitte prüfe die Sendung bei Erhalt auf Vollständigkeit. Bei Fragen sind wir jederzeit für dich da.', 'lindenweg16' ), 10 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
 
 		$filename = 'packliste-' . $order->get_order_number() . '-' . wp_generate_password( 6, false ) . '.pdf';
 		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
@@ -90,14 +140,6 @@ class PackingSlipGenerator {
 		return $filename;
 	}
 
-	/**
-	 * Ein Set rekursiv in Einzelmodule (Name => Gesamtmenge) auflösen.
-	 *
-	 * @param object $produkt Set-Produkt.
-	 * @param float  $menge   Menge des Sets.
-	 * @param array  $acc     Akkumulator.
-	 * @return array
-	 */
 	public static function resolve_modules( $produkt, $menge, array $acc = array() ) {
 		foreach ( Repository::get_stueckliste( $produkt->id ) as $pos ) {
 			$modul = Repository::get_product( $pos->modul_id );
@@ -114,12 +156,6 @@ class PackingSlipGenerator {
 		return $acc;
 	}
 
-	/**
-	 * Zahl formatieren.
-	 *
-	 * @param float $n Zahl.
-	 * @return string
-	 */
 	protected static function fmt( $n ) {
 		$s = number_format( (float) $n, 2, ',', '.' );
 		return rtrim( rtrim( $s, '0' ), ',' );

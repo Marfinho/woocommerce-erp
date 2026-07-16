@@ -22,58 +22,30 @@ class Pdf {
 	const PAGE_HEIGHT = 841.89;
 	const MARGIN      = 56.7; // ~2 cm.
 
-	/**
-	 * Content-Streams je Seite.
-	 *
-	 * @var string[]
-	 */
+	const COLOR_TINTE  = '#3A434D';
+	const COLOR_COGNAC = '#8B6914';
+
 	protected $pages = array();
-
-	/**
-	 * Aktueller Seiten-Content-Puffer.
-	 *
-	 * @var string
-	 */
 	protected $buffer = '';
-
-	/**
-	 * Aktuelle Y-Position (von oben gemessen, in pt).
-	 *
-	 * @var float
-	 */
 	protected $y = self::MARGIN;
-
-	/**
-	 * Eingebettete Bild-XObjects: name => array( data, w, h ).
-	 *
-	 * @var array
-	 */
 	protected $images = array();
-
-	/**
-	 * Bildzähler für eindeutige Ressourcennamen.
-	 *
-	 * @var int
-	 */
 	protected $img_counter = 0;
-
-	/**
-	 * CI-Header/Footer aktiviert?
-	 *
-	 * @var bool
-	 */
 	protected $ci_enabled = false;
 
-	/**
-	 * Neues Dokument – erste Seite anlegen.
-	 */
+	protected $fill_r = 0.0;
+	protected $fill_g = 0.0;
+	protected $fill_b = 0.0;
+	protected $stroke_r = 0.0;
+	protected $stroke_g = 0.0;
+	protected $stroke_b = 0.0;
+
 	public function __construct() {
+		$this->set_color( self::COLOR_TINTE );
 		$this->add_page();
 	}
 
 	/**
 	 * CI-Header und -Footer für alle Seiten aktivieren.
-	 * Rendert den Header sofort auf der aktuellen (ersten) Seite.
 	 */
 	public function enable_ci() {
 		$this->ci_enabled = true;
@@ -81,42 +53,40 @@ class Pdf {
 	}
 
 	/**
-	 * CI-Firmenkopf auf der aktuellen Seite rendern.
+	 * CI-Firmenkopf: Logo links, Firmendaten rechts.
 	 */
 	protected function render_ci_header() {
-		$logo_id = (int) Settings::get( 'ci_logo_id' );
+		$logo_id  = (int) Settings::get( 'ci_logo_id' );
+		$firma    = (string) Settings::get( 'firma_name' );
+		$strasse  = (string) Settings::get( 'firma_strasse' );
+		$plz_ort  = (string) Settings::get( 'firma_plz_ort' );
+		$steuer   = (string) Settings::get( 'firma_steuernummer' );
+
+		$header_y = $this->y;
+		$logo_h   = 0;
+
 		if ( $logo_id ) {
 			$path = get_attached_file( $logo_id );
 			if ( $path && is_readable( $path ) ) {
-				$this->image_jpeg( $path, 160, 50 );
+				$logo_h = $this->image_jpeg_at( $path, self::MARGIN, $header_y, 160, 60 );
 			}
 		}
 
-		$firma = (string) Settings::get( 'firma_name' );
-		if ( $firma ) {
-			$this->text( $firma, 14, true );
+		$info_lines = array_filter( array( $firma, $strasse, $plz_ort, $steuer ) );
+		$line_h     = 13 * 1.6;
+		$info_size  = 9;
+		$text_y     = $header_y;
+		$this->set_color( '#6E7882' );
+		foreach ( $info_lines as $line ) {
+			$this->text_xy_right( $line, self::PAGE_WIDTH - self::MARGIN, $text_y, $info_size );
+			$text_y += $line_h;
 		}
+		$this->set_color( self::COLOR_TINTE );
 
-		$strasse = (string) Settings::get( 'firma_strasse' );
-		$plz_ort = (string) Settings::get( 'firma_plz_ort' );
-		$steuer  = (string) Settings::get( 'firma_steuernummer' );
-
-		$zeile2 = implode( ' · ', array_filter( array( $strasse, $plz_ort ) ) );
-		if ( $zeile2 ) {
-			$this->text( $zeile2, 9 );
-		}
-		if ( $steuer ) {
-			$this->text( __( 'Steuernummer: ', 'lindenweg16' ) . $steuer, 9 );
-		}
-
-		$this->space( 6 );
-		$this->hr();
-		$this->space( 8 );
+		$this->y = max( $header_y + $logo_h + 8, $text_y + 8 );
+		$this->space( 10 );
 	}
 
-	/**
-	 * Neue Seite beginnen.
-	 */
 	public function add_page() {
 		if ( '' !== $this->buffer ) {
 			$this->pages[] = $this->buffer;
@@ -129,12 +99,6 @@ class Pdf {
 		}
 	}
 
-	/**
-	 * PDF-Textkodierung (WinAnsi/Latin-1) mit Escaping.
-	 *
-	 * @param string $text Eingabetext (UTF-8).
-	 * @return string
-	 */
 	protected function enc( $text ) {
 		$latin = function_exists( 'mb_convert_encoding' )
 			? mb_convert_encoding( $text, 'Windows-1252', 'UTF-8' )
@@ -142,11 +106,6 @@ class Pdf {
 		return str_replace( array( '\\', '(', ')' ), array( '\\\\', '\\(', '\\)' ), $latin );
 	}
 
-	/**
-	 * Automatischen Seitenumbruch prüfen.
-	 *
-	 * @param float $needed Benötigte Höhe.
-	 */
 	protected function ensure_space( $needed ) {
 		$footer_reserve = $this->ci_enabled ? 30 : 0;
 		if ( $this->y + $needed > self::PAGE_HEIGHT - self::MARGIN - $footer_reserve ) {
@@ -155,96 +114,170 @@ class Pdf {
 	}
 
 	/**
-	 * Eine Textzeile ausgeben.
-	 *
-	 * @param string $text  Text.
-	 * @param float  $size  Schriftgröße.
-	 * @param bool   $bold  Fett?
-	 * @param float  $indent Einzug von links.
+	 * Hex-Farbe (#RRGGBB) in 0-1-RGB-Array umwandeln.
 	 */
-	public function text( $text, $size = 11, $bold = false, $indent = 0 ) {
-		$this->ensure_space( $size + 4 );
+	protected static function hex_rgb( $hex ) {
+		$hex = ltrim( $hex, '#' );
+		if ( 3 === strlen( $hex ) ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+		return array(
+			hexdec( substr( $hex, 0, 2 ) ) / 255,
+			hexdec( substr( $hex, 2, 2 ) ) / 255,
+			hexdec( substr( $hex, 4, 2 ) ) / 255,
+		);
+	}
+
+	/**
+	 * Textfarbe setzen (Hex).
+	 */
+	public function set_color( $hex ) {
+		list( $this->fill_r, $this->fill_g, $this->fill_b ) = self::hex_rgb( $hex );
+	}
+
+	/**
+	 * Linienfarbe setzen (Hex).
+	 */
+	public function set_draw_color( $hex ) {
+		list( $this->stroke_r, $this->stroke_g, $this->stroke_b ) = self::hex_rgb( $hex );
+	}
+
+	protected function color_cmd() {
+		return sprintf( '%.3F %.3F %.3F rg', $this->fill_r, $this->fill_g, $this->fill_b );
+	}
+
+	protected function stroke_cmd() {
+		return sprintf( '%.3F %.3F %.3F RG', $this->stroke_r, $this->stroke_g, $this->stroke_b );
+	}
+
+	/**
+	 * Geschätzte Textbreite in pt.
+	 */
+	public function text_width( $text, $size, $bold = false ) {
+		$factor = $bold ? 0.54 : 0.52;
+		return strlen( $this->enc( $text ) ) * $size * $factor;
+	}
+
+	/**
+	 * Textzeile an beliebiger Position (Y von oben, kein Y-Vorschub).
+	 */
+	public function text_xy( $text, $x, $y_top, $size, $bold = false ) {
 		$font = $bold ? '/F2' : '/F1';
-		$x    = self::MARGIN + $indent;
-		$ty   = self::PAGE_HEIGHT - $this->y - $size;
+		$ty   = self::PAGE_HEIGHT - $y_top - $size;
 		$this->buffer .= sprintf(
-			"BT %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
+			"BT %s %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
+			$this->color_cmd(),
 			$font,
 			$size,
 			$x,
 			$ty,
 			$this->enc( $text )
 		);
+	}
+
+	/**
+	 * Textzeile rechts ausgerichtet an x-Position (Y von oben, kein Y-Vorschub).
+	 */
+	public function text_xy_right( $text, $x_right, $y_top, $size, $bold = false ) {
+		$w = $this->text_width( $text, $size, $bold );
+		$this->text_xy( $text, $x_right - $w, $y_top, $size, $bold );
+	}
+
+	/**
+	 * Eine Textzeile ausgeben (fließend, verschiebt Y).
+	 */
+	public function text( $text, $size = 11, $bold = false, $indent = 0 ) {
+		$this->ensure_space( $size + 4 );
+		$x = self::MARGIN + $indent;
+		$this->text_xy( $text, $x, $this->y, $size, $bold );
 		$this->y += $size + 4;
 	}
 
 	/**
-	 * Zwei Spalten (links Label, rechts rechtsbündiger Wert) ausgeben.
-	 *
-	 * @param string $left  Linker Text.
-	 * @param string $right Rechter Text.
-	 * @param float  $size  Größe.
-	 * @param bool   $bold  Fett?
+	 * Rechtsbündig fließend ausgeben.
+	 */
+	public function text_right( $text, $size = 11, $bold = false ) {
+		$this->ensure_space( $size + 4 );
+		$this->text_xy_right( $text, self::PAGE_WIDTH - self::MARGIN, $this->y, $size, $bold );
+		$this->y += $size + 4;
+	}
+
+	/**
+	 * Zwei Spalten (links/rechts).
 	 */
 	public function row( $left, $right, $size = 11, $bold = false ) {
 		$this->ensure_space( $size + 4 );
-		$font = $bold ? '/F2' : '/F1';
-		$ty   = self::PAGE_HEIGHT - $this->y - $size;
-		$right_w = strlen( $right ) * $size * 0.5;
-		$rx      = self::PAGE_WIDTH - self::MARGIN - $right_w;
-		$this->buffer .= sprintf(
-			"BT %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
-			$font,
-			$size,
-			self::MARGIN,
-			$ty,
-			$this->enc( $left )
-		);
-		$this->buffer .= sprintf(
-			"BT %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
-			$font,
-			$size,
-			$rx,
-			$ty,
-			$this->enc( $right )
-		);
+		$this->text_xy( $left, self::MARGIN, $this->y, $size, $bold );
+		$this->text_xy_right( $right, self::PAGE_WIDTH - self::MARGIN, $this->y, $size, $bold );
 		$this->y += $size + 4;
 	}
 
 	/**
-	 * Etwas vertikalen Abstand einfügen.
+	 * Mehrspaltige Tabellenzeile.
 	 *
-	 * @param float $h Höhe in pt.
+	 * @param array $cols   Texte je Spalte.
+	 * @param array $widths Breiten je Spalte (pt). Letzte Spalte füllt auf.
+	 * @param array $aligns 'l' oder 'r' je Spalte.
+	 * @param float $size   Schriftgröße.
+	 * @param bool  $bold   Fett?
 	 */
+	public function table_cols( array $cols, array $widths, array $aligns, $size = 11, $bold = false ) {
+		$this->ensure_space( $size + 8 );
+		$x = self::MARGIN;
+		foreach ( $cols as $i => $txt ) {
+			$w = isset( $widths[ $i ] ) ? $widths[ $i ] : 60;
+			if ( isset( $aligns[ $i ] ) && 'r' === $aligns[ $i ] ) {
+				$this->text_xy_right( $txt, $x + $w, $this->y, $size, $bold );
+			} else {
+				$this->text_xy( $txt, $x, $this->y, $size, $bold );
+			}
+			$x += $w;
+		}
+		$this->y += $size + 8;
+	}
+
 	public function space( $h = 8 ) {
 		$this->y += $h;
 	}
 
 	/**
-	 * Horizontale Trennlinie.
+	 * Horizontale Trennlinie mit optionaler Stärke.
 	 */
-	public function hr() {
+	public function hr( $thickness = 0.5 ) {
 		$this->ensure_space( 6 );
 		$yy = self::PAGE_HEIGHT - $this->y;
 		$this->buffer .= sprintf(
-			"%.2F %.2F m %.2F %.2F l 0.5 w S\n",
+			"%s %.2F %.2F m %.2F %.2F l %.2F w S\n",
+			$this->stroke_cmd(),
 			self::MARGIN,
 			$yy,
 			self::PAGE_WIDTH - self::MARGIN,
-			$yy
+			$yy,
+			$thickness
 		);
 		$this->y += 6;
 	}
 
 	/**
-	 * Ein JPEG-Bild einbetten (skaliert auf max. Breite/Höhe).
-	 *
-	 * @param string $file    Absoluter Pfad zu einer JPEG-Datei.
-	 * @param float  $max_w   Maximale Breite.
-	 * @param float  $max_h   Maximale Höhe.
-	 * @return bool Erfolg.
+	 * JPEG-Bild einbetten (fließend, linksbündig).
 	 */
 	public function image_jpeg( $file, $max_w = 400, $max_h = 500 ) {
+		$h = $this->embed_image( $file, self::MARGIN, $this->y, $max_w, $max_h );
+		if ( false === $h ) {
+			return false;
+		}
+		$this->y += $h + 8;
+		return true;
+	}
+
+	/**
+	 * JPEG-Bild an absoluter Position einbetten. Gibt Bildhöhe zurück.
+	 */
+	public function image_jpeg_at( $file, $x, $y_top, $max_w, $max_h ) {
+		return $this->embed_image( $file, $x, $y_top, $max_w, $max_h );
+	}
+
+	protected function embed_image( $file, $x, $y_top, $max_w, $max_h ) {
 		if ( ! is_readable( $file ) ) {
 			return false;
 		}
@@ -262,8 +295,6 @@ class Pdf {
 		$w     = $iw * $ratio;
 		$h     = $ih * $ratio;
 
-		$this->ensure_space( $h + 8 );
-
 		$this->img_counter++;
 		$name = 'Img' . $this->img_counter;
 		$this->images[ $name ] = array(
@@ -272,8 +303,7 @@ class Pdf {
 			'h'    => $ih,
 		);
 
-		$x  = self::MARGIN;
-		$yy = self::PAGE_HEIGHT - $this->y - $h;
+		$yy = self::PAGE_HEIGHT - $y_top - $h;
 		$this->buffer .= sprintf(
 			"q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
 			$w,
@@ -282,14 +312,32 @@ class Pdf {
 			$yy,
 			$name
 		);
-		$this->y += $h + 8;
-		return true;
+		return $h;
+	}
+
+	/**
+	 * Aktuelle Y-Position abfragen.
+	 */
+	public function get_y() {
+		return $this->y;
+	}
+
+	/**
+	 * Y-Position setzen.
+	 */
+	public function set_y( $y ) {
+		$this->y = $y;
+	}
+
+	/**
+	 * Nutzbare Inhaltsbreite (zwischen den Rändern).
+	 */
+	public function content_width() {
+		return self::PAGE_WIDTH - 2 * self::MARGIN;
 	}
 
 	/**
 	 * Das fertige PDF als Binärstring bauen.
-	 *
-	 * @return string
 	 */
 	public function output() {
 		if ( '' !== $this->buffer ) {
@@ -300,7 +348,6 @@ class Pdf {
 			$this->pages[] = '';
 		}
 
-		// CI-Footer auf jede Seite stempeln.
 		if ( $this->ci_enabled ) {
 			$n_pages  = count( $this->pages );
 			$firma    = $this->enc( (string) Settings::get( 'firma_name' ) );
@@ -308,45 +355,49 @@ class Pdf {
 			$plz_ort  = (string) Settings::get( 'firma_plz_ort' );
 			$email    = (string) Settings::get( 'firma_email' );
 			$footer_parts = array_filter( array( $strasse, $plz_ort, $email ) );
-			$footer_info  = $this->enc( implode( ' · ', $footer_parts ) );
+			$footer_info  = $this->enc( implode( ' \267 ', $footer_parts ) );
+
+			$tinte = self::hex_rgb( self::COLOR_TINTE );
+			$grey  = '0.600 0.600 0.600';
 
 			foreach ( $this->pages as $i => &$stream ) {
 				$page_str = $this->enc( sprintf( __( 'Seite %1$d von %2$d', 'lindenweg16' ), $i + 1, $n_pages ) );
 
-				// Trennlinie oberhalb des Footers.
 				$line_y = 42;
 				$stream .= sprintf(
-					"%.2F %.2F m %.2F %.2F l 0.3 w 0.7 0.7 0.7 RG S 0 0 0 RG\n",
+					"0.85 0.85 0.85 RG %.2F %.2F m %.2F %.2F l 0.3 w S\n",
 					self::MARGIN,
 					$line_y,
 					self::PAGE_WIDTH - self::MARGIN,
 					$line_y
 				);
 
-				// Firmenname links.
+				$tinte_cmd = sprintf( '%.3F %.3F %.3F rg', $tinte[0], $tinte[1], $tinte[2] );
+
 				$stream .= sprintf(
-					"BT /F2 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					"BT %s /F2 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					$tinte_cmd,
 					self::MARGIN,
 					30.0,
 					$firma
 				);
 
-				// Adresse/Kontakt Mitte.
 				if ( $footer_info ) {
 					$info_w = strlen( $footer_info ) * 3.5;
 					$info_x = ( self::PAGE_WIDTH - $info_w ) / 2;
 					$stream .= sprintf(
-						"BT /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+						"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+						$grey,
 						$info_x,
 						30.0,
 						$footer_info
 					);
 				}
 
-				// Seitenzahl rechts.
 				$page_w = strlen( $page_str ) * 3.5;
 				$stream .= sprintf(
-					"BT /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					$grey,
 					self::PAGE_WIDTH - self::MARGIN - $page_w,
 					30.0,
 					$page_str
@@ -355,17 +406,13 @@ class Pdf {
 			unset( $stream );
 		}
 
-		$objects   = array();
-		$n_pages   = count( $this->pages );
+		$objects  = array();
+		$n_pages = count( $this->pages );
 
-		// Objektnummern planen:
-		// 1 = Catalog, 2 = Pages, 3 = F1, 4 = F2,
-		// danach je Seite: Page-Obj + Content-Obj, danach Bilder.
 		$font1 = 3;
 		$font2 = 4;
 		$first_page_obj = 5;
 
-		// Bild-Objektnummern zuweisen.
 		$image_obj_start = $first_page_obj + $n_pages * 2;
 		$image_names     = array_keys( $this->images );
 		$image_obj_map   = array();
@@ -373,21 +420,17 @@ class Pdf {
 			$image_obj_map[ $name ] = $image_obj_start + $i;
 		}
 
-		// Catalog.
 		$objects[1] = '<< /Type /Catalog /Pages 2 0 R >>';
 
-		// Pages.
 		$kids = array();
 		for ( $i = 0; $i < $n_pages; $i++ ) {
 			$kids[] = ( $first_page_obj + $i * 2 ) . ' 0 R';
 		}
 		$objects[2] = '<< /Type /Pages /Count ' . $n_pages . ' /Kids [' . implode( ' ', $kids ) . '] >>';
 
-		// Fonts.
 		$objects[ $font1 ] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
 		$objects[ $font2 ] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
 
-		// XObject-Ressourcen-Referenzen für alle Seiten (der Einfachheit halber global).
 		$xobjects = '';
 		foreach ( $image_obj_map as $name => $obj ) {
 			$xobjects .= '/' . $name . ' ' . $obj . ' 0 R ';
@@ -398,7 +441,6 @@ class Pdf {
 		}
 		$resources .= ' >>';
 
-		// Seiten + Content.
 		for ( $i = 0; $i < $n_pages; $i++ ) {
 			$page_obj    = $first_page_obj + $i * 2;
 			$content_obj = $page_obj + 1;
@@ -413,7 +455,6 @@ class Pdf {
 			$objects[ $content_obj ] = "<< /Length " . strlen( $stream ) . " >>\nstream\n" . $stream . "\nendstream";
 		}
 
-		// Bild-XObjects.
 		foreach ( $this->images as $name => $img ) {
 			$obj = $image_obj_map[ $name ];
 			$objects[ $obj ] = "<< /Type /XObject /Subtype /Image /Width {$img['w']} /Height {$img['h']} "
@@ -421,7 +462,6 @@ class Pdf {
 				. "stream\n" . $img['data'] . "\nendstream";
 		}
 
-		// PDF zusammensetzen mit xref.
 		ksort( $objects );
 		$pdf     = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
 		$offsets = array();
@@ -451,12 +491,6 @@ class Pdf {
 		return $pdf;
 	}
 
-	/**
-	 * PDF in eine Datei schreiben.
-	 *
-	 * @param string $path Zielpfad.
-	 * @return bool
-	 */
 	public function save( $path ) {
 		return (bool) file_put_contents( $path, $this->output() ); // phpcs:ignore
 	}

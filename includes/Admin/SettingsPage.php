@@ -38,6 +38,9 @@ class SettingsPage {
 				'firma_plz_ort'      => array( __( 'PLZ / Ort', 'lindenweg16' ), 'text' ),
 				'firma_steuernummer' => array( __( 'Steuernummer', 'lindenweg16' ), 'text' ),
 				'firma_email'        => array( __( 'E-Mail', 'lindenweg16' ), 'text' ),
+				'firma_telefon'      => array( __( 'Telefon', 'lindenweg16' ), 'text' ),
+				'firma_iban'         => array( __( 'IBAN', 'lindenweg16' ), 'text' ),
+				'firma_bic'          => array( __( 'BIC', 'lindenweg16' ), 'text' ),
 			),
 			__( 'Corporate Identity', 'lindenweg16' ) => array(
 				'ci_logo_id' => array( __( 'Logo (JPEG empfohlen, wird in PDFs und E-Mails verwendet)', 'lindenweg16' ), 'media' ),

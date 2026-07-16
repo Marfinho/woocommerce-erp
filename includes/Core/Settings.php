@@ -29,6 +29,9 @@ class Settings {
 			'firma_plz_ort'             => '',
 			'firma_steuernummer'        => '',
 			'firma_email'               => get_bloginfo( 'admin_email' ),
+			'firma_telefon'             => '',
+			'firma_iban'                => '',
+			'firma_bic'                 => '',
 			// Buchhaltung.
 			'kleinunternehmer'          => 1,
 			'steuersatz_ruecklage'      => 25,
@@ -55,7 +58,7 @@ class Settings {
 			'export_email'              => get_bloginfo( 'admin_email' ),
 			// Corporate Identity.
 			'ci_logo_id'                => 0,
-			'ci_farbe'                  => '#1d2327',
+			'ci_farbe'                  => '#8B6914',
 			// E-Mail.
 			'email_absender_name'       => get_bloginfo( 'name' ),
 			'email_footer'              => '',

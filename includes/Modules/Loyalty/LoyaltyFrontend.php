@@ -137,13 +137,14 @@ class LoyaltyFrontend {
 			echo '<p>' . esc_html__( 'Noch keine Punktebewegungen.', 'lindenweg16' ) . '</p>';
 		} else {
 			echo '<table class="woocommerce-orders-table shop_table"><thead><tr>';
-			echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Punkte', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Grund', 'lindenweg16' ) . '</th>';
+			echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Punkte', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Grund', 'lindenweg16' ) . '</th>';
 			echo '</tr></thead><tbody>';
 			foreach ( $ledger as $l ) {
 				echo '<tr>';
 				echo '<td>' . esc_html( date_i18n( 'd.m.Y', strtotime( $l->created_at ) ) ) . '</td>';
 				echo '<td>' . ( $l->order_id ? '#' . (int) $l->order_id : '–' ) . '</td>';
 				echo '<td>' . esc_html( ( $l->points > 0 ? '+' : '' ) . $l->points ) . '</td>';
+				echo '<td>' . $this->ledger_status_badge( $l ) . '</td>';
 				echo '<td>' . esc_html( $this->ledger_label( $l ) ) . '</td>';
 				echo '</tr>';
 			}
@@ -376,5 +377,37 @@ class LoyaltyFrontend {
 			'manual_adjustment' => __( 'Manuelle Anpassung', 'lindenweg16' ),
 		);
 		return isset( $map[ $l->type ] ) ? $map[ $l->type ] : $l->type;
+	}
+
+	/**
+	 * Status-Badge mit Farbe und Tooltip für Ledger-Eintrag.
+	 */
+	protected function ledger_status_badge( $l ) {
+		$status = $l->status ?? 'available';
+
+		if ( 'pending' === $status ) {
+			$label = __( 'Ausstehend', 'lindenweg16' );
+			$color = '#d97706';
+			$bg    = '#fef3c7';
+			$hint  = '';
+			if ( ! empty( $l->available_at ) ) {
+				$hint = sprintf(
+					/* translators: %s: date */
+					__( 'Verfügbar ab %s', 'lindenweg16' ),
+					date_i18n( 'd.m.Y', strtotime( $l->available_at ) )
+				);
+			}
+			return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:' . $bg . ';color:' . $color . '"'
+				. ( $hint ? ' title="' . esc_attr( $hint ) . '"' : '' )
+				. '>' . esc_html( $label ) . '</span>';
+		}
+
+		if ( 'reversed' === $status ) {
+			return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#fee2e2;color:#dc2626">'
+				. esc_html__( 'Storniert', 'lindenweg16' ) . '</span>';
+		}
+
+		return '<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;background:#dcfce7;color:#16a34a">'
+			. esc_html__( 'Verfügbar', 'lindenweg16' ) . '</span>';
 	}
 }

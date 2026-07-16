@@ -15,19 +15,13 @@ use Lindenweg16\Core\Pdf;
 
 class PickListGenerator {
 
-	/**
-	 * Pickliste für eine Bestellung erstellen und als PDF speichern.
-	 *
-	 * @param int $order_id WooCommerce-Bestell-ID.
-	 * @return int|false Picklisten-ID oder false.
-	 */
 	public static function generate( $order_id ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {
 			return false;
 		}
 
-		$lagerorte = Repository::get_lagerorte();
+		$lagerorte  = Repository::get_lagerorte();
 		$positionen = self::resolve_order_items( $order, $lagerorte );
 
 		if ( empty( $positionen ) ) {
@@ -53,11 +47,6 @@ class PickListGenerator {
 		return $pickliste_id;
 	}
 
-	/**
-	 * Bestellpositionen in Picklisten-Positionen auflösen.
-	 * Sets werden in ihre Module aufgelöst. Jedem Produkt wird
-	 * der Lagerort mit dem höchsten Bestand zugewiesen.
-	 */
 	protected static function resolve_order_items( $order, $lagerorte ) {
 		$positionen = array();
 
@@ -95,9 +84,6 @@ class PickListGenerator {
 		return $positionen;
 	}
 
-	/**
-	 * Lagerort mit dem höchsten Bestand für ein Produkt finden.
-	 */
 	protected static function best_location( $produkt_id, $lagerorte ) {
 		if ( empty( $lagerorte ) ) {
 			return null;
@@ -118,11 +104,7 @@ class PickListGenerator {
 	}
 
 	/**
-	 * PDF für eine Pickliste generieren.
-	 *
-	 * @param int    $pickliste_id Picklisten-ID.
-	 * @param object $order        WooCommerce-Order.
-	 * @return string|false Dateiname oder false.
+	 * Picklisten-PDF im CI-Design.
 	 */
 	public static function generate_pdf( $pickliste_id, $order = null ) {
 		$pickliste = Repository::get_pickliste( $pickliste_id );
@@ -142,37 +124,59 @@ class PickListGenerator {
 		$pdf = new Pdf();
 		$pdf->enable_ci();
 
-		$pdf->text( __( 'Pickliste', 'lindenweg16' ), 18, true );
-		$pdf->space( 6 );
+		$datum = $order->get_date_created()
+			? $order->get_date_created()->date_i18n( 'd.m.Y' )
+			: gmdate( 'd.m.Y' );
 
-		$pdf->row( __( 'Pickliste Nr.:', 'lindenweg16' ), '#' . $pickliste_id, 11, true );
-		$pdf->row( __( 'Bestellung:', 'lindenweg16' ), '#' . $order->get_order_number(), 11 );
-		$datum = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'd.m.Y' ) : gmdate( 'd.m.Y' );
-		$pdf->row( __( 'Bestelldatum:', 'lindenweg16' ), $datum, 11 );
-		$pdf->row( __( 'Erstellt am:', 'lindenweg16' ), wp_date( 'd.m.Y H:i', strtotime( $pickliste->erstellt_am ) ), 11 );
-		$pdf->space( 6 );
+		// Titel + Meta.
+		$start_y = $pdf->get_y();
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->text( __( 'Pickliste', 'lindenweg16' ), 22, true );
+
+		$meta_x = Pdf::PAGE_WIDTH - Pdf::MARGIN;
+		$pdf->set_color( '#6E7882' );
+		$pdf->text_xy_right( __( 'Pickliste', 'lindenweg16' ) . ' #' . $pickliste_id, $meta_x, $start_y, 10 );
+		$pdf->text_xy_right( __( 'Bestellnr.', 'lindenweg16' ) . ' #' . $order->get_order_number(), $meta_x, $start_y + 16, 10 );
+		$pdf->text_xy_right( __( 'Datum', 'lindenweg16' ) . ' ' . $datum, $meta_x, $start_y + 32, 10 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->space( 8 );
 
 		$kunde = trim( $order->get_shipping_full_name() ?: $order->get_billing_full_name() );
 		if ( $kunde ) {
-			$pdf->row( __( 'Kunde:', 'lindenweg16' ), $kunde, 11 );
+			$pdf->set_color( Pdf::COLOR_COGNAC );
+			$pdf->text( mb_strtoupper( __( 'Kunde', 'lindenweg16' ) ), 8, true );
+			$pdf->set_color( Pdf::COLOR_TINTE );
+			$pdf->space( 2 );
+			$pdf->text( $kunde, 11 );
+			$pdf->space( 8 );
 		}
-		$pdf->space( 8 );
 
-		$pdf->hr();
-		$pdf->text(
-			self::pad( __( 'Lagerort', 'lindenweg16' ), 12 )
-			. self::pad( __( 'Artikel', 'lindenweg16' ), 30 )
-			. self::pad( __( 'Menge', 'lindenweg16' ), 10 )
-			. self::pad( __( 'Einheit', 'lindenweg16' ), 10 )
-			. '[ ] ' . __( 'OK', 'lindenweg16' ),
-			10,
+		// Tabellenkopf.
+		$widths = array( 70, 200, 60, 60, 40 );
+		$aligns = array( 'l', 'l', 'r', 'l', 'l' );
+
+		$pdf->set_color( '#6E7882' );
+		$pdf->table_cols(
+			array(
+				mb_strtoupper( __( 'Lagerort', 'lindenweg16' ) ),
+				mb_strtoupper( __( 'Artikel', 'lindenweg16' ) ),
+				mb_strtoupper( __( 'Menge', 'lindenweg16' ) ),
+				mb_strtoupper( __( 'Einheit', 'lindenweg16' ) ),
+				'[ ] ' . mb_strtoupper( __( 'OK', 'lindenweg16' ) ),
+			),
+			$widths,
+			$aligns,
+			8,
 			true
 		);
-		$pdf->hr();
+		$pdf->set_draw_color( Pdf::COLOR_TINTE );
+		$pdf->hr( 1.5 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
 
+		// Positionen, nach Lagerort gruppiert.
 		$current_ort = null;
 		foreach ( $positionen as $pos ) {
-			$ort_label = $pos->lagerort_kuerzel ?: '—';
+			$ort_label = $pos->lagerort_kuerzel ?: "\xE2\x80\x94";
 
 			if ( $ort_label !== $current_ort ) {
 				if ( null !== $current_ort ) {
@@ -182,30 +186,42 @@ class PickListGenerator {
 			}
 
 			$menge_str = self::fmt( $pos->soll_menge );
-			$pdf->text(
-				self::pad( $ort_label, 12 )
-				. self::pad( $pos->produkt_name ?: '?', 30 )
-				. self::pad( $menge_str, 10 )
-				. self::pad( $pos->basis_einheit ?: '', 10 )
-				. '[ ]',
+			$pdf->table_cols(
+				array(
+					$ort_label,
+					$pos->produkt_name ?: '?',
+					$menge_str,
+					$pos->basis_einheit ?: '',
+					'[ ]',
+				),
+				$widths,
+				$aligns,
 				10
 			);
+			$pdf->set_draw_color( '#E0E0E0' );
+			$pdf->hr( 0.3 );
 		}
 
 		$pdf->space( 16 );
-		$pdf->hr();
+		$pdf->set_draw_color( Pdf::COLOR_TINTE );
+		$pdf->hr( 0.8 );
 		$pdf->space( 8 );
+
+		$pdf->set_color( Pdf::COLOR_COGNAC );
 		$pdf->row(
 			__( 'Positionen gesamt:', 'lindenweg16' ),
 			(string) count( $positionen ),
 			11,
 			true
 		);
-		$pdf->space( 20 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
+		$pdf->space( 24 );
 
+		$pdf->set_color( '#6E7882' );
 		$pdf->text( __( 'Gepickt von: ________________________', 'lindenweg16' ), 11 );
 		$pdf->space( 12 );
 		$pdf->text( __( 'Datum/Uhrzeit: ________________________', 'lindenweg16' ), 11 );
+		$pdf->set_color( Pdf::COLOR_TINTE );
 
 		$filename = 'pickliste-' . $pickliste_id . '-' . $order->get_order_number() . '.pdf';
 		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
@@ -217,13 +233,5 @@ class PickListGenerator {
 	protected static function fmt( $n ) {
 		$s = number_format( (float) $n, 2, ',', '.' );
 		return rtrim( rtrim( $s, '0' ), ',' );
-	}
-
-	protected static function pad( $str, $width ) {
-		$len = strlen( $str );
-		if ( $len >= $width ) {
-			return substr( $str, 0, $width - 1 ) . ' ';
-		}
-		return $str . str_repeat( ' ', $width - $len );
 	}
 }

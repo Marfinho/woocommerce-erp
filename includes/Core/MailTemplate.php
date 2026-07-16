@@ -138,13 +138,16 @@ class MailTemplate {
 	/**
 	 * Plaintext-Body in HTML mit CI-Header und Footer einbetten.
 	 *
+	 * Design: Lindenweg16 CI — zentriertes Logo, Cognac-Akzente,
+	 * heller Hintergrund, Footer mit Adresse.
+	 *
 	 * @param string $text Klartext-Inhalt.
 	 * @return string Vollständiges HTML-Dokument.
 	 */
 	public static function wrap_html( $text ) {
 		$firma     = esc_html( (string) Settings::get( 'firma_name' ) );
-		$farbe     = self::sanitize_color( Settings::get( 'ci_farbe', '#1d2327' ) );
-		$footer    = esc_html( (string) Settings::get( 'email_footer', '' ) );
+		$farbe     = self::sanitize_color( Settings::get( 'ci_farbe', '#8B6914' ) );
+		$footer_txt = esc_html( (string) Settings::get( 'email_footer', '' ) );
 		$strasse   = esc_html( (string) Settings::get( 'firma_strasse', '' ) );
 		$plz_ort   = esc_html( (string) Settings::get( 'firma_plz_ort', '' ) );
 
@@ -153,7 +156,7 @@ class MailTemplate {
 		if ( $logo_id ) {
 			$logo_url = wp_get_attachment_url( $logo_id );
 			if ( $logo_url ) {
-				$logo_html = '<img src="' . esc_url( $logo_url ) . '" alt="' . $firma . '" style="max-width:180px;max-height:60px;margin-bottom:8px;display:block;margin-left:auto;margin-right:auto">';
+				$logo_html = '<img src="' . esc_url( $logo_url ) . '" alt="' . $firma . '" style="height:70px;max-width:240px;object-fit:contain;">';
 			}
 		}
 
@@ -162,35 +165,47 @@ class MailTemplate {
 		$footer_parts = array_filter( array( $firma, $strasse, $plz_ort ) );
 		$footer_line  = implode( ' &middot; ', $footer_parts );
 
-		$logo_margin = $logo_html ? '8' : '0';
+		$bg_color     = '#EFEBE3';
+		$text_color   = '#3A434D';
+		$text_light   = 'rgba(58,67,77,.72)';
+		$border_light = 'rgba(58,67,77,.08)';
+		$footer_color = 'rgba(58,67,77,.5)';
 
 		$html  = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>';
-		$html .= '<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif">';
-		$html .= '<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td align="center" style="padding:24px 8px">';
-		$html .= '<table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;width:100%">';
+		$html .= '<body style="margin:0;padding:0;background:' . $bg_color . ';font-family:\'Inter\',-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;color:' . $text_color . '">';
+		$html .= '<table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="background:' . $bg_color . '"><tr><td align="center" style="padding:32px 16px">';
 
-		// Header.
-		$html .= '<tr><td style="background:' . esc_attr( $farbe ) . ';padding:24px;text-align:center">';
+		$html .= '<table width="556" cellpadding="0" cellspacing="0" border="0" style="background:#ffffff;max-width:556px;width:100%">';
+
+		// Logo-Header.
+		$html .= '<tr><td style="padding:32px 0;text-align:center;border-bottom:1px solid ' . $border_light . '">';
 		if ( $logo_html ) {
-			$html .= '<div>' . $logo_html . '</div>';
+			$html .= $logo_html;
+		} else {
+			$html .= '<div style="font-family:\'Poppins\',Helvetica,Arial,sans-serif;font-weight:600;font-size:20px;color:' . $text_color . '">' . $firma . '</div>';
 		}
-		$html .= '<div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:' . $logo_margin . 'px">' . $firma . '</div>';
 		$html .= '</td></tr>';
 
 		// Body.
-		$html .= '<tr><td style="padding:32px 24px;font-size:15px;line-height:1.6;color:#333333">';
+		$html .= '<tr><td style="padding:36px 40px;font-size:14px;line-height:1.6;color:' . $text_light . '">';
 		$html .= $body_html;
 		$html .= '</td></tr>';
 
-		// Footer.
-		$html .= '<tr><td style="padding:16px 24px;border-top:1px solid #eeeeee;font-size:12px;color:#999999;text-align:center;line-height:1.5">';
-		if ( $footer ) {
-			$html .= '<div style="margin-bottom:8px">' . nl2br( esc_html( $footer ) ) . '</div>';
+		// Custom Footer Text.
+		if ( $footer_txt ) {
+			$html .= '<tr><td style="padding:0 40px 24px;font-size:13px;line-height:1.6;color:' . $text_light . '">';
+			$html .= nl2br( esc_html( $footer_txt ) );
+			$html .= '</td></tr>';
 		}
+
+		// Footer.
+		$html .= '<tr><td style="padding:24px 40px 36px;text-align:center;font-size:12px;color:' . $footer_color . ';line-height:1.7;border-top:1px solid ' . $border_light . '">';
 		$html .= '<div>' . $footer_line . '</div>';
+		$html .= '<div style="margin-top:4px">' . esc_html__( 'Diese E-Mail wurde automatisch versendet.', 'lindenweg16' ) . '</div>';
 		$html .= '</td></tr>';
 
-		$html .= '</table></td></tr></table></body></html>';
+		$html .= '</table>';
+		$html .= '</td></tr></table></body></html>';
 
 		return $html;
 	}
@@ -209,6 +224,6 @@ class MailTemplate {
 		if ( preg_match( '/^#[0-9a-fA-F]{3}$/', $color ) ) {
 			return $color;
 		}
-		return '#1d2327';
+		return '#8B6914';
 	}
 }

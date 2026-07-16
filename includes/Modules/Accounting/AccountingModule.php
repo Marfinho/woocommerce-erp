@@ -315,26 +315,51 @@ class AccountingModule {
 		$pdf = new \Lindenweg16\Core\Pdf();
 		$pdf->enable_ci();
 
-		$pdf->text( __( 'Einnahmen-Überschuss-Rechnung', 'lindenweg16' ), 16, true );
-		$pdf->row( __( 'Zeitraum:', 'lindenweg16' ), $from . ' – ' . $to, 11 );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+		$pdf->text( __( 'Einnahmen-Überschuss-Rechnung', 'lindenweg16' ), 22, true );
+		$pdf->set_color( '#6E7882' );
+		$pdf->text( __( 'Zeitraum:', 'lindenweg16' ) . ' ' . $from . ' – ' . $to, 11 );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
 		$pdf->space( 8 );
-		$pdf->hr();
-		$pdf->row( __( 'Einnahmen (WooCommerce, abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
-		$pdf->space( 6 );
-		$pdf->text( __( 'Ausgaben nach EÜR-Kategorie:', 'lindenweg16' ), 11, true );
+
+		$pdf->set_draw_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+		$pdf->hr( 1.5 );
+
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
+		$pdf->text( mb_strtoupper( __( 'Einnahmen', 'lindenweg16' ) ), 8, true );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+		$pdf->row( __( 'WooCommerce (abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
+		$pdf->space( 8 );
+
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
+		$pdf->text( mb_strtoupper( __( 'Ausgaben nach Kategorie', 'lindenweg16' ) ), 8, true );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
 		foreach ( $rep['ausgaben_kategorien'] as $kat => $summe ) {
 			$pdf->row( $kat, self::euro( $summe ), 11, false );
 		}
-		$pdf->hr();
+
+		$pdf->set_draw_color( '#E0E0E0' );
+		$pdf->hr( 0.3 );
 		$pdf->row( __( 'Ausgaben gesamt', 'lindenweg16' ), self::euro( $rep['ausgaben_summe'] ), 11, true );
-		$pdf->row( __( 'Gewinn', 'lindenweg16' ), self::euro( $rep['gewinn'] ), 13, true );
+		$pdf->space( 4 );
+
+		$pdf->set_draw_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+		$pdf->hr( 0.8 );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
+		$pdf->row( __( 'Gewinn', 'lindenweg16' ), self::euro( $rep['gewinn'] ), 14, true );
+		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+
 		if ( (int) Settings::get( 'kleinunternehmer', 1 ) === 1 ) {
-			$pdf->space( 6 );
+			$pdf->space( 8 );
+			$pdf->set_color( '#6E7882' );
 			$pdf->text( __( 'Kleinunternehmer §19 UStG: keine Umsatzsteuer, Beträge brutto.', 'lindenweg16' ), 9 );
+			$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
 		}
 		if ( $notiz ) {
 			$pdf->space( 6 );
+			$pdf->set_color( '#6E7882' );
 			$pdf->text( __( 'Notiz: ', 'lindenweg16' ) . $notiz, 10 );
+			$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
 		}
 
 		// Beleg-Fotos als Anhang (nur JPEG einbettbar).
