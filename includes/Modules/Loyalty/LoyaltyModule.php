@@ -14,6 +14,7 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\Calc;
+use Lindenweg16\Core\MailTemplate;
 
 /**
  * Verdrahtet Referral-Tracking, Reward-Berechnung mit Betrugsprüfung,
@@ -250,15 +251,11 @@ class LoyaltyModule {
 		if ( empty( $emails ) ) {
 			return;
 		}
-		$subject = __( '[Lindenweg16] Referral zur Prüfung', 'lindenweg16' );
-		$body    = sprintf(
-			/* translators: 1: ID, 2: Betrag, 3: Grund */
-			__( "Ein Referral (#%1\$d, Reward %2\$s €) wurde zur Prüfung markiert.\n\nGrund: %3\$s\n\nBitte im Backend unter Loyalty freigeben oder ablehnen.", 'lindenweg16' ),
-			$referral_id,
-			number_format( $reward, 2, ',', '.' ),
-			$grund
-		);
-		wp_mail( $emails, $subject, $body );
+		MailTemplate::send( $emails, 'referral_review', array(
+			'{referral_id}' => (string) $referral_id,
+			'{betrag}'      => number_format( $reward, 2, ',', '.' ),
+			'{grund}'       => $grund,
+		) );
 	}
 
 	/* --------------------------------------------------------------------

@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\MailTemplate;
 
 /**
  * Verbucht Lagerbewegungen und aktualisiert den Bestand konsistent.
@@ -174,20 +175,11 @@ class StockManager {
 			return;
 		}
 
-		$subject = sprintf(
-			/* translators: %s: Produktname */
-			__( '[Lindenweg16] Mindestbestand unterschritten: %s', 'lindenweg16' ),
-			$produkt->name
-		);
-		$body = sprintf(
-			/* translators: 1: Produktname, 2: Bestand, 3: Mindestbestand, 4: Einheit */
-			__( "Das Produkt \"%1\$s\" hat den Mindestbestand unterschritten.\n\nAktueller Bestand: %2\$s %4\$s\nMindestbestand: %3\$s %4\$s", 'lindenweg16' ),
-			$produkt->name,
-			rtrim( rtrim( number_format( (float) $neuer_bestand, 2, ',', '.' ), '0' ), ',' ),
-			rtrim( rtrim( number_format( (float) $produkt->mindestbestand, 2, ',', '.' ), '0' ), ',' ),
-			$produkt->basis_einheit
-		);
-
-		wp_mail( $emails, $subject, $body );
+		MailTemplate::send( $emails, 'mindestbestand', array(
+			'{produktname}'    => $produkt->name,
+			'{bestand}'        => rtrim( rtrim( number_format( (float) $neuer_bestand, 2, ',', '.' ), '0' ), ',' ),
+			'{mindestbestand}' => rtrim( rtrim( number_format( (float) $produkt->mindestbestand, 2, ',', '.' ), '0' ), ',' ),
+			'{einheit}'        => $produkt->basis_einheit,
+		) );
 	}
 }

@@ -313,9 +313,9 @@ class AccountingModule {
 
 		$rep = EuerCalculator::report( $from, $to );
 		$pdf = new \Lindenweg16\Core\Pdf();
+		$pdf->enable_ci();
 
 		$pdf->text( __( 'Einnahmen-Überschuss-Rechnung', 'lindenweg16' ), 16, true );
-		$pdf->text( (string) Settings::get( 'firma_name' ), 11 );
 		$pdf->row( __( 'Zeitraum:', 'lindenweg16' ), $from . ' – ' . $to, 11 );
 		$pdf->space( 8 );
 		$pdf->hr();

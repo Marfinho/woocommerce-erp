@@ -13,6 +13,7 @@ use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 
 /**
@@ -60,8 +61,7 @@ class SupportModule {
 		}
 
 		$attachments = $this->build_export_files();
-		$body        = __( "Automatischer Wochen-Export der Buchhaltungs- und Lagerdaten (CSV) im Anhang.\n\nDies ist eine zusätzliche Absicherung unabhängig vom Server-Backup.", 'lindenweg16' );
-		wp_mail( $email, __( '[Lindenweg16] Wöchentlicher Datenexport', 'lindenweg16' ), $body, array(), $attachments );
+		MailTemplate::send( $email, 'datenexport', array(), $attachments );
 
 		// Temporäre Dateien aufräumen.
 		foreach ( $attachments as $f ) {
@@ -268,11 +268,10 @@ class SupportModule {
 		// Manager benachrichtigen.
 		$emails = Roles::get_manager_emails();
 		if ( $emails ) {
-			wp_mail(
-				$emails,
-				__( '[Lindenweg16] Neues Support-Ticket', 'lindenweg16' ),
-				sprintf( /* translators: 1: ID, 2: Betreff */ __( "Neues Ticket #%1\$d: %2\$s\n\nIm Backend unter Support bearbeiten.", 'lindenweg16' ), $ticket_id, sanitize_text_field( wp_unslash( $_POST['betreff'] ?? '' ) ) )
-			);
+			MailTemplate::send( $emails, 'neues_ticket', array(
+				'{ticket_id}' => (string) $ticket_id,
+				'{betreff}'   => sanitize_text_field( wp_unslash( $_POST['betreff'] ?? '' ) ),
+			) );
 		}
 
 		$redirect = wc_get_account_endpoint_url( self::ENDPOINT );
@@ -407,7 +406,9 @@ class SupportModule {
 	protected function notify_customer( $ticket, $message ) {
 		$user = get_userdata( $ticket->user_id );
 		if ( $user && is_email( $user->user_email ) ) {
-			wp_mail( $user->user_email, __( '[Lindenweg16] Update zu Deiner Anfrage', 'lindenweg16' ), $message );
+			MailTemplate::send( $user->user_email, 'ticket_update', array(
+				'{nachricht}' => $message,
+			) );
 		}
 	}
 
@@ -579,14 +580,13 @@ class SupportModule {
 			$seit
 		) ); // phpcs:ignore
 
-		$body  = __( 'Wochen-Digest Lindenweg16', 'lindenweg16' ) . "\n\n";
-		$body .= sprintf( /* translators: 1: Anzahl, 2: Umsatz */ __( "Neue Bestellungen (7 Tage): %1\$d (Umsatz %2\$s €)\n", 'lindenweg16' ), $anzahl, number_format( $umsatz, 2, ',', '.' ) );
-		$body .= sprintf( /* translators: %d: Anzahl */ __( "Neue Referrals: %d\n", 'lindenweg16' ), $neue_refs );
-		$body .= sprintf( /* translators: %d: Anzahl */ __( "Neue Produktbewertungen: %d\n", 'lindenweg16' ), $neue_reviews );
-		$body .= "\n" . __( 'Lagerwarnungen:', 'lindenweg16' ) . "\n";
-		$body .= $warnungen ? $warnungen : __( 'keine', 'lindenweg16' );
-
-		wp_mail( $emails, __( '[Lindenweg16] Wochen-Digest', 'lindenweg16' ), $body );
+		MailTemplate::send( $emails, 'wochen_digest', array(
+			'{bestellungen}'   => (string) $anzahl,
+			'{umsatz}'         => number_format( $umsatz, 2, ',', '.' ),
+			'{referrals}'      => (string) $neue_refs,
+			'{bewertungen}'    => (string) $neue_reviews,
+			'{lagerwarnungen}' => $warnungen ?: __( 'keine', 'lindenweg16' ),
+		) );
 	}
 
 	/**

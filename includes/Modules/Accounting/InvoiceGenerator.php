@@ -101,19 +101,7 @@ class InvoiceGenerator {
 	 */
 	protected static function build_pdf( $order, $nummer ) {
 		$pdf = new Pdf();
-
-		// Firmenkopf.
-		$pdf->text( (string) Settings::get( 'firma_name' ), 16, true );
-		if ( Settings::get( 'firma_strasse' ) ) {
-			$pdf->text( (string) Settings::get( 'firma_strasse' ), 10 );
-		}
-		if ( Settings::get( 'firma_plz_ort' ) ) {
-			$pdf->text( (string) Settings::get( 'firma_plz_ort' ), 10 );
-		}
-		if ( Settings::get( 'firma_steuernummer' ) ) {
-			$pdf->text( __( 'Steuernummer: ', 'lindenweg16' ) . Settings::get( 'firma_steuernummer' ), 10 );
-		}
-		$pdf->space( 10 );
+		$pdf->enable_ci();
 
 		// Rechnungsempfänger.
 		$pdf->text( __( 'Rechnung an:', 'lindenweg16' ), 10, true );

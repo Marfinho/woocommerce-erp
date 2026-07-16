@@ -53,6 +53,9 @@ class Settings {
 			// Reporting.
 			'digest_wochentag'          => 1, // Montag.
 			'export_email'              => get_bloginfo( 'admin_email' ),
+			// Corporate Identity.
+			'ci_logo_id'                => 0,
+			'ci_farbe'                  => '#1d2327',
 			// E-Mail.
 			'email_absender_name'       => get_bloginfo( 'name' ),
 			'email_footer'              => '',
