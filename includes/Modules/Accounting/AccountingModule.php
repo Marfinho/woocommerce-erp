@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Accounting;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\AuditLog;
 
 /**
  * Verdrahtet Belegerfassung, EÜR-Ansicht, Dashboard-Rücklage und die
@@ -32,6 +33,25 @@ class AccountingModule {
 		// Automatische Rechnungserstellung: bei Abschluss asynchron einreihen.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
 		add_action( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( $this, 'generate_invoice' ), 10, 1 );
+
+		// Beleg-Storno.
+		add_action( 'admin_post_lw16_beleg_storno', array( $this, 'handle_beleg_storno' ) );
+
+		// Rechnungs-Storno.
+		add_action( 'admin_post_lw16_rechnung_storno', array( $this, 'handle_rechnung_storno' ) );
+
+		// E-Rechnung Upload.
+		add_action( 'admin_post_lw16_erechnung_upload', array( $this, 'handle_erechnung_upload' ) );
+		add_action( 'admin_post_lw16_erechnung_beleg', array( $this, 'handle_erechnung_beleg' ) );
+
+		// Betriebsprüfungs-Export.
+		add_action( 'admin_post_lw16_bp_export', array( $this, 'handle_bp_export' ) );
+
+		// GoBD-Prüfung.
+		add_action( 'admin_post_lw16_gobd_check', array( $this, 'handle_gobd_check' ) );
+
+		// Verfahrensdokumentation.
+		add_action( 'admin_post_lw16_verfahrensdoku', array( $this, 'handle_verfahrensdoku' ) );
 
 		// EÜR-PDF-Export.
 		add_action( 'admin_post_lw16_euer_pdf', array( $this, 'export_euer_pdf' ) );
@@ -78,19 +98,43 @@ class AccountingModule {
 		echo '<nav class="lw16-tabs">';
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( $base ), 'belege' === $view ? 'active' : '', esc_html__( 'Belege', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'neu', $base ) ), 'neu' === $view ? 'active' : '', esc_html__( 'Beleg erfassen', 'lindenweg16' ) );
-		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'euer', $base ) ), 'euer' === $view ? 'active' : '', esc_html__( 'EÜR', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'rechnungen', $base ) ), 'rechnungen' === $view ? 'active' : '', esc_html__( 'Rechnungen', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'journal', $base ) ), 'journal' === $view ? 'active' : '', esc_html__( 'Journal', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'euer', $base ) ), 'euer' === $view ? 'active' : '', esc_html__( 'EÜR', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'erechnung', $base ) ), 'erechnung' === $view ? 'active' : '', esc_html__( 'E-Rechnung', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'bp_export', $base ) ), 'bp_export' === $view ? 'active' : '', esc_html__( 'Betriebsprüfung', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'gobd', $base ) ), 'gobd' === $view ? 'active' : '', esc_html__( 'GoBD-Prüfung', 'lindenweg16' ) );
 		echo '</nav>';
 
 		if ( isset( $_GET['msg'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) ) . '</p></div>'; // phpcs:ignore
 		}
 
-		if ( 'neu' === $view ) {
-			$this->render_beleg_form();
-		} elseif ( 'euer' === $view ) {
-			$this->render_euer();
-		} else {
-			$this->render_belege_list();
+		switch ( $view ) {
+			case 'neu':
+				$this->render_beleg_form();
+				break;
+			case 'rechnungen':
+				$this->render_rechnungen_list();
+				break;
+			case 'journal':
+				$this->render_journal();
+				break;
+			case 'euer':
+				$this->render_euer();
+				break;
+			case 'erechnung':
+				$this->render_erechnung();
+				break;
+			case 'bp_export':
+				$this->render_bp_export();
+				break;
+			case 'gobd':
+				$this->render_gobd();
+				break;
+			default:
+				$this->render_belege_list();
+				break;
 		}
 		echo '</div>';
 	}
@@ -105,27 +149,44 @@ class AccountingModule {
 		$belege   = BelegRepository::query( array( 'per_page' => $per_page, 'page' => $page ) );
 
 		echo '<table class="widefat striped"><thead><tr>';
-		echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Händler', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Quelle', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Foto', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+		echo '<th>' . esc_html__( 'Nr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Händler', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Quelle', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Foto', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
 		echo '</tr></thead><tbody>';
 
 		foreach ( $belege as $b ) {
-			echo '<tr>';
+			$is_storniert = isset( $b->storniert ) && (int) $b->storniert === 1;
+			echo '<tr' . ( $is_storniert ? ' style="opacity:0.5"' : '' ) . '>';
+			echo '<td>' . esc_html( isset( $b->belegnummer ) ? $b->belegnummer : '#' . $b->id ) . '</td>';
 			echo '<td>' . esc_html( $b->datum ) . '</td>';
 			echo '<td>' . esc_html( (string) $b->haendler ) . '</td>';
 			echo '<td>' . esc_html( (string) $b->eur_kategorie ) . '</td>';
 			echo '<td>' . esc_html( self::euro( $b->betrag ) ) . '</td>';
-			$quelle = 'wareneingang' === $b->quelle
-				? '<span title="' . esc_attr__( 'automatisch aus Wareneingang übernommen', 'lindenweg16' ) . '">' . esc_html__( 'Wareneingang', 'lindenweg16' ) . '</span>'
-				: esc_html__( 'manuell', 'lindenweg16' );
-			echo '<td>' . $quelle . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			$quelle_label = $b->quelle;
+			if ( 'wareneingang' === $b->quelle ) {
+				$quelle_label = '<span title="' . esc_attr__( 'automatisch aus Wareneingang übernommen', 'lindenweg16' ) . '">' . esc_html__( 'Wareneingang', 'lindenweg16' ) . '</span>';
+			} elseif ( 'erechnung' === $b->quelle ) {
+				$quelle_label = esc_html__( 'E-Rechnung', 'lindenweg16' );
+			} elseif ( 'storno' === $b->quelle ) {
+				$quelle_label = esc_html__( 'Storno', 'lindenweg16' );
+			} else {
+				$quelle_label = esc_html__( 'manuell', 'lindenweg16' );
+			}
+			echo '<td>' . $quelle_label . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
 			if ( $b->datei_pfad ) {
 				$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_beleg_datei&id=' . $b->id ), 'lw16_beleg_datei_' . $b->id );
 				echo '<td><a href="' . esc_url( $url ) . '" target="_blank">' . esc_html__( 'ansehen', 'lindenweg16' ) . '</a></td>';
 			} else {
 				echo '<td>–</td>';
 			}
-			if ( (int) $b->festgeschrieben === 1 ) {
-				echo '<td><span class="lw16-locked">' . esc_html__( 'festgeschrieben', 'lindenweg16' ) . '</span></td><td></td>';
+			if ( $is_storniert ) {
+				echo '<td><span class="lw16-storno">' . esc_html__( 'storniert', 'lindenweg16' ) . '</span></td><td></td>';
+			} elseif ( (int) $b->festgeschrieben === 1 ) {
+				echo '<td><span class="lw16-locked">' . esc_html__( 'festgeschrieben', 'lindenweg16' ) . '</span></td>';
+				if ( 'storno' === $b->quelle ) {
+					echo '<td></td>'; // Storno-Belege können nicht nochmal storniert werden.
+				} else {
+					$st = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_beleg_storno&id=' . $b->id ), 'lw16_beleg_storno_' . $b->id );
+					echo '<td><a class="button button-small" href="' . esc_url( $st ) . '" onclick="return confirm(\'' . esc_attr__( 'Beleg wirklich stornieren?', 'lindenweg16' ) . '\')">' . esc_html__( 'Stornieren', 'lindenweg16' ) . '</a></td>';
+				}
 			} else {
 				echo '<td>' . esc_html__( 'offen', 'lindenweg16' ) . '</td>';
 				$fs = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_festschreiben&id=' . $b->id ), 'lw16_festschreiben_' . $b->id );
@@ -458,6 +519,320 @@ class AccountingModule {
 	}
 
 	/* --------------------------------------------------------------------
+	 * Rechnungsliste
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Rechnungsliste (paginiert) rendern.
+	 */
+	protected function render_rechnungen_list() {
+		$per_page = 50;
+		$page     = isset( $_GET['rp'] ) ? max( 1, (int) $_GET['rp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
+		$total    = InvoiceGenerator::count();
+		$rechnungen = InvoiceGenerator::query( array( 'per_page' => $per_page, 'page' => $page ) );
+
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Rechnungsnr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Erstellt', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $rechnungen as $r ) {
+			$is_storniert = isset( $r->storniert ) && (int) $r->storniert === 1;
+			echo '<tr' . ( $is_storniert ? ' style="opacity:0.5"' : '' ) . '>';
+			echo '<td>';
+			$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_rechnung&id=' . $r->id ), 'lw16_rechnung_' . $r->id );
+			echo '<a href="' . esc_url( $url ) . '" target="_blank">' . esc_html( $r->rechnungsnummer ) . '</a>';
+			echo '</td>';
+			echo '<td>#' . esc_html( $r->order_id ) . '</td>';
+			echo '<td>' . esc_html( self::euro( $r->betrag ) ) . '</td>';
+			echo '<td>' . esc_html( $r->erstellt_am ) . '</td>';
+			if ( $is_storniert ) {
+				echo '<td><span class="lw16-storno">' . esc_html__( 'storniert', 'lindenweg16' ) . '</span></td><td></td>';
+			} else {
+				echo '<td>' . esc_html__( 'aktiv', 'lindenweg16' ) . '</td>';
+				$st = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_rechnung_storno&id=' . $r->id ), 'lw16_rechnung_storno_' . $r->id );
+				echo '<td><a class="button button-small" href="' . esc_url( $st ) . '" onclick="return confirm(\'' . esc_attr__( 'Rechnung wirklich stornieren?', 'lindenweg16' ) . '\')">' . esc_html__( 'Stornieren', 'lindenweg16' ) . '</a></td>';
+			}
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+
+		$total_pages = (int) ceil( $total / $per_page );
+		if ( $total_pages > 1 ) {
+			$base = add_query_arg( 'view', 'rechnungen', admin_url( 'admin.php?page=lw16-buchhaltung' ) );
+			echo '<div class="lw16-pagination">';
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				if ( $i === $page ) {
+					echo '<span class="current">' . (int) $i . '</span> ';
+				} else {
+					echo '<a href="' . esc_url( add_query_arg( 'rp', $i, $base ) ) . '">' . (int) $i . '</a> ';
+				}
+			}
+			echo '</div>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Buchungsjournal
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Buchungsjournal rendern.
+	 */
+	protected function render_journal() {
+		$per_page = 50;
+		$page     = isset( $_GET['jp'] ) ? max( 1, (int) $_GET['jp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
+		$total    = BuchungRepository::count();
+		$buchungen = BuchungRepository::query( array( 'per_page' => $per_page, 'page' => $page ) );
+
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Nr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Typ', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Beschreibung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $buchungen as $bu ) {
+			$is_storniert = (int) $bu->storniert === 1;
+			echo '<tr' . ( $is_storniert ? ' style="opacity:0.5"' : '' ) . '>';
+			echo '<td>' . esc_html( $bu->buchungsnummer ) . '</td>';
+			echo '<td>' . esc_html( $bu->buchungsdatum ) . '</td>';
+			echo '<td>' . esc_html( $bu->typ ) . '</td>';
+			echo '<td>' . esc_html( self::euro( $bu->betrag ) ) . '</td>';
+			echo '<td>' . esc_html( $bu->kategorie ) . '</td>';
+			echo '<td>' . esc_html( mb_substr( (string) $bu->beschreibung, 0, 80 ) ) . '</td>';
+			echo '<td>' . ( $is_storniert ? esc_html__( 'storniert', 'lindenweg16' ) : esc_html__( 'aktiv', 'lindenweg16' ) ) . '</td>';
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+
+		$total_pages = (int) ceil( $total / $per_page );
+		if ( $total_pages > 1 ) {
+			$base = add_query_arg( 'view', 'journal', admin_url( 'admin.php?page=lw16-buchhaltung' ) );
+			echo '<div class="lw16-pagination">';
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				if ( $i === $page ) {
+					echo '<span class="current">' . (int) $i . '</span> ';
+				} else {
+					echo '<a href="' . esc_url( add_query_arg( 'jp', $i, $base ) ) . '">' . (int) $i . '</a> ';
+				}
+			}
+			echo '</div>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * E-Rechnungsempfang
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * E-Rechnungen-Liste und Upload-Formular.
+	 */
+	protected function render_erechnung() {
+		echo '<h2>' . esc_html__( 'E-Rechnung importieren', 'lindenweg16' ) . '</h2>';
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+			<input type="hidden" name="action" value="lw16_erechnung_upload">
+			<?php wp_nonce_field( 'lw16_erechnung_upload' ); ?>
+			<p>
+				<label><?php esc_html_e( 'XML- oder PDF-Datei:', 'lindenweg16' ); ?>
+				<input type="file" name="erechnung" accept=".xml,.pdf" required></label>
+				<?php submit_button( __( 'Hochladen', 'lindenweg16' ), 'secondary', '', false ); ?>
+			</p>
+		</form>
+		<?php
+
+		$erechnungen = ERechnungImporter::get_list();
+		if ( $erechnungen ) {
+			echo '<table class="widefat striped"><thead><tr>';
+			echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Absender', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Re-Nr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Format', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+			echo '</tr></thead><tbody>';
+			foreach ( $erechnungen as $er ) {
+				echo '<tr>';
+				echo '<td>' . esc_html( $er->datum ) . '</td>';
+				echo '<td>' . esc_html( $er->absender_name ) . '</td>';
+				echo '<td>' . esc_html( $er->rechnungsnummer_ext ) . '</td>';
+				echo '<td>' . esc_html( self::euro( $er->betrag ) ) . '</td>';
+				echo '<td>' . esc_html( $er->format ) . '</td>';
+				echo '<td>' . esc_html( $er->status ) . '</td>';
+				if ( 'empfangen' === $er->status ) {
+					$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_erechnung_beleg&id=' . $er->id ), 'lw16_erechnung_beleg_' . $er->id );
+					echo '<td><a class="button button-small" href="' . esc_url( $url ) . '">' . esc_html__( 'Als Beleg übernehmen', 'lindenweg16' ) . '</a></td>';
+				} else {
+					echo '<td>' . esc_html__( 'verarbeitet', 'lindenweg16' ) . '</td>';
+				}
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Betriebsprüfungs-Export
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Betriebsprüfungs-Export-Seite.
+	 */
+	protected function render_bp_export() {
+		echo '<h2>' . esc_html__( 'Export für Betriebsprüfung', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Strukturierter Datenexport gemäß §147 Abs. 6 AO (Z3: Datenträgerüberlassung). Enthält alle Belege, Rechnungen, Buchungen, Audit-Log und EÜR-Zusammenfassung als CSV-Dateien mit maschinenlesbarer Strukturbeschreibung (INDEX.xml).', 'lindenweg16' ) . '</p>';
+		$jahr = (int) gmdate( 'Y' );
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_bp_export">
+			<?php wp_nonce_field( 'lw16_bp_export' ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Von', 'lindenweg16' ); ?></th><td><input type="date" name="from" value="<?php echo esc_attr( $jahr . '-01-01' ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Bis', 'lindenweg16' ); ?></th><td><input type="date" name="to" value="<?php echo esc_attr( $jahr . '-12-31' ); ?>"></td></tr>
+			</tbody></table>
+			<?php submit_button( __( 'ZIP-Export herunterladen', 'lindenweg16' ) ); ?>
+		</form>
+		<?php
+	}
+
+	/* --------------------------------------------------------------------
+	 * GoBD-Prüfung
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * GoBD-Prüfung rendern.
+	 */
+	protected function render_gobd() {
+		echo '<h2>' . esc_html__( 'GoBD-Integritätsprüfung', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Prüft Hash-Ketten, Nummern-Lückenlosigkeit und zeitgerechte Erfassung. Empfehlung: mindestens jährlich vor dem Jahresabschluss durchführen.', 'lindenweg16' ) . '</p>';
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_gobd_check">
+			<?php wp_nonce_field( 'lw16_gobd_check' ); ?>
+			<p>
+				<label><?php esc_html_e( 'Jahr:', 'lindenweg16' ); ?>
+				<input type="number" name="jahr" value="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" min="2020" max="2099" class="small-text"></label>
+				<?php submit_button( __( 'Prüfung starten', 'lindenweg16' ), 'primary', '', false ); ?>
+			</p>
+		</form>
+		<?php
+		$doku_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_verfahrensdoku' ), 'lw16_verfahrensdoku' );
+		echo '<p><a class="button" href="' . esc_url( $doku_url ) . '">' . esc_html__( 'Verfahrensdokumentation als PDF', 'lindenweg16' ) . '</a></p>';
+
+		echo '<hr>';
+
+		// Letzte Prüfergebnisse anzeigen.
+		$results = GobdChecker::get_results( 5 );
+		if ( $results ) {
+			echo '<h3>' . esc_html__( 'Letzte Prüfungen', 'lindenweg16' ) . '</h3>';
+			echo '<table class="widefat striped"><thead><tr>';
+			echo '<th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Jahr', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Ergebnis', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Fehler', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Warnungen', 'lindenweg16' ) . '</th>';
+			echo '</tr></thead><tbody>';
+			foreach ( $results as $res ) {
+				$status_class = 'ok' === $res->ergebnis ? 'lw16-ok' : ( 'fehler' === $res->ergebnis ? 'lw16-error' : 'lw16-warn' );
+				echo '<tr>';
+				echo '<td>' . esc_html( $res->pruef_datum ) . '</td>';
+				echo '<td>' . esc_html( $res->jahr ) . '</td>';
+				echo '<td><span class="' . esc_attr( $status_class ) . '">' . esc_html( strtoupper( $res->ergebnis ) ) . '</span></td>';
+				echo '<td>' . esc_html( $res->fehler_anzahl ) . '</td>';
+				echo '<td>' . esc_html( $res->warn_anzahl ) . '</td>';
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Neue POST-Handler
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Beleg stornieren.
+	 */
+	public function handle_beleg_storno() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_beleg_storno_' . $id );
+		BelegRepository::stornieren( $id, __( 'Manuelle Stornierung', 'lindenweg16' ) );
+		$this->redirect( __( 'Beleg storniert.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Rechnung stornieren.
+	 */
+	public function handle_rechnung_storno() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_rechnung_storno_' . $id );
+		InvoiceGenerator::stornieren( $id, __( 'Manuelle Stornierung', 'lindenweg16' ) );
+		$this->redirect( __( 'Rechnung storniert.', 'lindenweg16' ), 'rechnungen' );
+	}
+
+	/**
+	 * E-Rechnung hochladen.
+	 */
+	public function handle_erechnung_upload() {
+		$this->guard( 'lw16_erechnung_upload' );
+		if ( empty( $_FILES['erechnung']['name'] ) ) {
+			$this->redirect( __( 'Keine Datei ausgewählt.', 'lindenweg16' ), 'erechnung' );
+		}
+		$parsed = ERechnungImporter::process_upload( $_FILES['erechnung'] );
+		if ( ! $parsed ) {
+			$this->redirect( __( 'Datei konnte nicht verarbeitet werden.', 'lindenweg16' ), 'erechnung' );
+		}
+		ERechnungImporter::save( $parsed );
+		$this->redirect( __( 'E-Rechnung importiert.', 'lindenweg16' ), 'erechnung' );
+	}
+
+	/**
+	 * E-Rechnung als Beleg übernehmen.
+	 */
+	public function handle_erechnung_beleg() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_erechnung_beleg_' . $id );
+		ERechnungImporter::create_beleg( $id );
+		$this->redirect( __( 'E-Rechnung als Beleg übernommen.', 'lindenweg16' ), 'erechnung' );
+	}
+
+	/**
+	 * Betriebsprüfungs-Export.
+	 */
+	public function handle_bp_export() {
+		$this->guard( 'lw16_bp_export' );
+		$from = sanitize_text_field( wp_unslash( $_POST['from'] ?? gmdate( 'Y' ) . '-01-01' ) );
+		$to   = sanitize_text_field( wp_unslash( $_POST['to'] ?? gmdate( 'Y' ) . '-12-31' ) );
+		ExportGenerator::download( $from, $to );
+	}
+
+	/**
+	 * GoBD-Prüfung durchführen.
+	 */
+	public function handle_gobd_check() {
+		$this->guard( 'lw16_gobd_check' );
+		$jahr     = (int) ( $_POST['jahr'] ?? gmdate( 'Y' ) );
+		$ergebnis = GobdChecker::run( $jahr );
+		$msg = sprintf(
+			/* translators: %1$d year, %2$s status */
+			__( 'GoBD-Prüfung %1$d: %2$s (%3$d Fehler, %4$d Warnungen)', 'lindenweg16' ),
+			$jahr,
+			strtoupper( $ergebnis['status'] ),
+			$ergebnis['fehler'],
+			$ergebnis['warnungen']
+		);
+		$this->redirect( $msg, 'gobd' );
+	}
+
+	/**
+	 * Verfahrensdokumentation als PDF.
+	 */
+	public function handle_verfahrensdoku() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_verfahrensdoku' );
+		VerfahrensDoku::download();
+	}
+
+	/* --------------------------------------------------------------------
 	 * Helfer
 	 * ------------------------------------------------------------------ */
 
@@ -503,12 +878,17 @@ class AccountingModule {
 	}
 
 	/**
-	 * Zurück zur Belegliste mit Meldung.
+	 * Zurück zur Buchhaltung mit Meldung.
 	 *
-	 * @param string $msg Meldung.
+	 * @param string $msg  Meldung.
+	 * @param string $view Ansicht.
 	 */
-	protected function redirect( $msg ) {
-		wp_safe_redirect( add_query_arg( array( 'page' => 'lw16-buchhaltung', 'msg' => rawurlencode( $msg ) ), admin_url( 'admin.php' ) ) );
+	protected function redirect( $msg, $view = '' ) {
+		$args = array( 'page' => 'lw16-buchhaltung', 'msg' => rawurlencode( $msg ) );
+		if ( $view ) {
+			$args['view'] = $view;
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

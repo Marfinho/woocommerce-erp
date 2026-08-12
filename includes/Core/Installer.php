@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '3';
+	const DB_VERSION = '4';
 
 	/**
 	 * Aktivierungsroutine.
@@ -245,6 +245,9 @@ class Installer {
 		// --- Modul 1: Buchhaltung -----------------------------------------
 		$tables[] = "CREATE TABLE {$p}belege (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			belegnummer VARCHAR(50) NULL,
+			beleg_jahr SMALLINT UNSIGNED NULL,
+			beleg_laufnummer INT UNSIGNED NULL,
 			datei_pfad VARCHAR(255) NULL,
 			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
 			datum DATE NOT NULL,
@@ -254,13 +257,20 @@ class Installer {
 			quelle VARCHAR(20) NOT NULL DEFAULT 'manuell',
 			festgeschrieben TINYINT(1) NOT NULL DEFAULT 0,
 			festgeschrieben_am DATETIME NULL,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			storno_von_id BIGINT UNSIGNED NULL,
+			storno_grund TEXT NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
 			erstellt_am DATETIME NOT NULL,
 			erstellt_von BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			KEY datum (datum),
 			KEY eur_kategorie (eur_kategorie),
 			KEY festgeschrieben (festgeschrieben),
-			KEY quelle (quelle)
+			KEY quelle (quelle),
+			KEY beleg_jahr (beleg_jahr),
+			KEY belegnummer (belegnummer)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}rechnungen (
@@ -271,6 +281,11 @@ class Installer {
 			laufnummer INT UNSIGNED NOT NULL,
 			datei_pfad VARCHAR(255) NULL,
 			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			storno_von_id BIGINT UNSIGNED NULL,
+			storno_grund TEXT NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
 			erstellt_am DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY rechnungsnummer (rechnungsnummer),
@@ -418,6 +433,8 @@ class Installer {
 			objekt_typ VARCHAR(50) NULL,
 			objekt_id BIGINT UNSIGNED NULL,
 			details LONGTEXT NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
 			erstellt_am DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY user_id (user_id),
@@ -462,8 +479,156 @@ class Installer {
 			KEY storniert (storniert)
 		) {$charset_collate};";
 
+		// --- Modul 1: Buchungsjournal (GoBD) ---------------------------------
+		$tables[] = "CREATE TABLE {$p}buchungen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			buchungsnummer VARCHAR(50) NOT NULL,
+			jahr SMALLINT UNSIGNED NOT NULL,
+			laufnummer INT UNSIGNED NOT NULL,
+			buchungsdatum DATE NOT NULL,
+			erfasst_am DATETIME NOT NULL,
+			typ VARCHAR(20) NOT NULL DEFAULT 'ausgabe',
+			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			kategorie VARCHAR(100) NOT NULL DEFAULT '',
+			beschreibung TEXT NULL,
+			referenz_typ VARCHAR(50) NOT NULL DEFAULT '',
+			referenz_id BIGINT UNSIGNED NULL,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			storno_von_id BIGINT UNSIGNED NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY jahr (jahr),
+			KEY buchungsdatum (buchungsdatum),
+			KEY typ (typ),
+			KEY referenz (referenz_typ, referenz_id),
+			KEY buchungsnummer (buchungsnummer)
+		) {$charset_collate};";
+
+		// --- Modul 1: E-Rechnungs-Eingang --------------------------------
+		$tables[] = "CREATE TABLE {$p}erechnung_eingang (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			datei_pfad VARCHAR(255) NOT NULL DEFAULT '',
+			format VARCHAR(20) NOT NULL DEFAULT '',
+			absender_name VARCHAR(255) NULL,
+			absender_steuer_id VARCHAR(50) NULL,
+			rechnungsnummer_ext VARCHAR(100) NULL,
+			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			datum DATE NOT NULL,
+			xml_inhalt LONGTEXT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'empfangen',
+			beleg_id BIGINT UNSIGNED NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
+			erstellt_am DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			KEY status (status),
+			KEY datum (datum),
+			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
+		// --- Modul 1: GoBD-Prüfprotokoll ---------------------------------
+		$tables[] = "CREATE TABLE {$p}gobd_pruefung (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			pruef_datum DATETIME NOT NULL,
+			jahr SMALLINT UNSIGNED NOT NULL,
+			ergebnis VARCHAR(20) NOT NULL DEFAULT 'ok',
+			fehler_anzahl INT UNSIGNED NOT NULL DEFAULT 0,
+			warn_anzahl INT UNSIGNED NOT NULL DEFAULT 0,
+			details LONGTEXT NULL,
+			geprueft_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY jahr (jahr),
+			KEY ergebnis (ergebnis)
+		) {$charset_collate};";
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
+		}
+
+		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
+		self::maybe_backfill_hashes();
+	}
+
+	/**
+	 * Bestehende Datensätze (vor DB_VERSION 4) nachträglich mit Hashes versehen.
+	 */
+	protected static function maybe_backfill_hashes() {
+		if ( (int) get_option( self::DB_VERSION_OPTION ) >= 4 ) {
+			return; // Bereits migriert.
+		}
+
+		global $wpdb;
+
+		// Belege: Belegnummern nachträglich vergeben.
+		$belege_table = $wpdb->prefix . 'lw16_belege';
+		$has_col = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'belegnummer'",
+			DB_NAME,
+			$belege_table
+		) );
+		if ( $has_col ) {
+			$unmigrated = $wpdb->get_results(
+				"SELECT id, datum FROM {$belege_table} WHERE (belegnummer IS NULL OR belegnummer = '') ORDER BY id ASC", // phpcs:ignore
+				ARRAY_A
+			);
+			$counters = array();
+			foreach ( $unmigrated as $row ) {
+				$jahr = (int) substr( $row['datum'], 0, 4 );
+				if ( ! $jahr ) {
+					$jahr = (int) gmdate( 'Y' );
+				}
+				if ( ! isset( $counters[ $jahr ] ) ) {
+					$counters[ $jahr ] = (int) $wpdb->get_var( $wpdb->prepare(
+						"SELECT COALESCE(MAX(beleg_laufnummer), 0) FROM {$belege_table} WHERE beleg_jahr = %d", // phpcs:ignore
+						$jahr
+					) );
+				}
+				$counters[ $jahr ]++;
+				$wpdb->update(
+					$belege_table,
+					array(
+						'belegnummer'      => Calc::belegnummer( $jahr, $counters[ $jahr ] ),
+						'beleg_jahr'       => $jahr,
+						'beleg_laufnummer' => $counters[ $jahr ],
+					),
+					array( 'id' => (int) $row['id'] )
+				);
+			}
+		}
+
+		// Hash-Ketten für alle Tabellen nachträglich berechnen.
+		$tables_to_hash = array(
+			'belege'     => $wpdb->prefix . 'lw16_belege',
+			'rechnungen' => $wpdb->prefix . 'lw16_rechnungen',
+			'audit_log'  => $wpdb->prefix . 'lw16_audit_log',
+		);
+
+		foreach ( $tables_to_hash as $key => $table ) {
+			$hash_col = $wpdb->get_var( $wpdb->prepare(
+				"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'hash'",
+				DB_NAME,
+				$table
+			) );
+			if ( ! $hash_col ) {
+				continue;
+			}
+			$rows = $wpdb->get_results(
+				"SELECT * FROM {$table} WHERE hash = '' OR hash IS NULL ORDER BY id ASC", // phpcs:ignore
+				ARRAY_A
+			);
+			$prev_hash = '';
+			// Finde den letzten vorhandenen Hash (falls teilweise migriert).
+			$last = $wpdb->get_var( "SELECT hash FROM {$table} WHERE hash != '' ORDER BY id DESC LIMIT 1" ); // phpcs:ignore
+			if ( $last ) {
+				$prev_hash = $last;
+			}
+			foreach ( $rows as $row ) {
+				$hash = HashChain::compute( $key, $row, $prev_hash );
+				$wpdb->update( $table, array( 'hash' => $hash, 'vorheriger_hash' => $prev_hash ), array( 'id' => (int) $row['id'] ) );
+				$prev_hash = $hash;
+			}
 		}
 	}
 }

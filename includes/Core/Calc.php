@@ -151,6 +151,28 @@ class Calc {
 	}
 
 	/**
+	 * Belegnummer im Format B-JJJJ-NNNN.
+	 *
+	 * @param int $jahr       Kalenderjahr.
+	 * @param int $laufnummer Laufende Nummer.
+	 * @return string
+	 */
+	public static function belegnummer( $jahr, $laufnummer ) {
+		return sprintf( 'B-%d-%04d', (int) $jahr, (int) $laufnummer );
+	}
+
+	/**
+	 * Buchungsnummer im Format BU-JJJJ-NNNN.
+	 *
+	 * @param int $jahr       Kalenderjahr.
+	 * @param int $laufnummer Laufende Nummer.
+	 * @return string
+	 */
+	public static function buchungsnummer( $jahr, $laufnummer ) {
+		return sprintf( 'BU-%d-%04d', (int) $jahr, (int) $laufnummer );
+	}
+
+	/**
 	 * Selbstwerbung erkennen (harte Blockregel): gleiche User-ID oder
 	 * gleiche E-Mail-Adresse (case-insensitiv).
 	 *

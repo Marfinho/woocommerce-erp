@@ -12,6 +12,8 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
+use Lindenweg16\Core\HashChain;
+use Lindenweg16\Core\AuditLog;
 
 class InvoiceGenerator {
 
@@ -43,31 +45,47 @@ class InvoiceGenerator {
 		}
 		$nummer = \Lindenweg16\Core\Calc::rechnungsnummer( $modus, $jahr, $laufnummer );
 
-		$ok = $wpdb->insert(
-			self::table(),
-			array(
-				'order_id'        => $order_id,
-				'rechnungsnummer' => $nummer,
-				'jahr'            => $jahr,
-				'laufnummer'      => $laufnummer,
-				'betrag'          => (float) $order->get_total(),
-				'erstellt_am'     => current_time( 'mysql' ),
-			),
-			array( '%d', '%s', '%d', '%d', '%f', '%s' )
+		// Dateiname VOR dem Insert generieren (für Hash-Kette).
+		$filename = 'rechnung-' . $nummer . '-' . wp_generate_password( 8, false ) . '.pdf';
+
+		$data = array(
+			'order_id'        => $order_id,
+			'rechnungsnummer' => $nummer,
+			'jahr'            => $jahr,
+			'laufnummer'      => $laufnummer,
+			'datei_pfad'      => $filename,
+			'betrag'          => (float) $order->get_total(),
+			'erstellt_am'     => current_time( 'mysql' ),
 		);
+
+		// Hash-Verkettung.
+		$hashes                   = HashChain::prepare_insert( 'rechnungen', $data );
+		$data['hash']             = $hashes['hash'];
+		$data['vorheriger_hash']  = $hashes['vorheriger_hash'];
+
+		$ok = $wpdb->insert( self::table(), $data );
 		if ( ! $ok ) {
 			return false;
 		}
 		$rechnung_id = (int) $wpdb->insert_id;
 
-		$filename = 'rechnung-' . $nummer . '-' . wp_generate_password( 8, false ) . '.pdf';
-		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
+		// PDF erzeugen und speichern.
+		$path = trailingslashit( Installer::docs_dir() ) . $filename;
 		self::build_pdf( $order, $nummer )->save( $path );
-
-		$wpdb->update( self::table(), array( 'datei_pfad' => $filename ), array( 'id' => $rechnung_id ) );
 
 		$order->update_meta_data( '_lw16_invoice_number', $nummer );
 		$order->save();
+
+		AuditLog::record( 'rechnung_erstellt', 'rechnung', $rechnung_id, array(
+			'rechnungsnummer' => $nummer,
+			'betrag'          => (float) $order->get_total(),
+		) );
+
+		// Buchung im Journal erzeugen.
+		$rechnung = self::get( $rechnung_id );
+		if ( $rechnung ) {
+			BuchungRepository::create_from_rechnung( $rechnung, $order );
+		}
 
 		return $rechnung_id;
 	}
@@ -241,6 +259,83 @@ class InvoiceGenerator {
 		$pdf->set_color( Pdf::COLOR_TINTE );
 
 		return $pdf;
+	}
+
+	/**
+	 * Rechnung stornieren (Gegenbuchung, kein Löschen).
+	 *
+	 * @param int    $id    Rechnungs-ID.
+	 * @param string $grund Stornierungsgrund.
+	 * @return bool
+	 */
+	public static function stornieren( $id, $grund = '' ) {
+		global $wpdb;
+		$rechnung = self::get( $id );
+		if ( ! $rechnung || (int) $rechnung->storniert === 1 ) {
+			return false;
+		}
+
+		// Original als storniert markieren (storniert nicht im Hash).
+		$wpdb->update(
+			self::table(),
+			array( 'storniert' => 1, 'storno_grund' => $grund ),
+			array( 'id' => (int) $id )
+		);
+
+		AuditLog::record( 'rechnung_storniert', 'rechnung', $id, array(
+			'rechnungsnummer' => $rechnung->rechnungsnummer,
+			'grund'           => $grund,
+		) );
+
+		// Zugehörige Buchung stornieren.
+		$buchung = BuchungRepository::get_by_referenz( 'rechnung', $id );
+		if ( $buchung ) {
+			BuchungRepository::create_storno( (int) $buchung->id, $grund );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Paginierte Liste der Rechnungen.
+	 *
+	 * @param array $args jahr, per_page, page.
+	 * @return array
+	 */
+	public static function query( array $args = array() ) {
+		global $wpdb;
+		$t        = self::table();
+		$per_page = isset( $args['per_page'] ) ? (int) $args['per_page'] : 50;
+		$page     = isset( $args['page'] ) ? max( 1, (int) $args['page'] ) : 1;
+		$offset   = ( $page - 1 ) * $per_page;
+
+		$where  = '1=1';
+		$params = array();
+		if ( ! empty( $args['jahr'] ) ) {
+			$where   .= ' AND jahr = %d';
+			$params[] = (int) $args['jahr'];
+		}
+
+		$sql      = "SELECT * FROM {$t} WHERE {$where} ORDER BY id DESC LIMIT %d OFFSET %d";
+		$params[] = $per_page;
+		$params[] = $offset;
+
+		return $wpdb->get_results( $wpdb->prepare( $sql, $params ) ); // phpcs:ignore
+	}
+
+	/**
+	 * Gesamtanzahl Rechnungen.
+	 *
+	 * @param array $args jahr.
+	 * @return int
+	 */
+	public static function count( array $args = array() ) {
+		global $wpdb;
+		$t = self::table();
+		if ( ! empty( $args['jahr'] ) ) {
+			return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE jahr = %d", (int) $args['jahr'] ) ); // phpcs:ignore
+		}
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t}" ); // phpcs:ignore
 	}
 
 	public static function get_by_order( $order_id ) {
