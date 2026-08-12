@@ -268,8 +268,8 @@ class BelegRepository {
 			return false;
 		}
 
-		// Original als storniert markieren (storniert ist nicht im Hash).
-		$wpdb->update( self::table(), array( 'storniert' => 1 ), array( 'id' => (int) $id ) );
+		// Original als storniert markieren (storniert + storno_grund sind nicht im Hash).
+		$wpdb->update( self::table(), array( 'storniert' => 1, 'storno_grund' => $grund ), array( 'id' => (int) $id ) );
 
 		// Storno-Beleg anlegen.
 		$storno_id = self::create( array(

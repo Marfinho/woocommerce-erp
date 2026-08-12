@@ -111,12 +111,10 @@ class ERechnungImporter {
 			'erstellt_am'         => current_time( 'mysql' ),
 		);
 
-		// Hash-Verkettung.
-		$prev = HashChain::get_last_hash( self::table() );
-		// E-Rechnungen haben eine eigene, vereinfachte Hash-Logik.
-		$hash_data = $row['datei_pfad'] . '|' . $row['betrag'] . '|' . $row['datum'] . '|' . $row['erstellt_am'];
-		$row['hash']            = hash( 'sha256', $hash_data . '|' . ( $prev ?: 'GENESIS' ) );
-		$row['vorheriger_hash'] = $prev;
+		// Hash-Verkettung (über zentrale HashChain wie alle anderen Tabellen).
+		$hashes                   = HashChain::prepare_insert( 'erechnung_eingang', $row );
+		$row['hash']              = $hashes['hash'];
+		$row['vorheriger_hash']   = $hashes['vorheriger_hash'];
 
 		$wpdb->insert( self::table(), $row );
 		$id = (int) $wpdb->insert_id;

@@ -217,7 +217,7 @@ class GobdTest extends TestCase {
 	 * -------------------------------------------------------------- */
 
 	public function test_hash_fields_defined_for_all_tables() {
-		$expected_tables = array( 'belege', 'rechnungen', 'buchungen', 'audit_log' );
+		$expected_tables = array( 'belege', 'rechnungen', 'buchungen', 'audit_log', 'erechnung_eingang' );
 		foreach ( $expected_tables as $table ) {
 			$this->assertArrayHasKey( $table, HashChain::HASH_FIELDS, "Hash fields missing for table: {$table}" );
 			$this->assertNotEmpty( HashChain::HASH_FIELDS[ $table ], "Hash fields empty for table: {$table}" );
@@ -248,6 +248,7 @@ class GobdTest extends TestCase {
 		$this->assertSame( 'belege', HashChain::table_key( 'wp_lw16_belege' ) );
 		$this->assertSame( 'audit_log', HashChain::table_key( 'wp_lw16_audit_log' ) );
 		$this->assertSame( 'buchungen', HashChain::table_key( 'custom_prefix_lw16_buchungen' ) );
+		$this->assertSame( 'erechnung_eingang', HashChain::table_key( 'wp_lw16_erechnung_eingang' ) );
 	}
 
 	public function test_table_key_empty_for_unknown() {
@@ -300,6 +301,27 @@ class GobdTest extends TestCase {
 		);
 		$hash = HashChain::compute( 'rechnungen', $data, '' );
 		$this->assertSame( 64, strlen( $hash ) );
+	}
+
+	public function test_hash_erechnung_eingang_table() {
+		$data = array(
+			'datei_pfad'          => 'erechnung-20260115.xml',
+			'format'              => 'xrechnung',
+			'absender_name'       => 'Lieferant GmbH',
+			'absender_steuer_id'  => 'DE123456789',
+			'rechnungsnummer_ext' => 'LF-2026-0042',
+			'betrag'              => '250.00',
+			'datum'               => '2026-01-15',
+			'erstellt_am'         => '2026-01-15 10:00:00',
+		);
+		$hash = HashChain::compute( 'erechnung_eingang', $data, '' );
+		$this->assertSame( 64, strlen( $hash ) );
+	}
+
+	public function test_erechnung_status_not_in_hash() {
+		// status und beleg_id dürfen sich nach Import ändern, also nicht im Hash.
+		$this->assertNotContains( 'status', HashChain::HASH_FIELDS['erechnung_eingang'] );
+		$this->assertNotContains( 'beleg_id', HashChain::HASH_FIELDS['erechnung_eingang'] );
 	}
 
 	/* ----------------------------------------------------------------

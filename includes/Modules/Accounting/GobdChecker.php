@@ -58,6 +58,7 @@ class GobdChecker {
 			'Rechnungen'       => InvoiceGenerator::table(),
 			'Buchungsjournal'  => BuchungRepository::table(),
 			'Audit-Log'        => AuditLog::table(),
+			'E-Rechnungen'     => ERechnungImporter::table(),
 		);
 
 		foreach ( $hash_tables as $label => $table ) {

@@ -24,10 +24,11 @@ class HashChain {
 	 * (z. B. storniert), gehören NICHT in diese Liste.
 	 */
 	const HASH_FIELDS = array(
-		'belege'      => array( 'belegnummer', 'datei_pfad', 'betrag', 'datum', 'haendler', 'eur_kategorie', 'quelle', 'erstellt_am', 'erstellt_von' ),
-		'rechnungen'  => array( 'order_id', 'rechnungsnummer', 'jahr', 'laufnummer', 'datei_pfad', 'betrag', 'erstellt_am' ),
-		'buchungen'   => array( 'buchungsnummer', 'buchungsdatum', 'erfasst_am', 'typ', 'betrag', 'kategorie', 'beschreibung', 'referenz_typ', 'referenz_id', 'erstellt_von' ),
-		'audit_log'   => array( 'user_id', 'aktion', 'objekt_typ', 'objekt_id', 'details', 'erstellt_am' ),
+		'belege'             => array( 'belegnummer', 'datei_pfad', 'betrag', 'datum', 'haendler', 'eur_kategorie', 'quelle', 'erstellt_am', 'erstellt_von' ),
+		'rechnungen'         => array( 'order_id', 'rechnungsnummer', 'jahr', 'laufnummer', 'datei_pfad', 'betrag', 'erstellt_am' ),
+		'buchungen'          => array( 'buchungsnummer', 'buchungsdatum', 'erfasst_am', 'typ', 'betrag', 'kategorie', 'beschreibung', 'referenz_typ', 'referenz_id', 'erstellt_von' ),
+		'audit_log'          => array( 'user_id', 'aktion', 'objekt_typ', 'objekt_id', 'details', 'erstellt_am' ),
+		'erechnung_eingang'  => array( 'datei_pfad', 'format', 'absender_name', 'absender_steuer_id', 'rechnungsnummer_ext', 'betrag', 'datum', 'erstellt_am' ),
 	);
 
 	/**
