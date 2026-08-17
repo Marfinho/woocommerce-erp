@@ -172,53 +172,93 @@ class Calc {
 	}
 
 	/**
-	 * Kaskadierte Bestandsabzüge für ein Set berechnen.
-	 * Gibt ein Array von [ produkt_id => abzug_menge ] zurück.
+	 * Kaskadierte Bestandsbewegungen für einen Stücklistenbaum berechnen.
 	 *
-	 * @param float $menge       Verkaufte Menge.
-	 * @param array $stueckliste Array von [ 'modul_id' => int, 'menge' => float ].
-	 * @param array $rezepturen  Map modul_id => [ [ 'rohmaterial_id' => int, 'menge' => float ], ... ].
-	 * @return array produkt_id => total_abzug (negative Werte).
+	 * Erwartet den Baum vollständig aufgelöst (der Aufrufer lädt ihn aus der
+	 * Datenbank, diese Methode bleibt seiteneffektfrei). Regeln:
+	 *
+	 * - Ein Knoten vom Typ `set` hat selbst keinen Bestand; er löst sich
+	 *   ausschließlich in seine Kinder auf.
+	 * - Jeder andere Knoten wird selbst bewegt **und** löst zusätzlich seine
+	 *   Kinder auf (Modul → Rohmaterial laut Rezeptur).
+	 * - Kindmengen sind Mengen *pro Elterneinheit* und werden multipliziert.
+	 *
+	 * Zyklen (ein Set, das sich direkt oder über Zwischenstufen selbst
+	 * enthält) werden erkannt und abgebrochen, statt in eine Endlosrekursion
+	 * zu laufen.
+	 *
+	 * @param float $menge     Bewegte Menge des Wurzelprodukts.
+	 * @param array $node      Baumknoten: produkt_id, typ, children[].
+	 * @param int   $vorzeichen -1 für Abgang (Verkauf), +1 für Zugang (Retoure).
+	 * @return array produkt_id => Bewegungsmenge (signiert).
 	 */
-	public static function cascade_deductions( $menge, array $stueckliste, array $rezepturen ) {
-		$result = array();
-		$menge  = abs( (float) $menge );
+	public static function cascade_deductions( $menge, array $node, $vorzeichen = -1 ) {
+		$result     = array();
+		$vorzeichen = $vorzeichen < 0 ? -1 : 1;
+		self::walk_cascade( abs( (float) $menge ), $node, $vorzeichen, $result, array() );
+		return $result;
+	}
 
-		foreach ( $stueckliste as $pos ) {
-			$modul_id    = (int) $pos['modul_id'];
-			$modul_menge = $menge * (float) $pos['menge'];
-
-			if ( ! isset( $result[ $modul_id ] ) ) {
-				$result[ $modul_id ] = 0.0;
-			}
-			$result[ $modul_id ] -= $modul_menge;
-
-			if ( isset( $rezepturen[ $modul_id ] ) ) {
-				foreach ( $rezepturen[ $modul_id ] as $rez ) {
-					$roh_id    = (int) $rez['rohmaterial_id'];
-					$roh_menge = $modul_menge * (float) $rez['menge'];
-					if ( ! isset( $result[ $roh_id ] ) ) {
-						$result[ $roh_id ] = 0.0;
-					}
-					$result[ $roh_id ] -= $roh_menge;
-				}
-			}
+	/**
+	 * Rekursiver Helfer für cascade_deductions().
+	 *
+	 * @param float $menge      Menge auf dieser Ebene.
+	 * @param array $node       Aktueller Knoten.
+	 * @param int   $vorzeichen -1 oder +1.
+	 * @param array $result     Ergebnis (Referenz).
+	 * @param array $pfad       Bereits besuchte Produkt-IDs auf diesem Ast.
+	 */
+	protected static function walk_cascade( $menge, array $node, $vorzeichen, array &$result, array $pfad ) {
+		$id = isset( $node['produkt_id'] ) ? (int) $node['produkt_id'] : 0;
+		if ( ! $id || $menge <= 0 ) {
+			return;
 		}
 
-		return $result;
+		// Zyklenschutz: derselbe Knoten darf auf einem Ast nur einmal vorkommen.
+		if ( isset( $pfad[ $id ] ) ) {
+			return;
+		}
+		$pfad[ $id ] = true;
+
+		$typ = isset( $node['typ'] ) ? (string) $node['typ'] : 'modul';
+
+		// Sets haben selbst keinen Bestand – sie lösen sich nur auf.
+		if ( 'set' !== $typ ) {
+			if ( ! isset( $result[ $id ] ) ) {
+				$result[ $id ] = 0.0;
+			}
+			$result[ $id ] += $vorzeichen * $menge;
+		}
+
+		if ( empty( $node['children'] ) || ! is_array( $node['children'] ) ) {
+			return;
+		}
+
+		foreach ( $node['children'] as $child ) {
+			if ( ! is_array( $child ) ) {
+				continue;
+			}
+			$faktor = isset( $child['menge'] ) ? (float) $child['menge'] : 0.0;
+			if ( $faktor <= 0 ) {
+				continue;
+			}
+			self::walk_cascade( $menge * $faktor, $child, $vorzeichen, $result, $pfad );
+		}
 	}
 
 	/**
 	 * Prüfen, ob ein Review-Bonus vergeben werden darf.
 	 *
-	 * @param string $post_type      Post-Type des Kommentar-Ziels.
-	 * @param int    $content_length Zeichenlänge des Kommentartexts.
-	 * @param int    $min_length     Mindestlänge.
-	 * @param int    $user_id        Benutzer-ID (0 = Gast).
+	 * @param string $post_type       Post-Type des Kommentar-Ziels.
+	 * @param int    $content_length  Zeichenlänge des Kommentartexts.
+	 * @param int    $min_length      Mindestlänge.
+	 * @param int    $user_id         Benutzer-ID (0 = Gast).
 	 * @param bool   $already_awarded Ob bereits ein Bonus für dieses Produkt vergeben wurde.
+	 * @param bool   $approved        Ob die Bewertung freigegeben ist (kein Spam/Moderation).
+	 * @param bool   $has_bought      Ob der Nutzer das Produkt gekauft hat.
 	 * @return bool
 	 */
-	public static function review_bonus_eligible( $post_type, $content_length, $min_length, $user_id, $already_awarded ) {
+	public static function review_bonus_eligible( $post_type, $content_length, $min_length, $user_id, $already_awarded, $approved = true, $has_bought = true ) {
 		if ( 'product' !== $post_type ) {
 			return false;
 		}
@@ -229,6 +269,14 @@ class Calc {
 			return false;
 		}
 		if ( $already_awarded ) {
+			return false;
+		}
+		// Punkte erst, wenn die Bewertung wirklich online ist.
+		if ( ! $approved ) {
+			return false;
+		}
+		// Nur für tatsächlich gekaufte Produkte.
+		if ( ! $has_bought ) {
 			return false;
 		}
 		return true;

@@ -23,7 +23,15 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '3';
+	const DB_VERSION = '4';
+
+	/**
+	 * Stichtag, ab dem die Post-Purchase-Automatik greifen darf.
+	 *
+	 * Ohne diesen Stichtag würde der erste Cron-Lauf sämtliche Altbestellungen
+	 * als „fällig" betrachten und die komplette Bestellhistorie anmailen.
+	 */
+	const POSTPURCHASE_START_OPTION = 'lw16_postpurchase_start';
 
 	/**
 	 * Aktivierungsroutine.
@@ -32,6 +40,7 @@ class Installer {
 		self::create_tables();
 		Roles::add_role();
 		self::protect_belege_directory();
+		self::maybe_set_postpurchase_start();
 		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 
 		// Standard-Einstellungen setzen, falls noch nicht vorhanden.
@@ -67,8 +76,41 @@ class Installer {
 			self::create_tables();
 			Roles::add_role();
 			self::protect_belege_directory();
+			self::maybe_set_postpurchase_start();
+			self::backfill_beleg_richtung();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+			// Intervalle können sich mit dem Schema geändert haben.
+			delete_option( Scheduler::VERSION_OPTION );
 		}
+	}
+
+	/**
+	 * Stichtag für die Post-Purchase-Automatik einmalig auf „jetzt" setzen.
+	 */
+	protected static function maybe_set_postpurchase_start() {
+		if ( ! get_option( self::POSTPURCHASE_START_OPTION ) ) {
+			update_option( self::POSTPURCHASE_START_OPTION, Time::now() );
+		}
+	}
+
+	/**
+	 * Bestehende Belege beim Upgrade auf v4 als Ausgabe kennzeichnen.
+	 *
+	 * Ausnahme: bereits vorhandene Marktkassen-Belege sind Einnahmen – sie
+	 * wurden vor dem Fix fälschlich als Ausgabe in die EÜR eingerechnet.
+	 */
+	protected static function backfill_beleg_richtung() {
+		global $wpdb;
+		$t = $wpdb->prefix . 'lw16_belege';
+
+		// Spalte existiert erst nach create_tables(); defensiv prüfen.
+		$has_column = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$t} LIKE %s", 'richtung' ) ); // phpcs:ignore
+		if ( ! $has_column ) {
+			return;
+		}
+
+		$wpdb->query( "UPDATE {$t} SET richtung = 'ausgabe' WHERE richtung IS NULL OR richtung = ''" ); // phpcs:ignore
+		$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET richtung = 'einnahme' WHERE quelle = %s", 'marktkasse' ) ); // phpcs:ignore
 	}
 
 	/**
@@ -252,6 +294,7 @@ class Installer {
 			eur_kategorie VARCHAR(100) NULL,
 			notiz TEXT NULL,
 			quelle VARCHAR(20) NOT NULL DEFAULT 'manuell',
+			richtung VARCHAR(10) NOT NULL DEFAULT 'ausgabe',
 			festgeschrieben TINYINT(1) NOT NULL DEFAULT 0,
 			festgeschrieben_am DATETIME NULL,
 			erstellt_am DATETIME NOT NULL,
@@ -260,7 +303,8 @@ class Installer {
 			KEY datum (datum),
 			KEY eur_kategorie (eur_kategorie),
 			KEY festgeschrieben (festgeschrieben),
-			KEY quelle (quelle)
+			KEY quelle (quelle),
+			KEY richtung (richtung)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}rechnungen (
@@ -348,6 +392,7 @@ class Installer {
 			aktueller_status VARCHAR(100) NULL,
 			voraussichtliches_lieferdatum DATE NULL,
 			events LONGTEXT NULL,
+			letzter_fehler TEXT NULL,
 			letzter_abruf DATETIME NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY order_id (order_id),

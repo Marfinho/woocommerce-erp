@@ -222,50 +222,114 @@ class CalcTest extends TestCase {
 	 * Lagerabzug bei Sets/Stücklisten (Kaskade)
 	 * -------------------------------------------------------------- */
 
-	public function test_cascade_deductions_set_to_modules() {
-		$stueckliste = array(
-			array( 'modul_id' => 10, 'menge' => 1 ),
-			array( 'modul_id' => 20, 'menge' => 2 ),
+	/**
+	 * Baumknoten bauen (entspricht StockManager::build_tree()).
+	 *
+	 * @param int    $id       Produkt-ID.
+	 * @param string $typ      set|modul|rohmaterial.
+	 * @param float  $menge    Menge pro Elterneinheit.
+	 * @param array  $children Kindknoten.
+	 * @return array
+	 */
+	private function node( $id, $typ, $menge = 1.0, array $children = array() ) {
+		return array(
+			'produkt_id' => $id,
+			'typ'        => $typ,
+			'menge'      => $menge,
+			'children'   => $children,
 		);
-		$rezepturen = array();
-		$result = Calc::cascade_deductions( 3, $stueckliste, $rezepturen );
+	}
+
+	public function test_cascade_set_has_no_own_stock_movement() {
+		// Ein Set hat selbst keinen Bestand, es löst sich nur auf.
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 10, 'modul', 1 ),
+			$this->node( 20, 'modul', 2 ),
+		) );
+		$result = Calc::cascade_deductions( 3, $tree );
+		$this->assertArrayNotHasKey( 1, $result, 'Set darf keine eigene Bestandsbewegung erzeugen.' );
 		$this->assertSame( -3.0, $result[10] );
 		$this->assertSame( -6.0, $result[20] );
 	}
 
-	public function test_cascade_deductions_modules_to_raw_materials() {
-		$stueckliste = array(
-			array( 'modul_id' => 10, 'menge' => 1 ),
-		);
-		$rezepturen = array(
-			10 => array(
-				array( 'rohmaterial_id' => 100, 'menge' => 0.5 ),
-				array( 'rohmaterial_id' => 200, 'menge' => 0.1 ),
-			),
-		);
-		$result = Calc::cascade_deductions( 2, $stueckliste, $rezepturen );
-		// Modul 10: -2.
+	public function test_cascade_modules_to_raw_materials() {
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 10, 'modul', 1, array(
+				$this->node( 100, 'rohmaterial', 0.5 ),
+				$this->node( 200, 'rohmaterial', 0.1 ),
+			) ),
+		) );
+		$result = Calc::cascade_deductions( 2, $tree );
 		$this->assertSame( -2.0, $result[10] );
-		// Rohmaterial 100: 2 × 0.5 = -1.0.
 		$this->assertSame( -1.0, $result[100] );
-		// Rohmaterial 200: 2 × 0.1 = -0.2.
 		$this->assertEqualsWithDelta( -0.2, $result[200], 0.0001 );
 	}
 
-	public function test_cascade_deductions_full_chain() {
-		// Set enthält 2× Modul A; Modul A braucht 50g Rohmaterial R.
-		$stueckliste = array(
-			array( 'modul_id' => 5, 'menge' => 2 ),
-		);
-		$rezepturen = array(
-			5 => array(
-				array( 'rohmaterial_id' => 50, 'menge' => 50 ),
-			),
-		);
-		// Verkauf von 1 Set.
-		$result = Calc::cascade_deductions( 1, $stueckliste, $rezepturen );
+	public function test_cascade_full_chain() {
+		// Set enthält 2× Modul A; Modul A braucht 50 g Rohmaterial R.
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 5, 'modul', 2, array(
+				$this->node( 50, 'rohmaterial', 50 ),
+			) ),
+		) );
+		$result = Calc::cascade_deductions( 1, $tree );
 		$this->assertSame( -2.0, $result[5] );
 		$this->assertSame( -100.0, $result[50] );
+	}
+
+	public function test_cascade_sold_module_moves_itself() {
+		// Direkt verkauftes Modul (kein Set) bewegt seinen eigenen Bestand.
+		$tree   = $this->node( 7, 'modul', 1.0, array( $this->node( 70, 'rohmaterial', 3 ) ) );
+		$result = Calc::cascade_deductions( 2, $tree );
+		$this->assertSame( -2.0, $result[7] );
+		$this->assertSame( -6.0, $result[70] );
+	}
+
+	public function test_cascade_aggregates_same_product_across_branches() {
+		// Dasselbe Rohmaterial in zwei Modulen muss summiert werden.
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 10, 'modul', 1, array( $this->node( 99, 'rohmaterial', 2 ) ) ),
+			$this->node( 20, 'modul', 1, array( $this->node( 99, 'rohmaterial', 3 ) ) ),
+		) );
+		$result = Calc::cascade_deductions( 1, $tree );
+		$this->assertSame( -5.0, $result[99] );
+	}
+
+	public function test_cascade_return_uses_positive_sign() {
+		// Retoure ist das Spiegelbild des Verkaufs: gleiche Verteilung, +1.
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 5, 'modul', 2, array( $this->node( 50, 'rohmaterial', 50 ) ) ),
+		) );
+		$verkauf = Calc::cascade_deductions( 1, $tree, -1 );
+		$retoure = Calc::cascade_deductions( 1, $tree, 1 );
+		$this->assertSame( array_keys( $verkauf ), array_keys( $retoure ) );
+		foreach ( $verkauf as $id => $delta ) {
+			$this->assertSame( -1 * $delta, $retoure[ $id ], "Produkt {$id} muss sich exakt aufheben." );
+		}
+	}
+
+	public function test_cascade_survives_self_referencing_set() {
+		// Ein Set, das sich selbst enthält, darf nicht in eine
+		// Endlosrekursion laufen, sondern muss den Ast abbrechen.
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 10, 'modul', 1 ),
+		) );
+		$tree['children'][] = $this->node( 1, 'set', 1.0, array( $this->node( 10, 'modul', 1 ) ) );
+
+		$result = Calc::cascade_deductions( 1, $tree );
+		$this->assertSame( -1.0, $result[10], 'Der zyklische Ast darf nicht zusätzlich buchen.' );
+	}
+
+	public function test_cascade_ignores_zero_and_negative_factors() {
+		$tree = $this->node( 1, 'set', 1.0, array(
+			$this->node( 10, 'modul', 0 ),
+			$this->node( 20, 'modul', -5 ),
+			$this->node( 30, 'modul', 1 ),
+		) );
+		$result = Calc::cascade_deductions( 1, $tree );
+		$this->assertArrayNotHasKey( 10, $result );
+		$this->assertArrayNotHasKey( 20, $result );
+		$this->assertSame( -1.0, $result[30] );
 	}
 
 	/* ----------------------------------------------------------------
@@ -273,23 +337,32 @@ class CalcTest extends TestCase {
 	 * -------------------------------------------------------------- */
 
 	public function test_review_bonus_eligible_real_review() {
-		$this->assertTrue( Calc::review_bonus_eligible( 'product', 20, 15, 42, false ) );
+		$this->assertTrue( Calc::review_bonus_eligible( 'product', 20, 15, 42, false, true, true ) );
 	}
 
 	public function test_review_bonus_not_eligible_wrong_type() {
-		$this->assertFalse( Calc::review_bonus_eligible( 'post', 20, 15, 42, false ) );
+		$this->assertFalse( Calc::review_bonus_eligible( 'post', 20, 15, 42, false, true, true ) );
 	}
 
 	public function test_review_bonus_not_eligible_too_short() {
-		$this->assertFalse( Calc::review_bonus_eligible( 'product', 10, 15, 42, false ) );
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 10, 15, 42, false, true, true ) );
 	}
 
 	public function test_review_bonus_not_eligible_guest() {
-		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 0, false ) );
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 0, false, true, true ) );
 	}
 
 	public function test_review_bonus_not_eligible_already_awarded() {
-		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 42, true ) );
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 42, true, true, true ) );
+	}
+
+	public function test_review_bonus_not_eligible_while_unapproved() {
+		// Kommentare in Moderation oder im Spam dürfen keine Punkte auslösen.
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 42, false, false, true ) );
+	}
+
+	public function test_review_bonus_not_eligible_without_purchase() {
+		$this->assertFalse( Calc::review_bonus_eligible( 'product', 20, 15, 42, false, true, false ) );
 	}
 
 	/* ----------------------------------------------------------------

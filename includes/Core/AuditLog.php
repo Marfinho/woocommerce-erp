@@ -42,7 +42,7 @@ class AuditLog {
 				'objekt_typ' => $objekt_typ,
 				'objekt_id'  => $objekt_id ? (int) $objekt_id : null,
 				'details'    => $details ? wp_json_encode( $details ) : null,
-				'erstellt_am' => current_time( 'mysql' ),
+				'erstellt_am' => Time::now(),
 			),
 			array( '%d', '%s', '%s', '%d', '%s', '%s' )
 		);

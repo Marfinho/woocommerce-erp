@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Inventory;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Time;
+
 /**
  * Kapselt alle DB-Zugriffe rund um Produkte, Stücklisten, Rezepturen,
  * Lagerbestand und Lagerbewegungen. Alle Statements sind prepared.
@@ -38,7 +40,7 @@ class Repository {
 	 */
 	public static function create_product( array $data ) {
 		global $wpdb;
-		$data['erstellt_am'] = current_time( 'mysql' );
+		$data['erstellt_am'] = Time::now();
 		$wpdb->insert( self::table( 'produkte' ), $data );
 		return (int) $wpdb->insert_id;
 	}
@@ -94,7 +96,11 @@ class Repository {
 	}
 
 	/**
-	 * Produkt löschen (samt abhängiger Stückliste/Rezeptur).
+	 * Produkt löschen (samt aller abhängigen Datensätze).
+	 *
+	 * Räumt bewusst *alle* Kindtabellen ab. Ohne die letzten drei Zeilen
+	 * bleiben Ortsbestände, Bewegungen und Picklistenpositionen als Waisen
+	 * zurück und verfälschen später Auswertungen.
 	 *
 	 * @param int $id Produkt-ID.
 	 */
@@ -107,6 +113,55 @@ class Repository {
 		$wpdb->delete( self::table( 'rezeptur' ), array( 'modul_id' => $id ) );
 		$wpdb->delete( self::table( 'rezeptur' ), array( 'rohmaterial_id' => $id ) );
 		$wpdb->delete( self::table( 'lagerbestand' ), array( 'produkt_id' => $id ) );
+		$wpdb->delete( self::table( 'lagerbestand_ort' ), array( 'produkt_id' => $id ) );
+		$wpdb->delete( self::table( 'lagerbewegung' ), array( 'produkt_id' => $id ) );
+		$wpdb->delete( self::table( 'pickliste_pos' ), array( 'produkt_id' => $id ) );
+	}
+
+	/**
+	 * Ein anderes Produkt mit derselben WooCommerce-ID finden.
+	 *
+	 * Die Spalte trägt bewusst keinen UNIQUE-Index (bestehende Installationen
+	 * könnten bereits Duplikate enthalten und dbDelta würde still scheitern),
+	 * deshalb wird die Eindeutigkeit hier im Code geprüft.
+	 *
+	 * @param int $woo_id     WooCommerce-Produkt-ID.
+	 * @param int $exclude_id Eigene Produkt-ID, die ignoriert wird.
+	 * @return object|null
+	 */
+	public static function find_woo_conflict( $woo_id, $exclude_id = 0 ) {
+		global $wpdb;
+		$woo_id = (int) $woo_id;
+		if ( ! $woo_id ) {
+			return null;
+		}
+		$t = self::table( 'produkte' );
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$t} WHERE woo_product_id = %d AND id <> %d LIMIT 1", // phpcs:ignore
+				$woo_id,
+				(int) $exclude_id
+			)
+		);
+	}
+
+	/**
+	 * Alle Produkte samt Bestand in einer einzigen Abfrage.
+	 *
+	 * Ersetzt das Muster „alle Produkte laden, dann pro Produkt get_stock()".
+	 *
+	 * @return array Produktzeilen mit zusätzlichem Feld `bestand`.
+	 */
+	public static function get_products_with_stock() {
+		global $wpdb;
+		$tp = self::table( 'produkte' );
+		$tb = self::table( 'lagerbestand' );
+		return $wpdb->get_results(
+			"SELECT p.*, COALESCE(b.menge, 0) AS bestand
+			 FROM {$tp} p
+			 LEFT JOIN {$tb} b ON b.produkt_id = p.id
+			 ORDER BY p.typ, p.name ASC" // phpcs:ignore
+		);
 	}
 
 	/* --------------------------------------------------------------------
@@ -222,9 +277,60 @@ class Repository {
 				 ON DUPLICATE KEY UPDATE menge = VALUES(menge), aktualisiert_am = VALUES(aktualisiert_am)", // phpcs:ignore
 				(int) $produkt_id,
 				(float) $menge,
-				current_time( 'mysql' )
+				Time::now()
 			)
 		);
+	}
+
+	/**
+	 * Bestand atomar um einen Delta-Wert verändern und den neuen Wert liefern.
+	 *
+	 * Rechnet die Addition in der Datenbank (menge = menge + delta), statt den
+	 * Bestand in PHP zu lesen, zu addieren und absolut zurückzuschreiben. Nur
+	 * so gehen bei gleichzeitigen Bestellungen keine Buchungen verloren.
+	 *
+	 * @param int   $produkt_id Produkt-ID.
+	 * @param float $delta      Veränderung (signiert).
+	 * @return float Neuer Bestand.
+	 */
+	public static function adjust_stock( $produkt_id, $delta ) {
+		global $wpdb;
+		$produkt_id = (int) $produkt_id;
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO " . self::table( 'lagerbestand' ) . " (produkt_id, menge, aktualisiert_am) VALUES (%d, %f, %s)
+				 ON DUPLICATE KEY UPDATE menge = menge + VALUES(menge), aktualisiert_am = VALUES(aktualisiert_am)", // phpcs:ignore
+				$produkt_id,
+				(float) $delta,
+				Time::now()
+			)
+		);
+		return self::get_stock( $produkt_id );
+	}
+
+	/**
+	 * Ortsbestand atomar um einen Delta-Wert verändern.
+	 *
+	 * @param int   $produkt_id  Produkt-ID.
+	 * @param int   $lagerort_id Lagerort-ID.
+	 * @param float $delta       Veränderung (signiert).
+	 * @return float Neuer Ortsbestand.
+	 */
+	public static function adjust_stock_at_location( $produkt_id, $lagerort_id, $delta ) {
+		global $wpdb;
+		$produkt_id  = (int) $produkt_id;
+		$lagerort_id = (int) $lagerort_id;
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO " . self::table( 'lagerbestand_ort' ) . " (produkt_id, lagerort_id, menge, aktualisiert_am) VALUES (%d, %d, %f, %s)
+				 ON DUPLICATE KEY UPDATE menge = menge + VALUES(menge), aktualisiert_am = VALUES(aktualisiert_am)", // phpcs:ignore
+				$produkt_id,
+				$lagerort_id,
+				(float) $delta,
+				Time::now()
+			)
+		);
+		return self::get_stock_at_location( $produkt_id, $lagerort_id );
 	}
 
 	/* --------------------------------------------------------------------
@@ -233,7 +339,7 @@ class Repository {
 
 	public static function create_lagerort( array $data ) {
 		global $wpdb;
-		$data['erstellt_am'] = current_time( 'mysql' );
+		$data['erstellt_am'] = Time::now();
 		$wpdb->insert( self::table( 'lagerorte' ), $data );
 		return (int) $wpdb->insert_id;
 	}
@@ -278,12 +384,19 @@ class Repository {
 		) );
 	}
 
+	/**
+	 * Ortsbestand absolut setzen.
+	 *
+	 * Zeilen mit Menge 0 (oder negativ) werden bewusst behalten: sie werden
+	 * sonst unauffindbar, und die Summe aller Ortsbestände würde vom
+	 * Gesamtbestand abweichen, der ebenfalls negativ werden darf.
+	 *
+	 * @param int   $produkt_id  Produkt-ID.
+	 * @param int   $lagerort_id Lagerort-ID.
+	 * @param float $menge       Neuer Ortsbestand.
+	 */
 	public static function set_stock_at_location( $produkt_id, $lagerort_id, $menge ) {
 		global $wpdb;
-		if ( $menge <= 0 ) {
-			$wpdb->delete( self::table( 'lagerbestand_ort' ), array( 'produkt_id' => (int) $produkt_id, 'lagerort_id' => (int) $lagerort_id ) );
-			return;
-		}
 		$wpdb->query(
 			$wpdb->prepare(
 				"INSERT INTO " . self::table( 'lagerbestand_ort' ) . " (produkt_id, lagerort_id, menge, aktualisiert_am) VALUES (%d, %d, %f, %s)
@@ -291,7 +404,7 @@ class Repository {
 				(int) $produkt_id,
 				(int) $lagerort_id,
 				(float) $menge,
-				current_time( 'mysql' )
+				Time::now()
 			)
 		);
 	}
@@ -309,7 +422,7 @@ class Repository {
 
 	public static function create_pickliste( array $data ) {
 		global $wpdb;
-		$data['erstellt_am'] = current_time( 'mysql' );
+		$data['erstellt_am'] = Time::now();
 		$wpdb->insert( self::table( 'pickliste' ), $data );
 		return (int) $wpdb->insert_id;
 	}

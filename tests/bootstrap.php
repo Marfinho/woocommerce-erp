@@ -13,3 +13,4 @@
 define( 'ABSPATH', __DIR__ . '/' );
 
 require dirname( __DIR__ ) . '/includes/Core/Calc.php';
+require dirname( __DIR__ ) . '/includes/Core/Format.php';
