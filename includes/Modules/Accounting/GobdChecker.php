@@ -59,6 +59,7 @@ class GobdChecker {
 			'Buchungsjournal'  => BuchungRepository::table(),
 			'Audit-Log'        => AuditLog::table(),
 			'E-Rechnungen'     => ERechnungImporter::table(),
+			'Kassenbuch'       => KassenbuchRepository::table(),
 		);
 
 		foreach ( $hash_tables as $label => $table ) {
@@ -179,7 +180,39 @@ class GobdChecker {
 		}
 		$ergebnis['pruefungen'][] = $bu_check;
 
-		// 5. Zeitgerechte Erfassung prüfen.
+		// 5. Kassenbuchnummern-Lücken prüfen.
+		$kb_check = array(
+			'name'    => 'Kassenbuchnummern-Lückenlosigkeit (' . $jahr . ')',
+			'status'  => 'ok',
+			'details' => '',
+		);
+		$kb_table = KassenbuchRepository::table();
+		$kb_col = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'laufnummer'",
+			DB_NAME,
+			$kb_table
+		) );
+		if ( $kb_col ) {
+			$kb_gaps = HashChain::find_gaps( $kb_table, 'laufnummer', $jahr );
+			if ( ! empty( $kb_gaps ) ) {
+				$kb_check['status']  = 'fehler';
+				$kb_check['details'] = 'Fehlende Nummern: ' . implode( ', ', array_slice( $kb_gaps, 0, 20 ) );
+				$ergebnis['fehler']++;
+			} else {
+				$max = (int) $wpdb->get_var( $wpdb->prepare(
+					"SELECT COALESCE(MAX(laufnummer), 0) FROM " . $kb_table . " WHERE jahr = %d", // phpcs:ignore
+					$jahr
+				) );
+				$kb_check['details'] = $max . ' Kassenbucheinträge, keine Lücken';
+			}
+		} else {
+			$kb_check['status']  = 'uebersprungen';
+			$kb_check['details'] = 'Kassenbuch-Tabelle nicht vorhanden';
+			$ergebnis['warnungen']++;
+		}
+		$ergebnis['pruefungen'][] = $kb_check;
+
+		// 6. Zeitgerechte Erfassung prüfen.
 		$zeit_check = array(
 			'name'    => 'Zeitgerechte Erfassung (Belege)',
 			'status'  => 'ok',

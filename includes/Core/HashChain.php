@@ -29,6 +29,7 @@ class HashChain {
 		'buchungen'          => array( 'buchungsnummer', 'buchungsdatum', 'erfasst_am', 'typ', 'betrag', 'kategorie', 'beschreibung', 'referenz_typ', 'referenz_id', 'erstellt_von' ),
 		'audit_log'          => array( 'user_id', 'aktion', 'objekt_typ', 'objekt_id', 'details', 'erstellt_am' ),
 		'erechnung_eingang'  => array( 'datei_pfad', 'format', 'absender_name', 'absender_steuer_id', 'rechnungsnummer_ext', 'betrag', 'datum', 'erstellt_am' ),
+		'kassenbuch'         => array( 'kassenbuchnummer', 'datum', 'beschreibung', 'einnahme', 'ausgabe', 'saldo', 'beleg_id', 'erstellt_am', 'erstellt_von' ),
 	);
 
 	/**

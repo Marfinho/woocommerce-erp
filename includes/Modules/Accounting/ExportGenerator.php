@@ -58,13 +58,16 @@ class ExportGenerator {
 		// 4. Audit-Log.
 		$zip->addFromString( 'audit_log.csv', self::audit_csv( $from, $to ) );
 
-		// 5. EÜR-Zusammenfassung.
+		// 5. Kassenbuch.
+		$zip->addFromString( 'kassenbuch.csv', self::kassenbuch_csv( $from, $to ) );
+
+		// 6. EÜR-Zusammenfassung.
 		$zip->addFromString( 'euer.csv', self::euer_csv( $from, $to ) );
 
-		// 6. Strukturbeschreibung.
+		// 7. Strukturbeschreibung.
 		$zip->addFromString( 'BESCHREIBUNG.txt', self::beschreibung( $from, $to ) );
 
-		// 7. INDEX.xml (GDPdU-ähnlich).
+		// 8. INDEX.xml (GDPdU-ähnlich).
 		$zip->addFromString( 'INDEX.xml', self::index_xml( $from, $to ) );
 
 		$zip->close();
@@ -208,6 +211,22 @@ class ExportGenerator {
 	}
 
 	/**
+	 * Kassenbuch-CSV.
+	 *
+	 * @param string $from Start.
+	 * @param string $to   Ende.
+	 * @return string
+	 */
+	protected static function kassenbuch_csv( $from, $to ) {
+		$rows = KassenbuchRepository::export( $from, $to );
+		return self::build_csv(
+			array( 'ID', 'Kassenbuchnummer', 'Jahr', 'Laufnummer', 'Datum', 'Beschreibung', 'Einnahme', 'Ausgabe', 'Saldo', 'Beleg_ID', 'Storniert', 'Storno_von_ID', 'Hash', 'Erstellt_am', 'Erstellt_von' ),
+			$rows,
+			array( 'id', 'kassenbuchnummer', 'jahr', 'laufnummer', 'datum', 'beschreibung', 'einnahme', 'ausgabe', 'saldo', 'beleg_id', 'storniert', 'storno_von_id', 'hash', 'erstellt_am', 'erstellt_von' )
+		);
+	}
+
+	/**
 	 * Strukturbeschreibung für den Betriebsprüfer.
 	 *
 	 * @param string $from Start.
@@ -250,6 +269,12 @@ class ExportGenerator {
 		$text .= "audit_log.csv     Änderungsprotokoll (alle Aktionen)\r\n";
 		$text .= "                  Felder: ID, User_ID, Aktion, Objekt_Typ, Objekt_ID,\r\n";
 		$text .= "                  Details (JSON), Hash (SHA-256), Erstellt_am\r\n\r\n";
+
+		$text .= "kassenbuch.csv    GoBD-konformes Kassenbuch (Barein-/ausgänge)\r\n";
+		$text .= "                  Felder: ID, Kassenbuchnummer, Jahr, Laufnummer,\r\n";
+		$text .= "                  Datum, Beschreibung, Einnahme, Ausgabe, Saldo,\r\n";
+		$text .= "                  Beleg_ID, Storniert, Storno_von_ID, Hash (SHA-256),\r\n";
+		$text .= "                  Erstellt_am, Erstellt_von\r\n\r\n";
 
 		$text .= "euer.csv          Einnahmen-Überschuss-Rechnung (Zusammenfassung)\r\n";
 		$text .= "                  Felder: Position, Betrag\r\n\r\n";
@@ -348,6 +373,22 @@ class ExportGenerator {
 					array( 'User_ID', 'Numeric', 'WordPress-Benutzer-ID' ),
 					array( 'Aktion', 'AlphaNumeric', 'Aktionsbezeichnung' ),
 					array( 'Details', 'AlphaNumeric', 'Zusatzinformationen (JSON)' ),
+					array( 'Hash', 'AlphaNumeric', 'SHA-256 Integritäts-Hash' ),
+				),
+			),
+			array(
+				'file'    => 'kassenbuch.csv',
+				'name'    => 'Kassenbuch',
+				'desc'    => 'GoBD-konformes Kassenbuch mit Hash-Verkettung',
+				'columns' => array(
+					array( 'ID', 'Numeric', 'Primärschlüssel' ),
+					array( 'Kassenbuchnummer', 'AlphaNumeric', 'Lückenlose Kassenbuchnummer (KB-JJJJ-NNNN)' ),
+					array( 'Datum', 'Date', 'Buchungsdatum (YYYY-MM-DD)' ),
+					array( 'Beschreibung', 'AlphaNumeric', 'Beschreibung des Vorgangs' ),
+					array( 'Einnahme', 'Numeric', 'Einnahme in EUR' ),
+					array( 'Ausgabe', 'Numeric', 'Ausgabe in EUR' ),
+					array( 'Saldo', 'Numeric', 'Laufender Saldo in EUR' ),
+					array( 'Storniert', 'Numeric', '1 = storniert' ),
 					array( 'Hash', 'AlphaNumeric', 'SHA-256 Integritäts-Hash' ),
 				),
 			),

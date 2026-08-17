@@ -217,7 +217,7 @@ class GobdTest extends TestCase {
 	 * -------------------------------------------------------------- */
 
 	public function test_hash_fields_defined_for_all_tables() {
-		$expected_tables = array( 'belege', 'rechnungen', 'buchungen', 'audit_log', 'erechnung_eingang' );
+		$expected_tables = array( 'belege', 'rechnungen', 'buchungen', 'audit_log', 'erechnung_eingang', 'kassenbuch' );
 		foreach ( $expected_tables as $table ) {
 			$this->assertArrayHasKey( $table, HashChain::HASH_FIELDS, "Hash fields missing for table: {$table}" );
 			$this->assertNotEmpty( HashChain::HASH_FIELDS[ $table ], "Hash fields empty for table: {$table}" );
@@ -349,5 +349,120 @@ class GobdTest extends TestCase {
 	public function test_nummern_different_years_independent() {
 		$this->assertSame( 'B-2025-0001', Calc::belegnummer( 2025, 1 ) );
 		$this->assertSame( 'B-2026-0001', Calc::belegnummer( 2026, 1 ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Kassenbuchnummer-Format
+	 * -------------------------------------------------------------- */
+
+	public function test_kassenbuchnummer_format() {
+		$this->assertSame( 'KB-2026-0001', Calc::kassenbuchnummer( 2026, 1 ) );
+		$this->assertSame( 'KB-2026-0042', Calc::kassenbuchnummer( 2026, 42 ) );
+		$this->assertSame( 'KB-2025-9999', Calc::kassenbuchnummer( 2025, 9999 ) );
+	}
+
+	public function test_kassenbuchnummer_zero_padded() {
+		$nr = Calc::kassenbuchnummer( 2026, 5 );
+		$this->assertMatchesRegularExpression( '/^KB-\d{4}-\d{4}$/', $nr );
+	}
+
+	public function test_kassenbuchnummer_sequential() {
+		$nr1 = Calc::kassenbuchnummer( 2026, 1 );
+		$nr2 = Calc::kassenbuchnummer( 2026, 2 );
+		$nr3 = Calc::kassenbuchnummer( 2026, 3 );
+
+		$this->assertSame( 'KB-2026-0001', $nr1 );
+		$this->assertSame( 'KB-2026-0002', $nr2 );
+		$this->assertSame( 'KB-2026-0003', $nr3 );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Anlagennummer-Format
+	 * -------------------------------------------------------------- */
+
+	public function test_anlagennummer_format() {
+		$this->assertSame( 'AN-2026-0001', Calc::anlagennummer( 2026, 1 ) );
+		$this->assertSame( 'AN-2026-0042', Calc::anlagennummer( 2026, 42 ) );
+		$this->assertSame( 'AN-2025-9999', Calc::anlagennummer( 2025, 9999 ) );
+	}
+
+	public function test_anlagennummer_zero_padded() {
+		$nr = Calc::anlagennummer( 2026, 5 );
+		$this->assertMatchesRegularExpression( '/^AN-\d{4}-\d{4}$/', $nr );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Hash-Berechnung: Kassenbuch
+	 * -------------------------------------------------------------- */
+
+	public function test_hash_kassenbuch_table() {
+		$data = array(
+			'kassenbuchnummer' => 'KB-2026-0001',
+			'datum'            => '2026-01-15',
+			'beschreibung'     => 'Barverkauf',
+			'einnahme'         => '50.00',
+			'ausgabe'          => '0.00',
+			'saldo'            => '50.00',
+			'beleg_id'         => '3',
+			'erstellt_am'      => '2026-01-15 10:00:00',
+			'erstellt_von'     => '1',
+		);
+		$hash = HashChain::compute( 'kassenbuch', $data, '' );
+		$this->assertSame( 64, strlen( $hash ) );
+		$this->assertMatchesRegularExpression( '/^[a-f0-9]{64}$/', $hash );
+	}
+
+	public function test_hash_kassenbuch_deterministic() {
+		$data = array(
+			'kassenbuchnummer' => 'KB-2026-0001',
+			'datum'            => '2026-01-15',
+			'beschreibung'     => 'Barverkauf',
+			'einnahme'         => '50.00',
+			'ausgabe'          => '0.00',
+			'saldo'            => '50.00',
+			'beleg_id'         => '3',
+			'erstellt_am'      => '2026-01-15 10:00:00',
+			'erstellt_von'     => '1',
+		);
+		$hash1 = HashChain::compute( 'kassenbuch', $data, '' );
+		$hash2 = HashChain::compute( 'kassenbuch', $data, '' );
+		$this->assertSame( $hash1, $hash2 );
+	}
+
+	public function test_kassenbuch_storniert_not_in_hash() {
+		$this->assertNotContains( 'storniert', HashChain::HASH_FIELDS['kassenbuch'] );
+		$this->assertNotContains( 'storno_von_id', HashChain::HASH_FIELDS['kassenbuch'] );
+	}
+
+	public function test_kassenbuch_hash_chain() {
+		$data1 = array(
+			'kassenbuchnummer' => 'KB-2026-0001',
+			'datum'            => '2026-01-15',
+			'beschreibung'     => 'Barverkauf',
+			'einnahme'         => '50.00',
+			'ausgabe'          => '0.00',
+			'saldo'            => '50.00',
+			'beleg_id'         => '',
+			'erstellt_am'      => '2026-01-15 10:00:00',
+			'erstellt_von'     => '1',
+		);
+		$hash1 = HashChain::compute( 'kassenbuch', $data1, '' );
+
+		$data2 = array(
+			'kassenbuchnummer' => 'KB-2026-0002',
+			'datum'            => '2026-01-15',
+			'beschreibung'     => 'Briefmarken',
+			'einnahme'         => '0.00',
+			'ausgabe'          => '5.80',
+			'saldo'            => '44.20',
+			'beleg_id'         => '',
+			'erstellt_am'      => '2026-01-15 11:00:00',
+			'erstellt_von'     => '1',
+		);
+		$hash2 = HashChain::compute( 'kassenbuch', $data2, $hash1 );
+		$hash2_alt = HashChain::compute( 'kassenbuch', $data2, '' );
+
+		// Hash2 depends on hash1 (chain).
+		$this->assertNotSame( $hash2, $hash2_alt );
 	}
 }

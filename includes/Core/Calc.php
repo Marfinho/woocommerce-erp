@@ -173,6 +173,28 @@ class Calc {
 	}
 
 	/**
+	 * Kassenbuchnummer im Format KB-JJJJ-NNNN.
+	 *
+	 * @param int $jahr       Kalenderjahr.
+	 * @param int $laufnummer Laufende Nummer.
+	 * @return string
+	 */
+	public static function kassenbuchnummer( $jahr, $laufnummer ) {
+		return sprintf( 'KB-%d-%04d', (int) $jahr, (int) $laufnummer );
+	}
+
+	/**
+	 * Anlagennummer im Format AN-JJJJ-NNNN.
+	 *
+	 * @param int $jahr       Kalenderjahr.
+	 * @param int $laufnummer Laufende Nummer.
+	 * @return string
+	 */
+	public static function anlagennummer( $jahr, $laufnummer ) {
+		return sprintf( 'AN-%d-%04d', (int) $jahr, (int) $laufnummer );
+	}
+
+	/**
 	 * Selbstwerbung erkennen (harte Blockregel): gleiche User-ID oder
 	 * gleiche E-Mail-Adresse (case-insensitiv).
 	 *

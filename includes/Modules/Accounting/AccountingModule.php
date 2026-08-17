@@ -53,6 +53,26 @@ class AccountingModule {
 		// Verfahrensdokumentation.
 		add_action( 'admin_post_lw16_verfahrensdoku', array( $this, 'handle_verfahrensdoku' ) );
 
+		// Dauerbuchungen.
+		add_action( 'admin_post_lw16_save_dauerbuchung', array( $this, 'handle_save_dauerbuchung' ) );
+		add_action( 'admin_post_lw16_deactivate_dauerbuchung', array( $this, 'handle_deactivate_dauerbuchung' ) );
+		add_action( 'admin_post_lw16_execute_dauerbuchungen', array( $this, 'handle_execute_dauerbuchungen' ) );
+
+		// Anlagenbuchhaltung.
+		add_action( 'admin_post_lw16_save_anlage', array( $this, 'handle_save_anlage' ) );
+		add_action( 'admin_post_lw16_book_afa', array( $this, 'handle_book_afa' ) );
+		add_action( 'admin_post_lw16_ausscheiden_anlage', array( $this, 'handle_ausscheiden_anlage' ) );
+
+		// Kassenbuch.
+		add_action( 'admin_post_lw16_save_kassenbuch', array( $this, 'handle_save_kassenbuch' ) );
+		add_action( 'admin_post_lw16_storno_kassenbuch', array( $this, 'handle_storno_kassenbuch' ) );
+
+		// Beleg-OCR (AJAX).
+		add_action( 'wp_ajax_lw16_ocr_scan', array( $this, 'handle_ocr_scan' ) );
+
+		// Dauerbuchungen automatisch ausführen (Scheduler-Hook).
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_RECURRING_BOOKINGS, array( $this, 'run_recurring_bookings' ) );
+
 		// EÜR-PDF-Export.
 		add_action( 'admin_post_lw16_euer_pdf', array( $this, 'export_euer_pdf' ) );
 
@@ -96,11 +116,15 @@ class AccountingModule {
 
 		$base = admin_url( 'admin.php?page=lw16-buchhaltung' );
 		echo '<nav class="lw16-tabs">';
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'dashboard', $base ) ), 'dashboard' === $view ? 'active' : '', esc_html__( 'Dashboard', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( $base ), 'belege' === $view ? 'active' : '', esc_html__( 'Belege', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'neu', $base ) ), 'neu' === $view ? 'active' : '', esc_html__( 'Beleg erfassen', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'rechnungen', $base ) ), 'rechnungen' === $view ? 'active' : '', esc_html__( 'Rechnungen', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'journal', $base ) ), 'journal' === $view ? 'active' : '', esc_html__( 'Journal', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'kassenbuch', $base ) ), 'kassenbuch' === $view ? 'active' : '', esc_html__( 'Kassenbuch', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'euer', $base ) ), 'euer' === $view ? 'active' : '', esc_html__( 'EÜR', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'dauerbuchungen', $base ) ), 'dauerbuchungen' === $view ? 'active' : '', esc_html__( 'Dauerbuchungen', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'anlagen', $base ) ), 'anlagen' === $view ? 'active' : '', esc_html__( 'Anlagen', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'erechnung', $base ) ), 'erechnung' === $view ? 'active' : '', esc_html__( 'E-Rechnung', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'bp_export', $base ) ), 'bp_export' === $view ? 'active' : '', esc_html__( 'Betriebsprüfung', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'gobd', $base ) ), 'gobd' === $view ? 'active' : '', esc_html__( 'GoBD-Prüfung', 'lindenweg16' ) );
@@ -111,6 +135,10 @@ class AccountingModule {
 		}
 
 		switch ( $view ) {
+			case 'dashboard':
+				$dj = isset( $_GET['dj'] ) ? (int) $_GET['dj'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+				AccountingDashboard::render( $dj );
+				break;
 			case 'neu':
 				$this->render_beleg_form();
 				break;
@@ -120,8 +148,17 @@ class AccountingModule {
 			case 'journal':
 				$this->render_journal();
 				break;
+			case 'kassenbuch':
+				$this->render_kassenbuch();
+				break;
 			case 'euer':
 				$this->render_euer();
+				break;
+			case 'dauerbuchungen':
+				$this->render_dauerbuchungen();
+				break;
+			case 'anlagen':
+				$this->render_anlagen();
 				break;
 			case 'erechnung':
 				$this->render_erechnung();
@@ -216,15 +253,26 @@ class AccountingModule {
 	 * Formular zur manuellen Belegerfassung.
 	 */
 	protected function render_beleg_form() {
+		$ocr_available = BelegOcr::is_available();
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" enctype="multipart/form-data" id="lw16-beleg-form">
 			<input type="hidden" name="action" value="lw16_save_beleg">
 			<?php wp_nonce_field( 'lw16_save_beleg' ); ?>
 			<table class="form-table"><tbody>
-				<tr><th><?php esc_html_e( 'Beleg-Foto', 'lindenweg16' ); ?></th><td><input type="file" name="beleg_foto" accept="image/*"></td></tr>
-				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" class="small-text" required></td></tr>
-				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
-				<tr><th><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></th><td><input type="text" name="haendler" class="regular-text"></td></tr>
+				<tr><th><?php esc_html_e( 'Beleg-Foto', 'lindenweg16' ); ?></th><td>
+					<input type="file" name="beleg_foto" accept="image/*" id="lw16-beleg-foto">
+					<?php if ( $ocr_available ) : ?>
+						<button type="button" class="button" id="lw16-ocr-btn" style="margin-left:8px" disabled>
+							<?php esc_html_e( 'OCR auslesen', 'lindenweg16' ); ?>
+						</button>
+						<span id="lw16-ocr-status" style="margin-left:8px;color:#6E7882"></span>
+					<?php else : ?>
+						<p class="description"><?php esc_html_e( 'Tipp: Tesseract OCR installieren für automatische Belegauswertung (apt install tesseract-ocr tesseract-ocr-deu).', 'lindenweg16' ); ?></p>
+					<?php endif; ?>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" id="lw16-betrag" class="small-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" id="lw16-datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></th><td><input type="text" name="haendler" id="lw16-haendler" class="regular-text"></td></tr>
 				<tr><th><?php esc_html_e( 'EÜR-Kategorie', 'lindenweg16' ); ?></th><td>
 					<select name="eur_kategorie">
 						<?php foreach ( self::eur_kategorien() as $k ) : ?>
@@ -236,6 +284,51 @@ class AccountingModule {
 			</tbody></table>
 			<?php submit_button( __( 'Beleg speichern', 'lindenweg16' ) ); ?>
 		</form>
+		<?php if ( $ocr_available ) : ?>
+		<script>
+		(function(){
+			var fileInput = document.getElementById('lw16-beleg-foto');
+			var ocrBtn = document.getElementById('lw16-ocr-btn');
+			var status = document.getElementById('lw16-ocr-status');
+
+			fileInput.addEventListener('change', function(){
+				ocrBtn.disabled = !fileInput.files.length;
+			});
+
+			ocrBtn.addEventListener('click', function(){
+				if (!fileInput.files.length) return;
+				ocrBtn.disabled = true;
+				status.textContent = '<?php echo esc_js( __( 'Wird analysiert…', 'lindenweg16' ) ); ?>';
+
+				var fd = new FormData();
+				fd.append('action', 'lw16_ocr_scan');
+				fd.append('_wpnonce', '<?php echo esc_js( wp_create_nonce( 'lw16_ocr_scan' ) ); ?>');
+				fd.append('beleg_foto', fileInput.files[0]);
+
+				fetch(ajaxurl, {method:'POST', body:fd})
+					.then(function(r){return r.json()})
+					.then(function(d){
+						if (d.success && d.data) {
+							if (d.data.betrag) document.getElementById('lw16-betrag').value = d.data.betrag;
+							if (d.data.datum) document.getElementById('lw16-datum').value = d.data.datum;
+							if (d.data.haendler) document.getElementById('lw16-haendler').value = d.data.haendler;
+							status.textContent = '<?php echo esc_js( __( 'Felder vorausgefüllt – bitte prüfen.', 'lindenweg16' ) ); ?>';
+							status.style.color = '#4CAF50';
+						} else {
+							status.textContent = d.data && d.data.error ? d.data.error : '<?php echo esc_js( __( 'Keine Daten erkannt.', 'lindenweg16' ) ); ?>';
+							status.style.color = '#F44336';
+						}
+						ocrBtn.disabled = false;
+					})
+					.catch(function(){
+						status.textContent = '<?php echo esc_js( __( 'Fehler bei der Verarbeitung.', 'lindenweg16' ) ); ?>';
+						status.style.color = '#F44336';
+						ocrBtn.disabled = false;
+					});
+			});
+		})();
+		</script>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -830,6 +923,403 @@ class AccountingModule {
 		}
 		check_admin_referer( 'lw16_verfahrensdoku' );
 		VerfahrensDoku::download();
+	}
+
+	/* --------------------------------------------------------------------
+	 * Kassenbuch
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Kassenbuch rendern.
+	 */
+	protected function render_kassenbuch() {
+		echo '<h2>' . esc_html__( 'Kassenbuch (Bargeschäfte)', 'lindenweg16' ) . '</h2>';
+
+		// Neuen Eintrag erfassen.
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:24px">
+			<input type="hidden" name="action" value="lw16_save_kassenbuch">
+			<?php wp_nonce_field( 'lw16_save_kassenbuch' ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>" required></td></tr>
+				<tr><th><?php esc_html_e( 'Beschreibung', 'lindenweg16' ); ?></th><td><input type="text" name="beschreibung" class="regular-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'Einnahme (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" min="0" name="einnahme" value="0" class="small-text"></td></tr>
+				<tr><th><?php esc_html_e( 'Ausgabe (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" min="0" name="ausgabe" value="0" class="small-text"></td></tr>
+			</tbody></table>
+			<?php submit_button( __( 'Eintrag buchen', 'lindenweg16' ), 'secondary' ); ?>
+		</form>
+		<?php
+
+		echo '<p><strong>' . esc_html__( 'Aktueller Kassensaldo:', 'lindenweg16' ) . '</strong> '
+			. esc_html( self::euro( KassenbuchRepository::aktueller_saldo() ) ) . '</p>';
+
+		// Einträge auflisten.
+		$per_page = 50;
+		$page     = isset( $_GET['kp'] ) ? max( 1, (int) $_GET['kp'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
+		$total    = KassenbuchRepository::count();
+		$eintraege = KassenbuchRepository::query( array( 'per_page' => $per_page, 'page' => $page ) );
+
+		echo '<table class="widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Nr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Beschreibung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Einnahme', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Ausgabe', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Saldo', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+		echo '</tr></thead><tbody>';
+
+		foreach ( $eintraege as $e ) {
+			$is_storniert = (int) $e->storniert === 1;
+			echo '<tr' . ( $is_storniert ? ' style="opacity:0.5"' : '' ) . '>';
+			echo '<td>' . esc_html( $e->kassenbuchnummer ) . '</td>';
+			echo '<td>' . esc_html( $e->datum ) . '</td>';
+			echo '<td>' . esc_html( mb_substr( $e->beschreibung, 0, 60 ) ) . '</td>';
+			echo '<td style="text-align:right;color:#4CAF50">' . ( (float) $e->einnahme > 0 ? esc_html( self::euro( $e->einnahme ) ) : '–' ) . '</td>';
+			echo '<td style="text-align:right;color:#F44336">' . ( (float) $e->ausgabe > 0 ? esc_html( self::euro( $e->ausgabe ) ) : '–' ) . '</td>';
+			echo '<td style="text-align:right;font-weight:bold">' . esc_html( self::euro( $e->saldo ) ) . '</td>';
+			if ( $is_storniert ) {
+				echo '<td>' . esc_html__( 'storniert', 'lindenweg16' ) . '</td><td></td>';
+			} else {
+				echo '<td>' . esc_html__( 'aktiv', 'lindenweg16' ) . '</td>';
+				$st = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_storno_kassenbuch&id=' . $e->id ), 'lw16_storno_kassenbuch_' . $e->id );
+				echo '<td><a class="button button-small" href="' . esc_url( $st ) . '" onclick="return confirm(\'' . esc_attr__( 'Eintrag stornieren?', 'lindenweg16' ) . '\')">' . esc_html__( 'Storno', 'lindenweg16' ) . '</a></td>';
+			}
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+
+		$total_pages = (int) ceil( $total / $per_page );
+		if ( $total_pages > 1 ) {
+			$pag_base = add_query_arg( 'view', 'kassenbuch', admin_url( 'admin.php?page=lw16-buchhaltung' ) );
+			echo '<div class="lw16-pagination">';
+			for ( $i = 1; $i <= $total_pages; $i++ ) {
+				if ( $i === $page ) {
+					echo '<span class="current">' . (int) $i . '</span> ';
+				} else {
+					echo '<a href="' . esc_url( add_query_arg( 'kp', $i, $pag_base ) ) . '">' . (int) $i . '</a> ';
+				}
+			}
+			echo '</div>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Dauerbuchungen
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Dauerbuchungen-Tab rendern.
+	 */
+	protected function render_dauerbuchungen() {
+		echo '<h2>' . esc_html__( 'Wiederkehrende Buchungen', 'lindenweg16' ) . '</h2>';
+
+		$faellig = DauerbuchungRepository::count_due();
+		if ( $faellig > 0 ) {
+			$exec_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_execute_dauerbuchungen' ), 'lw16_execute_dauerbuchungen' );
+			echo '<div class="notice notice-warning"><p>';
+			echo esc_html( sprintf(
+				/* translators: %d number of due bookings */
+				__( '%d Dauerbuchung(en) fällig.', 'lindenweg16' ),
+				$faellig
+			) );
+			echo ' <a class="button button-small" href="' . esc_url( $exec_url ) . '">' . esc_html__( 'Jetzt ausführen', 'lindenweg16' ) . '</a>';
+			echo '</p></div>';
+		}
+
+		// Formular für neue Dauerbuchung.
+		?>
+		<h3><?php esc_html_e( 'Neue Dauerbuchung anlegen', 'lindenweg16' ); ?></h3>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_save_dauerbuchung">
+			<?php wp_nonce_field( 'lw16_save_dauerbuchung' ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Bezeichnung', 'lindenweg16' ); ?></th><td><input type="text" name="bezeichnung" class="regular-text" required placeholder="<?php esc_attr_e( 'z. B. Büromiete, Hosting, Versicherung', 'lindenweg16' ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" class="small-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'EÜR-Kategorie', 'lindenweg16' ); ?></th><td>
+					<select name="kategorie">
+						<?php foreach ( self::eur_kategorien() as $k ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $k ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Intervall', 'lindenweg16' ); ?></th><td>
+					<select name="intervall">
+						<?php foreach ( DauerbuchungRepository::intervall_optionen() as $k => $v ) : ?>
+							<option value="<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $v ); ?></option>
+						<?php endforeach; ?>
+					</select>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Start', 'lindenweg16' ); ?></th><td><input type="date" name="start_datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>" required></td></tr>
+				<tr><th><?php esc_html_e( 'Ende (optional)', 'lindenweg16' ); ?></th><td><input type="date" name="ende_datum"></td></tr>
+			</tbody></table>
+			<?php submit_button( __( 'Dauerbuchung anlegen', 'lindenweg16' ), 'secondary' ); ?>
+		</form>
+		<?php
+
+		// Bestehende Dauerbuchungen.
+		$alle = DauerbuchungRepository::get_all( false );
+		if ( $alle ) {
+			echo '<h3>' . esc_html__( 'Aktive Dauerbuchungen', 'lindenweg16' ) . '</h3>';
+			echo '<table class="widefat striped"><thead><tr>';
+			echo '<th>' . esc_html__( 'Bezeichnung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Betrag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Intervall', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Nächste', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Letzte', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+			echo '</tr></thead><tbody>';
+
+			$intv = DauerbuchungRepository::intervall_optionen();
+			foreach ( $alle as $db ) {
+				$aktiv = (int) $db->aktiv === 1;
+				echo '<tr' . ( ! $aktiv ? ' style="opacity:0.5"' : '' ) . '>';
+				echo '<td>' . esc_html( $db->bezeichnung ) . '</td>';
+				echo '<td>' . esc_html( self::euro( $db->betrag ) ) . '</td>';
+				echo '<td>' . esc_html( $db->kategorie ) . '</td>';
+				echo '<td>' . esc_html( isset( $intv[ $db->intervall ] ) ? $intv[ $db->intervall ] : $db->intervall ) . '</td>';
+				echo '<td>' . esc_html( $aktiv ? $db->naechste_ausfuehrung : '–' ) . '</td>';
+				echo '<td>' . esc_html( $db->letzte_ausfuehrung ?: '–' ) . '</td>';
+				echo '<td>' . ( $aktiv ? esc_html__( 'aktiv', 'lindenweg16' ) : esc_html__( 'inaktiv', 'lindenweg16' ) ) . '</td>';
+				if ( $aktiv ) {
+					$deact = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_deactivate_dauerbuchung&id=' . $db->id ), 'lw16_deactivate_dauerbuchung_' . $db->id );
+					echo '<td><a class="button button-small" href="' . esc_url( $deact ) . '" onclick="return confirm(\'' . esc_attr__( 'Dauerbuchung deaktivieren?', 'lindenweg16' ) . '\')">' . esc_html__( 'Deaktivieren', 'lindenweg16' ) . '</a></td>';
+				} else {
+					echo '<td></td>';
+				}
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Anlagenbuchhaltung (AfA)
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Anlagen-Tab rendern.
+	 */
+	protected function render_anlagen() {
+		echo '<h2>' . esc_html__( 'Anlagenbuchhaltung', 'lindenweg16' ) . '</h2>';
+
+		// AfA buchen.
+		$afa_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_book_afa' ), 'lw16_book_afa' );
+		echo '<p>' . esc_html__( 'Anlagevermögen gesamt:', 'lindenweg16' ) . ' <strong>' . esc_html( self::euro( AnlagenRepository::summe_buchwerte() ) ) . '</strong></p>';
+
+		// Neue Anlage erfassen.
+		?>
+		<h3><?php esc_html_e( 'Neue Anlage erfassen', 'lindenweg16' ); ?></h3>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="lw16_save_anlage">
+			<?php wp_nonce_field( 'lw16_save_anlage' ); ?>
+			<table class="form-table"><tbody>
+				<tr><th><?php esc_html_e( 'Bezeichnung', 'lindenweg16' ); ?></th><td><input type="text" name="bezeichnung" class="regular-text" required placeholder="<?php esc_attr_e( 'z. B. Laptop, 3D-Drucker, Büromöbel', 'lindenweg16' ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Anschaffungsdatum', 'lindenweg16' ); ?></th><td><input type="date" name="anschaffungsdatum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>" required></td></tr>
+				<tr><th><?php esc_html_e( 'Anschaffungskosten (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="anschaffungskosten" class="small-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'Nutzungsdauer (Jahre)', 'lindenweg16' ); ?></th><td><input type="number" min="1" max="50" name="nutzungsdauer_jahre" value="3" class="small-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'Kategorie', 'lindenweg16' ); ?></th><td>
+					<select name="kategorie">
+						<option value="EDV/Hardware"><?php esc_html_e( 'EDV/Hardware', 'lindenweg16' ); ?></option>
+						<option value="Maschinen"><?php esc_html_e( 'Maschinen', 'lindenweg16' ); ?></option>
+						<option value="Büroausstattung"><?php esc_html_e( 'Büroausstattung', 'lindenweg16' ); ?></option>
+						<option value="Fahrzeuge"><?php esc_html_e( 'Fahrzeuge', 'lindenweg16' ); ?></option>
+						<option value="Werkzeuge"><?php esc_html_e( 'Werkzeuge', 'lindenweg16' ); ?></option>
+						<option value="Sonstiges"><?php esc_html_e( 'Sonstiges', 'lindenweg16' ); ?></option>
+					</select>
+				</td></tr>
+			</tbody></table>
+			<?php submit_button( __( 'Anlage erfassen', 'lindenweg16' ), 'secondary' ); ?>
+		</form>
+		<?php
+
+		// AfA-Buchung.
+		echo '<h3>' . esc_html__( 'Jährliche Abschreibung buchen', 'lindenweg16' ) . '</h3>';
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-bottom:24px">
+			<input type="hidden" name="action" value="lw16_book_afa">
+			<?php wp_nonce_field( 'lw16_book_afa' ); ?>
+			<p>
+				<label><?php esc_html_e( 'Jahr:', 'lindenweg16' ); ?>
+				<input type="number" name="afa_jahr" value="<?php echo esc_attr( gmdate( 'Y' ) ); ?>" min="2020" max="2099" class="small-text"></label>
+				<?php submit_button( __( 'AfA für alle Anlagen buchen', 'lindenweg16' ), 'primary', '', false ); ?>
+			</p>
+		</form>
+		<?php
+
+		// Anlagenverzeichnis.
+		$anlagen = AnlagenRepository::get_all( false );
+		if ( $anlagen ) {
+			echo '<h3>' . esc_html__( 'Anlagenverzeichnis', 'lindenweg16' ) . '</h3>';
+			echo '<table class="widefat striped"><thead><tr>';
+			echo '<th>' . esc_html__( 'Nr.', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bezeichnung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Anschaffung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kosten', 'lindenweg16' ) . '</th><th>' . esc_html__( 'ND', 'lindenweg16' ) . '</th><th>' . esc_html__( 'AfA/Jahr', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Buchwert', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kategorie', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th><th></th>';
+			echo '</tr></thead><tbody>';
+
+			foreach ( $anlagen as $a ) {
+				$ausgeschieden = (int) $a->ausgeschieden === 1;
+				$jahres_afa = round( (float) $a->anschaffungskosten / max( 1, (int) $a->nutzungsdauer_jahre ), 2 );
+				echo '<tr' . ( $ausgeschieden ? ' style="opacity:0.5"' : '' ) . '>';
+				echo '<td>' . esc_html( $a->anlagennummer ) . '</td>';
+				echo '<td>' . esc_html( $a->bezeichnung ) . '</td>';
+				echo '<td>' . esc_html( $a->anschaffungsdatum ) . '</td>';
+				echo '<td>' . esc_html( self::euro( $a->anschaffungskosten ) ) . '</td>';
+				echo '<td>' . esc_html( $a->nutzungsdauer_jahre ) . ' ' . esc_html__( 'J.', 'lindenweg16' ) . '</td>';
+				echo '<td>' . esc_html( self::euro( $jahres_afa ) ) . '</td>';
+				echo '<td><strong>' . esc_html( self::euro( $a->buchwert ) ) . '</strong></td>';
+				echo '<td>' . esc_html( $a->kategorie ) . '</td>';
+				if ( $ausgeschieden ) {
+					echo '<td>' . esc_html__( 'ausgeschieden', 'lindenweg16' ) . '</td><td></td>';
+				} else {
+					echo '<td>' . esc_html__( 'aktiv', 'lindenweg16' ) . '</td>';
+					$aus = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_ausscheiden_anlage&id=' . $a->id ), 'lw16_ausscheiden_anlage_' . $a->id );
+					echo '<td><a class="button button-small" href="' . esc_url( $aus ) . '" onclick="return confirm(\'' . esc_attr__( 'Anlage als ausgeschieden markieren?', 'lindenweg16' ) . '\')">' . esc_html__( 'Ausscheiden', 'lindenweg16' ) . '</a></td>';
+				}
+				echo '</tr>';
+			}
+			echo '</tbody></table>';
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Neue POST-Handler: Kassenbuch, Dauerbuchungen, Anlagen, OCR
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Kassenbuch-Eintrag speichern.
+	 */
+	public function handle_save_kassenbuch() {
+		$this->guard( 'lw16_save_kassenbuch' );
+		KassenbuchRepository::create( array(
+			'datum'         => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
+			'beschreibung'  => sanitize_text_field( wp_unslash( $_POST['beschreibung'] ?? '' ) ),
+			'einnahme'      => abs( (float) ( $_POST['einnahme'] ?? 0 ) ),
+			'ausgabe'       => abs( (float) ( $_POST['ausgabe'] ?? 0 ) ),
+		) );
+		$this->redirect( __( 'Kassenbuch-Eintrag gebucht.', 'lindenweg16' ), 'kassenbuch' );
+	}
+
+	/**
+	 * Kassenbuch-Eintrag stornieren.
+	 */
+	public function handle_storno_kassenbuch() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_storno_kassenbuch_' . $id );
+		KassenbuchRepository::create_storno( $id, __( 'Manuelle Stornierung', 'lindenweg16' ) );
+		$this->redirect( __( 'Kassenbuch-Eintrag storniert.', 'lindenweg16' ), 'kassenbuch' );
+	}
+
+	/**
+	 * Neue Dauerbuchung speichern.
+	 */
+	public function handle_save_dauerbuchung() {
+		$this->guard( 'lw16_save_dauerbuchung' );
+		DauerbuchungRepository::create( array(
+			'bezeichnung'  => sanitize_text_field( wp_unslash( $_POST['bezeichnung'] ?? '' ) ),
+			'betrag'       => abs( (float) ( $_POST['betrag'] ?? 0 ) ),
+			'kategorie'    => sanitize_text_field( wp_unslash( $_POST['kategorie'] ?? '' ) ),
+			'typ'          => 'ausgabe',
+			'intervall'    => sanitize_text_field( wp_unslash( $_POST['intervall'] ?? 'monatlich' ) ),
+			'start_datum'  => sanitize_text_field( wp_unslash( $_POST['start_datum'] ?? gmdate( 'Y-m-d' ) ) ),
+			'ende_datum'   => ! empty( $_POST['ende_datum'] ) ? sanitize_text_field( wp_unslash( $_POST['ende_datum'] ) ) : null,
+		) );
+		$this->redirect( __( 'Dauerbuchung angelegt.', 'lindenweg16' ), 'dauerbuchungen' );
+	}
+
+	/**
+	 * Dauerbuchung deaktivieren.
+	 */
+	public function handle_deactivate_dauerbuchung() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_deactivate_dauerbuchung_' . $id );
+		DauerbuchungRepository::deactivate( $id );
+		$this->redirect( __( 'Dauerbuchung deaktiviert.', 'lindenweg16' ), 'dauerbuchungen' );
+	}
+
+	/**
+	 * Fällige Dauerbuchungen manuell ausführen.
+	 */
+	public function handle_execute_dauerbuchungen() {
+		$this->guard( 'lw16_execute_dauerbuchungen' );
+		$count = DauerbuchungRepository::execute_due();
+		$msg   = sprintf(
+			/* translators: %d number of executed bookings */
+			__( '%d Dauerbuchung(en) ausgeführt.', 'lindenweg16' ),
+			$count
+		);
+		$this->redirect( $msg, 'dauerbuchungen' );
+	}
+
+	/**
+	 * Neue Anlage speichern.
+	 */
+	public function handle_save_anlage() {
+		$this->guard( 'lw16_save_anlage' );
+		AnlagenRepository::create( array(
+			'bezeichnung'         => sanitize_text_field( wp_unslash( $_POST['bezeichnung'] ?? '' ) ),
+			'anschaffungsdatum'   => sanitize_text_field( wp_unslash( $_POST['anschaffungsdatum'] ?? gmdate( 'Y-m-d' ) ) ),
+			'anschaffungskosten'  => abs( (float) ( $_POST['anschaffungskosten'] ?? 0 ) ),
+			'nutzungsdauer_jahre' => max( 1, (int) ( $_POST['nutzungsdauer_jahre'] ?? 3 ) ),
+			'kategorie'           => sanitize_text_field( wp_unslash( $_POST['kategorie'] ?? '' ) ),
+		) );
+		$this->redirect( __( 'Anlage erfasst.', 'lindenweg16' ), 'anlagen' );
+	}
+
+	/**
+	 * AfA für ein Jahr buchen.
+	 */
+	public function handle_book_afa() {
+		$this->guard( 'lw16_book_afa' );
+		$jahr  = (int) ( $_POST['afa_jahr'] ?? gmdate( 'Y' ) );
+		$count = AnlagenRepository::book_yearly_afa( $jahr );
+		$msg   = sprintf(
+			/* translators: %1$d number of assets, %2$d year */
+			__( 'AfA für %1$d Anlage(n) im Jahr %2$d gebucht.', 'lindenweg16' ),
+			$count,
+			$jahr
+		);
+		$this->redirect( $msg, 'anlagen' );
+	}
+
+	/**
+	 * Anlage als ausgeschieden markieren.
+	 */
+	public function handle_ausscheiden_anlage() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_ausscheiden_anlage_' . $id );
+		AnlagenRepository::ausscheiden( $id );
+		$this->redirect( __( 'Anlage als ausgeschieden markiert.', 'lindenweg16' ), 'anlagen' );
+	}
+
+	/**
+	 * OCR-Scan eines Beleg-Fotos (AJAX).
+	 */
+	public function handle_ocr_scan() {
+		check_ajax_referer( 'lw16_ocr_scan' );
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_send_json_error( array( 'error' => __( 'Keine Berechtigung.', 'lindenweg16' ) ) );
+		}
+
+		if ( empty( $_FILES['beleg_foto']['tmp_name'] ) ) {
+			wp_send_json_error( array( 'error' => __( 'Keine Datei empfangen.', 'lindenweg16' ) ) );
+		}
+
+		$tmp = $_FILES['beleg_foto']['tmp_name'];
+		$result = BelegOcr::scan( $tmp );
+
+		if ( ! $result['success'] ) {
+			wp_send_json_error( array( 'error' => $result['error'] ) );
+		}
+
+		wp_send_json_success( array(
+			'betrag'   => $result['betrag'],
+			'datum'    => $result['datum'],
+			'haendler' => $result['haendler'],
+		) );
+	}
+
+	/**
+	 * Scheduler-Callback: Fällige Dauerbuchungen automatisch ausführen.
+	 */
+	public function run_recurring_bookings() {
+		DauerbuchungRepository::execute_due();
 	}
 
 	/* --------------------------------------------------------------------

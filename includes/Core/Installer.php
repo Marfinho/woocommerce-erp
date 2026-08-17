@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '4';
+	const DB_VERSION = '5';
 
 	/**
 	 * Aktivierungsroutine.
@@ -525,6 +525,77 @@ class Installer {
 			PRIMARY KEY  (id),
 			KEY status (status),
 			KEY datum (datum),
+			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
+		// --- Modul 1: Kassenbuch (GoBD) ----------------------------------
+		$tables[] = "CREATE TABLE {$p}kassenbuch (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			kassenbuchnummer VARCHAR(50) NOT NULL,
+			jahr SMALLINT UNSIGNED NOT NULL,
+			laufnummer INT UNSIGNED NOT NULL,
+			datum DATE NOT NULL,
+			beschreibung VARCHAR(255) NOT NULL DEFAULT '',
+			einnahme DECIMAL(12,2) NOT NULL DEFAULT 0,
+			ausgabe DECIMAL(12,2) NOT NULL DEFAULT 0,
+			saldo DECIMAL(12,2) NOT NULL DEFAULT 0,
+			beleg_id BIGINT UNSIGNED NULL,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			storno_von_id BIGINT UNSIGNED NULL,
+			hash VARCHAR(64) NOT NULL DEFAULT '',
+			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
+			erstellt_am DATETIME NOT NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY jahr (jahr),
+			KEY datum (datum),
+			KEY kassenbuchnummer (kassenbuchnummer),
+			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
+		// --- Modul 1: Dauerbuchungen ------------------------------------
+		$tables[] = "CREATE TABLE {$p}dauerbuchungen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			bezeichnung VARCHAR(255) NOT NULL,
+			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			kategorie VARCHAR(100) NOT NULL DEFAULT '',
+			typ VARCHAR(20) NOT NULL DEFAULT 'ausgabe',
+			intervall VARCHAR(20) NOT NULL DEFAULT 'monatlich',
+			start_datum DATE NOT NULL,
+			ende_datum DATE NULL,
+			naechste_ausfuehrung DATE NOT NULL,
+			letzte_ausfuehrung DATE NULL,
+			aktiv TINYINT(1) NOT NULL DEFAULT 1,
+			erstellt_am DATETIME NOT NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY aktiv (aktiv),
+			KEY naechste_ausfuehrung (naechste_ausfuehrung)
+		) {$charset_collate};";
+
+		// --- Modul 1: Anlagenverzeichnis (AfA) --------------------------
+		$tables[] = "CREATE TABLE {$p}anlagen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			anlagennummer VARCHAR(50) NOT NULL,
+			jahr SMALLINT UNSIGNED NOT NULL,
+			laufnummer INT UNSIGNED NOT NULL,
+			bezeichnung VARCHAR(255) NOT NULL,
+			anschaffungsdatum DATE NOT NULL,
+			anschaffungskosten DECIMAL(12,2) NOT NULL DEFAULT 0,
+			nutzungsdauer_jahre INT UNSIGNED NOT NULL DEFAULT 1,
+			afa_methode VARCHAR(20) NOT NULL DEFAULT 'linear',
+			buchwert DECIMAL(12,2) NOT NULL DEFAULT 0,
+			beleg_id BIGINT UNSIGNED NULL,
+			kategorie VARCHAR(100) NOT NULL DEFAULT '',
+			ausgeschieden TINYINT(1) NOT NULL DEFAULT 0,
+			ausgeschieden_am DATE NULL,
+			erstellt_am DATETIME NOT NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY anlagennummer (anlagennummer),
+			KEY jahr (jahr),
+			KEY kategorie (kategorie),
+			KEY ausgeschieden (ausgeschieden),
 			KEY beleg_id (beleg_id)
 		) {$charset_collate};";
 
