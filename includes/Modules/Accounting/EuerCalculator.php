@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Accounting;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Time;
+
 /**
  * Berechnet Einnahmen (abzgl. Refunds) und Ausgaben für einen Zeitraum.
  * Einnahmen werden zur Laufzeit aus WooCommerce ermittelt, nie manuell erfasst.
@@ -53,22 +55,33 @@ class EuerCalculator {
 	/**
 	 * Vollständige EÜR-Übersicht für einen Zeitraum.
 	 *
+	 * Einnahmen setzen sich aus zwei Quellen zusammen: den WooCommerce-
+	 * Bestellungen und den Einnahmebelegen (Tagesabschlüsse der Marktkasse).
+	 * Letztere wurden vorher als Ausgabe behandelt und damit vom Gewinn
+	 * abgezogen statt addiert.
+	 *
 	 * @param string $from Y-m-d.
 	 * @param string $to   Y-m-d.
-	 * @return array {einnahmen, ausgaben_kategorien, ausgaben_summe, gewinn}
+	 * @return array Kennzahlen des Zeitraums.
 	 */
 	public static function report( $from, $to ) {
-		$einnahmen = self::einnahmen( $from, $to );
-		$ausgaben  = BelegRepository::sum_by_category( $from, $to );
-		$ausg_sum  = array_sum( $ausgaben );
+		$einnahmen_shop  = self::einnahmen( $from, $to );
+		$einnahmen_beleg = BelegRepository::sum_einnahmen( $from, $to );
+		$einnahmen       = $einnahmen_shop + $einnahmen_beleg;
+
+		$ausgaben = BelegRepository::sum_by_category( $from, $to, 'ausgabe' );
+		$ausg_sum = array_sum( $ausgaben );
 
 		return array(
 			'from'                 => $from,
 			'to'                   => $to,
 			'einnahmen'            => $einnahmen,
+			'einnahmen_shop'       => $einnahmen_shop,
+			'einnahmen_beleg'      => $einnahmen_beleg,
 			'ausgaben_kategorien'  => $ausgaben,
 			'ausgaben_summe'       => $ausg_sum,
 			'gewinn'               => $einnahmen - $ausg_sum,
+			'belege_offen'         => BelegRepository::count_offen( $from, $to ),
 		);
 	}
 
@@ -79,7 +92,7 @@ class EuerCalculator {
 	 * @return array {gewinn, ruecklage}
 	 */
 	public static function ruecklage( $steuersatz_prozent ) {
-		$jahr = (int) gmdate( 'Y' );
+		$jahr = Time::year();
 		$rep  = self::report( $jahr . '-01-01', $jahr . '-12-31' );
 		$gewinn = max( 0, $rep['gewinn'] );
 		return array(

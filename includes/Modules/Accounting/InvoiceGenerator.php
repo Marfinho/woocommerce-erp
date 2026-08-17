@@ -12,6 +12,8 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
+use Lindenweg16\Core\Format;
+use Lindenweg16\Core\Time;
 
 class InvoiceGenerator {
 
@@ -20,56 +22,143 @@ class InvoiceGenerator {
 		return $wpdb->prefix . 'lw16_rechnungen';
 	}
 
-	public static function generate_for_order( $order_id ) {
-		global $wpdb;
+	/**
+	 * Name des MySQL-Locks für die Nummernvergabe (max. 64 Zeichen).
+	 */
+	const LOCK_NAME = 'lw16_invoice_number';
 
+	/**
+	 * Rechnung für eine Bestellung erzeugen (idempotent).
+	 *
+	 * @param int $order_id Bestell-ID.
+	 * @return int|false Rechnungs-ID oder false.
+	 */
+	public static function generate_for_order( $order_id ) {
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {
 			return false;
 		}
 
-		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE order_id = %d', $order_id ) ); // phpcs:ignore
+		$existing = self::get_by_order( $order_id );
 		if ( $existing ) {
+			// Reparaturpfad: Wenn beim ersten Versuch die PDF-Erzeugung
+			// scheiterte, existiert der Datensatz ohne Datei. Ohne diesen
+			// Zweig würde die Nummer für immer ohne Dokument bleiben.
+			if ( empty( $existing->datei_pfad ) ) {
+				self::attach_pdf( (int) $existing->id, $existing->rechnungsnummer, $order );
+			}
 			return (int) $existing->id;
 		}
 
-		$jahr = (int) gmdate( 'Y', $order->get_date_created() ? $order->get_date_created()->getTimestamp() : time() );
-
-		$modus = Settings::get( 'rechnungsnummer_modus', 'jahr' );
-		if ( 'durchlaufend' === $modus ) {
-			$laufnummer = 1 + (int) $wpdb->get_var( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() ); // phpcs:ignore
-		} else {
-			$laufnummer = 1 + (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() . ' WHERE jahr = %d', $jahr ) ); // phpcs:ignore
-		}
-		$nummer = \Lindenweg16\Core\Calc::rechnungsnummer( $modus, $jahr, $laufnummer );
-
-		$ok = $wpdb->insert(
-			self::table(),
-			array(
-				'order_id'        => $order_id,
-				'rechnungsnummer' => $nummer,
-				'jahr'            => $jahr,
-				'laufnummer'      => $laufnummer,
-				'betrag'          => (float) $order->get_total(),
-				'erstellt_am'     => current_time( 'mysql' ),
-			),
-			array( '%d', '%s', '%d', '%d', '%f', '%s' )
-		);
-		if ( ! $ok ) {
+		$rechnung = self::reserve_number( $order );
+		if ( ! $rechnung ) {
 			return false;
 		}
-		$rechnung_id = (int) $wpdb->insert_id;
 
-		$filename = 'rechnung-' . $nummer . '-' . wp_generate_password( 8, false ) . '.pdf';
-		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
-		self::build_pdf( $order, $nummer )->save( $path );
+		self::attach_pdf( $rechnung['id'], $rechnung['nummer'], $order );
 
-		$wpdb->update( self::table(), array( 'datei_pfad' => $filename ), array( 'id' => $rechnung_id ) );
-
-		$order->update_meta_data( '_lw16_invoice_number', $nummer );
+		$order->update_meta_data( '_lw16_invoice_number', $rechnung['nummer'] );
 		$order->save();
 
-		return $rechnung_id;
+		return $rechnung['id'];
+	}
+
+	/**
+	 * Rechnungsnummer unter einem Datenbank-Lock vergeben.
+	 *
+	 * „MAX(laufnummer) + 1" gefolgt von einem INSERT ist ohne Sperre nicht
+	 * eindeutig: zwei parallele Action-Scheduler-Läufe ermitteln dieselbe
+	 * Nummer, der zweite INSERT scheitert am UNIQUE-Index und die Bestellung
+	 * bleibt stillschweigend ohne Rechnung.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @return array|false {id, nummer}
+	 */
+	protected static function reserve_number( $order ) {
+		global $wpdb;
+
+		$locked = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', self::LOCK_NAME, 10 ) );
+
+		try {
+			// Innerhalb der Sperre erneut prüfen – ein paralleler Lauf kann
+			// die Rechnung inzwischen angelegt haben.
+			$existing = self::get_by_order( $order->get_id() );
+			if ( $existing ) {
+				return array(
+					'id'     => (int) $existing->id,
+					'nummer' => $existing->rechnungsnummer,
+				);
+			}
+
+			$created = $order->get_date_created();
+			$jahr    = (int) ( $created ? $created->date( 'Y' ) : Time::year() );
+
+			$modus = Settings::get( 'rechnungsnummer_modus', 'jahr' );
+			$modus = 'durchlaufend' === $modus ? 'durchlaufend' : 'jahr';
+
+			if ( 'durchlaufend' === $modus ) {
+				$laufnummer = 1 + (int) $wpdb->get_var( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() ); // phpcs:ignore
+			} else {
+				$laufnummer = 1 + (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(MAX(laufnummer),0) FROM ' . self::table() . ' WHERE jahr = %d', $jahr ) ); // phpcs:ignore
+			}
+			$nummer = \Lindenweg16\Core\Calc::rechnungsnummer( $modus, $jahr, $laufnummer );
+
+			$ok = $wpdb->insert(
+				self::table(),
+				array(
+					'order_id'        => $order->get_id(),
+					'rechnungsnummer' => $nummer,
+					'jahr'            => $jahr,
+					'laufnummer'      => $laufnummer,
+					'betrag'          => (float) $order->get_total(),
+					'erstellt_am'     => Time::now(),
+				),
+				array( '%d', '%s', '%d', '%d', '%f', '%s' )
+			);
+
+			if ( ! $ok ) {
+				return false;
+			}
+
+			return array(
+				'id'     => (int) $wpdb->insert_id,
+				'nummer' => $nummer,
+			);
+		} finally {
+			if ( 1 === $locked ) {
+				$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', self::LOCK_NAME ) ); // phpcs:ignore
+			}
+		}
+	}
+
+	/**
+	 * PDF erzeugen und mit dem Rechnungsdatensatz verknüpfen.
+	 *
+	 * Schlägt das Schreiben fehl, bleibt `datei_pfad` leer, damit ein späterer
+	 * Aufruf es erneut versuchen kann.
+	 *
+	 * @param int       $rechnung_id Rechnungs-ID.
+	 * @param string    $nummer      Rechnungsnummer.
+	 * @param \WC_Order $order       Bestellung.
+	 * @return bool
+	 */
+	protected static function attach_pdf( $rechnung_id, $nummer, $order ) {
+		global $wpdb;
+
+		$dir = Installer::docs_dir();
+		if ( ! file_exists( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+
+		$filename = 'rechnung-' . sanitize_file_name( $nummer ) . '-' . wp_generate_password( 8, false ) . '.pdf';
+		$path     = trailingslashit( $dir ) . $filename;
+
+		if ( ! self::build_pdf( $order, $nummer )->save( $path ) ) {
+			return false;
+		}
+
+		$wpdb->update( self::table(), array( 'datei_pfad' => $filename ), array( 'id' => (int) $rechnung_id ) );
+		return true;
 	}
 
 	/**
@@ -140,20 +229,27 @@ class InvoiceGenerator {
 		$pdf->hr( 1.5 );
 		$pdf->set_color( Pdf::COLOR_TINTE );
 
-		// Positionen.
-		$pos_nr = 0;
+		// Positionen. Alle Beträge brutto (inkl. Steuer), damit die Summe der
+		// Zeilen exakt dem Gesamtbetrag entspricht – vorher wurden Netto-
+		// Zeilenwerte gegen einen Brutto-Gesamtbetrag gestellt, und Coupons
+		// sowie Gebühren (u. a. die eigene Guthaben-Einlösung) fehlten ganz.
+		$pos_nr       = 0;
+		$zeilen_summe = 0.0;
+
 		foreach ( $order->get_items() as $item ) {
 			$pos_nr++;
-			$qty        = max( 1, $item->get_quantity() );
-			$einzelpreis = (float) $item->get_total() / $qty;
+			$qty         = (float) $item->get_quantity();
+			$brutto      = (float) $item->get_total() + (float) $item->get_total_tax();
+			$einzelpreis = $qty > 0 ? $brutto / $qty : $brutto;
+			$zeilen_summe += $brutto;
 
 			$pdf->table_cols(
 				array(
 					(string) $pos_nr,
 					$item->get_name(),
-					(string) $item->get_quantity(),
+					Format::qty( $qty ),
 					self::money( $einzelpreis ),
-					self::money( (float) $item->get_total() ),
+					self::money( $brutto ),
 				),
 				$widths,
 				$aligns,
@@ -163,15 +259,17 @@ class InvoiceGenerator {
 			$pdf->hr( 0.3 );
 		}
 
-		if ( (float) $order->get_shipping_total() > 0 ) {
+		$versand = (float) $order->get_shipping_total() + (float) $order->get_shipping_tax();
+		if ( abs( $versand ) > 0.0049 ) {
 			$pos_nr++;
+			$zeilen_summe += $versand;
 			$pdf->table_cols(
 				array(
 					(string) $pos_nr,
 					__( 'Versand', 'lindenweg16' ),
 					'1',
-					self::money( (float) $order->get_shipping_total() ),
-					self::money( (float) $order->get_shipping_total() ),
+					self::money( $versand ),
+					self::money( $versand ),
 				),
 				$widths,
 				$aligns,
@@ -179,6 +277,47 @@ class InvoiceGenerator {
 			);
 			$pdf->set_draw_color( '#E0E0E0' );
 			$pdf->hr( 0.3 );
+		}
+
+		// Gebühren und Gutschriften (negative Gebühren, z. B. eingelöstes
+		// Guthaben) gehören auf die Rechnung, sonst geht sie nicht auf.
+		foreach ( $order->get_items( 'fee' ) as $fee ) {
+			$brutto = (float) $fee->get_total() + (float) $fee->get_total_tax();
+			if ( abs( $brutto ) < 0.0049 ) {
+				continue;
+			}
+			$pos_nr++;
+			$zeilen_summe += $brutto;
+			$pdf->table_cols(
+				array(
+					(string) $pos_nr,
+					$fee->get_name() ? $fee->get_name() : __( 'Gebühr', 'lindenweg16' ),
+					'1',
+					self::money( $brutto ),
+					self::money( $brutto ),
+				),
+				$widths,
+				$aligns,
+				10
+			);
+			$pdf->set_draw_color( '#E0E0E0' );
+			$pdf->hr( 0.3 );
+		}
+
+		$pdf->space( 4 );
+
+		// Gewährte Rabatte sind in den Zeilensummen bereits berücksichtigt und
+		// werden nur informativ ausgewiesen.
+		$rabatt = (float) $order->get_discount_total() + (float) $order->get_discount_tax();
+		if ( $rabatt > 0.0049 ) {
+			$pdf->set_color( '#6E7882' );
+			$codes = $order->get_coupon_codes();
+			$label = __( 'enthaltener Rabatt', 'lindenweg16' );
+			if ( ! empty( $codes ) ) {
+				$label .= ' (' . implode( ', ', $codes ) . ')';
+			}
+			$pdf->row( $label, '-' . self::money( $rabatt ), 9 );
+			$pdf->set_color( Pdf::COLOR_TINTE );
 		}
 
 		$pdf->space( 8 );
@@ -189,12 +328,25 @@ class InvoiceGenerator {
 		$kleinunternehmer = (int) Settings::get( 'kleinunternehmer', 1 ) === 1;
 
 		$pdf->set_color( '#6E7882' );
-		if ( ! $kleinunternehmer ) {
-			$subtotal = (float) $order->get_subtotal() + (float) $order->get_shipping_total();
-			$tax      = (float) $order->get_total_tax();
 
-			$pdf->text_xy( __( 'Zwischensumme', 'lindenweg16' ), $sum_x, $sum_y, 10 );
-			$pdf->text_xy_right( self::money( $subtotal ), Pdf::PAGE_WIDTH - Pdf::MARGIN, $sum_y, 10 );
+		$gesamt = (float) $order->get_total();
+
+		// Falls Zeilensumme und Gesamtbetrag auseinanderlaufen (etwa durch
+		// Rundung fremder Plugins), wird die Differenz offen ausgewiesen statt
+		// stillschweigend verschluckt.
+		$differenz = $gesamt - $zeilen_summe;
+		if ( abs( $differenz ) > 0.0099 ) {
+			$pdf->text_xy( __( 'Rundungsdifferenz', 'lindenweg16' ), $sum_x, $sum_y, 10 );
+			$pdf->text_xy_right( self::money( $differenz ), Pdf::PAGE_WIDTH - Pdf::MARGIN, $sum_y, 10 );
+			$sum_y += 16;
+		}
+
+		if ( ! $kleinunternehmer ) {
+			$tax   = (float) $order->get_total_tax();
+			$netto = $gesamt - $tax;
+
+			$pdf->text_xy( __( 'Nettobetrag', 'lindenweg16' ), $sum_x, $sum_y, 10 );
+			$pdf->text_xy_right( self::money( $netto ), Pdf::PAGE_WIDTH - Pdf::MARGIN, $sum_y, 10 );
 			$sum_y += 16;
 
 			$pdf->text_xy( __( 'MwSt.', 'lindenweg16' ), $sum_x, $sum_y, 10 );

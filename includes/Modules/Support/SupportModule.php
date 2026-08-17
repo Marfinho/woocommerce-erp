@@ -13,7 +13,10 @@ use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Format;
+use Lindenweg16\Core\Time;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 
 /**
@@ -61,9 +64,14 @@ class SupportModule {
 		}
 
 		$attachments = $this->build_export_files();
+		if ( empty( $attachments ) ) {
+			return;
+		}
+
 		MailTemplate::send( $email, 'datenexport', array(), $attachments );
 
-		// Temporäre Dateien aufräumen.
+		// Exportdateien direkt nach dem Versand entfernen – sie sollen nicht
+		// dauerhaft auf der Platte liegen bleiben.
 		foreach ( $attachments as $f ) {
 			@unlink( $f ); // phpcs:ignore
 		}
@@ -88,33 +96,84 @@ class SupportModule {
 	 */
 	protected function build_export_files() {
 		global $wpdb;
-		$dir   = get_temp_dir();
-		$files = array();
+
+		// Nicht in das System-Temp-Verzeichnis schreiben: das ist auf vielen
+		// Hosts für alle Nutzer lesbar, und der Dateiname war zusätzlich
+		// vorhersagbar. Das Dokumentenverzeichnis des Plugins ist per
+		// .htaccess gesperrt.
+		$dir = trailingslashit( Installer::docs_dir() ) . 'exports';
+		if ( ! is_dir( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+		if ( ! is_dir( $dir ) || ! is_writable( $dir ) ) {
+			return array();
+		}
+
+		$suffix = Time::today() . '-' . wp_generate_password( 8, false );
+		$files  = array();
 
 		$exports = array(
-			'belege'        => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_belege ORDER BY id',
-			'lagerbewegung' => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_lagerbewegung ORDER BY id',
-			'rechnungen'    => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_rechnungen ORDER BY id',
+			'belege'        => $wpdb->prefix . 'lw16_belege',
+			'lagerbewegung' => $wpdb->prefix . 'lw16_lagerbewegung',
+			'rechnungen'    => $wpdb->prefix . 'lw16_rechnungen',
 		);
 
-		foreach ( $exports as $name => $sql ) {
-			$rows = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore
-			if ( empty( $rows ) ) {
-				continue;
-			}
-			$path = trailingslashit( $dir ) . 'lw16-' . $name . '-' . gmdate( 'Ymd' ) . '.csv';
+		foreach ( $exports as $name => $table ) {
+			$path = trailingslashit( $dir ) . 'lw16-' . $name . '-' . $suffix . '.csv';
 			$fh   = fopen( $path, 'w' ); // phpcs:ignore
 			if ( ! $fh ) {
 				continue;
 			}
-			fputcsv( $fh, array_keys( $rows[0] ) );
-			foreach ( $rows as $row ) {
-				fputcsv( $fh, $row );
-			}
+
+			// In Blöcken lesen statt die gesamte Tabelle in den Speicher.
+			$offset     = 0;
+			$batch      = 500;
+			$has_header = false;
+
+			do {
+				$rows = $wpdb->get_results(
+					$wpdb->prepare( "SELECT * FROM {$table} ORDER BY id LIMIT %d OFFSET %d", $batch, $offset ), // phpcs:ignore
+					ARRAY_A
+				);
+				if ( ! $has_header && ! empty( $rows ) ) {
+					fputcsv( $fh, array_keys( $rows[0] ) );
+					$has_header = true;
+				}
+				foreach ( $rows as $row ) {
+					fputcsv( $fh, array_map( array( __CLASS__, 'csv_cell' ), $row ) );
+				}
+				$offset += $batch;
+			} while ( count( $rows ) === $batch );
+
 			fclose( $fh ); // phpcs:ignore
+
+			if ( ! $has_header ) {
+				@unlink( $path ); // phpcs:ignore
+				continue;
+			}
 			$files[] = $path;
 		}
 		return $files;
+	}
+
+	/**
+	 * Einzelne CSV-Zelle gegen Formel-Injection entschärfen.
+	 *
+	 * Tabellenkalkulationen interpretieren Zellen, die mit =, +, - oder @
+	 * beginnen, als Formel. Ein Händlername wie "=cmd|..." würde beim Öffnen
+	 * der Exportdatei ausgeführt.
+	 *
+	 * @param mixed $value Zellwert.
+	 * @return mixed
+	 */
+	protected static function csv_cell( $value ) {
+		if ( ! is_string( $value ) || '' === $value ) {
+			return $value;
+		}
+		if ( in_array( $value[0], array( '=', '+', '-', '@', "\t", "\r" ), true ) ) {
+			return "'" . $value;
+		}
+		return $value;
 	}
 
 	/**

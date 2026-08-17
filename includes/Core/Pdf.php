@@ -99,11 +99,52 @@ class Pdf {
 		}
 	}
 
+	/**
+	 * Text nach Windows-1252 wandeln und PDF-Sonderzeichen maskieren.
+	 *
+	 * @param string $text UTF-8-Text.
+	 * @return string
+	 */
 	protected function enc( $text ) {
-		$latin = function_exists( 'mb_convert_encoding' )
-			? mb_convert_encoding( $text, 'Windows-1252', 'UTF-8' )
-			: utf8_decode( $text );
+		$text = (string) $text;
+
+		if ( function_exists( 'mb_convert_encoding' ) ) {
+			$latin = mb_convert_encoding( $text, 'Windows-1252', 'UTF-8' );
+		} elseif ( function_exists( 'iconv' ) ) {
+			// utf8_decode() ist seit PHP 8.2 deprecated; iconv kann zusätzlich
+			// nicht abbildbare Zeichen sauber ersetzen.
+			$latin = iconv( 'UTF-8', 'Windows-1252//TRANSLIT', $text );
+		} else {
+			$latin = $text;
+		}
+
+		if ( false === $latin ) {
+			$latin = $text;
+		}
+
 		return str_replace( array( '\\', '(', ')' ), array( '\\\\', '\\(', '\\)' ), $latin );
+	}
+
+	/**
+	 * Prüfen, ob eine Datei von diesem Generator eingebettet werden kann.
+	 *
+	 * Unterstützt werden ausschließlich JPEGs in Graustufen oder RGB
+	 * (DCTDecode). CMYK-JPEGs würden mit falschen Farben erscheinen und
+	 * werden daher abgelehnt.
+	 *
+	 * @param string $file Absoluter Dateipfad.
+	 * @return bool
+	 */
+	public static function can_embed_image( $file ) {
+		if ( ! $file || ! is_readable( $file ) ) {
+			return false;
+		}
+		$info = @getimagesize( $file ); // phpcs:ignore
+		if ( ! $info || IMAGETYPE_JPEG !== $info[2] ) {
+			return false;
+		}
+		$channels = isset( $info['channels'] ) ? (int) $info['channels'] : 3;
+		return in_array( $channels, array( 1, 3 ), true );
 	}
 
 	protected function ensure_space( $needed ) {
@@ -278,29 +319,32 @@ class Pdf {
 	}
 
 	protected function embed_image( $file, $x, $y_top, $max_w, $max_h ) {
-		if ( ! is_readable( $file ) ) {
+		if ( ! self::can_embed_image( $file ) ) {
 			return false;
 		}
 		$info = @getimagesize( $file ); // phpcs:ignore
-		if ( ! $info || IMAGETYPE_JPEG !== $info[2] ) {
-			return false;
-		}
 		$data = file_get_contents( $file ); // phpcs:ignore
 		if ( false === $data ) {
 			return false;
 		}
 
 		list( $iw, $ih ) = $info;
+		if ( $iw <= 0 || $ih <= 0 ) {
+			return false;
+		}
 		$ratio = min( $max_w / $iw, $max_h / $ih, 1 );
 		$w     = $iw * $ratio;
 		$h     = $ih * $ratio;
 
+		$channels = isset( $info['channels'] ) ? (int) $info['channels'] : 3;
+
 		$this->img_counter++;
 		$name = 'Img' . $this->img_counter;
 		$this->images[ $name ] = array(
-			'data' => $data,
-			'w'    => $iw,
-			'h'    => $ih,
+			'data'       => $data,
+			'w'          => $iw,
+			'h'          => $ih,
+			'colorspace' => 1 === $channels ? 'DeviceGray' : 'DeviceRGB',
 		);
 
 		$yy = self::PAGE_HEIGHT - $y_top - $h;
@@ -355,13 +399,18 @@ class Pdf {
 			$plz_ort  = (string) Settings::get( 'firma_plz_ort' );
 			$email    = (string) Settings::get( 'firma_email' );
 			$footer_parts = array_filter( array( $strasse, $plz_ort, $email ) );
-			$footer_info  = $this->enc( implode( ' \267 ', $footer_parts ) );
+			// Echtes UTF-8-Mittelpunktzeichen: enc() wandelt es nach
+			// Windows-1252 (0xB7). Eine PDF-Oktalsequenz wie "\267" würde von
+			// enc() als Backslash maskiert und wörtlich gedruckt werden.
+			$footer_raw   = implode( ' · ', $footer_parts );
+			$footer_info  = $this->enc( $footer_raw );
 
 			$tinte = self::hex_rgb( self::COLOR_TINTE );
 			$grey  = '0.600 0.600 0.600';
 
 			foreach ( $this->pages as $i => &$stream ) {
-				$page_str = $this->enc( sprintf( __( 'Seite %1$d von %2$d', 'lindenweg16' ), $i + 1, $n_pages ) );
+				$page_label = sprintf( __( 'Seite %1$d von %2$d', 'lindenweg16' ), $i + 1, $n_pages );
+				$page_str   = $this->enc( $page_label );
 
 				$line_y = 42;
 				$stream .= sprintf(
@@ -383,7 +432,9 @@ class Pdf {
 				);
 
 				if ( $footer_info ) {
-					$info_w = strlen( $footer_info ) * 3.5;
+					// Breite über die reguläre Schätzfunktion statt über einen
+					// festen Faktor, damit die Zentrierung zur Schriftgröße passt.
+					$info_w = $this->text_width( $footer_raw, 7 );
 					$info_x = ( self::PAGE_WIDTH - $info_w ) / 2;
 					$stream .= sprintf(
 						"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
@@ -394,7 +445,7 @@ class Pdf {
 					);
 				}
 
-				$page_w = strlen( $page_str ) * 3.5;
+				$page_w = $this->text_width( $page_label, 7 );
 				$stream .= sprintf(
 					"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
 					$grey,
@@ -457,8 +508,9 @@ class Pdf {
 
 		foreach ( $this->images as $name => $img ) {
 			$obj = $image_obj_map[ $name ];
+			$colorspace = isset( $img['colorspace'] ) ? $img['colorspace'] : 'DeviceRGB';
 			$objects[ $obj ] = "<< /Type /XObject /Subtype /Image /Width {$img['w']} /Height {$img['h']} "
-				. "/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen( $img['data'] ) . " >>\n"
+				. "/ColorSpace /{$colorspace} /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen( $img['data'] ) . " >>\n"
 				. "stream\n" . $img['data'] . "\nendstream";
 		}
 
@@ -491,7 +543,27 @@ class Pdf {
 		return $pdf;
 	}
 
+	/**
+	 * PDF auf die Platte schreiben.
+	 *
+	 * Der Rückgabewert wird von den Aufrufern ausgewertet (die Rechnung wird
+	 * z. B. nur verknüpft, wenn die Datei wirklich existiert), deshalb hier
+	 * defensiv prüfen statt blind zu schreiben.
+	 *
+	 * @param string $path Absoluter Zielpfad.
+	 * @return bool
+	 */
 	public function save( $path ) {
-		return (bool) file_put_contents( $path, $this->output() ); // phpcs:ignore
+		$dir = dirname( $path );
+		if ( ! is_dir( $dir ) ) {
+			wp_mkdir_p( $dir );
+		}
+		if ( ! is_dir( $dir ) || ! is_writable( $dir ) ) {
+			return false;
+		}
+
+		$bytes = @file_put_contents( $path, $this->output() ); // phpcs:ignore
+
+		return false !== $bytes && $bytes > 0;
 	}
 }

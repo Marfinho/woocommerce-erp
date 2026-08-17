@@ -82,7 +82,12 @@ class AccountingModule {
 		echo '</nav>';
 
 		if ( isset( $_GET['msg'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) ) . '</p></div>'; // phpcs:ignore
+			$is_error = isset( $_GET['msg_type'] ) && 'error' === $_GET['msg_type']; // phpcs:ignore WordPress.Security.NonceVerification
+			printf(
+				'<div class="notice %s is-dismissible"><p>%s</p></div>',
+				$is_error ? 'notice-error' : 'notice-success',
+				esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) ) // phpcs:ignore WordPress.Security.NonceVerification
+			);
 		}
 
 		if ( 'neu' === $view ) {
@@ -113,11 +118,14 @@ class AccountingModule {
 			echo '<td>' . esc_html( $b->datum ) . '</td>';
 			echo '<td>' . esc_html( (string) $b->haendler ) . '</td>';
 			echo '<td>' . esc_html( (string) $b->eur_kategorie ) . '</td>';
-			echo '<td>' . esc_html( self::euro( $b->betrag ) ) . '</td>';
-			$quelle = 'wareneingang' === $b->quelle
-				? '<span title="' . esc_attr__( 'automatisch aus Wareneingang übernommen', 'lindenweg16' ) . '">' . esc_html__( 'Wareneingang', 'lindenweg16' ) . '</span>'
-				: esc_html__( 'manuell', 'lindenweg16' );
-			echo '<td>' . $quelle . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput
+			$ist_einnahme = isset( $b->richtung ) && 'einnahme' === $b->richtung;
+			printf(
+				'<td style="color:%s">%s%s</td>',
+				$ist_einnahme ? '#00a32a' : 'inherit',
+				$ist_einnahme ? '+' : '&minus;',
+				esc_html( self::euro( $b->betrag ) )
+			);
+			echo '<td>' . esc_html( self::quelle_label( $b->quelle ) ) . '</td>';
 			if ( $b->datei_pfad ) {
 				$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_beleg_datei&id=' . $b->id ), 'lw16_beleg_datei_' . $b->id );
 				echo '<td><a href="' . esc_url( $url ) . '" target="_blank">' . esc_html__( 'ansehen', 'lindenweg16' ) . '</a></td>';
@@ -160,9 +168,18 @@ class AccountingModule {
 			<input type="hidden" name="action" value="lw16_save_beleg">
 			<?php wp_nonce_field( 'lw16_save_beleg' ); ?>
 			<table class="form-table"><tbody>
-				<tr><th><?php esc_html_e( 'Beleg-Foto', 'lindenweg16' ); ?></th><td><input type="file" name="beleg_foto" accept="image/*"></td></tr>
-				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" class="small-text" required></td></tr>
-				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
+				<tr><th><?php esc_html_e( 'Art', 'lindenweg16' ); ?></th><td>
+					<label><input type="radio" name="richtung" value="ausgabe" checked> <?php esc_html_e( 'Ausgabe', 'lindenweg16' ); ?></label>
+					&nbsp;&nbsp;
+					<label><input type="radio" name="richtung" value="einnahme"> <?php esc_html_e( 'Einnahme', 'lindenweg16' ); ?></label>
+					<p class="description"><?php esc_html_e( 'Einnahmebelege werden in der EÜR zum Gewinn addiert, Ausgaben abgezogen.', 'lindenweg16' ); ?></p>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Beleg-Foto', 'lindenweg16' ); ?></th><td>
+					<input type="file" name="beleg_foto" accept="image/jpeg,image/png,image/webp,image/gif">
+					<p class="description"><?php esc_html_e( 'JPEG, PNG, WebP oder GIF. Wird automatisch verkleinert und für den EÜR-Export nach JPEG umgewandelt.', 'lindenweg16' ); ?></p>
+				</td></tr>
+				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" min="0" name="betrag" class="small-text" required></td></tr>
+				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" value="<?php echo esc_attr( \Lindenweg16\Core\Time::today() ); ?>" required></td></tr>
 				<tr><th><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></th><td><input type="text" name="haendler" class="regular-text"></td></tr>
 				<tr><th><?php esc_html_e( 'EÜR-Kategorie', 'lindenweg16' ); ?></th><td>
 					<select name="eur_kategorie">
@@ -182,7 +199,7 @@ class AccountingModule {
 	 * EÜR-Ansicht mit Zeitraumauswahl.
 	 */
 	protected function render_euer() {
-		$jahr = (int) gmdate( 'Y' );
+		$jahr = \Lindenweg16\Core\Time::year();
 		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : $jahr . '-01-01'; // phpcs:ignore WordPress.Security.NonceVerification
 		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : $jahr . '-12-31'; // phpcs:ignore WordPress.Security.NonceVerification
 
@@ -196,7 +213,13 @@ class AccountingModule {
 		echo '</form>';
 
 		echo '<table class="widefat striped" style="max-width:640px">';
-		echo '<tr><th>' . esc_html__( 'Einnahmen (WooCommerce, abzgl. Refunds)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
+		echo '<tr><th colspan="2">' . esc_html__( 'Einnahmen', 'lindenweg16' ) . '</th></tr>';
+		echo '<tr><td style="padding-left:2em">' . esc_html__( 'WooCommerce (abzgl. Refunds)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_shop'] ) ) . '</td></tr>';
+		if ( abs( $rep['einnahmen_beleg'] ) > 0.004 ) {
+			echo '<tr><td style="padding-left:2em">' . esc_html__( 'Einnahmebelege (z. B. Marktkasse)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_beleg'] ) ) . '</td></tr>';
+		}
+		echo '<tr><th>' . esc_html__( 'Einnahmen gesamt', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
+
 		echo '<tr><th colspan="2">' . esc_html__( 'Ausgaben nach EÜR-Kategorie', 'lindenweg16' ) . '</th></tr>';
 		foreach ( $rep['ausgaben_kategorien'] as $kat => $summe ) {
 			echo '<tr><td style="padding-left:2em">' . esc_html( $kat ) . '</td><td>' . esc_html( self::euro( $summe ) ) . '</td></tr>';
@@ -204,6 +227,23 @@ class AccountingModule {
 		echo '<tr><th>' . esc_html__( 'Ausgaben gesamt', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['ausgaben_summe'] ) ) . '</td></tr>';
 		echo '<tr class="lw16-euer-result"><th>' . esc_html__( 'Gewinn', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['gewinn'] ) ) . '</strong></td></tr>';
 		echo '</table>';
+
+		if ( $rep['belege_offen'] > 0 ) {
+			echo '<div class="notice notice-info inline" style="max-width:640px;margin:12px 0"><p>';
+			echo esc_html(
+				sprintf(
+					/* translators: %d: Anzahl Belege */
+					_n(
+						'%d Beleg in diesem Zeitraum ist noch nicht festgeschrieben und damit änderbar. Er ist in der Rechnung oben bereits enthalten.',
+						'%d Belege in diesem Zeitraum sind noch nicht festgeschrieben und damit änderbar. Sie sind in der Rechnung oben bereits enthalten.',
+						$rep['belege_offen'],
+						'lindenweg16'
+					),
+					$rep['belege_offen']
+				)
+			);
+			echo '</p></div>';
+		}
 
 		if ( (int) Settings::get( 'kleinunternehmer', 1 ) === 1 ) {
 			echo '<p class="description">' . esc_html__( 'Kleinunternehmer §19 UStG: keine Umsatzsteuer ausgewiesen, alle Beträge brutto.', 'lindenweg16' ) . '</p>';
@@ -227,22 +267,57 @@ class AccountingModule {
 
 		$datei_pfad = '';
 		if ( ! empty( $_FILES['beleg_foto']['name'] ) ) {
-			$datei_pfad = BelegRepository::store_upload( $_FILES['beleg_foto'] );
+			$stored = BelegRepository::store_upload( $_FILES['beleg_foto'] );
+			// Fehlerhafte Uploads brechen den Vorgang ab, statt einen
+			// Buchungssatz ohne Nachweis anzulegen.
+			if ( is_wp_error( $stored ) ) {
+				$this->redirect( $stored->get_error_message(), 'error', 'neu' );
+			}
+			$datei_pfad = $stored;
 		}
+
+		$datum = self::sanitize_date( $_POST['datum'] ?? '' );
+		if ( ! $datum ) {
+			$this->redirect( __( 'Bitte ein gültiges Datum angeben.', 'lindenweg16' ), 'error', 'neu' );
+		}
+
+		$richtung = isset( $_POST['richtung'] ) && 'einnahme' === $_POST['richtung'] ? 'einnahme' : 'ausgabe';
 
 		BelegRepository::create(
 			array(
 				'datei_pfad'    => $datei_pfad,
-				'betrag'        => (float) ( $_POST['betrag'] ?? 0 ),
-				'datum'         => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
+				'betrag'        => abs( (float) ( $_POST['betrag'] ?? 0 ) ),
+				'datum'         => $datum,
 				'haendler'      => sanitize_text_field( wp_unslash( $_POST['haendler'] ?? '' ) ),
 				'eur_kategorie' => sanitize_text_field( wp_unslash( $_POST['eur_kategorie'] ?? '' ) ),
 				'notiz'         => sanitize_textarea_field( wp_unslash( $_POST['notiz'] ?? '' ) ),
 				'quelle'        => 'manuell',
+				'richtung'      => $richtung,
 			)
 		);
 
 		$this->redirect( __( 'Beleg gespeichert.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Datumseingabe auf ein echtes Y-m-d-Datum prüfen.
+	 *
+	 * Ohne diese Prüfung landet beliebiger Text in einer DATE-Spalte und wird
+	 * von MySQL (ohne strict mode) zu 0000-00-00.
+	 *
+	 * @param string $value Rohwert.
+	 * @return string Gültiges Datum oder leerer String.
+	 */
+	public static function sanitize_date( $value ) {
+		$value = sanitize_text_field( wp_unslash( (string) $value ) );
+		if ( '' === $value ) {
+			return \Lindenweg16\Core\Time::today();
+		}
+		$dt = \DateTime::createFromFormat( 'Y-m-d', $value );
+		if ( ! $dt || $dt->format( 'Y-m-d' ) !== $value ) {
+			return '';
+		}
+		return $value;
 	}
 
 	/**
@@ -307,8 +382,8 @@ class AccountingModule {
 		}
 		check_admin_referer( 'lw16_euer_pdf' );
 
-		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : gmdate( 'Y' ) . '-01-01';
-		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : gmdate( 'Y' ) . '-12-31';
+		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : \Lindenweg16\Core\Time::year() . '-01-01';
+		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : \Lindenweg16\Core\Time::year() . '-12-31';
 		$notiz = isset( $_GET['notiz'] ) ? sanitize_text_field( wp_unslash( $_GET['notiz'] ) ) : '';
 
 		$rep = EuerCalculator::report( $from, $to );
@@ -328,7 +403,13 @@ class AccountingModule {
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
 		$pdf->text( mb_strtoupper( __( 'Einnahmen', 'lindenweg16' ) ), 8, true );
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
-		$pdf->row( __( 'WooCommerce (abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
+		$pdf->row( __( 'WooCommerce (abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen_shop'] ), 11, false );
+		if ( abs( $rep['einnahmen_beleg'] ) > 0.004 ) {
+			$pdf->row( __( 'Einnahmebelege (z. B. Marktkasse)', 'lindenweg16' ), self::euro( $rep['einnahmen_beleg'] ), 11, false );
+		}
+		$pdf->set_draw_color( '#E0E0E0' );
+		$pdf->hr( 0.3 );
+		$pdf->row( __( 'Einnahmen gesamt', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
 		$pdf->space( 8 );
 
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
@@ -362,17 +443,55 @@ class AccountingModule {
 			$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
 		}
 
-		// Beleg-Fotos als Anhang (nur JPEG einbettbar).
-		$belege = BelegRepository::query( array( 'from' => $from, 'to' => $to, 'per_page' => 500, 'page' => 1 ) );
-		foreach ( $belege as $b ) {
-			if ( empty( $b->datei_pfad ) ) {
-				continue;
-			}
-			$path = BelegRepository::file_path( $b->datei_pfad );
-			$pdf->add_page();
-			$pdf->text( __( 'Beleg', 'lindenweg16' ) . ' #' . $b->id . ' – ' . $b->datum . ' – ' . self::euro( $b->betrag ) . ' – ' . $b->haendler, 11, true );
+		if ( $rep['belege_offen'] > 0 ) {
 			$pdf->space( 6 );
-			$pdf->image_jpeg( $path, 480, 640 );
+			$pdf->set_color( '#6E7882' );
+			$pdf->text(
+				sprintf(
+					/* translators: %d: Anzahl Belege */
+					__( 'Hinweis: %d Beleg(e) in diesem Zeitraum sind noch nicht festgeschrieben.', 'lindenweg16' ),
+					$rep['belege_offen']
+				),
+				9
+			);
+			$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+		}
+
+		// Beleg-Fotos als Anhang. Der Generator kann nur JPEG einbetten –
+		// nicht einbettbare Belege werden als Textzeile aufgeführt, statt eine
+		// leere Seite zu erzeugen.
+		$nicht_einbettbar = array();
+		$page             = 1;
+		do {
+			$belege = BelegRepository::query( array( 'from' => $from, 'to' => $to, 'per_page' => 50, 'page' => $page ) );
+			foreach ( $belege as $b ) {
+				if ( empty( $b->datei_pfad ) ) {
+					continue;
+				}
+				$path = BelegRepository::file_path( $b->datei_pfad );
+				if ( ! \Lindenweg16\Core\Pdf::can_embed_image( $path ) ) {
+					$nicht_einbettbar[] = '#' . $b->id . ' (' . $b->datum . ', ' . self::euro( $b->betrag ) . ')';
+					continue;
+				}
+				$pdf->add_page();
+				$pdf->text( __( 'Beleg', 'lindenweg16' ) . ' #' . $b->id . ' – ' . $b->datum . ' – ' . self::euro( $b->betrag ) . ' – ' . $b->haendler, 11, true );
+				$pdf->space( 6 );
+				$pdf->image_jpeg( $path, 480, 640 );
+			}
+			$page++;
+		} while ( count( $belege ) === 50 );
+
+		if ( $nicht_einbettbar ) {
+			$pdf->add_page();
+			$pdf->text( __( 'Belege ohne einbettbares Bild', 'lindenweg16' ), 14, true );
+			$pdf->space( 4 );
+			$pdf->set_color( '#6E7882' );
+			$pdf->text( __( 'Diese Belegdateien liegen nicht als RGB-JPEG vor und konnten nicht eingebettet werden. Sie sind im Backend unter Buchhaltung einsehbar.', 'lindenweg16' ), 9 );
+			$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
+			$pdf->space( 6 );
+			foreach ( $nicht_einbettbar as $zeile ) {
+				$pdf->text( '– ' . $zeile, 10 );
+			}
 		}
 
 		$content = $pdf->output();
@@ -466,6 +585,21 @@ class AccountingModule {
 	 *
 	 * @return string[]
 	 */
+	/**
+	 * Sprechendes Label für die Belegquelle.
+	 *
+	 * @param string $quelle Quellenschlüssel.
+	 * @return string
+	 */
+	public static function quelle_label( $quelle ) {
+		$map = array(
+			'manuell'      => __( 'manuell', 'lindenweg16' ),
+			'wareneingang' => __( 'Wareneingang', 'lindenweg16' ),
+			'marktkasse'   => __( 'Marktkasse', 'lindenweg16' ),
+		);
+		return isset( $map[ $quelle ] ) ? $map[ $quelle ] : (string) $quelle;
+	}
+
 	public static function eur_kategorien() {
 		return array(
 			'Wareneinkauf',
@@ -476,6 +610,8 @@ class AccountingModule {
 			'Porto/Versand',
 			'Hosting/Software',
 			'AfA',
+			'Marktstandgebühr',
+			'Marktverkauf',
 			'Sonstiges',
 		);
 	}
@@ -505,10 +641,20 @@ class AccountingModule {
 	/**
 	 * Zurück zur Belegliste mit Meldung.
 	 *
-	 * @param string $msg Meldung.
+	 * @param string $msg  Meldung.
+	 * @param string $type success|error.
+	 * @param string $view Zielansicht.
 	 */
-	protected function redirect( $msg ) {
-		wp_safe_redirect( add_query_arg( array( 'page' => 'lw16-buchhaltung', 'msg' => rawurlencode( $msg ) ), admin_url( 'admin.php' ) ) );
+	protected function redirect( $msg, $type = 'success', $view = '' ) {
+		$args = array(
+			'page'     => 'lw16-buchhaltung',
+			'msg'      => rawurlencode( $msg ),
+			'msg_type' => $type,
+		);
+		if ( $view ) {
+			$args['view'] = $view;
+		}
+		wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }
