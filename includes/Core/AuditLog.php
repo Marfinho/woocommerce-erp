@@ -34,18 +34,22 @@ class AuditLog {
 	 */
 	public static function record( $aktion, $objekt_typ = '', $objekt_id = 0, array $details = array() ) {
 		global $wpdb;
-		$wpdb->insert(
-			self::table(),
-			array(
-				'user_id'    => get_current_user_id(),
-				'aktion'     => $aktion,
-				'objekt_typ' => $objekt_typ,
-				'objekt_id'  => $objekt_id ? (int) $objekt_id : null,
-				'details'    => $details ? wp_json_encode( $details ) : null,
-				'erstellt_am' => current_time( 'mysql' ),
-			),
-			array( '%d', '%s', '%s', '%d', '%s', '%s' )
+
+		$data = array(
+			'user_id'     => get_current_user_id(),
+			'aktion'      => $aktion,
+			'objekt_typ'  => $objekt_typ,
+			'objekt_id'   => $objekt_id ? (int) $objekt_id : null,
+			'details'     => $details ? wp_json_encode( $details ) : null,
+			'erstellt_am' => current_time( 'mysql' ),
 		);
+
+		// Hash-Verkettung (nur wenn die Spalte existiert).
+		$hashes = HashChain::prepare_insert( 'audit_log', $data );
+		$data['hash']            = $hashes['hash'];
+		$data['vorheriger_hash'] = $hashes['vorheriger_hash'];
+
+		$wpdb->insert( self::table(), $data );
 	}
 
 	/**

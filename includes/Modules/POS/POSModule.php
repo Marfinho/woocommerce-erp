@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Modules\Accounting\BelegRepository;
+use Lindenweg16\Modules\Accounting\KassenbuchRepository;
 use Lindenweg16\Modules\Inventory\Repository as LagerRepository;
 use Lindenweg16\Modules\Inventory\StockManager;
 
@@ -612,6 +613,18 @@ class POSModule {
 			) );
 		}
 
+		// Kassenbuch-Eintrag: Tagesumsatz als Bareinnahme buchen.
+		$kassenbuch_id = null;
+		if ( $umsatz > 0 ) {
+			$kassenbuch_id = KassenbuchRepository::create( array(
+				'datum'        => $tag->datum,
+				'beschreibung' => sprintf( __( 'Marktkasse %s – Tagesumsatz', 'lindenweg16' ), $tag->markt_name ),
+				'einnahme'     => $umsatz,
+				'ausgabe'      => 0,
+				'beleg_id'     => $beleg_id,
+			) );
+		}
+
 		POSRepository::update_tag( $tag_id, array(
 			'status'              => 'abgeschlossen',
 			'kassenbestand_ende'  => $kassenbestand_ende,
@@ -622,12 +635,13 @@ class POSModule {
 		) );
 
 		AuditLog::record( 'pos_tag_abgeschlossen', 'pos_tag', $tag_id, array(
-			'umsatz'     => $umsatz,
-			'kasse_ende' => $kassenbestand_ende,
-			'beleg_id'   => $beleg_id,
+			'umsatz'        => $umsatz,
+			'kasse_ende'    => $kassenbestand_ende,
+			'beleg_id'      => $beleg_id,
+			'kassenbuch_id' => $kassenbuch_id,
 		) );
 
-		$this->redirect( sprintf( __( 'Kassatag abgeschlossen. Umsatz: %s € – Beleg #%d in Buchhaltung angelegt.', 'lindenweg16' ), number_format( $umsatz, 2, ',', '.' ), $beleg_id ?: 0 ) );
+		$this->redirect( sprintf( __( 'Kassatag abgeschlossen. Umsatz: %s € – Beleg #%d in Buchhaltung, Kassenbuch-Eintrag #%d angelegt.', 'lindenweg16' ), number_format( $umsatz, 2, ',', '.' ), $beleg_id ?: 0, $kassenbuch_id ?: 0 ) );
 	}
 
 	/* ------------------------------------------------------------------
