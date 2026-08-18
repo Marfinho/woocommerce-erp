@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\POS;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Time;
+
 class POSRepository {
 
 	/* ------------------------------------------------------------------
@@ -25,7 +27,7 @@ class POSRepository {
 				'kassenbestand_anfang' => $data['kassenbestand_anfang'] ?? 0,
 				'status'               => 'offen',
 				'erstellt_von'         => get_current_user_id(),
-				'erstellt_am'          => current_time( 'mysql' ),
+				'erstellt_am'          => Time::now(),
 			),
 			array( '%s', '%s', '%f', '%s', '%d', '%s' )
 		);
@@ -108,7 +110,7 @@ class POSRepository {
 				'einzelpreis'  => $data['einzelpreis'] ?? 0,
 				'betrag'       => $data['betrag'] ?? 0,
 				'storniert'    => 0,
-				'erstellt_am'  => current_time( 'mysql' ),
+				'erstellt_am'  => Time::now(),
 			),
 			array( '%d', '%d', '%s', '%d', '%f', '%f', '%d', '%s' )
 		);

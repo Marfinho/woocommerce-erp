@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\POS;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\Time;
 use Lindenweg16\Modules\Accounting\BelegRepository;
 use Lindenweg16\Modules\Inventory\Repository as LagerRepository;
 use Lindenweg16\Modules\Inventory\StockManager;
@@ -33,8 +34,8 @@ class POSModule {
 		add_action( 'admin_post_lw16_pos_storno', array( $this, 'handle_storno' ) );
 		add_action( 'admin_post_lw16_pos_tag_abschluss', array( $this, 'handle_tag_abschluss' ) );
 
-		// AJAX für schnelle Produktsuche in der Kasse.
-		add_action( 'wp_ajax_lw16_pos_produkt_suche', array( $this, 'ajax_produkt_suche' ) );
+		// Mobile Kasse als eigener Endpoint (eigenständiges HTML-Dokument).
+		add_action( 'admin_post_lw16_pos_mobil', array( $this, 'render_mobil_page' ) );
 	}
 
 	/* ------------------------------------------------------------------
@@ -55,9 +56,6 @@ class POSModule {
 			case 'tag_detail':
 				$this->render_tag_detail();
 				break;
-			case 'mobil':
-				$this->render_mobil();
-				return; // Eigenes HTML-Dokument.
 			default:
 				$this->render_uebersicht();
 		}
@@ -96,7 +94,7 @@ class POSModule {
 			echo '<p>' . esc_html( sprintf( __( 'Verkäufe: %d Positionen – %s €', 'lindenweg16' ), count( $positionen ), number_format( $summe, 2, ',', '.' ) ) ) . '</p>';
 			echo '<p style="margin-top:12px">';
 			echo '<a class="button button-primary button-hero" href="' . esc_url( add_query_arg( 'view', 'kasse', $base ) ) . '">' . esc_html__( 'Kasse öffnen', 'lindenweg16' ) . '</a> ';
-			echo '<a class="button button-hero" href="' . esc_url( add_query_arg( 'view', 'mobil', $base ) ) . '" target="_blank">' . esc_html__( 'Mobile Kasse', 'lindenweg16' ) . '</a>';
+			echo '<a class="button button-hero" href="' . esc_url( self::mobil_url() ) . '" target="_blank">' . esc_html__( 'Mobile Kasse', 'lindenweg16' ) . '</a>';
 			echo '</p></div></div>';
 		} else {
 			echo '<h2>' . esc_html__( 'Neuen Kassatag starten', 'lindenweg16' ) . '</h2>';
@@ -175,7 +173,7 @@ class POSModule {
 			) ); ?>
 		</p>
 		<p>
-			<a class="button" href="<?php echo esc_url( add_query_arg( 'view', 'mobil', $base ) ); ?>" target="_blank"><?php esc_html_e( 'Mobile Ansicht', 'lindenweg16' ); ?></a>
+			<a class="button" href="<?php echo esc_url( self::mobil_url() ); ?>" target="_blank"><?php esc_html_e( 'Mobile Ansicht', 'lindenweg16' ); ?></a>
 		</p>
 
 		<div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:16px">
@@ -338,11 +336,34 @@ class POSModule {
 	 * Mobile Kasse (eigenständiges HTML – wird im Vollbild gerendert)
 	 * ---------------------------------------------------------------- */
 
+	/**
+	 * URL der mobilen Kasse (eigener Endpoint, kein Admin-Rahmen).
+	 *
+	 * @return string
+	 */
+	public static function mobil_url() {
+		return wp_nonce_url( admin_url( 'admin-post.php?action=lw16_pos_mobil' ), 'lw16_pos_mobil' );
+	}
+
+	/**
+	 * Mobile Kasse als eigenständige Seite ausliefern.
+	 *
+	 * Vorher wurde das vollständige HTML-Dokument in die bereits geöffnete
+	 * Admin-Seite geschrieben und der Request per exit abgebrochen – das
+	 * ergab ein Dokument im Dokument.
+	 */
+	public function render_mobil_page() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_pos_mobil' );
+		$this->render_mobil();
+	}
+
 	protected function render_mobil() {
 		$tag = POSRepository::get_offener_tag();
 		if ( ! $tag ) {
-			echo '<p>' . esc_html__( 'Kein offener Kassatag.', 'lindenweg16' ) . '</p></div>';
-			return;
+			wp_die( esc_html__( 'Kein offener Kassatag.', 'lindenweg16' ) );
 		}
 
 		$positionen = POSRepository::get_positionen( $tag->id );
@@ -408,7 +429,7 @@ class POSModule {
 			<form method="post" action="<?php echo esc_url( $sell_url ); ?>">
 				<input type="hidden" name="action" value="lw16_pos_verkauf">
 				<input type="hidden" name="tag_id" value="<?php echo (int) $tag->id; ?>">
-				<input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ); ?>">
+				<input type="hidden" name="lw16_back" value="mobil">
 				<?php wp_nonce_field( 'lw16_pos_verkauf' ); ?>
 
 				<div class="pos-field">
@@ -457,7 +478,7 @@ class POSModule {
 					<div>
 						<span class="pos-item-price"><?php echo esc_html( number_format( (float) $pos->betrag, 2, ',', '.' ) ); ?> &euro;</span>
 						<?php if ( ! $pos->storniert ) : ?>
-							<a href="<?php echo esc_url( wp_nonce_url( $storno_base . '&id=' . $pos->id . '&_wp_http_referer=' . rawurlencode( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ), 'lw16_pos_storno_' . $pos->id ) ); ?>" class="pos-item-storno" onclick="return confirm('<?php esc_attr_e( 'Stornieren?', 'lindenweg16' ); ?>')">&times;</a>
+							<a href="<?php echo esc_url( wp_nonce_url( $storno_base . '&id=' . $pos->id . '&lw16_back=mobil', 'lw16_pos_storno_' . $pos->id ) ); ?>" class="pos-item-storno" onclick="return confirm('<?php esc_attr_e( 'Stornieren?', 'lindenweg16' ); ?>')">&times;</a>
 						<?php endif; ?>
 					</div>
 				</div>
@@ -470,7 +491,7 @@ class POSModule {
 			<form method="post" action="<?php echo esc_url( $close_url ); ?>">
 				<input type="hidden" name="action" value="lw16_pos_tag_abschluss">
 				<input type="hidden" name="tag_id" value="<?php echo (int) $tag->id; ?>">
-				<input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ); ?>">
+				<input type="hidden" name="lw16_back" value="mobil">
 				<?php wp_nonce_field( 'lw16_pos_tag_abschluss' ); ?>
 				<div class="pos-field">
 					<label><?php esc_html_e( 'Kassenbestand Ende (€)', 'lindenweg16' ); ?></label>
@@ -504,7 +525,7 @@ class POSModule {
 
 		$id = POSRepository::create_tag( array(
 			'markt_name'           => sanitize_text_field( wp_unslash( $_POST['markt_name'] ?? '' ) ),
-			'datum'                => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
+			'datum'                => \Lindenweg16\Modules\Accounting\AccountingModule::sanitize_date( $_POST['datum'] ?? '' ) ?: Time::today(),
 			'kassenbestand_anfang' => (float) ( $_POST['kassenbestand_anfang'] ?? 0 ),
 		) );
 
@@ -524,7 +545,7 @@ class POSModule {
 		$produkt_id  = ! empty( $_POST['produkt_id'] ) ? (int) $_POST['produkt_id'] : null;
 		$artikel     = sanitize_text_field( wp_unslash( $_POST['artikel_name'] ?? '' ) );
 		$menge       = max( 1, (int) ( $_POST['menge'] ?? 1 ) );
-		$einzelpreis = (float) ( $_POST['einzelpreis'] ?? 0 );
+		$einzelpreis = max( 0, (float) ( $_POST['einzelpreis'] ?? 0 ) );
 
 		if ( ! $artikel && $produkt_id ) {
 			$p = LagerRepository::get_product( $produkt_id );
@@ -545,11 +566,14 @@ class POSModule {
 			'betrag'       => $betrag,
 		) );
 
-		// Lagerbestand abbuchen wenn ERP-Produkt.
+		// Lagerbestand abbuchen wenn ERP-Produkt. Kaskadierend, damit ein am
+		// Markt verkauftes Set seine Module abbucht - genauso wie im Shop.
 		if ( $produkt_id ) {
-			StockManager::record_movement( $produkt_id, -1 * abs( $menge ), 'verkauf', array(
-				'referenz' => sprintf( __( 'Marktverkauf %s', 'lindenweg16' ), $tag->markt_name ),
-			) );
+			StockManager::process_sale(
+				$produkt_id,
+				abs( $menge ),
+				sprintf( __( 'Marktverkauf %s', 'lindenweg16' ), $tag->markt_name )
+			);
 		}
 
 		$this->redirect_back( __( 'Verkauf gebucht.', 'lindenweg16' ) );
@@ -563,17 +587,30 @@ class POSModule {
 		check_admin_referer( 'lw16_pos_storno_' . $id );
 
 		$pos = POSRepository::get_position( $id );
-		if ( $pos && ! $pos->storniert ) {
-			POSRepository::update_position( $id, array( 'storniert' => 1 ) );
-
-			// Lagerbestand zurückbuchen.
-			if ( $pos->produkt_id ) {
-				$tag = POSRepository::get_tag( $pos->tag_id );
-				StockManager::record_movement( (int) $pos->produkt_id, abs( (int) $pos->menge ), 'retoure', array(
-					'referenz' => sprintf( __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag ? $tag->markt_name : '' ),
-				) );
-			}
+		if ( ! $pos || $pos->storniert ) {
+			$this->redirect_back( __( 'Position nicht gefunden oder bereits storniert.', 'lindenweg16' ) );
 		}
+
+		// Nach dem Tagesabschluss ist der Umsatz in der Buchhaltung verbucht.
+		// Ein Storno wuerde die Anzeige veraendern, nicht aber umsatz_gesamt
+		// und den erzeugten Beleg - Kasse und Buchhaltung liefen auseinander.
+		$tag = POSRepository::get_tag( $pos->tag_id );
+		if ( ! $tag || 'offen' !== $tag->status ) {
+			$this->redirect_back( __( 'Der Kassatag ist bereits abgeschlossen. Bitte über die Buchhaltung korrigieren.', 'lindenweg16' ) );
+		}
+
+		POSRepository::update_position( $id, array( 'storniert' => 1 ) );
+
+		// Lagerbestand kaskadierend zurückbuchen.
+		if ( $pos->produkt_id ) {
+			StockManager::process_return(
+				(int) $pos->produkt_id,
+				abs( (int) $pos->menge ),
+				sprintf( __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag->markt_name )
+			);
+		}
+
+		AuditLog::record( 'pos_storno', 'pos_position', $id, array( 'betrag' => $pos->betrag ) );
 
 		$this->redirect_back( __( 'Verkauf storniert.', 'lindenweg16' ) );
 	}
@@ -609,6 +646,9 @@ class POSModule {
 				'eur_kategorie' => 'Marktverkauf',
 				'notiz'         => $notiz ?: sprintf( __( 'Tagesumsatz Markt: %s', 'lindenweg16' ), $tag->markt_name ),
 				'quelle'        => 'marktkasse',
+				// Der Tagesumsatz ist eine Einnahme. Ohne diese Angabe wuerde
+				// er in der EÜR als Ausgabe vom Gewinn abgezogen.
+				'richtung'      => 'einnahme',
 			) );
 		}
 
@@ -618,7 +658,7 @@ class POSModule {
 			'umsatz_gesamt'       => $umsatz,
 			'notiz'               => $notiz,
 			'beleg_id'            => $beleg_id,
-			'abgeschlossen_am'    => current_time( 'mysql' ),
+			'abgeschlossen_am'    => Time::now(),
 		) );
 
 		AuditLog::record( 'pos_tag_abgeschlossen', 'pos_tag', $tag_id, array(
@@ -628,30 +668,6 @@ class POSModule {
 		) );
 
 		$this->redirect( sprintf( __( 'Kassatag abgeschlossen. Umsatz: %s € – Beleg #%d in Buchhaltung angelegt.', 'lindenweg16' ), number_format( $umsatz, 2, ',', '.' ), $beleg_id ?: 0 ) );
-	}
-
-	/* ------------------------------------------------------------------
-	 * AJAX Produktsuche
-	 * ---------------------------------------------------------------- */
-
-	public function ajax_produkt_suche() {
-		check_ajax_referer( 'lw16_admin' );
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
-			wp_send_json_error();
-		}
-		$q = isset( $_POST['q'] ) ? sanitize_text_field( wp_unslash( $_POST['q'] ) ) : '';
-		if ( strlen( $q ) < 2 ) {
-			wp_send_json_success( array( 'items' => array() ) );
-		}
-		global $wpdb;
-		$t    = $wpdb->prefix . 'lw16_produkte';
-		$like = '%' . $wpdb->esc_like( $q ) . '%';
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, name, typ FROM {$t} WHERE name LIKE %s LIMIT 10", $like ) ); // phpcs:ignore
-		$items = array();
-		foreach ( $rows as $r ) {
-			$items[] = array( 'id' => (int) $r->id, 'name' => $r->name, 'typ' => $r->typ );
-		}
-		wp_send_json_success( array( 'items' => $items ) );
 	}
 
 	/* ------------------------------------------------------------------
@@ -671,9 +687,9 @@ class POSModule {
 	}
 
 	protected function redirect_back( $msg ) {
-		$referer = wp_get_referer();
-		if ( $referer && false !== strpos( $referer, 'view=mobil' ) ) {
-			wp_safe_redirect( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) );
+		$from_mobile = isset( $_REQUEST['lw16_back'] ) && 'mobil' === $_REQUEST['lw16_back']; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $from_mobile ) {
+			wp_safe_redirect( self::mobil_url() );
 			exit;
 		}
 		wp_safe_redirect( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'kasse', 'msg' => rawurlencode( $msg ) ), admin_url( 'admin.php' ) ) );

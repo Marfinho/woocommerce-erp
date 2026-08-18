@@ -25,6 +25,17 @@ class InventoryModule {
 		// Echtzeit-Lagerabzug bei abgeschlossener Bestellung.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'deduct_stock_for_order' ), 20, 1 );
 
+		// Gegenstueck: bei Storno/Rueckerstattung den Bestand zurueckbuchen.
+		add_action( 'woocommerce_order_status_refunded', array( $this, 'restock_for_order' ), 20, 1 );
+		add_action( 'woocommerce_order_status_cancelled', array( $this, 'restock_for_order' ), 20, 1 );
+
+		// Pickliste: Positionen aus der mobilen Ansicht persistieren.
+		add_action( 'wp_ajax_lw16_pick_toggle', array( $this, 'ajax_pick_toggle' ) );
+
+		// Mobile Ansichten als eigene Endpoints (eigenstaendiges HTML-Dokument
+		// ohne Admin-Rahmen).
+		add_action( 'admin_post_lw16_pickliste_mobil', array( $this, 'render_pickliste_mobile_page' ) );
+
 		// Admin-Seite.
 		add_action( 'lw16_render_page_lw16_lager', array( $this, 'render_admin' ) );
 		add_action( 'admin_post_lw16_save_product', array( $this, 'handle_save_product' ) );
@@ -74,16 +85,63 @@ class InventoryModule {
 		}
 
 		foreach ( $order->get_items() as $item ) {
-			$woo_product_id = $item->get_product_id();
-			$produkt        = Repository::get_by_woo_id( $woo_product_id );
+			$produkt = Repository::get_by_woo_id( $item->get_product_id() );
 			if ( ! $produkt ) {
 				continue;
 			}
-			$qty = (float) $item->get_quantity();
-			StockManager::process_sale( (int) $produkt->id, $qty, 'Bestellung #' . $order->get_order_number() );
+			StockManager::process_sale(
+				(int) $produkt->id,
+				(float) $item->get_quantity(),
+				'Bestellung #' . $order->get_order_number()
+			);
 		}
 
-		$order->update_meta_data( '_lw16_stock_deducted', current_time( 'mysql' ) );
+		$order->update_meta_data( '_lw16_stock_deducted', \Lindenweg16\Core\Time::now() );
+		$order->delete_meta_data( '_lw16_stock_restocked' );
+		$order->save();
+	}
+
+	/**
+	 * Bestand bei Storno oder Rückerstattung wieder zubuchen.
+	 *
+	 * Gegenstück zu deduct_stock_for_order(): ohne diesen Hook blieb der
+	 * Bestand nach jeder Stornierung dauerhaft zu niedrig, weil nur der
+	 * Abgang, nie aber der Rückfluss verbucht wurde.
+	 *
+	 * @param int $order_id Bestell-ID.
+	 */
+	public function restock_for_order( $order_id ) {
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		// Nur zurückbuchen, was vorher wirklich abgebucht wurde.
+		if ( ! $order->get_meta( '_lw16_stock_deducted' ) ) {
+			return;
+		}
+		if ( $order->get_meta( '_lw16_stock_restocked' ) ) {
+			return;
+		}
+
+		foreach ( $order->get_items() as $item ) {
+			$produkt = Repository::get_by_woo_id( $item->get_product_id() );
+			if ( ! $produkt ) {
+				continue;
+			}
+			StockManager::process_return(
+				(int) $produkt->id,
+				(float) $item->get_quantity(),
+				sprintf(
+					/* translators: %s: Bestellnummer */
+					__( 'Storno Bestellung #%s', 'lindenweg16' ),
+					$order->get_order_number()
+				)
+			);
+		}
+
+		$order->update_meta_data( '_lw16_stock_restocked', \Lindenweg16\Core\Time::now() );
+		$order->delete_meta_data( '_lw16_stock_deducted' );
 		$order->save();
 	}
 
@@ -590,7 +648,7 @@ class InventoryModule {
 
 		$produkt_id = (int) ( $_POST['produkt_id'] ?? 0 );
 		$produkt    = Repository::get_product( $produkt_id );
-		if ( ! $produkt ) {
+		if ( ! $produkt || 'rohmaterial' !== $produkt->typ ) {
 			$this->redirect( 'lager', __( 'Rohmaterial nicht gefunden.', 'lindenweg16' ) );
 		}
 
@@ -602,22 +660,37 @@ class InventoryModule {
 			$menge_basis = $menge_eingabe * (float) $produkt->einkaufseinheit_umrechnung;
 		}
 
+		if ( $menge_basis <= 0 ) {
+			$this->redirect( 'lager&view=wareneingang', __( 'Bitte eine Menge groesser als 0 angeben.', 'lindenweg16' ) );
+		}
+
 		$beleg_id = null;
 
 		// Beleg nur bei Kaufteil anlegen.
 		if ( 'kaufteil' === $produkt->rohmaterial_kategorie ) {
 			$datei_pfad = '';
 			if ( ! empty( $_FILES['beleg_foto']['name'] ) ) {
-				$datei_pfad = BelegRepository::store_upload( $_FILES['beleg_foto'] );
+				$stored = BelegRepository::store_upload( $_FILES['beleg_foto'] );
+				if ( is_wp_error( $stored ) ) {
+					$this->redirect( 'lager&view=wareneingang', $stored->get_error_message() );
+				}
+				$datei_pfad = $stored;
 			}
+
+			$datum = \Lindenweg16\Modules\Accounting\AccountingModule::sanitize_date( $_POST['datum'] ?? '' );
+			if ( ! $datum ) {
+				$this->redirect( 'lager&view=wareneingang', __( 'Bitte ein gueltiges Datum angeben.', 'lindenweg16' ) );
+			}
+
 			$beleg_id = BelegRepository::create(
 				array(
 					'datei_pfad'    => $datei_pfad,
-					'betrag'        => (float) ( $_POST['betrag'] ?? 0 ),
-					'datum'         => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
+					'betrag'        => abs( (float) ( $_POST['betrag'] ?? 0 ) ),
+					'datum'         => $datum,
 					'haendler'      => sanitize_text_field( wp_unslash( $_POST['haendler'] ?? '' ) ),
 					'eur_kategorie' => sanitize_text_field( wp_unslash( $_POST['eur_kategorie'] ?? 'Wareneinkauf' ) ),
 					'quelle'        => 'wareneingang',
+					'richtung'      => 'ausgabe',
 				)
 			);
 		}
@@ -907,7 +980,7 @@ class InventoryModule {
 					<?php if ( $pl->datei_pfad ) : ?>
 						| <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=lw16_download_pickliste&id=' . $pl->id ), 'lw16_download_pickliste_' . $pl->id ) ); ?>"><?php esc_html_e( 'PDF', 'lindenweg16' ); ?></a>
 					<?php endif; ?>
-					| <a href="<?php echo esc_url( add_query_arg( array( 'view' => 'pickliste_detail', 'id' => $pl->id, 'mobile' => '1' ), $base ) ); ?>" target="_blank"><?php esc_html_e( 'Mobil/Scanner', 'lindenweg16' ); ?></a>
+					| <a href="<?php echo esc_url( self::mobile_url( $pl->id ) ); ?>" target="_blank"><?php esc_html_e( 'Mobil/Scanner', 'lindenweg16' ); ?></a>
 				</td>
 			</tr>
 		<?php endforeach; ?>
@@ -917,16 +990,10 @@ class InventoryModule {
 	}
 
 	protected function render_pickliste_detail() {
-		$id     = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
-		$mobile = isset( $_GET['mobile'] ); // phpcs:ignore WordPress.Security.NonceVerification
-		$pl     = $id ? Repository::get_pickliste( $id ) : null;
+		$id = isset( $_GET['id'] ) ? (int) $_GET['id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		$pl = $id ? Repository::get_pickliste( $id ) : null;
 		if ( ! $pl ) {
 			echo '<p>' . esc_html__( 'Pickliste nicht gefunden.', 'lindenweg16' ) . '</p>';
-			return;
-		}
-
-		if ( $mobile ) {
-			$this->render_pickliste_mobile( $pl );
 			return;
 		}
 
@@ -967,7 +1034,7 @@ class InventoryModule {
 			<?php if ( 'offen' === $pl->status ) : ?>
 				<a class="button button-primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=lw16_complete_pickliste&id=' . $pl->id ), 'lw16_complete_pickliste_' . $pl->id ) ); ?>"><?php esc_html_e( 'Als abgeschlossen markieren', 'lindenweg16' ); ?></a>
 			<?php endif; ?>
-			<a class="button" href="<?php echo esc_url( add_query_arg( array( 'view' => 'pickliste_detail', 'id' => $pl->id, 'mobile' => '1' ), $base ) ); ?>" target="_blank"><?php esc_html_e( 'Mobile Ansicht mit Scanner', 'lindenweg16' ); ?></a>
+			<a class="button" href="<?php echo esc_url( self::mobile_url( $pl->id ) ); ?>" target="_blank"><?php esc_html_e( 'Mobile Ansicht mit Scanner', 'lindenweg16' ); ?></a>
 		</p>
 		<?php
 	}
@@ -976,6 +1043,87 @@ class InventoryModule {
 	 * Mobile Picklisten-Ansicht mit Barcode-Scanner.
 	 * Wird als eigenständige Seite ohne WP-Admin-Chrome ausgegeben.
 	 */
+	/**
+	 * URL der mobilen Pickliste (eigener Endpoint, kein Admin-Rahmen).
+	 *
+	 * @param int $pickliste_id Pickliste.
+	 * @return string
+	 */
+	public static function mobile_url( $pickliste_id ) {
+		return wp_nonce_url(
+			admin_url( 'admin-post.php?action=lw16_pickliste_mobil&id=' . (int) $pickliste_id ),
+			'lw16_pickliste_mobil_' . (int) $pickliste_id
+		);
+	}
+
+	/**
+	 * Mobile Pickliste als eigenständige Seite ausliefern.
+	 *
+	 * Bewusst ein eigener admin-post-Endpoint: vorher wurde das komplette
+	 * HTML-Dokument mitten in die bereits gerenderte Admin-Seite geschrieben
+	 * (inklusive <div class="wrap"> und Tab-Navigation davor) und dann per
+	 * exit abgebrochen – das Ergebnis war ein verschachteltes Dokument.
+	 */
+	public function render_pickliste_mobile_page() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		$id = (int) ( $_GET['id'] ?? 0 );
+		check_admin_referer( 'lw16_pickliste_mobil_' . $id );
+
+		$pl = Repository::get_pickliste( $id );
+		if ( ! $pl ) {
+			wp_die( esc_html__( 'Pickliste nicht gefunden.', 'lindenweg16' ) );
+		}
+		$this->render_pickliste_mobile( $pl );
+	}
+
+	/**
+	 * AJAX: eine Picklistenposition als gepickt/offen markieren.
+	 *
+	 * Die mobile Ansicht hatte bisher nur DOM-Zustand – nonce und ajaxUrl
+	 * wurden ausgegeben, aber nie verwendet. Nach einem Reload war die
+	 * Kommissionierung verloren.
+	 */
+	public function ajax_pick_toggle() {
+		check_ajax_referer( 'lw16_admin' );
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_send_json_error();
+		}
+
+		$pos_id  = absint( $_POST['pos_id'] ?? 0 );
+		$gepickt = ! empty( $_POST['gepickt'] ) ? 1 : 0;
+		if ( ! $pos_id ) {
+			wp_send_json_error();
+		}
+
+		global $wpdb;
+		$tp  = Repository::table( 'pickliste_pos' );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$tp} WHERE id = %d", $pos_id ) ); // phpcs:ignore
+		if ( ! $row ) {
+			wp_send_json_error();
+		}
+
+		$pl = Repository::get_pickliste( (int) $row->pickliste_id );
+		if ( ! $pl || 'offen' !== $pl->status ) {
+			wp_send_json_error( array( 'message' => __( 'Pickliste ist bereits abgeschlossen.', 'lindenweg16' ) ) );
+		}
+
+		Repository::update_pickliste_pos(
+			$pos_id,
+			array(
+				'gepickt'   => $gepickt,
+				'ist_menge' => $gepickt ? (float) $row->soll_menge : null,
+			)
+		);
+
+		$offen = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$tp} WHERE pickliste_id = %d AND gepickt = 0", (int) $row->pickliste_id ) // phpcs:ignore
+		);
+
+		wp_send_json_success( array( 'offen' => $offen ) );
+	}
+
 	protected function render_pickliste_mobile( $pl ) {
 		$positionen = Repository::get_pickliste_positionen( $pl->id );
 		$order      = function_exists( 'wc_get_order' ) ? wc_get_order( $pl->order_id ) : null;
@@ -1002,6 +1150,7 @@ class InventoryModule {
 			.pl-item { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; gap: 12px; transition: background .2s; }
 			.pl-item.picked { background: #e8f5e9; }
 			.pl-item.highlight { background: #fff3cd; animation: flash .5s; }
+			.pl-item.pl-saving { opacity: .55; }
 			@keyframes flash { 0%,100%{background:#fff3cd} 50%{background:#ffecb5} }
 			.pl-check { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; cursor: pointer; }
 			.pl-item.picked .pl-check { background: #46b450; border-color: #46b450; color: #fff; }
@@ -1060,6 +1209,11 @@ class InventoryModule {
 		var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
 		var nonce = <?php echo wp_json_encode( wp_create_nonce( 'lw16_admin' ) ); ?>;
 		var total = <?php echo count( $positionen ); ?>;
+		var saveErrorText = <?php echo wp_json_encode( __( 'Konnte nicht gespeichert werden.', 'lindenweg16' ) ); ?>;
+
+		var scanInput = document.getElementById('scan-input');
+		var scanStatus = document.getElementById('scan-status');
+		var scanTimeout;
 
 		function updateProgress() {
 			var picked = document.querySelectorAll('.pl-item.picked').length;
@@ -1068,15 +1222,47 @@ class InventoryModule {
 		}
 
 		function togglePick(el) {
-			el.classList.toggle('picked');
+			var picked = !el.classList.contains('picked');
+			el.classList.toggle('picked', picked);
 			var check = el.querySelector('.pl-check');
-			check.innerHTML = el.classList.contains('picked') ? '&#10003;' : '';
+			check.innerHTML = picked ? '&#10003;' : '';
 			updateProgress();
+			persistPick(el, picked);
 		}
 
-		var scanInput = document.getElementById('scan-input');
-		var scanStatus = document.getElementById('scan-status');
-		var scanTimeout;
+		// Zustand serverseitig festhalten, damit die Kommissionierung einen
+		// Reload ueberlebt.
+		function persistPick(el, picked) {
+			var id = el.dataset.id;
+			if (!id) { return; }
+			el.classList.add('pl-saving');
+			var xhr = new XMLHttpRequest();
+			xhr.open('POST', ajaxUrl);
+			xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+			xhr.onload = function () {
+				el.classList.remove('pl-saving');
+				var ok = false;
+				try { ok = JSON.parse(xhr.responseText).success === true; } catch (e) { ok = false; }
+				if (!ok) {
+					// Rueckgaengig machen und melden, statt einen falschen
+					// Zustand anzuzeigen.
+					el.classList.toggle('picked', !picked);
+					el.querySelector('.pl-check').innerHTML = !picked ? '&#10003;' : '';
+					updateProgress();
+					scanStatus.innerHTML = '<span class="scan-err">' + saveErrorText + '</span>';
+				}
+			};
+			xhr.onerror = function () {
+				el.classList.remove('pl-saving');
+				el.classList.toggle('picked', !picked);
+				el.querySelector('.pl-check').innerHTML = !picked ? '&#10003;' : '';
+				updateProgress();
+				scanStatus.innerHTML = '<span class="scan-err">' + saveErrorText + '</span>';
+			};
+			xhr.send('action=lw16_pick_toggle&_ajax_nonce=' + encodeURIComponent(nonce) +
+				'&pos_id=' + encodeURIComponent(id) +
+				'&gepickt=' + (picked ? '1' : '0'));
+		}
 
 		scanInput.addEventListener('input', function() {
 			clearTimeout(scanTimeout);
@@ -1214,7 +1400,9 @@ class InventoryModule {
 			if ( $menge <= 0 ) {
 				continue;
 			}
-			StockManager::record_movement( (int) $produkt_id, abs( $menge ), 'retoure', array( 'referenz' => $referenz ) );
+			// Kaskadierend zurueckbuchen, damit ein retourniertes Set seinen
+			// Modulen gutgeschrieben wird - genau wie der Verkauf sie abbucht.
+			StockManager::process_return( (int) $produkt_id, abs( $menge ), $referenz );
 			$gebucht++;
 		}
 
@@ -1299,10 +1487,16 @@ class InventoryModule {
 		$ids  = isset( $_POST['import_ids'] ) && is_array( $_POST['import_ids'] ) ? array_map( 'intval', $_POST['import_ids'] ) : array();
 		$typs = isset( $_POST['import_typ'] ) && is_array( $_POST['import_typ'] ) ? wp_unslash( $_POST['import_typ'] ) : array();
 
-		$count = 0;
+		$count         = 0;
+		$uebersprungen = 0;
 		foreach ( $ids as $wc_id ) {
 			$wc = wc_get_product( $wc_id );
 			if ( ! $wc ) {
+				continue;
+			}
+			// Doppelte Verknuepfung verhindern (z. B. bei doppeltem Absenden).
+			if ( Repository::find_woo_conflict( $wc_id ) ) {
+				$uebersprungen++;
 				continue;
 			}
 			$typ = isset( $typs[ $wc_id ] ) ? sanitize_key( $typs[ $wc_id ] ) : 'modul';
@@ -1319,7 +1513,11 @@ class InventoryModule {
 			$count++;
 		}
 
-		$this->redirect( 'lager&view=wc_import', sprintf( __( '%d Produkte importiert.', 'lindenweg16' ), $count ) );
+		$msg = sprintf( __( '%d Produkte importiert.', 'lindenweg16' ), $count );
+		if ( $uebersprungen > 0 ) {
+			$msg .= ' ' . sprintf( __( '%d bereits verknuepft und uebersprungen.', 'lindenweg16' ), $uebersprungen );
+		}
+		$this->redirect( 'lager&view=wc_import', $msg );
 	}
 
 	/* --------------------------------------------------------------------
@@ -1368,11 +1566,25 @@ class InventoryModule {
 		$soll = isset( $_POST['soll_bestand'] ) && is_array( $_POST['soll_bestand'] ) ? wp_unslash( $_POST['soll_bestand'] ) : array();
 
 		$korrekturen = 0;
+		$veraltet    = 0;
+
 		foreach ( $ist as $produkt_id => $ist_menge ) {
 			$produkt_id = (int) $produkt_id;
 			$ist_menge  = (float) $ist_menge;
-			$soll_menge = isset( $soll[ $produkt_id ] ) ? (float) $soll[ $produkt_id ] : 0;
-			$diff       = $ist_menge - $soll_menge;
+
+			// Der Sollwert wird serverseitig frisch gelesen. Das mitgesendete
+			// Hidden-Field dient nur noch als Optimistic Lock: weicht es vom
+			// aktuellen Bestand ab, hat sich zwischen Formularaufruf und
+			// Absenden etwas bewegt und die Zeile wird uebersprungen.
+			$soll_menge   = Repository::get_stock( $produkt_id );
+			$formular_ist = isset( $soll[ $produkt_id ] ) ? (float) $soll[ $produkt_id ] : $soll_menge;
+
+			if ( abs( $formular_ist - $soll_menge ) > 0.001 ) {
+				$veraltet++;
+				continue;
+			}
+
+			$diff = $ist_menge - $soll_menge;
 
 			if ( abs( $diff ) < 0.001 ) {
 				continue;
@@ -1387,6 +1599,20 @@ class InventoryModule {
 		$msg = $korrekturen > 0
 			? sprintf( __( 'Inventur abgeschlossen: %d Korrekturen gebucht.', 'lindenweg16' ), $korrekturen )
 			: __( 'Keine Abweichungen festgestellt.', 'lindenweg16' );
+
+		if ( $veraltet > 0 ) {
+			$msg .= ' ' . sprintf(
+				/* translators: %d: Anzahl Positionen */
+				_n(
+					'%d Position wurde übersprungen, weil sich der Bestand zwischenzeitlich geändert hat – bitte erneut zählen.',
+					'%d Positionen wurden übersprungen, weil sich der Bestand zwischenzeitlich geändert hat – bitte erneut zählen.',
+					$veraltet,
+					'lindenweg16'
+				),
+				$veraltet
+			);
+		}
+
 		$this->redirect( 'lager&view=inventur', $msg );
 	}
 
@@ -1546,12 +1772,49 @@ class InventoryModule {
 		}
 		check_admin_referer( 'lw16_zuordnung_lagerort_' . $lagerort_id );
 
+		$gebucht = 0;
 		if ( ! empty( $_POST['bestand'] ) && is_array( $_POST['bestand'] ) ) {
+			$ort = Repository::get_lagerort( $lagerort_id );
 			foreach ( wp_unslash( $_POST['bestand'] ) as $produkt_id => $menge ) {
-				Repository::set_stock_at_location( (int) $produkt_id, $lagerort_id, max( 0, (float) $menge ) );
+				$produkt_id = (int) $produkt_id;
+				$neu        = max( 0, (float) $menge );
+				$alt        = Repository::get_stock_at_location( $produkt_id, $lagerort_id );
+				$diff       = $neu - $alt;
+
+				if ( abs( $diff ) < 0.001 ) {
+					continue;
+				}
+
+				// Als echte Korrekturbewegung buchen, statt den Ortsbestand
+				// still zu ueberschreiben. Sonst laufen Ortsbestaende und
+				// Gesamtbestand auseinander und die Historie zeigt einen
+				// Verlauf, der zum Ist-Bestand nicht passt.
+				StockManager::record_movement(
+					$produkt_id,
+					$diff,
+					'korrektur',
+					array(
+						'lagerort_id' => $lagerort_id,
+						'referenz'    => sprintf(
+							/* translators: %s: Lagerort-Kuerzel */
+							__( 'Bestandskorrektur Lagerort %s', 'lindenweg16' ),
+							$ort ? $ort->kuerzel : (string) $lagerort_id
+						),
+					)
+				);
+				$gebucht++;
 			}
 		}
-		$this->redirect( 'lager&view=lagerorte', __( 'Bestände aktualisiert.', 'lindenweg16' ) );
+
+		$msg = $gebucht > 0
+			? sprintf(
+				/* translators: %d: Anzahl Korrekturen */
+				_n( 'Bestände aktualisiert: %d Korrektur gebucht.', 'Bestände aktualisiert: %d Korrekturen gebucht.', $gebucht, 'lindenweg16' ),
+				$gebucht
+			)
+			: __( 'Keine Änderungen.', 'lindenweg16' );
+
+		$this->redirect( 'lager&view=lagerorte', $msg );
 	}
 
 	/* --------------------------------------------------------------------
