@@ -12,10 +12,23 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
+use Lindenweg16\Core\Time;
 
 class DhlTracking {
 
 	const API_BASE = 'https://api-eu.dhl.com/track/shipments';
+
+	/**
+	 * Maximale Zahl Sendungen pro Cron-Lauf (jede kostet einen HTTP-Request).
+	 */
+	const REFRESH_BATCH = 50;
+
+	/**
+	 * Merker, damit die Hook-Bereinigung pro Request nur einmal laeuft.
+	 *
+	 * @var bool
+	 */
+	protected $hooks_stripped = false;
 
 	public function register() {
 		add_action( Scheduler::HOOK_DHL_TRACKING, array( $this, 'refresh_all' ) );
@@ -79,36 +92,41 @@ class DhlTracking {
 		return false;
 	}
 
+	/**
+	 * Tracking-Ausgaben bekannter Fremd-Plugins entfernen.
+	 *
+	 * Vorher wurden ueber elf Hooks hinweg *alle* Callbacks entfernt, deren
+	 * Klassen- oder Funktionsname eines der Schlagworte enthielt – darunter
+	 * "versand". In einem deutschsprachigen Shop trifft das zuverlaessig
+	 * fremden Code, der mit Sendungsverfolgung nichts zu tun hat. Entfernt
+	 * werden jetzt nur noch Callbacks aus namentlich bekannten Plugins.
+	 */
 	protected function strip_external_tracking_hooks() {
+		if ( $this->hooks_stripped ) {
+			return;
+		}
+		$this->hooks_stripped = true;
+
 		// DHL for WooCommerce (PR DHL).
 		if ( function_exists( 'PR_DHL' ) ) {
 			$dhl = PR_DHL();
 			if ( is_object( $dhl ) && isset( $dhl->front_end ) ) {
-				remove_action( 'woocommerce_order_details_after_order_table', array( $dhl->front_end, 'display_tracking_info' ) );
-				remove_action( 'woocommerce_order_details_after_order_table', array( $dhl->front_end, 'add_tracking_info' ) );
-				remove_action( 'woocommerce_view_order', array( $dhl->front_end, 'display_tracking_info' ) );
-				remove_action( 'woocommerce_view_order', array( $dhl->front_end, 'add_tracking_info' ) );
+				foreach ( array( 'display_tracking_info', 'add_tracking_info' ) as $method ) {
+					remove_action( 'woocommerce_order_details_after_order_table', array( $dhl->front_end, $method ) );
+					remove_action( 'woocommerce_view_order', array( $dhl->front_end, $method ) );
+				}
 			}
 		}
 
-		$hooks_to_clean = array(
+		// Germanized Shipments: nur Callbacks aus dem GZD-Namensraum, und nur
+		// solche, die tatsaechlich Sendungs-/Tracking-Ausgaben erzeugen.
+		$tags = array(
 			'woocommerce_order_details_after_order_table',
-			'woocommerce_order_details_before_order_table',
 			'woocommerce_view_order',
-			'woocommerce_after_order_details',
-			'woocommerce_order_details_after_order_table_items',
-			'woocommerce_order_item_meta_end',
-			'woocommerce_email_after_order_table',
-			'woocommerce_gzd_shipment_details',
-			'woocommerce_gzd_shipment_details_after_table',
-			'woocommerce_gzd_view_shipment',
-			'woocommerce_gzd_shipments_after_order_table',
 		);
 
-		$keywords = array( 'tracking', 'shipment', 'dhl', 'sendungsverfolgung', 'versand' );
-
 		global $wp_filter;
-		foreach ( $hooks_to_clean as $tag ) {
+		foreach ( $tags as $tag ) {
 			if ( empty( $wp_filter[ $tag ] ) ) {
 				continue;
 			}
@@ -117,64 +135,34 @@ class DhlTracking {
 					if ( $this->is_own_callback( $hook['function'] ) ) {
 						continue;
 					}
-					if ( $this->callback_matches_keywords( $hook['function'], $keywords ) ) {
+					if ( ! is_array( $hook['function'] ) || ! is_object( $hook['function'][0] ) ) {
+						continue;
+					}
+					$class = strtolower( get_class( $hook['function'][0] ) );
+					if ( false === strpos( $class, 'germanized' ) && false === strpos( $class, 'gzd' ) ) {
+						continue;
+					}
+					$method = strtolower( (string) $hook['function'][1] );
+					if ( false !== strpos( $method, 'shipment' ) || false !== strpos( $method, 'tracking' ) ) {
 						unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $key ] );
 					}
 				}
 			}
 		}
-
-		// Germanized: Shipment-Tabelle auf der Bestelldetailseite ausblenden.
-		foreach ( array( 'woocommerce_order_details_after_order_table', 'woocommerce_view_order' ) as $tag ) {
-			if ( empty( $wp_filter[ $tag ] ) ) {
-				continue;
-			}
-			foreach ( $wp_filter[ $tag ]->callbacks as $priority => $hooks ) {
-				foreach ( $hooks as $key => $hook ) {
-					if ( $this->is_own_callback( $hook['function'] ) ) {
-						continue;
-					}
-					if ( is_array( $hook['function'] ) && is_object( $hook['function'][0] ) ) {
-						$class = strtolower( get_class( $hook['function'][0] ) );
-						if ( strpos( $class, 'germanized' ) !== false || strpos( $class, 'gzd' ) !== false ) {
-							$method = strtolower( $hook['function'][1] );
-							if ( strpos( $method, 'shipment' ) !== false || strpos( $method, 'tracking' ) !== false ) {
-								unset( $wp_filter[ $tag ]->callbacks[ $priority ][ $key ] );
-							}
-						}
-					}
-				}
-			}
-		}
 	}
 
+	/**
+	 * Prüfen, ob ein Callback zu dieser Instanz gehört.
+	 *
+	 * @param mixed $function Callback.
+	 * @return bool
+	 */
 	protected function is_own_callback( $function ) {
-		if ( is_array( $function ) && is_object( $function[0] ) ) {
+		if ( is_array( $function ) && isset( $function[0] ) && is_object( $function[0] ) ) {
 			return $function[0] === $this;
 		}
 		return false;
 	}
-
-	protected function callback_matches_keywords( $function, $keywords ) {
-		$haystack = '';
-		if ( is_array( $function ) && is_object( $function[0] ) ) {
-			$haystack = strtolower( get_class( $function[0] ) . $function[1] );
-		} elseif ( is_array( $function ) && is_string( $function[0] ) ) {
-			$haystack = strtolower( $function[0] . $function[1] );
-		} elseif ( is_string( $function ) ) {
-			$haystack = strtolower( $function );
-		}
-		if ( ! $haystack ) {
-			return false;
-		}
-		foreach ( $keywords as $kw ) {
-			if ( strpos( $haystack, $kw ) !== false ) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 
 	public function remove_external_tracking_actions( $actions, $order ) {
 		$external_keys = array( 'shipment', 'tracking', 'dhl', 'sendungsverfolgung', 'view-shipment' );
@@ -227,11 +215,17 @@ class DhlTracking {
 			echo '<span style="color:#8c8f94">—</span>';
 			return;
 		}
-		$step  = self::status_step( $row->aktueller_status ?: '' );
+		$step = self::status_step( $row->aktueller_status ?: '' );
+		if ( 0 === $step ) {
+			// Noch keine belastbare Statusmeldung – lieber nichts sagen als
+			// einen Versand behaupten, den die API nie bestaetigt hat.
+			echo '<span style="color:#8c8f94">—</span>';
+			return;
+		}
 		$labels = array( '', __( 'Versendet', 'lindenweg16' ), __( 'Unterwegs', 'lindenweg16' ), __( 'In Zustellung', 'lindenweg16' ), __( 'Zugestellt', 'lindenweg16' ) );
 		$colors = array( '', '#2271b1', '#ffb900', '#00a32a', '#00a32a' );
-		$label  = $labels[ $step ] ?? $labels[1];
-		$color  = $colors[ $step ] ?? $colors[1];
+		$label  = isset( $labels[ $step ] ) ? $labels[ $step ] : $labels[1];
+		$color  = isset( $colors[ $step ] ) ? $colors[ $step ] : $colors[1];
 		$url    = $order->get_view_order_url();
 		printf( '<a href="%s" style="color:%s;font-weight:600;text-decoration:none">%s</a>', esc_url( $url ), esc_attr( $color ), esc_html( $label ) );
 	}
@@ -300,6 +294,11 @@ class DhlTracking {
 				<p>
 					<strong><?php esc_html_e( 'Voraussichtlich:', 'lindenweg16' ); ?></strong>
 					<?php echo esc_html( date_i18n( 'd.m.Y', strtotime( $row->voraussichtliches_lieferdatum ) ) ); ?>
+				</p>
+				<?php endif; ?>
+				<?php if ( ! empty( $row->letzter_fehler ) ) : ?>
+				<p class="description" style="color:#dc3232">
+					<?php echo esc_html( sprintf( __( 'Letzter Abruf-Fehler: %s', 'lindenweg16' ), $row->letzter_fehler ) ); ?>
 				</p>
 				<?php endif; ?>
 				<?php if ( $row->letzter_abruf ) : ?>
@@ -468,8 +467,15 @@ class DhlTracking {
 			return;
 		}
 
+		// Begrenzen: jede Zeile kostet einen HTTP-Request mit 15 s Timeout.
 		$rows = $wpdb->get_results(
-			"SELECT * FROM " . self::table() . " WHERE aktueller_status IS NULL OR aktueller_status NOT IN ('zugestellt', 'delivered')" // phpcs:ignore
+			$wpdb->prepare(
+				"SELECT * FROM " . self::table() . "
+				 WHERE aktueller_status IS NULL OR aktueller_status NOT IN ('zugestellt', 'delivered')
+				 ORDER BY COALESCE(letzter_abruf, '1970-01-01') ASC
+				 LIMIT %d", // phpcs:ignore
+				self::REFRESH_BATCH
+			)
 		);
 
 		foreach ( $rows as $row ) {
@@ -500,10 +506,14 @@ class DhlTracking {
 
 		$response = wp_remote_get( $url, $args );
 
-		$update_data = array( 'letzter_abruf' => current_time( 'mysql' ) );
+		$update_data = array( 'letzter_abruf' => Time::now() );
 
+		// Fehler landen in einer eigenen Spalte. Frueher wurden sie in
+		// aktueller_status geschrieben - und weil status_step() alles
+		// Unbekannte als "Versendet" einstufte, sah der Kunde bei kaputtem
+		// API-Key eine erfundene Versandmeldung.
 		if ( is_wp_error( $response ) ) {
-			$update_data['aktueller_status'] = __( 'Fehler: ', 'lindenweg16' ) . $response->get_error_message();
+			$update_data['letzter_fehler'] = $response->get_error_message();
 			$wpdb->update( self::table(), $update_data, array( 'id' => $row->id ) );
 			return;
 		}
@@ -513,7 +523,7 @@ class DhlTracking {
 			$body_raw = wp_remote_retrieve_body( $response );
 			$err      = json_decode( $body_raw, true );
 			$err_msg  = isset( $err['detail'] ) ? $err['detail'] : ( isset( $err['title'] ) ? $err['title'] : 'HTTP ' . $code );
-			$update_data['aktueller_status'] = __( 'API-Fehler: ', 'lindenweg16' ) . $err_msg;
+			$update_data['letzter_fehler'] = 'HTTP ' . $code . ': ' . $err_msg;
 			$wpdb->update( self::table(), $update_data, array( 'id' => $row->id ) );
 			return;
 		}
@@ -524,6 +534,7 @@ class DhlTracking {
 		$update_data['aktueller_status']              = $parsed['status'];
 		$update_data['voraussichtliches_lieferdatum'] = $parsed['lieferdatum'];
 		$update_data['events']                        = wp_json_encode( $parsed['events'] );
+		$update_data['letzter_fehler']                = null;
 
 		$wpdb->update( self::table(), $update_data, array( 'id' => $row->id ) );
 	}
@@ -577,7 +588,8 @@ class DhlTracking {
 		if ( false !== strpos( $s, 'angenommen' ) || false !== strpos( $s, 'picked' ) || false !== strpos( $s, 'shipment' ) || false !== strpos( $s, 'electronic' ) ) {
 			return 1;
 		}
-		return 1;
+		// Unbekannter oder leerer Status: keine Aussage treffen.
+		return 0;
 	}
 
 	/**

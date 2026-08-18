@@ -309,16 +309,26 @@ class SupportModule {
 		if ( ! $user_id ) {
 			wp_die( esc_html__( 'Bitte einloggen.', 'lindenweg16' ) );
 		}
+		// Nur eigene Bestellungen zulassen - die ID kam ungeprueft aus dem
+		// Formular und liess sich auf beliebige fremde Bestellungen setzen.
+		$order_id = ! empty( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0;
+		if ( $order_id ) {
+			$order = wc_get_order( $order_id );
+			if ( ! $order || (int) $order->get_customer_id() !== $user_id ) {
+				$order_id = 0;
+			}
+		}
+
 		global $wpdb;
 		$wpdb->insert(
 			self::table(),
 			array(
 				'user_id'     => $user_id,
-				'order_id'    => ! empty( $_POST['order_id'] ) ? (int) $_POST['order_id'] : null,
+				'order_id'    => $order_id ? $order_id : null,
 				'betreff'     => sanitize_text_field( wp_unslash( $_POST['betreff'] ?? '' ) ),
 				'nachricht'   => sanitize_textarea_field( wp_unslash( $_POST['nachricht'] ?? '' ) ),
 				'status'      => 'offen',
-				'erstellt_am' => current_time( 'mysql' ),
+				'erstellt_am' => Time::now(),
 			),
 			array( '%d', '%d', '%s', '%s', '%s', '%s' )
 		);
@@ -416,7 +426,7 @@ class SupportModule {
 			if ( $text ) {
 				$wpdb->update(
 					self::table(),
-					array( 'status' => 'in_bearbeitung', 'beantwortet_am' => current_time( 'mysql' ) ),
+					array( 'status' => 'in_bearbeitung', 'beantwortet_am' => Time::now() ),
 					array( 'id' => $id )
 				);
 				$this->notify_customer(
@@ -446,7 +456,7 @@ class SupportModule {
 		if ( in_array( $do, array( 'in_bearbeitung', 'geloest' ), true ) ) {
 			$wpdb->update(
 				self::table(),
-				array( 'status' => $do, 'beantwortet_am' => current_time( 'mysql' ) ),
+				array( 'status' => $do, 'beantwortet_am' => Time::now() ),
 				array( 'id' => $id )
 			);
 			$this->notify_customer( $ticket, 'geloest' === $do ? __( 'Wir haben Dein Anliegen bearbeitet.', 'lindenweg16' ) : __( 'Wir kümmern uns um Dein Anliegen.', 'lindenweg16' ) );
@@ -481,7 +491,7 @@ class SupportModule {
 	public function render_reporting_admin() {
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Reporting', 'lindenweg16' ) . '</h1>';
 
-		$jahr = (int) gmdate( 'Y' );
+		$jahr = Time::year();
 		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : $jahr . '-01-01'; // phpcs:ignore WordPress.Security.NonceVerification
 		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : $jahr . '-12-31'; // phpcs:ignore WordPress.Security.NonceVerification
 
@@ -519,15 +529,13 @@ class SupportModule {
 	 * Bestellstatistiken: Tages-/Wochen-/Monatsumsatz.
 	 */
 	protected function render_order_statistics() {
-		$now   = current_time( 'timestamp' );
-		$today = gmdate( 'Y-m-d', $now );
-		$week  = gmdate( 'Y-m-d', $now - 7 * DAY_IN_SECONDS );
-		$month = gmdate( 'Y-m-d', $now - 30 * DAY_IN_SECONDS );
-
+		// current_time( 'timestamp' ) ist deprecated und lieferte einen
+		// verschobenen Timestamp, der dann mit gmdate() weiterverrechnet
+		// wurde. Jetzt durchgaengig Seitenzeit.
 		$periods = array(
-			__( 'Heute', 'lindenweg16' )           => $today,
-			__( 'Letzte 7 Tage', 'lindenweg16' )   => $week,
-			__( 'Letzte 30 Tage', 'lindenweg16' )  => $month,
+			__( 'Heute', 'lindenweg16' )          => Time::today(),
+			__( 'Letzte 7 Tage', 'lindenweg16' )  => substr( Time::ago( 7 * DAY_IN_SECONDS ), 0, 10 ),
+			__( 'Letzte 30 Tage', 'lindenweg16' ) => substr( Time::ago( 30 * DAY_IN_SECONDS ), 0, 10 ),
 		);
 
 		echo '<h2>' . esc_html__( 'Bestellstatistiken', 'lindenweg16' ) . '</h2>';
@@ -608,8 +616,12 @@ class SupportModule {
 	 */
 	public function send_digest() {
 		// Nur am konfigurierten Wochentag senden.
+		// Der Job laeuft taeglich und filtert hier auf den konfigurierten
+		// Wochentag. Mit dem frueheren Wochenintervall feuerte er immer am
+		// Aktivierungs-Wochentag und wurde hier dann jedes Mal verworfen -
+		// der Digest kam nie an.
 		$wochentag = (int) Settings::get( 'digest_wochentag', 1 );
-		if ( (int) gmdate( 'N' ) !== $wochentag ) {
+		if ( Time::weekday() !== $wochentag ) {
 			return;
 		}
 
@@ -618,7 +630,7 @@ class SupportModule {
 			return;
 		}
 
-		$seit   = gmdate( 'Y-m-d H:i:s', time() - WEEK_IN_SECONDS );
+		$seit   = Time::ago( WEEK_IN_SECONDS );
 		$orders = wc_get_orders( array( 'status' => array( 'wc-completed', 'wc-processing' ), 'date_created' => '>=' . strtotime( $seit ), 'limit' => -1, 'return' => 'objects' ) );
 		$anzahl = count( $orders );
 		$umsatz = 0;
@@ -654,15 +666,15 @@ class SupportModule {
 	 * @return string
 	 */
 	protected function lager_warnungen() {
-		$produkte = \Lindenweg16\Modules\Inventory\Repository::get_products();
+		$produkte = \Lindenweg16\Modules\Inventory\Repository::get_products_with_stock();
 		$lines    = array();
 		foreach ( $produkte as $p ) {
-			$ampel = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p );
+			$bestand = (float) $p->bestand;
+			$ampel   = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p, $bestand );
 			if ( 'gruen' === $ampel ) {
 				continue;
 			}
-			$bestand = \Lindenweg16\Modules\Inventory\Repository::get_stock( $p->id );
-			$lines[] = '- ' . $p->name . ' (' . $ampel . '): ' . rtrim( rtrim( number_format( $bestand, 2, ',', '.' ), '0' ), ',' ) . ' ' . $p->basis_einheit;
+			$lines[] = '- ' . $p->name . ' (' . $ampel . '): ' . Format::qty( $bestand ) . ' ' . $p->basis_einheit;
 		}
 		return implode( "\n", $lines );
 	}

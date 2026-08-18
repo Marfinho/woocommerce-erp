@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Production;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Inventory\Repository;
+use Lindenweg16\Core\Time;
 
 /**
  * Kapselt Druckaufträge (Status geplant→verpackt) und das Produktions-Log
@@ -49,7 +50,7 @@ class ProductionRepository {
 				'menge'         => (float) $menge,
 				'status'        => 'geplant',
 				'order_referenz' => $referenz,
-				'erstellt_am'   => current_time( 'mysql' ),
+				'erstellt_am'   => Time::now(),
 			),
 			array( '%d', '%f', '%s', '%s', '%s' )
 		);
@@ -87,9 +88,29 @@ class ProductionRepository {
 		global $wpdb;
 		$data = array( 'status' => $status );
 		if ( 'fertig' === $status ) {
-			$data['abgeschlossen_am'] = current_time( 'mysql' );
+			$data['abgeschlossen_am'] = Time::now();
 		}
 		$wpdb->update( self::table( 'druckauftrag' ), $data, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Offene (noch nicht verpackte) Mengen je Produkt.
+	 *
+	 * Wird von der Druck-Queue gegengerechnet, damit fuer dieselbe Bestellung
+	 * nicht bei jedem Seitenaufruf erneut die volle Menge vorgeschlagen wird.
+	 *
+	 * @return array produkt_id => Menge.
+	 */
+	public static function open_job_quantities() {
+		global $wpdb;
+		$t    = self::table( 'druckauftrag' );
+		$rows = $wpdb->get_results( "SELECT produkt_id, SUM(menge) AS menge FROM {$t} WHERE status <> 'verpackt' GROUP BY produkt_id" ); // phpcs:ignore
+
+		$out = array();
+		foreach ( $rows as $r ) {
+			$out[ (int) $r->produkt_id ] = (float) $r->menge;
+		}
+		return $out;
 	}
 
 	/* --------------------------------------------------------------------
@@ -104,7 +125,7 @@ class ProductionRepository {
 	 */
 	public static function add_log( array $data ) {
 		global $wpdb;
-		$data['erstellt_am'] = current_time( 'mysql' );
+		$data['erstellt_am'] = Time::now();
 		$wpdb->insert( self::table( 'produktion_log' ), $data );
 		return (int) $wpdb->insert_id;
 	}
@@ -119,19 +140,39 @@ class ProductionRepository {
 	public static function avg_ist( $produkt_id, $limit = 8 ) {
 		global $wpdb;
 		$t    = self::table( 'produktion_log' );
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT ist_druckzeit_h, ist_arbeitszeit_min FROM {$t} WHERE produkt_id = %d ORDER BY id DESC LIMIT %d", $produkt_id, $limit ) ); // phpcs:ignore
+		// Nur Eintraege mit erfassten Ist-Zeiten. Wurde ein Druckauftrag ohne
+		// Zeiterfassung abgeschlossen, steht dort NULL - frueher eine 0, die
+		// den Durchschnitt nach unten zog.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ist_druckzeit_h, ist_arbeitszeit_min FROM {$t}
+				 WHERE produkt_id = %d
+				   AND ( ist_druckzeit_h IS NOT NULL OR ist_arbeitszeit_min IS NOT NULL )
+				 ORDER BY id DESC LIMIT %d", // phpcs:ignore
+				$produkt_id,
+				$limit
+			)
+		);
 		if ( empty( $rows ) ) {
 			return null;
 		}
-		$dz = 0; $az = 0; $n = count( $rows );
+
+		$dz = 0.0; $az = 0.0; $n_dz = 0; $n_az = 0;
 		foreach ( $rows as $r ) {
-			$dz += (float) $r->ist_druckzeit_h;
-			$az += (float) $r->ist_arbeitszeit_min;
+			if ( null !== $r->ist_druckzeit_h ) {
+				$dz += (float) $r->ist_druckzeit_h;
+				$n_dz++;
+			}
+			if ( null !== $r->ist_arbeitszeit_min ) {
+				$az += (float) $r->ist_arbeitszeit_min;
+				$n_az++;
+			}
 		}
+
 		return array(
-			'ist_druckzeit_h'    => $dz / $n,
-			'ist_arbeitszeit_min' => $az / $n,
-			'anzahl'             => $n,
+			'ist_druckzeit_h'     => $n_dz > 0 ? $dz / $n_dz : null,
+			'ist_arbeitszeit_min' => $n_az > 0 ? $az / $n_az : null,
+			'anzahl'              => count( $rows ),
 		);
 	}
 
@@ -150,9 +191,10 @@ class ProductionRepository {
 	 */
 	public static function weekly_average( $produkt_id, $wochen = 6, array $excluded_weeks = array() ) {
 		global $wpdb;
-		$t     = Repository::table( 'lagerbewegung' );
-		$grenze = gmdate( 'Y-m-d H:i:s', time() - $wochen * WEEK_IN_SECONDS );
-		$rows  = $wpdb->get_results(
+		$t      = Repository::table( 'lagerbewegung' );
+		$wochen = max( 1, (int) $wochen );
+		$grenze = Time::ago( $wochen * WEEK_IN_SECONDS );
+		$rows   = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT menge, erstellt_am FROM {$t} WHERE produkt_id = %d AND typ = 'verkauf' AND erstellt_am >= %s", // phpcs:ignore
 				$produkt_id,
@@ -160,16 +202,32 @@ class ProductionRepository {
 			)
 		);
 
+		// Welche Kalenderwochen liegen ueberhaupt im Betrachtungsfenster?
+		$fenster = array();
+		for ( $i = 0; $i < $wochen; $i++ ) {
+			$fenster[ Time::week_key( Time::ago( $i * WEEK_IN_SECONDS ) ) ] = true;
+		}
+
 		$per_week = array();
 		foreach ( $rows as $r ) {
-			$wk = gmdate( 'o-W', strtotime( $r->erstellt_am ) );
-			if ( in_array( $wk, $excluded_weeks, true ) ) {
+			$wk = Time::week_key( $r->erstellt_am );
+			if ( '' === $wk || in_array( $wk, $excluded_weeks, true ) ) {
 				continue;
 			}
 			$per_week[ $wk ] = ( $per_week[ $wk ] ?? 0 ) + abs( (float) $r->menge );
 		}
 
-		$effektive_wochen = max( 1, $wochen - count( $excluded_weeks ) );
+		// Nur Ausschlusswochen abziehen, die auch im Fenster liegen. Vorher
+		// verkleinerten laengst vergangene Eintraege den Divisor und blaehten
+		// den Durchschnitt auf.
+		$ausgeschlossen_im_fenster = 0;
+		foreach ( $excluded_weeks as $wk ) {
+			if ( isset( $fenster[ $wk ] ) ) {
+				$ausgeschlossen_im_fenster++;
+			}
+		}
+
+		$effektive_wochen = max( 1, $wochen - $ausgeschlossen_im_fenster );
 		return array_sum( $per_week ) / $effektive_wochen;
 	}
 }

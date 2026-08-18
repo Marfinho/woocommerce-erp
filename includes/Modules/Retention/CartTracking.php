@@ -12,6 +12,8 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Calc;
+use Lindenweg16\Core\Time;
 
 /**
  * Erfasst nur Warenkörbe mit bekannter E-Mail (kein anonymes Tracking) und
@@ -29,6 +31,7 @@ class CartTracking {
 		add_action( 'woocommerce_checkout_update_order_review', array( $this, 'capture_from_checkout' ) );
 		// Umwandlung bei Bestellung markieren.
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'mark_converted' ), 10, 1 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'mark_converted' ), 10, 1 );
 		// Cron-Erinnerungen.
 		add_action( Scheduler::HOOK_CART_REMINDERS, array( $this, 'send_reminders' ) );
 	}
@@ -66,17 +69,21 @@ class CartTracking {
 	 * Warenkorb erfassen/aktualisieren – nur mit bekannter E-Mail.
 	 */
 	public function capture() {
-		if ( is_admin() || ! function_exists( 'WC' ) || ! WC()->cart ) {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 			return;
 		}
-		if ( WC()->cart->is_empty() ) {
+
+		// Entscheidungsregel liegt in der getesteten Calc::cart_should_track().
+		$erlaubt = Calc::cart_should_track(
+			$this->current_email(),
+			WC()->cart->is_empty(),
+			is_admin() && ! wp_doing_ajax()
+		);
+		if ( ! $erlaubt ) {
 			return;
 		}
-		$email = $this->current_email();
-		if ( ! is_email( $email ) ) {
-			return;
-		}
-		$this->store( $email );
+
+		$this->store( $this->current_email() );
 	}
 
 	/**
@@ -100,6 +107,15 @@ class CartTracking {
 	protected function store( $email ) {
 		global $wpdb;
 
+		// woocommerce_cart_updated feuert auf nahezu jedem Frontend-Request.
+		// Ohne Daempfer schreibt jede Seitenansicht eines eingeloggten Kunden
+		// in die Tabelle - und setzt dabei die Erinnerungsfristen zurueck.
+		$lock = 'lw16_cart_seen_' . md5( $email );
+		if ( get_transient( $lock ) ) {
+			return;
+		}
+		set_transient( $lock, 1, 5 * MINUTE_IN_SECONDS );
+
 		$snapshot = array();
 		foreach ( WC()->cart->get_cart() as $item ) {
 			$snapshot[] = array(
@@ -115,7 +131,7 @@ class CartTracking {
 			'email'         => $email,
 			'user_id'       => get_current_user_id() ?: null,
 			'cart_snapshot' => wp_json_encode( $snapshot ),
-			'erstellt_am'   => current_time( 'mysql' ),
+			'erstellt_am'   => Time::now(),
 		);
 
 		if ( $existing ) {
@@ -135,9 +151,9 @@ class CartTracking {
 	 *
 	 * @param int $order_id Bestell-ID.
 	 */
-	public function mark_converted( $order_id ) {
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
+	public function mark_converted( $order_or_id ) {
+		$order = is_numeric( $order_or_id ) ? wc_get_order( $order_or_id ) : $order_or_id;
+		if ( ! $order instanceof \WC_Order ) {
 			return;
 		}
 		$email = $order->get_billing_email();
@@ -157,20 +173,20 @@ class CartTracking {
 		$zweite_frist = (float) Settings::get( 'cart_erinnerung_2_stunden', 48 );
 
 		// Erste Erinnerung.
-		$grenze1 = gmdate( 'Y-m-d H:i:s', time() - $erste_frist * HOUR_IN_SECONDS );
+		$grenze1 = Time::ago( $erste_frist * HOUR_IN_SECONDS );
 		$rows    = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze1 ) ); // phpcs:ignore
 		foreach ( $rows as $row ) {
 			$this->send_mail( $row, 1 );
-			$wpdb->update( self::table(), array( 'erinnert_am' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
+			$wpdb->update( self::table(), array( 'erinnert_am' => Time::now() ), array( 'id' => $row->id ) );
 		}
 
 		// Zweite Erinnerung.
 		if ( $zweite_frist > 0 ) {
-			$grenze2 = gmdate( 'Y-m-d H:i:s', time() - $zweite_frist * HOUR_IN_SECONDS );
+			$grenze2 = Time::ago( $zweite_frist * HOUR_IN_SECONDS );
 			$rows2   = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NOT NULL AND zweite_erinnerung_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze2 ) ); // phpcs:ignore
 			foreach ( $rows2 as $row ) {
 				$this->send_mail( $row, 2 );
-				$wpdb->update( self::table(), array( 'zweite_erinnerung_am' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
+				$wpdb->update( self::table(), array( 'zweite_erinnerung_am' => Time::now() ), array( 'id' => $row->id ) );
 			}
 		}
 	}

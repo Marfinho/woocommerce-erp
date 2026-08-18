@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Retention;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Inventory\Repository;
+use Lindenweg16\Core\Time;
 
 /**
  * „Merken"-Funktion für eingeloggte Kunden, Mein-Konto-Tab und ein
@@ -144,7 +145,7 @@ class Wishlist {
 		}
 		$wpdb->insert(
 			self::table(),
-			array( 'user_id' => $user_id, 'woo_product_id' => $pid, 'hinzugefuegt_am' => current_time( 'mysql' ) ),
+			array( 'user_id' => $user_id, 'woo_product_id' => $pid, 'hinzugefuegt_am' => Time::now() ),
 			array( '%d', '%d', '%s' )
 		);
 		wp_send_json_success( array( 'active' => true ) );
@@ -209,7 +210,11 @@ class Wishlist {
 	 * @return array wooProductId => Anzahl.
 	 */
 	public static function most_wished( $limit = 20 ) {
-		$cache = get_transient( 'lw16_most_wished' );
+		$limit = max( 1, (int) $limit );
+		// Cache-Key mit Limit: vorher teilten sich alle Aufrufer einen Key,
+		// und wer zuerst kam, bestimmte fuer 30 Minuten die Laenge fuer alle.
+		$cache_key = 'lw16_most_wished_' . $limit;
+		$cache     = get_transient( $cache_key );
 		if ( false !== $cache ) {
 			return $cache;
 		}
@@ -219,7 +224,7 @@ class Wishlist {
 		foreach ( $rows as $r ) {
 			$out[ (int) $r->woo_product_id ] = (int) $r->anzahl;
 		}
-		set_transient( 'lw16_most_wished', $out, 30 * MINUTE_IN_SECONDS );
+		set_transient( $cache_key, $out, 30 * MINUTE_IN_SECONDS );
 		return $out;
 	}
 }

@@ -11,6 +11,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Inventory\Repository;
+use Lindenweg16\Core\Calc;
+use Lindenweg16\Core\Time;
 
 /**
  * Formular auf ausverkauften Produktseiten und automatische Benachrichtigung,
@@ -63,7 +65,9 @@ class Waitlist {
 			$email = $u->user_email;
 		}
 
-		echo '<div class="lw16-waitlist">';
+		// Die Wunschliste verlinkt auf diesen Anker – vorher gab es nur eine
+		// gleichnamige Klasse, der Sprung ging also ins Leere.
+		echo '<div class="lw16-waitlist" id="lw16-waitlist">';
 		echo '<h4>' . esc_html__( 'Zurzeit nicht auf Lager', 'lindenweg16' ) . '</h4>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="lw16_waitlist_signup">';
@@ -87,6 +91,24 @@ class Waitlist {
 		$email      = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
 		$redirect   = isset( $_POST['redirect'] ) ? esc_url_raw( wp_unslash( $_POST['redirect'] ) ) : home_url();
 
+		// Eingeloggte Kunden tragen sich mit ihrer eigenen Adresse ein.
+		if ( is_user_logged_in() ) {
+			$u = wp_get_current_user();
+			if ( $u && is_email( $u->user_email ) ) {
+				$email = $u->user_email;
+			}
+		}
+
+		// Einfache Missbrauchsbremse: die Anmeldung verschickt spaeter eine
+		// Mail an eine frei waehlbare Adresse.
+		$rate_key = 'lw16_wl_' . md5( (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+		$versuche = (int) get_transient( $rate_key );
+		if ( $versuche >= 5 ) {
+			wp_safe_redirect( add_query_arg( 'lw16_waitlist', 'limit', $redirect ) );
+			exit;
+		}
+		set_transient( $rate_key, $versuche + 1, HOUR_IN_SECONDS );
+
 		if ( $produkt_id && is_email( $email ) ) {
 			// Doppelte offene Anmeldung vermeiden.
 			$exists = $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table() . ' WHERE produkt_id = %d AND email = %s AND benachrichtigt = 0', $produkt_id, $email ) ); // phpcs:ignore
@@ -98,7 +120,7 @@ class Waitlist {
 						'email'         => $email,
 						'user_id'       => get_current_user_id() ?: null,
 						'benachrichtigt' => 0,
-						'erstellt_am'   => current_time( 'mysql' ),
+						'erstellt_am'   => Time::now(),
 					),
 					array( '%d', '%s', '%d', '%d', '%s' )
 				);
@@ -131,6 +153,10 @@ class Waitlist {
 		$link = $wc ? get_permalink( $produkt->woo_product_id ) : home_url();
 
 		foreach ( $rows as $row ) {
+			// Entscheidungsregel liegt in der getesteten Calc-Funktion.
+			if ( ! Calc::waitlist_should_notify( (bool) $row->benachrichtigt ) ) {
+				continue;
+			}
 			MailTemplate::send( $row->email, 'wieder_verfuegbar', array(
 				'{produktname}' => $name,
 				'{produktlink}' => $link,

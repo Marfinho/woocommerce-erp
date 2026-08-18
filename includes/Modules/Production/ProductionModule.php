@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Production;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Installer;
+use Lindenweg16\Core\Format;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Inventory\StockManager;
@@ -151,16 +152,21 @@ class ProductionModule {
 
 		if ( ! empty( $queue ) ) {
 			echo '<table class="widefat striped"><thead><tr>';
-			echo '<th>' . esc_html__( 'Modul', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Benötigt', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestand', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Fehlend', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellungen', 'lindenweg16' ) . '</th><th></th>';
+			echo '<th>' . esc_html__( 'Modul', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Benötigt', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestand', 'lindenweg16' ) . '</th><th>' . esc_html__( 'In Produktion', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Fehlend', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellungen', 'lindenweg16' ) . '</th><th></th>';
 			echo '</tr></thead><tbody>';
+			$geplant = ProductionRepository::open_job_quantities();
 			foreach ( $queue as $modul_id => $row ) {
-				$bestand = Repository::get_stock( $modul_id );
-				$fehlend = max( 0, $row['benoetigt'] - $bestand );
+				$bestand    = Repository::get_stock( $modul_id );
+				$in_arbeit  = isset( $geplant[ $modul_id ] ) ? (float) $geplant[ $modul_id ] : 0.0;
+				// Bereits eingeplante Druckauftraege gegenrechnen, sonst wird
+				// bei jedem Seitenaufruf erneut die volle Menge vorgeschlagen.
+				$fehlend    = max( 0, $row['benoetigt'] - $bestand - $in_arbeit );
 				echo '<tr>';
 				echo '<td>' . esc_html( $row['name'] ) . '</td>';
-				echo '<td>' . esc_html( $this->fmt( $row['benoetigt'] ) ) . '</td>';
-				echo '<td>' . esc_html( $this->fmt( $bestand ) ) . '</td>';
-				echo '<td' . ( $fehlend > 0 ? ' class="lw16-fehlend"' : '' ) . '>' . esc_html( $this->fmt( $fehlend ) ) . '</td>';
+				echo '<td>' . esc_html( Format::qty( $row['benoetigt'] ) ) . '</td>';
+				echo '<td>' . esc_html( Format::qty( $bestand ) ) . '</td>';
+				echo '<td>' . esc_html( $in_arbeit > 0 ? Format::qty( $in_arbeit ) : '–' ) . '</td>';
+				echo '<td' . ( $fehlend > 0 ? ' class="lw16-fehlend"' : '' ) . '>' . esc_html( Format::qty( $fehlend ) ) . '</td>';
 				echo '<td>' . esc_html( implode( ', ', array_unique( $row['orders'] ) ) ) . '</td>';
 				echo '<td>';
 				if ( $fehlend > 0 ) {
@@ -193,7 +199,9 @@ class ProductionModule {
 			echo '<input type="text" name="notiz" placeholder="' . esc_attr__( 'Notiz…', 'lindenweg16' ) . '" class="small-text" style="width:120px"> ';
 			echo '<button type="submit" class="button button-small">' . esc_html__( 'Packliste', 'lindenweg16' ) . '</button>';
 			echo '</form> ';
-			$label = admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' );
+			// get_edit_order_url() liefert auch mit aktivierten Custom Order
+			// Tables die richtige Adresse; post.php?post=… fuehrt dort ins Leere.
+			$label = $order->get_edit_order_url();
 			echo '<a class="button button-small" href="' . esc_url( $label ) . '#dhl">' . esc_html__( 'DHL-Label erstellen', 'lindenweg16' ) . '</a>';
 			echo '</td></tr>';
 		}
@@ -218,7 +226,7 @@ class ProductionModule {
 		foreach ( $jobs as $job ) {
 			$produkt = Repository::get_product( $job->produkt_id );
 			echo '<tr><td>' . esc_html( $produkt ? $produkt->name : '#' . $job->produkt_id ) . '</td>';
-			echo '<td>' . esc_html( $this->fmt( $job->menge ) ) . '</td>';
+			echo '<td>' . esc_html( Format::qty( $job->menge ) ) . '</td>';
 			echo '<td>' . esc_html( $job->status ) . '</td><td>';
 
 			if ( 'fertig' === $job->status ) {
@@ -251,16 +259,20 @@ class ProductionModule {
 		foreach ( $module as $m ) {
 			$avg = ProductionRepository::avg_ist( $m->id, 8 );
 			echo '<tr><td>' . esc_html( $m->name ) . '</td>';
-			echo '<td>' . esc_html( $this->fmt( $m->arbeitszeit_minuten ) ) . ' min</td>';
-			if ( $avg ) {
-				$plan  = (float) $m->arbeitszeit_minuten;
-				$ist   = $avg['ist_arbeitszeit_min'];
-				$abw   = $plan > 0 ? round( ( $ist - $plan ) / $plan * 100 ) : 0;
-				echo '<td>' . esc_html( $this->fmt( $ist ) ) . ' min</td>';
+			echo '<td>' . esc_html( Format::qty( $m->arbeitszeit_minuten ) ) . ' min</td>';
+			if ( $avg && null !== $avg['ist_arbeitszeit_min'] ) {
+				$plan = (float) $m->arbeitszeit_minuten;
+				$ist  = (float) $avg['ist_arbeitszeit_min'];
+				$abw  = $plan > 0 ? round( ( $ist - $plan ) / $plan * 100 ) : 0;
+				echo '<td>' . esc_html( Format::qty( $ist ) ) . ' min</td>';
 				echo '<td' . ( abs( $abw ) >= 20 ? ' class="lw16-fehlend"' : '' ) . '>' . esc_html( ( $abw > 0 ? '+' : '' ) . $abw . ' %' ) . '</td>';
-				echo '<td>' . esc_html( $this->fmt( $avg['ist_druckzeit_h'] ) ) . ' h</td>';
 			} else {
-				echo '<td>–</td><td>–</td><td>–</td>';
+				echo '<td>–</td><td>–</td>';
+			}
+			if ( $avg && null !== $avg['ist_druckzeit_h'] ) {
+				echo '<td>' . esc_html( Format::qty( $avg['ist_druckzeit_h'] ) ) . ' h</td>';
+			} else {
+				echo '<td>–</td>';
 			}
 			echo '<td><a href="' . esc_url( admin_url( 'admin.php?page=lw16-preiskalkulation' ) ) . '">' . esc_html__( 'zur Kalkulation', 'lindenweg16' ) . '</a></td>';
 			echo '</tr>';
@@ -387,9 +399,11 @@ class ProductionModule {
 				'produkt_id'             => (int) $job->produkt_id,
 				'menge'                  => (float) $job->menge,
 				'geplante_druckzeit_h'   => $produkt ? (float) $produkt->druckzeit_stunden : null,
-				'ist_druckzeit_h'        => (float) ( $_POST['ist_druckzeit_h'] ?? 0 ),
+				// Leere Felder als NULL ablegen, damit sie den Ist-Durchschnitt
+				// nicht als 0 verwaessern.
+				'ist_druckzeit_h'        => ( isset( $_POST['ist_druckzeit_h'] ) && '' !== $_POST['ist_druckzeit_h'] ) ? (float) $_POST['ist_druckzeit_h'] : null,
 				'geplante_arbeitszeit_min' => $produkt ? (float) $produkt->arbeitszeit_minuten : null,
-				'ist_arbeitszeit_min'    => (float) ( $_POST['ist_arbeitszeit_min'] ?? 0 ),
+				'ist_arbeitszeit_min'    => ( isset( $_POST['ist_arbeitszeit_min'] ) && '' !== $_POST['ist_arbeitszeit_min'] ) ? (float) $_POST['ist_arbeitszeit_min'] : null,
 			)
 		);
 
@@ -446,17 +460,6 @@ class ProductionModule {
 			$queue[ $produkt->id ]['benoetigt'] += $menge;
 			$queue[ $produkt->id ]['orders'][]   = $order_no;
 		}
-	}
-
-	/**
-	 * Zahl formatieren.
-	 *
-	 * @param float $n Zahl.
-	 * @return string
-	 */
-	protected function fmt( $n ) {
-		$s = number_format( (float) $n, 2, ',', '.' );
-		return rtrim( rtrim( $s, '0' ), ',' );
 	}
 
 	/**
