@@ -99,7 +99,7 @@ class PricingModule {
 		// "Alle übernehmen"-Button.
 		$alle_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_preis_alle_uebernehmen' ), 'lw16_alle_uebernehmen' );
 		echo '<hr><p><a class="button button-primary button-hero" href="' . esc_url( $alle_url ) . '" onclick="return confirm(\'' . esc_attr__( 'Alle Preise übernehmen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Alle Preise übernehmen', 'lindenweg16' ) . '</a>';
-		echo ' <span class="description">' . esc_html__( 'Schreibt den kalkulierten Preis und die Marge in alle WooCommerce-Produkte.', 'lindenweg16' ) . '</span></p>';
+		echo ' <span class="description">' . esc_html__( 'Schreibt den kalkulierten Preis und die Marge in alle verknüpften Module und Sets. Produkte ohne hinterlegte Kostenfelder werden übersprungen.', 'lindenweg16' ) . '</span></p>';
 
 		echo '</div>';
 	}
@@ -246,6 +246,14 @@ class PricingModule {
 		}
 
 		$preis = (float) $calc['vorschlag'];
+
+		// Ohne hinterlegte Kostenfelder ergibt die Kalkulation 0 - dann wuerde
+		// hier der Shop-Preis auf 0 EUR gesetzt. Lieber nichts tun und das
+		// sagen.
+		if ( $preis <= 0 || (float) $calc['kosten'] <= 0 ) {
+			$this->redirect( __( 'Kein Preis übernommen: für dieses Produkt sind keine Kostenfelder hinterlegt.', 'lindenweg16' ) );
+		}
+
 		$wc->set_regular_price( (string) $preis );
 		$wc->save();
 
@@ -267,10 +275,16 @@ class PricingModule {
 		}
 		check_admin_referer( 'lw16_alle_uebernehmen' );
 
-		$count    = 0;
-		$products = Repository::get_products();
+		$count         = 0;
+		$uebersprungen = 0;
+		$products      = Repository::get_products();
 		foreach ( $products as $produkt ) {
 			if ( empty( $produkt->woo_product_id ) ) {
+				continue;
+			}
+			// Rohmaterial hat keinen Verkaufspreis - frueher lief es hier mit
+			// und bekam den kalkulierten Modulpreis (meist 0) zugewiesen.
+			if ( 'rohmaterial' === $produkt->typ ) {
 				continue;
 			}
 			$wc = wc_get_product( $produkt->woo_product_id );
@@ -279,6 +293,14 @@ class PricingModule {
 			}
 			$calc  = 'set' === $produkt->typ ? PricingCalculator::calc_set( $produkt ) : PricingCalculator::calc_modul( $produkt );
 			$preis = (float) $calc['vorschlag'];
+
+			// Produkte ohne Kostenbasis ueberspringen, statt ihren Shop-Preis
+			// auf 0 EUR zu setzen.
+			if ( $preis <= 0 || (float) $calc['kosten'] <= 0 ) {
+				$uebersprungen++;
+				continue;
+			}
+
 			$wc->set_regular_price( (string) $preis );
 			$wc->save();
 			$marge = PricingCalculator::marge_prozent( $calc['kosten'], $preis );
@@ -287,7 +309,20 @@ class PricingModule {
 			$count++;
 		}
 
-		$this->redirect( sprintf( /* translators: %d: Anzahl */ __( '%d Preise übernommen.', 'lindenweg16' ), $count ) );
+		$msg = sprintf( /* translators: %d: Anzahl */ __( '%d Preise übernommen.', 'lindenweg16' ), $count );
+		if ( $uebersprungen > 0 ) {
+			$msg .= ' ' . sprintf(
+				/* translators: %d: Anzahl */
+				_n(
+					'%d Produkt übersprungen (keine Kostenfelder hinterlegt).',
+					'%d Produkte übersprungen (keine Kostenfelder hinterlegt).',
+					$uebersprungen,
+					'lindenweg16'
+				),
+				$uebersprungen
+			);
+		}
+		$this->redirect( $msg );
 	}
 
 	/**

@@ -48,8 +48,17 @@ class SettingsPage {
 			),
 			__( 'Buchhaltung', 'lindenweg16' )    => array(
 				'kleinunternehmer'      => array( __( 'Kleinunternehmer §19 UStG', 'lindenweg16' ), 'checkbox' ),
-				'steuersatz_ruecklage'  => array( __( 'Geschätzter Steuersatz für Rücklage (%)', 'lindenweg16' ), 'number' ),
-				'rechnungsnummer_modus' => array( __( 'Rechnungsnummern-Modus (jahr/durchlaufend)', 'lindenweg16' ), 'text' ),
+				'steuersatz_ruecklage'  => array( __( 'Geschätzter Steuersatz für Rücklage (%)', 'lindenweg16' ), 'number', array( 'min' => 0, 'max' => 100 ) ),
+				'rechnungsnummer_modus' => array(
+					__( 'Rechnungsnummern-Modus', 'lindenweg16' ),
+					'select',
+					array(
+						'options' => array(
+							'jahr'         => __( 'Pro Jahr (2026-0001)', 'lindenweg16' ),
+							'durchlaufend' => __( 'Durchlaufend (RE-00001)', 'lindenweg16' ),
+						),
+					),
+				),
 			),
 			__( 'Loyalty', 'lindenweg16' )        => array(
 				'referral_cookie_tage'     => array( __( 'Referral-Cookie Laufzeit (Tage)', 'lindenweg16' ), 'number' ),
@@ -58,8 +67,9 @@ class SettingsPage {
 				'referral_wartezeit_tage'  => array( __( 'Mindestwartezeit Referral (Tage)', 'lindenweg16' ), 'number' ),
 				'referral_review_schwelle' => array( __( 'Review-Schwelle Reward (€)', 'lindenweg16' ), 'number' ),
 				'punkte_pro_euro'          => array( __( 'Punkte pro Euro', 'lindenweg16' ), 'number' ),
-				'punkte_einloesewert'      => array( __( 'Punkte für 1 €', 'lindenweg16' ), 'number' ),
-				'punkte_wartezeit_tage'    => array( __( 'Mindestwartezeit Punkte (Tage)', 'lindenweg16' ), 'number' ),
+				'punkte_einloesewert'      => array( __( 'Punkte für 1 €', 'lindenweg16' ), 'number', array( 'min' => 1, 'step' => 1 ) ),
+				'punkte_wartezeit_tage'    => array( __( 'Mindestwartezeit Punkte (Tage)', 'lindenweg16' ), 'number', array( 'min' => 0 ) ),
+				'referral_schnellkauf_sek' => array( __( 'Schnellkauf-Schwelle für Prüfung (Sekunden)', 'lindenweg16' ), 'number', array( 'min' => 0 ) ),
 			),
 			__( 'Kundenbindung', 'lindenweg16' )  => array(
 				'cart_erinnerung_1_stunden' => array( __( '1. Warenkorb-Erinnerung nach (Std)', 'lindenweg16' ), 'number' ),
@@ -74,8 +84,23 @@ class SettingsPage {
 				'email_footer'        => array( __( 'E-Mail-Footer-Text (erscheint in jeder Mail)', 'lindenweg16' ), 'textarea' ),
 			),
 			__( 'Reporting & DHL', 'lindenweg16' ) => array(
+				'digest_wochentag'     => array(
+					__( 'Wochentag für den Digest', 'lindenweg16' ),
+					'select',
+					array(
+						'options' => array(
+							1 => __( 'Montag', 'lindenweg16' ),
+							2 => __( 'Dienstag', 'lindenweg16' ),
+							3 => __( 'Mittwoch', 'lindenweg16' ),
+							4 => __( 'Donnerstag', 'lindenweg16' ),
+							5 => __( 'Freitag', 'lindenweg16' ),
+							6 => __( 'Samstag', 'lindenweg16' ),
+							7 => __( 'Sonntag', 'lindenweg16' ),
+						),
+					),
+				),
 				'export_email'         => array( __( 'E-Mail für Datenexport', 'lindenweg16' ), 'text' ),
-				'dhl_tracking_api_key' => array( __( 'DHL Sendungsverfolgung API-Key', 'lindenweg16' ), 'text' ),
+				'dhl_tracking_api_key' => array( __( 'DHL Sendungsverfolgung API-Key', 'lindenweg16' ), 'password' ),
 				'dhl_tracking_sandbox' => array( __( 'DHL Sandbox-Modus', 'lindenweg16' ), 'checkbox' ),
 			),
 		);
@@ -101,14 +126,36 @@ class SettingsPage {
 			echo '<h2>' . esc_html( $group ) . '</h2>';
 			echo '<table class="form-table"><tbody>';
 			foreach ( $fields as $key => $meta ) {
-				list( $label, $type ) = $meta;
-				$val = isset( $values[ $key ] ) ? $values[ $key ] : '';
+				$label = $meta[0];
+				$type  = $meta[1];
+				$args  = isset( $meta[2] ) ? $meta[2] : array();
+				$val   = isset( $values[ $key ] ) ? $values[ $key ] : '';
 				echo '<tr><th scope="row"><label for="' . esc_attr( $key ) . '">' . esc_html( $label ) . '</label></th><td>';
 
 				if ( 'checkbox' === $type ) {
 					echo '<input type="checkbox" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="1" ' . checked( 1, (int) $val, false ) . '>';
 				} elseif ( 'number' === $type ) {
-					echo '<input type="number" step="any" class="regular-text" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( $val ) . '">';
+					$attrs = ' step="' . esc_attr( isset( $args['step'] ) ? $args['step'] : 'any' ) . '"';
+					if ( isset( $args['min'] ) ) {
+						$attrs .= ' min="' . esc_attr( $args['min'] ) . '"';
+					}
+					if ( isset( $args['max'] ) ) {
+						$attrs .= ' max="' . esc_attr( $args['max'] ) . '"';
+					}
+					echo '<input type="number"' . $attrs . ' class="regular-text" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( $val ) . '">'; // phpcs:ignore WordPress.Security.EscapeOutput
+				} elseif ( 'select' === $type ) {
+					echo '<select id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '">';
+					foreach ( $args['options'] as $opt_val => $opt_label ) {
+						printf(
+							'<option value="%s" %s>%s</option>',
+							esc_attr( $opt_val ),
+							selected( (string) $val, (string) $opt_val, false ),
+							esc_html( $opt_label )
+						);
+					}
+					echo '</select>';
+				} elseif ( 'password' === $type ) {
+					echo '<input type="password" class="regular-text" autocomplete="off" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( $val ) . '">';
 				} elseif ( 'color' === $type ) {
 					echo '<input type="color" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="' . esc_attr( $val ?: '#1d2327' ) . '" style="width:60px;height:36px;padding:2px;cursor:pointer">';
 					echo ' <code>' . esc_html( $val ?: '#1d2327' ) . '</code>';
@@ -252,10 +299,27 @@ class SettingsPage {
 		foreach ( $this->fields() as $fields ) {
 			foreach ( $fields as $key => $meta ) {
 				$type = $meta[1];
+				$args = isset( $meta[2] ) ? $meta[2] : array();
 				if ( 'checkbox' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? 1 : 0;
 				} elseif ( 'number' === $type ) {
-					$clean[ $key ] = isset( $_POST[ $key ] ) ? (float) wp_unslash( $_POST[ $key ] ) : 0;
+					$num = isset( $_POST[ $key ] ) ? (float) wp_unslash( $_POST[ $key ] ) : 0;
+					// Grenzen serverseitig durchsetzen. Ein
+					// punkte_einloesewert von 0 wuerde sonst dazu fuehren,
+					// dass ein Punkt einem Euro entspricht.
+					if ( isset( $args['min'] ) ) {
+						$num = max( (float) $args['min'], $num );
+					}
+					if ( isset( $args['max'] ) ) {
+						$num = min( (float) $args['max'], $num );
+					}
+					$clean[ $key ] = $num;
+				} elseif ( 'select' === $type ) {
+					$raw           = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
+					$erlaubt       = array_map( 'strval', array_keys( $args['options'] ) );
+					$clean[ $key ] = in_array( $raw, $erlaubt, true ) ? $raw : (string) $erlaubt[0];
+				} elseif ( 'password' === $type ) {
+					$clean[ $key ] = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 				} elseif ( 'color' === $type ) {
 					$raw = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 					$clean[ $key ] = MailTemplate::sanitize_color( $raw );

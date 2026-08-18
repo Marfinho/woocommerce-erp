@@ -406,6 +406,6 @@ class InvoiceGenerator {
 	}
 
 	protected static function money( $n ) {
-		return number_format( (float) $n, 2, ',', '.' ) . ' €';
+		return Format::euro( $n );
 	}
 }

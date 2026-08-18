@@ -10,8 +10,8 @@ namespace Lindenweg16\Modules\Production;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Installer;
-use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
+use Lindenweg16\Core\Format;
 use Lindenweg16\Modules\Inventory\Repository;
 
 /**
@@ -95,7 +95,7 @@ class PackingSlipGenerator {
 			$produkt = Repository::get_by_woo_id( $item->get_product_id() );
 
 			$pdf->table_cols(
-				array( (string) $pos_nr, $item->get_name(), self::fmt( $qty ) ),
+				array( (string) $pos_nr, $item->get_name(), Format::qty( $qty ) ),
 				$widths,
 				$aligns,
 				10,
@@ -108,7 +108,7 @@ class PackingSlipGenerator {
 				foreach ( self::resolve_modules( $produkt, $qty ) as $mod_name => $menge ) {
 					$pdf->set_color( '#6E7882' );
 					$pdf->table_cols(
-						array( '', "\xE2\x80\x94 " . $mod_name, self::fmt( $menge ) ),
+						array( '', "\xE2\x80\x94 " . $mod_name, Format::qty( $menge ) ),
 						$widths,
 						$aligns,
 						9
@@ -130,9 +130,26 @@ class PackingSlipGenerator {
 		$pdf->text( __( 'Bitte prüfe die Sendung bei Erhalt auf Vollständigkeit. Bei Fragen sind wir jederzeit für dich da.', 'lindenweg16' ), 10 );
 		$pdf->set_color( Pdf::COLOR_TINTE );
 
-		$filename = 'packliste-' . $order->get_order_number() . '-' . wp_generate_password( 6, false ) . '.pdf';
-		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
-		$pdf->save( $path );
+		// Dateinamen bereinigen: Bestellnummern koennen durch Fremd-Plugins
+		// Schraegstriche oder andere Sonderzeichen enthalten.
+		$filename = sanitize_file_name( 'packliste-' . $order->get_order_number() . '-' . wp_generate_password( 6, false ) . '.pdf' );
+		$dir      = Installer::docs_dir();
+		$path     = trailingslashit( $dir ) . $filename;
+
+		if ( ! $pdf->save( $path ) ) {
+			return false;
+		}
+
+		// Vorgaengerdatei entfernen. Die Packliste wird bei jedem Abruf neu
+		// erzeugt; ohne dieses Aufraeumen wuchs das Dokumentenverzeichnis mit
+		// jedem Klick um eine verwaiste PDF.
+		$alt = (string) $order->get_meta( '_lw16_packing_slip' );
+		if ( $alt && $alt !== $filename ) {
+			$alt_pfad = trailingslashit( $dir ) . basename( $alt );
+			if ( is_file( $alt_pfad ) ) {
+				@unlink( $alt_pfad ); // phpcs:ignore
+			}
+		}
 
 		$order->update_meta_data( '_lw16_packing_slip', $filename );
 		$order->save();
@@ -156,8 +173,4 @@ class PackingSlipGenerator {
 		return $acc;
 	}
 
-	protected static function fmt( $n ) {
-		$s = number_format( (float) $n, 2, ',', '.' );
-		return rtrim( rtrim( $s, '0' ), ',' );
-	}
 }

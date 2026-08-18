@@ -10,8 +10,8 @@ namespace Lindenweg16\Modules\Inventory;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Installer;
-use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
+use Lindenweg16\Core\Format;
 
 class PickListGenerator {
 
@@ -68,14 +68,14 @@ class PickListGenerator {
 					$modul_menge = $qty * (float) $bom->menge;
 					$positionen[] = array(
 						'produkt_id'  => (int) $modul->id,
-						'lagerort_id' => self::best_location( $modul->id, $lagerorte ),
+						'lagerort_id' => self::best_location( $modul->id, $lagerorte, $modul_menge ),
 						'soll_menge'  => $modul_menge,
 					);
 				}
 			} else {
 				$positionen[] = array(
 					'produkt_id'  => (int) $produkt->id,
-					'lagerort_id' => self::best_location( $produkt->id, $lagerorte ),
+					'lagerort_id' => self::best_location( $produkt->id, $lagerorte, $qty ),
 					'soll_menge'  => $qty,
 				);
 			}
@@ -84,23 +84,43 @@ class PickListGenerator {
 		return $positionen;
 	}
 
-	protected static function best_location( $produkt_id, $lagerorte ) {
+	/**
+	 * Lagerort mit dem hoechsten Bestand fuer ein Produkt bestimmen.
+	 *
+	 * Liefert null, wenn an keinem Ort Bestand liegt – vorher wurde in dem
+	 * Fall der erste Ort der Liste zurueckgegeben und die Pickliste schickte
+	 * den Kommissionierer an ein leeres Fach.
+	 *
+	 * @param int   $produkt_id Produkt.
+	 * @param array $lagerorte  Verfuegbare Lagerorte.
+	 * @param float $benoetigt  Benoetigte Menge (nur fuer die Auswahl).
+	 * @return int|null
+	 */
+	protected static function best_location( $produkt_id, $lagerorte, $benoetigt = 0 ) {
 		if ( empty( $lagerorte ) ) {
 			return null;
 		}
 
 		$best_id    = null;
-		$best_menge = -1;
+		$best_menge = 0;
+		$gedeckt_id = null;
 
 		foreach ( $lagerorte as $ort ) {
 			$menge = Repository::get_stock_at_location( $produkt_id, $ort->id );
+			if ( $menge <= 0 ) {
+				continue;
+			}
+			// Ort bevorzugen, der die benoetigte Menge allein abdeckt.
+			if ( $benoetigt > 0 && $menge >= $benoetigt && null === $gedeckt_id ) {
+				$gedeckt_id = (int) $ort->id;
+			}
 			if ( $menge > $best_menge ) {
 				$best_menge = $menge;
 				$best_id    = (int) $ort->id;
 			}
 		}
 
-		return $best_id;
+		return null !== $gedeckt_id ? $gedeckt_id : $best_id;
 	}
 
 	/**
@@ -185,7 +205,7 @@ class PickListGenerator {
 				$current_ort = $ort_label;
 			}
 
-			$menge_str = self::fmt( $pos->soll_menge );
+			$menge_str = Format::qty( $pos->soll_menge );
 			$pdf->table_cols(
 				array(
 					$ort_label,
@@ -223,15 +243,13 @@ class PickListGenerator {
 		$pdf->text( __( 'Datum/Uhrzeit: ________________________', 'lindenweg16' ), 11 );
 		$pdf->set_color( Pdf::COLOR_TINTE );
 
-		$filename = 'pickliste-' . $pickliste_id . '-' . $order->get_order_number() . '.pdf';
+		$filename = sanitize_file_name( 'pickliste-' . $pickliste_id . '-' . $order->get_order_number() . '.pdf' );
 		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
-		$pdf->save( $path );
+		if ( ! $pdf->save( $path ) ) {
+			return false;
+		}
 
 		return $filename;
 	}
 
-	protected static function fmt( $n ) {
-		$s = number_format( (float) $n, 2, ',', '.' );
-		return rtrim( rtrim( $s, '0' ), ',' );
-	}
 }

@@ -623,7 +623,7 @@ class AccountingModule {
 	 * @return string
 	 */
 	public static function euro( $n ) {
-		return number_format( (float) $n, 2, ',', '.' ) . ' €';
+		return \Lindenweg16\Core\Format::euro( $n );
 	}
 
 	/**

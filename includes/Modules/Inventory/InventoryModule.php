@@ -10,6 +10,11 @@ namespace Lindenweg16\Modules\Inventory;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Format;
+use Lindenweg16\Core\Roles;
+use Lindenweg16\Core\Scheduler;
+use Lindenweg16\Core\Installer;
+use Lindenweg16\Core\Time;
 use Lindenweg16\Modules\Accounting\BelegRepository;
 
 /**
@@ -65,7 +70,7 @@ class InventoryModule {
 		add_action( 'admin_post_lw16_inventur', array( $this, 'handle_inventur' ) );
 
 		// Täglicher Bestandsreport.
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_STOCK, array( $this, 'send_daily_stock_report' ) );
+		add_action( Scheduler::HOOK_DAILY_STOCK, array( $this, 'send_daily_stock_report' ) );
 	}
 
 	/**
@@ -96,7 +101,7 @@ class InventoryModule {
 			);
 		}
 
-		$order->update_meta_data( '_lw16_stock_deducted', \Lindenweg16\Core\Time::now() );
+		$order->update_meta_data( '_lw16_stock_deducted', Time::now() );
 		$order->delete_meta_data( '_lw16_stock_restocked' );
 		$order->save();
 	}
@@ -140,7 +145,7 @@ class InventoryModule {
 			);
 		}
 
-		$order->update_meta_data( '_lw16_stock_restocked', \Lindenweg16\Core\Time::now() );
+		$order->update_meta_data( '_lw16_stock_restocked', Time::now() );
 		$order->delete_meta_data( '_lw16_stock_deducted' );
 		$order->save();
 	}
@@ -229,7 +234,9 @@ class InventoryModule {
 	 * Bestandsübersicht mit Ampel.
 	 */
 	protected function render_overview() {
-		$produkte = Repository::get_products();
+		// Bestand kommt aus derselben Abfrage – vorher eine Zusatzabfrage pro
+		// Produkt fuer die Ampel und noch eine fuer die Bestandsspalte.
+		$produkte = Repository::get_products_with_stock();
 		$base     = admin_url( 'admin.php?page=lw16-lager' );
 		echo '<table class="widefat striped"><thead><tr>';
 		echo '<th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th>';
@@ -243,8 +250,8 @@ class InventoryModule {
 		echo '</tr></thead><tbody>';
 
 		foreach ( $produkte as $p ) {
-			$ampel   = StockManager::ampel( $p );
-			$bestand = Repository::get_stock( $p->id );
+			$bestand = (float) $p->bestand;
+			$ampel   = StockManager::ampel( $p, $bestand );
 			echo '<tr>';
 			echo '<td><span class="lw16-ampel lw16-ampel-' . esc_attr( $ampel ) . '" title="' . esc_attr( $ampel ) . '"></span></td>';
 			echo '<td>' . esc_html( $p->name ) . '</td>';
@@ -260,7 +267,7 @@ class InventoryModule {
 				echo '<span class="description">' . esc_html__( 'nicht verknüpft', 'lindenweg16' ) . '</span>';
 			}
 			echo '</td>';
-			echo '<td>' . esc_html( $this->fmt( $bestand ) . ' ' . $p->basis_einheit ) . '</td>';
+			echo '<td>' . esc_html( Format::qty( $bestand ) . ' ' . $p->basis_einheit ) . '</td>';
 			// Lagerorte mit Bestand.
 			$ort_bestaende = Repository::get_stock_by_location( $p->id );
 			echo '<td>';
@@ -268,7 +275,7 @@ class InventoryModule {
 				$ort_parts = array();
 				foreach ( $ort_bestaende as $ob ) {
 					if ( (float) $ob->menge > 0 ) {
-						$ort_parts[] = esc_html( $ob->kuerzel . ': ' . $this->fmt( $ob->menge ) );
+						$ort_parts[] = esc_html( $ob->kuerzel . ': ' . Format::qty( $ob->menge ) );
 					}
 				}
 				echo implode( '<br>', $ort_parts ) ?: '<span class="description">–</span>';
@@ -276,7 +283,7 @@ class InventoryModule {
 				echo '<span class="description">–</span>';
 			}
 			echo '</td>';
-			echo '<td>' . esc_html( $this->fmt( $p->mindestbestand ) ) . '</td>';
+			echo '<td>' . esc_html( Format::qty( $p->mindestbestand ) ) . '</td>';
 			$edit = add_query_arg( array( 'view' => 'edit', 'id' => $p->id ), $base );
 			$del  = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_delete_product&id=' . $p->id ), 'lw16_delete_product_' . $p->id );
 			echo '<td><a href="' . esc_url( $edit ) . '">' . esc_html__( 'Bearbeiten', 'lindenweg16' ) . '</a> | <a href="' . esc_url( $del ) . '" onclick="return confirm(\'' . esc_attr__( 'Produkt wirklich löschen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Löschen', 'lindenweg16' ) . '</a></td>';
@@ -583,7 +590,7 @@ class InventoryModule {
 			echo '<td>' . esc_html( $r->erstellt_am ) . '</td>';
 			echo '<td>' . esc_html( $r->produkt_name ) . '</td>';
 			echo '<td>' . esc_html( $r->lagerort_kuerzel ?: '–' ) . '</td>';
-			echo '<td>' . esc_html( $this->fmt( $r->menge ) . ' ' . $r->basis_einheit ) . '</td>';
+			echo '<td>' . esc_html( Format::qty( $r->menge ) . ' ' . $r->basis_einheit ) . '</td>';
 			echo '<td>' . esc_html( $r->typ ) . '</td>';
 			echo '<td>' . esc_html( (string) $r->referenz ) . '</td>';
 			echo '<td>' . ( $r->beleg_id ? '#' . (int) $r->beleg_id : '–' ) . '</td>';
@@ -900,7 +907,7 @@ class InventoryModule {
 				<tr>
 					<td><?php echo esc_html( $p->name ); ?></td>
 					<td><?php echo esc_html( $p->typ ); ?></td>
-					<td><?php echo esc_html( $this->fmt( $gesamt ) . ' ' . $p->basis_einheit ); ?></td>
+					<td><?php echo esc_html( Format::qty( $gesamt ) . ' ' . $p->basis_einheit ); ?></td>
 					<td><input type="number" step="any" min="0" name="bestand[<?php echo (int) $p->id; ?>]" value="<?php echo esc_attr( $ort_menge ); ?>" class="small-text"> <?php echo esc_html( $p->basis_einheit ); ?></td>
 				</tr>
 			<?php endforeach; ?>
@@ -1020,7 +1027,7 @@ class InventoryModule {
 			<tr>
 				<td><strong><?php echo esc_html( $pos->lagerort_kuerzel ?: '–' ); ?></strong></td>
 				<td><?php echo esc_html( $pos->produkt_name ); ?></td>
-				<td><?php echo esc_html( $this->fmt( $pos->soll_menge ) ); ?></td>
+				<td><?php echo esc_html( Format::qty( $pos->soll_menge ) ); ?></td>
 				<td><?php echo esc_html( $pos->basis_einheit ); ?></td>
 				<td><?php echo $pos->gepickt ? '&#10003;' : '&#10007;'; ?></td>
 			</tr>
@@ -1193,7 +1200,7 @@ class InventoryModule {
 				<div class="pl-info">
 					<div class="pl-name"><?php echo esc_html( $pos->produkt_name ); ?></div>
 					<div class="pl-loc"><?php echo esc_html( $pos->lagerort_kuerzel ? $pos->lagerort_kuerzel . ' – ' . $pos->lagerort_name : __( 'Kein Lagerort', 'lindenweg16' ) ); ?></div>
-					<div class="pl-qty"><?php echo esc_html( $this->fmt( $pos->soll_menge ) . ' ' . $pos->basis_einheit ); ?></div>
+					<div class="pl-qty"><?php echo esc_html( Format::qty( $pos->soll_menge ) . ' ' . $pos->basis_einheit ); ?></div>
 				</div>
 			</div>
 		<?php endforeach; ?>
@@ -1375,7 +1382,7 @@ class InventoryModule {
 			<tr>
 				<td><?php echo esc_html( $r->erstellt_am ); ?></td>
 				<td><?php echo esc_html( $r->produkt_name ); ?></td>
-				<td><?php echo esc_html( $this->fmt( $r->menge ) . ' ' . $r->basis_einheit ); ?></td>
+				<td><?php echo esc_html( Format::qty( $r->menge ) . ' ' . $r->basis_einheit ); ?></td>
 				<td><?php echo esc_html( (string) $r->referenz ); ?></td>
 			</tr>
 		<?php endforeach; ?>
@@ -1545,7 +1552,7 @@ class InventoryModule {
 				<tr>
 					<td><?php echo esc_html( $p->name ); ?></td>
 					<td><?php echo esc_html( $p->typ ); ?></td>
-					<td><?php echo esc_html( $this->fmt( $bestand ) ); ?></td>
+					<td><?php echo esc_html( Format::qty( $bestand ) ); ?></td>
 					<td>
 						<input type="number" step="any" name="ist_bestand[<?php echo (int) $p->id; ?>]" value="<?php echo esc_attr( $bestand ); ?>" class="small-text">
 						<input type="hidden" name="soll_bestand[<?php echo (int) $p->id; ?>]" value="<?php echo esc_attr( $bestand ); ?>">
@@ -1591,7 +1598,7 @@ class InventoryModule {
 			}
 
 			StockManager::record_movement( $produkt_id, $diff, 'inventur', array(
-				'referenz' => sprintf( __( 'Inventur: Soll %s, Ist %s', 'lindenweg16' ), $this->fmt( $soll_menge ), $this->fmt( $ist_menge ) ),
+				'referenz' => sprintf( __( 'Inventur: Soll %s, Ist %s', 'lindenweg16' ), Format::qty( $soll_menge ), Format::qty( $ist_menge ) ),
 			) );
 			$korrekturen++;
 		}
@@ -1657,7 +1664,7 @@ class InventoryModule {
 		) ); // phpcs:ignore
 
 		$bestand_aktuell = Repository::get_stock( $produkt_id );
-		echo '<h3>' . esc_html( sprintf( __( '%s – Aktueller Bestand: %s %s', 'lindenweg16' ), $produkt->name, $this->fmt( $bestand_aktuell ), $produkt->basis_einheit ) ) . '</h3>';
+		echo '<h3>' . esc_html( sprintf( __( '%s – Aktueller Bestand: %s %s', 'lindenweg16' ), $produkt->name, Format::qty( $bestand_aktuell ), $produkt->basis_einheit ) ) . '</h3>';
 
 		if ( empty( $rows ) ) {
 			echo '<p>' . esc_html__( 'Noch keine Bewegungen für dieses Produkt.', 'lindenweg16' ) . '</p>';
@@ -1680,8 +1687,8 @@ class InventoryModule {
 			echo '<tr>';
 			echo '<td>' . esc_html( $r->erstellt_am ) . '</td>';
 			echo '<td>' . esc_html( $r->typ ) . '</td>';
-			echo '<td style="' . $sign_class . ';font-weight:600">' . esc_html( $sign . $this->fmt( $r->menge ) ) . '</td>';
-			echo '<td>' . esc_html( $this->fmt( $laufender_bestand ) ) . '</td>';
+			echo '<td style="' . $sign_class . ';font-weight:600">' . esc_html( $sign . Format::qty( $r->menge ) ) . '</td>';
+			echo '<td>' . esc_html( Format::qty( $laufender_bestand ) ) . '</td>';
 			echo '<td>' . esc_html( (string) $r->referenz ) . '</td>';
 			echo '</tr>';
 		}
@@ -1693,14 +1700,14 @@ class InventoryModule {
 	 * ------------------------------------------------------------------ */
 
 	public function send_daily_stock_report() {
-		$produkte = Repository::get_products();
+		$produkte = Repository::get_products_with_stock();
 		$warnings = array();
 
 		foreach ( $produkte as $p ) {
 			if ( (float) $p->mindestbestand <= 0 ) {
 				continue;
 			}
-			$bestand = Repository::get_stock( $p->id );
+			$bestand = (float) $p->bestand;
 			if ( $bestand < (float) $p->mindestbestand ) {
 				$warnings[] = sprintf(
 					'- %s: %s %s (Mindestbestand: %s)',
@@ -1716,7 +1723,7 @@ class InventoryModule {
 			return;
 		}
 
-		$emails = \Lindenweg16\Core\Roles::get_manager_emails();
+		$emails = Roles::get_manager_emails();
 		if ( empty( $emails ) ) {
 			return;
 		}
@@ -1842,7 +1849,7 @@ class InventoryModule {
 		check_admin_referer( 'lw16_complete_pickliste_' . $id );
 		Repository::update_pickliste( $id, array(
 			'status'           => 'abgeschlossen',
-			'abgeschlossen_am' => current_time( 'mysql' ),
+			'abgeschlossen_am' => Time::now(),
 		) );
 		$this->redirect( 'lager&view=pickliste_detail&id=' . $id, __( 'Pickliste abgeschlossen.', 'lindenweg16' ) );
 	}
@@ -1857,7 +1864,7 @@ class InventoryModule {
 		if ( ! $pl || ! $pl->datei_pfad ) {
 			wp_die( esc_html__( 'PDF nicht gefunden.', 'lindenweg16' ) );
 		}
-		$path = trailingslashit( \Lindenweg16\Core\Installer::docs_dir() ) . $pl->datei_pfad;
+		$path = trailingslashit( Installer::docs_dir() ) . $pl->datei_pfad;
 		if ( ! is_readable( $path ) ) {
 			wp_die( esc_html__( 'PDF-Datei nicht gefunden.', 'lindenweg16' ) );
 		}
@@ -1894,17 +1901,6 @@ class InventoryModule {
 		$url = admin_url( 'admin.php?page=lw16-' . $page . '&msg=' . rawurlencode( $msg ) );
 		wp_safe_redirect( $url );
 		exit;
-	}
-
-	/**
-	 * Zahl hübsch formatieren (deutsche Notation, ohne überflüssige Nullen).
-	 *
-	 * @param float $n Zahl.
-	 * @return string
-	 */
-	protected function fmt( $n ) {
-		$s = number_format( (float) $n, 2, ',', '.' );
-		return rtrim( rtrim( $s, '0' ), ',' );
 	}
 
 	/**

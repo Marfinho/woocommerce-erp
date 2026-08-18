@@ -138,7 +138,7 @@ class LoyaltyModule {
 		// --- Referral: Cookie auswerten. ---------------------------------
 		$this->maybe_create_referral( $order );
 
-		$order->update_meta_data( '_lw16_loyalty_done', current_time( 'mysql' ) );
+		$order->update_meta_data( '_lw16_loyalty_done', Time::now() );
 		$order->save();
 	}
 

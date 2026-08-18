@@ -10,6 +10,8 @@ namespace Lindenweg16\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\Format;
+use Lindenweg16\Core\Time;
 use Lindenweg16\Modules\Accounting\EuerCalculator;
 use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Inventory\StockManager;
@@ -32,8 +34,14 @@ class Dashboard {
 	public function render() {
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Lindenweg16 Dashboard', 'lindenweg16' ) . '</h1>';
 
-		$this->render_kpi_cards();
-		$this->render_low_stock_warning();
+		// Einmal berechnen und an beide Ausgaben durchreichen: vorher kam die
+		// KPI-Karte aus einem 15-Minuten-Transient und die Tabelle darunter
+		// aus einer Live-Abfrage - die Karte konnte "0" zeigen, waehrend
+		// darunter Warnungen standen.
+		$kpis = $this->get_kpis();
+
+		$this->render_kpi_cards( $kpis );
+		$this->render_low_stock_warning( $kpis['lagerwarnungen_liste'] );
 		$this->render_recent_orders();
 
 		do_action( 'lw16_dashboard_widgets' );
@@ -44,15 +52,24 @@ class Dashboard {
 	/**
 	 * KPI-Karten.
 	 */
-	protected function render_kpi_cards() {
+	protected function get_kpis() {
 		$cache_key = 'lw16_dashboard_kpis';
 		$kpis      = get_transient( $cache_key );
 
-		if ( false === $kpis ) {
+		if ( false === $kpis || ! isset( $kpis['lagerwarnungen_liste'] ) ) {
 			$kpis = $this->calculate_kpis();
 			set_transient( $cache_key, $kpis, 15 * MINUTE_IN_SECONDS );
 		}
 
+		return $kpis;
+	}
+
+	/**
+	 * KPI-Karten.
+	 *
+	 * @param array $kpis Vorberechnete Kennzahlen.
+	 */
+	protected function render_kpi_cards( array $kpis ) {
 		$steuersatz = (float) Settings::get( 'steuersatz_ruecklage', 25 );
 		$ruecklage  = EuerCalculator::ruecklage( $steuersatz );
 
@@ -126,36 +143,48 @@ class Dashboard {
 	protected function calculate_kpis() {
 		global $wpdb;
 
-		$jahr       = (int) gmdate( 'Y' );
-		$monat      = (int) gmdate( 'n' );
+		$jahr       = Time::year();
+		$monat      = (int) current_time( 'n' );
 		$monat_from = sprintf( '%04d-%02d-01', $jahr, $monat );
-		$monat_to   = gmdate( 'Y-m-t' );
+		$monat_to   = (string) current_time( 'Y-m-t' );
 		$jahr_from  = $jahr . '-01-01';
 		$jahr_to    = $jahr . '-12-31';
 
 		$umsatz_monat = EuerCalculator::einnahmen( $monat_from, $monat_to );
 		$umsatz_jahr  = EuerCalculator::einnahmen( $jahr_from, $jahr_to );
 
+		// paginate => true liefert nur die Gesamtzahl, statt saemtliche IDs zu
+		// laden, nur um sie zu zaehlen.
 		$offene = wc_get_orders( array(
-			'status' => array( 'wc-processing', 'wc-on-hold', 'wc-pending' ),
-			'limit'  => -1,
-			'return' => 'ids',
+			'status'   => array( 'wc-processing', 'wc-on-hold', 'wc-pending' ),
+			'limit'    => 1,
+			'return'   => 'ids',
+			'paginate' => true,
 		) );
 
 		$heute = wc_get_orders( array(
 			'status'       => array( 'wc-processing', 'wc-on-hold', 'wc-pending', 'wc-completed' ),
-			'date_created' => gmdate( 'Y-m-d' ) . '...' . gmdate( 'Y-m-d' ),
-			'limit'        => -1,
+			'date_created' => '>=' . strtotime( Time::today() . ' 00:00:00' ),
+			'limit'        => 1,
 			'return'       => 'ids',
+			'paginate'     => true,
 		) );
 
-		$produkte      = Repository::get_products();
-		$lagerwarnungen = 0;
-		foreach ( $produkte as $p ) {
-			$ampel = StockManager::ampel( $p );
-			if ( 'gruen' !== $ampel ) {
-				$lagerwarnungen++;
+		// Produkte samt Bestand in einer Abfrage statt einer pro Produkt.
+		$warnungen = array();
+		foreach ( Repository::get_products_with_stock() as $p ) {
+			$bestand = (float) $p->bestand;
+			$ampel   = StockManager::ampel( $p, $bestand );
+			if ( 'gruen' === $ampel ) {
+				continue;
 			}
+			$warnungen[] = array(
+				'name'    => $p->name,
+				'ampel'   => $ampel,
+				'bestand' => $bestand,
+				'einheit' => $p->basis_einheit,
+				'min'     => (float) $p->mindestbestand,
+			);
 		}
 
 		$offene_tickets   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lw16_tickets WHERE status NOT IN ('geloest')" ); // phpcs:ignore
@@ -164,9 +193,10 @@ class Dashboard {
 		return array(
 			'umsatz_monat'        => $umsatz_monat,
 			'umsatz_jahr'         => $umsatz_jahr,
-			'offene_bestellungen' => count( $offene ),
-			'bestellungen_heute'  => count( $heute ),
-			'lagerwarnungen'      => $lagerwarnungen,
+			'offene_bestellungen' => isset( $offene->total ) ? (int) $offene->total : 0,
+			'bestellungen_heute'  => isset( $heute->total ) ? (int) $heute->total : 0,
+			'lagerwarnungen'      => count( $warnungen ),
+			'lagerwarnungen_liste' => $warnungen,
 			'offene_tickets'      => $offene_tickets,
 			'offene_picklisten'   => $offene_picklisten,
 		);
@@ -175,22 +205,7 @@ class Dashboard {
 	/**
 	 * Lagerwarnungen-Widget.
 	 */
-	protected function render_low_stock_warning() {
-		$produkte = Repository::get_products();
-		$warnings = array();
-		foreach ( $produkte as $p ) {
-			$ampel = StockManager::ampel( $p );
-			if ( 'gruen' !== $ampel ) {
-				$warnings[] = array(
-					'name'    => $p->name,
-					'ampel'   => $ampel,
-					'bestand' => Repository::get_stock( $p->id ),
-					'einheit' => $p->basis_einheit,
-					'min'     => (float) $p->mindestbestand,
-				);
-			}
-		}
-
+	protected function render_low_stock_warning( array $warnings ) {
 		if ( empty( $warnings ) ) {
 			return;
 		}
@@ -258,7 +273,7 @@ class Dashboard {
 	 * @return string
 	 */
 	protected static function euro( $n ) {
-		return number_format( (float) $n, 2, ',', '.' ) . ' €';
+		return Format::euro( $n );
 	}
 
 	/**
@@ -268,7 +283,6 @@ class Dashboard {
 	 * @return string
 	 */
 	protected static function fmt( $n ) {
-		$s = number_format( (float) $n, 2, ',', '.' );
-		return rtrim( rtrim( $s, '0' ), ',' );
+		return Format::qty( $n );
 	}
 }
