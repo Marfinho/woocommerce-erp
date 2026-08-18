@@ -65,6 +65,48 @@ class Calc {
 	}
 
 	/**
+	 * Einlösung auf die Bestellsumme deckeln und auf Guthaben/Punkte aufteilen.
+	 *
+	 * Entscheidend ist, dass Deckelung und Aufteilung *gemeinsam* bestimmt
+	 * werden: wird der Rabatt gedeckelt, die Abbuchung aber vom vollen
+	 * Wunschbetrag genommen, verliert der Kunde die Differenz ersatzlos.
+	 *
+	 * Guthaben wird vor Punkten verbraucht – es ist ein exakter Eurobetrag,
+	 * während Punkte beim Umrechnen auf Cent abgerundet werden. Von den
+	 * Punkten werden nur so viele eingezogen, wie der gewährte Eurobetrag
+	 * tatsächlich erfordert.
+	 *
+	 * @param float $credit_wunsch Gewünschtes Guthaben in Euro.
+	 * @param int   $points_wunsch Gewünschte Punkte.
+	 * @param float $basis         Deckelungsgrundlage (Warenkorbsumme).
+	 * @param int   $einloesewert  Punkte für 1 Euro.
+	 * @return array {credit, points, rabatt}
+	 */
+	public static function split_redemption( $credit_wunsch, $points_wunsch, $basis, $einloesewert ) {
+		$einloesewert  = max( 1, (int) $einloesewert );
+		$credit_wunsch = max( 0, (float) $credit_wunsch );
+		$points_wunsch = max( 0, (int) $points_wunsch );
+		$basis         = max( 0, (float) $basis );
+
+		$credit_used = min( $credit_wunsch, $basis );
+		$rest        = $basis - $credit_used;
+
+		$points_euro_used = min( self::points_to_euro( $points_wunsch, $einloesewert ), $rest );
+
+		$points_used = 0;
+		if ( $points_euro_used > 0 ) {
+			$points_used = (int) ceil( $points_euro_used * $einloesewert );
+			$points_used = max( 0, min( $points_used, $points_wunsch ) );
+		}
+
+		return array(
+			'credit' => round( $credit_used, 2 ),
+			'points' => $points_used,
+			'rabatt' => round( $credit_used + $points_euro_used, 2 ),
+		);
+	}
+
+	/**
 	 * Druckerkosten pro Stunde.
 	 *
 	 * @param float $anschaffung   Anschaffungspreis.

@@ -260,52 +260,6 @@ class LoyaltyFrontend {
 	}
 
 	/**
-	 * Tatsächlich anwendbare Einlösung aus dem Einlöse-Wunsch berechnen.
-	 *
-	 * Der Wunsch wird auf die Warenkorbsumme gedeckelt. Entscheidend ist, dass
-	 * die Aufteilung auf Guthaben und Punkte hier *einmal* bestimmt und dann
-	 * sowohl für die Rabattzeile als auch für die spätere Abbuchung verwendet
-	 * wird. Vorher deckelte der Warenkorb den Rabatt, die Abbuchung nahm aber
-	 * den vollen Wunschbetrag – wer 50 € Guthaben auf eine 10-€-Bestellung
-	 * einlöste, verlor 40 € ersatzlos.
-	 *
-	 * Guthaben wird vor Punkten verbraucht: es ist ein exakter Eurobetrag,
-	 * während Punkte beim Umrechnen abgerundet werden.
-	 *
-	 * @param float $credit_wunsch Gewünschtes Guthaben.
-	 * @param int   $points_wunsch Gewünschte Punkte.
-	 * @param float $basis         Deckelungsgrundlage (Warenkorbsumme).
-	 * @return array {credit, points, rabatt}
-	 */
-	public static function split_redemption( $credit_wunsch, $points_wunsch, $basis ) {
-		$einloesewert = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
-
-		$credit_wunsch = max( 0, (float) $credit_wunsch );
-		$points_wunsch = max( 0, (int) $points_wunsch );
-		$basis         = max( 0, (float) $basis );
-
-		$credit_used = min( $credit_wunsch, $basis );
-		$rest        = $basis - $credit_used;
-
-		$points_euro_wunsch = Calc::points_to_euro( $points_wunsch, $einloesewert );
-		$points_euro_used   = min( $points_euro_wunsch, $rest );
-
-		// Nur so viele Punkte verbrauchen, wie für den gewährten Eurobetrag
-		// nötig sind – der Rest bleibt dem Kunden erhalten.
-		$points_used = (int) ceil( $points_euro_used * $einloesewert );
-		$points_used = max( 0, min( $points_used, $points_wunsch ) );
-		if ( $points_euro_used <= 0 ) {
-			$points_used = 0;
-		}
-
-		return array(
-			'credit' => round( $credit_used, 2 ),
-			'points' => $points_used,
-			'rabatt' => round( $credit_used + $points_euro_used, 2 ),
-		);
-	}
-
-	/**
 	 * Deckelungsgrundlage: Zwischensumme inkl. Steuer.
 	 *
 	 * Bewusst ohne Versandkosten, damit die Einlösung nie mehr als den Wert
@@ -347,7 +301,13 @@ class LoyaltyFrontend {
 			LoyaltyRepository::get_points( $user_id )
 		);
 
-		$angewandt = self::split_redemption( $credit_wunsch, $points_wunsch, $this->redemption_base( $cart ) );
+		// Aufteilung in der seiteneffektfreien, getesteten Calc-Funktion.
+		$angewandt = Calc::split_redemption(
+			$credit_wunsch,
+			$points_wunsch,
+			$this->redemption_base( $cart ),
+			(int) Settings::get( 'punkte_einloesewert', 100 )
+		);
 
 		// Ergebnis in der Session festhalten, damit record_redemption exakt
 		// das abbucht, was auch als Rabatt gewährt wurde.

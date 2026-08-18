@@ -105,6 +105,75 @@ class CalcTest extends TestCase {
 	}
 
 	/* ----------------------------------------------------------------
+	 * Einlöse-Aufteilung (Guthaben + Punkte)
+	 * -------------------------------------------------------------- */
+
+	public function test_split_redemption_within_basis() {
+		// 10 € Guthaben + 500 Punkte (= 5 €) auf 50 € Warenkorb: alles nutzbar.
+		$r = Calc::split_redemption( 10, 500, 50, 100 );
+		$this->assertSame( 10.0, $r['credit'] );
+		$this->assertSame( 500, $r['points'] );
+		$this->assertSame( 15.0, $r['rabatt'] );
+	}
+
+	/**
+	 * Der eigentliche Fehlerfall: der Rabatt wurde gedeckelt, abgebucht
+	 * wurde aber der volle Wunschbetrag. Es darf nie mehr abgebucht als
+	 * gewährt werden.
+	 */
+	public function test_split_redemption_never_deducts_more_than_granted() {
+		$r = Calc::split_redemption( 50, 0, 10, 100 );
+		$this->assertSame( 10.0, $r['rabatt'] );
+		$this->assertSame( 10.0, $r['credit'], 'Es darf nur das abgebucht werden, was auch Rabatt wurde.' );
+		$this->assertSame( 0, $r['points'] );
+	}
+
+	public function test_split_redemption_keeps_unused_points() {
+		// 2 € Warenkorb, 10 € Guthaben: die Punkte werden gar nicht gebraucht.
+		$r = Calc::split_redemption( 10, 1000, 2, 100 );
+		$this->assertSame( 2.0, $r['credit'] );
+		$this->assertSame( 0, $r['points'], 'Nicht benötigte Punkte bleiben erhalten.' );
+		$this->assertSame( 2.0, $r['rabatt'] );
+	}
+
+	public function test_split_redemption_uses_credit_before_points() {
+		// 5 € Guthaben + 1000 Punkte (= 10 €) auf 8 € Warenkorb.
+		// Guthaben zuerst: 5 €, Rest 3 € aus 300 Punkten.
+		$r = Calc::split_redemption( 5, 1000, 8, 100 );
+		$this->assertSame( 5.0, $r['credit'] );
+		$this->assertSame( 300, $r['points'] );
+		$this->assertSame( 8.0, $r['rabatt'] );
+	}
+
+	public function test_split_redemption_points_only() {
+		$r = Calc::split_redemption( 0, 250, 100, 100 );
+		$this->assertSame( 0.0, $r['credit'] );
+		$this->assertSame( 250, $r['points'] );
+		$this->assertSame( 2.5, $r['rabatt'] );
+	}
+
+	public function test_split_redemption_zero_basis() {
+		$r = Calc::split_redemption( 50, 5000, 0, 100 );
+		$this->assertSame( 0.0, $r['credit'] );
+		$this->assertSame( 0, $r['points'] );
+		$this->assertSame( 0.0, $r['rabatt'] );
+	}
+
+	public function test_split_redemption_never_exceeds_available_points() {
+		// Deckelung darf nie mehr Punkte einziehen, als gewünscht waren.
+		$r = Calc::split_redemption( 0, 99, 100, 100 );
+		$this->assertLessThanOrEqual( 99, $r['points'] );
+		$this->assertSame( 0.99, $r['rabatt'] );
+	}
+
+	public function test_split_redemption_guards_invalid_input() {
+		$r = Calc::split_redemption( -5, -100, 50, 0 );
+		$this->assertSame( 0.0, $r['credit'] );
+		$this->assertSame( 0, $r['points'] );
+		$this->assertSame( 0.0, $r['rabatt'] );
+	}
+
+	/* ----------------------------------------------------------------
 	 * Preiskalkulation
 	 * -------------------------------------------------------------- */
 
