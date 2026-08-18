@@ -11,6 +11,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Calc;
+use Lindenweg16\Core\Time;
+use Lindenweg16\Core\AuditLog;
 
 /**
  * Bindet Guthaben-/Punkte-Einlösung im Checkout ein und stellt den
@@ -37,8 +39,10 @@ class LoyaltyFrontend {
 		add_action( 'wp_ajax_nopriv_lw16_set_redeem', array( $this, 'ajax_set_redeem' ) );
 		add_action( 'woocommerce_cart_calculate_fees', array( $this, 'apply_redeem_fee' ) );
 
-		// Verbuchung bei Bestellabschluss.
+		// Verbuchung bei Bestellabschluss – klassischer Checkout und Store API
+		// (Block-Checkout), damit die Einlösung in beiden Wegen verbucht wird.
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'record_redemption' ), 10, 1 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'record_redemption' ), 10, 1 );
 	}
 
 	/* --------------------------------------------------------------------
@@ -256,6 +260,65 @@ class LoyaltyFrontend {
 	}
 
 	/**
+	 * Tatsächlich anwendbare Einlösung aus dem Einlöse-Wunsch berechnen.
+	 *
+	 * Der Wunsch wird auf die Warenkorbsumme gedeckelt. Entscheidend ist, dass
+	 * die Aufteilung auf Guthaben und Punkte hier *einmal* bestimmt und dann
+	 * sowohl für die Rabattzeile als auch für die spätere Abbuchung verwendet
+	 * wird. Vorher deckelte der Warenkorb den Rabatt, die Abbuchung nahm aber
+	 * den vollen Wunschbetrag – wer 50 € Guthaben auf eine 10-€-Bestellung
+	 * einlöste, verlor 40 € ersatzlos.
+	 *
+	 * Guthaben wird vor Punkten verbraucht: es ist ein exakter Eurobetrag,
+	 * während Punkte beim Umrechnen abgerundet werden.
+	 *
+	 * @param float $credit_wunsch Gewünschtes Guthaben.
+	 * @param int   $points_wunsch Gewünschte Punkte.
+	 * @param float $basis         Deckelungsgrundlage (Warenkorbsumme).
+	 * @return array {credit, points, rabatt}
+	 */
+	public static function split_redemption( $credit_wunsch, $points_wunsch, $basis ) {
+		$einloesewert = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
+
+		$credit_wunsch = max( 0, (float) $credit_wunsch );
+		$points_wunsch = max( 0, (int) $points_wunsch );
+		$basis         = max( 0, (float) $basis );
+
+		$credit_used = min( $credit_wunsch, $basis );
+		$rest        = $basis - $credit_used;
+
+		$points_euro_wunsch = Calc::points_to_euro( $points_wunsch, $einloesewert );
+		$points_euro_used   = min( $points_euro_wunsch, $rest );
+
+		// Nur so viele Punkte verbrauchen, wie für den gewährten Eurobetrag
+		// nötig sind – der Rest bleibt dem Kunden erhalten.
+		$points_used = (int) ceil( $points_euro_used * $einloesewert );
+		$points_used = max( 0, min( $points_used, $points_wunsch ) );
+		if ( $points_euro_used <= 0 ) {
+			$points_used = 0;
+		}
+
+		return array(
+			'credit' => round( $credit_used, 2 ),
+			'points' => $points_used,
+			'rabatt' => round( $credit_used + $points_euro_used, 2 ),
+		);
+	}
+
+	/**
+	 * Deckelungsgrundlage: Zwischensumme inkl. Steuer.
+	 *
+	 * Bewusst ohne Versandkosten, damit die Einlösung nie mehr als den Wert
+	 * der Ware ausmacht und der Gesamtbetrag nicht negativ werden kann.
+	 *
+	 * @param \WC_Cart $cart Warenkorb.
+	 * @return float
+	 */
+	protected function redemption_base( $cart ) {
+		return (float) $cart->get_subtotal() + (float) $cart->get_subtotal_tax();
+	}
+
+	/**
 	 * Einlösung als negative Fee anwenden, gedeckelt auf die Bestellsumme.
 	 *
 	 * @param \WC_Cart $cart Warenkorb.
@@ -273,35 +336,69 @@ class LoyaltyFrontend {
 			return;
 		}
 
-		$einloesewert = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
-		$credit       = isset( $session['credit'] ) ? (float) $session['credit'] : 0;
-		$points       = isset( $session['points'] ) ? (int) $session['points'] : 0;
-		$points_euro  = Calc::points_to_euro( $points, $einloesewert );
+		// Gegen die *aktuellen* Salden prüfen: zwischen Auswahl und Abschluss
+		// kann sich das Guthaben geändert haben.
+		$credit_wunsch = min(
+			isset( $session['credit'] ) ? (float) $session['credit'] : 0,
+			LoyaltyRepository::get_credit( $user_id )
+		);
+		$points_wunsch = min(
+			isset( $session['points'] ) ? (int) $session['points'] : 0,
+			LoyaltyRepository::get_points( $user_id )
+		);
 
-		// Deckeln auf die Warenkorbsumme (nie unter 0 €).
-		$rabatt = Calc::cap_redemption( $credit + $points_euro, (float) $cart->get_subtotal() );
-		if ( $rabatt > 0 ) {
-			$cart->add_fee( __( 'Guthaben/Punkte eingelöst', 'lindenweg16' ), -1 * $rabatt );
+		$angewandt = self::split_redemption( $credit_wunsch, $points_wunsch, $this->redemption_base( $cart ) );
+
+		// Ergebnis in der Session festhalten, damit record_redemption exakt
+		// das abbucht, was auch als Rabatt gewährt wurde.
+		$session['applied_credit'] = $angewandt['credit'];
+		$session['applied_points'] = $angewandt['points'];
+		$session['applied_total']  = $angewandt['rabatt'];
+		WC()->session->set( 'lw16_redeem', $session );
+
+		if ( $angewandt['rabatt'] > 0 ) {
+			$cart->add_fee( __( 'Guthaben/Punkte eingelöst', 'lindenweg16' ), -1 * $angewandt['rabatt'] );
 		}
 	}
 
 	/**
 	 * Bei Bestellabschluss die Einlösung ins Ledger schreiben und Salden mindern.
 	 *
-	 * @param int $order_id Bestell-ID.
+	 * @param int|\WC_Order $order_or_id Bestell-ID oder Bestellobjekt (Store API).
 	 */
-	public function record_redemption( $order_id ) {
-		$user_id = get_current_user_id();
+	public function record_redemption( $order_or_id ) {
+		$order = is_numeric( $order_or_id ) ? wc_get_order( $order_or_id ) : $order_or_id;
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+
+		$user_id = (int) $order->get_customer_id();
+		if ( ! $user_id ) {
+			$user_id = get_current_user_id();
+		}
 		if ( ! $user_id || ! WC()->session ) {
 			return;
 		}
+
+		// Doppelte Verbuchung verhindern (klassischer Checkout und Store API
+		// können beide feuern).
+		if ( $order->get_meta( '_lw16_redeem_recorded' ) ) {
+			return;
+		}
+
 		$session = WC()->session->get( 'lw16_redeem', array() );
 		if ( empty( $session ) ) {
 			return;
 		}
 
-		$credit = isset( $session['credit'] ) ? (float) $session['credit'] : 0;
-		$points = isset( $session['points'] ) ? (int) $session['points'] : 0;
+		// Nur den tatsächlich gewährten Rabatt abbuchen.
+		$credit = isset( $session['applied_credit'] ) ? (float) $session['applied_credit'] : 0;
+		$points = isset( $session['applied_points'] ) ? (int) $session['applied_points'] : 0;
+
+		if ( $credit <= 0 && $points <= 0 ) {
+			WC()->session->set( 'lw16_redeem', array() );
+			return;
+		}
 
 		if ( $credit > 0 ) {
 			LoyaltyRepository::adjust_credit( $user_id, -1 * $credit );
@@ -311,7 +408,7 @@ class LoyaltyFrontend {
 			LoyaltyRepository::add_ledger(
 				array(
 					'user_id'  => $user_id,
-					'order_id' => $order_id,
+					'order_id' => $order->get_id(),
 					'points'   => -1 * $points,
 					'type'     => 'redeemed',
 					'status'   => 'available',
@@ -319,6 +416,24 @@ class LoyaltyFrontend {
 				)
 			);
 		}
+
+		// Auf der Bestellung festhalten, damit ein Storno die Einlösung
+		// zurückgeben kann.
+		$order->update_meta_data( '_lw16_redeemed_credit', $credit );
+		$order->update_meta_data( '_lw16_redeemed_points', $points );
+		$order->update_meta_data( '_lw16_redeem_recorded', Time::now() );
+		$order->save();
+
+		AuditLog::record(
+			'guthaben_eingeloest',
+			'order',
+			$order->get_id(),
+			array(
+				'user_id' => $user_id,
+				'credit'  => $credit,
+				'points'  => $points,
+			)
+		);
 
 		// Reservierung aufheben.
 		WC()->session->set( 'lw16_redeem', array() );
@@ -374,6 +489,8 @@ class LoyaltyFrontend {
 			'earned'            => __( 'Bestellung', 'lindenweg16' ),
 			'redeemed'          => __( 'Eingelöst', 'lindenweg16' ),
 			'reversed'          => __( 'Storniert', 'lindenweg16' ),
+			'review_bonus'      => __( 'Bonus für Bewertung', 'lindenweg16' ),
+			'redeem_reversed'   => __( 'Einlösung storniert', 'lindenweg16' ),
 			'manual_adjustment' => __( 'Manuelle Anpassung', 'lindenweg16' ),
 		);
 		return isset( $map[ $l->type ] ) ? $map[ $l->type ] : $l->type;

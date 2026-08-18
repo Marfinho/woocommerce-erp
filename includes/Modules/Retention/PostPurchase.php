@@ -10,6 +10,9 @@ namespace Lindenweg16\Modules\Retention;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\Calc;
+use Lindenweg16\Core\Installer;
+use Lindenweg16\Core\Time;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
@@ -26,8 +29,10 @@ class PostPurchase {
 	public function register() {
 		// Läuft im täglichen Loyalty-Cron mit.
 		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process' ) );
-		// Punkte-Bonus, wenn eine echte Produktbewertung eingeht.
+		// Punkte-Bonus, wenn eine echte Produktbewertung eingeht …
 		add_action( 'comment_post', array( $this, 'maybe_award_review_bonus' ), 10, 2 );
+		// … und nachträglich, sobald eine moderierte Bewertung freigegeben wird.
+		add_action( 'transition_comment_status', array( $this, 'on_comment_status_change' ), 10, 3 );
 	}
 
 	/**
@@ -51,13 +56,22 @@ class PostPurchase {
 	 * @param string $typ       thankyou|review.
 	 */
 	protected function process_batch( $flag_meta, $tage, $typ ) {
-		$grenze = gmdate( 'Y-m-d H:i:s', time() - $tage * DAY_IN_SECONDS );
+		$grenze = time() - $tage * DAY_IN_SECONDS;
+
+		// Stichtag: Bestellungen von *vor* der Plugin-Installation dürfen die
+		// Automatik nicht auslösen. Ohne diese Grenze würde der erste
+		// Cron-Lauf die komplette Bestellhistorie anmailen.
+		$start = get_option( Installer::POSTPURCHASE_START_OPTION );
+		$start_ts = $start ? strtotime( $start ) : 0;
+		if ( $start_ts && $start_ts > $grenze ) {
+			return;
+		}
 
 		$orders = wc_get_orders(
 			array(
 				'status'       => array( 'wc-completed' ),
 				'limit'        => 50,
-				'date_created' => '<=' . strtotime( $grenze ),
+				'date_created' => ( $start_ts ? $start_ts : 0 ) . '...' . $grenze,
 				'meta_query'   => array( // phpcs:ignore WordPress.DB.SlowDBQuery
 					array(
 						'key'     => $flag_meta,
@@ -74,7 +88,7 @@ class PostPurchase {
 			} else {
 				$this->send_review_request( $order );
 			}
-			$order->update_meta_data( $flag_meta, current_time( 'mysql' ) );
+			$order->update_meta_data( $flag_meta, Time::now() );
 			$order->save();
 		}
 	}
@@ -125,32 +139,73 @@ class PostPurchase {
 	 * Punkte-Bonus vergeben, wenn eine echte Produktbewertung eingeht.
 	 *
 	 * @param int        $comment_id Kommentar-ID.
-	 * @param int|string $approved   Freigabestatus.
+	 * @param int|string $approved   Freigabestatus (1 = freigegeben).
 	 */
-	public function maybe_award_review_bonus( $comment_id, $approved ) {
+	public function maybe_award_review_bonus( $comment_id, $approved = 1 ) {
+		$this->award_review_bonus( $comment_id, 1 === (int) $approved );
+	}
+
+	/**
+	 * Bonus nachtragen, wenn eine Bewertung später freigegeben wird.
+	 *
+	 * @param string      $new_status Neuer Status.
+	 * @param string      $old_status Alter Status.
+	 * @param \WP_Comment $comment    Kommentar.
+	 */
+	public function on_comment_status_change( $new_status, $old_status, $comment ) {
+		if ( 'approved' !== $new_status || ! $comment ) {
+			return;
+		}
+		$this->award_review_bonus( (int) $comment->comment_ID, true );
+	}
+
+	/**
+	 * Gemeinsame Prüf- und Vergabelogik für den Bewertungsbonus.
+	 *
+	 * Die Bedingungen stecken in der getesteten Calc::review_bonus_eligible().
+	 * Vorher wurde der Freigabestatus komplett ignoriert – Bewertungen in
+	 * Moderation oder im Spam lösten sofort Punkte aus – und ein Kaufnachweis
+	 * wurde nie geprüft.
+	 *
+	 * @param int  $comment_id Kommentar-ID.
+	 * @param bool $approved   Ob die Bewertung freigegeben ist.
+	 */
+	protected function award_review_bonus( $comment_id, $approved ) {
 		$comment = get_comment( $comment_id );
 		if ( ! $comment ) {
 			return;
 		}
-		// Nur Produktbewertungen.
-		if ( 'product' !== get_post_type( $comment->comment_post_ID ) ) {
-			return;
+
+		$product_id = (int) $comment->comment_post_ID;
+		$user_id    = (int) $comment->user_id;
+		$min        = (int) Settings::get( 'review_min_zeichen', 15 );
+		$flag       = 'lw16_review_bonus_' . $product_id;
+
+		$has_bought = false;
+		if ( $user_id && function_exists( 'wc_customer_bought_product' ) ) {
+			$user       = get_userdata( $user_id );
+			$has_bought = wc_customer_bought_product( $user ? $user->user_email : '', $user_id, $product_id );
 		}
-		$min = (int) Settings::get( 'review_min_zeichen', 15 );
-		if ( mb_strlen( trim( $comment->comment_content ) ) < $min ) {
-			return;
-		}
-		$user_id = (int) $comment->user_id;
-		if ( ! $user_id ) {
-			return;
-		}
-		// Nur ein Bonus je Nutzer und Produkt.
-		$flag = 'lw16_review_bonus_' . $comment->comment_post_ID;
-		if ( get_user_meta( $user_id, $flag, true ) ) {
+
+		$eligible = Calc::review_bonus_eligible(
+			get_post_type( $product_id ),
+			mb_strlen( trim( (string) $comment->comment_content ) ),
+			$min,
+			$user_id,
+			(bool) get_user_meta( $user_id, $flag, true ),
+			(bool) $approved,
+			(bool) $has_bought
+		);
+
+		if ( ! $eligible ) {
 			return;
 		}
 
 		$bonus = (int) Settings::get( 'review_bonus_punkte', 20 );
+		if ( $bonus <= 0 ) {
+			return;
+		}
+
 		LoyaltyRepository::adjust_points( $user_id, $bonus );
 		LoyaltyRepository::add_ledger(
 			array(

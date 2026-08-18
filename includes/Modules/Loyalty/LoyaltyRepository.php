@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Loyalty;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Time;
+
 /**
  * Kapselt Referrals, Punkte-Ledger und die User-Meta-Salden.
  */
@@ -82,7 +84,7 @@ class LoyaltyRepository {
 	 */
 	public static function create_referral( array $data ) {
 		global $wpdb;
-		$data['created_at'] = current_time( 'mysql' );
+		$data['created_at'] = Time::now();
 		$wpdb->insert( self::table( 'referrals' ), $data );
 		return (int) $wpdb->insert_id;
 	}
@@ -97,7 +99,7 @@ class LoyaltyRepository {
 		global $wpdb;
 		$data = array( 'status' => $status );
 		if ( 'completed' === $status ) {
-			$data['completed_at'] = current_time( 'mysql' );
+			$data['completed_at'] = Time::now();
 		}
 		$wpdb->update( self::table( 'referrals' ), $data, array( 'id' => (int) $id ) );
 	}
@@ -147,7 +149,7 @@ class LoyaltyRepository {
 	public static function due_referrals( $wartezeit_tage ) {
 		global $wpdb;
 		$t     = self::table( 'referrals' );
-		$grenze = gmdate( 'Y-m-d H:i:s', time() - $wartezeit_tage * DAY_IN_SECONDS );
+		$grenze = Time::ago( $wartezeit_tage * DAY_IN_SECONDS );
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'pending' AND created_at <= %s", $grenze ) ); // phpcs:ignore
 	}
 
@@ -163,7 +165,7 @@ class LoyaltyRepository {
 	 */
 	public static function add_ledger( array $data ) {
 		global $wpdb;
-		$data['created_at'] = current_time( 'mysql' );
+		$data['created_at'] = Time::now();
 		$wpdb->insert( self::table( 'points_ledger' ), $data );
 		return (int) $wpdb->insert_id;
 	}
@@ -203,7 +205,7 @@ class LoyaltyRepository {
 	public static function due_points() {
 		global $wpdb;
 		$t = self::table( 'points_ledger' );
-		$now = current_time( 'mysql' );
+		$now = Time::now();
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE type = 'earned' AND status = 'pending' AND available_at <= %s", $now ) ); // phpcs:ignore
 	}
 

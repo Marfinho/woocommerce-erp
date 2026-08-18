@@ -15,6 +15,7 @@ use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\Calc;
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Time;
 
 /**
  * Verdrahtet Referral-Tracking, Reward-Berechnung mit Betrugsprüfung,
@@ -25,11 +26,24 @@ class LoyaltyModule {
 	const COOKIE = 'lw16ref';
 
 	/**
+	 * Order-Meta, in dem der Werber-Code beim Checkout gesichert wird.
+	 */
+	const META_REF_CODE = '_lw16_ref_code';
+	const META_REF_TS   = '_lw16_ref_ts';
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
 		// Cookie-Tracking (nur beim ersten Aufruf setzen).
 		add_action( 'init', array( $this, 'maybe_set_referral_cookie' ) );
+
+		// Werber-Code im Checkout festhalten. Das MUSS hier passieren und
+		// nicht beim Statuswechsel: 'completed' wird typischerweise im Admin
+		// oder per Cron ausgelöst, wo das Cookie des Kunden gar nicht
+		// vorliegt (bzw. das des Admins gelesen würde).
+		add_action( 'woocommerce_checkout_order_processed', array( $this, 'capture_referral_source' ), 10, 1 );
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'capture_referral_source' ), 10, 1 );
 
 		// Bestellabschluss: schnelle, synchrone Aktionen.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_completed' ), 10, 1 );
@@ -115,7 +129,7 @@ class LoyaltyModule {
 						'type'         => 'earned',
 						'status'       => 'pending',
 						'notiz'        => __( 'Bestellung', 'lindenweg16' ),
-						'available_at' => gmdate( 'Y-m-d H:i:s', time() + $wartezeit * DAY_IN_SECONDS ),
+						'available_at' => Time::in( $wartezeit * DAY_IN_SECONDS ),
 					)
 				);
 			}
@@ -129,16 +143,47 @@ class LoyaltyModule {
 	}
 
 	/**
-	 * Referral aus Cookie erzeugen, inklusive Betrugsprüfung.
+	 * Werber-Code und Zeitstempel beim Checkout auf der Bestellung sichern.
+	 *
+	 * @param int|\WC_Order $order_or_id Bestell-ID oder Bestellobjekt.
+	 */
+	public function capture_referral_source( $order_or_id ) {
+		$order = is_numeric( $order_or_id ) ? wc_get_order( $order_or_id ) : $order_or_id;
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+		if ( empty( $_COOKIE[ self::COOKIE ] ) ) {
+			return;
+		}
+		if ( $order->get_meta( self::META_REF_CODE ) ) {
+			return;
+		}
+
+		$code = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
+		if ( ! $code ) {
+			return;
+		}
+
+		$order->update_meta_data( self::META_REF_CODE, $code );
+		if ( ! empty( $_COOKIE[ self::COOKIE . '_ts' ] ) ) {
+			$order->update_meta_data( self::META_REF_TS, (int) $_COOKIE[ self::COOKIE . '_ts' ] );
+		}
+		$order->save();
+	}
+
+	/**
+	 * Referral aus dem beim Checkout gesicherten Code erzeugen,
+	 * inklusive Betrugsprüfung.
 	 *
 	 * @param \WC_Order $order Bestellung.
 	 */
 	protected function maybe_create_referral( $order ) {
-		if ( empty( $_COOKIE[ self::COOKIE ] ) ) {
+		$code = (string) $order->get_meta( self::META_REF_CODE );
+		if ( ! $code ) {
 			return;
 		}
-		$code         = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
-		$referrer_id  = LoyaltyRepository::user_id_by_code( $code );
+
+		$referrer_id = LoyaltyRepository::user_id_by_code( $code );
 		if ( ! $referrer_id ) {
 			return;
 		}
@@ -171,7 +216,7 @@ class LoyaltyModule {
 			)
 		);
 
-		if ( 'review' === $status ) {
+		if ( 'review' === $status && $referral_id ) {
 			$this->notify_review( $referral_id, $review_grund, $reward );
 		}
 	}
@@ -227,10 +272,15 @@ class LoyaltyModule {
 			}
 		}
 
-		// Sehr schnelle Bestellung nach Cookie-Setzung.
-		if ( ! empty( $_COOKIE[ self::COOKIE . '_ts' ] ) ) {
-			$diff  = time() - (int) $_COOKIE[ self::COOKIE . '_ts' ];
-			$grenze = (int) Settings::get( 'referral_schnellkauf_sek', 60 );
+		// Sehr schnelle Bestellung nach Cookie-Setzung. Gemessen wird gegen
+		// den Bestellzeitpunkt, nicht gegen "jetzt" – der Reifeprozess läuft
+		// asynchron und wäre sonst immer weit über der Grenze.
+		$cookie_ts = (int) $order->get_meta( self::META_REF_TS );
+		if ( $cookie_ts > 0 ) {
+			$created = $order->get_date_created();
+			$order_ts = $created ? $created->getTimestamp() : time();
+			$diff     = $order_ts - $cookie_ts;
+			$grenze   = (int) Settings::get( 'referral_schnellkauf_sek', 60 );
 			if ( $diff >= 0 && $diff < $grenze ) {
 				$gruende[] = __( 'sehr schnelle Bestellung nach Cookie-Setzung', 'lindenweg16' );
 			}
@@ -269,6 +319,10 @@ class LoyaltyModule {
 	 */
 	public function on_order_reversed( $order_id ) {
 		global $wpdb;
+
+		// Zuerst die im Checkout eingelöste Einlösung zurückgeben.
+		$this->restore_redemption( $order_id );
+
 		$t   = LoyaltyRepository::table( 'referrals' );
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE referred_order_id = %d", $order_id ) ); // phpcs:ignore
 		if ( ! $row ) {
@@ -289,6 +343,63 @@ class LoyaltyModule {
 			}
 			LoyaltyRepository::set_ledger_status( (int) $pl->id, 'reversed' );
 		}
+	}
+
+	/**
+	 * Im Checkout eingelöstes Guthaben und Punkte bei Storno zurückgeben.
+	 *
+	 * Ohne diesen Schritt behält der Kunde zwar die Rückerstattung, verliert
+	 * aber das eingesetzte Guthaben und die Punkte ersatzlos.
+	 *
+	 * @param int $order_id Bestell-ID.
+	 */
+	protected function restore_redemption( $order_id ) {
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+		if ( $order->get_meta( '_lw16_redeem_restored' ) ) {
+			return;
+		}
+
+		$user_id = (int) $order->get_customer_id();
+		$credit  = (float) $order->get_meta( '_lw16_redeemed_credit' );
+		$points  = (int) $order->get_meta( '_lw16_redeemed_points' );
+
+		if ( ! $user_id || ( $credit <= 0 && $points <= 0 ) ) {
+			return;
+		}
+
+		if ( $credit > 0 ) {
+			LoyaltyRepository::adjust_credit( $user_id, $credit );
+		}
+		if ( $points > 0 ) {
+			LoyaltyRepository::adjust_points( $user_id, $points );
+			LoyaltyRepository::add_ledger(
+				array(
+					'user_id'  => $user_id,
+					'order_id' => $order_id,
+					'points'   => $points,
+					'type'     => 'redeem_reversed',
+					'status'   => 'available',
+					'notiz'    => __( 'Einlösung storniert', 'lindenweg16' ),
+				)
+			);
+		}
+
+		$order->update_meta_data( '_lw16_redeem_restored', Time::now() );
+		$order->save();
+
+		AuditLog::record(
+			'einloesung_storniert',
+			'order',
+			$order_id,
+			array(
+				'user_id' => $user_id,
+				'credit'  => $credit,
+				'points'  => $points,
+			)
+		);
 	}
 
 	/**
