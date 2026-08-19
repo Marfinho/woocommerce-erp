@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '5';
+	const DB_VERSION = '6';
 
 	/**
 	 * Aktivierungsroutine.
@@ -433,6 +433,9 @@ class Installer {
 			objekt_typ VARCHAR(50) NULL,
 			objekt_id BIGINT UNSIGNED NULL,
 			details LONGTEXT NULL,
+			payload_before_json LONGTEXT NULL,
+			payload_after_json LONGTEXT NULL,
+			grund VARCHAR(255) NULL,
 			hash VARCHAR(64) NOT NULL DEFAULT '',
 			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
 			erstellt_am DATETIME NOT NULL,
@@ -614,9 +617,15 @@ class Installer {
 			KEY ergebnis (ergebnis)
 		) {$charset_collate};";
 
+		// --- Modul Betrieb ------------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\Betrieb\Schema::tables( $p, $charset_collate ) );
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
+
+		// Startwerte der Kalkulationsannahmen (nur wenn noch keine vorhanden).
+		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_defaults();
 
 		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
 		self::maybe_backfill_hashes();

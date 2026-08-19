@@ -1,0 +1,51 @@
+/* Modul Betrieb – ergänzt admin.css, keine externen Abhängigkeiten. */
+
+.lw16-wrap .lw16-tabs {
+	margin: 12px 0 18px;
+	border-bottom: 1px solid #c3c4c7;
+	padding-bottom: 6px;
+}
+
+.lw16-wrap .lw16-tabs a {
+	display: inline-block;
+	padding: 6px 12px;
+	margin-right: 4px;
+	text-decoration: none;
+	border: 1px solid transparent;
+	border-radius: 3px 3px 0 0;
+}
+
+.lw16-wrap .lw16-tabs a.active {
+	background: #fff;
+	border-color: #c3c4c7;
+	border-bottom-color: #fff;
+	font-weight: 600;
+}
+
+.lw16-wrap table.widefat td form {
+	display: flex;
+	gap: 4px;
+	flex-wrap: wrap;
+	align-items: center;
+	margin: 0;
+}
+
+.lw16-wrap table.widefat ul {
+	list-style: none;
+	font-size: 12px;
+	color: #50575e;
+}
+
+/* Ampel für Kennzahlen und Bestände. */
+.lw16-ampel {
+	display: inline-block;
+	min-width: 8px;
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.lw16-ampel--gruen { background: #d5e5d5; color: #1e4620; }
+.lw16-ampel--gelb  { background: #f8e5b9; color: #5c4813; }
+.lw16-ampel--rot   { background: #f4c7c3; color: #6b1e18; }

@@ -38,8 +38,31 @@ includes/Modules/Accounting/ BelegRepository, EuerCalculator, AccountingModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyModule
 includes/Modules/Pricing/    PricingCalculator, PricingModule
 includes/Modules/Production/ ProductionModule
-assets/                      admin.css, admin.js
+includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, BetriebModule, Admin/
+assets/                      admin.css, admin.js, betrieb.css
 ```
+
+### Modul Betrieb
+
+Eigenes Hauptmenü **Betrieb** für die Fertigungs-, Lager- und Vertriebsdaten
+des Haster Hakens. Löst die Excel-Mappe `Haster-Haken-Datenerfassung.xlsx`
+und die Papierformulare ab.
+
+- **Eigene Tabellen** mit Präfix `lw16_` und englischen Spaltennamen
+  (abweichend vom übrigen Plugin, siehe Kommentar in `Schema.php`), angelegt
+  über denselben `dbDelta`-Durchlauf wie die übrigen Tabellen.
+- **Capabilities** `lw16_manage_production`, `lw16_view_reports`,
+  `lw16_manage_settings` und die Rolle `lw16_betrieb`. Wer `manage_lw16`
+  besitzt, behält vollen Zugriff.
+- **Kalkulationsannahmen** liegen historisiert in `lw16_calc_settings`: jede
+  Änderung erzeugt eine Zeile mit eigenem `valid_from`, Werte werden nie
+  überschrieben. Eine Kalkulation von 2026 bleibt damit 2028 nachrechenbar.
+- **Protokollierung** läuft über das bestehende hashverkettete Audit-Log,
+  ergänzt um Vorher-/Nachher-Abbild und Begründung. Die Kettenprüfung liegt
+  unter *Betrieb → Einstellungen → Protokoll & Kettenprüfung*.
+
+Umsetzungsstand: Meilenstein 1 (Fundament). Die übrigen Seiten sind angelegt
+und benennen den Meilenstein, in dem sie Inhalt bekommen.
 
 ## Umsetzungsstand
 
