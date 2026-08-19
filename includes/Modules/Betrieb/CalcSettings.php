@@ -28,7 +28,8 @@ class CalcSettings {
 		// aus den Gerätedaten berechnet (siehe MachineRate) und ist deshalb
 		// bewusst keine eigene Annahme.
 		'printer_lifetime_h'     => 5000.0,
-		'spare_parts_per_h'      => 0.02,
+		'spare_parts_per_year'   => 68.0,
+		'annual_operating_hours' => 3380.0,
 		'printer_power_kw'       => 0.15,
 		'power_price_per_kwh'    => 0.35,
 		'workspace_cost_per_h'   => 0.0,
@@ -53,7 +54,8 @@ class CalcSettings {
 			'filament_price_per_kg'     => __( 'Filamentpreis (€/kg)', 'lindenweg16' ),
 			'labor_rate_per_h'          => __( 'Kalkulatorischer Stundensatz (€/h)', 'lindenweg16' ),
 			'printer_lifetime_h'        => __( 'Lebensdauer je Gerät (Betriebsstunden)', 'lindenweg16' ),
-			'spare_parts_per_h'         => __( 'Ersatzteile und Verschleiß (€/h)', 'lindenweg16' ),
+			'spare_parts_per_year'      => __( 'Ersatzteile und Verschleiß (€ je Gerät und Jahr)', 'lindenweg16' ),
+			'annual_operating_hours'    => __( 'Geplante Betriebsstunden je Gerät und Jahr', 'lindenweg16' ),
 			'printer_power_kw'          => __( 'Leistungsaufnahme je Gerät (kW)', 'lindenweg16' ),
 			'power_price_per_kwh'       => __( 'Strompreis (€/kWh)', 'lindenweg16' ),
 			'workspace_cost_per_h'      => __( 'Flächenkosten je Betriebsstunde (€/h)', 'lindenweg16' ),

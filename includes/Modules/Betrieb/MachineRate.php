@@ -4,10 +4,10 @@
  *
  * Der Satz ergibt sich aus den Gerätedaten und den Betriebsannahmen:
  *
- *   Satz je Stunde = Anschaffung / Lebensdauer   (Abschreibung)
- *                  + Ersatzteile je Stunde       (Verschleiß)
- *                  + Leistung kW * Strompreis    (Energie)
- *                  + Flächenkosten je Stunde     (Stellplatz)
+ *   Satz je Stunde = Anschaffung / Lebensdauer          (Abschreibung)
+ *                  + Ersatzteile je Jahr / Jahresstunden (Verschleiß)
+ *                  + Stromkosten je Stunde               (Energie)
+ *                  + Flächenkosten je Stunde             (Stellplatz)
  *
  * Die eigentliche Formel liegt bereits in Core\Calc und wird von der
  * Preiskalkulation genutzt; sie wird hier nicht dupliziert, sondern um die
@@ -52,19 +52,47 @@ class MachineRate {
 	 * @return float Euro je Betriebsstunde.
 	 */
 	public static function for_printer( array $printer, array $settings ) {
-		$lifetime = self::pick( $printer, 'lifetime_h', $settings, 'printer_lifetime_h' );
-		$spares   = self::pick( $printer, 'spare_parts_per_h', $settings, 'spare_parts_per_h' );
-		$power    = self::pick( $printer, 'power_kw', $settings, 'printer_power_kw' );
+		$b = self::breakdown( $printer, $settings );
+		return $b['summe'];
+	}
 
-		$rate = Calc::drucker_kosten_pro_stunde(
-			isset( $printer['acquisition_cost'] ) ? (float) $printer['acquisition_cost'] : 0.0,
-			$lifetime,
-			$spares,
-			$power,
-			isset( $settings['power_price_per_kwh'] ) ? (float) $settings['power_price_per_kwh'] : 0.0
-		);
+	/**
+	 * Energiekosten je Stunde.
+	 *
+	 * Bevorzugt wird der am Gerät hinterlegte Eurobetrag – das ist die Zahl,
+	 * die auf der Steckdosenmessung steht. Fehlt er, wird aus Leistung und
+	 * Strompreis gerechnet, damit eine Strompreisänderung durchschlägt.
+	 *
+	 * @param array $printer  Gerät.
+	 * @param array $settings Annahmen.
+	 * @return float
+	 */
+	public static function energy_per_hour( array $printer, array $settings ) {
+		if ( self::has( $printer, 'power_cost_per_h' ) ) {
+			return (float) $printer['power_cost_per_h'];
+		}
+		$kw    = self::pick( $printer, 'power_kw', $settings, 'printer_power_kw' );
+		$preis = isset( $settings['power_price_per_kwh'] ) ? (float) $settings['power_price_per_kwh'] : 0.0;
+		return $kw * $preis;
+	}
 
-		return $rate + ( isset( $settings['workspace_cost_per_h'] ) ? (float) $settings['workspace_cost_per_h'] : 0.0 );
+	/**
+	 * Verschleißkosten je Stunde aus dem Jahresbetrag.
+	 *
+	 * Ersatzteile fallen als Jahresbetrag an (Düsen, Riemen, Platten, Lüfter),
+	 * verrechnet werden sie je Betriebsstunde. Der Nenner ist die geplante
+	 * Jahresauslastung – läuft ein Gerät tatsächlich weniger, ist der Anteil
+	 * je Teil höher als hier ausgewiesen.
+	 *
+	 * @param array $printer  Gerät.
+	 * @param array $settings Annahmen.
+	 * @return float
+	 */
+	public static function wear_per_hour( array $printer, array $settings ) {
+		$pro_jahr = self::pick( $printer, 'spare_parts_per_year', $settings, 'spare_parts_per_year' );
+		$stunden  = self::pick( $printer, 'annual_operating_hours', $settings, 'annual_operating_hours' );
+
+		return $stunden > 0 ? $pro_jahr / $stunden : 0.0;
 	}
 
 	/**
@@ -76,21 +104,28 @@ class MachineRate {
 	 */
 	public static function breakdown( array $printer, array $settings ) {
 		$lifetime = self::pick( $printer, 'lifetime_h', $settings, 'printer_lifetime_h' );
-		$spares   = self::pick( $printer, 'spare_parts_per_h', $settings, 'spare_parts_per_h' );
-		$power    = self::pick( $printer, 'power_kw', $settings, 'printer_power_kw' );
-		$strom    = isset( $settings['power_price_per_kwh'] ) ? (float) $settings['power_price_per_kwh'] : 0.0;
 		$flaeche  = isset( $settings['workspace_cost_per_h'] ) ? (float) $settings['workspace_cost_per_h'] : 0.0;
 
-		$abschreibung = $lifetime > 0 && isset( $printer['acquisition_cost'] )
-			? (float) $printer['acquisition_cost'] / $lifetime
-			: 0.0;
+		// Abschreibung über Core\Calc, damit Betrieb und Preiskalkulation
+		// dieselbe Formel benutzen; Verschleiß und Energie werden dort mit
+		// 0 übergeben und hier aus den Gerätedaten ergänzt.
+		$abschreibung = Calc::drucker_kosten_pro_stunde(
+			isset( $printer['acquisition_cost'] ) ? (float) $printer['acquisition_cost'] : 0.0,
+			$lifetime,
+			0.0,
+			0.0,
+			0.0
+		);
+
+		$verschleiss = self::wear_per_hour( $printer, $settings );
+		$energie     = self::energy_per_hour( $printer, $settings );
 
 		return array(
 			'abschreibung' => $abschreibung,
-			'verschleiss'  => $spares,
-			'energie'      => $power * $strom,
+			'verschleiss'  => $verschleiss,
+			'energie'      => $energie,
 			'flaeche'      => $flaeche,
-			'summe'        => $abschreibung + $spares + ( $power * $strom ) + $flaeche,
+			'summe'        => $abschreibung + $verschleiss + $energie + $flaeche,
 		);
 	}
 
@@ -181,9 +216,20 @@ class MachineRate {
 	 * @return float
 	 */
 	protected static function pick( array $printer, $printer_key, array $settings, $setting_key ) {
-		if ( isset( $printer[ $printer_key ] ) && '' !== $printer[ $printer_key ] && null !== $printer[ $printer_key ] ) {
+		if ( self::has( $printer, $printer_key ) ) {
 			return (float) $printer[ $printer_key ];
 		}
 		return isset( $settings[ $setting_key ] ) ? (float) $settings[ $setting_key ] : 0.0;
+	}
+
+	/**
+	 * Ist am Gerät ein eigener Wert hinterlegt?
+	 *
+	 * @param array  $printer Gerät.
+	 * @param string $key     Feld.
+	 * @return bool
+	 */
+	protected static function has( array $printer, $key ) {
+		return isset( $printer[ $key ] ) && '' !== $printer[ $key ] && null !== $printer[ $key ];
 	}
 }

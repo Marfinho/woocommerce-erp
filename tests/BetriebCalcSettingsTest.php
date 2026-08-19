@@ -57,7 +57,8 @@ class BetriebCalcSettingsTest extends TestCase {
 
 		$this->assertArrayNotHasKey( 'machine_rate_per_h', $values );
 		$this->assertSame( 5000.0, $values['printer_lifetime_h'] );
-		$this->assertSame( 0.02, $values['spare_parts_per_h'] );
+		$this->assertSame( 68.0, $values['spare_parts_per_year'] );
+		$this->assertSame( 3380.0, $values['annual_operating_hours'] );
 		$this->assertSame( 0.15, $values['printer_power_kw'] );
 		$this->assertSame( 0.35, $values['power_price_per_kwh'] );
 		$this->assertSame( 0.0, $values['workspace_cost_per_h'] );

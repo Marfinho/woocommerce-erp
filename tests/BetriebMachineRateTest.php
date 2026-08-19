@@ -20,11 +20,12 @@ class BetriebMachineRateTest extends TestCase {
 	 */
 	protected function settings() {
 		return array(
-			'printer_lifetime_h'   => 5000.0,
-			'spare_parts_per_h'    => 0.02,
-			'printer_power_kw'     => 0.15,
-			'power_price_per_kwh'  => 0.35,
-			'workspace_cost_per_h' => 0.0,
+			'printer_lifetime_h'     => 5000.0,
+			'spare_parts_per_year'   => 68.0,
+			'annual_operating_hours' => 3400.0,
+			'printer_power_kw'       => 0.15,
+			'power_price_per_kwh'    => 0.35,
+			'workspace_cost_per_h'   => 0.0,
 		);
 	}
 
@@ -45,7 +46,7 @@ class BetriebMachineRateTest extends TestCase {
 	 * Abschreibung + Verschleiß + Energie, ohne Flächenkosten.
 	 */
 	public function test_satz_eines_geraets() {
-		// 899 / 5000 = 0,1798 + 0,02 + 0,15 * 0,35 = 0,0525 → 0,2523.
+		// 899 / 5000 = 0,1798 + 68 / 3400 = 0,02 + 0,15 * 0,35 = 0,0525 → 0,2523.
 		$this->assertEqualsWithDelta(
 			0.2523,
 			MachineRate::for_printer( $this->p1s(), $this->settings() ),
@@ -99,6 +100,71 @@ class BetriebMachineRateTest extends TestCase {
 			MachineRate::for_printer( $printer, $this->settings() ),
 			0.00001
 		);
+	}
+
+	/**
+	 * Direkt gemessene Stromkosten schlagen die Rechnung aus Leistung
+	 * und Strompreis – das ist die Zahl vom Messgerät.
+	 */
+	public function test_stromkosten_je_stunde_schlagen_die_rechnung() {
+		$printer                     = $this->p1s();
+		$printer['power_kw']         = 0.15;
+		$printer['power_cost_per_h'] = 0.08;
+
+		$this->assertEqualsWithDelta( 0.08, MachineRate::energy_per_hour( $printer, $this->settings() ), 0.00001 );
+		// 0,1798 + 0,02 + 0,08 = 0,2798.
+		$this->assertEqualsWithDelta( 0.2798, MachineRate::for_printer( $printer, $this->settings() ), 0.00001 );
+	}
+
+	/**
+	 * Stromkosten von 0 sind eine Aussage, kein fehlender Wert – sie dürfen
+	 * nicht auf die Leistungsrechnung zurückfallen.
+	 */
+	public function test_stromkosten_null_faellt_nicht_zurueck() {
+		$printer                     = $this->p1s();
+		$printer['power_cost_per_h'] = 0.0;
+
+		$this->assertEqualsWithDelta( 0.0, MachineRate::energy_per_hour( $printer, $this->settings() ), 0.00001 );
+	}
+
+	/**
+	 * Ersatzteile werden als Jahresbetrag gepflegt und über die
+	 * Jahresbetriebsstunden umgelegt.
+	 */
+	public function test_ersatzteile_werden_aus_dem_jahresbetrag_umgelegt() {
+		$printer                         = $this->p1s();
+		$printer['spare_parts_per_year'] = 340.0;
+		$printer['annual_operating_hours'] = 1700.0;
+
+		// 340 / 1700 = 0,20 je Stunde.
+		$this->assertEqualsWithDelta( 0.20, MachineRate::wear_per_hour( $printer, $this->settings() ), 0.00001 );
+	}
+
+	/**
+	 * Weniger Betriebsstunden bei gleichem Jahresbetrag heben den
+	 * Stundenanteil – genau das soll die Umlage sichtbar machen.
+	 */
+	public function test_geringere_auslastung_erhoeht_den_verschleissanteil() {
+		$viel  = $this->p1s();
+		$wenig = $this->p1s();
+
+		$viel['annual_operating_hours']  = 3400.0;
+		$wenig['annual_operating_hours'] = 850.0;
+
+		$this->assertGreaterThan(
+			MachineRate::wear_per_hour( $viel, $this->settings() ),
+			MachineRate::wear_per_hour( $wenig, $this->settings() )
+		);
+	}
+
+	/**
+	 * Ohne Jahresstunden keine Division durch null.
+	 */
+	public function test_jahresstunden_null_ergibt_keinen_verschleiss() {
+		$settings                           = $this->settings();
+		$settings['annual_operating_hours'] = 0.0;
+
+		$this->assertEqualsWithDelta( 0.0, MachineRate::wear_per_hour( $this->p1s(), $settings ), 0.00001 );
 	}
 
 	/**
