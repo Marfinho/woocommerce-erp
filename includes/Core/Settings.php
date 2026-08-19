@@ -53,6 +53,10 @@ class Settings {
 			'postpurchase_review_tage'  => 12,
 			'review_bonus_punkte'       => 20,
 			'review_min_zeichen'        => 15,
+			// Betrieb.
+			'betrieb_color_attribute'   => 'pa_farbe',
+			'betrieb_default_color'     => 'anthrazit',
+			'betrieb_lagerhoheit'       => 0,
 			// Reporting.
 			'digest_wochentag'          => 1, // Montag.
 			'export_email'              => get_bloginfo( 'admin_email' ),

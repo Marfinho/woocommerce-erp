@@ -75,7 +75,22 @@ class InventoryModule {
 
 		foreach ( $order->get_items() as $item ) {
 			$woo_product_id = $item->get_product_id();
-			$produkt        = Repository::get_by_woo_id( $woo_product_id );
+
+			/**
+			 * Produkt beim Lagerabzug überspringen.
+			 *
+			 * Das Modul Betrieb führt für die Artikel, die es kennt, ein
+			 * eigenes Bewegungskonto. Ohne diesen Filter würde derselbe
+			 * Abgang zweimal gebucht.
+			 *
+			 * @param bool $skip           Überspringen.
+			 * @param int  $woo_product_id WooCommerce-Produkt-ID.
+			 */
+			if ( apply_filters( 'lw16_inventory_skip_product', false, $woo_product_id ) ) {
+				continue;
+			}
+
+			$produkt = Repository::get_by_woo_id( $woo_product_id );
 			if ( ! $produkt ) {
 				continue;
 			}

@@ -11,6 +11,9 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Core\Settings;
+use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Betrieb\BetriebAudit;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 
@@ -27,6 +30,7 @@ class SettingsPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_einstellungen', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_save_setting', array( $this, 'handle_save' ) );
+		add_action( 'admin_post_lw16_betrieb_save_lager', array( $this, 'handle_save_lager' ) );
 	}
 
 	/**
@@ -107,6 +111,12 @@ class SettingsPage {
 			esc_html__( 'Kalkulationsannahmen', 'lindenweg16' )
 		);
 		printf(
+			'<a href="%s" class="%s">%s</a> ',
+			esc_url( add_query_arg( 'view', 'lager', $base ) ),
+			'lager' === $view ? 'active' : '',
+			esc_html__( 'Farben & Lagerhoheit', 'lindenweg16' )
+		);
+		printf(
 			'<a href="%s" class="%s">%s</a>',
 			esc_url( add_query_arg( 'view', 'protokoll', $base ) ),
 			'protokoll' === $view ? 'active' : '',
@@ -118,6 +128,8 @@ class SettingsPage {
 
 		if ( 'protokoll' === $view ) {
 			$this->render_protokoll();
+		} elseif ( 'lager' === $view ) {
+			$this->render_lager();
 		} else {
 			$this->render_annahmen();
 		}
@@ -204,6 +216,103 @@ class SettingsPage {
 		}
 
 		echo '</tbody></table>';
+	}
+
+	/**
+	 * Farb- und Lagereinstellungen speichern.
+	 */
+	public function handle_save_lager() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$attribute = isset( $_POST['betrieb_color_attribute'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_color_attribute'] ) ) : 'pa_farbe';
+		$default   = isset( $_POST['betrieb_default_color'] ) ? sanitize_text_field( wp_unslash( $_POST['betrieb_default_color'] ) ) : 'anthrazit';
+		$hoheit    = empty( $_POST['betrieb_lagerhoheit'] ) ? 0 : 1;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		Settings::update(
+			array(
+				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
+				'betrieb_default_color'   => ColorRegistry::normalize( $default ),
+				'betrieb_lagerhoheit'     => $hoheit,
+			)
+		);
+
+		$this->redirect_back( __( 'Einstellungen gespeichert.', 'lindenweg16' ), 'success' );
+	}
+
+	/**
+	 * Farbsystem und Lagerhoheit.
+	 */
+	protected function render_lager() {
+		echo '<h2>' . esc_html__( 'Farbsystem', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Die Farbe kommt aus einem globalen WooCommerce-Produktattribut. So gibt es sie nur einmal – im Shop sichtbar, an der Bestellposition auslesbar und im Lager buchbar. Intern wird immer der Slug gespeichert, nie der Anzeigename: Der darf sich ändern, ohne alte Buchungen zu entwerten.', 'lindenweg16' ) . '</p>';
+
+		$taxonomy = ColorRegistry::taxonomy();
+		$exists   = taxonomy_exists( $taxonomy );
+		$colors   = ColorRegistry::all();
+
+		if ( ! $exists ) {
+			echo '<div class="notice notice-warning inline"><p>';
+			printf(
+				/* translators: %s: Taxonomie-Slug. */
+				esc_html__( 'Das Attribut %s existiert in WooCommerce noch nicht. Solange bucht alles auf die Standardfarbe. Anlegen unter Produkte → Attribute; als Slug genügt „farbe".', 'lindenweg16' ),
+				'<code>' . esc_html( $taxonomy ) . '</code>'
+			);
+			echo '</p></div>';
+		}
+
+		echo '<h3>' . esc_html__( 'Bekannte Farben', 'lindenweg16' ) . '</h3>';
+		echo '<table class="widefat striped" style="max-width:520px"><thead><tr>';
+		printf( '<th>%s</th><th>%s</th>', esc_html__( 'Slug (gespeichert)', 'lindenweg16' ), esc_html__( 'Anzeigename', 'lindenweg16' ) );
+		echo '</tr></thead><tbody>';
+		foreach ( $colors as $slug => $label ) {
+			printf(
+				'<tr><td><code>%s</code>%s</td><td>%s</td></tr>',
+				esc_html( $slug ),
+				ColorRegistry::default_color() === $slug ? ' <em>(' . esc_html__( 'Standard', 'lindenweg16' ) . ')</em>' : '',
+				esc_html( $label )
+			);
+		}
+		echo '</tbody></table>';
+
+		echo '<h3>' . esc_html__( 'Lagerhoheit', 'lindenweg16' ) . '</h3>';
+		echo '<p>' . esc_html__( 'Das Plugin hat zwei Lagermodelle: den fortgeschriebenen Bestand des Lager-Moduls und das Bewegungskonto von Betrieb. Beide auf dieselbe Bestellung loszulassen, würde doppelt abbuchen.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Ist die Übernahme aktiv, bucht Betrieb genau die Produkte, die auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie. Alles andere bleibt unverändert beim Lager-Modul. Die Umstellung erfolgt damit je Artikel, nicht schlagartig.', 'lindenweg16' ) . '</p>';
+
+		if ( ! StockOwnership::is_active() ) {
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Noch abgeschaltet: Betrieb bucht erst ab Meilenstein 5. Vorher eingeschaltet entstünde eine Lücke, in der niemand abbucht.', 'lindenweg16' ) . '</p></div>';
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( self::NONCE );
+		echo '<input type="hidden" name="action" value="lw16_betrieb_save_lager" />';
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		printf(
+			'<tr><th scope="row"><label for="lw16-attr">%s</label></th><td><input type="text" name="betrieb_color_attribute" id="lw16-attr" value="%s" class="regular-text" /><p class="description">%s</p></td></tr>',
+			esc_html__( 'Farbattribut (Taxonomie)', 'lindenweg16' ),
+			esc_attr( $taxonomy ),
+			esc_html__( 'Globales Produktattribut, üblicherweise pa_farbe.', 'lindenweg16' )
+		);
+
+		printf(
+			'<tr><th scope="row"><label for="lw16-defcolor">%s</label></th><td><input type="text" name="betrieb_default_color" id="lw16-defcolor" value="%s" class="regular-text" /><p class="description">%s</p></td></tr>',
+			esc_html__( 'Standardfarbe', 'lindenweg16' ),
+			esc_attr( ColorRegistry::default_color() ),
+			esc_html__( 'Gilt für jede Position ohne eigene Farbe. Solange nur eine Farbe produziert wird, ist das der Normalfall.', 'lindenweg16' )
+		);
+
+		printf(
+			'<tr><th scope="row">%s</th><td><label><input type="checkbox" name="betrieb_lagerhoheit" value="1"%s /> %s</label></td></tr>',
+			esc_html__( 'Lagerhoheit', 'lindenweg16' ),
+			checked( StockOwnership::is_active(), true, false ),
+			esc_html__( 'Betrieb bucht die Lagerabgänge der ihm bekannten Artikel', 'lindenweg16' )
+		);
+
+		echo '</tbody></table>';
+		printf( '<p><button class="button button-primary">%s</button></p></form>', esc_html__( 'Speichern', 'lindenweg16' ) );
 	}
 
 	/**

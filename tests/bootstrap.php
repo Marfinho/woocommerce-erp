@@ -54,3 +54,5 @@ require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BundleCalculator.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ReleaseGate.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SanitizesInput.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SourcingRepository.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ColorRegistry.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/StockOwnership.php';

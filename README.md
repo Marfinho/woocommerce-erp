@@ -87,6 +87,17 @@ und die Papierformulare ab.
   Maßgeblich ist die niedrigste Bruchlast, nicht der Mittelwert.
 - **Bestellart-Rechner**: rechnet Sets und stellt sie gegen den Einzelverkauf.
   Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an.
+- **Farbsystem**: Die Farbe ist ein globales WooCommerce-Produktattribut
+  (Standard `pa_farbe`), verwendet als Variantenattribut. Intern wird immer der
+  Slug gespeichert, nie der Anzeigename. Auflösung je Bestellposition:
+  Variantenattribut → eindeutiges Produktattribut → Standardfarbe → `ungeklaert`.
+  Solange nur eine Farbe produziert wird, greift durchgehend die Standardfarbe;
+  eine zweite Farbe ist später ein neuer Attributbegriff, keine Umstellung.
+- **Lagerhoheit**: Betrieb bucht die Lagerabgänge genau der Produkte, die über
+  `wc_product_id` auf einen Artikel im Artikelstamm zeigen; das Lager-Modul
+  überspringt sie über den Filter `lw16_inventory_skip_product`. Alles andere
+  bleibt beim Lager-Modul. Abschaltbar unter *Betrieb → Einstellungen → Farben
+  & Lagerhoheit*, bis Meilenstein 5 aus.
 
 Umsetzungsstand: Meilensteine 1 und 2, dazu die Geräteliste aus Meilenstein 3.
 Die übrigen Seiten sind angelegt und benennen den Meilenstein, in dem sie

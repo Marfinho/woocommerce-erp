@@ -71,6 +71,10 @@ class BetriebModule {
 	 * Hooks registrieren.
 	 */
 	public function register() {
+		// Gilt auch im Frontend: Der Lagerabzug läuft beim Statuswechsel
+		// einer Bestellung, nicht im Backend.
+		( new StockOwnership() )->register();
+
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
