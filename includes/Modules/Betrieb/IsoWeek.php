@@ -89,19 +89,43 @@ class IsoWeek {
 		$week  = (int) $iso_week;
 
 		for ( $i = 0; $i < (int) $count; $i++ ) {
-			$weeks[] = array(
-				'iso_year' => $year,
-				'iso_week' => $week,
-			);
-
-			$week++;
-			if ( $week > self::weeks_in_year( $year ) ) {
-				$week = 1;
-				$year++;
-			}
+			$current = self::shift( $year, $week, $i );
+			$weeks[] = $current;
 		}
 
 		return $weeks;
+	}
+
+	/**
+	 * Eine Woche vor- oder zurückschieben.
+	 *
+	 * Nötig, weil eine einfache Subtraktion an der Jahresgrenze scheitert:
+	 * Eine Woche vor KW 1/2027 ist KW 53/2026, nicht KW 0 – und ein auf 1
+	 * begrenzter Wert zeigt dieselbe Woche mehrfach an.
+	 *
+	 * @param int $iso_year ISO-Jahr.
+	 * @param int $iso_week ISO-Woche.
+	 * @param int $delta    Verschiebung, negativ für zurück.
+	 * @return array {iso_year, iso_week}
+	 */
+	public static function shift( $iso_year, $iso_week, $delta ) {
+		$year = (int) $iso_year;
+		$week = (int) $iso_week + (int) $delta;
+
+		while ( $week < 1 ) {
+			$year--;
+			$week += self::weeks_in_year( $year );
+		}
+
+		while ( $week > self::weeks_in_year( $year ) ) {
+			$week -= self::weeks_in_year( $year );
+			$year++;
+		}
+
+		return array(
+			'iso_year' => $year,
+			'iso_week' => $week,
+		);
 	}
 
 	/**

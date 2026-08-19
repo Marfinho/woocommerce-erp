@@ -121,8 +121,22 @@ class StockLedger {
 	 * @return array {lager, kommission, unterwegs, gesamt}
 	 */
 	public static function balance_for( array $movements, $article, $color ) {
-		$balances = self::balances( $movements );
-		$row      = isset( $balances[ (int) $article ][ (string) $color ] ) ? $balances[ (int) $article ][ (string) $color ] : array();
+		return self::pick( self::balances( $movements ), $article, $color );
+	}
+
+	/**
+	 * Bestand aus bereits berechneten Summen greifen.
+	 *
+	 * Wer viele Zeilen anzeigt, berechnet balances() einmal und liest hier –
+	 * sonst läuft die gesamte Bewegungstabelle je Zeile erneut durch.
+	 *
+	 * @param array  $balances Ergebnis von balances().
+	 * @param int    $article  Artikel.
+	 * @param string $color    Farbe.
+	 * @return array {lager, kommission, unterwegs, gesamt}
+	 */
+	public static function pick( array $balances, $article, $color ) {
+		$row = isset( $balances[ (int) $article ][ (string) $color ] ) ? $balances[ (int) $article ][ (string) $color ] : array();
 
 		$result = array(
 			'lager'      => isset( $row['lager'] ) ? (float) $row['lager'] : 0.0,

@@ -21,6 +21,7 @@ use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CapacityPlanner;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
@@ -288,6 +289,59 @@ class SimplePages {
 				'note'     => __( 'Kommission', 'lindenweg16' ),
 			)
 		);
+
+		// Erst mit der Abrechnung entsteht Umsatz: Die Ware verlässt den
+		// Bestand endgültig. Ohne diesen Bestellsatz tauchte der Verkauf in
+		// keiner Auswertung auf und der Händler bekäme keine Rechnung.
+		if ( 'kommission_abgerechnet' === $type ) {
+			$article = ArticleRepository::find( $article_id );
+
+			if ( $article ) {
+				$items = array(
+					array(
+						'article_id'       => $article_id,
+						'color'            => $color,
+						'qty'              => $qty,
+						'unit_price_gross' => (float) $article['price_gross'],
+						'discountable'     => (int) $article['discountable'],
+					),
+				);
+
+				$discount = DiscountResolver::for_contact( $contact_id, $items, gmdate( 'Y-m-d' ) );
+
+				// Die Lagerbuchung ist oben bereits erfolgt – der Bestellsatz
+				// darf sie nicht ein zweites Mal auslösen.
+				$order_id = OrderOpsRepository::create_manual(
+					array(
+						'contact_id'           => $contact_id ? $contact_id : null,
+						'manual_order_date'    => gmdate( 'Y-m-d' ),
+						'manual_order_value'   => $discount['order_value_net_of_discount'],
+						'channel'              => 'Fachhandel',
+						'customer_type'        => 'B2B',
+						'price_level'          => 'haendler',
+						'applied_discount_pct' => $discount['discount_pct'],
+						'applied_tier_id'      => $discount['tier_id'],
+						'payment_terms_days'   => $discount['payment_terms_days'],
+						'invoice_status'       => 'offen',
+						'order_status'         => 'bestaetigt',
+						'note'                 => __( 'Kommissionsabrechnung', 'lindenweg16' ),
+					),
+					$items,
+					false
+				);
+
+				$this->redirect(
+					'lw16-betrieb-kontakte',
+					sprintf(
+						/* translators: %s: Bestellwert. */
+						__( 'Kommission abgerechnet und als offener Posten über %s erfasst.', 'lindenweg16' ),
+						number_format_i18n( $discount['order_value_net_of_discount'], 2 ) . ' €'
+					),
+					'success',
+					array( 'contact' => $contact_id )
+				);
+			}
+		}
 
 		$this->redirect( 'lw16-betrieb-kontakte', __( 'Kommissionsbewegung gebucht.', 'lindenweg16' ), 'success', array( 'contact' => $contact_id ) );
 	}
@@ -831,7 +885,7 @@ class SimplePages {
 
 		$current = IsoWeek::from_date( gmdate( 'Y-m-d' ) );
 		for ( $i = 7; $i >= 0; $i-- ) {
-			$week   = IsoWeek::sequence( $current['iso_year'], max( 1, $current['iso_week'] - $i ), 1 )[0];
+			$week   = IsoWeek::shift( $current['iso_year'], $current['iso_week'], -$i );
 			$bounds = IsoWeek::bounds( $week['iso_year'], $week['iso_week'] );
 			$agg    = PrintJobRepository::aggregate( $bounds['von'], $bounds['bis'] );
 			$util   = CapacityPlanner::utilisation( $agg['print_time_h'], $printers, (float) $settings['net_hours_per_printer'] );

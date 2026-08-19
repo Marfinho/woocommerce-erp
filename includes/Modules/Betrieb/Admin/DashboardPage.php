@@ -212,12 +212,12 @@ class DashboardPage {
 	 * @return array
 	 */
 	protected static function below_target() {
-		$movements = StockRepository::all();
-		$articles  = ArticleRepository::all_by_id();
-		$rows      = array();
+		$balances = StockLedger::balances( StockRepository::all() );
+		$articles = ArticleRepository::all_by_id();
+		$rows     = array();
 
 		foreach ( StockRepository::targets() as $target ) {
-			$balance = StockLedger::balance_for( $movements, (int) $target['article_id'], (string) $target['color'] );
+			$balance = StockLedger::pick( $balances, (int) $target['article_id'], (string) $target['color'] );
 
 			if ( $balance['gesamt'] >= (float) $target['target_qty'] ) {
 				continue;

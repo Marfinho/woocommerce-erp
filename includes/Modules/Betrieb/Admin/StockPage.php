@@ -201,7 +201,7 @@ class StockPage {
 			$consumption = StockRepository::consumption( $article_id, 4 );
 
 			foreach ( $colors as $color => $locations ) {
-				$balance = StockLedger::balance_for( $movements, $article_id, $color );
+				$balance = StockLedger::pick( $balances, $article_id, $color );
 				$target  = isset( $targets[ $article_id ][ $color ] ) ? $targets[ $article_id ][ $color ] : null;
 				$diff    = null === $target ? null : $balance['gesamt'] - $target;
 				$reach   = StockLedger::coverage_weeks( $balance['lager'], $consumption, 4 );

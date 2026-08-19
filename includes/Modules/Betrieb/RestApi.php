@@ -113,7 +113,7 @@ class RestApi {
 			if ( 'zukauf' === $article['sourcing_type'] ) {
 				continue;
 			}
-			$revision   = RevisionRepository::active_for_article( (int) $article['id'] );
+			$revision   = RevisionRepository::current_for_article( (int) $article['id'] );
 			$articles[] = array(
 				'id'                 => (int) $article['id'],
 				'sku'                => $article['sku'],
@@ -251,7 +251,7 @@ class RestApi {
 		}
 
 		if ( null === $revision && ! empty( $input['article_id'] ) ) {
-			$revision = RevisionRepository::active_for_article( (int) $input['article_id'] );
+			$revision = RevisionRepository::current_for_article( (int) $input['article_id'] );
 		}
 
 		if ( $revision ) {

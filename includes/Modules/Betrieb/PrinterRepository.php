@@ -135,7 +135,7 @@ class PrinterRepository {
 			'annual_operating_hours' => self::decimal( $input, 'annual_operating_hours' ),
 			'nozzle_mm'              => self::decimal( $input, 'nozzle_mm' ),
 			'status'                 => $status,
-			'hours_at_last_nozzle_change' => self::decimal( $input, 'hours_at_last_nozzle_change' ),
+			'hours_at_last_nozzle_change' => self::decimal_or( $input, 'hours_at_last_nozzle_change', 0 ),
 			'notes'                  => isset( $input['notes'] ) ? sanitize_textarea_field( $input['notes'] ) : null,
 		);
 

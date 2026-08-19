@@ -101,6 +101,30 @@ class RevisionRepository {
 	}
 
 	/**
+	 * Maßgebliche Revision eines Artikels für die Erfassung.
+	 *
+	 * Bevorzugt die aktive; solange keine freigegeben ist, die zuletzt
+	 * angelegte. Ohne diesen Rückfall stünde am Anfang jeder Druckjob ohne
+	 * Revision da – und damit ohne Bauteilgewicht, ohne Filamentverbrauch und
+	 * ohne verwertbare Charge. Die Freigabe steuert, was verkauft werden darf,
+	 * nicht was intern erfasst werden kann.
+	 *
+	 * @param int $article_id Artikel.
+	 * @return array|null
+	 */
+	public static function current_for_article( $article_id ) {
+		$active = self::active_for_article( $article_id );
+
+		if ( $active ) {
+			return $active;
+		}
+
+		$revisions = self::for_article( $article_id );
+
+		return $revisions ? $revisions[0] : null;
+	}
+
+	/**
 	 * Eingaben prüfen.
 	 *
 	 * @param array    $input Eingaben.

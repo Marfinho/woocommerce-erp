@@ -114,6 +114,7 @@ foreach ( array(
 	'IsoWeek',
 	'StockLedger',
 	'BomResolver',
+	'ComponentConsumption',
 	'CostCalculator',
 	'BundleCalculator',
 	'ReleaseGate',

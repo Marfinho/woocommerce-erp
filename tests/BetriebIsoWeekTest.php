@@ -106,6 +106,49 @@ class BetriebIsoWeekTest extends TestCase {
 	}
 
 	/**
+	 * Rückwärts über die Jahresgrenze: Eine Woche vor KW 1/2027 ist
+	 * KW 53/2026 – nicht KW 0 und nicht wieder KW 1.
+	 */
+	public function test_rueckwaerts_ueber_die_jahresgrenze() {
+		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 53 ), IsoWeek::shift( 2027, 1, -1 ) );
+		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 52 ), IsoWeek::shift( 2027, 1, -2 ) );
+		$this->assertSame( array( 'iso_year' => 2025, 'iso_week' => 52 ), IsoWeek::shift( 2026, 1, -1 ) );
+	}
+
+	/**
+	 * Acht Wochen zurück aus KW 3 landet im Vorjahr und liefert acht
+	 * verschiedene Wochen – nicht mehrfach dieselbe.
+	 */
+	public function test_acht_wochen_zurueck_sind_acht_verschiedene() {
+		$wochen = array();
+
+		for ( $i = 0; $i < 8; $i++ ) {
+			$week     = IsoWeek::shift( 2027, 3, -$i );
+			$wochen[] = $week['iso_year'] . '-' . $week['iso_week'];
+		}
+
+		$this->assertCount( 8, array_unique( $wochen ) );
+		$this->assertSame( '2026-49', end( $wochen ) );
+	}
+
+	/**
+	 * Vorwärts verhält sich shift() wie die Folge.
+	 */
+	public function test_vorwaerts_entspricht_der_folge() {
+		$folge = IsoWeek::sequence( 2026, 52, 3 );
+
+		$this->assertSame( $folge[1], IsoWeek::shift( 2026, 52, 1 ) );
+		$this->assertSame( $folge[2], IsoWeek::shift( 2026, 52, 2 ) );
+	}
+
+	/**
+	 * Eine Verschiebung um null verändert nichts.
+	 */
+	public function test_verschiebung_um_null() {
+		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 35 ), IsoWeek::shift( 2026, 35, 0 ) );
+	}
+
+	/**
 	 * In einem Jahr mit 52 Wochen springt die Folge direkt weiter.
 	 */
 	public function test_folge_bei_52_wochen() {

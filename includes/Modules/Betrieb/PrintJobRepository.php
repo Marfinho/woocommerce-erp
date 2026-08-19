@@ -179,7 +179,11 @@ class PrintJobRepository {
 			$errors[] = __( 'Ein Zukaufartikel wird nicht gedruckt.', 'lindenweg16' );
 		}
 
-		$revision = $article_id ? RevisionRepository::active_for_article( $article_id ) : null;
+		$revision = $article_id ? RevisionRepository::current_for_article( $article_id ) : null;
+
+		if ( $article && 'zukauf' !== $article['sourcing_type'] && ! $revision ) {
+			$errors[] = __( 'Für diesen Artikel ist keine Revision hinterlegt. Ohne Bauteilgewicht lassen sich weder Filamentverbrauch noch Charge nachvollziehen.', 'lindenweg16' );
+		}
 
 		$planned = self::decimal_or( $input, 'parts_planned', 0 );
 		$ok      = self::decimal_or( $input, 'parts_ok', 0 );
@@ -273,8 +277,17 @@ class PrintJobRepository {
 			);
 		}
 
-		// Kleinteile der Stückliste mit den guten Teilen verbrauchen.
+		// Kleinteile und direkte Unterbaugruppen mit den guten Teilen verbauen.
 		ComponentConsumption::consume_for_production( (int) $data['article_id'], (float) $data['parts_ok'], 'print_job', $id );
+		ComponentConsumption::book_assemblies(
+			ComponentConsumption::assemblies_at_production(
+				BomRepository::for_article( (int) $data['article_id'] ),
+				(float) $data['parts_ok']
+			),
+			$data['color'],
+			'print_job',
+			$id
+		);
 
 		return $id;
 	}
@@ -333,9 +346,34 @@ class PrintJobRepository {
 			StockRepository::void( (int) $movement['id'], $reason );
 		}
 
+		// Die Kleinteile wurden beim Buchen verbraucht – sie gehen dem
+		// Bestand wieder zu.
+		ComponentConsumption::restore_for_production(
+			(int) $job['article_id'],
+			(float) $job['parts_ok'],
+			'print_job_storno',
+			(int) $id
+		);
+		ComponentConsumption::book_assemblies(
+			ComponentConsumption::assemblies_at_production(
+				BomRepository::for_article( (int) $job['article_id'] ),
+				(float) $job['parts_ok']
+			),
+			$job['color'],
+			'print_job_storno',
+			(int) $id,
+			1.0
+		);
+
+		// Die Charge wurde nie gefertigt und darf in der Rückverfolgung nicht
+		// als ausgeliefert erscheinen.
+		if ( $job['batch_id'] ) {
+			BatchRepository::void( (int) $job['batch_id'], $reason );
+		}
+
 		return array(
 			'success' => true,
-			'message' => __( 'Druckjob storniert und Lagerzugang gegengebucht.', 'lindenweg16' ),
+			'message' => __( 'Druckjob storniert: Lagerzugang gegengebucht, Kleinteile zurückgebucht, Charge storniert.', 'lindenweg16' ),
 		);
 	}
 

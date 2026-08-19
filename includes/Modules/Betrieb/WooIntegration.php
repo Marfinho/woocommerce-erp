@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 
+
 /**
  * Verbindet Bestellungen mit dem Bewegungskonto und der Betriebsakte.
  */
@@ -75,6 +76,13 @@ class WooIntegration {
 		$order_op_id = OrderOpsRepository::ensure_for_order( (int) $order_id );
 		$unresolved  = 0;
 
+		// Einmal laden statt je Position: Beide Tabellen sind klein, die
+		// Auflösung läuft aber je Position mehrfach durch sie hindurch.
+		$ctx = array(
+			'bom'      => BomRepository::all_by_parent(),
+			'articles' => ArticleRepository::all_by_id(),
+		);
+
 		foreach ( $order->get_items() as $item ) {
 			$product_id = $item->get_product_id();
 			$article_id = StockOwnership::article_for_product( $product_id );
@@ -109,6 +117,13 @@ class WooIntegration {
 			);
 
 			ComponentConsumption::consume_for_sale( $article_id, $qty, 'wc_order', (int) $order_id );
+
+			ComponentConsumption::book_assemblies(
+				ComponentConsumption::assemblies_at_sale( $article_id, $qty, $ctx ),
+				$color['color'],
+				'wc_order',
+				(int) $order_id
+			);
 		}
 
 		ComponentConsumption::consume_supplies( $order_op_id );
@@ -232,7 +247,17 @@ class WooIntegration {
 			$input[ $field ] = $record[ $field ];
 		}
 
-		OrderOpsRepository::update_fields( $id, $input, __( 'Über die Bestellansicht geändert.', 'lindenweg16' ) );
+		$saved = OrderOpsRepository::update_fields( $id, $input, __( 'Über die Bestellansicht geändert.', 'lindenweg16' ) );
+
+		// Ein stiller Fehlschlag wäre hier besonders tückisch: Die Maske sähe
+		// gespeichert aus, die Handlingzeit fehlte aber weiterhin.
+		if ( ! $saved ) {
+			$order = wc_get_order( $order_id );
+			if ( $order ) {
+				$order->add_order_note( __( 'Betrieb: Betriebsdaten nicht gespeichert – ein Geschäftskunde braucht einen zugeordneten Kontakt.', 'lindenweg16' ) );
+				$order->save();
+			}
+		}
 	}
 
 	/**

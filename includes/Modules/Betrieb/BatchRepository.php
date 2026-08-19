@@ -134,6 +134,10 @@ class BatchRepository {
 			}
 		}
 
+		if ( empty( $args['include_voided'] ) ) {
+			$where[] = 'voided_at IS NULL';
+		}
+
 		$sql      = "SELECT * FROM {$table} WHERE " . implode( ' AND ', $where ) . ' ORDER BY produced_on DESC, id DESC LIMIT %d';
 		$params[] = isset( $args['limit'] ) ? (int) $args['limit'] : 200;
 
@@ -168,6 +172,38 @@ class BatchRepository {
 			$wpdb->prepare( "SELECT * FROM {$table} WHERE batch_code = %s", (string) $code ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
+	}
+
+	/**
+	 * Charge stornieren – ohne sie zu löschen.
+	 *
+	 * Wird der zugehörige Druckjob storniert, wurde die Charge nie gefertigt.
+	 * Sie bleibt stehen, damit die Nummernfolge lückenlos bleibt, ist aber
+	 * gekennzeichnet: Eine stornierte Charge darf in der Rückverfolgung nicht
+	 * als ausgeliefert erscheinen.
+	 *
+	 * @param int    $id     Charge.
+	 * @param string $reason Begründung.
+	 * @return bool
+	 */
+	public static function void( $id, $reason ) {
+		global $wpdb;
+
+		$before = self::find( $id );
+		if ( ! $before || $before['voided_at'] ) {
+			return false;
+		}
+
+		$data = array(
+			'voided_at'   => current_time( 'mysql', true ),
+			'void_reason' => sanitize_text_field( $reason ),
+			'updated_at'  => current_time( 'mysql', true ),
+		);
+
+		$wpdb->update( self::table(), $data, array( 'id' => (int) $id ) );
+		BetriebAudit::record( 'void', 'batches', (int) $id, $before, $data, $reason );
+
+		return true;
 	}
 
 	/**

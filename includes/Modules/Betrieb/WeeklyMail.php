@@ -69,7 +69,7 @@ class WeeklyMail {
 	public static function compose() {
 		$today  = gmdate( 'Y-m-d' );
 		$iso    = IsoWeek::from_date( $today );
-		$last   = IsoWeek::sequence( $iso['iso_year'], max( 1, $iso['iso_week'] - 1 ), 1 )[0];
+		$last   = IsoWeek::shift( $iso['iso_year'], $iso['iso_week'], -1 );
 		$bounds = IsoWeek::bounds( $last['iso_year'], $last['iso_week'] );
 
 		$lines = array(

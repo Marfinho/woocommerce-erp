@@ -82,7 +82,9 @@ class ProcurementAlert {
 	public static function purchased_articles() {
 		$alerts   = array();
 		$sourcing = SourcingRepository::all_valid_at();
-		$movements = StockRepository::all();
+		// Einmal summieren statt je Artikel erneut: Die Bewegungstabelle ist
+		// die größte des Moduls.
+		$balances = StockLedger::balances( StockRepository::all() );
 
 		foreach ( ArticleRepository::all() as $article ) {
 			if ( 'druck' === $article['sourcing_type'] ) {
@@ -96,8 +98,7 @@ class ProcurementAlert {
 				continue;
 			}
 
-			$stock       = 0.0;
-			$balances    = StockLedger::balances( $movements );
+			$stock = 0.0;
 			if ( isset( $balances[ $id ] ) ) {
 				foreach ( $balances[ $id ] as $locations ) {
 					$stock += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;

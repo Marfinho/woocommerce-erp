@@ -210,11 +210,14 @@ class OrderOpsRepository {
 	/**
 	 * Manuelle Bestellung anlegen (Fachhandel, Barverkauf, Nachbestellung).
 	 *
-	 * @param array $data  Kopfdaten.
-	 * @param array $items Positionen mit article_id, qty, unit_price_gross.
+	 * @param array $data       Kopfdaten.
+	 * @param array $items      Positionen mit article_id, qty, unit_price_gross.
+	 * @param bool  $book_stock Lagerabgänge mitbuchen. Bei der Kommissions-
+	 *                          abrechnung ist die Ware bereits ausgebucht –
+	 *                          dann würde ein zweiter Abgang entstehen.
 	 * @return int
 	 */
-	public static function create_manual( array $data, array $items ) {
+	public static function create_manual( array $data, array $items, $book_stock = true ) {
 		global $wpdb;
 
 		$row = array_merge(
@@ -260,7 +263,7 @@ class OrderOpsRepository {
 		// Lagerabgänge und Komponentenverbrauch nur bei bestätigten
 		// Bestellungen – ein Entwurf aus dem Nachbestell-Link darf nichts
 		// bewegen, bevor er geprüft ist.
-		if ( 'bestaetigt' === $row['order_status'] ) {
+		if ( $book_stock && 'bestaetigt' === $row['order_status'] ) {
 			self::book_stock( $id );
 		}
 
@@ -290,6 +293,19 @@ class OrderOpsRepository {
 			);
 
 			ComponentConsumption::consume_for_sale( (int) $item['article_id'], (float) $item['qty'], 'order_ops', (int) $id );
+
+			// Eingebaute Unterbaugruppen verlassen mit dem Set das Lager.
+			$ctx = array(
+				'bom'      => BomRepository::all_by_parent(),
+				'articles' => ArticleRepository::all_by_id(),
+			);
+			ComponentConsumption::book_assemblies(
+				ComponentConsumption::assemblies_at_sale( (int) $item['article_id'], (float) $item['qty'], $ctx ),
+				$item['color'],
+				'order_ops',
+				(int) $id
+			);
+
 			$count++;
 		}
 
@@ -363,15 +379,48 @@ class OrderOpsRepository {
 	}
 
 	/**
+	 * Zwischenspeicher für geladene WooCommerce-Bestellungen.
+	 *
+	 * Wert und Datum werden je Bestellung mehrfach abgefragt – Dashboard und
+	 * Berichte laufen über hunderte Sätze. Ohne diesen Speicher lädt jede
+	 * Auswertung dieselbe Bestellung mehrfach aus der Datenbank.
+	 *
+	 * @var array
+	 */
+	protected static $wc_cache = array();
+
+	/**
+	 * WooCommerce-Bestellung einmalig laden.
+	 *
+	 * @param int $wc_order_id Bestellung.
+	 * @return \WC_Order|null
+	 */
+	protected static function wc_order( $wc_order_id ) {
+		$wc_order_id = (int) $wc_order_id;
+
+		if ( ! $wc_order_id || ! function_exists( 'wc_get_order' ) ) {
+			return null;
+		}
+
+		if ( ! array_key_exists( $wc_order_id, self::$wc_cache ) ) {
+			$order = wc_get_order( $wc_order_id );
+			self::$wc_cache[ $wc_order_id ] = $order ? $order : null;
+		}
+
+		return self::$wc_cache[ $wc_order_id ];
+	}
+
+	/**
 	 * Bestellwert – aus WooCommerce oder aus dem manuellen Feld.
 	 *
 	 * @param array $order Bestellung.
 	 * @return float
 	 */
 	public static function order_value( array $order ) {
-		if ( ! empty( $order['wc_order_id'] ) && function_exists( 'wc_get_order' ) ) {
-			$wc = wc_get_order( (int) $order['wc_order_id'] );
-			return $wc ? (float) $wc->get_total() : 0.0;
+		$wc = self::wc_order( isset( $order['wc_order_id'] ) ? $order['wc_order_id'] : 0 );
+
+		if ( $wc ) {
+			return (float) $wc->get_total();
 		}
 
 		return (float) $order['manual_order_value'];
@@ -384,11 +433,10 @@ class OrderOpsRepository {
 	 * @return string
 	 */
 	public static function order_date( array $order ) {
-		if ( ! empty( $order['wc_order_id'] ) && function_exists( 'wc_get_order' ) ) {
-			$wc = wc_get_order( (int) $order['wc_order_id'] );
-			if ( $wc && $wc->get_date_created() ) {
-				return $wc->get_date_created()->date( 'Y-m-d' );
-			}
+		$wc = self::wc_order( isset( $order['wc_order_id'] ) ? $order['wc_order_id'] : 0 );
+
+		if ( $wc && $wc->get_date_created() ) {
+			return $wc->get_date_created()->date( 'Y-m-d' );
 		}
 
 		return (string) $order['manual_order_date'];
