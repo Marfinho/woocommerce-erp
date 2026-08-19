@@ -39,6 +39,7 @@ class Installer {
 
 		// Endpoints registrieren, damit der anschließende Flush sie kennt.
 		add_rewrite_rule( '^betrieb-erfassen/?$', 'index.php?lw16_erfassung=1', 'top' );
+		add_rewrite_rule( '^nachbestellen/([a-f0-9]{64})/?$', 'index.php?lw16_reorder=1&lw16_token=$matches[1]', 'top' );
 		add_rewrite_endpoint( 'praemien', EP_ROOT | EP_PAGES );
 		add_rewrite_endpoint( 'wunschliste', EP_ROOT | EP_PAGES );
 		flush_rewrite_rules();

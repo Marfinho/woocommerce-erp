@@ -66,3 +66,86 @@
 .lw16-labels .lw16-label__model { font-size: 12px; margin-top: 4px; }
 .lw16-labels .lw16-label__url { font-size: 14px; margin-top: 10px; font-weight: 600; word-break: break-all; }
 .lw16-labels .lw16-label__hint { font-size: 11px; margin-top: 4px; color: #444; }
+
+/* Kennzahlenkacheln des Dashboards. */
+.lw16-tiles {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin: 12px 0 20px;
+}
+
+.lw16-tile {
+	flex: 1 1 180px;
+	min-width: 170px;
+	padding: 12px 14px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-left-width: 5px;
+	border-radius: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.lw16-tile--gruen { border-left-color: #46b450; }
+.lw16-tile--gelb { border-left-color: #dba617; }
+.lw16-tile--rot { border-left-color: #d63638; }
+.lw16-tile--neutral { border-left-color: #c3c4c7; }
+
+.lw16-tile__label { font-size: 12px; color: #50575e; }
+.lw16-tile__value { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.lw16-tile__target { font-size: 11px; color: #787c82; }
+
+/* Alarmblöcke. */
+.lw16-alerts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 12px 0;
+}
+
+.lw16-alert {
+	flex: 1 1 300px;
+	padding: 10px 14px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+}
+
+.lw16-alert h3 { margin: 4px 0 8px; font-size: 14px; }
+.lw16-alert ul { list-style: disc; margin: 0 0 8px 18px; font-size: 13px; }
+.lw16-alert--leer { opacity: .7; }
+
+/* Verfahrensdokumentation. */
+.lw16-doku {
+	max-width: 820px;
+	padding: 16px 20px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+}
+
+.lw16-doku h4 { margin: 0 0 4px; font-size: 17px; }
+.lw16-doku h5 { margin: 18px 0 4px; font-size: 14px; }
+.lw16-doku p { margin: 4px 0; font-size: 13px; line-height: 1.6; }
+
+/* Nachbestell-Seite. */
+.lw16-reorder__table { width: 100%; border-collapse: collapse; }
+.lw16-reorder__table td { padding: 10px 6px; border-bottom: 1px solid var(--lw16-line); vertical-align: middle; }
+.lw16-reorder__thumb img { width: 48px; height: auto; display: block; }
+.lw16-reorder__qty input { width: 84px; text-align: center; font-size: 20px; }
+.lw16-reorder__submit {
+	width: 100%;
+	min-height: 60px;
+	margin-top: 16px;
+	font-size: 19px;
+	font-weight: 600;
+	border: 0;
+	border-radius: 8px;
+	background: var(--lw16-accent);
+	color: #fff;
+}
+.lw16-reorder__greeting { font-size: 18px; font-weight: 600; }
+.lw16-reorder__hint { font-size: 13px; color: #50575e; }
+.lw16-reorder__error { color: #6b1e18; font-weight: 600; }

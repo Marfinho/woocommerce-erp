@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
+use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\MachineRate;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
@@ -208,6 +209,7 @@ class PrintersPage {
 
 		echo '</tbody></table>';
 
+		$this->render_maintenance( $printers );
 		$this->render_labels( $printers );
 
 		$fleet = MachineRate::fleet_breakdown( $printers, $settings );
@@ -223,6 +225,61 @@ class PrintersPage {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Wartungsfälligkeiten und Erfassung.
+	 *
+	 * @param array $printers Geräte.
+	 */
+	protected function render_maintenance( array $printers ) {
+		echo '<h2>' . esc_html__( 'Wartung', 'lindenweg16' ) . '</h2>';
+
+		$due = array_filter(
+			MaintenanceRepository::due(),
+			static function ( $row ) {
+				return ! empty( $row['reasons'] );
+			}
+		);
+
+		if ( $due ) {
+			echo '<div class="notice notice-warning inline"><ul style="list-style:disc;margin-left:20px">';
+			foreach ( $due as $row ) {
+				printf(
+					'<li><strong>%s</strong>: %s</li>',
+					esc_html( $row['printer']['code'] ),
+					esc_html( implode( '; ', $row['reasons'] ) )
+				);
+			}
+			echo '</ul></div>';
+		} else {
+			echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Keine Wartung fällig.', 'lindenweg16' ) . '</p></div>';
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'lw16_betrieb_pages' );
+		echo '<input type="hidden" name="action" value="lw16_betrieb_maintenance" />';
+		echo '<p><select name="printer_id">';
+		foreach ( $printers as $printer ) {
+			printf( '<option value="%d">%s</option>', (int) $printer['id'], esc_html( $printer['code'] ) );
+		}
+		echo '</select> <select name="interval_type">';
+		foreach ( array(
+			'woechentlich' => __( 'wöchentlich', 'lindenweg16' ),
+			'monatlich'    => __( 'monatlich', 'lindenweg16' ),
+			'verschleiss'  => __( 'Verschleiß', 'lindenweg16' ),
+			'saison'       => __( 'Saison', 'lindenweg16' ),
+		) as $key => $label ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
+		}
+		echo '</select> ';
+		printf( '<input type="date" name="performed_on" value="%s" /> ', esc_attr( gmdate( 'Y-m-d' ) ) );
+		printf( '<input type="text" name="part_replaced" placeholder="%s" size="18" /> ', esc_attr__( 'Ersatzteil', 'lindenweg16' ) );
+		printf(
+			'<label><input type="checkbox" name="nozzle_changed" value="1" /> %s</label> ',
+			esc_html__( 'Düse gewechselt', 'lindenweg16' )
+		);
+		printf( '<button class="button">%s</button></p></form>', esc_html__( 'Wartung erfassen', 'lindenweg16' ) );
 	}
 
 	/**

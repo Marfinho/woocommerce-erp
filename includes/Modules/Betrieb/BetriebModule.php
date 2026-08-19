@@ -14,6 +14,12 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
+use Lindenweg16\Modules\Betrieb\Admin\DashboardPage;
+use Lindenweg16\Modules\Betrieb\Admin\ImportPage;
+use Lindenweg16\Modules\Betrieb\Admin\MaterialPage;
+use Lindenweg16\Modules\Betrieb\Admin\OrdersPage;
+use Lindenweg16\Modules\Betrieb\Admin\SimplePages;
+use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
@@ -44,6 +50,7 @@ class BetriebModule {
 			'lw16-betrieb-kontakte'     => array( __( 'Kontakte / B2B', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-zeit'         => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-berichte'     => array( __( 'Berichte', 'lindenweg16' ), 'lw16_view_reports' ),
+			'lw16-betrieb-import'       => array( __( 'Import & Doku', 'lindenweg16' ), 'lw16_manage_settings' ),
 			'lw16-betrieb-einstellungen' => array( __( 'Einstellungen', 'lindenweg16' ), 'lw16_manage_settings' ),
 		);
 	}
@@ -55,16 +62,7 @@ class BetriebModule {
 	 * @return array
 	 */
 	protected static function milestones() {
-		return array(
-			'lw16-betrieb-material'     => 5,
-			'lw16-betrieb-lager'        => 5,
-			'lw16-betrieb-bestellungen' => 5,
-			'lw16-betrieb-qualitaet'    => 6,
-			'lw16-betrieb-kapazitaet'   => 7,
-			'lw16-betrieb-zeit'         => 7,
-			'lw16-betrieb-kontakte'     => 8,
-			'lw16-betrieb-berichte'     => 10,
-		);
+		return array();
 	}
 
 	/**
@@ -76,6 +74,10 @@ class BetriebModule {
 		( new StockOwnership() )->register();
 		( new RestApi() )->register();
 		( new MobileCapture() )->register();
+		( new ReorderPage() )->register();
+		( new WooIntegration() )->register();
+		( new WeeklyMail() )->register();
+		( new Exporter() )->register();
 
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );
@@ -84,6 +86,11 @@ class BetriebModule {
 			( new PrintersPage() )->register();
 			( new ArticlesPage() )->register();
 			( new PrintJobsPage() )->register();
+			( new StockPage() )->register();
+			( new MaterialPage() )->register();
+			( new OrdersPage() )->register();
+			( new SimplePages() )->register();
+			( new ImportPage() )->register();
 		}
 	}
 
@@ -152,7 +159,7 @@ class BetriebModule {
 		}
 
 		if ( self::MENU_SLUG === $page ) {
-			$this->render_dashboard_stub();
+			DashboardPage::render();
 			return;
 		}
 

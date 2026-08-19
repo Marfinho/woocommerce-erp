@@ -4,21 +4,20 @@
  *
  * Die getesteten Klassen enthalten `defined('ABSPATH') || exit;` als
  * Direktaufruf-Schutz. Für die Unit-Tests definieren wir ABSPATH und laden
- * die seiteneffektfreie Calc-Klasse direkt – bewusst ohne die volle
+ * die seiteneffektfreien Klassen direkt – bewusst ohne die volle
  * WordPress-Testsuite, da nur reine Logik geprüft wird.
+ *
+ * Die wenigen WordPress-Funktionen, die in den Rechenklassen vorkommen,
+ * betreffen ausschließlich übersetzbare Meldungen und Randwerte. Sie werden
+ * hier minimal nachgebildet, damit die Fachklassen idiomatisch bleiben.
  *
  * @package Lindenweg16
  */
 
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
+define( 'HOUR_IN_SECONDS', 3600 );
 
-/*
- * Minimale Stubs der WordPress-Funktionen, die in den ansonsten reinen
- * Rechenklassen nur für übersetzbare Meldungen vorkommen. Damit bleiben die
- * Fachklassen idiomatisch (alle Strings übersetzbar) und trotzdem ohne
- * WordPress testbar.
- */
 if ( ! function_exists( '__' ) ) {
 	/**
 	 * Gibt den Text unverändert zurück.
@@ -29,6 +28,34 @@ if ( ! function_exists( '__' ) ) {
 	 */
 	function __( $text, $domain = 'default' ) { // phpcs:ignore
 		return $text;
+	}
+}
+
+if ( ! function_exists( '_n' ) ) {
+	/**
+	 * Wählt Singular oder Plural.
+	 *
+	 * @param string $single Einzahl.
+	 * @param string $plural Mehrzahl.
+	 * @param int    $number Anzahl.
+	 * @param string $domain Textdomain.
+	 * @return string
+	 */
+	function _n( $single, $plural, $number, $domain = 'default' ) { // phpcs:ignore
+		return 1 === (int) $number ? $single : $plural;
+	}
+}
+
+if ( ! function_exists( 'number_format_i18n' ) ) {
+	/**
+	 * Zahl formatieren.
+	 *
+	 * @param float $number   Zahl.
+	 * @param int   $decimals Nachkommastellen.
+	 * @return string
+	 */
+	function number_format_i18n( $number, $decimals = 0 ) {
+		return number_format( (float) $number, (int) $decimals, ',', '.' );
 	}
 }
 
@@ -58,34 +85,47 @@ if ( ! function_exists( 'get_bloginfo' ) ) {
 	}
 }
 
-if ( ! function_exists( 'number_format_i18n' ) ) {
+if ( ! function_exists( 'home_url' ) ) {
 	/**
-	 * Zahl formatieren.
+	 * Basis-URL im Test.
 	 *
-	 * @param float $number   Zahl.
-	 * @param int   $decimals Nachkommastellen.
+	 * @param string $path Pfad.
 	 * @return string
 	 */
-	function number_format_i18n( $number, $decimals = 0 ) {
-		return number_format( (float) $number, (int) $decimals, ',', '.' );
+	function home_url( $path = '' ) {
+		return 'https://lindenweg16.test' . $path;
 	}
 }
 
-require dirname( __DIR__ ) . '/includes/Core/Calc.php';
-require dirname( __DIR__ ) . '/includes/Core/HashChain.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/CalcSettings.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/MachineRate.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BomResolver.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/CostCalculator.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BundleCalculator.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ReleaseGate.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SanitizesInput.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SourcingRepository.php';
-require dirname( __DIR__ ) . '/includes/Core/Settings.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ColorRegistry.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/StockOwnership.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/IsoWeek.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/StockLedger.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/PrintJobRepository.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BatchRepository.php';
-require dirname( __DIR__ ) . '/includes/Modules/Betrieb/RestApi.php';
+$lw16_root = dirname( __DIR__ );
+
+// Kernbausteine.
+require $lw16_root . '/includes/Core/Calc.php';
+require $lw16_root . '/includes/Core/HashChain.php';
+require $lw16_root . '/includes/Core/Settings.php';
+
+// Seiteneffektfreie Klassen des Moduls Betrieb.
+foreach ( array(
+	'SanitizesInput',
+	'CalcSettings',
+	'MachineRate',
+	'ColorRegistry',
+	'StockOwnership',
+	'IsoWeek',
+	'StockLedger',
+	'BomResolver',
+	'CostCalculator',
+	'BundleCalculator',
+	'ReleaseGate',
+	'SourcingRepository',
+	'PrintJobRepository',
+	'BatchRepository',
+	'RestApi',
+	'ProcurementAlert',
+	'DiscountResolver',
+	'CapacityPlanner',
+	'Kpi',
+	'ReorderToken',
+) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';
+}

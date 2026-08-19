@@ -29,8 +29,8 @@ class BetriebStockOwnershipTest extends TestCase {
 	}
 
 	/**
-	 * Solange die Übernahme abgeschaltet ist, bucht das Lager-Modul alles –
-	 * auch bekannte Artikel. Das ist der Zustand bis Meilenstein 5.
+	 * Ist die Übernahme abgeschaltet, bucht das Lager-Modul alles – auch
+	 * bekannte Artikel. Genau eines der beiden Module ist zuständig.
 	 */
 	public function test_ohne_uebernahme_bucht_inventory_alles() {
 		$this->assertSame( 'inventory', StockOwnership::decide( 42, false ) );

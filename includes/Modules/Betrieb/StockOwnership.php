@@ -18,9 +18,10 @@
  * vorbei. Die Umstellung erfolgt aber nicht schlagartig, sondern je Artikel:
  * Wer in `lw16_articles` steht, ist umgestellt.
  *
- * Die Übernahme ist bis zum Abschluss von Meilenstein 5 abgeschaltet, weil
- * Betrieb bis dahin gar nicht bucht – sonst entstünde eine Lücke, in der
- * niemand abbucht.
+ * Die Übernahme ist aktiv, seit Betrieb die Abgänge selbst bucht
+ * (WooIntegration). Sie lässt sich in den Einstellungen abschalten, falls das
+ * Lager-Modul die Hoheit zurückbekommen soll – dann bucht wieder ausschließlich
+ * dieses.
  *
  * @package Lindenweg16
  */
@@ -49,7 +50,7 @@ class StockOwnership {
 	 * @return bool
 	 */
 	public static function is_active() {
-		return (bool) Settings::get( 'betrieb_lagerhoheit', 0 );
+		return (bool) Settings::get( 'betrieb_lagerhoheit', 1 );
 	}
 
 	/**

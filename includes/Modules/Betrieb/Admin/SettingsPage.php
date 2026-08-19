@@ -229,6 +229,7 @@ class SettingsPage {
 		$attribute = isset( $_POST['betrieb_color_attribute'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_color_attribute'] ) ) : 'pa_farbe';
 		$default   = isset( $_POST['betrieb_default_color'] ) ? sanitize_text_field( wp_unslash( $_POST['betrieb_default_color'] ) ) : 'anthrazit';
 		$hoheit    = empty( $_POST['betrieb_lagerhoheit'] ) ? 0 : 1;
+		$mail      = empty( $_POST['betrieb_wochenmail'] ) ? 0 : 1;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		Settings::update(
@@ -236,6 +237,7 @@ class SettingsPage {
 				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
 				'betrieb_default_color'   => ColorRegistry::normalize( $default ),
 				'betrieb_lagerhoheit'     => $hoheit,
+				'betrieb_wochenmail'      => $mail,
 			)
 		);
 
@@ -282,7 +284,7 @@ class SettingsPage {
 		echo '<p>' . esc_html__( 'Ist die Übernahme aktiv, bucht Betrieb genau die Produkte, die auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie. Alles andere bleibt unverändert beim Lager-Modul. Die Umstellung erfolgt damit je Artikel, nicht schlagartig.', 'lindenweg16' ) . '</p>';
 
 		if ( ! StockOwnership::is_active() ) {
-			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Noch abgeschaltet: Betrieb bucht erst ab Meilenstein 5. Vorher eingeschaltet entstünde eine Lücke, in der niemand abbucht.', 'lindenweg16' ) . '</p></div>';
+			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Abgeschaltet: Das Lager-Modul bucht alle Abgänge. Das Bewegungskonto bleibt dann für Verkäufe leer und die Bestände im Betrieb stimmen nicht.', 'lindenweg16' ) . '</p></div>';
 		}
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
@@ -309,6 +311,14 @@ class SettingsPage {
 			esc_html__( 'Lagerhoheit', 'lindenweg16' ),
 			checked( StockOwnership::is_active(), true, false ),
 			esc_html__( 'Betrieb bucht die Lagerabgänge der ihm bekannten Artikel', 'lindenweg16' )
+		);
+
+		printf(
+			'<tr><th scope="row">%s</th><td><label><input type="checkbox" name="betrieb_wochenmail" value="1"%s /> %s</label><p class="description">%s</p></td></tr>',
+			esc_html__( 'Wochenmail', 'lindenweg16' ),
+			checked( (bool) Settings::get( 'betrieb_wochenmail', 1 ), true, false ),
+			esc_html__( 'Wöchentliche Zusammenfassung per E-Mail senden', 'lindenweg16' ),
+			esc_html__( 'Kennzahlen, Alarme, Beschaffung, Wartung und Wiedervorlagen der vergangenen Woche. Läuft über den Action Scheduler.', 'lindenweg16' )
 		);
 
 		echo '</tbody></table>';

@@ -48,60 +48,87 @@ Eigenes Hauptmenü **Betrieb** für die Fertigungs-, Lager- und Vertriebsdaten
 des Haster Hakens. Löst die Excel-Mappe `Haster-Haken-Datenerfassung.xlsx`
 und die Papierformulare ab.
 
+**Grundsätze**
+
 - **Eigene Tabellen** mit Präfix `lw16_` und englischen Spaltennamen
   (abweichend vom übrigen Plugin, siehe Kommentar in `Schema.php`), angelegt
   über denselben `dbDelta`-Durchlauf wie die übrigen Tabellen.
+- **Nichts Berechnetes wird gespeichert.** Stückpreis aus der Gebindegröße,
+  Druckzeit je Teil aus dem Plattenwert, Maschinenstundensatz aus den
+  Gerätedaten, Herstellkosten rekursiv über die Stückliste, Betriebsstunden aus
+  dem Druckjournal, Bestand als Summe der Bewegungen.
+- **Rechenlogik ohne Datenbank.** `BomResolver`, `CostCalculator`,
+  `BundleCalculator`, `ReleaseGate`, `DiscountResolver`, `CapacityPlanner`,
+  `StockLedger`, `IsoWeek`, `Kpi`, `ProcurementAlert`, `MachineRate`,
+  `ColorRegistry` und `ReorderToken` sind reine Funktionen und damit ohne
+  WordPress-Testsuite prüfbar.
+- **Kein hartes Löschen** bei Druckjobs, Lagerbewegungen, Chargen und
+  Zugversuchen: Korrektur ausschließlich durch Storno-Gegenbuchung mit
+  Begründung und Verweis auf den Ursprungssatz.
 - **Capabilities** `lw16_manage_production`, `lw16_view_reports`,
   `lw16_manage_settings` und die Rolle `lw16_betrieb`. Wer `manage_lw16`
   besitzt, behält vollen Zugriff.
-- **Kalkulationsannahmen** liegen historisiert in `lw16_calc_settings`: jede
-  Änderung erzeugt eine Zeile mit eigenem `valid_from`, Werte werden nie
-  überschrieben. Eine Kalkulation von 2026 bleibt damit 2028 nachrechenbar.
-- **Geräteliste** unter *Betrieb → Drucker & Wartung*: Hersteller, Typ,
-  Anschaffungspreis, Lebensdauer, Stromkosten je Stunde, Ersatzteilkosten je
-  Jahr und Betriebsstunden je Jahr sind dort selbst pflegbar. Jede Änderung
-  wird protokolliert.
-- **Maschinenstundensatz wird berechnet, nicht gepflegt**: Abschreibung
-  (Anschaffung / Lebensdauer) + Verschleiß (Ersatzteile je Jahr /
-  Betriebsstunden je Jahr) + Energie + Flächenkosten, je Gerät aus
-  `lw16_printers` und im Mittel über die produzierende Flotte (`MachineRate`).
-  Gerätefelder überschreiben die globale Annahme; Energie kann als Eurobetrag
-  je Stunde oder als Leistung × Strompreis hinterlegt werden. Die
-  Abschreibungsformel stammt aus `Core\Calc` und wird mit der Preiskalkulation
-  geteilt.
-- **Protokollierung** läuft über das bestehende hashverkettete Audit-Log,
-  ergänzt um Vorher-/Nachher-Abbild und Begründung. Die Kettenprüfung liegt
-  unter *Betrieb → Einstellungen → Protokoll & Kettenprüfung*.
+- **Protokollierung** über das bestehende hashverkettete Audit-Log, ergänzt um
+  Vorher-/Nachher-Abbild und Begründung.
 
-- **Artikel, Revisionen, Stückliste, Kalkulation** unter *Betrieb → Artikel &
-  Revisionen*. Die Stückliste ist rekursiv: Eine Position verweist entweder
-  auf eine Komponente (Zukauf-Kleinteil) oder auf einen anderen Artikel
-  (Unterbaugruppe mit eigenem Druckprofil und eigener Charge). Zyklen werden
-  beim Speichern abgewiesen, die Auflösungstiefe ist auf fünf Ebenen begrenzt.
-- **Berechnet statt gepflegt**: Stückpreis einer Komponente aus der
-  Gebindegröße, Druckzeit je Teil aus dem Plattenwert, Herstellkosten rekursiv
-  über die Stückliste. Nichts davon wird gespeichert – die Kalkulation läuft
-  bei jeder Anzeige gegen die zum Stichtag gültigen Annahmen.
-- **Freigabelogik**: Eine Revision wird nur aktiv, wenn mindestens fünf
-  Zugversuche vorliegen und der Sicherheitsfaktor mindestens 3,0 beträgt.
-  Maßgeblich ist die niedrigste Bruchlast, nicht der Mittelwert.
-- **Bestellart-Rechner**: rechnet Sets und stellt sie gegen den Einzelverkauf.
-  Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an.
-- **Farbsystem**: Die Farbe ist ein globales WooCommerce-Produktattribut
-  (Standard `pa_farbe`), verwendet als Variantenattribut. Intern wird immer der
-  Slug gespeichert, nie der Anzeigename. Auflösung je Bestellposition:
-  Variantenattribut → eindeutiges Produktattribut → Standardfarbe → `ungeklaert`.
-  Solange nur eine Farbe produziert wird, greift durchgehend die Standardfarbe;
-  eine zweite Farbe ist später ein neuer Attributbegriff, keine Umstellung.
-- **Lagerhoheit**: Betrieb bucht die Lagerabgänge genau der Produkte, die über
-  `wc_product_id` auf einen Artikel im Artikelstamm zeigen; das Lager-Modul
-  überspringt sie über den Filter `lw16_inventory_skip_product`. Alles andere
-  bleibt beim Lager-Modul. Abschaltbar unter *Betrieb → Einstellungen → Farben
-  & Lagerhoheit*, bis Meilenstein 5 aus.
+**Bereiche**
 
-Umsetzungsstand: Meilensteine 1 und 2, dazu die Geräteliste aus Meilenstein 3.
-Die übrigen Seiten sind angelegt und benennen den Meilenstein, in dem sie
-Inhalt bekommen.
+| Seite | Inhalt |
+|---|---|
+| Dashboard | Kennzahlenkacheln mit Ampel, Wochenbudget, Alarme |
+| Druckjournal | Erfassung, Journal mit Quoten, Storno |
+| Artikel & Revisionen | Stammdaten, Revisionen, Komponenten, Stückliste, Beschaffung, Kalkulation, Bestellart-Rechner |
+| Drucker & Wartung | Geräte mit berechnetem Stundensatz, Wartungsfälligkeiten, Aufkleber |
+| Kapazität | Wochenvorschau, Rückwärtsrechnung, Auslastungsverlauf |
+| Material | Filamentchargen, Verbrauchsmaterial, Beschaffungsalarm |
+| Lager | Bestand je Artikel, Farbe und Lagerort, Soll/Ist, Korrekturbuchung |
+| Bestellungen | WooCommerce-Bestellungen, manuelle Erfassung, Entwürfe bestätigen |
+| Qualität | Zugversuche, Freigabestand, Chargenbuch, Rückverfolgung, GPSR-PDF |
+| Kontakte / B2B | Kontaktakte, Konditionen, Kommissionsbestand, Nachbestell-Link |
+| Zeiterfassung | Tageseinträge, Wochenübersicht gegen Budget |
+| Berichte | Kennzahlen im Zeitraum, CSV-Export, Monatsabschluss |
+| Import & Doku | CSV-Importer für die Mappe, Verfahrensdokumentation als PDF |
+| Einstellungen | Kalkulationsannahmen mit Historie, Farbsystem, Lagerhoheit, Wochenmail |
+
+**Mobile Schnellerfassung**
+
+Unter `/betrieb-erfassen/` hinter Login: eine Spalte, große Bedienelemente,
+fünf Eingaben je Druckjob (Drucker, Artikel, Teile i.O., Plattenwechsel,
+optional Fehlerursache). Alles andere kommt aus der Vorbelegung. Jede Buchung
+wandert zuerst in eine Warteschlange im Browser und verschwindet erst nach
+Bestätigung des Servers — im Keller geht damit keine Eingabe verloren.
+REST-Endpunkte unter `lw16/v1` mit Cookie- plus Nonce-Auth.
+
+**Farbsystem**
+
+Die Farbe ist ein globales WooCommerce-Produktattribut (Standard `pa_farbe`),
+verwendet als Variantenattribut. Intern wird immer der Slug gespeichert, nie
+der Anzeigename. Auflösung je Bestellposition: Variantenattribut → eindeutiges
+Produktattribut → Standardfarbe → `ungeklaert`. Ungeklärte Bewegungen werden
+gebucht und gemeldet, nie verworfen.
+
+**Lagerhoheit**
+
+Betrieb bucht die Lagerabgänge genau der Produkte, die über `wc_product_id`
+auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie über
+den Filter `lw16_inventory_skip_product`. Alles andere bleibt beim Lager-Modul.
+Abschaltbar unter *Betrieb → Einstellungen → Farben & Lagerhoheit*.
+
+**Nachbestell-Link**
+
+Kein B2B-Portal: Jeder Händler bekommt unter `/nachbestellen/{token}/` einen
+persönlichen Link ohne Login. Das Token ist 32 Byte zufällig und wird nur als
+Hash gespeichert; die Seite ist nicht indexierbar, rate-limitiert je Token und
+IP und zeigt weder Bestands- noch Umsatz- noch Fremdkonditionen. Sie erzeugt
+ausschließlich Bestellentwürfe für ihren Kontakt — Lagerabgang und offener
+Posten entstehen erst mit der Bestätigung im Backend.
+
+**Kein selbstgebauter QR-Code.** Ein handgeschriebener Encoder ließ sich ohne
+Referenzbibliothek nicht bit-genau verifizieren; ein Code, den der Scanner
+nicht liest, wäre schlimmer als keiner. Der Geräteaufkleber trägt stattdessen
+Kürzel und Kurz-URL in großer Schrift.
+
+Umsetzungsstand: Meilensteine 1 bis 11 vollständig umgesetzt.
 
 ## Umsetzungsstand
 
