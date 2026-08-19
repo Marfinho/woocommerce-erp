@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '5';
+	const DB_VERSION = '7';
 
 	/**
 	 * Aktivierungsroutine.
@@ -38,6 +38,8 @@ class Installer {
 		Settings::maybe_set_defaults();
 
 		// Endpoints registrieren, damit der anschließende Flush sie kennt.
+		add_rewrite_rule( '^betrieb-erfassen/?$', 'index.php?lw16_erfassung=1', 'top' );
+		add_rewrite_rule( '^nachbestellen/([a-f0-9]{64})/?$', 'index.php?lw16_reorder=1&lw16_token=$matches[1]', 'top' );
 		add_rewrite_endpoint( 'praemien', EP_ROOT | EP_PAGES );
 		add_rewrite_endpoint( 'wunschliste', EP_ROOT | EP_PAGES );
 		flush_rewrite_rules();
@@ -433,6 +435,9 @@ class Installer {
 			objekt_typ VARCHAR(50) NULL,
 			objekt_id BIGINT UNSIGNED NULL,
 			details LONGTEXT NULL,
+			payload_before_json LONGTEXT NULL,
+			payload_after_json LONGTEXT NULL,
+			grund VARCHAR(255) NULL,
 			hash VARCHAR(64) NOT NULL DEFAULT '',
 			vorheriger_hash VARCHAR(64) NOT NULL DEFAULT '',
 			erstellt_am DATETIME NOT NULL,
@@ -614,9 +619,16 @@ class Installer {
 			KEY ergebnis (ergebnis)
 		) {$charset_collate};";
 
+		// --- Modul Betrieb ------------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\Betrieb\Schema::tables( $p, $charset_collate ) );
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
+
+		// Startwerte der Kalkulationsannahmen (nur wenn noch keine vorhanden).
+		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_defaults();
+		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_price_tiers();
 
 		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
 		self::maybe_backfill_hashes();

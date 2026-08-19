@@ -29,6 +29,9 @@ class Scheduler {
 	// Dauerbuchungen täglich prüfen und ausführen.
 	const HOOK_RECURRING_BOOKINGS = 'lw16_recurring_bookings';
 
+	// Modul Betrieb.
+	const HOOK_BETRIEB_WEEKLY = 'lw16_betrieb_weekly_mail';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -50,6 +53,7 @@ class Scheduler {
 			self::HOOK_RECURRING_BOOKINGS,
 			self::HOOK_GENERATE_INVOICE,
 			self::HOOK_GENERATE_PACKING,
+			self::HOOK_BETRIEB_WEEKLY,
 		);
 	}
 
@@ -73,6 +77,7 @@ class Scheduler {
 			self::HOOK_WEEKLY_EXPORT  => WEEK_IN_SECONDS,
 			self::HOOK_DAILY_STOCK       => DAY_IN_SECONDS,
 			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
+			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {
