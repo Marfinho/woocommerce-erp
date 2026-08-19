@@ -626,6 +626,7 @@ class Installer {
 
 		// Startwerte der Kalkulationsannahmen (nur wenn noch keine vorhanden).
 		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_defaults();
+		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_price_tiers();
 
 		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
 		self::maybe_backfill_hashes();

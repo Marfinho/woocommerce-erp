@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
  */
 class PrinterRepository {
 
+	use SanitizesInput;
+
 	/**
 	 * Erlaubte Gerätestatus.
 	 */
@@ -199,52 +201,4 @@ class PrinterRepository {
 		return true;
 	}
 
-	/**
-	 * Textfeld normalisieren.
-	 *
-	 * @param array  $input Eingaben.
-	 * @param string $key   Feld.
-	 * @return string|null
-	 */
-	protected static function text( array $input, $key ) {
-		if ( ! isset( $input[ $key ] ) ) {
-			return null;
-		}
-		$value = sanitize_text_field( $input[ $key ] );
-		return '' === $value ? null : $value;
-	}
-
-	/**
-	 * Zahl normalisieren, deutsche Kommaschreibweise zulassen.
-	 * Leere Eingabe bleibt NULL.
-	 *
-	 * @param array  $input Eingaben.
-	 * @param string $key   Feld.
-	 * @return float|null
-	 */
-	protected static function decimal( array $input, $key ) {
-		if ( ! isset( $input[ $key ] ) ) {
-			return null;
-		}
-		$raw = trim( str_replace( ',', '.', (string) $input[ $key ] ) );
-		if ( '' === $raw || ! is_numeric( $raw ) ) {
-			return null;
-		}
-		return (float) $raw;
-	}
-
-	/**
-	 * Datum normalisieren.
-	 *
-	 * @param array  $input Eingaben.
-	 * @param string $key   Feld.
-	 * @return string|null
-	 */
-	protected static function date( array $input, $key ) {
-		if ( ! isset( $input[ $key ] ) ) {
-			return null;
-		}
-		$raw = trim( (string) $input[ $key ] );
-		return preg_match( '/^\d{4}-\d{2}-\d{2}$/', $raw ) ? $raw : null;
-	}
 }

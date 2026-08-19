@@ -252,6 +252,45 @@ class CalcSettings {
 	}
 
 	/**
+	 * Standard-Rabattstaffel einmalig anlegen.
+	 *
+	 * Die Staffel gilt für alle Händler ohne Sondervereinbarung. Sie steht
+	 * hier, weil die Kalkulationsansicht sie ab Meilenstein 2 braucht, um die
+	 * Preisebenen nebeneinanderzustellen; gepflegt wird sie in Meilenstein 8.
+	 */
+	public static function seed_price_tiers() {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'lw16_price_tiers';
+		$count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( $count > 0 ) {
+			return;
+		}
+
+		$now   = current_time( 'mysql', true );
+		$start = gmdate( 'Y-m-d' );
+
+		foreach ( array(
+			array( 'Stufe 1', 150.0, 40.0 ),
+			array( 'Stufe 2', 400.0, 45.0 ),
+			array( 'Stufe 3', 800.0, 50.0 ),
+		) as $tier ) {
+			$wpdb->insert(
+				$table,
+				array(
+					'tier_name'       => $tier[0],
+					'min_order_value' => $tier[1],
+					'discount_pct'    => $tier[2],
+					'valid_from'      => $start,
+					'note'            => 'Startwert',
+					'created_at'      => $now,
+					'created_by'      => get_current_user_id(),
+				)
+			);
+		}
+	}
+
+	/**
 	 * Datum auf Y-m-d normalisieren, Fallback heute.
 	 *
 	 * @param string $date Eingabe.

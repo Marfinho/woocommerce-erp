@@ -73,8 +73,24 @@ und die Papierformulare ab.
   ergänzt um Vorher-/Nachher-Abbild und Begründung. Die Kettenprüfung liegt
   unter *Betrieb → Einstellungen → Protokoll & Kettenprüfung*.
 
-Umsetzungsstand: Meilenstein 1 (Fundament). Die übrigen Seiten sind angelegt
-und benennen den Meilenstein, in dem sie Inhalt bekommen.
+- **Artikel, Revisionen, Stückliste, Kalkulation** unter *Betrieb → Artikel &
+  Revisionen*. Die Stückliste ist rekursiv: Eine Position verweist entweder
+  auf eine Komponente (Zukauf-Kleinteil) oder auf einen anderen Artikel
+  (Unterbaugruppe mit eigenem Druckprofil und eigener Charge). Zyklen werden
+  beim Speichern abgewiesen, die Auflösungstiefe ist auf fünf Ebenen begrenzt.
+- **Berechnet statt gepflegt**: Stückpreis einer Komponente aus der
+  Gebindegröße, Druckzeit je Teil aus dem Plattenwert, Herstellkosten rekursiv
+  über die Stückliste. Nichts davon wird gespeichert – die Kalkulation läuft
+  bei jeder Anzeige gegen die zum Stichtag gültigen Annahmen.
+- **Freigabelogik**: Eine Revision wird nur aktiv, wenn mindestens fünf
+  Zugversuche vorliegen und der Sicherheitsfaktor mindestens 3,0 beträgt.
+  Maßgeblich ist die niedrigste Bruchlast, nicht der Mittelwert.
+- **Bestellart-Rechner**: rechnet Sets und stellt sie gegen den Einzelverkauf.
+  Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an.
+
+Umsetzungsstand: Meilensteine 1 und 2, dazu die Geräteliste aus Meilenstein 3.
+Die übrigen Seiten sind angelegt und benennen den Meilenstein, in dem sie
+Inhalt bekommen.
 
 ## Umsetzungsstand
 

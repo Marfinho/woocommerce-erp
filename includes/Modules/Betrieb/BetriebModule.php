@@ -13,6 +13,7 @@ namespace Lindenweg16\Modules\Betrieb;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 
@@ -54,7 +55,6 @@ class BetriebModule {
 	 */
 	protected static function milestones() {
 		return array(
-			'lw16-betrieb-artikel'      => 2,
 			'lw16-betrieb-druckjournal' => 3,
 			'lw16-betrieb-material'     => 5,
 			'lw16-betrieb-lager'        => 5,
@@ -76,6 +76,7 @@ class BetriebModule {
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 			( new SettingsPage() )->register();
 			( new PrintersPage() )->register();
+			( new ArticlesPage() )->register();
 		}
 	}
 
