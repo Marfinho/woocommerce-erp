@@ -11,6 +11,7 @@
  */
 
 define( 'ABSPATH', __DIR__ . '/' );
+define( 'DAY_IN_SECONDS', 86400 );
 
 /*
  * Minimale Stubs der WordPress-Funktionen, die in den ansonsten reinen
@@ -28,6 +29,32 @@ if ( ! function_exists( '__' ) ) {
 	 */
 	function __( $text, $domain = 'default' ) { // phpcs:ignore
 		return $text;
+	}
+}
+
+if ( ! function_exists( 'get_option' ) ) {
+	/**
+	 * Liefert im Test immer den Vorgabewert – die Rechenklassen greifen nur
+	 * für Randwerte wie die Standardfarbe auf Optionen zu.
+	 *
+	 * @param string $key     Schlüssel.
+	 * @param mixed  $default Vorgabe.
+	 * @return mixed
+	 */
+	function get_option( $key, $default = false ) {
+		return $default;
+	}
+}
+
+if ( ! function_exists( 'get_bloginfo' ) ) {
+	/**
+	 * Platzhalter für Blog-Angaben.
+	 *
+	 * @param string $show Feld.
+	 * @return string
+	 */
+	function get_bloginfo( $show = '' ) {
+		return '';
 	}
 }
 
@@ -54,5 +81,11 @@ require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BundleCalculator.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ReleaseGate.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SanitizesInput.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/SourcingRepository.php';
+require dirname( __DIR__ ) . '/includes/Core/Settings.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/ColorRegistry.php';
 require dirname( __DIR__ ) . '/includes/Modules/Betrieb/StockOwnership.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/IsoWeek.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/StockLedger.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/PrintJobRepository.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/BatchRepository.php';
+require dirname( __DIR__ ) . '/includes/Modules/Betrieb/RestApi.php';

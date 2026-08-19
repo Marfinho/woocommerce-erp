@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
+use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 
@@ -55,7 +56,6 @@ class BetriebModule {
 	 */
 	protected static function milestones() {
 		return array(
-			'lw16-betrieb-druckjournal' => 3,
 			'lw16-betrieb-material'     => 5,
 			'lw16-betrieb-lager'        => 5,
 			'lw16-betrieb-bestellungen' => 5,
@@ -74,6 +74,8 @@ class BetriebModule {
 		// Gilt auch im Frontend: Der Lagerabzug läuft beim Statuswechsel
 		// einer Bestellung, nicht im Backend.
 		( new StockOwnership() )->register();
+		( new RestApi() )->register();
+		( new MobileCapture() )->register();
 
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );
@@ -81,6 +83,7 @@ class BetriebModule {
 			( new SettingsPage() )->register();
 			( new PrintersPage() )->register();
 			( new ArticlesPage() )->register();
+			( new PrintJobsPage() )->register();
 		}
 	}
 

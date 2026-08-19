@@ -11,6 +11,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
+use Lindenweg16\Modules\Betrieb\DeviceLabel;
+use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\MachineRate;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 
@@ -157,6 +159,7 @@ class PrintersPage {
 			__( 'Hersteller / Typ', 'lindenweg16' ),
 			__( 'Status', 'lindenweg16' ),
 			__( 'Anschaffung', 'lindenweg16' ),
+			__( 'Betriebsstunden', 'lindenweg16' ),
 			__( 'Abschreibung €/h', 'lindenweg16' ),
 			__( 'Verschleiß €/h', 'lindenweg16' ),
 			__( 'Energie €/h', 'lindenweg16' ),
@@ -187,6 +190,10 @@ class PrintersPage {
 				'<td>%s</td>',
 				esc_html( null === $printer['acquisition_cost'] ? '—' : number_format_i18n( (float) $printer['acquisition_cost'], 2 ) . ' €' )
 			);
+			printf(
+				'<td>%s h</td>',
+				esc_html( number_format_i18n( PrintJobRepository::operating_hours( (int) $printer['id'] ), 1 ) )
+			);
 			foreach ( array( 'abschreibung', 'verschleiss', 'energie', 'flaeche' ) as $part ) {
 				printf( '<td>%s</td>', esc_html( number_format_i18n( $b[ $part ], 4 ) ) );
 			}
@@ -201,6 +208,8 @@ class PrintersPage {
 
 		echo '</tbody></table>';
 
+		$this->render_labels( $printers );
+
 		$fleet = MachineRate::fleet_breakdown( $printers, $settings );
 		printf(
 			'<p>%s <strong>%s €/h</strong> — %s</p>',
@@ -214,6 +223,22 @@ class PrintersPage {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Geräteaufkleber zum Ausdrucken und Ankleben.
+	 *
+	 * @param array $printers Geräte.
+	 */
+	protected function render_labels( array $printers ) {
+		echo '<h2>' . esc_html__( 'Aufkleber für die Geräte', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Ausdrucken und ans Gerät kleben. Die URL öffnet die Erfassung mit vorausgewähltem Drucker – am Handy genügen dann fünf Eingaben.', 'lindenweg16' ) . '</p>';
+
+		echo '<div class="lw16-labels">';
+		foreach ( $printers as $printer ) {
+			echo DeviceLabel::render( $printer ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapt in render().
+		}
+		echo '</div>';
 	}
 
 	/**
