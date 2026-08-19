@@ -198,12 +198,58 @@ class BetriebModule {
 			);
 		}
 		echo '</tbody></table>';
+
+		$this->render_machine_rate();
+
 		printf(
 			'<p><a class="button" href="%s">%s</a></p>',
 			esc_url( admin_url( 'admin.php?page=lw16-betrieb-einstellungen' ) ),
 			esc_html__( 'Annahmen bearbeiten', 'lindenweg16' )
 		);
 		echo '</div>';
+	}
+
+	/**
+	 * Maschinenstundensatz mit seiner Herkunft ausweisen.
+	 *
+	 * Der Satz ist eine Rechengröße, kein gepflegter Wert – deshalb wird
+	 * offengelegt, aus welchen Geräten und Annahmen er entsteht.
+	 */
+	protected function render_machine_rate() {
+		$breakdown = MachineRate::current_breakdown();
+
+		echo '<h2>' . esc_html__( 'Maschinenstundensatz (berechnet)', 'lindenweg16' ) . '</h2>';
+
+		if ( 0 === $breakdown['printer_count'] ) {
+			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Noch keine Geräte erfasst. Ohne Anschaffungskosten fehlt die Abschreibung – der Satz ist damit zu niedrig. Geräte werden in Meilenstein 3 erfasst.', 'lindenweg16' ) . '</p></div>';
+		}
+
+		printf(
+			'<p><strong>%s €/h</strong> %s</p>',
+			esc_html( number_format_i18n( $breakdown['rate'], 4 ) ),
+			esc_html(
+				sprintf(
+					/* translators: %d: Anzahl berücksichtigter Geräte. */
+					_n( 'Mittelwert über %d produzierendes Gerät.', 'Mittelwert über %d produzierende Geräte.', (int) $breakdown['printer_count'], 'lindenweg16' ),
+					(int) $breakdown['printer_count']
+				)
+			)
+		);
+
+		if ( $breakdown['per_printer'] ) {
+			echo '<table class="widefat striped" style="max-width:640px"><thead><tr>';
+			echo '<th>' . esc_html__( 'Gerät', 'lindenweg16' ) . '</th>';
+			echo '<th style="text-align:right">' . esc_html__( 'Satz €/h', 'lindenweg16' ) . '</th>';
+			echo '</tr></thead><tbody>';
+			foreach ( $breakdown['per_printer'] as $code => $rate ) {
+				printf(
+					'<tr><td>%s</td><td style="text-align:right">%s</td></tr>',
+					esc_html( $code ),
+					esc_html( number_format_i18n( $rate, 4 ) )
+				);
+			}
+			echo '</tbody></table>';
+		}
 	}
 
 	/**

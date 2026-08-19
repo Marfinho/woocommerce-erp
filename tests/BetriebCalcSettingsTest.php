@@ -44,9 +44,23 @@ class BetriebCalcSettingsTest extends TestCase {
 	public function test_defaults_gelten_ohne_zeilen() {
 		$values = CalcSettings::resolve( array(), '2026-09-01' );
 		$this->assertSame( 22.0, $values['filament_price_per_kg'] );
-		$this->assertSame( 0.20, $values['machine_rate_per_h'] );
 		$this->assertSame( 0.05, $values['scrap_surcharge_pct'] );
 		$this->assertSame( 0.0, $values['vat_rate'] );
+	}
+
+	/**
+	 * Der Maschinenstundensatz ist keine Annahme, sondern eine Rechengröße
+	 * aus den Gerätedaten. Nur seine Eingangsgrößen werden gepflegt.
+	 */
+	public function test_maschinensatz_ist_keine_annahme() {
+		$values = CalcSettings::resolve( array(), '2026-09-01' );
+
+		$this->assertArrayNotHasKey( 'machine_rate_per_h', $values );
+		$this->assertSame( 5000.0, $values['printer_lifetime_h'] );
+		$this->assertSame( 0.02, $values['spare_parts_per_h'] );
+		$this->assertSame( 0.15, $values['printer_power_kw'] );
+		$this->assertSame( 0.35, $values['power_price_per_kwh'] );
+		$this->assertSame( 0.0, $values['workspace_cost_per_h'] );
 	}
 
 	/**

@@ -57,6 +57,12 @@ und die Papierformulare ab.
 - **Kalkulationsannahmen** liegen historisiert in `lw16_calc_settings`: jede
   Änderung erzeugt eine Zeile mit eigenem `valid_from`, Werte werden nie
   überschrieben. Eine Kalkulation von 2026 bleibt damit 2028 nachrechenbar.
+- **Maschinenstundensatz wird berechnet, nicht gepflegt**: Abschreibung
+  (Anschaffung / Lebensdauer) + Verschleiß + Energie (kW × Strompreis) +
+  Flächenkosten, je Gerät aus `lw16_printers` und im Mittel über die
+  produzierende Flotte (`MachineRate`). Gerätefelder überschreiben die
+  globale Annahme. Die Formel selbst stammt aus `Core\Calc` und wird mit der
+  Preiskalkulation geteilt.
 - **Protokollierung** läuft über das bestehende hashverkettete Audit-Log,
   ergänzt um Vorher-/Nachher-Abbild und Begründung. Die Kettenprüfung liegt
   unter *Betrieb → Einstellungen → Protokoll & Kettenprüfung*.

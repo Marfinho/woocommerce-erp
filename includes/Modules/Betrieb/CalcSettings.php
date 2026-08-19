@@ -23,8 +23,15 @@ class CalcSettings {
 	 */
 	const DEFAULTS = array(
 		'filament_price_per_kg'  => 22.0,
-		'machine_rate_per_h'     => 0.20,
 		'labor_rate_per_h'       => 25.0,
+		// Eingangsgrößen des Maschinenstundensatzes. Der Satz selbst wird
+		// aus den Gerätedaten berechnet (siehe MachineRate) und ist deshalb
+		// bewusst keine eigene Annahme.
+		'printer_lifetime_h'     => 5000.0,
+		'spare_parts_per_h'      => 0.02,
+		'printer_power_kw'       => 0.15,
+		'power_price_per_kwh'    => 0.35,
+		'workspace_cost_per_h'   => 0.0,
 		'payment_fee_pct'        => 0.0249,
 		'payment_fee_fixed'      => 0.35,
 		'packaging_cost'         => 0.75,
@@ -44,8 +51,12 @@ class CalcSettings {
 	public static function labels() {
 		return array(
 			'filament_price_per_kg'     => __( 'Filamentpreis (€/kg)', 'lindenweg16' ),
-			'machine_rate_per_h'        => __( 'Maschinenstundensatz (€/h)', 'lindenweg16' ),
 			'labor_rate_per_h'          => __( 'Kalkulatorischer Stundensatz (€/h)', 'lindenweg16' ),
+			'printer_lifetime_h'        => __( 'Lebensdauer je Gerät (Betriebsstunden)', 'lindenweg16' ),
+			'spare_parts_per_h'         => __( 'Ersatzteile und Verschleiß (€/h)', 'lindenweg16' ),
+			'printer_power_kw'          => __( 'Leistungsaufnahme je Gerät (kW)', 'lindenweg16' ),
+			'power_price_per_kwh'       => __( 'Strompreis (€/kWh)', 'lindenweg16' ),
+			'workspace_cost_per_h'      => __( 'Flächenkosten je Betriebsstunde (€/h)', 'lindenweg16' ),
 			'payment_fee_pct'           => __( 'Zahlungsgebühr variabel (Anteil)', 'lindenweg16' ),
 			'payment_fee_fixed'         => __( 'Zahlungsgebühr fix (€ je Transaktion)', 'lindenweg16' ),
 			'packaging_cost'            => __( 'Verpackung + Beileger (€ je Bestellung)', 'lindenweg16' ),
