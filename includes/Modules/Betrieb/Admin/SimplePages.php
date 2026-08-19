@@ -246,14 +246,17 @@ class SimplePages {
 
 		$token = ReorderToken::issue( $contact_id );
 
+		// Der Link darf nicht in die Adresszeile: Er landete sonst im
+		// Browserverlauf, im Referer und im Serverprotokoll. Stattdessen
+		// einmalig in einem kurzlebigen Transient für genau diesen Benutzer.
+		if ( $token['url'] ) {
+			set_transient( 'lw16_reorder_link_' . get_current_user_id(), $token['url'], 5 * MINUTE_IN_SECONDS );
+		}
+
 		$this->redirect(
 			'lw16-betrieb-kontakte',
 			$token['url']
-				? sprintf(
-					/* translators: %s: URL. */
-					__( 'Neuer Link: %s — er wird nur dieses eine Mal angezeigt.', 'lindenweg16' ),
-					$token['url']
-				)
+				? __( 'Neuer Link erzeugt – er wird unten nur dieses eine Mal angezeigt.', 'lindenweg16' )
 				: __( 'Link konnte nicht erzeugt werden.', 'lindenweg16' ),
 			$token['url'] ? 'success' : 'error',
 			array( 'contact' => $contact_id )
@@ -1260,6 +1263,18 @@ class SimplePages {
 				return ! $token['revoked_at'];
 			}
 		);
+
+		// Frisch erzeugter Link: einmalig anzeigen und sofort verwerfen.
+		$fresh = get_transient( 'lw16_reorder_link_' . get_current_user_id() );
+		if ( $fresh ) {
+			delete_transient( 'lw16_reorder_link_' . get_current_user_id() );
+			printf(
+				'<div class="notice notice-success inline"><p><strong>%s</strong><br /><code style="user-select:all;font-size:13px">%s</code></p><p>%s</p></div>',
+				esc_html__( 'Neuer Link – jetzt kopieren und dem Händler geben:', 'lindenweg16' ),
+				esc_html( $fresh ),
+				esc_html__( 'Er wird nicht erneut angezeigt. Gespeichert ist nur sein Hash.', 'lindenweg16' )
+			);
+		}
 
 		if ( $active ) {
 			$token = reset( $active );
