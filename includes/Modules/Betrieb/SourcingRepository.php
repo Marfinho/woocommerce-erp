@@ -113,8 +113,8 @@ class SourcingRepository {
 		$article = $article_id ? ArticleRepository::find( $article_id ) : null;
 		if ( ! $article ) {
 			$errors[] = __( 'Der Artikel existiert nicht.', 'lindenweg16' );
-		} elseif ( 'druck' === $article['sourcing_type'] ) {
-			$errors[] = __( 'Für einen reinen Druckartikel gibt es keine Beschaffungsdaten. Beschaffungsweg zuerst auf Zukauf oder Hybrid ändern.', 'lindenweg16' );
+		} elseif ( in_array( $article['sourcing_type'], array( 'druck', 'montage' ), true ) ) {
+			$errors[] = __( 'Selbst gefertigte Artikel werden nicht eingekauft. Beschaffungsweg zuerst auf Zukauf oder Hybrid ändern.', 'lindenweg16' );
 		}
 
 		$price = self::decimal_or( $input, 'purchase_price_net', 0 );

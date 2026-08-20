@@ -70,18 +70,23 @@ class PicklistRepository {
 				continue;
 			}
 
+			// Eine Pickliste trägt Artikel und Kleinteile nebeneinander: Wer
+			// zehn Halbzeuge baut, holt Rohlinge und Schrauben in einem Gang.
+			$type = isset( $line['item_type'] ) && 'komponente' === $line['item_type'] ? 'komponente' : 'artikel';
+
 			$color = isset( $line['color'] ) && '' !== $line['color']
 				? (string) $line['color']
 				: ColorRegistry::UNRESOLVED;
 			$order = isset( $line['wc_order_id'] ) ? (int) $line['wc_order_id'] : 0;
-			$key   = $article . '|' . $color . '|' . $order;
+			$key   = $type . '|' . $article . '|' . $color . '|' . $order;
 
 			if ( ! isset( $grouped[ $key ] ) ) {
 				$grouped[ $key ] = array(
+					'item_type'    => $type,
 					'article_id'   => $article,
 					'color'        => $color,
 					'wc_order_id'  => $order,
-					'bin_id'       => isset( $bins[ $article ] ) ? (int) $bins[ $article ] : 0,
+					'bin_id'       => isset( $line['bin_id'] ) ? (int) $line['bin_id'] : ( isset( $bins[ $article ] ) && 'artikel' === $type ? (int) $bins[ $article ] : 0 ),
 					'qty_required' => 0.0,
 				);
 			}
@@ -132,11 +137,13 @@ class PicklistRepository {
 	/**
 	 * Liste mit Positionen anlegen.
 	 *
-	 * @param array  $rows Ergebnis von condense().
-	 * @param string $note Notiz.
+	 * @param array  $rows          Ergebnis von condense().
+	 * @param string $note          Notiz.
+	 * @param string $source        bestellungen oder fertigung.
+	 * @param int    $work_order_id Zugehöriger Fertigungsauftrag.
 	 * @return int Listen-ID oder 0.
 	 */
-	public static function create( array $rows, $note = '' ) {
+	public static function create( array $rows, $note = '', $source = 'bestellungen', $work_order_id = 0 ) {
 		global $wpdb;
 
 		if ( ! $rows ) {
@@ -144,12 +151,13 @@ class PicklistRepository {
 		}
 
 		$list = array(
-			'code'       => self::next_code(),
-			'status'     => 'offen',
-			'source'     => 'bestellungen',
-			'note'       => $note ? sanitize_textarea_field( $note ) : null,
-			'created_at' => current_time( 'mysql', true ),
-			'created_by' => get_current_user_id(),
+			'code'          => self::next_code(),
+			'status'        => 'offen',
+			'source'        => 'fertigung' === $source ? 'fertigung' : 'bestellungen',
+			'work_order_id' => $work_order_id ? (int) $work_order_id : null,
+			'note'          => $note ? sanitize_textarea_field( $note ) : null,
+			'created_at'    => current_time( 'mysql', true ),
+			'created_by'    => get_current_user_id(),
 		);
 
 		if ( false === $wpdb->insert( self::table(), $list ) ) {
@@ -164,6 +172,7 @@ class PicklistRepository {
 				self::items_table(),
 				array(
 					'picklist_id'  => $id,
+					'item_type'    => isset( $row['item_type'] ) ? (string) $row['item_type'] : 'artikel',
 					'article_id'   => (int) $row['article_id'],
 					'color'        => (string) $row['color'],
 					'bin_id'       => ! empty( $row['bin_id'] ) ? (int) $row['bin_id'] : null,
@@ -252,8 +261,13 @@ class PicklistRepository {
 	 * @return array
 	 */
 	public static function open_with_items() {
-		$articles = ArticleRepository::all_by_id();
-		$bins     = array();
+		$articles   = ArticleRepository::all_by_id();
+		$components = array();
+		foreach ( ComponentRepository::all() as $component ) {
+			$components[ (int) $component['id'] ] = $component;
+		}
+
+		$bins = array();
 		foreach ( BinRepository::all() as $bin ) {
 			$bins[ (int) $bin['id'] ] = $bin;
 		}
@@ -262,15 +276,16 @@ class PicklistRepository {
 		foreach ( self::all( 'offen' ) as $list ) {
 			$items = array();
 			foreach ( self::items( (int) $list['id'] ) as $item ) {
-				$article = isset( $articles[ (int) $item['article_id'] ] ) ? $articles[ (int) $item['article_id'] ] : null;
-				$bin     = $item['bin_id'] && isset( $bins[ (int) $item['bin_id'] ] ) ? $bins[ (int) $item['bin_id'] ] : null;
+				$target = self::describe( $item, $articles, $components );
+				$bin    = $item['bin_id'] && isset( $bins[ (int) $item['bin_id'] ] ) ? $bins[ (int) $item['bin_id'] ] : null;
 
 				$items[] = array(
 					'id'           => (int) $item['id'],
+					'item_type'    => (string) $item['item_type'],
 					'article_id'   => (int) $item['article_id'],
-					'sku'          => $article ? $article['sku'] : '',
-					'name'         => $article ? $article['name'] : '',
-					'color'        => (string) $item['color'],
+					'sku'          => $target['sku'],
+					'name'         => $target['name'],
+					'color'        => 'komponente' === $item['item_type'] ? '' : (string) $item['color'],
 					'bin'          => $bin ? $bin['code'] : '',
 					'bin_id'       => (int) $item['bin_id'],
 					'wc_order_id'  => (int) $item['wc_order_id'],
@@ -281,13 +296,85 @@ class PicklistRepository {
 			}
 
 			$out[] = array(
-				'id'    => (int) $list['id'],
-				'code'  => (string) $list['code'],
-				'items' => $items,
+				'id'     => (int) $list['id'],
+				'code'   => (string) $list['code'],
+				'source' => (string) $list['source'],
+				'items'  => $items,
 			);
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Nummer, Bezeichnung und Barcode einer Position auflösen.
+	 *
+	 * Eine Position zeigt entweder auf einen Artikel oder auf eine
+	 * Komponente – dieselbe Spalte, zwei Stämme.
+	 *
+	 * @param array $item       Position.
+	 * @param array $articles   Artikel nach ID.
+	 * @param array $components Komponenten nach ID.
+	 * @return array {sku, name, barcode}
+	 */
+	public static function describe( array $item, array $articles, array $components ) {
+		$id = (int) $item['article_id'];
+
+		if ( isset( $item['item_type'] ) && 'komponente' === $item['item_type'] ) {
+			$row = isset( $components[ $id ] ) ? $components[ $id ] : null;
+
+			return array(
+				'sku'     => $row ? (string) $row['code'] : '',
+				'name'    => $row ? (string) $row['name'] : '',
+				'barcode' => $row && ! empty( $row['barcode'] ) ? (string) $row['barcode'] : '',
+			);
+		}
+
+		$row = isset( $articles[ $id ] ) ? $articles[ $id ] : null;
+
+		return array(
+			'sku'     => $row ? (string) $row['sku'] : '',
+			'name'    => $row ? (string) $row['name'] : '',
+			'barcode' => $row && ! empty( $row['barcode'] ) ? (string) $row['barcode'] : '',
+		);
+	}
+
+	/**
+	 * Pickliste aus einem Fertigungsauftrag.
+	 *
+	 * @param array $order Auftrag.
+	 * @param array $bins  Zuordnung article_id => bin_id.
+	 * @return int Listen-ID oder 0.
+	 */
+	public static function from_work_order( array $order, array $bins = array() ) {
+		$need = WorkOrderRepository::material_need(
+			BomRepository::for_article( (int) $order['article_id'] ),
+			(float) $order['qty_planned']
+		);
+
+		$lines = array();
+		foreach ( $need as $row ) {
+			$lines[] = array(
+				'item_type'   => $row['child_type'] === 'komponente' ? 'komponente' : 'artikel',
+				'article_id'  => (int) $row['child_id'],
+				'color'       => 'komponente' === $row['child_type'] ? '' : (string) $order['color'],
+				'qty'         => (float) $row['qty'],
+				'wc_order_id' => 0,
+			);
+		}
+
+		$rows = self::condense( $lines, $bins );
+
+		return self::create(
+			$rows,
+			sprintf(
+				/* translators: %s: Auftragscode. */
+				__( 'Material für Fertigungsauftrag %s', 'lindenweg16' ),
+				$order['code']
+			),
+			'fertigung',
+			(int) $order['id']
+		);
 	}
 
 	/**
@@ -338,16 +425,23 @@ class PicklistRepository {
 			);
 		}
 
-		$article = ArticleRepository::find( (int) $item['article_id'] );
-		if ( ! $article ) {
+		if ( 'komponente' === $item['item_type'] ) {
+			$row = ComponentRepository::find( (int) $item['article_id'] );
+			$sku = $row ? (string) $row['code'] : '';
+		} else {
+			$row = ArticleRepository::find( (int) $item['article_id'] );
+			$sku = $row ? (string) $row['sku'] : '';
+		}
+
+		if ( ! $row ) {
 			return array(
 				'success' => false,
-				'message' => __( 'Artikel nicht gefunden.', 'lindenweg16' ),
+				'message' => __( 'Position zeigt auf einen Stammsatz, den es nicht mehr gibt.', 'lindenweg16' ),
 				'done'    => false,
 			);
 		}
 
-		if ( ! self::scan_matches( $scanned, $article['sku'], isset( $article['barcode'] ) ? $article['barcode'] : '' ) ) {
+		if ( ! self::scan_matches( $scanned, $sku, isset( $row['barcode'] ) ? $row['barcode'] : '' ) ) {
 			return array(
 				'success' => false,
 				'message' => __( 'Der gescannte Code gehört nicht zu dieser Position.', 'lindenweg16' ),

@@ -24,7 +24,7 @@ class ArticleRepository {
 	/**
 	 * Erlaubte Beschaffungswege.
 	 */
-	const SOURCING = array( 'druck', 'zukauf', 'hybrid' );
+	const SOURCING = array( 'druck', 'montage', 'zukauf', 'hybrid' );
 
 	/**
 	 * Tabellenname.
@@ -43,9 +43,10 @@ class ArticleRepository {
 	 */
 	public static function sourcing_labels() {
 		return array(
-			'druck'  => __( 'Eigenfertigung (Druck)', 'lindenweg16' ),
-			'zukauf' => __( 'Zukauf', 'lindenweg16' ),
-			'hybrid' => __( 'Hybrid (Zukauf mit gedruckten Anbauteilen)', 'lindenweg16' ),
+			'druck'   => __( 'Rohling aus dem Drucker', 'lindenweg16' ),
+			'montage' => __( 'Halbzeug oder Baugruppe (Montage)', 'lindenweg16' ),
+			'zukauf'  => __( 'Zukauf', 'lindenweg16' ),
+			'hybrid'  => __( 'Hybrid (Zukauf mit gedruckten Anbauteilen)', 'lindenweg16' ),
 		);
 	}
 

@@ -347,7 +347,8 @@ class RestApi {
 
 		$articles = array();
 		foreach ( ArticleRepository::all() as $article ) {
-			if ( 'zukauf' === $article['sourcing_type'] ) {
+			// Die Druckmaske zeigt nur, was auch gedruckt wird.
+			if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
 				continue;
 			}
 			$revision   = RevisionRepository::current_for_article( (int) $article['id'] );

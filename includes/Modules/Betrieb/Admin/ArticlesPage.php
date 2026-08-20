@@ -539,7 +539,7 @@ class ArticlesPage {
 
 		$this->field( __( 'Artikelnummer', 'lindenweg16' ), 'sku', $this->val( $edit, 'sku' ), 'text', __( 'Pflicht, eindeutig, z. B. HH-001.', 'lindenweg16' ) );
 		$this->field( __( 'Bezeichnung', 'lindenweg16' ), 'name', $this->val( $edit, 'name' ) );
-		$this->select( __( 'Beschaffungsweg', 'lindenweg16' ), 'sourcing_type', $sourcing, $edit ? $edit['sourcing_type'] : 'druck', __( 'Zukaufartikel haben kein Druckprofil; ihre Kosten kommen aus dem Reiter Beschaffung.', 'lindenweg16' ) );
+		$this->select( __( 'Beschaffungsweg', 'lindenweg16' ), 'sourcing_type', $sourcing, $edit ? $edit['sourcing_type'] : 'druck', __( 'Rohling = kommt aus dem Drucker, braucht eine Revision. Halbzeug/Baugruppe = entsteht durch Montage aus der Stückliste, Fertigungsauftrag unter Lagerplätze &amp; Picklisten. Zukauf = wird bestellt, Kosten aus dem Reiter Beschaffung.', 'lindenweg16' ) );
 		$this->select( __( 'Status', 'lindenweg16' ), 'status', $status, $edit ? $edit['status'] : 'entwicklung' );
 		$this->checkbox( __( 'Im Shop verkäuflich', 'lindenweg16' ), 'sellable', $edit ? $edit['sellable'] : 1, __( 'Abstandshalter und Wandanker sind eigene Artikel, aber nicht verkäuflich.', 'lindenweg16' ) );
 		$this->checkbox( __( 'Rabattfähig', 'lindenweg16' ), 'discountable', $edit ? $edit['discountable'] : 1, __( 'Personalisierte Artikel sind von der Händlerstaffel ausgenommen.', 'lindenweg16' ) );
@@ -658,8 +658,8 @@ class ArticlesPage {
 			return;
 		}
 
-		if ( 'zukauf' === $article['sourcing_type'] ) {
-			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Ein Zukaufartikel hat kein Druckprofil. Die Kosten kommen aus dem Reiter Beschaffung.', 'lindenweg16' ) . '</p></div>';
+		if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Dieser Artikel hat kein Druckprofil. Ein Halbzeug entsteht durch Montage aus seiner Stückliste, ein Zukaufartikel kommt aus dem Reiter Beschaffung.', 'lindenweg16' ) . '</p></div>';
 			return;
 		}
 
@@ -868,7 +868,7 @@ class ArticlesPage {
 			return;
 		}
 
-		if ( 'druck' === $article['sourcing_type'] ) {
+		if ( in_array( $article['sourcing_type'], array( 'druck', 'montage' ), true ) ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Dieser Artikel wird selbst gefertigt. Beschaffungsdaten gibt es nur für Zukauf- und Hybridartikel.', 'lindenweg16' ) . '</p></div>';
 			return;
 		}

@@ -115,7 +115,9 @@ class CostCalculator {
 
 		// --- Eigenfertigung ------------------------------------------------
 		// Nur gedruckte und hybride Artikel haben Filamentgewicht und Druckzeit.
-		// Für einen Zukaufartikel wie die Holzstange gäbe es hier Unsinn.
+		// Für einen Zukaufartikel wie die Holzstange gäbe es hier Unsinn, und
+		// ein Halbzeug (montage) kostet keine Maschinenzeit, sondern
+		// Handarbeit – die steckt in postprocessing_min weiter unten.
 		if ( 'druck' === $type || 'hybrid' === $type ) {
 			if ( $revision ) {
 				$weight  = isset( $revision['weight_g'] ) ? (float) $revision['weight_g'] : 0.0;

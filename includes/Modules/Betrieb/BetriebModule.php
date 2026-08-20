@@ -46,7 +46,7 @@ class BetriebModule {
 			'lw16-betrieb-kapazitaet'   => array( __( 'Kapazität', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-material'     => array( __( 'Material', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-lager'        => array( __( 'Lager', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze & Picklisten', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze, Fertigung & Picklisten', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-bestellungen' => array( __( 'Bestellungen', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-qualitaet'    => array( __( 'Qualität', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-kontakte'     => array( __( 'Kontakte / B2B', 'lindenweg16' ), 'lw16_manage_production' ),

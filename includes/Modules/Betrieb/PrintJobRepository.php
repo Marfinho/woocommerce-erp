@@ -175,13 +175,13 @@ class PrintJobRepository {
 		$article = $article_id ? ArticleRepository::find( $article_id ) : null;
 		if ( ! $article ) {
 			$errors[] = __( 'Bitte einen Artikel wählen.', 'lindenweg16' );
-		} elseif ( 'zukauf' === $article['sourcing_type'] ) {
-			$errors[] = __( 'Ein Zukaufartikel wird nicht gedruckt.', 'lindenweg16' );
+		} elseif ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
+			$errors[] = __( 'Dieser Artikel wird nicht gedruckt. Ein Halbzeug entsteht über einen Fertigungsauftrag, ein Zukaufartikel über eine Bestellung.', 'lindenweg16' );
 		}
 
 		$revision = $article_id ? RevisionRepository::current_for_article( $article_id ) : null;
 
-		if ( $article && 'zukauf' !== $article['sourcing_type'] && ! $revision ) {
+		if ( $article && ! in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) && ! $revision ) {
 			$errors[] = __( 'Für diesen Artikel ist keine Revision hinterlegt. Ohne Bauteilgewicht lassen sich weder Filamentverbrauch noch Charge nachvollziehen.', 'lindenweg16' );
 		}
 

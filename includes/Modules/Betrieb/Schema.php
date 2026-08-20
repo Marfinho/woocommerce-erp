@@ -315,6 +315,7 @@ class Schema {
 			code VARCHAR(32) NOT NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'offen',
 			source VARCHAR(20) NOT NULL DEFAULT 'bestellungen',
+			work_order_id BIGINT UNSIGNED NULL,
 			note TEXT NULL,
 			started_at DATETIME NULL,
 			finished_at DATETIME NULL,
@@ -328,6 +329,7 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}picklist_items (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			picklist_id BIGINT UNSIGNED NOT NULL,
+			item_type VARCHAR(20) NOT NULL DEFAULT 'artikel',
 			article_id BIGINT UNSIGNED NOT NULL,
 			color VARCHAR(50) NULL,
 			bin_id BIGINT UNSIGNED NULL,
@@ -341,6 +343,25 @@ class Schema {
 			KEY picklist_id (picklist_id),
 			KEY article_id (article_id),
 			KEY wc_order_id (wc_order_id)
+		) {$charset_collate};";
+
+		$t[] = "CREATE TABLE {$p}work_orders (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			code VARCHAR(32) NOT NULL,
+			article_id BIGINT UNSIGNED NOT NULL,
+			color VARCHAR(50) NULL,
+			qty_planned DECIMAL(10,3) NOT NULL DEFAULT 0,
+			qty_done DECIMAL(10,3) NOT NULL DEFAULT 0,
+			status VARCHAR(20) NOT NULL DEFAULT 'offen',
+			picklist_id BIGINT UNSIGNED NULL,
+			note TEXT NULL,
+			finished_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code (code),
+			KEY article_id (article_id),
+			KEY status (status)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}storage_bins (

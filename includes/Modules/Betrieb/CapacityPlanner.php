@@ -76,7 +76,7 @@ class CapacityPlanner {
 
 		$article = (array) $ctx['articles'][ $article_id ];
 
-		if ( in_array( $article['sourcing_type'], array( 'zukauf', 'hybrid' ), true ) ) {
+		if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage', 'hybrid' ), true ) ) {
 			if ( ! isset( $purchased[ $article_id ] ) ) {
 				$purchased[ $article_id ] = array(
 					'sku' => $article['sku'],

@@ -13,7 +13,11 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
+use Lindenweg16\Modules\Betrieb\BomRepository;
+use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ScanResolver;
+use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\WooIntegration;
 
@@ -31,6 +35,8 @@ class BinsPage {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_lagerplaetze', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_save_bin', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_lw16_betrieb_make_picklist', array( $this, 'handle_picklist' ) );
+		add_action( 'admin_post_lw16_betrieb_work_order', array( $this, 'handle_work_order' ) );
+		add_action( 'admin_post_lw16_betrieb_work_done', array( $this, 'handle_work_done' ) );
 	}
 
 	/**
@@ -190,6 +196,7 @@ class BinsPage {
 		foreach ( array(
 			'plaetze'    => __( 'Lagerplätze', 'lindenweg16' ),
 			'etiketten'  => __( 'Etiketten', 'lindenweg16' ),
+			'fertigung'  => __( 'Fertigungsaufträge', 'lindenweg16' ),
 			'picklisten' => __( 'Picklisten', 'lindenweg16' ),
 		) as $key => $label ) {
 			printf(
@@ -203,6 +210,8 @@ class BinsPage {
 
 		if ( 'etiketten' === $view ) {
 			$this->render_labels();
+		} elseif ( 'fertigung' === $view ) {
+			$this->render_work_orders();
 		} elseif ( 'picklisten' === $view ) {
 			$this->render_picklists();
 		} else {
@@ -385,6 +394,211 @@ class BinsPage {
 	}
 
 	/**
+	 * Fertigungsauftrag anlegen und Pickliste dazu erzeugen.
+	 */
+	public function handle_work_order() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE . '_work' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
+		$input = array_map(
+			static function ( $value ) {
+				return is_string( $value ) ? wp_unslash( $value ) : $value;
+			},
+			(array) $_POST
+		);
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$result = WorkOrderRepository::validate( $input );
+
+		if ( $result['errors'] ) {
+			$this->redirect( implode( ' ', $result['errors'] ), 'error', array( 'view' => 'fertigung' ) );
+		}
+
+		$id = WorkOrderRepository::insert( $result['data'] );
+
+		if ( ! $id ) {
+			$this->redirect( __( 'Auftrag konnte nicht angelegt werden.', 'lindenweg16' ), 'error', array( 'view' => 'fertigung' ) );
+		}
+
+		$order       = WorkOrderRepository::find( $id );
+		$picklist_id = PicklistRepository::from_work_order( $order, $this->bin_hints() );
+
+		if ( $picklist_id ) {
+			WorkOrderRepository::attach_picklist( $id, $picklist_id );
+		}
+
+		$this->redirect(
+			sprintf(
+				/* translators: %s: Auftragscode. */
+				__( 'Fertigungsauftrag %s angelegt. Die Materialliste steht am Handy unter „Picken" bereit.', 'lindenweg16' ),
+				$order['code']
+			),
+			'success',
+			array( 'view' => 'fertigung' )
+		);
+	}
+
+	/**
+	 * Auftrag fertigmelden oder stornieren.
+	 */
+	public function handle_work_done() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE . '_work' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
+		$id     = isset( $_POST['work_order_id'] ) ? (int) $_POST['work_order_id'] : 0;
+		$qty    = isset( $_POST['qty_done'] ) ? (float) str_replace( ',', '.', wp_unslash( $_POST['qty_done'] ) ) : 0;
+		$cancel = ! empty( $_POST['cancel'] );
+		$reason = isset( $_POST['reason'] ) ? sanitize_text_field( wp_unslash( $_POST['reason'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$result = $cancel
+			? WorkOrderRepository::cancel( $id, $reason )
+			: WorkOrderRepository::complete( $id, $qty );
+
+		$this->redirect( $result['message'], $result['success'] ? 'success' : 'error', array( 'view' => 'fertigung' ) );
+	}
+
+	/**
+	 * Fertigungsaufträge.
+	 */
+	protected function render_work_orders() {
+		$articles = ArticleRepository::all_by_id();
+
+		echo '<h2>' . esc_html__( 'Fertigungsaufträge', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Zwischen Rohling und fertigem Artikel liegen Arbeitsschritte, die kein Druckjob sind: Gewindemuttern einschmelzen, Stange und Abstandshalter verbinden. Dafür ist der Fertigungsauftrag da – er ist das Gegenstück zum Druckjob, nur ohne Drucker.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Mit dem Anlegen entsteht automatisch die Materialliste: eine Ebene tief, also genau das, was aus dem Regal geholt werden muss. Gebucht wird erst beim Fertigmelden – dann geht das Material ab und das Fertigteil zu.', 'lindenweg16' ) . '</p>';
+
+		// --- Neuer Auftrag ------------------------------------------------
+		$makeable = array();
+		foreach ( ArticleRepository::all() as $article ) {
+			if ( WorkOrderRepository::is_makeable( $article ) ) {
+				$makeable[] = $article;
+			}
+		}
+
+		if ( ! $makeable ) {
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Noch kein montierter Artikel angelegt. Ein Halbzeug bekommt unter Artikel & Revisionen den Beschaffungsweg „Halbzeug oder Baugruppe (Montage)" und eine Stückliste – dann erscheint es hier.', 'lindenweg16' ) . '</p></div>';
+		} else {
+			echo '<h3>' . esc_html__( 'Neuen Auftrag anlegen', 'lindenweg16' ) . '</h3>';
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( self::NONCE . '_work' );
+			echo '<input type="hidden" name="action" value="lw16_betrieb_work_order" />';
+
+			echo '<p><select name="article_id">';
+			foreach ( $makeable as $article ) {
+				printf(
+					'<option value="%d">%s</option>',
+					(int) $article['id'],
+					esc_html( $article['sku'] . ' – ' . $article['name'] )
+				);
+			}
+			echo '</select> ';
+
+			printf( '<input type="text" name="qty_planned" size="5" placeholder="%s" /> ', esc_attr__( 'Stück', 'lindenweg16' ) );
+
+			echo '<select name="color">';
+			foreach ( ColorRegistry::options() as $slug => $label ) {
+				printf( '<option value="%s">%s</option>', esc_attr( $slug ), esc_html( $label ) );
+			}
+			echo '</select> ';
+
+			printf( '<button class="button button-primary">%s</button></p></form>', esc_html__( 'Auftrag anlegen', 'lindenweg16' ) );
+		}
+
+		// --- Bestehende Aufträge -----------------------------------------
+		$orders = WorkOrderRepository::all();
+
+		if ( ! $orders ) {
+			return;
+		}
+
+		echo '<h3>' . esc_html__( 'Aufträge', 'lindenweg16' ) . '</h3>';
+		echo '<table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Auftrag', 'lindenweg16' ),
+			__( 'Artikel', 'lindenweg16' ),
+			__( 'Farbe', 'lindenweg16' ),
+			__( 'Geplant', 'lindenweg16' ),
+			__( 'Material', 'lindenweg16' ),
+			__( 'Status', 'lindenweg16' ),
+			'',
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		$components = array();
+		foreach ( ComponentRepository::all() as $component ) {
+			$components[ (int) $component['id'] ] = $component;
+		}
+
+		foreach ( $orders as $order ) {
+			$article = isset( $articles[ (int) $order['article_id'] ] ) ? $articles[ (int) $order['article_id'] ] : null;
+
+			$need  = WorkOrderRepository::material_need(
+				BomRepository::for_article( (int) $order['article_id'] ),
+				(float) $order['qty_planned']
+			);
+			$parts = array();
+			foreach ( $need as $row ) {
+				if ( 'komponente' === $row['child_type'] ) {
+					$label = isset( $components[ $row['child_id'] ] ) ? $components[ $row['child_id'] ]['code'] : '?';
+				} else {
+					$label = isset( $articles[ $row['child_id'] ] ) ? $articles[ $row['child_id'] ]['sku'] : '?';
+				}
+				$parts[] = number_format_i18n( $row['qty'], 0 ) . '× ' . $label;
+			}
+
+			echo '<tr>';
+			printf( '<td><strong>%s</strong></td>', esc_html( $order['code'] ) );
+			printf( '<td>%s</td>', esc_html( $article ? $article['sku'] . ' – ' . $article['name'] : '?' ) );
+			printf( '<td>%s</td>', esc_html( ColorRegistry::label( $order['color'] ) ) );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $order['qty_planned'], 0 ) ) );
+			printf( '<td>%s</td>', esc_html( implode( ' · ', $parts ) ) );
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
+				'offen' === $order['status'] ? 'gelb' : ( 'erledigt' === $order['status'] ? 'gruen' : 'rot' ),
+				esc_html( $order['status'] )
+			);
+
+			echo '<td>';
+			if ( 'offen' === $order['status'] ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				wp_nonce_field( self::NONCE . '_work' );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
+				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
+				printf(
+					'<input type="text" name="qty_done" size="4" value="%s" /> <button class="button button-primary button-small">%s</button>',
+					esc_attr( number_format_i18n( (float) $order['qty_planned'], 0 ) ),
+					esc_html__( 'Fertigmelden', 'lindenweg16' )
+				);
+				echo '</form>';
+
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:4px">';
+				wp_nonce_field( self::NONCE . '_work' );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
+				echo '<input type="hidden" name="cancel" value="1" />';
+				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
+				printf(
+					'<input type="text" name="reason" size="10" placeholder="%s" /> <button class="button button-small">%s</button>',
+					esc_attr__( 'Grund', 'lindenweg16' ),
+					esc_html__( 'Storno', 'lindenweg16' )
+				);
+				echo '</form>';
+			} elseif ( 'erledigt' === $order['status'] ) {
+				printf(
+					'<span>%s</span>',
+					esc_html( sprintf( /* translators: %s: Menge. */ __( '%s gefertigt', 'lindenweg16' ), number_format_i18n( (float) $order['qty_done'], 0 ) ) )
+				);
+			}
+			echo '</td></tr>';
+		}
+		echo '</tbody></table>';
+	}
+
+	/**
 	 * Picklisten.
 	 */
 	protected function render_picklists() {
@@ -404,14 +618,19 @@ class BinsPage {
 			return;
 		}
 
-		$articles = ArticleRepository::all_by_id();
+		$articles   = ArticleRepository::all_by_id();
+		$components = array();
+		foreach ( ComponentRepository::all() as $component ) {
+			$components[ (int) $component['id'] ] = $component;
+		}
 
 		foreach ( $lists as $list ) {
 			printf(
-				'<h3>%s <span class="lw16-ampel lw16-ampel--%s">%s</span></h3>',
+				'<h3>%s <span class="lw16-ampel lw16-ampel--%s">%s</span> <small>%s</small></h3>',
 				esc_html( $list['code'] ),
 				'offen' === $list['status'] ? 'gelb' : 'gruen',
-				esc_html( $list['status'] )
+				esc_html( $list['status'] ),
+				esc_html( 'fertigung' === $list['source'] ? __( 'Fertigung', 'lindenweg16' ) : __( 'Bestellungen', 'lindenweg16' ) )
 			);
 
 			echo '<table class="widefat striped"><thead><tr>';
@@ -428,13 +647,17 @@ class BinsPage {
 			echo '</tr></thead><tbody>';
 
 			foreach ( PicklistRepository::items( (int) $list['id'] ) as $item ) {
-				$bin     = $item['bin_id'] ? BinRepository::find( (int) $item['bin_id'] ) : null;
-				$article = isset( $articles[ (int) $item['article_id'] ] ) ? $articles[ (int) $item['article_id'] ] : null;
+				$bin    = $item['bin_id'] ? BinRepository::find( (int) $item['bin_id'] ) : null;
+				$target = PicklistRepository::describe( $item, $articles, $components );
 
 				echo '<tr>';
 				printf( '<td>%s</td>', esc_html( $bin ? $bin['code'] : '—' ) );
-				printf( '<td>%s</td>', esc_html( $article ? $article['sku'] . ' · ' . $article['name'] : '?' ) );
-				printf( '<td>%s</td>', esc_html( (string) $item['color'] ) );
+				printf(
+					'<td>%s%s</td>',
+					esc_html( $target['sku'] . ' · ' . $target['name'] ),
+					'komponente' === $item['item_type'] ? ' <small>' . esc_html__( 'Kleinteil', 'lindenweg16' ) . '</small>' : ''
+				);
+				printf( '<td>%s</td>', esc_html( 'komponente' === $item['item_type'] ? '—' : (string) $item['color'] ) );
 				printf( '<td>%s</td>', $item['wc_order_id'] ? esc_html( '#' . (int) $item['wc_order_id'] ) : '—' );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $item['qty_required'], 0 ) ) );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $item['qty_picked'], 0 ) ) );

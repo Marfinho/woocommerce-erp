@@ -86,8 +86,9 @@ class ComponentConsumption {
 	 * Entscheidend ist, wo ein Kleinteil verbaut wird, denn abgebucht werden
 	 * darf es genau einmal:
 	 *
-	 * - Kleinteile unter einem gefertigten Artikel (druck oder hybrid) werden
-	 *   beim Nachbearbeiten des Druckjobs verbaut und dort abgebucht.
+	 * - Kleinteile unter einem gefertigten Artikel (druck, montage oder
+	 *   hybrid) werden beim Fertigen verbaut und dort abgebucht – beim
+	 *   Druckjob oder beim Fertigmelden des Fertigungsauftrags.
 	 * - Kleinteile unter einem Zukaufartikel – die Dübel und Schrauben der
 	 *   Stange – werden erst beim Packen beigelegt und deshalb hier abgebucht.
 	 *
@@ -235,7 +236,12 @@ class ComponentConsumption {
 
 	/**
 	 * Wird dieser Artikel selbst gefertigt und bucht damit seine Kleinteile
-	 * bereits beim Druckjob ab?
+	 * bereits beim Fertigen ab – statt erst beim Verkauf?
+	 *
+	 * Gefertigt heißt: Es gibt einen Vorgang, an dem der Artikel entsteht.
+	 * Das ist der Druckjob beim Rohling und der Fertigungsauftrag beim
+	 * Halbzeug. Nur beim Zukaufartikel gibt es keinen solchen Vorgang – dort
+	 * wird alles erst beim Packen zusammengelegt.
 	 *
 	 * @param int   $article_id Artikel.
 	 * @param array $ctx        Kontext mit 'articles'.
@@ -249,7 +255,7 @@ class ComponentConsumption {
 		$article = (array) $ctx['articles'][ $article_id ];
 		$type    = isset( $article['sourcing_type'] ) ? (string) $article['sourcing_type'] : 'druck';
 
-		return in_array( $type, array( 'druck', 'hybrid' ), true );
+		return in_array( $type, array( 'druck', 'montage', 'hybrid' ), true );
 	}
 
 	/**

@@ -139,8 +139,8 @@ class RevisionRepository {
 
 		if ( ! $article ) {
 			$errors[] = __( 'Der Artikel existiert nicht.', 'lindenweg16' );
-		} elseif ( 'zukauf' === $article['sourcing_type'] ) {
-			$errors[] = __( 'Ein Zukaufartikel hat kein Druckprofil.', 'lindenweg16' );
+		} elseif ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
+			$errors[] = __( 'Nur gedruckte Artikel haben ein Druckprofil. Ein Halbzeug entsteht durch Montage, ein Zukaufartikel wird bestellt.', 'lindenweg16' );
 		}
 
 		$version = isset( $input['version'] ) ? sanitize_text_field( $input['version'] ) : '';
