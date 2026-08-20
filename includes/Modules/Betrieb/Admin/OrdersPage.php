@@ -12,6 +12,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\CalculationContext;
+use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
@@ -32,6 +34,110 @@ class OrdersPage {
 		add_action( 'admin_post_lw16_betrieb_save_order', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_lw16_betrieb_manual_order', array( $this, 'handle_manual' ) );
 		add_action( 'admin_post_lw16_betrieb_confirm_order', array( $this, 'handle_confirm' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	}
+
+	/**
+	 * Live-Rechner für die Rabattstaffel laden.
+	 *
+	 * @param string $hook Aktueller Admin-Hook.
+	 */
+	public function enqueue( $hook ) {
+		if ( false === strpos( (string) $hook, self::SLUG ) ) {
+			return;
+		}
+		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_production' ) ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'lw16-betrieb-staffel',
+			LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js',
+			array(),
+			LW16_VERSION,
+			true
+		);
+
+		wp_add_inline_script(
+			'lw16-betrieb-staffel',
+			'window.LW16Staffel = ' . wp_json_encode( self::staffel_config() ) . ';',
+			'before'
+		);
+	}
+
+	/**
+	 * Daten für den Live-Rechner.
+	 *
+	 * Enthält neben Preisen auch Herstellkosten und Nachbearbeitungszeit –
+	 * das ist eine reine Backend-Ansicht. Die öffentliche Nachbestell-Seite
+	 * bekommt diese Werte ausdrücklich nicht.
+	 *
+	 * @return array
+	 */
+	protected static function staffel_config() {
+		$ctx      = CalculationContext::build();
+		$settings = CalculationContext::settings();
+
+		$articles = array();
+		$costs    = array();
+
+		foreach ( ArticleRepository::all( true ) as $article ) {
+			$id = (int) $article['id'];
+
+			$articles[ $id ] = array(
+				'sku'          => $article['sku'],
+				'price'        => (float) $article['price_gross'],
+				'discountable' => (bool) $article['discountable'],
+			);
+
+			$cost           = CostCalculator::manufacturing_cost( $id, $ctx, $settings );
+			$costs[ $id ]   = array(
+				'hk'   => (float) $cost['herstellkosten'],
+				'post' => (float) $cost['postprocessing_min'],
+			);
+		}
+
+		$tiers = array();
+		foreach ( CalculationContext::price_tiers() as $tier ) {
+			$tiers[] = array(
+				'name' => $tier['tier_name'],
+				'min'  => (float) $tier['min_order_value'],
+				'pct'  => (float) $tier['discount_pct'],
+			);
+		}
+
+		return array(
+			'mode'     => 'admin',
+			'articles' => $articles,
+			'costs'    => $costs,
+			'tiers'    => $tiers,
+			'settings' => array(
+				'vat_rate'            => (float) $settings['vat_rate'],
+				'scrap_surcharge_pct' => (float) $settings['scrap_surcharge_pct'],
+				'payment_fee_pct'     => (float) $settings['payment_fee_pct'],
+				'labor_rate_per_h'    => (float) $settings['labor_rate_per_h'],
+				'min_db2'             => (float) $settings['min_db2_warning'],
+			),
+			'i18n'     => self::staffel_labels(),
+		);
+	}
+
+	/**
+	 * Beschriftungen des Live-Rechners.
+	 *
+	 * @return array
+	 */
+	public static function staffel_labels() {
+		return array(
+			'orderValue'      => __( 'Bestellwert zum UVP', 'lindenweg16' ),
+			'tier'            => __( 'Rabattstufe', 'lindenweg16' ),
+			'noTier'          => __( 'keine erreicht', 'lindenweg16' ),
+			'afterDiscount'   => __( 'Bestellwert nach Rabatt', 'lindenweg16' ),
+			'notDiscountable' => __( 'Davon %s nicht rabattfähig (personalisiert).', 'lindenweg16' ),
+			'nextTier'        => __( 'Noch %1$s bis %2$s mit %3$s – das spart dem Händler %4$s.', 'lindenweg16' ),
+			'marginWarning'   => __( 'Deckungsbeitrag unter der Schwelle:', 'lindenweg16' ),
+			'lowMargin'       => __( '%1$s: DB II %2$s je Stück, Schwelle %3$s', 'lindenweg16' ),
+		);
 	}
 
 	/**
@@ -349,6 +455,11 @@ class OrdersPage {
 		}
 
 		echo '</tbody></table>';
+
+		// Der Live-Rechner füllt diesen Bereich, während Mengen eingetragen
+		// werden. Verbindlich rechnet der Server beim Absenden.
+		echo '<div id="lw16-staffel" class="lw16-staffel"></div>';
+
 		printf( '<p><button class="button button-primary">%s</button></p></form>', esc_html__( 'Bestellung erfassen', 'lindenweg16' ) );
 	}
 }

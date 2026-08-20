@@ -149,3 +149,53 @@
 .lw16-reorder__greeting { font-size: 18px; font-weight: 600; }
 .lw16-reorder__hint { font-size: 13px; color: #50575e; }
 .lw16-reorder__error { color: #6b1e18; font-weight: 600; }
+
+/* Live-Anzeige der Rabattstaffel. */
+.lw16-staffel {
+	max-width: 720px;
+	margin: 14px 0;
+}
+
+.lw16-staffel:empty { display: none; }
+
+.lw16-staffel__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 7px 12px;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-bottom: 0;
+}
+
+.lw16-staffel__row:last-of-type { border-bottom: 1px solid #c3c4c7; }
+.lw16-staffel__row strong { font-variant-numeric: tabular-nums; }
+
+.lw16-staffel__note {
+	margin: 6px 0 0;
+	font-size: 13px;
+	color: #50575e;
+}
+
+/* Der Satz, der im Verkaufsgespräch zählt. */
+.lw16-staffel__next {
+	margin: 10px 0 0;
+	padding: 10px 12px;
+	background: #f8e5b9;
+	color: #5c4813;
+	border-radius: 4px;
+	font-weight: 600;
+}
+
+.lw16-staffel__warn {
+	margin: 10px 0 0;
+	padding: 10px 12px;
+	background: #f4c7c3;
+	color: #6b1e18;
+	border-radius: 4px;
+}
+
+.lw16-staffel__warn ul {
+	margin: 6px 0 0 18px;
+	list-style: disc;
+}

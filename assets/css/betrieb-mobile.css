@@ -148,3 +148,31 @@ body.lw16-mobile {
 		--lw16-text: #f0f0f1;
 	}
 }
+
+/* Konditionsanzeige auf der Nachbestell-Seite. */
+.lw16-staffel { margin: 18px 0; }
+.lw16-staffel:empty { display: none; }
+
+.lw16-staffel__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 16px;
+	padding: 10px 12px;
+	background: var(--lw16-card);
+	border: 1px solid var(--lw16-line);
+	border-bottom: 0;
+	font-size: 15px;
+}
+
+.lw16-staffel__row:last-of-type { border-bottom: 1px solid var(--lw16-line); }
+
+.lw16-staffel__note { margin: 6px 0 0; font-size: 13px; color: #50575e; }
+
+.lw16-staffel__next {
+	margin: 12px 0 0;
+	padding: 12px;
+	background: #f8e5b9;
+	color: #5c4813;
+	border-radius: 8px;
+	font-weight: 600;
+}
