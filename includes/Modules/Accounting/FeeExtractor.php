@@ -62,8 +62,12 @@ class FeeExtractor {
 	 * Metaschlüssel, unter denen Zahlungsdienstleister ihre Gebühr ablegen.
 	 *
 	 * Werden bevorzugt gelesen: Ein Zahlenfeld ist verlässlicher als ein Satz.
+	 * WooPayments steht vorn, weil es der hier eingesetzte Weg ist – es legt
+	 * die Gebühr als fertige Dezimalzahl unter _wcpay_transaction_fee ab,
+	 * geschrieben vom Webhook nach der Abrechnung.
 	 */
 	const META_KEYS = array(
+		'_wcpay_transaction_fee',
 		'_stripe_fee',
 		'_paypal_transaction_fee',
 		'_ppcp_paypal_fees',
@@ -71,6 +75,17 @@ class FeeExtractor {
 		'_wc_paypal_fee',
 		'_transaction_fee',
 		'_payment_fee',
+	);
+
+	/**
+	 * Metaschlüssel mit der Währung, in der die Gebühr steht.
+	 *
+	 * WooPayments rechnet in der Währung der Zahlung, nicht zwingend in der
+	 * des Shops. Weicht sie ab, wird nichts gebucht: Ein Dollarbetrag als
+	 * Euro in der EÜR wäre schlimmer als eine fehlende Zeile.
+	 */
+	const CURRENCY_KEYS = array(
+		'_wcpay_transaction_fee' => '_wcpay_intent_currency',
 	);
 
 	/**
@@ -233,22 +248,52 @@ class FeeExtractor {
 				continue;
 			}
 
-			$amount = self::parse_amount( (string) $raw );
+			// Ein numerisches Feld ist eindeutig; nur wenn es keines ist,
+			// wird der Text durchsucht. Andersherum würde "1.2" zu 12.
+			$amount = is_numeric( $raw ) ? (float) $raw : self::parse_amount( (string) $raw );
 
-			// Manche Anbieter speichern glatte Werte ohne Nachkommastellen.
-			if ( null === $amount && is_numeric( $raw ) ) {
-				$amount = (float) $raw;
+			if ( null === $amount || ! self::is_plausible( $amount, $total ) ) {
+				continue;
 			}
 
-			if ( null !== $amount && self::is_plausible( $amount, $total ) ) {
-				return array(
-					'amount' => round( $amount, 2 ),
-					'source' => $key,
-				);
+			if ( ! self::currency_matches( $order, $key ) ) {
+				continue;
 			}
+
+			return array(
+				'amount' => round( $amount, 2 ),
+				'source' => $key,
+			);
 		}
 
 		return self::from_notes( self::order_notes( $order ), $total );
+	}
+
+	/**
+	 * Steht die Gebühr in der Währung des Shops?
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @param string    $key   Metaschlüssel der Gebühr.
+	 * @return bool
+	 */
+	protected static function currency_matches( $order, $key ) {
+		if ( ! isset( self::CURRENCY_KEYS[ $key ] ) ) {
+			return true;
+		}
+
+		$fee_currency = (string) $order->get_meta( self::CURRENCY_KEYS[ $key ] );
+
+		if ( '' === $fee_currency ) {
+			return true;
+		}
+
+		$order_currency = method_exists( $order, 'get_currency' ) ? (string) $order->get_currency() : '';
+
+		if ( '' === $order_currency ) {
+			return true;
+		}
+
+		return 0 === strcasecmp( $fee_currency, $order_currency );
 	}
 
 	/**

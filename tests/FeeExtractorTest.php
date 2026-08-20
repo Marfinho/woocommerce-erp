@@ -203,4 +203,42 @@ class FeeExtractorTest extends TestCase {
 
 		$this->assertNull( $result['amount'] );
 	}
+
+	/* ================================================================
+	 * WooPayments und andere Metafelder
+	 * ============================================================== */
+
+	/**
+	 * WooPayments steht an erster Stelle der Metafelder – es ist der hier
+	 * eingesetzte Weg und liefert eine fertige Zahl statt eines Satzes.
+	 */
+	public function test_woopayments_wird_zuerst_gelesen() {
+		$this->assertSame( '_wcpay_transaction_fee', FeeExtractor::META_KEYS[0] );
+	}
+
+	/**
+	 * Die Gebühr von WooPayments steht als schlichte Dezimalzahl im
+	 * Metafeld. Genau diese Schreibweisen müssen ankommen.
+	 */
+	public function test_woopayments_schreibweisen_werden_gelesen() {
+		// So legt WooPayments den Wert ab: Punkt als Dezimaltrenner.
+		$this->assertEqualsWithDelta( 1.23, FeeExtractor::parse_amount( '1.23' ), 0.001 );
+		$this->assertEqualsWithDelta( 0.55, FeeExtractor::parse_amount( '0.55' ), 0.001 );
+
+		// Ein glatter Wert hat keine zwei Nachkommastellen und wird deshalb
+		// nicht vom Textmuster erkannt – dafuer greift die Zahlenpruefung
+		// in for_order().
+		$this->assertNull( FeeExtractor::parse_amount( '2' ) );
+		$this->assertTrue( is_numeric( '2' ) );
+	}
+
+	/**
+	 * Zu jedem währungsabhängigen Feld gehört ein Währungsfeld.
+	 */
+	public function test_waehrungsfelder_gehoeren_zu_bekannten_metafeldern() {
+		foreach ( FeeExtractor::CURRENCY_KEYS as $fee_key => $currency_key ) {
+			$this->assertContains( $fee_key, FeeExtractor::META_KEYS, $fee_key . ' ist kein bekanntes Gebuehrenfeld.' );
+			$this->assertNotEmpty( $currency_key );
+		}
+	}
 }

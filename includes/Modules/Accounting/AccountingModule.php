@@ -43,6 +43,11 @@ class AccountingModule {
 		add_action( 'woocommerce_payment_complete', array( $this, 'capture_order_fee' ), 40, 1 );
 		add_action( 'woocommerce_order_note_added', array( $this, 'capture_fee_from_note' ), 10, 2 );
 
+		// Nachlauf: WooPayments traegt die Gebuehr per Webhook nach, oft
+		// Stunden nach dem Kauf und ohne dass ein Status wechselt oder eine
+		// Notiz entsteht. Ohne diesen taeglichen Nachlauf bliebe sie liegen.
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_FEES, array( $this, 'sync_recent_fees' ) );
+
 		// Gebühr von Hand nachtragen oder erneut suchen.
 		add_action( 'admin_post_lw16_fee_rescan', array( $this, 'handle_fee_rescan' ) );
 
@@ -130,6 +135,41 @@ class AccountingModule {
 		}
 
 		return BuchungRepository::create_from_order_fee( $order, $fee['amount'], $fee['source'] );
+	}
+
+	/**
+	 * Gebühren der letzten Wochen nachtragen.
+	 *
+	 * Läuft täglich. Betrachtet werden bezahlte Bestellungen der letzten 30
+	 * Tage; für jede, die noch keine Gebührenbuchung hat, wird erneut
+	 * gesucht. Die Buchung selbst ist gegen Doppelung gesichert, der Lauf
+	 * kann also gefahrlos wiederholt werden.
+	 *
+	 * @return int Anzahl neu gebuchter Gebühren.
+	 */
+	public function sync_recent_fees() {
+		if ( ! (int) Settings::get( 'gebuehren_automatisch', 1 ) || ! function_exists( 'wc_get_orders' ) ) {
+			return 0;
+		}
+
+		$orders = wc_get_orders(
+			array(
+				'status'       => array( 'processing', 'completed', 'on-hold' ),
+				'limit'        => 200,
+				'date_created' => '>' . ( time() - 30 * DAY_IN_SECONDS ),
+				'return'       => 'objects',
+			)
+		);
+
+		$booked = 0;
+
+		foreach ( (array) $orders as $order ) {
+			if ( $this->capture_order_fee( $order->get_id() ) ) {
+				$booked++;
+			}
+		}
+
+		return $booked;
 	}
 
 	/**

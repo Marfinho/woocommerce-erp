@@ -26,6 +26,10 @@ class Scheduler {
 	const HOOK_WEEKLY_EXPORT   = 'lw16_weekly_export';
 	const HOOK_DAILY_STOCK     = 'lw16_daily_stock_report';
 
+	// Zahlungsgebühren nachtragen: Der Dienstleister liefert sie oft erst
+	// Stunden oder Tage nach dem Kauf per Webhook nach.
+	const HOOK_DAILY_FEES      = 'lw16_daily_fee_sync';
+
 	// Dauerbuchungen täglich prüfen und ausführen.
 	const HOOK_RECURRING_BOOKINGS = 'lw16_recurring_bookings';
 
@@ -50,6 +54,7 @@ class Scheduler {
 			self::HOOK_WEEKLY_DIGEST,
 			self::HOOK_WEEKLY_EXPORT,
 			self::HOOK_DAILY_STOCK,
+			self::HOOK_DAILY_FEES,
 			self::HOOK_RECURRING_BOOKINGS,
 			self::HOOK_GENERATE_INVOICE,
 			self::HOOK_GENERATE_PACKING,
@@ -76,6 +81,7 @@ class Scheduler {
 			self::HOOK_WEEKLY_DIGEST  => WEEK_IN_SECONDS,
 			self::HOOK_WEEKLY_EXPORT  => WEEK_IN_SECONDS,
 			self::HOOK_DAILY_STOCK       => DAY_IN_SECONDS,
+			self::HOOK_DAILY_FEES        => DAY_IN_SECONDS,
 			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
 			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
 		);
