@@ -9,8 +9,10 @@ namespace Lindenweg16\Modules\Pricing;
 
 defined( 'ABSPATH' ) || exit;
 
-use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\CalculationContext;
+use Lindenweg16\Modules\Betrieb\CostCalculator;
 
 /**
  * Admin-Oberfläche für die Preiskalkulation samt „Preis übernehmen".
@@ -23,203 +25,169 @@ class PricingModule {
 	 */
 	public function register() {
 		add_action( 'lw16_render_page_lw16_preiskalkulation', array( $this, 'render_admin' ) );
-		add_action( 'admin_post_lw16_save_kalk_settings', array( $this, 'handle_save_settings' ) );
-		add_action( 'admin_post_lw16_save_kalk_produkt', array( $this, 'handle_save_produkt' ) );
 		add_action( 'admin_post_lw16_preis_uebernehmen', array( $this, 'handle_uebernehmen' ) );
 		add_action( 'admin_post_lw16_preis_alle_uebernehmen', array( $this, 'handle_alle_uebernehmen' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_kalk_data' ) );
-	}
-
-	/**
-	 * Kalkulationsdaten für Live-JS-Recalculation auf der Preiskalkulationsseite.
-	 *
-	 * @param string $hook Admin-Page-Hook.
-	 */
-	public function enqueue_kalk_data( $hook ) {
-		if ( false === strpos( (string) $hook, 'lw16' ) ) {
-			return;
-		}
-		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-		if ( 'lw16-preiskalkulation' !== $page ) {
-			return;
-		}
-		$s = PricingCalculator::settings();
-		wp_localize_script(
-			'lw16-admin',
-			'LW16Kalk',
-			array(
-				'druckerKostenH'  => PricingCalculator::drucker_kosten_pro_stunde(),
-				'filamentPreisKg' => (float) $s['filamentpreis_pro_kg'],
-				'stundenlohn'     => (float) $s['stundenlohn'],
-				'ausschuss'       => (float) $s['ausschuss_prozent'],
-				'zielmarge'       => (float) $s['zielmarge_module_prozent'],
-			)
-		);
 	}
 
 	/**
 	 * Kalkulationsseite rendern.
 	 */
 	public function render_admin() {
-		$s = PricingCalculator::settings();
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Preiskalkulation', 'lindenweg16' ) . '</h1>';
 
 		if ( isset( $_GET['msg'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) ) . '</p></div>'; // phpcs:ignore
 		}
 
-		// --- Globale Annahmen. -------------------------------------------
-		echo '<h2>' . esc_html__( 'Globale Annahmen', 'lindenweg16' ) . '</h2>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		echo '<input type="hidden" name="action" value="lw16_save_kalk_settings">';
-		wp_nonce_field( 'lw16_save_kalk_settings' );
-		echo '<table class="form-table"><tbody>';
-		$labels = array(
-			'drucker_anschaffungspreis'      => __( 'Drucker Anschaffungspreis (€)', 'lindenweg16' ),
-			'drucker_lebensdauer_stunden'    => __( 'Drucker Lebensdauer (Std)', 'lindenweg16' ),
-			'drucker_ersatzteile_pro_stunde' => __( 'Ersatzteile pro Stunde (€)', 'lindenweg16' ),
-			'drucker_leistung_kw'            => __( 'Leistung (kW)', 'lindenweg16' ),
-			'strompreis_pro_kwh'             => __( 'Strompreis pro kWh (€)', 'lindenweg16' ),
-			'filamentpreis_pro_kg'           => __( 'Filamentpreis pro kg (€)', 'lindenweg16' ),
-			'stundenlohn'                    => __( 'Stundenlohn (€)', 'lindenweg16' ),
-			'ausschuss_prozent'              => __( 'Ausschuss (%)', 'lindenweg16' ),
-			'zielmarge_module_prozent'       => __( 'Zielmarge Module (%)', 'lindenweg16' ),
+		echo '<p>' . esc_html__( 'Gerechnet wird mit den Zahlen aus dem Modul Betrieb: Herstellkosten aus Revision und Stückliste, Maschinenstundensatz je Gerät, Annahmen zum Stichtag. Diese Seite macht daraus einen Preisvorschlag und schreibt ihn auf Wunsch ins WooCommerce-Produkt.', 'lindenweg16' ) . '</p>';
+
+		printf(
+			'<p class="description">%s <a href="%s">%s</a></p>',
+			esc_html__( 'Die Annahmen selbst werden nicht mehr hier gepflegt, sondern historisiert unter:', 'lindenweg16' ),
+			esc_url( admin_url( 'admin.php?page=lw16-betrieb-einstellungen' ) ),
+			esc_html__( 'Betrieb → Einstellungen → Kalkulationsannahmen', 'lindenweg16' )
 		);
-		foreach ( $labels as $k => $label ) {
-			echo '<tr><th>' . esc_html( $label ) . '</th><td><input type="number" step="any" name="' . esc_attr( $k ) . '" value="' . esc_attr( $s[ $k ] ) . '" class="small-text"></td></tr>';
-		}
-		echo '</tbody></table>';
-		echo '<p class="description">' . esc_html( sprintf( /* translators: %s: Betrag */ __( 'Druckerkosten pro Stunde: %s €', 'lindenweg16' ), number_format( PricingCalculator::drucker_kosten_pro_stunde(), 4, ',', '.' ) ) ) . '</p>';
-		submit_button( __( 'Annahmen speichern', 'lindenweg16' ), 'secondary' );
+
+		$margin = $this->target_margin();
+
+		echo '<form method="get" style="margin:16px 0">';
+		echo '<input type="hidden" name="page" value="lw16-preiskalkulation" />';
+		printf(
+			'<label>%s <input type="number" step="1" min="0" max="95" name="marge" value="%s" class="small-text" /> %%</label> ',
+			esc_html__( 'Zielmarge (Deckungsbeitrag II vom Nettoerlös)', 'lindenweg16' ),
+			esc_attr( (string) round( $margin * 100 ) )
+		);
+		printf( '<button class="button">%s</button>', esc_html__( 'Neu rechnen', 'lindenweg16' ) );
 		echo '</form>';
 
-		$this->render_module_table();
-		$this->render_set_table();
-
-		// "Alle übernehmen"-Button.
-		$alle_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_preis_alle_uebernehmen' ), 'lw16_alle_uebernehmen' );
-		echo '<hr><p><a class="button button-primary button-hero" href="' . esc_url( $alle_url ) . '" onclick="return confirm(\'' . esc_attr__( 'Alle Preise übernehmen?', 'lindenweg16' ) . '\')">' . esc_html__( 'Alle Preise übernehmen', 'lindenweg16' ) . '</a>';
-		echo ' <span class="description">' . esc_html__( 'Schreibt den kalkulierten Preis und die Marge in alle WooCommerce-Produkte.', 'lindenweg16' ) . '</span></p>';
+		$this->render_article_table( $margin );
 
 		echo '</div>';
 	}
 
 	/**
-	 * Tabelle aller Module mit Kalkulation und Übernahme.
+	 * Zielmarge aus der Adresszeile, sonst der Startwert.
+	 *
+	 * @return float Anteil zwischen 0 und 1.
 	 */
-	protected function render_module_table() {
-		$module = Repository::get_products( 'modul' );
-		echo '<h2>' . esc_html__( 'Module', 'lindenweg16' ) . '</h2>';
-		echo '<table class="widefat striped"><thead><tr>';
-		echo '<th>' . esc_html__( 'Modul', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kostenfelder', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kosten', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Vorschlag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Aktuell', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Marge', 'lindenweg16' ) . '</th><th></th>';
+	protected function target_margin() {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$raw = isset( $_GET['marge'] ) ? (float) $_GET['marge'] : 45.0;
+
+		return max( 0.0, min( 0.95, $raw / 100 ) );
+	}
+
+	/**
+	 * Alle verkäuflichen Artikel mit Kosten, Vorschlag und Ist-Preis.
+	 *
+	 * @param float $margin Zielmarge.
+	 */
+	protected function render_article_table( $margin ) {
+		$ctx      = CalculationContext::build();
+		$settings = CalculationContext::settings();
+		$articles = ArticleRepository::all( true );
+
+		if ( ! $articles ) {
+			echo '<p>' . esc_html__( 'Noch kein verkäuflicher Artikel angelegt.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<div class="lw16-scrollx"><table class="widefat striped lw16-table--zahlen"><thead><tr>';
+		foreach ( array(
+			__( 'Artikel', 'lindenweg16' ),
+			__( 'Herstellkosten', 'lindenweg16' ),
+			__( 'Vorschlag', 'lindenweg16' ),
+			__( 'Aktuell im Shop', 'lindenweg16' ),
+			__( 'DB II aktuell', 'lindenweg16' ),
+			__( 'Marge aktuell', 'lindenweg16' ),
+			'',
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
 		echo '</tr></thead><tbody>';
 
-		foreach ( $module as $m ) {
-			$calc    = PricingCalculator::calc_modul( $m );
-			$aktuell = PricingCalculator::aktueller_preis( $m );
+		$uebernehmbar = 0;
+
+		foreach ( $articles as $article ) {
+			$id   = (int) $article['id'];
+			$cost = CostCalculator::manufacturing_cost( $id, $ctx, $settings );
+
+			$wc      = ! empty( $article['wc_product_id'] ) && function_exists( 'wc_get_product' )
+				? wc_get_product( (int) $article['wc_product_id'] )
+				: null;
+			$aktuell = $wc ? (float) $wc->get_regular_price() : 0.0;
+
+			$vorschlag = CostCalculator::price_for_margin( $cost, $settings, $margin );
+			$ist       = CostCalculator::contribution_from_cost( $cost, $aktuell, $settings );
+
 			echo '<tr>';
-			echo '<td>' . esc_html( $m->name ) . '</td>';
+			printf( '<td><strong>%s</strong><br /><small>%s</small></td>', esc_html( $article['sku'] ), esc_html( $article['name'] ) );
+			printf( '<td>%s</td>', esc_html( $this->euro( $cost['herstellkosten'] ) ) );
+			printf(
+				'<td><strong>%s</strong></td>',
+				null === $vorschlag ? esc_html__( 'nicht erreichbar', 'lindenweg16' ) : esc_html( $this->euro( $vorschlag ) )
+			);
+			printf( '<td>%s</td>', $aktuell > 0 ? esc_html( $this->euro( $aktuell ) ) : '—' );
+			printf( '<td>%s</td>', $aktuell > 0 ? esc_html( $this->euro( $ist['db2'] ) ) : '—' );
 
-			// Editierbare Kostenfelder.
-			echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form">';
-			echo '<input type="hidden" name="action" value="lw16_save_kalk_produkt"><input type="hidden" name="produkt_id" value="' . (int) $m->id . '">';
-			wp_nonce_field( 'lw16_save_kalk_produkt_' . $m->id );
-			echo '<label>' . esc_html__( 'Filament (g)', 'lindenweg16' ) . ' <input type="number" step="any" name="filament_gramm" value="' . esc_attr( $m->filament_gramm ) . '" class="small-text"></label> ';
-			echo '<label>' . esc_html__( 'Druckzeit (h)', 'lindenweg16' ) . ' <input type="number" step="any" name="druckzeit_stunden" value="' . esc_attr( $m->druckzeit_stunden ) . '" class="small-text"></label> ';
-			echo '<label>' . esc_html__( 'Arbeitszeit (min)', 'lindenweg16' ) . ' <input type="number" step="any" name="arbeitszeit_minuten" value="' . esc_attr( $m->arbeitszeit_minuten ) . '" class="small-text"></label> ';
-			echo '<label>' . esc_html__( 'Verpackung (€)', 'lindenweg16' ) . ' <input type="number" step="any" name="verpackung_euro" value="' . esc_attr( $m->verpackung_euro ) . '" class="small-text"></label> ';
-			echo '<label>' . esc_html__( 'Zusatz (€)', 'lindenweg16' ) . ' <input type="number" step="any" name="zusatzmaterial_euro" value="' . esc_attr( $m->zusatzmaterial_euro ) . '" class="small-text"></label> ';
-			submit_button( __( 'Speichern', 'lindenweg16' ), 'small', '', false );
-			echo '</form></td>';
-
-			echo '<td>' . esc_html( number_format( $calc['kosten'], 2, ',', '.' ) ) . ' €</td>';
-			echo '<td><strong>' . esc_html( number_format( $calc['vorschlag'], 0, ',', '.' ) ) . ' €</strong></td>';
-			echo '<td>' . ( $aktuell > 0 ? esc_html( number_format( $aktuell, 0, ',', '.' ) . ' €' ) : '–' ) . '</td>';
-			echo '<td>' . esc_html( number_format( $calc['marge'], 1, ',', '.' ) ) . ' %</td>';
+			if ( $aktuell > 0 ) {
+				printf(
+					'<td><span class="lw16-ampel lw16-ampel--%s">%s %%</span></td>',
+					$ist['db2_pct'] >= $margin ? 'gruen' : ( $ist['db2_pct'] > 0 ? 'gelb' : 'rot' ),
+					esc_html( number_format_i18n( $ist['db2_pct'] * 100, 1 ) )
+				);
+			} else {
+				echo '<td>—</td>';
+			}
 
 			echo '<td>';
-			if ( $m->woo_product_id ) {
-				$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_preis_uebernehmen&id=' . $m->id ), 'lw16_preis_' . $m->id );
-				echo '<a class="button button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Preis übernehmen', 'lindenweg16' ) . '</a>';
-			} else {
-				echo '<span class="description">' . esc_html__( 'keine Woo-Zuordnung', 'lindenweg16' ) . '</span>';
+			if ( $wc && null !== $vorschlag ) {
+				$uebernehmbar++;
+				printf(
+					'<a class="button button-small" href="%s" onclick="return confirm(\'%s\')">%s</a>',
+					esc_url(
+						wp_nonce_url(
+							admin_url( 'admin-post.php?action=lw16_preis_uebernehmen&article=' . $id . '&marge=' . rawurlencode( (string) $margin ) ),
+							'lw16_preis_' . $id
+						)
+					),
+					esc_attr__( 'Diesen Preis ins Shop-Produkt schreiben?', 'lindenweg16' ),
+					esc_html__( 'Übernehmen', 'lindenweg16' )
+				);
+			} elseif ( ! $wc ) {
+				echo '<small>' . esc_html__( 'kein Shop-Produkt', 'lindenweg16' ) . '</small>';
 			}
 			echo '</td></tr>';
 		}
-		echo '</tbody></table>';
+
+		echo '</tbody></table></div>';
+
+		if ( ! $uebernehmbar ) {
+			return;
+		}
+
+		printf(
+			'<p><a class="button button-primary" href="%s" onclick="return confirm(\'%s\')">%s</a> <span class="description">%s</span></p>',
+			esc_url(
+				wp_nonce_url(
+					admin_url( 'admin-post.php?action=lw16_preis_alle_uebernehmen&marge=' . rawurlencode( (string) $margin ) ),
+					'lw16_alle_uebernehmen'
+				)
+			),
+			esc_attr__( 'Wirklich alle Shop-Preise überschreiben?', 'lindenweg16' ),
+			esc_html__( 'Alle Preise übernehmen', 'lindenweg16' ),
+			esc_html__( 'Überschreibt den Normalpreis jedes verknüpften Produkts. Ein Angebotspreis in WooCommerce bleibt unberührt.', 'lindenweg16' )
+		);
 	}
 
 	/**
-	 * Tabelle aller Sets.
+	 * Betrag mit Währung.
+	 *
+	 * @param float $value Wert.
+	 * @return string
 	 */
-	protected function render_set_table() {
-		$sets = Repository::get_products( 'set' );
-		echo '<h2>' . esc_html__( 'Sets', 'lindenweg16' ) . '</h2>';
-		echo '<table class="widefat striped"><thead><tr>';
-		echo '<th>' . esc_html__( 'Set', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Rabatt (%)', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Einzelsumme', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Vorschlag', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Aktuell', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Marge', 'lindenweg16' ) . '</th><th></th>';
-		echo '</tr></thead><tbody>';
-
-		foreach ( $sets as $set ) {
-			$calc    = PricingCalculator::calc_set( $set );
-			$aktuell = PricingCalculator::aktueller_preis( $set );
-			echo '<tr>';
-			echo '<td>' . esc_html( $set->name ) . '</td>';
-			echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form">';
-			echo '<input type="hidden" name="action" value="lw16_save_kalk_produkt"><input type="hidden" name="produkt_id" value="' . (int) $set->id . '">';
-			wp_nonce_field( 'lw16_save_kalk_produkt_' . $set->id );
-			echo '<input type="number" step="any" name="rabatt_prozent" value="' . esc_attr( $set->rabatt_prozent ) . '" class="small-text"> ';
-			submit_button( __( 'Speichern', 'lindenweg16' ), 'small', '', false );
-			echo '</form></td>';
-			echo '<td>' . esc_html( number_format( $calc['einzelsumme'], 2, ',', '.' ) ) . ' €</td>';
-			echo '<td><strong>' . esc_html( number_format( $calc['vorschlag'], 0, ',', '.' ) ) . ' €</strong></td>';
-			echo '<td>' . ( $aktuell > 0 ? esc_html( number_format( $aktuell, 0, ',', '.' ) . ' €' ) : '–' ) . '</td>';
-			echo '<td>' . esc_html( number_format( $calc['marge'], 1, ',', '.' ) ) . ' %</td>';
-			echo '<td>';
-			if ( $set->woo_product_id ) {
-				$url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_preis_uebernehmen&id=' . $set->id ), 'lw16_preis_' . $set->id );
-				echo '<a class="button button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Preis übernehmen', 'lindenweg16' ) . '</a>';
-			} else {
-				echo '<span class="description">' . esc_html__( 'keine Woo-Zuordnung', 'lindenweg16' ) . '</span>';
-			}
-			echo '</td></tr>';
-		}
-		echo '</tbody></table>';
-	}
-
-	/* --------------------------------------------------------------------
-	 * POST-Handler
-	 * ------------------------------------------------------------------ */
-
-	/**
-	 * Globale Annahmen speichern.
-	 */
-	public function handle_save_settings() {
-		$this->guard( 'lw16_save_kalk_settings' );
-		PricingCalculator::save_settings( wp_unslash( $_POST ) );
-		$this->redirect( __( 'Annahmen gespeichert.', 'lindenweg16' ) );
-	}
-
-	/**
-	 * Kostenfelder eines Produkts speichern.
-	 */
-	public function handle_save_produkt() {
-		$id = (int) ( $_POST['produkt_id'] ?? 0 );
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
-			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
-		}
-		check_admin_referer( 'lw16_save_kalk_produkt_' . $id );
-
-		$fields = array( 'filament_gramm', 'druckzeit_stunden', 'arbeitszeit_minuten', 'verpackung_euro', 'zusatzmaterial_euro', 'rabatt_prozent' );
-		$data   = array();
-		foreach ( $fields as $f ) {
-			if ( isset( $_POST[ $f ] ) ) {
-				$data[ $f ] = (float) $_POST[ $f ];
-			}
-		}
-		if ( $data ) {
-			Repository::update_product( $id, $data );
-		}
-		$this->redirect( __( 'Kostenfelder gespeichert.', 'lindenweg16' ) );
+	protected function euro( $value ) {
+		return number_format_i18n( (float) $value, 2 ) . ' €';
 	}
 
 	/**
@@ -227,35 +195,16 @@ class PricingModule {
 	 * tatsächliche Marge in _lw16_margin_percent schreiben.
 	 */
 	public function handle_uebernehmen() {
-		$id = (int) ( $_GET['id'] ?? 0 );
 		if ( ! current_user_can( LW16_CAPABILITY ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
+
+		$id = (int) ( $_GET['article'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification
 		check_admin_referer( 'lw16_preis_' . $id );
 
-		$produkt = Repository::get_product( $id );
-		if ( ! $produkt || empty( $produkt->woo_product_id ) ) {
-			$this->redirect( __( 'Kein zugeordnetes WooCommerce-Produkt.', 'lindenweg16' ) );
-		}
+		$result = $this->apply_price( $id, $this->target_margin() );
 
-		$calc = 'set' === $produkt->typ ? PricingCalculator::calc_set( $produkt ) : PricingCalculator::calc_modul( $produkt );
-
-		$wc = wc_get_product( $produkt->woo_product_id );
-		if ( ! $wc ) {
-			$this->redirect( __( 'WooCommerce-Produkt nicht gefunden.', 'lindenweg16' ) );
-		}
-
-		$preis = (float) $calc['vorschlag'];
-		$wc->set_regular_price( (string) $preis );
-		$wc->save();
-
-		// Tatsächliche Marge fürs Referral-Programm hinterlegen.
-		$marge = PricingCalculator::marge_prozent( $calc['kosten'], $preis );
-		update_post_meta( $produkt->woo_product_id, '_lw16_margin_percent', $marge );
-
-		AuditLog::record( 'preis_uebernommen', 'produkt', $id, array( 'preis' => $preis, 'marge' => $marge ) );
-
-		$this->redirect( sprintf( /* translators: 1: Preis, 2: Marge */ __( 'Preis übernommen: %1$s € (Marge %2$s %%).', 'lindenweg16' ), number_format( $preis, 0, ',', '.' ), number_format( $marge, 1, ',', '.' ) ) );
+		$this->redirect( $result['message'] );
 	}
 
 	/**
@@ -267,27 +216,95 @@ class PricingModule {
 		}
 		check_admin_referer( 'lw16_alle_uebernehmen' );
 
-		$count    = 0;
-		$products = Repository::get_products();
-		foreach ( $products as $produkt ) {
-			if ( empty( $produkt->woo_product_id ) ) {
-				continue;
+		$margin = $this->target_margin();
+		$count  = 0;
+
+		foreach ( ArticleRepository::all( true ) as $article ) {
+			if ( $this->apply_price( (int) $article['id'], $margin )['success'] ) {
+				$count++;
 			}
-			$wc = wc_get_product( $produkt->woo_product_id );
-			if ( ! $wc ) {
-				continue;
-			}
-			$calc  = 'set' === $produkt->typ ? PricingCalculator::calc_set( $produkt ) : PricingCalculator::calc_modul( $produkt );
-			$preis = (float) $calc['vorschlag'];
-			$wc->set_regular_price( (string) $preis );
-			$wc->save();
-			$marge = PricingCalculator::marge_prozent( $calc['kosten'], $preis );
-			update_post_meta( $produkt->woo_product_id, '_lw16_margin_percent', $marge );
-			AuditLog::record( 'preis_uebernommen', 'produkt', $produkt->id, array( 'preis' => $preis, 'marge' => $marge, 'batch' => true ) );
-			$count++;
 		}
 
-		$this->redirect( sprintf( /* translators: %d: Anzahl */ __( '%d Preise übernommen.', 'lindenweg16' ), $count ) );
+		$this->redirect(
+			sprintf(
+				/* translators: %d: Anzahl. */
+				__( '%d Preise übernommen.', 'lindenweg16' ),
+				$count
+			)
+		);
+	}
+
+	/**
+	 * Vorschlagspreis eines Artikels ins Shop-Produkt schreiben.
+	 *
+	 * Geschrieben wird ausschließlich der Normalpreis. Ein laufendes Angebot
+	 * in WooCommerce bleibt unberührt – sonst wäre eine Preisaktion mit einem
+	 * Klick weg, ohne dass es jemand merkt.
+	 *
+	 * @param int   $article_id Artikel.
+	 * @param float $margin     Zielmarge.
+	 * @return array {success, message}
+	 */
+	protected function apply_price( $article_id, $margin ) {
+		$article = ArticleRepository::find( $article_id );
+
+		if ( ! $article || empty( $article['wc_product_id'] ) ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Kein zugeordnetes WooCommerce-Produkt.', 'lindenweg16' ),
+			);
+		}
+
+		$wc = function_exists( 'wc_get_product' ) ? wc_get_product( (int) $article['wc_product_id'] ) : null;
+
+		if ( ! $wc ) {
+			return array(
+				'success' => false,
+				'message' => __( 'WooCommerce-Produkt nicht gefunden.', 'lindenweg16' ),
+			);
+		}
+
+		$settings = CalculationContext::settings();
+		$cost     = CostCalculator::manufacturing_cost( $article_id, CalculationContext::build(), $settings );
+		$preis    = CostCalculator::price_for_margin( $cost, $settings, $margin );
+
+		if ( null === $preis ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Diese Marge ist mit den aktuellen Annahmen nicht erreichbar.', 'lindenweg16' ),
+			);
+		}
+
+		$wc->set_regular_price( (string) $preis );
+		$wc->save();
+
+		$ergebnis = CostCalculator::contribution_from_cost( $cost, $preis, $settings );
+
+		// Marge fürs Empfehlungsprogramm hinterlegen – dort wird die
+		// Prämie daraus abgeleitet.
+		update_post_meta( (int) $article['wc_product_id'], '_lw16_margin_percent', round( $ergebnis['db2_pct'] * 100, 2 ) );
+
+		// Auch am Betriebsartikel festhalten, damit die Kalkulation dort
+		// denselben Preis zeigt wie der Shop.
+		ArticleRepository::update( $article_id, array( 'price_gross' => $preis ), __( 'Preisübernahme aus der Kalkulation.', 'lindenweg16' ) );
+
+		AuditLog::record(
+			'preis_uebernommen',
+			'article',
+			$article_id,
+			array( 'preis' => $preis, 'marge' => $ergebnis['db2_pct'] )
+		);
+
+		return array(
+			'success' => true,
+			'message' => sprintf(
+				/* translators: 1: Artikelnummer, 2: Preis, 3: Marge. */
+				__( '%1$s: %2$s € übernommen (Marge %3$s %%).', 'lindenweg16' ),
+				$article['sku'],
+				number_format_i18n( $preis, 2 ),
+				number_format_i18n( $ergebnis['db2_pct'] * 100, 1 )
+			),
+		);
 	}
 
 	/**

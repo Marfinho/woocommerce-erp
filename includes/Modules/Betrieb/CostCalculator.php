@@ -253,6 +253,58 @@ class CostCalculator {
 	}
 
 	/**
+	 * Bruttopreis, der eine gewünschte DB-II-Marge erreicht – reine Logik.
+	 *
+	 * Rückwärtsrechnung zur Deckungsbeitragsrechnung: Gesucht ist der
+	 * Bruttopreis, bei dem der Deckungsbeitrag II den gewünschten Anteil am
+	 * Nettoerlös ausmacht.
+	 *
+	 * Das lässt sich nicht durch Aufschlag lösen, weil die Zahlungsgebühr am
+	 * Preis selbst hängt: Ein höherer Preis erzeugt eine höhere Gebühr und
+	 * damit wieder einen niedrigeren Deckungsbeitrag. Aufgelöst ergibt sich
+	 *
+	 *   netto × (1 − marge) = fixkosten + netto × (1 + ust) × gebuehr_pct
+	 *
+	 * und daraus der Nettoerlös in einem Schritt.
+	 *
+	 * @param array $cost     Ergebnis von manufacturing_cost.
+	 * @param array $settings Annahmen.
+	 * @param float $margin   Gewünschte DB-II-Marge als Anteil, z. B. 0.45.
+	 * @return float|null Bruttopreis, null wenn die Marge nicht erreichbar ist.
+	 */
+	public static function price_for_margin( array $cost, array $settings, $margin ) {
+		$margin = (float) $margin;
+
+		if ( $margin < 0 || $margin >= 1 ) {
+			return null;
+		}
+
+		$vat        = self::setting( $settings, 'vat_rate' );
+		$fee_pct    = self::setting( $settings, 'payment_fee_pct' );
+		$herstell   = (float) $cost['herstellkosten'];
+		$handling   = (float) $cost['postprocessing_min'] / 60 * self::setting( $settings, 'labor_rate_per_h' );
+
+		$fix = $herstell
+			+ $herstell * self::setting( $settings, 'scrap_surcharge_pct' )
+			+ self::setting( $settings, 'packaging_cost' )
+			+ self::setting( $settings, 'payment_fee_fixed' )
+			+ $handling;
+
+		// Anteil des Nettoerlöses, der nach variabler Gebühr und Marge übrig
+		// bleibt, um die Fixkosten zu decken.
+		$share = 1 - $margin - ( 1 + $vat ) * $fee_pct;
+
+		if ( $share <= 0.0001 ) {
+			// Die variable Gebühr allein frisst die gewünschte Marge auf.
+			return null;
+		}
+
+		$netto = $fix / $share;
+
+		return round( $netto * ( 1 + $vat ), 2 );
+	}
+
+	/**
 	 * Deckungsbeitrag aus fertigen Herstellkosten.
 	 *
 	 * Verpackung und Zahlungsgebühr fallen genau einmal an – hier je Artikel,

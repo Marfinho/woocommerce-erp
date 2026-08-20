@@ -13,7 +13,6 @@ use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Inventory\StockManager;
-use Lindenweg16\Modules\Pricing\PricingCalculator;
 
 /**
  * Druck-Queue, Packliste, DHL-Verlinkung/-Tracking, Ist-Zeit-Erfassung
