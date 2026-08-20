@@ -169,11 +169,11 @@ class ArticlesPage {
 		}
 
 		RevisionRepository::insert( $result['data'] );
-		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – dafür braucht es einen bestandenen Zugversuch.', 'lindenweg16' ), 'success', $args );
+		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – setze sie in der Liste aktiv.', 'lindenweg16' ), 'success', $args );
 	}
 
 	/**
-	 * Revision freigeben.
+	 * Revision aktiv setzen.
 	 */
 	public function handle_activate() {
 		$input   = $this->post_input();
@@ -184,14 +184,10 @@ class ArticlesPage {
 		$result = RevisionRepository::activate( $id );
 
 		if ( ! $result['success'] ) {
-			$this->redirect(
-				__( 'Freigabe verweigert:', 'lindenweg16' ) . ' ' . implode( ' ', $result['reasons'] ),
-				'error',
-				$args
-			);
+			$this->redirect( implode( ' ', $result['reasons'] ), 'error', $args );
 		}
 
-		$this->redirect( __( 'Revision freigegeben und aktiv gesetzt.', 'lindenweg16' ), 'success', $args );
+		$this->redirect( __( 'Revision aktiv gesetzt.', 'lindenweg16' ), 'success', $args );
 	}
 
 	/**
@@ -550,7 +546,7 @@ class ArticlesPage {
 		$this->field( __( 'VK brutto (€)', 'lindenweg16' ), 'price_gross', $this->val( $edit, 'price_gross' ) );
 		$this->field( __( 'Händlerpreis (€)', 'lindenweg16' ), 'dealer_price', $this->val( $edit, 'dealer_price' ) );
 		$this->field( __( 'Nachbearbeitung (min)', 'lindenweg16' ), 'postprocessing_min', $this->val( $edit, 'postprocessing_min' ), 'text', __( 'Entgraten, Gewindeeinsätze setzen, Beipack.', 'lindenweg16' ) );
-		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Grundlage des Sicherheitsfaktors bei der Freigabe.', 'lindenweg16' ) );
+		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Angegebene Traglast. Erscheint in der Chargenakte.', 'lindenweg16' ) );
 		$this->field( __( 'WooCommerce-Produkt-ID', 'lindenweg16' ), 'wc_product_id', $this->val( $edit, 'wc_product_id' ), 'text', __( 'Optional. Verknüpft den Artikel mit dem Shop-Produkt.', 'lindenweg16' ) );
 
 		echo '<tr><th scope="row"><label for="lw16-notes">' . esc_html__( 'Bemerkung', 'lindenweg16' ) . '</label></th>';
@@ -678,7 +674,7 @@ class ArticlesPage {
 				__( 'Teile je Platte', 'lindenweg16' ),
 				__( 'Druckzeit Platte', 'lindenweg16' ),
 				__( 'Druckzeit je Teil', 'lindenweg16' ),
-				__( 'Freigabe', 'lindenweg16' ),
+				__( 'Status', 'lindenweg16' ),
 				'',
 			) as $head ) {
 				echo '<th>' . esc_html( $head ) . '</th>';
@@ -686,8 +682,6 @@ class ArticlesPage {
 			echo '</tr></thead><tbody>';
 
 			foreach ( $rows as $row ) {
-				$status = RevisionRepository::release_status( (int) $row['id'] );
-
 				echo '<tr>';
 				printf( '<td><strong>%s</strong></td>', esc_html( $row['version'] ) );
 				printf( '<td>%s</td>', esc_html( (string) $row['material'] ) );
@@ -699,24 +693,8 @@ class ArticlesPage {
 				echo '<td>';
 				if ( $row['is_active'] ) {
 					printf( '<span class="lw16-ampel lw16-ampel--gruen">%s</span>', esc_html__( 'aktiv', 'lindenweg16' ) );
-				} elseif ( $status['released'] ) {
-					printf( '<span class="lw16-ampel lw16-ampel--gelb">%s</span>', esc_html__( 'freigabefähig', 'lindenweg16' ) );
 				} else {
-					printf( '<span class="lw16-ampel lw16-ampel--rot">%s</span>', esc_html__( 'gesperrt', 'lindenweg16' ) );
-				}
-				printf(
-					'<br /><small>%s</small>',
-					esc_html(
-						sprintf(
-							/* translators: 1: Probenzahl, 2: Sicherheitsfaktor. */
-							__( '%1$d Proben, Faktor %2$s', 'lindenweg16' ),
-							(int) $status['sample_count'],
-							number_format_i18n( $status['safety_factor'], 2 )
-						)
-					)
-				);
-				foreach ( $status['reasons'] as $reason ) {
-					printf( '<br /><small>%s</small>', esc_html( $reason ) );
+					printf( '<span class="lw16-ampel lw16-ampel--gelb">%s</span>', esc_html__( 'inaktiv', 'lindenweg16' ) );
 				}
 				echo '</td>';
 
@@ -725,11 +703,7 @@ class ArticlesPage {
 					$this->form_open( 'activate' );
 					printf( '<input type="hidden" name="revision_id" value="%d" />', (int) $row['id'] );
 					printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
-					printf(
-						'<button class="button"%s>%s</button>',
-						$status['released'] ? '' : ' disabled',
-						esc_html__( 'Freigeben', 'lindenweg16' )
-					);
+					printf( '<button class="button">%s</button>', esc_html__( 'Aktiv setzen', 'lindenweg16' ) );
 					echo '</form>';
 				}
 				echo '</td></tr>';
@@ -740,7 +714,7 @@ class ArticlesPage {
 		}
 
 		echo '<h2>' . esc_html__( 'Revision anlegen', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Neue Revisionen sind zunächst gesperrt. Aktiv wird nur, was mindestens fünf Zugversuche mit Sicherheitsfaktor 3,0 bestanden hat.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Neue Revisionen sind zunächst inaktiv. Aktiv gesetzt wird immer genau eine Revision je Artikel – sie löst die bisherige ab.', 'lindenweg16' ) . '</p>';
 
 		$this->form_open( 'revision' );
 		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );

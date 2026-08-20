@@ -117,7 +117,6 @@ foreach ( array(
 	'ComponentConsumption',
 	'CostCalculator',
 	'BundleCalculator',
-	'ReleaseGate',
 	'SourcingRepository',
 	'PrintJobRepository',
 	'BatchRepository',

@@ -59,7 +59,7 @@ class VerfahrensDokuBetrieb {
 			array( 'p', __( 'Verkauf außerhalb des Shops: Manuelle Bestellerfassung mit Kontakt, Positionen und aufgelöster Rabattstaffel. Der ermittelte Rabatt wird auf der Bestellung festgeschrieben.', 'lindenweg16' ) ),
 			array( 'p', __( 'Kommission: Auslieferung, Abrechnung und Rücknahme werden als Bewegungspaare gebucht. Der Gesamtbestand über alle Lagerorte bleibt dabei konstant; nur der abgerechnete Teil verlässt ihn.', 'lindenweg16' ) ),
 			array( 'p', __( 'Nachbestell-Link: Händler können über einen persönlichen Link eine Anfrage stellen. Diese entsteht ausschließlich als Entwurf; Lagerabgang und offener Posten entstehen erst mit der Bestätigung im Backend.', 'lindenweg16' ) ),
-			array( 'p', __( 'Korrektur: Druckjobs, Lagerbewegungen, Chargen und Zugversuche werden nicht gelöscht. Korrekturen erfolgen ausschließlich durch Storno-Gegenbuchung mit Begründung und Verweis auf den Ursprungssatz.', 'lindenweg16' ) ),
+			array( 'p', __( 'Korrektur: Druckjobs, Lagerbewegungen und Chargen werden nicht gelöscht. Korrekturen erfolgen ausschließlich durch Storno-Gegenbuchung mit Begründung und Verweis auf den Ursprungssatz.', 'lindenweg16' ) ),
 		);
 	}
 
@@ -84,7 +84,6 @@ class VerfahrensDokuBetrieb {
 			'print_jobs'        => __( 'Druckjournal; Ausschuss und Quoten werden gerechnet', 'lindenweg16' ),
 			'filament_lots'     => __( 'Filamentchargen; Verbrauch aus den Druckjobs', 'lindenweg16' ),
 			'batches'           => __( 'Chargenbuch für die Rückverfolgbarkeit', 'lindenweg16' ),
-			'tensile_tests'     => __( 'Zugversuche als Grundlage der Freigabe', 'lindenweg16' ),
 			'stock_movements'   => __( 'Lagerbestand als Bewegungskonto; es gibt kein Bestandsfeld', 'lindenweg16' ),
 			'order_ops'         => __( 'Betriebliche Zusatzdaten zu Bestellungen', 'lindenweg16' ),
 			'contacts'          => __( 'Händler, Vereine, Leads mit Aktivitäten und Konditionen', 'lindenweg16' ),
@@ -116,7 +115,6 @@ class VerfahrensDokuBetrieb {
 			array( 'p', __( 'Deckungsbeitrag II = Deckungsbeitrag I − Nachbearbeitungszeit × kalkulatorischem Stundensatz', 'lindenweg16' ) ),
 			array( 'p', __( 'Beim Set fallen Verpackung und Zahlungsgebühr genau einmal je Bestellung an, nicht je Position.', 'lindenweg16' ) ),
 			array( 'p', __( 'Ausschussquote = (geplante Teile − gute Teile) / geplante Teile', 'lindenweg16' ) ),
-			array( 'p', __( 'Sicherheitsfaktor = (niedrigste Bruchlast / 9,81) / angegebene Traglast', 'lindenweg16' ) ),
 			array( 'p', __( 'Reichweite in Tagen = Bestand / durchschnittlicher Tagesverbrauch der letzten vier Wochen', 'lindenweg16' ) ),
 			array( 'p', __( 'Kalenderwochen nach ISO 8601: Woche 1 enthält den ersten Donnerstag des Jahres; das ISO-Jahr weicht am Jahreswechsel vom Kalenderjahr ab.', 'lindenweg16' ) ),
 		);

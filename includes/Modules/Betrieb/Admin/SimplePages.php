@@ -29,13 +29,11 @@ use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
-use Lindenweg16\Modules\Betrieb\ReleaseGate;
 use Lindenweg16\Modules\Betrieb\ReorderToken;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
-use Lindenweg16\Modules\Betrieb\TensileRepository;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\Traceability;
 
@@ -56,7 +54,7 @@ class SimplePages {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_kontakte', array( $this, 'contacts' ) );
 		add_action( 'lw16_betrieb_render_lw16_betrieb_berichte', array( $this, 'reports' ) );
 
-		foreach ( array( 'tensile', 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission' ) as $what ) {
+		foreach ( array( 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_' . $what, array( $this, 'handle_' . $what ) );
 		}
 	}
@@ -157,21 +155,6 @@ class SimplePages {
 	/* ====================================================================
 	 * Handler
 	 * ================================================================== */
-
-	/**
-	 * Zugversuch erfassen.
-	 */
-	public function handle_tensile() {
-		$input  = $this->input();
-		$result = TensileRepository::validate( $input );
-
-		if ( $result['errors'] ) {
-			$this->redirect( 'lw16-betrieb-qualitaet', implode( ' ', $result['errors'] ), 'error' );
-		}
-
-		TensileRepository::insert( $result['data'] );
-		$this->redirect( 'lw16-betrieb-qualitaet', __( 'Zugversuch erfasst.', 'lindenweg16' ) );
-	}
 
 	/**
 	 * Zeiteintrag erfassen.
@@ -394,7 +377,7 @@ class SimplePages {
 		$this->notice();
 
 		// phpcs:disable WordPress.Security.NonceVerification
-		$view  = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'zugversuche';
+		$view  = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'chargen';
 		$batch = isset( $_GET['batch'] ) ? (int) $_GET['batch'] : 0;
 		$lot   = isset( $_GET['lot'] ) ? (int) $_GET['lot'] : 0;
 		// phpcs:enable WordPress.Security.NonceVerification
@@ -402,7 +385,6 @@ class SimplePages {
 		$base = admin_url( 'admin.php?page=lw16-betrieb-qualitaet' );
 		echo '<nav class="lw16-tabs">';
 		foreach ( array(
-			'zugversuche'     => __( 'Zugversuche', 'lindenweg16' ),
 			'chargen'         => __( 'Chargenbuch', 'lindenweg16' ),
 			'rueckverfolgung' => __( 'Rückverfolgung', 'lindenweg16' ),
 		) as $key => $label ) {
@@ -415,125 +397,13 @@ class SimplePages {
 		}
 		echo '</nav>';
 
-		if ( 'chargen' === $view ) {
-			$this->batches( $batch );
-		} elseif ( 'rueckverfolgung' === $view ) {
+		if ( 'rueckverfolgung' === $view ) {
 			$this->trace( $lot, $batch );
 		} else {
-			$this->tensile();
+			$this->batches( $batch );
 		}
 
 		echo '</div>';
-	}
-
-	/**
-	 * Zugversuche und Freigabestand.
-	 */
-	protected function tensile() {
-		echo '<p>' . esc_html__( 'Eine Revision wird nur freigegeben, wenn mindestens fünf Proben vorliegen und der Sicherheitsfaktor mindestens 3,0 beträgt. Maßgeblich ist die niedrigste Bruchlast, nicht der Mittelwert.', 'lindenweg16' ) . '</p>';
-
-		$revisions = array();
-		foreach ( ArticleRepository::all() as $article ) {
-			foreach ( RevisionRepository::for_article( (int) $article['id'] ) as $revision ) {
-				$revisions[] = array( 'article' => $article, 'revision' => $revision );
-			}
-		}
-
-		if ( $revisions ) {
-			echo '<h2>' . esc_html__( 'Freigabestand je Revision', 'lindenweg16' ) . '</h2>';
-			$this->thead(
-				array(
-					__( 'Artikel', 'lindenweg16' ),
-					__( 'Version', 'lindenweg16' ),
-					__( 'Proben', 'lindenweg16' ),
-					__( 'niedrigste Bruchlast', 'lindenweg16' ),
-					__( 'Mittelwert', 'lindenweg16' ),
-					__( 'in kg', 'lindenweg16' ),
-					__( 'Traglast', 'lindenweg16' ),
-					__( 'Sicherheitsfaktor', 'lindenweg16' ),
-					__( 'Status', 'lindenweg16' ),
-				)
-			);
-
-			foreach ( $revisions as $row ) {
-				$tests  = TensileRepository::for_revision( (int) $row['revision']['id'] );
-				$status = ReleaseGate::evaluate( $tests, (float) $row['article']['load_rating_kg'] );
-
-				echo '<tr>';
-				printf( '<td>%s</td>', esc_html( $row['article']['sku'] ) );
-				printf( '<td>%s</td>', esc_html( $row['revision']['version'] ) );
-				printf( '<td>%d</td>', (int) $status['sample_count'] );
-				printf( '<td>%s N</td>', esc_html( number_format_i18n( $status['break_load_min_n'], 0 ) ) );
-				printf( '<td>%s N</td>', esc_html( number_format_i18n( $status['break_load_avg_n'], 0 ) ) );
-				printf( '<td>%s kg</td>', esc_html( number_format_i18n( $status['kg_min'], 1 ) ) );
-				printf( '<td>%s kg</td>', esc_html( number_format_i18n( $status['load_rating_kg'], 1 ) ) );
-				printf( '<td>%s</td>', esc_html( number_format_i18n( $status['safety_factor'], 2 ) ) );
-				printf(
-					'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
-					esc_attr( $status['released'] ? 'gruen' : 'rot' ),
-					esc_html( $status['released'] ? __( 'freigabefähig', 'lindenweg16' ) : __( 'gesperrt', 'lindenweg16' ) )
-				);
-				echo '</tr>';
-			}
-			echo '</tbody></table>';
-		}
-
-		echo '<h2>' . esc_html__( 'Zugversuch erfassen', 'lindenweg16' ) . '</h2>';
-		$this->form( 'tensile' );
-		echo '<p>';
-
-		echo '<select name="article_revision_id">';
-		foreach ( $revisions as $row ) {
-			printf(
-				'<option value="%d">%s %s</option>',
-				(int) $row['revision']['id'],
-				esc_html( $row['article']['sku'] ),
-				esc_html( $row['revision']['version'] )
-			);
-		}
-		echo '</select> ';
-
-		printf( '<input type="date" name="test_date" value="%s" /> ', esc_attr( gmdate( 'Y-m-d' ) ) );
-		printf( '<input type="text" name="sample_no" placeholder="%s" size="4" /> ', esc_attr__( 'Probe', 'lindenweg16' ) );
-		printf( '<input type="text" name="break_load_n" placeholder="%s" size="8" /> ', esc_attr__( 'Bruchlast N', 'lindenweg16' ) );
-		printf( '<input type="text" name="failure_mode" placeholder="%s" size="20" /> ', esc_attr__( 'Bruchbild', 'lindenweg16' ) );
-		printf( '<input type="text" name="tester" placeholder="%s" size="10" /> ', esc_attr__( 'Prüfer', 'lindenweg16' ) );
-		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Erfassen', 'lindenweg16' ) );
-		echo '</p></form>';
-
-		$tests = TensileRepository::all( 50 );
-		if ( $tests ) {
-			echo '<h2>' . esc_html__( 'Letzte Versuche', 'lindenweg16' ) . '</h2>';
-			$this->thead(
-				array(
-					__( 'Datum', 'lindenweg16' ),
-					__( 'Artikel', 'lindenweg16' ),
-					__( 'Probe', 'lindenweg16' ),
-					__( 'Bruchlast', 'lindenweg16' ),
-					__( 'Bruchbild', 'lindenweg16' ),
-					__( 'Prüfer', 'lindenweg16' ),
-					'',
-				)
-			);
-
-			$articles = ArticleRepository::all_by_id();
-
-			foreach ( $tests as $test ) {
-				printf( '<tr%s>', $test['voided_at'] ? ' style="opacity:.55"' : '' );
-				printf( '<td>%s</td>', esc_html( mysql2date( 'd.m.Y', $test['test_date'] ) ) );
-				printf(
-					'<td>%s</td>',
-					esc_html( isset( $articles[ (int) $test['article_id'] ] ) ? $articles[ (int) $test['article_id'] ]['sku'] : '' )
-				);
-				printf( '<td>%d</td>', (int) $test['sample_no'] );
-				printf( '<td>%s N</td>', esc_html( number_format_i18n( (float) $test['break_load_n'], 0 ) ) );
-				printf( '<td>%s</td>', esc_html( (string) $test['failure_mode'] ) );
-				printf( '<td>%s</td>', esc_html( (string) $test['tester'] ) );
-				printf( '<td>%s</td>', $test['voided_at'] ? esc_html__( 'storniert', 'lindenweg16' ) : '' );
-				echo '</tr>';
-			}
-			echo '</tbody></table>';
-		}
 	}
 
 	/**
@@ -626,8 +496,6 @@ class SimplePages {
 			array( __( 'Filamentcharge', 'lindenweg16' ), $dossier['lot'] ? $dossier['lot']['lot_code'] : '—' ),
 			array( __( 'Drucker', 'lindenweg16' ), $dossier['printer'] ? $dossier['printer']['code'] : '—' ),
 			array( __( 'Stückzahl', 'lindenweg16' ), number_format_i18n( (float) $dossier['batch']['qty'], 0 ) ),
-			array( __( 'Zugversuche', 'lindenweg16' ), sprintf( '%d', count( $dossier['tests'] ) ) ),
-			array( __( 'Sicherheitsfaktor', 'lindenweg16' ), number_format_i18n( $dossier['release']['safety_factor'], 2 ) ),
 			array( __( 'Betroffene Bestellungen', 'lindenweg16' ), sprintf( '%d', count( $dossier['orders'] ) ) ),
 		) as $row ) {
 			printf( '<tr><td>%s</td><td><strong>%s</strong></td></tr>', esc_html( $row[0] ), esc_html( $row[1] ) );

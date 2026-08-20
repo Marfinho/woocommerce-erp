@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '7';
+	const DB_VERSION = '8';
 
 	/**
 	 * Aktivierungsroutine.
@@ -632,6 +632,24 @@ class Installer {
 
 		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
 		self::maybe_backfill_hashes();
+
+		// Migration: Tabellen entfernter Funktionen abräumen.
+		self::drop_removed_tables();
+	}
+
+	/**
+	 * Tabellen, die zu entfernten Funktionen gehören, abräumen.
+	 *
+	 * dbDelta löscht nie – ohne diesen Schritt bliebe eine Tabelle stehen,
+	 * die kein Code mehr liest oder schreibt. Betroffen sind ausdrücklich
+	 * keine Buchhaltungsdaten, deren Aufbewahrung die GoBD verlangt.
+	 */
+	protected static function drop_removed_tables() {
+		global $wpdb;
+
+		// DB_VERSION 8: Zugversuche wurden ersatzlos entfernt.
+		$table = $wpdb->prefix . 'lw16_tensile_tests';
+		$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
 	}
 
 	/**

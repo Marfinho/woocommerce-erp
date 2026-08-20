@@ -10,7 +10,7 @@ namespace Lindenweg16\Modules\Betrieb;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Lesen und Schreiben der Revisionen inklusive Freigabeprüfung.
+ * Lesen und Schreiben der Revisionen.
  */
 class RevisionRepository {
 
@@ -103,11 +103,10 @@ class RevisionRepository {
 	/**
 	 * Maßgebliche Revision eines Artikels für die Erfassung.
 	 *
-	 * Bevorzugt die aktive; solange keine freigegeben ist, die zuletzt
+	 * Bevorzugt die aktive; solange keine aktiv gesetzt ist, die zuletzt
 	 * angelegte. Ohne diesen Rückfall stünde am Anfang jeder Druckjob ohne
 	 * Revision da – und damit ohne Bauteilgewicht, ohne Filamentverbrauch und
-	 * ohne verwertbare Charge. Die Freigabe steuert, was verkauft werden darf,
-	 * nicht was intern erfasst werden kann.
+	 * ohne verwertbare Charge.
 	 *
 	 * @param int $article_id Artikel.
 	 * @return array|null
@@ -206,8 +205,8 @@ class RevisionRepository {
 	}
 
 	/**
-	 * Revision anlegen. Neue Revisionen sind zunächst inaktiv – aktiv wird
-	 * nur, was den Zugversuch bestanden hat.
+	 * Revision anlegen. Neue Revisionen sind zunächst inaktiv und werden
+	 * bewusst aktiv gesetzt.
 	 *
 	 * @param array $data Geprüfte Daten.
 	 * @return int
@@ -254,41 +253,7 @@ class RevisionRepository {
 	}
 
 	/**
-	 * Freigabestand einer Revision prüfen.
-	 *
-	 * Die Zugversuche selbst werden in Meilenstein 6 erfasst; die Prüfung
-	 * greift schon jetzt, damit keine Revision ohne Nachweis aktiv wird.
-	 *
-	 * @param int $id Revision.
-	 * @return array Ergebnis von ReleaseGate::evaluate.
-	 */
-	public static function release_status( $id ) {
-		global $wpdb;
-
-		$revision = self::find( $id );
-		if ( ! $revision ) {
-			return ReleaseGate::evaluate( array(), 0 );
-		}
-
-		$article = ArticleRepository::find( (int) $revision['article_id'] );
-		$table   = $wpdb->prefix . 'lw16_tensile_tests';
-		$tests   = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE article_revision_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				(int) $id
-			),
-			ARRAY_A
-		);
-
-		return ReleaseGate::evaluate(
-			$tests ? $tests : array(),
-			$article && null !== $article['load_rating_kg'] ? (float) $article['load_rating_kg'] : 0.0
-		);
-	}
-
-	/**
-	 * Revision aktiv setzen. Harte Validierung: ohne bestandenen Zugversuch
-	 * keine Freigabe.
+	 * Revision aktiv setzen.
 	 *
 	 * @param int $id Revision.
 	 * @return array {success, reasons}
@@ -301,14 +266,6 @@ class RevisionRepository {
 			return array(
 				'success' => false,
 				'reasons' => array( __( 'Revision nicht gefunden.', 'lindenweg16' ) ),
-			);
-		}
-
-		$status = self::release_status( $id );
-		if ( ! $status['released'] ) {
-			return array(
-				'success' => false,
-				'reasons' => $status['reasons'],
 			);
 		}
 
@@ -345,12 +302,7 @@ class RevisionRepository {
 			(int) $id,
 			$revision,
 			$data,
-			sprintf(
-				/* translators: 1: Probenzahl, 2: Sicherheitsfaktor. */
-				__( 'Freigegeben nach %1$d Proben, Sicherheitsfaktor %2$s.', 'lindenweg16' ),
-				(int) $status['sample_count'],
-				number_format_i18n( $status['safety_factor'], 2 )
-			)
+			__( 'Revision aktiv gesetzt.', 'lindenweg16' )
 		);
 
 		return array(
