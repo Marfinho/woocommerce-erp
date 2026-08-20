@@ -1116,7 +1116,7 @@ class ArticlesPage {
 
 		// --- Aufgeklappte Stückliste -------------------------------------
 		echo '<h3>' . esc_html__( 'Kostenanteile je Position', 'lindenweg16' ) . '</h3>';
-		echo '<table class="widefat striped"><thead><tr>';
+		echo '<div class="lw16-scrollx"><table class="widefat striped lw16-table--zahlen"><thead><tr>';
 		foreach ( array(
 			__( 'Position', 'lindenweg16' ),
 			__( 'Art', 'lindenweg16' ),
@@ -1166,13 +1166,13 @@ class ArticlesPage {
 			esc_html__( 'Herstellkosten', 'lindenweg16' ),
 			esc_html( $this->money( $hk, 4 ) )
 		);
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
 		// --- Preisebenen nebeneinander -----------------------------------
 		$akquise = (float) $result['settings']['customer_acquisition_cost'];
 
 		echo '<h3>' . esc_html__( 'Preisebenen im Vergleich', 'lindenweg16' ) . '</h3>';
-		echo '<table class="widefat striped"><thead><tr>';
+		echo '<div class="lw16-scrollx"><table class="widefat striped lw16-table--zahlen"><thead><tr>';
 		foreach ( array(
 			__( 'Ebene', 'lindenweg16' ),
 			__( 'Brutto', 'lindenweg16' ),
@@ -1218,7 +1218,7 @@ class ArticlesPage {
 			);
 			echo '</tr>';
 		}
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
 		printf(
 			'<p class="description">%s</p>',

@@ -37,13 +37,35 @@
 }
 
 /* Ampel für Kennzahlen und Bestände. */
-.lw16-ampel {
+/*
+ * Beschriftetes Statusetikett.
+ *
+ * Achtung, Namenskollision: admin.css definiert .lw16-ampel als runden
+ * 14x14-Punkt (mit einfachem Bindestrich: .lw16-ampel-gruen). Beide
+ * Stylesheets liegen auf den Betrieb-Seiten uebereinander. Ohne die
+ * Ruecksetzung von width und height blieb das Etikett 14 Pixel breit und
+ * sein Text zerfiel in einen Zeichenturm - besonders auffaellig dort, wo
+ * ein Betrag wie "+16,00 EUR" darin steht.
+ *
+ * Deshalb haengen die Regeln hier ausdruecklich an den Modifikatoren mit
+ * doppeltem Bindestrich: Sie sind spezifischer als .lw16-ampel und lassen
+ * den Punkt aus admin.css unberuehrt.
+ */
+.lw16-ampel--gruen,
+.lw16-ampel--gelb,
+.lw16-ampel--rot {
 	display: inline-block;
+	width: auto;
+	height: auto;
 	min-width: 8px;
 	padding: 2px 8px;
 	border-radius: 10px;
 	font-size: 12px;
 	font-weight: 600;
+	line-height: 1.5;
+	vertical-align: baseline;
+	/* Ein Etikett bricht nie um. */
+	white-space: nowrap;
 }
 
 .lw16-ampel--gruen { background: #d5e5d5; color: #1e4620; }
@@ -247,3 +269,30 @@
 .lw16-picker__label { font-weight: 500; }
 .lw16-picker__item small { color: #646970; }
 .lw16-picker__empty { padding: 8px 11px; color: #646970; margin: 0; }
+
+/* --- Breite Zahlentabellen -------------------------------------------- */
+/*
+ * Kalkulationstabellen haben ein Dutzend Spalten. In einem schmalen Fenster
+ * quetscht der Browser sie so weit zusammen, dass Betraege mitten im Wort
+ * umbrechen. Statt die Zahlen zu verkleinern, darf die Tabelle waagerecht
+ * scrollen - die Seite selbst bleibt ruhig.
+ */
+.lw16-scrollx {
+	overflow-x: auto;
+	-webkit-overflow-scrolling: touch;
+	margin: 12px 0;
+}
+
+.lw16-scrollx > table {
+	margin: 0;
+}
+
+/* Zahlen brechen nicht und stehen untereinander bündig. */
+.lw16-table--zahlen th,
+.lw16-table--zahlen td {
+	white-space: nowrap;
+}
+
+.lw16-table--zahlen td {
+	font-variant-numeric: tabular-nums;
+}
