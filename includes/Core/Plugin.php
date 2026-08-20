@@ -68,6 +68,11 @@ class Plugin {
 		// Einmaliger Rewrite-Flush nach Aktivierung.
 		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );
 
+		// Auskunft und Löschung nach DSGVO. Gilt im Frontend wie im Backend:
+		// WordPress ruft die Rueckrufe aus dem Adminbereich auf, meldet sie
+		// aber ueber Filter an, die frueh gesetzt sein muessen.
+		( new Privacy() )->register();
+
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
 			( new Menu() )->register();

@@ -59,7 +59,12 @@ class VerfahrensDokuBetrieb {
 			array( 'p', __( 'Verkauf außerhalb des Shops: Manuelle Bestellerfassung mit Kontakt, Positionen und aufgelöster Rabattstaffel. Der ermittelte Rabatt wird auf der Bestellung festgeschrieben.', 'lindenweg16' ) ),
 			array( 'p', __( 'Kommission: Auslieferung, Abrechnung und Rücknahme werden als Bewegungspaare gebucht. Der Gesamtbestand über alle Lagerorte bleibt dabei konstant; nur der abgerechnete Teil verlässt ihn.', 'lindenweg16' ) ),
 			array( 'p', __( 'Nachbestell-Link: Händler können über einen persönlichen Link eine Anfrage stellen. Diese entsteht ausschließlich als Entwurf; Lagerabgang und offener Posten entstehen erst mit der Bestätigung im Backend.', 'lindenweg16' ) ),
+			array( 'p', __( 'Fertigung von Halbzeugen: Zwischen Rohling und verkaufsfertigem Artikel liegen Arbeitsschritte, die kein Druckjob sind. Sie laufen über einen Fertigungsauftrag. Mit dem Fertigmelden entsteht der Zugang des gefertigten Artikels und der Abgang seiner direkten Stückliste – nur der ersten Ebene, denn was darunter liegt, hat sich beim eigenen Auftrag bereits abgebucht.', 'lindenweg16' ) ),
+			array( 'p', __( 'Kommissionierung: Picklisten entstehen aus offenen Bestellungen oder aus einem Fertigungsauftrag, sortiert nach Lagerplatz. Das Abhaken bucht bewusst keinen Lagerabgang – der entsteht genau einmal beim Bestellabschluss beziehungsweise beim Fertigmelden. Was das Picken beiträgt, ist die Ortsangabe.', 'lindenweg16' ) ),
+			array( 'p', __( 'Bedarfsermittlung: Bedarfe aus offenen Bestellungen, aus der Unterdeckung gegenüber dem Sollbestand und – getrennt ausgewiesen – aus der Wunschliste werden über alle Fertigungsstufen nach unten gerechnet und dabei gegen Bestand und laufende Aufträge verrechnet.', 'lindenweg16' ) ),
+			array( 'p', __( 'Marktverkauf: Verkäufe an der Kasse buchen über dieselbe Zuständigkeitsweiche wie Shop-Bestellungen. Der Storno läuft über denselben Weg, damit Verkauf und Storno nie in verschiedenen Lagerverwaltungen landen.', 'lindenweg16' ) ),
 			array( 'p', __( 'Korrektur: Druckjobs, Lagerbewegungen und Chargen werden nicht gelöscht. Korrekturen erfolgen ausschließlich durch Storno-Gegenbuchung mit Begründung und Verweis auf den Ursprungssatz.', 'lindenweg16' ) ),
+			array( 'p', __( 'Zurücksetzen vor dem Livegang: Probedaten lassen sich einmalig abräumen. Der Vorgang ist zweistufig, lässt Stammdaten unberührt und wird mit Zeitpunkt, Benutzer und Mengen dauerhaft protokolliert. Nach Aufnahme des echten Betriebs wird er nicht mehr verwendet.', 'lindenweg16' ) ),
 		);
 	}
 
@@ -89,6 +94,34 @@ class VerfahrensDokuBetrieb {
 			'contacts'          => __( 'Händler, Vereine, Leads mit Aktivitäten und Konditionen', 'lindenweg16' ),
 			'calc_settings'     => __( 'Kalkulationsannahmen, historisiert über valid_from', 'lindenweg16' ),
 			'audit_log'         => __( 'Hashverkettetes Protokoll aller Änderungen', 'lindenweg16' ),
+
+			// Fertigung zwischen Rohling und fertigem Artikel.
+			'work_orders'       => __( 'Fertigungsaufträge für Halbzeuge und Baugruppen', 'lindenweg16' ),
+			'maintenance_log'   => __( 'Wartungsprotokoll je Gerät', 'lindenweg16' ),
+			'supplies'          => __( 'Verbrauchsmaterial ohne eigene Stückliste', 'lindenweg16' ),
+
+			// Lagerort und Kommissionierung.
+			'storage_bins'      => __( 'Lagerplätze; der Platz hängt an der Bewegung, nicht als zweites Bestandsfeld', 'lindenweg16' ),
+			'stock_targets'     => __( 'Sollbestände je Artikel und Farbe', 'lindenweg16' ),
+			'picklists'         => __( 'Picklisten aus Bestellungen oder Fertigungsaufträgen', 'lindenweg16' ),
+			'picklist_items'    => __( 'Positionen einer Pickliste; das Abhaken bucht nicht, es hält den Ort fest', 'lindenweg16' ),
+
+			// Verkauf und Konditionen.
+			'order_op_items'    => __( 'Positionen manuell erfasster Bestellungen', 'lindenweg16' ),
+			'price_tiers'       => __( 'Standard-Rabattstaffel, historisiert über valid_from', 'lindenweg16' ),
+			'bundles'           => __( 'Benannte Bestellarten für den Vergleich der Preisebenen', 'lindenweg16' ),
+			'bundle_items'      => __( 'Positionen einer Bestellart', 'lindenweg16' ),
+
+			// Kontakte.
+			'contact_activities' => __( 'Aktivitäten je Kontakt mit Wiedervorlage', 'lindenweg16' ),
+			'contact_terms'     => __( 'Sonderkonditionen je Kontakt, historisiert über valid_from', 'lindenweg16' ),
+			'contact_profiles'  => __( 'Bevorzugte Artikel und Vorbelegungen je Kontakt', 'lindenweg16' ),
+			'reorder_tokens'    => __( 'Nachbestell-Links; gespeichert wird nur der Hash, nie der Link', 'lindenweg16' ),
+
+			// Auswertung.
+			'time_entries'      => __( 'Zeiterfassung je Woche und Tätigkeit', 'lindenweg16' ),
+			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
+			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
 		);
 
 		foreach ( $tables as $table => $description ) {
@@ -116,6 +149,7 @@ class VerfahrensDokuBetrieb {
 			array( 'p', __( 'Beim Set fallen Verpackung und Zahlungsgebühr genau einmal je Bestellung an, nicht je Position.', 'lindenweg16' ) ),
 			array( 'p', __( 'Ausschussquote = (geplante Teile − gute Teile) / geplante Teile', 'lindenweg16' ) ),
 			array( 'p', __( 'Reichweite in Tagen = Bestand / durchschnittlicher Tagesverbrauch der letzten vier Wochen', 'lindenweg16' ) ),
+			array( 'p', __( 'Preisvorschlag zu einer Zielmarge: Der Bruttopreis wird rückwärts aus der Deckungsbeitragsrechnung bestimmt. Ein Aufschlag genügt nicht, weil die variable Zahlungsgebühr am Preis selbst hängt; die Gleichung wird deshalb nach dem Nettoerlös aufgelöst.', 'lindenweg16' ) ),
 			array( 'p', __( 'Kalenderwochen nach ISO 8601: Woche 1 enthält den ersten Donnerstag des Jahres; das ISO-Jahr weicht am Jahreswechsel vom Kalenderjahr ab.', 'lindenweg16' ) ),
 		);
 	}
