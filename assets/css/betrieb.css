@@ -221,3 +221,29 @@
 	.lw16-labels, .lw16-labels * { visibility: visible; }
 	.lw16-dealercard { position: absolute; left: 0; top: 0; border: 1px dashed #999; }
 }
+
+/* --- Suchbares Produktfeld -------------------------------------------- */
+.lw16-picker { position: relative; max-width: 25em; }
+.lw16-picker__input { width: 100%; padding-right: 2em; }
+.lw16-picker__clear {
+	position: absolute; top: 2px; right: 4px;
+	border: 0; background: none; cursor: pointer;
+	font-size: 18px; line-height: 1; color: #646970; padding: 4px 6px;
+}
+.lw16-picker__clear:hover { color: #d63638; }
+.lw16-picker__list {
+	position: absolute; z-index: 20; left: 0; right: 0; top: 100%;
+	margin: 2px 0 0; padding: 4px 0; list-style: none;
+	max-height: 17em; overflow-y: auto;
+	background: #fff; border: 1px solid #8c8f94; border-radius: 4px;
+	box-shadow: 0 4px 14px rgba(0,0,0,.12);
+}
+.lw16-picker__item {
+	display: flex; flex-direction: column; gap: 1px;
+	padding: 7px 11px; cursor: pointer; margin: 0;
+}
+.lw16-picker__item:hover,
+.lw16-picker__item.is-active { background: #f0f4f2; }
+.lw16-picker__label { font-weight: 500; }
+.lw16-picker__item small { color: #646970; }
+.lw16-picker__empty { padding: 8px 11px; color: #646970; margin: 0; }

@@ -38,6 +38,136 @@ class ArticlesPage {
 		foreach ( array( 'article', 'component', 'revision', 'bom', 'sourcing', 'activate', 'bom_delete', 'bundle' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_save_' . $what, array( $this, 'handle_' . $what ) );
 		}
+
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	}
+
+	/**
+	 * Auswahlfeld-Skript nur auf der Artikelseite laden.
+	 *
+	 * @param string $hook Aktueller Admin-Hook.
+	 */
+	public function enqueue( $hook ) {
+		if ( false === strpos( (string) $hook, 'lw16-betrieb-artikel' ) ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'lw16-betrieb-productpicker',
+			LW16_PLUGIN_URL . 'assets/js/betrieb-productpicker.js',
+			array(),
+			LW16_VERSION,
+			true
+		);
+	}
+
+	/**
+	 * Suchbares Auswahlfeld für ein WooCommerce-Produkt.
+	 *
+	 * @param string $label       Beschriftung.
+	 * @param string $name        Feldname.
+	 * @param int    $current     Aktuelle Produkt-ID.
+	 * @param string $description Hilfetext.
+	 */
+	protected function product_picker( $label, $name, $current, $description = '' ) {
+		$products = self::shop_products();
+
+		// Ohne WooCommerce oder bei sehr grossem Sortiment bleibt das
+		// schlichte Zahlenfeld: Ein Auswahlfeld mit tausenden Eintraegen
+		// waere langsamer als das Eintippen der ID.
+		if ( ! $products ) {
+			$this->field( $label, $name, $current ? (string) $current : '', 'text', $description );
+			return;
+		}
+
+		$selected = '';
+		foreach ( $products as $product ) {
+			if ( (int) $product['id'] === (int) $current ) {
+				$selected = $product['label'];
+				break;
+			}
+		}
+
+		// Verknuepft, aber nicht mehr im Katalog: Die ID trotzdem zeigen,
+		// statt die Verknuepfung stillschweigend zu verlieren.
+		if ( $current && '' === $selected ) {
+			$selected = sprintf(
+				/* translators: %d: Produkt-ID. */
+				__( 'Produkt #%d (nicht im Katalog)', 'lindenweg16' ),
+				(int) $current
+			);
+		}
+
+		printf(
+			'<tr><th scope="row"><label for="lw16-%1$s-search">%2$s</label></th><td>'
+			. '<div class="lw16-picker" data-products="%3$s" data-empty="%4$s" data-more="%5$s">'
+			. '<input type="text" class="lw16-picker__input regular-text" id="lw16-%1$s-search" value="%6$s" placeholder="%7$s" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" />'
+			. '<button type="button" class="lw16-picker__clear" aria-label="%8$s"%9$s>&times;</button>'
+			. '<input type="hidden" class="lw16-picker__value" name="%1$s" value="%10$s" />'
+			. '<ul class="lw16-picker__list" role="listbox" hidden></ul>'
+			. '</div>',
+			esc_attr( $name ),
+			esc_html( $label ),
+			esc_attr( wp_json_encode( $products ) ),
+			esc_attr__( 'Kein Produkt gefunden.', 'lindenweg16' ),
+			esc_attr__( '… und %d weitere. Bitte genauer eingrenzen.', 'lindenweg16' ),
+			esc_attr( $selected ),
+			esc_attr__( 'Tippen zum Suchen …', 'lindenweg16' ),
+			esc_attr__( 'Verknüpfung entfernen', 'lindenweg16' ),
+			$current ? '' : ' hidden',
+			esc_attr( $current ? (string) $current : '' )
+		);
+
+		if ( $description ) {
+			printf( '<p class="description">%s</p>', esc_html( $description ) );
+		}
+
+		echo '</td></tr>';
+	}
+
+	/**
+	 * Shop-Produkte für das Auswahlfeld.
+	 *
+	 * Einmal je Seitenaufruf gelesen und mitgeliefert, damit im Browser ohne
+	 * Nachladen gefiltert werden kann.
+	 *
+	 * @return array Leeres Array, wenn kein Auswahlfeld sinnvoll ist.
+	 */
+	protected static function shop_products() {
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return array();
+		}
+
+		// Eins mehr holen als angezeigt werden soll: Kommt die Zusatzzeile
+		// zurueck, ist das Sortiment zu gross fuers Mitliefern, und das Feld
+		// faellt auf die Eingabe der ID zurueck – lieber ehrlich als eine
+		// stillschweigend gekuerzte Liste, in der ein Produkt fehlt.
+		$limit    = 400;
+		$products = wc_get_products(
+			array(
+				'status'  => array( 'publish', 'private', 'draft' ),
+				'limit'   => $limit + 1,
+				'orderby' => 'title',
+				'order'   => 'ASC',
+				'return'  => 'objects',
+			)
+		);
+
+		if ( count( (array) $products ) > $limit ) {
+			return array();
+		}
+
+		$rows = array();
+
+		foreach ( (array) $products as $product ) {
+			$rows[] = array(
+				'id'    => (int) $product->get_id(),
+				'label' => $product->get_name(),
+				'sku'   => (string) $product->get_sku(),
+			);
+		}
+
+		return $rows;
 	}
 
 	/* ====================================================================
@@ -548,7 +678,7 @@ class ArticlesPage {
 		$this->field( __( 'Nachbearbeitung (min)', 'lindenweg16' ), 'postprocessing_min', $this->val( $edit, 'postprocessing_min' ), 'text', __( 'Entgraten, Gewindeeinsätze setzen, Beipack.', 'lindenweg16' ) );
 		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Angegebene Traglast. Erscheint in der Chargenakte.', 'lindenweg16' ) );
 		$this->field( __( 'Barcode', 'lindenweg16' ), 'barcode', $this->val( $edit, 'barcode' ), 'text', __( 'Fremder Barcode zugekaufter Ware (EAN). Wird beim Scannen erkannt – dann muss nichts umetikettiert werden.', 'lindenweg16' ) );
-		$this->field( __( 'WooCommerce-Produkt-ID', 'lindenweg16' ), 'wc_product_id', $this->val( $edit, 'wc_product_id' ), 'text', __( 'Optional. Verknüpft den Artikel mit dem Shop-Produkt.', 'lindenweg16' ) );
+		$this->product_picker( __( 'Shop-Produkt', 'lindenweg16' ), 'wc_product_id', (int) $this->val( $edit, 'wc_product_id' ), __( 'Optional, aber nötig für Lagerabgang beim Verkauf, Produktbild und Nachbestellseite. Tippen filtert nach Name, Artikelnummer oder ID.', 'lindenweg16' ) );
 
 		echo '<tr><th scope="row"><label for="lw16-notes">' . esc_html__( 'Bemerkung', 'lindenweg16' ) . '</label></th>';
 		printf( '<td><textarea name="notes" id="lw16-notes" rows="3" class="large-text">%s</textarea></td></tr>', esc_textarea( $this->val( $edit, 'notes' ) ) );
