@@ -85,9 +85,21 @@ class CartTracking {
 	 * @param string $post_data Serialisierte Formulardaten.
 	 */
 	public function capture_from_checkout( $post_data ) {
+		// Dieser Haken laeuft in der AJAX-Antwort, aus der WooCommerce die
+		// Bestelluebersicht samt Versandart-Auswahl neu aufbaut. Alles, was
+		// hier eine Warnung oder Ausgabe erzeugt, zerstoert die Antwort - und
+		// dann bleibt die Versandart ungesetzt, obwohl der Kunde alles
+		// ausgefuellt hat. Deshalb hier ausdruecklich still und defensiv.
+		if ( ! function_exists( 'WC' ) || ! WC()->cart || WC()->cart->is_empty() ) {
+			return;
+		}
+
+		$data = array();
 		parse_str( (string) $post_data, $data );
+
 		$email = isset( $data['billing_email'] ) ? sanitize_email( $data['billing_email'] ) : $this->current_email();
-		if ( is_email( $email ) && WC()->cart && ! WC()->cart->is_empty() ) {
+
+		if ( is_email( $email ) ) {
 			$this->store( $email );
 		}
 	}
@@ -99,6 +111,14 @@ class CartTracking {
 	 */
 	protected function store( $email ) {
 		global $wpdb;
+
+		if ( ! self::table_exists() ) {
+			return;
+		}
+
+		// Datenbankfehler nie ausgeben: Im Checkout landet die Ausgabe sonst
+		// mitten in der JSON-Antwort.
+		$show_errors = $wpdb->hide_errors();
 
 		$snapshot = array();
 		foreach ( WC()->cart->get_cart() as $item ) {
@@ -128,6 +148,34 @@ class CartTracking {
 		} else {
 			$wpdb->insert( self::table(), $data, array( '%s', '%d', '%s', '%s' ) );
 		}
+
+		if ( $show_errors ) {
+			$wpdb->show_errors();
+		}
+	}
+
+	/**
+	 * Gibt es die Tabelle überhaupt?
+	 *
+	 * Einmal je Aufruf geprüft und gemerkt. Ohne diese Prüfung liefe im
+	 * Checkout bei jedem Tastendruck eine Abfrage gegen eine fehlende
+	 * Tabelle – mit sichtbarer Fehlermeldung, sobald WP_DEBUG an ist.
+	 *
+	 * @return bool
+	 */
+	protected static function table_exists() {
+		static $exists = null;
+
+		if ( null !== $exists ) {
+			return $exists;
+		}
+
+		global $wpdb;
+
+		$table  = self::table();
+		$exists = (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
+
+		return $exists;
 	}
 
 	/**
