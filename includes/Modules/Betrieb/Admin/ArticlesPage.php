@@ -547,6 +547,7 @@ class ArticlesPage {
 		$this->field( __( 'Händlerpreis (€)', 'lindenweg16' ), 'dealer_price', $this->val( $edit, 'dealer_price' ) );
 		$this->field( __( 'Nachbearbeitung (min)', 'lindenweg16' ), 'postprocessing_min', $this->val( $edit, 'postprocessing_min' ), 'text', __( 'Entgraten, Gewindeeinsätze setzen, Beipack.', 'lindenweg16' ) );
 		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Angegebene Traglast. Erscheint in der Chargenakte.', 'lindenweg16' ) );
+		$this->field( __( 'Barcode', 'lindenweg16' ), 'barcode', $this->val( $edit, 'barcode' ), 'text', __( 'Fremder Barcode zugekaufter Ware (EAN). Wird beim Scannen erkannt – dann muss nichts umetikettiert werden.', 'lindenweg16' ) );
 		$this->field( __( 'WooCommerce-Produkt-ID', 'lindenweg16' ), 'wc_product_id', $this->val( $edit, 'wc_product_id' ), 'text', __( 'Optional. Verknüpft den Artikel mit dem Shop-Produkt.', 'lindenweg16' ) );
 
 		echo '<tr><th scope="row"><label for="lw16-notes">' . esc_html__( 'Bemerkung', 'lindenweg16' ) . '</label></th>';
@@ -621,6 +622,7 @@ class ArticlesPage {
 		echo '<table class="form-table" role="presentation"><tbody>';
 
 		$this->field( __( 'Code', 'lindenweg16' ), 'code', $this->val( $edit, 'code' ), 'text', __( 'Pflicht, eindeutig, z. B. SCHR-M4-80.', 'lindenweg16' ) );
+		$this->field( __( 'Barcode', 'lindenweg16' ), 'barcode', $this->val( $edit, 'barcode' ), 'text', __( 'Barcode des Lieferanten, falls die Packung einen trägt.', 'lindenweg16' ) );
 		$this->field( __( 'Bezeichnung', 'lindenweg16' ), 'name', $this->val( $edit, 'name' ) );
 		$this->select( __( 'Kategorie', 'lindenweg16' ), 'category', $labels, $edit ? $edit['category'] : 'sonstiges' );
 		$this->field( __( 'Lieferant', 'lindenweg16' ), 'supplier', $this->val( $edit, 'supplier' ) );

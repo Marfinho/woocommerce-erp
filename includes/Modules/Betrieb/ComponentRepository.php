@@ -87,6 +87,28 @@ class ComponentRepository {
 	}
 
 	/**
+	 * Komponente anhand ihres Codes oder eines fremden Barcodes.
+	 *
+	 * @param string $code Code oder Barcode.
+	 * @return array|null
+	 */
+	public static function find_by_code_or_barcode( $code ) {
+		global $wpdb;
+
+		$code = trim( (string) $code );
+		if ( '' === $code ) {
+			return null;
+		}
+
+		$table = self::table();
+
+		return $wpdb->get_row(
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE code = %s OR barcode = %s LIMIT 1", $code, $code ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Komponente über ihren Code holen.
 	 *
 	 * @param string $code Code.
@@ -138,6 +160,7 @@ class ComponentRepository {
 		$data = array(
 			'code'           => $code,
 			'name'           => $name,
+			'barcode'        => self::text( $input, 'barcode' ),
 			'category'       => self::enum( $input, 'category', self::CATEGORIES, 'sonstiges' ),
 			'supplier'       => self::text( $input, 'supplier' ),
 			'pack_qty'       => $pack_qty,

@@ -76,6 +76,19 @@ if ( ! function_exists( 'get_option' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	/**
+	 * Platzhalter fuer die WordPress-Variante von parse_url.
+	 *
+	 * @param string $url       URL.
+	 * @param int    $component Bestandteil.
+	 * @return mixed
+	 */
+	function wp_parse_url( $url, $component = -1 ) {
+		return parse_url( $url, $component );
+	}
+}
+
 if ( ! function_exists( 'add_query_arg' ) ) {
 	/**
 	 * Vereinfachter Nachbau: haengt Parameter an eine URL an.
@@ -150,6 +163,9 @@ foreach ( array(
 	'Kpi',
 	'DeviceLabel',
 	'QrCode',
+	'ScanResolver',
+	'BinRepository',
+	'PicklistRepository',
 	'ReorderToken',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';

@@ -105,6 +105,31 @@ class ArticleRepository {
 	}
 
 	/**
+	 * Artikel anhand eines fremden Barcodes.
+	 *
+	 * Zugekaufte Ware traegt den Barcode des Lieferanten. Ihn zu erfassen ist
+	 * billiger, als jeden Beutel neu zu bekleben.
+	 *
+	 * @param string $barcode Barcode.
+	 * @return array|null
+	 */
+	public static function find_by_barcode( $barcode ) {
+		global $wpdb;
+
+		$barcode = trim( (string) $barcode );
+		if ( '' === $barcode ) {
+			return null;
+		}
+
+		$table = self::table();
+
+		return $wpdb->get_row(
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE barcode = %s", $barcode ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Artikel über die Artikelnummer holen.
 	 *
 	 * @param string $sku Artikelnummer.
@@ -164,6 +189,7 @@ class ArticleRepository {
 			'weight_g'           => self::decimal( $input, 'weight_g' ),
 			'postprocessing_min' => self::int_or( $input, 'postprocessing_min', 0 ),
 			'load_rating_kg'     => self::decimal( $input, 'load_rating_kg' ),
+			'barcode'            => self::text( $input, 'barcode' ) ? self::text( $input, 'barcode' ) : null,
 			'notes'              => isset( $input['notes'] ) ? sanitize_textarea_field( $input['notes'] ) : null,
 		);
 

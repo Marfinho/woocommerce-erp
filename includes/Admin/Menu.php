@@ -38,7 +38,6 @@ class Menu {
 
 		$pages = array(
 			LW16_MENU_SLUG              => __( 'Dashboard', 'lindenweg16' ),
-			'lw16-lager'               => __( 'Lager', 'lindenweg16' ),
 			'lw16-buchhaltung'         => __( 'Buchhaltung', 'lindenweg16' ),
 			'lw16-loyalty'             => __( 'Loyalty', 'lindenweg16' ),
 			'lw16-produktion'          => __( 'Produktion', 'lindenweg16' ),

@@ -194,6 +194,12 @@ class MobileCapture {
 		</section>
 	</main>
 
+	<div class="lw16-camera" id="lw16-camera" hidden>
+		<video id="lw16-video" playsinline muted></video>
+		<button type="button" class="lw16-camera__close" id="lw16-camera-close"><?php esc_html_e( 'Abbrechen', 'lindenweg16' ); ?></button>
+		<p class="lw16-camera__hint" id="lw16-camera-hint"></p>
+	</div>
+
 	<script>
 		window.LW16Erfassung = <?php
 			echo wp_json_encode(
@@ -201,6 +207,18 @@ class MobileCapture {
 					'root'        => esc_url_raw( rest_url( RestApi::NAMESPACE_V1 . '/' ) ),
 					'nonce'       => wp_create_nonce( 'wp_rest' ),
 					'printerCode' => $printer,
+					'movementTypes' => StockLedger::movement_labels(),
+					'colors'        => ColorRegistry::options(),
+					'bins'          => array_map(
+						static function ( $bin ) {
+							return array(
+								'id'    => (int) $bin['id'],
+								'code'  => (string) $bin['code'],
+								'label' => trim( $bin['code'] . ' ' . (string) $bin['name'] ),
+							);
+						},
+						BinRepository::all( true )
+					),
 					'i18n'        => array(
 						'saved'    => __( 'Gebucht.', 'lindenweg16' ),
 						'queued'   => __( 'Offline – wird beim nächsten Mal gesendet.', 'lindenweg16' ),
@@ -208,6 +226,18 @@ class MobileCapture {
 						'sent'     => __( 'Nachgesendet.', 'lindenweg16' ),
 						'error'    => __( 'Fehler:', 'lindenweg16' ),
 						'noRevision' => __( 'Für diesen Artikel ist keine Revision freigegeben.', 'lindenweg16' ),
+						'scanHint'   => __( 'Code vor die Kamera halten', 'lindenweg16' ),
+						'noCamera'   => __( 'Kein Kamerazugriff. Code bitte eintippen.', 'lindenweg16' ),
+						'noScanner'  => __( 'Dieser Browser hat keinen eingebauten Scanner. Code bitte eintippen.', 'lindenweg16' ),
+						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
+						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
+						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),
+						'picked'     => __( 'Entnommen.', 'lindenweg16' ),
+						'noBin'      => __( 'kein Platz', 'lindenweg16' ),
+						'noArticle'  => __( 'kein Artikel', 'lindenweg16' ),
+						'inStock'    => __( 'Bestand', 'lindenweg16' ),
+						'noStock'    => __( 'Kein Bestand gebucht.', 'lindenweg16' ),
+						'unplaced'   => __( 'ohne Platz', 'lindenweg16' ),
 					),
 				)
 			);

@@ -17,6 +17,7 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\LegacyMigration;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
@@ -127,6 +128,7 @@ class ImportPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_import', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_import', array( $this, 'handle' ) );
+		add_action( 'admin_post_lw16_betrieb_migrate_legacy', array( $this, 'handle_migrate' ) );
 	}
 
 	/**
@@ -625,6 +627,7 @@ class ImportPage {
 			$this->render_upload();
 		}
 
+		$this->render_legacy();
 		$this->render_docs();
 
 		echo '</div>';
@@ -763,6 +766,108 @@ class ImportPage {
 
 		echo '<p><input type="file" name="csv" accept=".csv,text/csv" /> ';
 		printf( '<button class="button button-primary">%s</button></p></form>', esc_html__( 'Import jetzt durchführen', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Übernahme aus der alten Lagerverwaltung ausführen.
+	 */
+	public function handle_migrate() {
+		$this->require_cap();
+		check_admin_referer( 'lw16_betrieb_migrate_legacy' );
+
+		$result = LegacyMigration::run();
+
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'     => 'lw16-betrieb-import',
+					'lw16_msg' => rawurlencode(
+						sprintf(
+							/* translators: 1: angelegte Artikel, 2: uebersprungene, 3: Bestandsbuchungen. */
+							__( '%1$d Artikel angelegt, %2$d bereits vorhanden, %3$d Anfangsbestände gebucht.', 'lindenweg16' ),
+							$result['angelegt'],
+							$result['uebersprungen'],
+							$result['gebucht']
+						)
+					),
+					'lw16_typ' => 'success',
+				),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
+	}
+
+	/**
+	 * Übernahme aus der alten Lagerverwaltung.
+	 */
+	protected function render_legacy() {
+		$rows = LegacyMigration::preview();
+
+		echo '<hr /><h2>' . esc_html__( 'Übernahme aus der alten Lagerverwaltung', 'lindenweg16' ) . '</h2>';
+
+		if ( ! $rows ) {
+			echo '<p>' . esc_html__( 'In der alten Lagerverwaltung stehen keine Produkte. Es gibt nichts zu übernehmen.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<p>' . esc_html__( 'Seit der Zusammenlegung gibt es nur noch eine Lagerverwaltung, und die liegt unter Betrieb. Damit aus der alten nichts verwaist, lassen sich Produkte und Bestände hier übernehmen. Gelöscht wird dabei nichts: Die alten Tabellen bleiben als Beleg stehen, und der Bestand kommt als eine einzige Anfangsbuchung je Artikel ins Bewegungskonto.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Zweimal ausgeführt entsteht kein doppelter Bestand – schon übernommene Produkte werden erkannt und übersprungen.', 'lindenweg16' ) . '</p>';
+
+		$new = 0;
+		foreach ( $rows as $row ) {
+			if ( 'neu' === $row['status'] ) {
+				$new++;
+			}
+		}
+
+		echo '<table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Altes Produkt', 'lindenweg16' ),
+			__( 'Typ', 'lindenweg16' ),
+			__( 'Bestand', 'lindenweg16' ),
+			__( 'wird zu', 'lindenweg16' ),
+			__( 'Artikelnummer', 'lindenweg16' ),
+			__( 'Zustand', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $rows as $row ) {
+			echo '<tr>';
+			printf( '<td>%s</td>', esc_html( $row['name'] ) );
+			printf( '<td>%s</td>', esc_html( $row['typ'] ) );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( $row['stock'], 0 ) ) );
+			printf( '<td>%s</td>', esc_html( $row['target'] ) );
+			printf( '<td><code>%s</code></td>', esc_html( $row['sku'] ) );
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
+				'neu' === $row['status'] ? 'gelb' : 'gruen',
+				esc_html( $row['status'] )
+			);
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
+
+		if ( ! $new ) {
+			echo '<p>' . esc_html__( 'Alles bereits übernommen.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'lw16_betrieb_migrate_legacy' );
+		echo '<input type="hidden" name="action" value="lw16_betrieb_migrate_legacy" />';
+		printf(
+			'<p><button class="button button-primary">%s</button></p></form>',
+			esc_html(
+				sprintf(
+					/* translators: %d: Anzahl. */
+					__( '%d Produkte jetzt übernehmen', 'lindenweg16' ),
+					$new
+				)
+			)
+		);
 	}
 
 	/**

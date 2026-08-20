@@ -342,6 +342,11 @@ class StockPage {
 		$types    = StockLedger::movement_labels();
 		$places   = StockLedger::location_labels();
 
+		$bins = array();
+		foreach ( \Lindenweg16\Modules\Betrieb\BinRepository::all() as $bin ) {
+			$bins[ (int) $bin['id'] ] = (string) $bin['code'];
+		}
+
 		echo '<h2>' . esc_html__( 'Letzte Bewegungen', 'lindenweg16' ) . '</h2>';
 
 		if ( ! $rows ) {
@@ -356,6 +361,7 @@ class StockPage {
 			__( 'Menge', 'lindenweg16' ),
 			__( 'Art', 'lindenweg16' ),
 			__( 'Ort', 'lindenweg16' ),
+			__( 'Platz', 'lindenweg16' ),
 			__( 'Herkunft', 'lindenweg16' ),
 			__( 'Bemerkung', 'lindenweg16' ),
 			'',
@@ -380,6 +386,10 @@ class StockPage {
 			);
 			printf( '<td>%s</td>', esc_html( isset( $types[ $row['movement_type'] ] ) ? $types[ $row['movement_type'] ] : $row['movement_type'] ) );
 			printf( '<td>%s</td>', esc_html( isset( $places[ $row['location'] ] ) ? $places[ $row['location'] ] : $row['location'] ) );
+			printf(
+				'<td>%s</td>',
+				esc_html( $row['bin_id'] && isset( $bins[ (int) $row['bin_id'] ] ) ? $bins[ (int) $row['bin_id'] ] : '—' )
+			);
 			printf( '<td>%s %s</td>', esc_html( (string) $row['ref_type'] ), esc_html( (string) $row['ref_id'] ) );
 			printf( '<td>%s</td>', esc_html( (string) $row['note'] . ( $row['void_reason'] ? ' · ' . $row['void_reason'] : '' ) ) );
 

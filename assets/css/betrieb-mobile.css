@@ -176,3 +176,46 @@ body.lw16-mobile {
 	border-radius: 8px;
 	font-weight: 600;
 }
+
+/* --- Scannen ---------------------------------------------------------- */
+.lw16-scanbox { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+.lw16-scan {
+	flex: 0 0 auto; padding: 14px 18px; font-size: 16px; font-weight: 600;
+	border: 0; border-radius: 10px; background: #1f5f52; color: #fff;
+}
+.lw16-scan--ghost { background: #4a5257; }
+.lw16-scan:active { transform: translateY(1px); }
+.lw16-slot {
+	flex: 1 1 auto; padding: 12px 14px; border-radius: 10px;
+	background: #f0f1ec; color: #333; font-size: 15px; word-break: break-all;
+}
+
+.lw16-stock { margin: 10px 0; padding: 12px 14px; background: #eef3f1; border-radius: 10px; font-size: 15px; }
+.lw16-stock ul { margin: 6px 0 0; padding-left: 18px; }
+.lw16-stock li { margin-bottom: 3px; }
+
+.lw16-camera {
+	position: fixed; inset: 0; z-index: 999;
+	background: #000; display: flex; flex-direction: column;
+	align-items: center; justify-content: center; gap: 14px;
+}
+.lw16-camera video { width: 100%; max-height: 70vh; object-fit: cover; }
+.lw16-camera__close {
+	padding: 16px 28px; font-size: 17px; border: 0; border-radius: 10px;
+	background: #fff; color: #111;
+}
+.lw16-camera__hint { color: #fff; font-size: 15px; margin: 0; }
+
+/* --- Picken ----------------------------------------------------------- */
+.lw16-pickrow {
+	display: flex; align-items: center; gap: 10px;
+	padding: 12px 10px; border-bottom: 1px solid #dcdfda;
+}
+.lw16-pickrow.is-done { opacity: .45; }
+.lw16-pickrow__bin { flex: 0 0 78px; font-weight: 700; font-size: 15px; }
+.lw16-pickrow__what { flex: 1 1 auto; font-size: 15px; }
+.lw16-pickrow__do {
+	flex: 0 0 auto; width: 52px; height: 52px; font-size: 22px;
+	border: 0; border-radius: 10px; background: #1f5f52; color: #fff;
+}
+.lw16-pickrow__do:disabled { background: #b8bdb9; }

@@ -51,6 +51,7 @@ class StockRepository {
 			'qty'           => isset( $data['qty'] ) ? (float) $data['qty'] : 0.0,
 			'movement_type' => isset( $data['movement_type'] ) ? sanitize_key( $data['movement_type'] ) : 'korrektur',
 			'location'      => isset( $data['location'] ) && in_array( $data['location'], StockLedger::LOCATIONS, true ) ? $data['location'] : 'lager',
+			'bin_id'        => ! empty( $data['bin_id'] ) ? (int) $data['bin_id'] : null,
 			'contact_id'    => ! empty( $data['contact_id'] ) ? (int) $data['contact_id'] : null,
 			'ref_type'      => isset( $data['ref_type'] ) ? sanitize_key( $data['ref_type'] ) : null,
 			'ref_id'        => ! empty( $data['ref_id'] ) ? (int) $data['ref_id'] : null,

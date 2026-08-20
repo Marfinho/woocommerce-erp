@@ -70,6 +70,243 @@ class RestApi {
 				'permission_callback' => array( $this, 'can_produce' ),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/scan',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'scan' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+				'args'                => array(
+					'code' => array(
+						'type'     => 'string',
+						'required' => true,
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/lager/bewegung',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_movement' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/picklisten',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_picklists' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/picklisten/position',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'pick_item' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+	}
+
+	/**
+	 * Gescannten Code auflösen.
+	 *
+	 * Gibt zusätzlich den Bestand zurück, wenn der Code auf einen Lagerplatz
+	 * oder einen Artikel zeigt: Wer scannt, will fast immer sofort wissen,
+	 * was da liegen müsste.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function scan( $request ) {
+		$result = ScanResolver::resolve( (string) $request->get_param( 'code' ) );
+
+		if ( 'bin' === $result['type'] ) {
+			$result['stock'] = $this->bin_stock( (int) $result['id'] );
+		}
+
+		if ( 'article' === $result['type'] ) {
+			$result['stock'] = $this->article_stock( (int) $result['id'] );
+		}
+
+		if ( 'batch' === $result['type'] ) {
+			$result['stock'] = $this->article_stock( (int) $result['extra']['article_id'] );
+		}
+
+		return new WP_REST_Response( $result, 'none' === $result['type'] ? 404 : 200 );
+	}
+
+	/**
+	 * Bestand eines Lagerplatzes, für die Anzeige aufbereitet.
+	 *
+	 * @param int $bin_id Platz.
+	 * @return array
+	 */
+	protected function bin_stock( $bin_id ) {
+		$balances = BinRepository::balances( StockRepository::all() );
+		$rows     = BinRepository::stock_of( $balances, $bin_id );
+		$articles = ArticleRepository::all_by_id();
+		$out      = array();
+
+		foreach ( $rows as $article_id => $colors ) {
+			foreach ( $colors as $color => $qty ) {
+				$out[] = array(
+					'article_id' => (int) $article_id,
+					'sku'        => isset( $articles[ $article_id ] ) ? $articles[ $article_id ]['sku'] : '',
+					'name'       => isset( $articles[ $article_id ] ) ? $articles[ $article_id ]['name'] : '',
+					'color'      => (string) $color,
+					'qty'        => (float) $qty,
+				);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Bestand eines Artikels je Farbe und Lagerplatz.
+	 *
+	 * @param int $article_id Artikel.
+	 * @return array
+	 */
+	protected function article_stock( $article_id ) {
+		$movements = StockRepository::all( (int) $article_id );
+		$balances  = BinRepository::balances( $movements );
+		$bins      = array();
+
+		foreach ( BinRepository::all() as $bin ) {
+			$bins[ (int) $bin['id'] ] = $bin;
+		}
+
+		$out = array();
+		foreach ( $balances as $bin_id => $articles ) {
+			foreach ( $articles as $id => $colors ) {
+				foreach ( $colors as $color => $qty ) {
+					if ( (int) $id !== (int) $article_id || abs( $qty ) < 0.0005 ) {
+						continue;
+					}
+					$out[] = array(
+						'bin_id' => (int) $bin_id,
+						'bin'    => isset( $bins[ $bin_id ] ) ? $bins[ $bin_id ]['code'] : '',
+						'color'  => (string) $color,
+						'qty'    => (float) $qty,
+					);
+				}
+			}
+		}
+
+		// Bestand ohne Platzangabe getrennt ausweisen, statt ihn zu verschweigen.
+		// Wer den Platz nachpflegt, soll sehen, wie viel noch offen ist.
+		$located = 0.0;
+		foreach ( $out as $row ) {
+			$located += $row['qty'];
+		}
+
+		$total = StockLedger::total( $movements );
+
+		return array(
+			'bins'       => $out,
+			'ohne_platz' => round( $total - $located, 3 ),
+			'gesamt'     => round( $total, 3 ),
+		);
+	}
+
+	/**
+	 * Lagerbewegung vom Handy buchen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function create_movement( $request ) {
+		$article_id = (int) $request->get_param( 'article_id' );
+		$qty        = (float) $request->get_param( 'qty' );
+		$type       = sanitize_key( (string) $request->get_param( 'movement_type' ) );
+		$bin_id     = (int) $request->get_param( 'bin_id' );
+		$to_bin_id  = (int) $request->get_param( 'to_bin_id' );
+		$color      = (string) $request->get_param( 'color' );
+		$note       = (string) $request->get_param( 'note' );
+
+		if ( ! $article_id || ! ArticleRepository::find( $article_id ) ) {
+			return new WP_Error( 'lw16_no_article', __( 'Artikel nicht gefunden.', 'lindenweg16' ), array( 'status' => 400 ) );
+		}
+
+		if ( abs( $qty ) < 0.0005 ) {
+			return new WP_Error( 'lw16_no_qty', __( 'Eine Bewegung ohne Menge ist keine Bewegung.', 'lindenweg16' ), array( 'status' => 400 ) );
+		}
+
+		if ( ! array_key_exists( $type, StockLedger::movement_labels() ) ) {
+			$type = 'korrektur';
+		}
+
+		$common = array(
+			'article_id'    => $article_id,
+			'color'         => $color,
+			'movement_type' => $type,
+			'note'          => $note,
+			'ref_type'      => 'mobil',
+		);
+
+		// Umlagern ist kein eigener Bewegungstyp, sondern ein Paar: Abgang am
+		// einen Platz, Zugang am anderen. Der Gesamtbestand bleibt gleich, und
+		// beide Buchungen stehen einzeln im Journal.
+		if ( $to_bin_id && $bin_id && $to_bin_id !== $bin_id ) {
+			$ids = StockRepository::book_many(
+				array(
+					array( 'qty' => -1 * abs( $qty ), 'bin_id' => $bin_id ),
+					array( 'qty' => abs( $qty ), 'bin_id' => $to_bin_id ),
+				),
+				array_merge( $common, array( 'movement_type' => 'umlagerung' ) )
+			);
+
+			return new WP_REST_Response( array( 'ok' => true, 'ids' => $ids ), 201 );
+		}
+
+		$id = StockRepository::book( array_merge( $common, array( 'qty' => $qty, 'bin_id' => $bin_id ) ) );
+
+		if ( ! $id ) {
+			return new WP_Error( 'lw16_book_failed', __( 'Buchung fehlgeschlagen.', 'lindenweg16' ), array( 'status' => 500 ) );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'ids' => array( $id ) ), 201 );
+	}
+
+	/**
+	 * Offene Picklisten mit ihren Positionen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function get_picklists() {
+		return new WP_REST_Response( PicklistRepository::open_with_items(), 200 );
+	}
+
+	/**
+	 * Eine Position abhaken.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function pick_item( $request ) {
+		$result = PicklistRepository::pick(
+			(int) $request->get_param( 'item_id' ),
+			(float) $request->get_param( 'qty' ),
+			(string) $request->get_param( 'scanned' )
+		);
+
+		if ( ! $result['success'] ) {
+			return new WP_Error( 'lw16_pick_failed', $result['message'], array( 'status' => 400 ) );
+		}
+
+		return new WP_REST_Response( $result, 200 );
 	}
 
 	/**

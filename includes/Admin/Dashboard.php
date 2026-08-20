@@ -86,7 +86,7 @@ class Dashboard {
 			$stock_class,
 			esc_html__( 'Lagerwarnungen', 'lindenweg16' ),
 			$kpis['lagerwarnungen'],
-			esc_url( admin_url( 'admin.php?page=lw16-lager' ) ),
+			esc_url( admin_url( 'admin.php?page=lw16-betrieb-lager' ) ),
 			esc_html__( 'Lager ansehen', 'lindenweg16' )
 		);
 
@@ -111,7 +111,7 @@ class Dashboard {
 			'<div class="lw16-card"><h2>%s</h2><p class="lw16-big">%d</p><p class="lw16-sub"><a href="%s">%s</a></p></div>',
 			esc_html__( 'Offene Picklisten', 'lindenweg16' ),
 			$kpis['offene_picklisten'],
-			esc_url( admin_url( 'admin.php?page=lw16-lager&view=picklisten' ) ),
+			esc_url( admin_url( 'admin.php?page=lw16-betrieb-lagerplaetze&view=picklisten' ) ),
 			esc_html__( 'Picklisten ansehen', 'lindenweg16' )
 		);
 
@@ -149,17 +149,27 @@ class Dashboard {
 			'return'       => 'ids',
 		) );
 
-		$produkte      = Repository::get_products();
+		// Lagerwarnung heisst jetzt: Bestand unter Sollbestand im Modul
+		// Betrieb. Die alte Ampel zaehlte Produkte einer Verwaltung, die es
+		// als eigene Oberflaeche nicht mehr gibt.
+		$balances       = \Lindenweg16\Modules\Betrieb\StockLedger::balances(
+			\Lindenweg16\Modules\Betrieb\StockRepository::all()
+		);
 		$lagerwarnungen = 0;
-		foreach ( $produkte as $p ) {
-			$ampel = StockManager::ampel( $p );
-			if ( 'gruen' !== $ampel ) {
+		foreach ( \Lindenweg16\Modules\Betrieb\StockRepository::targets() as $target ) {
+			$stock = \Lindenweg16\Modules\Betrieb\StockLedger::pick(
+				$balances,
+				(int) $target['article_id'],
+				(string) $target['color']
+			);
+			if ( $stock['lager'] < (float) $target['qty'] ) {
 				$lagerwarnungen++;
 			}
 		}
 
 		$offene_tickets   = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lw16_tickets WHERE status NOT IN ('geloest')" ); // phpcs:ignore
-		$offene_picklisten = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lw16_pickliste WHERE status = 'offen'" ); // phpcs:ignore
+		// Seit der Zusammenlegung fuehrt das Modul Betrieb die Picklisten.
+		$offene_picklisten = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}lw16_picklists WHERE status = 'offen'" ); // phpcs:ignore
 
 		return array(
 			'umsatz_monat'        => $umsatz_monat,

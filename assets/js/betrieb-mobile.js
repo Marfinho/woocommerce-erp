@@ -243,6 +243,275 @@
 	}
 
 	/* ---------------------------------------------------------------- */
+	/* Scannen                                                           */
+	/* ---------------------------------------------------------------- */
+
+	/*
+	 * Gescannt wird mit dem, was der Browser mitbringt: der BarcodeDetector.
+	 * Bewusst keine Scanner-Bibliothek - sie waere ein Fremdpaket im Plugin
+	 * und muesste mitgepflegt werden. Kann der Browser es nicht, bleibt das
+	 * Eingabefeld: Ein Code ist kurz genug zum Abtippen, und ein Lager, das
+	 * ohne Kamera stillsteht, waere schlechter als eines mit Tastatur.
+	 */
+
+	var scanState = { bin: null, article: null };
+	var scanStream = null;
+	var scanLoop = null;
+
+	function scannerAvailable() {
+		return 'BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+	}
+
+	function closeCamera() {
+		if ( scanLoop ) {
+			window.clearInterval( scanLoop );
+			scanLoop = null;
+		}
+		if ( scanStream ) {
+			scanStream.getTracks().forEach( function ( track ) {
+				track.stop();
+			} );
+			scanStream = null;
+		}
+		document.getElementById( 'lw16-camera' ).hidden = true;
+	}
+
+	function openCamera( onCode ) {
+		if ( ! scannerAvailable() ) {
+			status( config.i18n.noScanner, 'error' );
+			document.getElementById( 'lw16-manual' ).focus();
+			return;
+		}
+
+		var box = document.getElementById( 'lw16-camera' );
+		var video = document.getElementById( 'lw16-video' );
+		var detector = new window.BarcodeDetector( {
+			formats: [ 'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'itf' ]
+		} );
+
+		document.getElementById( 'lw16-camera-hint' ).textContent = config.i18n.scanHint;
+		box.hidden = false;
+
+		navigator.mediaDevices.getUserMedia( { video: { facingMode: 'environment' } } ).then( function ( stream ) {
+			scanStream = stream;
+			video.srcObject = stream;
+			return video.play();
+		} ).then( function () {
+			scanLoop = window.setInterval( function () {
+				detector.detect( video ).then( function ( codes ) {
+					if ( ! codes.length ) {
+						return;
+					}
+					closeCamera();
+					onCode( codes[ 0 ].rawValue );
+				} ).catch( function () {
+					/* Einzelne Bilder duerfen fehlschlagen. */
+				} );
+			}, 300 );
+		} ).catch( function () {
+			closeCamera();
+			status( config.i18n.noCamera, 'error' );
+			document.getElementById( 'lw16-manual' ).focus();
+		} );
+	}
+
+	function lookup( code ) {
+		return fetch( config.root + 'scan?code=' + encodeURIComponent( code ), {
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': config.nonce }
+		} ).then( function ( response ) {
+			return response.json().then( function ( body ) {
+				return { ok: response.ok, body: body };
+			} );
+		} );
+	}
+
+	function renderStock( result ) {
+		var box = document.getElementById( 'lw16-stock' );
+		var rows = [];
+
+		if ( 'bin' === result.type && result.stock ) {
+			result.stock.forEach( function ( row ) {
+				rows.push( row.sku + ' ' + row.color + ' — ' + row.qty );
+			} );
+		}
+
+		if ( 'article' === result.type && result.stock ) {
+			result.stock.bins.forEach( function ( row ) {
+				rows.push( row.bin + ' ' + row.color + ' — ' + row.qty );
+			} );
+			if ( Math.abs( result.stock.ohne_platz ) > 0.0005 ) {
+				rows.push( config.i18n.unplaced + ' — ' + result.stock.ohne_platz );
+			}
+		}
+
+		box.textContent = '';
+		if ( ! rows.length ) {
+			box.textContent = config.i18n.noStock;
+		} else {
+			var title = document.createElement( 'strong' );
+			title.textContent = config.i18n.inStock;
+			box.appendChild( title );
+			var list = document.createElement( 'ul' );
+			rows.forEach( function ( text ) {
+				var li = document.createElement( 'li' );
+				li.textContent = text;
+				list.appendChild( li );
+			} );
+			box.appendChild( list );
+		}
+		box.hidden = false;
+	}
+
+	function applyScan( result ) {
+		if ( 'bin' === result.type ) {
+			scanState.bin = result;
+			document.getElementById( 'lw16-slot-bin' ).textContent = result.code + ' ' + result.label;
+		} else if ( 'article' === result.type ) {
+			scanState.article = result;
+			document.getElementById( 'lw16-slot-article' ).textContent = result.code + ' ' + result.label;
+		} else if ( 'batch' === result.type ) {
+			// Eine Charge zeigt auf ihren Artikel - der Werker scannt, was
+			// aufs Teil gepraegt ist, nicht was in der Datenbank steht.
+			scanState.article = {
+				type: 'article',
+				id: result.extra.article_id,
+				code: result.code,
+				label: result.label
+			};
+			document.getElementById( 'lw16-slot-article' ).textContent = result.code;
+		} else {
+			status( config.i18n.notFound + ' ' + result.code, 'error' );
+			return;
+		}
+
+		renderStock( result );
+		status( result.code, 'ok' );
+	}
+
+	function handleScan( code ) {
+		lookup( code ).then( function ( response ) {
+			if ( ! response.ok ) {
+				status( config.i18n.notFound + ' ' + code, 'error' );
+				return;
+			}
+			applyScan( response.body );
+		} ).catch( function () {
+			status( config.i18n.notFound + ' ' + code, 'error' );
+		} );
+	}
+
+	/* ---------------------------------------------------------------- */
+	/* Picken                                                            */
+	/* ---------------------------------------------------------------- */
+
+	var picklists = [];
+
+	function loadPicklists() {
+		return fetch( config.root + 'picklisten', {
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': config.nonce }
+		} ).then( function ( response ) {
+			return response.json();
+		} ).then( function ( data ) {
+			picklists = data || [];
+			renderPicklists();
+		} ).catch( function () {
+			picklists = [];
+			renderPicklists();
+		} );
+	}
+
+	function renderPicklists() {
+		var box = document.getElementById( 'lw16-picklists' );
+		box.textContent = '';
+
+		if ( ! picklists.length ) {
+			box.textContent = config.i18n.noPicklist;
+			return;
+		}
+
+		picklists.forEach( function ( list ) {
+			var section = document.createElement( 'section' );
+			var heading = document.createElement( 'h2' );
+			heading.textContent = list.code;
+			section.appendChild( heading );
+
+			list.items.forEach( function ( item ) {
+				var row = document.createElement( 'div' );
+				row.className = 'lw16-pickrow' + ( item.done ? ' is-done' : '' );
+
+				var where = document.createElement( 'span' );
+				where.className = 'lw16-pickrow__bin';
+				where.textContent = item.bin || config.i18n.noBin;
+
+				var what = document.createElement( 'span' );
+				what.className = 'lw16-pickrow__what';
+				what.textContent = item.sku + ' · ' + item.color + ' · ' +
+					( item.qty_required - item.qty_picked ) + '×';
+
+				var button = document.createElement( 'button' );
+				button.type = 'button';
+				button.className = 'lw16-pickrow__do';
+				button.textContent = '✓';
+				button.disabled = !! item.done;
+				button.addEventListener( 'click', function () {
+					pickItem( item.id, 0, '' );
+				} );
+
+				row.appendChild( where );
+				row.appendChild( what );
+				row.appendChild( button );
+				section.appendChild( row );
+			} );
+
+			box.appendChild( section );
+		} );
+	}
+
+	function pickItem( itemId, qty, scanned ) {
+		return fetch( config.root + 'picklisten/position', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': config.nonce },
+			body: JSON.stringify( { item_id: itemId, qty: qty, scanned: scanned } )
+		} ).then( function ( response ) {
+			return response.json().then( function ( body ) {
+				if ( ! response.ok ) {
+					status( body.message || config.i18n.error, 'error' );
+					return;
+				}
+				status( config.i18n.picked, 'ok' );
+				loadPicklists();
+			} );
+		} ).catch( function () {
+			status( config.i18n.error, 'error' );
+		} );
+	}
+
+	function pickByScan( code ) {
+		// Die erste offene Position, deren Artikel zum Scan passt.
+		var target = null;
+
+		picklists.some( function ( list ) {
+			return list.items.some( function ( item ) {
+				if ( ! item.done && code.toUpperCase().indexOf( item.sku.toUpperCase() ) !== -1 ) {
+					target = item;
+					return true;
+				}
+				return false;
+			} );
+		} );
+
+		if ( ! target ) {
+			status( config.i18n.notFound + ' ' + code, 'error' );
+			return;
+		}
+
+		pickItem( target.id, 0, code );
+	}
+
+	/* ---------------------------------------------------------------- */
 	/* Bedienung                                                         */
 	/* ---------------------------------------------------------------- */
 
@@ -271,6 +540,64 @@
 
 		document.getElementById( 'lw16-article' ).addEventListener( 'change', applyArticleDefaults );
 
+		// Scannen
+		document.querySelectorAll( '.lw16-scan[data-scan]' ).forEach( function ( button ) {
+			button.addEventListener( 'click', function () {
+				openCamera( 'pick' === button.dataset.scan ? pickByScan : handleScan );
+			} );
+		} );
+
+		document.getElementById( 'lw16-camera-close' ).addEventListener( 'click', closeCamera );
+
+		document.getElementById( 'lw16-pick-reload' ).addEventListener( 'click', loadPicklists );
+
+		// Eingetippter Code: Enter loest dieselbe Aufloesung aus wie ein Scan.
+		document.getElementById( 'lw16-manual' ).addEventListener( 'keydown', function ( event ) {
+			if ( 'Enter' !== event.key ) {
+				return;
+			}
+			event.preventDefault();
+			var value = event.target.value.trim();
+			if ( value ) {
+				handleScan( value );
+				event.target.value = '';
+			}
+		} );
+
+		// Umlagern braucht ein zweites Ziel, alles andere nicht.
+		document.getElementById( 'lw16-movetype' ).addEventListener( 'change', function ( event ) {
+			document.getElementById( 'lw16-tobin-field' ).hidden = 'umlagerung' !== event.target.value;
+		} );
+
+		document.getElementById( 'lw16-form-lager' ).addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+
+			if ( ! scanState.article ) {
+				status( config.i18n.needBoth, 'error' );
+				return;
+			}
+
+			var type = document.getElementById( 'lw16-movetype' ).value;
+			var qty = parseFloat( String( document.getElementById( 'lw16-lager-qty' ).value ).replace( ',', '.' ) ) || 0;
+
+			// Abgangsarten werden negativ gebucht - der Werker soll nicht
+			// ueberlegen muessen, wann ein Minus vor die Zahl gehoert.
+			if ( [ 'verkauf', 'ausschuss', 'muster', 'kommission_raus' ].indexOf( type ) !== -1 ) {
+				qty = -Math.abs( qty );
+			}
+
+			submit( 'lager/bewegung', {
+				article_id: scanState.article.id,
+				bin_id: scanState.bin ? scanState.bin.id : 0,
+				to_bin_id: 'umlagerung' === type ? document.getElementById( 'lw16-tobin' ).value : 0,
+				color: document.getElementById( 'lw16-lager-color' ).value,
+				movement_type: type,
+				qty: qty
+			} );
+
+			status( config.i18n.saved, 'ok' );
+		} );
+
 		document.getElementById( 'lw16-form-druck' ).addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
 
@@ -297,9 +624,38 @@
 		} );
 	}
 
+	function fillLagerSelects() {
+		var types = document.getElementById( 'lw16-movetype' );
+		Object.keys( config.movementTypes || {} ).forEach( function ( key ) {
+			var option = document.createElement( 'option' );
+			option.value = key;
+			option.textContent = config.movementTypes[ key ];
+			types.appendChild( option );
+		} );
+		types.value = 'korrektur';
+
+		var colors = document.getElementById( 'lw16-lager-color' );
+		Object.keys( config.colors || {} ).forEach( function ( key ) {
+			var option = document.createElement( 'option' );
+			option.value = key;
+			option.textContent = config.colors[ key ];
+			colors.appendChild( option );
+		} );
+
+		var target = document.getElementById( 'lw16-tobin' );
+		( config.bins || [] ).forEach( function ( bin ) {
+			var option = document.createElement( 'option' );
+			option.value = bin.id;
+			option.textContent = bin.label;
+			target.appendChild( option );
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
+		fillLagerSelects();
 		bind();
 		renderQueue( readQueue() );
 		loadContext().then( flush );
+		loadPicklists();
 	} );
 }() );

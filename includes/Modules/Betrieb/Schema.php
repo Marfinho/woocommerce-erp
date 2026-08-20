@@ -40,6 +40,7 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}articles (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			sku VARCHAR(64) NOT NULL,
+			barcode VARCHAR(64) NULL,
 			name VARCHAR(255) NOT NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'entwicklung',
 			wc_product_id BIGINT UNSIGNED NULL,
@@ -58,6 +59,7 @@ class Schema {
 			created_by BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY sku (sku),
+			KEY barcode (barcode),
 			KEY wc_product_id (wc_product_id),
 			KEY legacy_produkt_id (legacy_produkt_id),
 			KEY status (status),
@@ -85,6 +87,7 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}components (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			code VARCHAR(64) NOT NULL,
+			barcode VARCHAR(64) NULL,
 			name VARCHAR(255) NOT NULL,
 			category VARCHAR(30) NOT NULL DEFAULT 'sonstiges',
 			supplier VARCHAR(255) NULL,
@@ -100,6 +103,7 @@ class Schema {
 			created_by BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY code (code),
+			KEY barcode (barcode),
 			KEY category (category)
 		) {$charset_collate};";
 
@@ -286,6 +290,7 @@ class Schema {
 			qty DECIMAL(10,3) NOT NULL DEFAULT 0,
 			movement_type VARCHAR(30) NOT NULL,
 			location VARCHAR(20) NOT NULL DEFAULT 'lager',
+			bin_id BIGINT UNSIGNED NULL,
 			contact_id BIGINT UNSIGNED NULL,
 			ref_type VARCHAR(20) NULL,
 			ref_id BIGINT UNSIGNED NULL,
@@ -298,10 +303,60 @@ class Schema {
 			PRIMARY KEY  (id),
 			KEY article_color (article_id, color),
 			KEY location (location),
+			KEY bin_id (bin_id),
 			KEY movement_type (movement_type),
 			KEY contact_id (contact_id),
 			KEY ref (ref_type, ref_id),
 			KEY moved_at (moved_at)
+		) {$charset_collate};";
+
+		$t[] = "CREATE TABLE {$p}picklists (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			code VARCHAR(32) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'offen',
+			source VARCHAR(20) NOT NULL DEFAULT 'bestellungen',
+			note TEXT NULL,
+			started_at DATETIME NULL,
+			finished_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code (code),
+			KEY status (status)
+		) {$charset_collate};";
+
+		$t[] = "CREATE TABLE {$p}picklist_items (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			picklist_id BIGINT UNSIGNED NOT NULL,
+			article_id BIGINT UNSIGNED NOT NULL,
+			color VARCHAR(50) NULL,
+			bin_id BIGINT UNSIGNED NULL,
+			wc_order_id BIGINT UNSIGNED NULL,
+			qty_required DECIMAL(10,3) NOT NULL DEFAULT 0,
+			qty_picked DECIMAL(10,3) NOT NULL DEFAULT 0,
+			picked_at DATETIME NULL,
+			picked_by BIGINT UNSIGNED NULL,
+			sort_order SMALLINT NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY picklist_id (picklist_id),
+			KEY article_id (article_id),
+			KEY wc_order_id (wc_order_id)
+		) {$charset_collate};";
+
+		$t[] = "CREATE TABLE {$p}storage_bins (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			code VARCHAR(64) NOT NULL,
+			name VARCHAR(255) NULL,
+			kind VARCHAR(20) NOT NULL DEFAULT 'regal',
+			note TEXT NULL,
+			sort_order SMALLINT NOT NULL DEFAULT 0,
+			is_active TINYINT(1) NOT NULL DEFAULT 1,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY code (code),
+			KEY is_active (is_active)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}stock_targets (

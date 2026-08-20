@@ -62,6 +62,7 @@ class StockLedger {
 			'kommission_retour'      => __( 'Kommission zurück', 'lindenweg16' ),
 			'muster'                 => __( 'Muster abgegeben', 'lindenweg16' ),
 			'ausschuss'              => __( 'Ausschuss', 'lindenweg16' ),
+			'umlagerung'             => __( 'Umlagerung', 'lindenweg16' ),
 			'korrektur'              => __( 'Korrektur', 'lindenweg16' ),
 			'retoure'                => __( 'Retoure', 'lindenweg16' ),
 		);
@@ -228,6 +229,9 @@ class StockLedger {
 			'qty'           => -1 * ( isset( $movement['qty'] ) ? (float) $movement['qty'] : 0.0 ),
 			'movement_type' => 'korrektur',
 			'location'      => isset( $movement['location'] ) ? (string) $movement['location'] : 'lager',
+			// Der Lagerplatz muss mit: Eine Gegenbuchung ohne Platz wuerde den
+			// Platzbestand dauerhaft schieflegen, obwohl der Gesamtbestand stimmt.
+			'bin_id'        => isset( $movement['bin_id'] ) ? $movement['bin_id'] : null,
 			'contact_id'    => isset( $movement['contact_id'] ) ? $movement['contact_id'] : null,
 			'ref_type'      => isset( $movement['ref_type'] ) ? $movement['ref_type'] : null,
 			'ref_id'        => isset( $movement['ref_id'] ) ? $movement['ref_id'] : null,

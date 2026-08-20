@@ -133,17 +133,20 @@ class GlobalSearch {
 	 */
 	protected function search_products( $q ) {
 		global $wpdb;
-		$t       = $wpdb->prefix . 'lw16_produkte';
+		// Gesucht wird im Artikelstamm des Moduls Betrieb – seit der
+		// Zusammenlegung die einzige Lagerverwaltung. Auch die Artikelnummer
+		// zaehlt, weil man die eher im Kopf hat als die Bezeichnung.
+		$t       = $wpdb->prefix . 'lw16_articles';
 		$like    = '%' . $wpdb->esc_like( $q ) . '%';
-		$rows    = $wpdb->get_results( $wpdb->prepare( "SELECT id, name, typ FROM {$t} WHERE name LIKE %s LIMIT 5", $like ) ); // phpcs:ignore
+		$rows    = $wpdb->get_results( $wpdb->prepare( "SELECT id, sku, name, sourcing_type FROM {$t} WHERE name LIKE %s OR sku LIKE %s LIMIT 5", $like, $like ) ); // phpcs:ignore
 		$results = array();
-		$base    = admin_url( 'admin.php?page=lw16-lager&view=edit' );
+		$base    = admin_url( 'admin.php?page=lw16-betrieb-artikel&tab=artikel' );
 		foreach ( $rows as $r ) {
 			$results[] = array(
-				'type'  => __( 'Produkt', 'lindenweg16' ),
-				'title' => $r->name,
-				'meta'  => $r->typ,
-				'url'   => add_query_arg( 'id', $r->id, $base ),
+				'type'  => __( 'Artikel', 'lindenweg16' ),
+				'title' => $r->sku . ' – ' . $r->name,
+				'meta'  => $r->sourcing_type,
+				'url'   => add_query_arg( 'edit', $r->id, $base ),
 			);
 		}
 		return $results;

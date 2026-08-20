@@ -83,6 +83,11 @@ class WooIntegration {
 			'articles' => ArticleRepository::all_by_id(),
 		);
 
+		// Wurde die Bestellung gepickt, ist bekannt, aus welchem Fach die Ware
+		// kam. Ohne diese Zuordnung bliebe der Abgang platzlos und der
+		// Fachbestand stünde dauerhaft zu hoch.
+		$bins = PicklistRepository::bins_for_order( (int) $order_id );
+
 		foreach ( $order->get_items() as $item ) {
 			$product_id = $item->get_product_id();
 			$article_id = StockOwnership::article_for_product( $product_id );
@@ -106,6 +111,7 @@ class WooIntegration {
 					'qty'           => -1 * $qty,
 					'movement_type' => 'verkauf',
 					'location'      => 'lager',
+					'bin_id'        => isset( $bins[ $article_id ] ) ? $bins[ $article_id ] : 0,
 					'ref_type'      => 'wc_order',
 					'ref_id'        => (int) $order_id,
 					'note'          => sprintf(
@@ -139,6 +145,54 @@ class WooIntegration {
 			);
 		}
 		$order->save();
+	}
+
+	/**
+	 * Positionen aller noch nicht gebuchten Bestellungen.
+	 *
+	 * Grundlage der Pickliste. Bereits gebuchte Bestellungen bleiben außen
+	 * vor – was das Lager schon verlassen hat, muss niemand mehr holen.
+	 *
+	 * @return array Zeilen mit article_id, color, qty und wc_order_id.
+	 */
+	public static function open_order_lines() {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return array();
+		}
+
+		$orders = wc_get_orders(
+			array(
+				'status' => array( 'processing', 'on-hold' ),
+				'limit'  => 200,
+				'return' => 'objects',
+			)
+		);
+
+		$lines = array();
+
+		foreach ( (array) $orders as $order ) {
+			if ( $order->get_meta( self::META_BOOKED ) ) {
+				continue;
+			}
+
+			foreach ( $order->get_items() as $item ) {
+				$article_id = StockOwnership::article_for_product( $item->get_product_id() );
+
+				if ( ! $article_id ) {
+					continue;
+				}
+
+				$color   = ColorRegistry::resolve_order_item( $item );
+				$lines[] = array(
+					'article_id'  => $article_id,
+					'color'       => $color['color'],
+					'qty'         => (float) $item->get_quantity(),
+					'wc_order_id' => (int) $order->get_id(),
+				);
+			}
+		}
+
+		return $lines;
 	}
 
 	/**
