@@ -58,6 +58,21 @@ class Menu {
 				array( $this, 'render_page' )
 			);
 		}
+
+		// Das Zurücksetzen vor dem Livegang loescht Bewegungsdaten
+		// unwiderruflich. Es erscheint deshalb nur fuer Benutzer, die die
+		// Website ohnehin verwalten duerfen - einen Menuepunkt anzuzeigen,
+		// den man nicht benutzen darf, waere nur verwirrend.
+		if ( current_user_can( 'manage_options' ) ) {
+			add_submenu_page(
+				LW16_MENU_SLUG,
+				__( 'Livegang', 'lindenweg16' ),
+				__( 'Livegang', 'lindenweg16' ),
+				'manage_options',
+				'lw16-livegang',
+				array( $this, 'render_page' )
+			);
+		}
 	}
 
 	/**

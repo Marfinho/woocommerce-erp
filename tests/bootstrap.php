@@ -139,6 +139,7 @@ $lw16_root = dirname( __DIR__ );
 require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';
+require $lw16_root . '/includes/Core/ResetTool.php';
 
 // Seiteneffektfreie Klassen des Moduls Betrieb.
 foreach ( array(
