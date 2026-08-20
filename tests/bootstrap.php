@@ -69,7 +69,30 @@ if ( ! function_exists( 'get_option' ) ) {
 	 * @return mixed
 	 */
 	function get_option( $key, $default = false ) {
+		if ( isset( $GLOBALS['lw16_test_options'][ $key ] ) ) {
+			return $GLOBALS['lw16_test_options'][ $key ];
+		}
 		return $default;
+	}
+}
+
+if ( ! function_exists( 'add_query_arg' ) ) {
+	/**
+	 * Vereinfachter Nachbau: haengt Parameter an eine URL an.
+	 *
+	 * @param array|string $args Parameter oder einzelner Schluessel.
+	 * @param string       $url  Basis-URL.
+	 * @return string
+	 */
+	function add_query_arg( $args, $url = '' ) {
+		if ( ! is_array( $args ) ) {
+			$args = array( $args => func_get_arg( 1 ) );
+			$url  = func_num_args() > 2 ? func_get_arg( 2 ) : '';
+		}
+
+		$query = http_build_query( $args );
+
+		return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . $query;
 	}
 }
 
@@ -125,6 +148,7 @@ foreach ( array(
 	'DiscountResolver',
 	'CapacityPlanner',
 	'Kpi',
+	'DeviceLabel',
 	'ReorderToken',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';

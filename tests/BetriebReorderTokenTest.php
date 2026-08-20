@@ -135,7 +135,28 @@ class BetriebReorderTokenTest extends TestCase {
 	public function test_url_enthaelt_das_token() {
 		$token = str_repeat( 'c', 64 );
 
+		$GLOBALS['lw16_test_options']['permalink_structure'] = '/%postname%/';
+
 		$this->assertStringContainsString( $token, ReorderToken::url( $token ) );
 		$this->assertStringNotContainsString( ReorderToken::hash( $token ), ReorderToken::url( $token ) );
+		$this->assertStringContainsString( '/nachbestellen/', ReorderToken::url( $token ) );
+
+		unset( $GLOBALS['lw16_test_options']['permalink_structure'] );
+	}
+
+	/**
+	 * Ohne sprechende Permalinks greift keine Rewrite-Regel. Die URL muss
+	 * dann auf die Abfragevariablen ausweichen, sonst laeuft der Haendler
+	 * auf eine 404 – der Fehler faellt erst beim Kunden auf.
+	 */
+	public function test_url_ohne_permalinks_nutzt_abfragevariablen() {
+		$token = str_repeat( 'd', 64 );
+
+		$GLOBALS['lw16_test_options']['permalink_structure'] = '';
+		$url = ReorderToken::url( $token );
+
+		$this->assertStringContainsString( 'lw16_reorder=1', $url );
+		$this->assertStringContainsString( 'lw16_token=' . $token, $url );
+		$this->assertStringNotContainsString( '/nachbestellen/', $url );
 	}
 }

@@ -30,6 +30,24 @@ class PrintersPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_drucker', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_save_printer', array( $this, 'handle_save' ) );
+		add_action( 'admin_post_lw16_betrieb_flush_routes', array( $this, 'handle_flush' ) );
+	}
+
+	/**
+	 * Adressen neu registrieren.
+	 *
+	 * Rewrite-Regeln stehen in einer Zwischenablage der Datenbank. Kommt eine
+	 * Regel durch ein Update dazu, ohne dass diese Ablage neu geschrieben
+	 * wird, laeuft die Adresse ins Leere. Genau das raeumt dieser Knopf auf –
+	 * er ist die Kurzfassung von „Permalinks einmal speichern".
+	 */
+	public function handle_flush() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE . '_flush' );
+
+		flush_rewrite_rules();
+
+		$this->redirect( __( 'Adressen neu registriert. Der Link vom Aufkleber sollte jetzt aufgehen.', 'lindenweg16' ), 'success', 0 );
 	}
 
 	/**
@@ -291,11 +309,40 @@ class PrintersPage {
 		echo '<h2>' . esc_html__( 'Aufkleber für die Geräte', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Ausdrucken und ans Gerät kleben. Die URL öffnet die Erfassung mit vorausgewähltem Drucker – am Handy genügen dann fünf Eingaben.', 'lindenweg16' ) . '</p>';
 
+		$this->render_route_hint();
+
 		echo '<div class="lw16-labels">';
 		foreach ( $printers as $printer ) {
 			echo DeviceLabel::render( $printer ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapt in render().
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Hinweis und Reparaturknopf, wenn die Erfassungsadresse nicht greifen kann.
+	 */
+	protected function render_route_hint() {
+		if ( ! DeviceLabel::pretty_permalinks() ) {
+			echo '<div class="notice notice-warning inline"><p>';
+			echo esc_html__( 'Diese Seite nutzt keine sprechenden Permalinks. Die Erfassung ist deshalb nur über die lange Adresse mit Fragezeichen erreichbar – so steht sie auch auf dem Aufkleber. Kürzer wird sie, sobald unter Einstellungen → Permalinks eine Struktur wie „Beitragsname" gewählt ist.', 'lindenweg16' );
+			echo '</p></div>';
+			return;
+		}
+
+		echo '<div class="notice notice-info inline"><p>';
+		echo esc_html__( 'Führt der Link zu „Seite nicht gefunden“, sind die Adressen nach einem Update noch nicht neu registriert. Ein Klick genügt:', 'lindenweg16' );
+		echo ' </p><p>';
+		printf(
+			'<a href="%s" class="button">%s</a>',
+			esc_url(
+				wp_nonce_url(
+					admin_url( 'admin-post.php?action=lw16_betrieb_flush_routes' ),
+					self::NONCE . '_flush'
+				)
+			),
+			esc_html__( 'Adressen neu registrieren', 'lindenweg16' )
+		);
+		echo '</p></div>';
 	}
 
 	/**
