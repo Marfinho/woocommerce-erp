@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '8';
+	const DB_VERSION = '9';
 
 	/**
 	 * Aktivierungsroutine.
@@ -70,6 +70,11 @@ class Installer {
 			Roles::add_role();
 			self::protect_belege_directory();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+
+			// Ein Update laeuft ohne Aktivierung durch. Ohne diesen Merker
+			// blieben Rewrite-Regeln, die erst in der neuen Fassung dazukommen,
+			// unbekannt – die Adressen liefen dann dauerhaft auf 404.
+			update_option( 'lw16_flush_rewrite', 1 );
 		}
 	}
 

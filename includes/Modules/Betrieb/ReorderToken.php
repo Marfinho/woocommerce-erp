@@ -123,6 +123,16 @@ class ReorderToken {
 	 * @return string
 	 */
 	public static function url( $token ) {
+		if ( ! DeviceLabel::pretty_permalinks() ) {
+			return add_query_arg(
+				array(
+					'lw16_reorder' => '1',
+					'lw16_token'   => rawurlencode( $token ),
+				),
+				home_url( '/' )
+			);
+		}
+
 		return home_url( '/' . self::ROUTE . '/' . rawurlencode( $token ) . '/' );
 	}
 

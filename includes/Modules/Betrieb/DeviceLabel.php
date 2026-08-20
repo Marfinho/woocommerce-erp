@@ -36,13 +36,28 @@ class DeviceLabel {
 	 * @return string
 	 */
 	public static function url( $printer_code = '' ) {
-		$url = home_url( '/' . self::ROUTE . '/' );
+		$url = self::pretty_permalinks()
+			? home_url( '/' . self::ROUTE . '/' )
+			: add_query_arg( 'lw16_erfassung', '1', home_url( '/' ) );
 
 		if ( $printer_code ) {
 			$url = add_query_arg( 'p', rawurlencode( $printer_code ), $url );
 		}
 
 		return $url;
+	}
+
+	/**
+	 * Nutzt die Seite sprechende Permalinks?
+	 *
+	 * Ohne sie greift keine Rewrite-Regel. Die Kurzadresse waere dann nicht
+	 * nur unschoen, sondern gar nicht erreichbar – deshalb wird in dem Fall
+	 * auf die Abfragevariable ausgewichen.
+	 *
+	 * @return bool
+	 */
+	public static function pretty_permalinks() {
+		return '' !== (string) get_option( 'permalink_structure' );
 	}
 
 	/**
