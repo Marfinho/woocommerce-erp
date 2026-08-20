@@ -199,3 +199,25 @@
 	margin: 6px 0 0 18px;
 	list-style: disc;
 }
+
+/* --- QR auf Aufklebern und Händlerkarten ------------------------------- */
+.lw16-labels .lw16-label__qr { margin: 10px 0 4px; }
+.lw16-labels .lw16-label__qr svg { display: block; margin: 0 auto; }
+.lw16-labels .lw16-label__url { font-size: 12px; }
+
+.lw16-dealercard {
+	display: flex; align-items: center; gap: 18px;
+	max-width: 460px; margin: 10px 0 14px; padding: 16px;
+	background: #fff; border: 1px solid #c3c4c7; border-radius: 6px;
+}
+.lw16-dealercard__qr svg { display: block; }
+.lw16-dealercard__name { font-size: 17px; font-weight: 600; }
+.lw16-dealercard__hint { font-size: 12px; color: #50575e; margin: 2px 0 8px; }
+.lw16-dealercard__url { font-size: 11px; word-break: break-all; user-select: all; display: block; }
+
+@media print {
+	body * { visibility: hidden; }
+	.lw16-dealercard, .lw16-dealercard *,
+	.lw16-labels, .lw16-labels * { visibility: visible; }
+	.lw16-dealercard { position: absolute; left: 0; top: 0; border: 1px dashed #999; }
+}

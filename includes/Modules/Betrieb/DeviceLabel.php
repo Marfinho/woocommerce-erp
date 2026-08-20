@@ -5,12 +5,11 @@
  * Jeder Drucker bekommt einen Aufkleber mit seiner Kurz-URL. Scannen oder
  * Abtippen öffnet die Erfassung mit vorausgewähltem Gerät.
  *
- * Hinweis zur QR-Darstellung: Ein QR-Code wird bewusst **nicht** selbst
- * erzeugt. Ein handgeschriebener Encoder war ohne Referenzbibliothek nicht
- * verlässlich zu verifizieren, und ein Code, den der Scanner nicht liest, ist
- * schlimmer als keiner. Stattdessen steht die URL groß und tippbar auf dem
- * Aufkleber. Wer QR will, hinterlegt in den Einstellungen die URL-Vorlage
- * eines Diensts oder es wird später eine geprüfte Bibliothek mitgeliefert.
+ * Der QR-Code kommt aus dem eigenen Encoder (siehe QrCode). Die URL steht
+ * zusätzlich in Klartext darunter: Wenn ein Aufkleber verschmutzt oder das
+ * Handy keinen Scanner öffnet, muss der Zettel trotzdem benutzbar bleiben.
+ * Fehlerkorrekturstufe Q, weil der Aufkleber auf einem Drucker in der
+ * Werkstatt klebt und nicht in einer Schublade.
  *
  * @package Lindenweg16
  */
@@ -72,11 +71,32 @@ class DeviceLabel {
 		$html  = '<div class="lw16-label">';
 		$html .= '<div class="lw16-label__code">' . esc_html( $printer['code'] ) . '</div>';
 		$html .= '<div class="lw16-label__model">' . esc_html( trim( (string) $printer['manufacturer'] . ' ' . (string) $printer['model'] ) ) . '</div>';
+		$html .= '<div class="lw16-label__qr">' . self::qr( $url ) . '</div>';
 		$html .= '<div class="lw16-label__url">' . esc_html( self::readable( $url ) ) . '</div>';
-		$html .= '<div class="lw16-label__hint">' . esc_html__( 'Öffnen und Druckjob erfassen', 'lindenweg16' ) . '</div>';
+		$html .= '<div class="lw16-label__hint">' . esc_html__( 'Scannen und Druckjob erfassen', 'lindenweg16' ) . '</div>';
 		$html .= '</div>';
 
 		return $html;
+	}
+
+	/**
+	 * QR-Code als SVG, mit stiller Rückfallebene.
+	 *
+	 * Schlägt die Erzeugung fehl – etwa weil ein Inhalt unerwartet lang ist –,
+	 * bleibt der Aufkleber ohne Bild, aber mit lesbarer URL. Ein halber
+	 * Aufkleber ist besser als eine weiße Seite mit Fehlermeldung.
+	 *
+	 * @param string $url   Inhalt.
+	 * @param int    $px    Kantenlänge.
+	 * @param string $level Fehlerkorrektur.
+	 * @return string
+	 */
+	public static function qr( $url, $px = 120, $level = 'Q' ) {
+		try {
+			return QrCode::svg( $url, $px, $level );
+		} catch ( \Exception $e ) {
+			return '';
+		}
 	}
 
 	/**

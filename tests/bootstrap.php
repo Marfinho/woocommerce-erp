@@ -149,6 +149,7 @@ foreach ( array(
 	'CapacityPlanner',
 	'Kpi',
 	'DeviceLabel',
+	'QrCode',
 	'ReorderToken',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';

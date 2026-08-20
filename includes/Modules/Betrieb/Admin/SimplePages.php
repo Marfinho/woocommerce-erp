@@ -21,6 +21,7 @@ use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CapacityPlanner;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
@@ -1190,10 +1191,24 @@ class SimplePages {
 		$fresh = get_transient( 'lw16_reorder_link_' . get_current_user_id() );
 		if ( $fresh ) {
 			delete_transient( 'lw16_reorder_link_' . get_current_user_id() );
+			$contact = ContactRepository::find( $contact_id );
+
 			printf(
-				'<div class="notice notice-success inline"><p><strong>%s</strong><br /><code style="user-select:all;font-size:13px">%s</code></p><p>%s</p></div>',
-				esc_html__( 'Neuer Link – jetzt kopieren und dem Händler geben:', 'lindenweg16' ),
-				esc_html( $fresh ),
+				'<div class="notice notice-success inline"><p><strong>%s</strong></p>'
+				. '<div class="lw16-dealercard">'
+				. '<div class="lw16-dealercard__qr">%s</div>'
+				. '<div class="lw16-dealercard__body">'
+				. '<div class="lw16-dealercard__name">%s</div>'
+				. '<div class="lw16-dealercard__hint">%s</div>'
+				. '<code class="lw16-dealercard__url">%s</code>'
+				. '</div></div>'
+				. '<p><button type="button" class="button" onclick="window.print()">%s</button> %s</p></div>',
+				esc_html__( 'Neuer Link – jetzt weitergeben:', 'lindenweg16' ),
+				DeviceLabel::qr( $fresh, 150, 'M' ),
+				esc_html( $contact ? $contact['name'] : '' ),
+				esc_html__( 'Scannen und nachbestellen', 'lindenweg16' ),
+				esc_html( DeviceLabel::readable( $fresh ) ),
+				esc_html__( 'Karte drucken', 'lindenweg16' ),
 				esc_html__( 'Er wird nicht erneut angezeigt. Gespeichert ist nur sein Hash.', 'lindenweg16' )
 			);
 		}
