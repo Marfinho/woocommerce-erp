@@ -131,53 +131,22 @@ class ProductionModule {
 	 * Druck-Queue aus offenen Bestellungen (Status processing).
 	 */
 	protected function render_queue() {
-		echo '<h2>' . esc_html__( 'Druck-Queue (offene Bestellungen)', 'lindenweg16' ) . '</h2>';
+		// Die frühere Druck-Queue las den alten Produktstamm und löste
+		// Stücklisten nur eine Ebene tief auf. Seit der Zusammenlegung der
+		// Lagerverwaltung ist dieser Stamm nicht mehr die führende Quelle,
+		// und seit es Halbzeuge gibt, reicht eine Ebene nicht. Die Rechnung
+		// steht deshalb im Modul Betrieb; hier bleiben die Versandaktionen,
+		// die es dort nicht gibt.
+		printf(
+			'<div class="notice notice-info inline"><p>%s</p><p><a class="button button-primary" href="%s">%s</a></p></div>',
+			esc_html__( 'Die Fertigungsvorschläge stehen jetzt unter Betrieb → Bedarf. Sie rechnen über alle Stufen – vom fertigen Artikel über Halbzeuge bis zu Rohlingen und Kleinteilen – und verrechnen Bestand und laufende Aufträge.', 'lindenweg16' ),
+			esc_url( admin_url( 'admin.php?page=lw16-betrieb-bedarf' ) ),
+			esc_html__( 'Zum Bedarf', 'lindenweg16' )
+		);
 
 		$orders = wc_get_orders(
 			array( 'status' => array( 'wc-processing' ), 'limit' => -1, 'orderby' => 'date', 'order' => 'ASC', 'return' => 'objects' )
 		);
-
-		// Aggregierte Modulmengen.
-		$queue = array();
-		foreach ( $orders as $order ) {
-			foreach ( $order->get_items() as $item ) {
-				$produkt = Repository::get_by_woo_id( $item->get_product_id() );
-				if ( ! $produkt ) {
-					continue;
-				}
-				$this->add_modules( $produkt, (float) $item->get_quantity(), '#' . $order->get_order_number(), $queue );
-			}
-		}
-
-		if ( ! empty( $queue ) ) {
-			echo '<table class="widefat striped"><thead><tr>';
-			echo '<th>' . esc_html__( 'Modul', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Benötigt', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestand', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Fehlend', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Bestellungen', 'lindenweg16' ) . '</th><th></th>';
-			echo '</tr></thead><tbody>';
-			foreach ( $queue as $modul_id => $row ) {
-				$bestand = Repository::get_stock( $modul_id );
-				$fehlend = max( 0, $row['benoetigt'] - $bestand );
-				echo '<tr>';
-				echo '<td>' . esc_html( $row['name'] ) . '</td>';
-				echo '<td>' . esc_html( $this->fmt( $row['benoetigt'] ) ) . '</td>';
-				echo '<td>' . esc_html( $this->fmt( $bestand ) ) . '</td>';
-				echo '<td' . ( $fehlend > 0 ? ' class="lw16-fehlend"' : '' ) . '>' . esc_html( $this->fmt( $fehlend ) ) . '</td>';
-				echo '<td>' . esc_html( implode( ', ', array_unique( $row['orders'] ) ) ) . '</td>';
-				echo '<td>';
-				if ( $fehlend > 0 ) {
-					$form = admin_url( 'admin-post.php' );
-					echo '<form method="post" action="' . esc_url( $form ) . '" class="lw16-inline-form">';
-					echo '<input type="hidden" name="action" value="lw16_job_status"><input type="hidden" name="new_job" value="1">';
-					echo '<input type="hidden" name="produkt_id" value="' . (int) $modul_id . '"><input type="hidden" name="menge" value="' . esc_attr( $fehlend ) . '">';
-					wp_nonce_field( 'lw16_job_new' );
-					submit_button( __( 'In Druckauftrag', 'lindenweg16' ), 'small', '', false );
-					echo '</form>';
-				}
-				echo '</td></tr>';
-			}
-			echo '</tbody></table>';
-		} else {
-			echo '<p>' . esc_html__( 'Keine offenen Bestellungen.', 'lindenweg16' ) . '</p>';
-		}
 
 		// Packlisten + DHL-Label je Bestellung.
 		echo '<h2>' . esc_html__( 'Versand-Aktionen je Bestellung', 'lindenweg16' ) . '</h2>';

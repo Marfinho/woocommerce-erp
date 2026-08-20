@@ -168,6 +168,7 @@ foreach ( array(
 	'PicklistRepository',
 	'WorkOrderRepository',
 	'PriceTierRepository',
+	'DemandPlanner',
 	'ReorderToken',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';

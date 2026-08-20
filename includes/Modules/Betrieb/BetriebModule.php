@@ -15,6 +15,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
 use Lindenweg16\Modules\Betrieb\Admin\DashboardPage;
+use Lindenweg16\Modules\Betrieb\Admin\DemandPage;
 use Lindenweg16\Modules\Betrieb\Admin\ImportPage;
 use Lindenweg16\Modules\Betrieb\Admin\MaterialPage;
 use Lindenweg16\Modules\Betrieb\Admin\OrdersPage;
@@ -40,6 +41,7 @@ class BetriebModule {
 	public static function pages() {
 		return array(
 			self::MENU_SLUG            => array( __( 'Dashboard', 'lindenweg16' ), 'lw16_view_reports' ),
+			'lw16-betrieb-bedarf'       => array( __( 'Bedarf', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-druckjournal' => array( __( 'Druckjournal', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-artikel'      => array( __( 'Artikel & Revisionen', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-drucker'      => array( __( 'Drucker & Wartung', 'lindenweg16' ), 'lw16_manage_production' ),
@@ -90,6 +92,7 @@ class BetriebModule {
 			( new PrintJobsPage() )->register();
 			( new StockPage() )->register();
 			( new BinsPage() )->register();
+			( new DemandPage() )->register();
 			( new MaterialPage() )->register();
 			( new OrdersPage() )->register();
 			( new SimplePages() )->register();

@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
@@ -108,6 +109,33 @@ class DashboardPage {
 	}
 
 	/**
+	 * Was aus dem Bedarf heraus zu fertigen oder zu bestellen ist.
+	 *
+	 * Nur die feste Seite – Bestellungen und Sollbestand. Wunschlisten
+	 * gehören nicht in eine Alarmliste; sie sind ein Hinweis, keine
+	 * Verpflichtung, und stehen deshalb nur auf der Bedarfsseite.
+	 *
+	 * @return array
+	 */
+	protected static function to_produce() {
+		$plan    = DemandPlanner::plan( DemandPlanner::collect( false ), DemandPlanner::context() );
+		$actions = DemandPlanner::action_labels();
+		$out     = array();
+
+		foreach ( DemandPlanner::actionable( $plan['articles'] ) as $row ) {
+			$out[] = sprintf(
+				/* translators: 1: Menge, 2: Artikelnummer, 3: Handlung. */
+				__( '%1$s× %2$s – %3$s', 'lindenweg16' ),
+				number_format_i18n( $row['net'], 0 ),
+				$row['sku'],
+				isset( $actions[ $row['action'] ] ) ? $actions[ $row['action'] ] : $row['action']
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Alarme: Wartung, Bestände, Beschaffung, Wiedervorlagen, offene Posten.
 	 */
 	protected static function render_alerts() {
@@ -152,6 +180,8 @@ class DashboardPage {
 		);
 
 		self::alert_block( __( 'Artikel unter Sollbestand', 'lindenweg16' ), self::below_target(), 'lw16-betrieb-lager' );
+
+		self::alert_block( __( 'Zu fertigen', 'lindenweg16' ), self::to_produce(), 'lw16-betrieb-bedarf' );
 
 		self::alert_block(
 			__( 'Fällige Wiedervorlagen', 'lindenweg16' ),
