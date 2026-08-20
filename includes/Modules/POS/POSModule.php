@@ -14,6 +14,8 @@ use Lindenweg16\Modules\Accounting\BelegRepository;
 use Lindenweg16\Modules\Accounting\KassenbuchRepository;
 use Lindenweg16\Modules\Inventory\Repository as LagerRepository;
 use Lindenweg16\Modules\Inventory\StockManager;
+use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\StockOwnership;
 
 /**
  * Kassenfunktion für den Marktverkauf: Tagesbetrieb mit Anfangs-/Endbestand,
@@ -165,7 +167,7 @@ class POSModule {
 		}
 
 		$base     = admin_url( 'admin.php?page=lw16-kasse' );
-		$produkte = LagerRepository::get_products();
+		$produkte = self::sale_options();
 		?>
 		<h1><?php echo esc_html( sprintf( __( 'Kasse – %s', 'lindenweg16' ), $tag->markt_name ) ); ?></h1>
 		<p>
@@ -191,7 +193,7 @@ class POSModule {
 							<select name="produkt_id" id="lw16-pos-produkt">
 								<option value=""><?php esc_html_e( '— Manuell eingeben —', 'lindenweg16' ); ?></option>
 								<?php foreach ( $produkte as $p ) : ?>
-									<option value="<?php echo (int) $p->id; ?>" data-name="<?php echo esc_attr( $p->name ); ?>"><?php echo esc_html( $p->name . ' (' . $p->typ . ')' ); ?></option>
+									<option value="<?php echo esc_attr( $p['value'] ); ?>" data-name="<?php echo esc_attr( $p['name'] ); ?>" data-preis="<?php echo esc_attr( $p['preis'] ); ?>"><?php echo esc_html( $p['label'] ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</td></tr>
@@ -207,7 +209,12 @@ class POSModule {
 				<script>
 				document.getElementById('lw16-pos-produkt').addEventListener('change',function(){
 					var sel=this.options[this.selectedIndex];
-					if(sel.value){document.getElementById('lw16-pos-name').value=sel.dataset.name||sel.textContent.trim();}
+					if(!sel.value){return;}
+					document.getElementById('lw16-pos-name').value=sel.dataset.name||sel.textContent.trim();
+					// Preis nur vorschlagen, wenn das Feld noch leer ist -
+					// am Marktstand wird oft ein Sonderpreis eingetippt.
+					var preis=document.querySelector('[name="einzelpreis"]');
+					if(preis&&sel.dataset.preis&&!parseFloat(preis.value)){preis.value=sel.dataset.preis;}
 				});
 				</script>
 
@@ -354,7 +361,7 @@ class POSModule {
 			}
 		}
 
-		$produkte = LagerRepository::get_products();
+		$produkte = self::sale_options();
 		$sell_url = admin_url( 'admin-post.php' );
 		$close_url = admin_url( 'admin-post.php' );
 		$storno_base = admin_url( 'admin-post.php?action=lw16_pos_storno' );
@@ -417,7 +424,7 @@ class POSModule {
 					<select name="produkt_id" id="m-pos-produkt">
 						<option value=""><?php esc_html_e( '— Manuell —', 'lindenweg16' ); ?></option>
 						<?php foreach ( $produkte as $p ) : ?>
-							<option value="<?php echo (int) $p->id; ?>" data-name="<?php echo esc_attr( $p->name ); ?>"><?php echo esc_html( $p->name ); ?></option>
+							<option value="<?php echo esc_attr( $p['value'] ); ?>" data-name="<?php echo esc_attr( $p['name'] ); ?>" data-preis="<?php echo esc_attr( $p['preis'] ); ?>"><?php echo esc_html( $p['label'] ); ?></option>
 						<?php endforeach; ?>
 					</select>
 				</div>
@@ -442,7 +449,10 @@ class POSModule {
 		<script>
 		document.getElementById('m-pos-produkt').addEventListener('change',function(){
 			var o=this.options[this.selectedIndex];
-			if(o.value) document.getElementById('m-pos-name').value=o.dataset.name||'';
+			if(!o.value){return;}
+			document.getElementById('m-pos-name').value=o.dataset.name||'';
+			var preis=document.querySelector('[name="einzelpreis"]');
+			if(preis&&o.dataset.preis&&!parseFloat(preis.value)){preis.value=o.dataset.preis;}
 		});
 		</script>
 
@@ -513,6 +523,81 @@ class POSModule {
 		$this->redirect( __( 'Kassatag gestartet.', 'lindenweg16' ) );
 	}
 
+	/**
+	 * Verkäufliche Positionen für die Kassenauswahl.
+	 *
+	 * Führend sind die Betriebsartikel – seit der Zusammenlegung die einzige
+	 * Lagerverwaltung. Produkte der abgelösten Verwaltung erscheinen nur
+	 * noch, solange sie keinen Betriebsartikel haben; sonst stünde dieselbe
+	 * Ware zweimal in der Liste und man könnte ins falsche Lager buchen.
+	 *
+	 * @return array Einträge mit value, label, name und preis.
+	 */
+	public static function sale_options() {
+		$options = array();
+		$legacy  = array();
+
+		foreach ( ArticleRepository::all( true ) as $article ) {
+			$options[] = array(
+				'value' => 'a:' . (int) $article['id'],
+				'label' => $article['sku'] . ' – ' . $article['name'],
+				'name'  => (string) $article['name'],
+				'preis' => null === $article['price_gross'] ? '' : number_format( (float) $article['price_gross'], 2, '.', '' ),
+			);
+
+			if ( ! empty( $article['legacy_produkt_id'] ) ) {
+				$legacy[ (int) $article['legacy_produkt_id'] ] = true;
+			}
+		}
+
+		foreach ( LagerRepository::get_products() as $product ) {
+			if ( isset( $legacy[ (int) $product->id ] ) ) {
+				continue;
+			}
+
+			$options[] = array(
+				'value' => 'p:' . (int) $product->id,
+				'label' => $product->name . ' (' . $product->typ . ')',
+				'name'  => (string) $product->name,
+				'preis' => '',
+			);
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Auswahlwert der Kasse zerlegen – reine Zeichenkettenlogik.
+	 *
+	 * Alte Kassentage schickten die nackte Produkt-ID. Die wird weiterhin
+	 * verstanden, damit ein offener Tab von vor dem Update nichts kaputt
+	 * macht.
+	 *
+	 * @param string $raw Wert aus dem Formular.
+	 * @return array {article_id, produkt_id} – jeweils null, wenn nicht gesetzt.
+	 */
+	public static function parse_choice( $raw ) {
+		$raw = trim( (string) $raw );
+
+		if ( '' === $raw ) {
+			return array( 'article_id' => null, 'produkt_id' => null );
+		}
+
+		if ( 0 === strpos( $raw, 'a:' ) ) {
+			$id = (int) substr( $raw, 2 );
+			return array( 'article_id' => $id ? $id : null, 'produkt_id' => null );
+		}
+
+		if ( 0 === strpos( $raw, 'p:' ) ) {
+			$id = (int) substr( $raw, 2 );
+			return array( 'article_id' => null, 'produkt_id' => $id ? $id : null );
+		}
+
+		$id = (int) $raw;
+
+		return array( 'article_id' => null, 'produkt_id' => $id ? $id : null );
+	}
+
 	public function handle_verkauf() {
 		$this->guard( 'lw16_pos_verkauf' );
 
@@ -522,11 +607,17 @@ class POSModule {
 			$this->redirect( __( 'Kein offener Kassatag.', 'lindenweg16' ) );
 		}
 
-		$produkt_id  = ! empty( $_POST['produkt_id'] ) ? (int) $_POST['produkt_id'] : null;
+		$auswahl     = self::parse_choice( wp_unslash( $_POST['produkt_id'] ?? '' ) );
+		$produkt_id  = $auswahl['produkt_id'];
+		$article_id  = $auswahl['article_id'];
 		$artikel     = sanitize_text_field( wp_unslash( $_POST['artikel_name'] ?? '' ) );
 		$menge       = max( 1, (int) ( $_POST['menge'] ?? 1 ) );
 		$einzelpreis = (float) ( $_POST['einzelpreis'] ?? 0 );
 
+		if ( ! $artikel && $article_id ) {
+			$a       = ArticleRepository::find( $article_id );
+			$artikel = $a ? $a['name'] : __( 'Unbekannt', 'lindenweg16' );
+		}
 		if ( ! $artikel && $produkt_id ) {
 			$p = LagerRepository::get_product( $produkt_id );
 			$artikel = $p ? $p->name : __( 'Unbekannt', 'lindenweg16' );
@@ -540,17 +631,35 @@ class POSModule {
 		POSRepository::create_position( array(
 			'tag_id'       => $tag_id,
 			'produkt_id'   => $produkt_id,
+			'article_id'   => $article_id,
 			'artikel_name' => $artikel,
 			'menge'        => $menge,
 			'einzelpreis'  => $einzelpreis,
 			'betrag'       => $betrag,
 		) );
 
-		// Lagerbestand abbuchen wenn ERP-Produkt.
-		if ( $produkt_id ) {
-			StockManager::record_movement( $produkt_id, -1 * abs( $menge ), 'verkauf', array(
-				'referenz' => sprintf( __( 'Marktverkauf %s', 'lindenweg16' ), $tag->markt_name ),
-			) );
+		// Lagerbestand abbuchen. Die Weiche entscheidet, welche
+		// Lagerverwaltung zustaendig ist - seit der Zusammenlegung ist das
+		// bei bekannten Artikeln das Modul Betrieb. Ohne sie blieb der
+		// Marktverkauf dort unsichtbar und die Bedarfsplanung rechnete mit
+		// Ware, die laengst im Karton lag.
+		if ( $produkt_id || $article_id ) {
+			$referenz = sprintf( /* translators: %s: Marktname. */ __( 'Marktverkauf %s', 'lindenweg16' ), $tag->markt_name );
+
+			$booked = StockOwnership::book(
+				array( 'article_id' => $article_id, 'legacy_produkt_id' => $produkt_id ),
+				-1 * abs( $menge ),
+				'verkauf',
+				array(
+					'ref_type' => 'kasse',
+					'ref_id'   => (int) $tag_id,
+					'note'     => $referenz,
+				)
+			);
+
+			if ( 'betrieb' !== $booked && $produkt_id ) {
+				StockManager::record_movement( $produkt_id, -1 * abs( $menge ), 'verkauf', array( 'referenz' => $referenz ) );
+			}
 		}
 
 		$this->redirect_back( __( 'Verkauf gebucht.', 'lindenweg16' ) );
@@ -567,12 +676,30 @@ class POSModule {
 		if ( $pos && ! $pos->storniert ) {
 			POSRepository::update_position( $id, array( 'storniert' => 1 ) );
 
-			// Lagerbestand zurückbuchen.
-			if ( $pos->produkt_id ) {
-				$tag = POSRepository::get_tag( $pos->tag_id );
-				StockManager::record_movement( (int) $pos->produkt_id, abs( (int) $pos->menge ), 'retoure', array(
-					'referenz' => sprintf( __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag ? $tag->markt_name : '' ),
-				) );
+			// Lagerbestand zurückbuchen – über dieselbe Weiche wie der
+			// Verkauf, sonst landet der Storno im anderen Lager als der
+			// Verkauf und beide stehen dauerhaft falsch.
+			if ( $pos->produkt_id || ! empty( $pos->article_id ) ) {
+				$tag      = POSRepository::get_tag( $pos->tag_id );
+				$referenz = sprintf( /* translators: %s: Marktname. */ __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag ? $tag->markt_name : '' );
+
+				$booked = StockOwnership::book(
+					array(
+						'article_id'        => isset( $pos->article_id ) ? (int) $pos->article_id : 0,
+						'legacy_produkt_id' => (int) $pos->produkt_id,
+					),
+					abs( (int) $pos->menge ),
+					'retoure',
+					array(
+						'ref_type' => 'kasse',
+						'ref_id'   => (int) $pos->tag_id,
+						'note'     => $referenz,
+					)
+				);
+
+				if ( 'betrieb' !== $booked && $pos->produkt_id ) {
+					StockManager::record_movement( (int) $pos->produkt_id, abs( (int) $pos->menge ), 'retoure', array( 'referenz' => $referenz ) );
+				}
 			}
 		}
 

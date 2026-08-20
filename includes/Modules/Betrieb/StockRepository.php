@@ -78,7 +78,44 @@ class StockRepository {
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'stock_movements', $id, null, $row, isset( $data['void_reason'] ) ? $data['void_reason'] : '' );
 
+		self::maybe_announce_replenished( (int) $row['article_id'], (float) $row['qty'] );
+
 		return $id;
+	}
+
+	/**
+	 * Meldung, wenn ein Artikel wieder lieferbar wird.
+	 *
+	 * Die Warteliste hing bisher an einem Ereignis der abgelösten
+	 * Lagerverwaltung. Seit das Modul Betrieb bucht, wurde es nie mehr
+	 * ausgelöst – die „Ist wieder da"-Mail ging also nicht mehr raus.
+	 *
+	 * Geprüft wird nur bei Zugängen, und nur der Übergang von leer auf
+	 * vorhanden. Ohne diese Bedingung käme bei jedem Wareneingang eine Mail.
+	 *
+	 * @param int   $article_id Artikel.
+	 * @param float $qty        Gebuchte Menge.
+	 */
+	protected static function maybe_announce_replenished( $article_id, $qty ) {
+		if ( $article_id <= 0 || $qty <= 0 ) {
+			return;
+		}
+
+		$movements = self::all( $article_id );
+		$balances  = StockLedger::balances( $movements );
+		$after     = 0.0;
+
+		foreach ( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() as $locations ) {
+			$after += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;
+		}
+
+		$before = $after - $qty;
+
+		if ( $before > 0.0005 || $after <= 0.0005 ) {
+			return;
+		}
+
+		do_action( 'lw16_betrieb_stock_replenished', $article_id, $after );
 	}
 
 	/**

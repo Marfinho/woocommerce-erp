@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '11';
+	const DB_VERSION = '12';
 
 	/**
 	 * Aktivierungsroutine.
@@ -405,13 +405,15 @@ class Installer {
 
 		$tables[] = "CREATE TABLE {$p}warteliste (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			produkt_id BIGINT UNSIGNED NOT NULL,
+			produkt_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			article_id BIGINT UNSIGNED NULL,
 			email VARCHAR(191) NOT NULL,
 			user_id BIGINT UNSIGNED NULL,
 			benachrichtigt TINYINT(1) NOT NULL DEFAULT 0,
 			erstellt_am DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY produkt_id (produkt_id),
+			KEY article_id (article_id),
 			KEY benachrichtigt (benachrichtigt),
 			KEY email (email)
 		) {$charset_collate};";
@@ -477,6 +479,7 @@ class Installer {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			tag_id BIGINT UNSIGNED NOT NULL,
 			produkt_id BIGINT UNSIGNED NULL,
+			article_id BIGINT UNSIGNED NULL,
 			artikel_name VARCHAR(255) NOT NULL,
 			menge INT NOT NULL DEFAULT 1,
 			einzelpreis DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -486,6 +489,7 @@ class Installer {
 			PRIMARY KEY  (id),
 			KEY tag_id (tag_id),
 			KEY produkt_id (produkt_id),
+			KEY article_id (article_id),
 			KEY storniert (storniert)
 		) {$charset_collate};";
 

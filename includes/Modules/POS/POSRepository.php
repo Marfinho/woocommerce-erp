@@ -103,6 +103,7 @@ class POSRepository {
 			array(
 				'tag_id'       => $data['tag_id'],
 				'produkt_id'   => $data['produkt_id'] ?? null,
+				'article_id'   => $data['article_id'] ?? null,
 				'artikel_name' => $data['artikel_name'] ?? '',
 				'menge'        => $data['menge'] ?? 1,
 				'einzelpreis'  => $data['einzelpreis'] ?? 0,
@@ -110,7 +111,7 @@ class POSRepository {
 				'storniert'    => 0,
 				'erstellt_am'  => current_time( 'mysql' ),
 			),
-			array( '%d', '%d', '%s', '%d', '%f', '%f', '%d', '%s' )
+			array( '%d', '%d', '%d', '%s', '%d', '%f', '%f', '%d', '%s' )
 		);
 		return $wpdb->insert_id;
 	}

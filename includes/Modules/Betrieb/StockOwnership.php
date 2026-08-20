@@ -78,6 +78,75 @@ class StockOwnership {
 	}
 
 	/**
+	 * Kennt Betrieb ein Produkt der abgelösten Lagerverwaltung?
+	 *
+	 * Die Übernahme setzt legacy_produkt_id, sodass ein altes Produkt und
+	 * sein Betriebsartikel dieselbe Sache bleiben. Ohne diese Brücke würden
+	 * Kasse und Warteliste weiter in den eingefrorenen Altbestand buchen
+	 * beziehungsweise ihn abfragen.
+	 *
+	 * @param int $legacy_id Produkt-ID der alten Lagerverwaltung.
+	 * @return int Artikel-ID oder 0.
+	 */
+	public static function article_for_legacy_product( $legacy_id ) {
+		global $wpdb;
+
+		$legacy_id = (int) $legacy_id;
+		if ( ! $legacy_id ) {
+			return 0;
+		}
+
+		$table = ArticleRepository::table();
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$table} WHERE legacy_produkt_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$legacy_id
+			)
+		);
+	}
+
+	/**
+	 * Eine Bewegung an die zuständige Lagerverwaltung geben.
+	 *
+	 * Gemeinsame Weiche für alle Stellen außerhalb des Shops – heute Kasse,
+	 * morgen was auch immer. Ohne sie trifft jede Stelle ihre eigene
+	 * Entscheidung, und irgendwann trifft eine die falsche.
+	 *
+	 * @param array  $target     Ziel: article_id und/oder legacy_produkt_id.
+	 * @param float  $qty        Menge, negativ für Abgang.
+	 * @param string $type       Bewegungsart.
+	 * @param array  $args       Zusatz: color, note, ref_type, ref_id.
+	 * @return string 'betrieb' oder 'inventory' – wer gebucht hat.
+	 */
+	public static function book( array $target, $qty, $type, array $args = array() ) {
+		$article_id = isset( $target['article_id'] ) ? (int) $target['article_id'] : 0;
+		$legacy_id  = isset( $target['legacy_produkt_id'] ) ? (int) $target['legacy_produkt_id'] : 0;
+
+		if ( ! $article_id && $legacy_id ) {
+			$article_id = self::article_for_legacy_product( $legacy_id );
+		}
+
+		if ( 'betrieb' !== self::decide( $article_id, self::is_active() ) ) {
+			return 'inventory';
+		}
+
+		StockRepository::book(
+			array_merge(
+				array(
+					'article_id'    => $article_id,
+					'qty'           => (float) $qty,
+					'movement_type' => (string) $type,
+					'location'      => 'lager',
+				),
+				$args
+			)
+		);
+
+		return 'betrieb';
+	}
+
+	/**
 	 * Entscheidung als reine Logik – wer bucht?
 	 *
 	 * @param int  $article_id      Artikel in lw16_articles, 0 wenn unbekannt.
