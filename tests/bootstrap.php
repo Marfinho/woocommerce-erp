@@ -140,6 +140,8 @@ require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';
 require $lw16_root . '/includes/Core/ResetTool.php';
+require $lw16_root . '/includes/Modules/Accounting/FeeExtractor.php';
+require $lw16_root . '/includes/Modules/Production/DhlTracking.php';
 
 // Seiteneffektfreie Klassen des Moduls Betrieb.
 foreach ( array(

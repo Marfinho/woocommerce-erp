@@ -34,6 +34,18 @@ class AccountingModule {
 		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
 		add_action( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( $this, 'generate_invoice' ), 10, 1 );
 
+		// Zahlungsgebühr übernehmen. Bewusst an mehreren Statuswechseln: Die
+		// Gebühr schreibt der Zahlungsdienstleister mal beim Bezahlen, mal
+		// erst Tage später in eine Notiz. Die Buchung selbst ist gegen
+		// Doppelung gesichert, also schadet ein Aufruf zu viel nicht.
+		add_action( 'woocommerce_order_status_processing', array( $this, 'capture_order_fee' ), 40, 1 );
+		add_action( 'woocommerce_order_status_completed', array( $this, 'capture_order_fee' ), 40, 1 );
+		add_action( 'woocommerce_payment_complete', array( $this, 'capture_order_fee' ), 40, 1 );
+		add_action( 'woocommerce_order_note_added', array( $this, 'capture_fee_from_note' ), 10, 2 );
+
+		// Gebühr von Hand nachtragen oder erneut suchen.
+		add_action( 'admin_post_lw16_fee_rescan', array( $this, 'handle_fee_rescan' ) );
+
 		// Beleg-Storno.
 		add_action( 'admin_post_lw16_beleg_storno', array( $this, 'handle_beleg_storno' ) );
 
@@ -92,6 +104,83 @@ class AccountingModule {
 	 */
 	public function enqueue_invoice( $order_id ) {
 		\Lindenweg16\Core\Scheduler::enqueue_async( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( 'order_id' => (int) $order_id ) );
+	}
+
+	/**
+	 * Zahlungsgebühr einer Bestellung erkennen und buchen.
+	 *
+	 * @param int $order_id Bestell-ID.
+	 * @return int Buchungs-ID, 0 wenn nichts gebucht wurde.
+	 */
+	public function capture_order_fee( $order_id ) {
+		if ( ! (int) Settings::get( 'gebuehren_automatisch', 1 ) ) {
+			return 0;
+		}
+
+		$order = wc_get_order( $order_id );
+
+		if ( ! $order ) {
+			return 0;
+		}
+
+		$fee = FeeExtractor::for_order( $order );
+
+		if ( null === $fee['amount'] ) {
+			return 0;
+		}
+
+		return BuchungRepository::create_from_order_fee( $order, $fee['amount'], $fee['source'] );
+	}
+
+	/**
+	 * Neu hinzugekommene Notiz sofort auswerten.
+	 *
+	 * Viele Dienstleister tragen die Gebühr erst nach, wenn die Zahlung
+	 * abgerechnet ist – oft Tage nach dem letzten Statuswechsel. Ohne diesen
+	 * Haken bliebe sie bis zum nächsten Statuswechsel unbeachtet, und bei
+	 * abgeschlossenen Bestellungen käme keiner mehr.
+	 *
+	 * @param int   $note_id Notiz-ID.
+	 * @param array $args    Argumente von WooCommerce.
+	 */
+	public function capture_fee_from_note( $note_id, $args = array() ) {
+		$order_id = 0;
+
+		if ( is_array( $args ) && isset( $args['order_id'] ) ) {
+			$order_id = (int) $args['order_id'];
+		} elseif ( is_object( $args ) && isset( $args->id ) ) {
+			$order_id = (int) $args->id;
+		}
+
+		if ( $order_id ) {
+			$this->capture_order_fee( $order_id );
+		}
+	}
+
+	/**
+	 * Gebühr einer Bestellung von Hand suchen lassen.
+	 */
+	public function handle_fee_rescan() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+
+		$order_id = isset( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		check_admin_referer( 'lw16_fee_rescan_' . $order_id );
+
+		$booked = $this->capture_order_fee( $order_id );
+
+		$msg = $booked
+			? __( 'Zahlungsgebühr gefunden und gebucht.', 'lindenweg16' )
+			: __( 'Keine neue Zahlungsgebühr gefunden – entweder steht keine in den Hinweisen, oder sie ist bereits gebucht.', 'lindenweg16' );
+
+		wp_safe_redirect(
+			add_query_arg(
+				array( 'page' => 'lw16-buchhaltung', 'view' => 'journal', 'msg' => rawurlencode( $msg ) ),
+				admin_url( 'admin.php' )
+			)
+		);
+		exit;
 	}
 
 	/**

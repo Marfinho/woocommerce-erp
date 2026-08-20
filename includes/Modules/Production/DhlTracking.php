@@ -418,13 +418,80 @@ class DhlTracking {
 			'_pr_shipment_dhl_label_tracking',
 			'_shipment_tracking_number',
 			'_tracking_number',
+			'_wc_shipment_tracking_items',
 		);
+
 		foreach ( $keys as $key ) {
 			$val = $order->get_meta( $key );
+
 			if ( $val ) {
-				return is_array( $val ) ? (string) reset( $val ) : (string) $val;
+				$number = self::flatten_tracking_meta( $val );
+
+				if ( '' !== $number ) {
+					return $number;
+				}
 			}
 		}
+
+		// Germanized Shipments fuehrt die Sendungsnummer nicht an der
+		// Bestellung, sondern an der Sendung. Ohne diese Abfrage entfernt das
+		// Plugin die Anzeige von Germanized und stellt nichts an ihre Stelle -
+		// der Kunde saehe dann gar nichts mehr.
+		if ( function_exists( 'wc_gzd_get_shipments_by_order' ) ) {
+			foreach ( (array) wc_gzd_get_shipments_by_order( $order->get_id() ) as $shipment ) {
+				if ( is_object( $shipment ) && method_exists( $shipment, 'get_tracking_id' ) ) {
+					$id = (string) $shipment->get_tracking_id();
+
+					if ( '' !== $id ) {
+						return $id;
+					}
+				}
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Sendungsnummer aus einem beliebig verschachtelten Metawert holen.
+	 *
+	 * Die Versandplugins legen ihre Nummern sehr verschieden ab: als
+	 * Zeichenkette, als Liste, als Liste von Datensaetzen. Ein reset() auf die
+	 * aeussere Ebene liefert dann ein Array statt einer Nummer.
+	 *
+	 * Reine Zeichenkettenlogik, damit sie pruefbar bleibt.
+	 *
+	 * @param mixed $value Metawert.
+	 * @return string
+	 */
+	public static function flatten_tracking_meta( $value ) {
+		if ( is_string( $value ) || is_numeric( $value ) ) {
+			return trim( (string) $value );
+		}
+
+		if ( ! is_array( $value ) ) {
+			return '';
+		}
+
+		// Bevorzugt benannte Felder, sonst der erste brauchbare Wert.
+		foreach ( array( 'tracking_number', 'tracking_id', 'number', 'id' ) as $key ) {
+			if ( isset( $value[ $key ] ) ) {
+				$found = self::flatten_tracking_meta( $value[ $key ] );
+
+				if ( '' !== $found ) {
+					return $found;
+				}
+			}
+		}
+
+		foreach ( $value as $entry ) {
+			$found = self::flatten_tracking_meta( $entry );
+
+			if ( '' !== $found ) {
+				return $found;
+			}
+		}
+
 		return '';
 	}
 
@@ -563,6 +630,49 @@ class DhlTracking {
 	/**
 	 * Versandstatus-Stufe aus dem aktuellen Status ableiten (0–4).
 	 */
+	/**
+	 * Fortschritt allein aus dem Bestellstatus – reine Logik.
+	 *
+	 * Solange keine Sendungsnummer vorliegt, ist der Bestellstatus die einzige
+	 * ehrliche Auskunft, die sich dem Kunden geben lässt.
+	 *
+	 * @param object $order Bestellung.
+	 * @return int|null Null, wenn keine Anzeige sinnvoll ist.
+	 */
+	public static function order_step( $order ) {
+		if ( ! is_object( $order ) || ! method_exists( $order, 'get_status' ) ) {
+			return null;
+		}
+
+		return self::step_for_order_status( (string) $order->get_status() );
+	}
+
+	/**
+	 * Zuordnung Bestellstatus zu Fortschrittsstufe – ohne WooCommerce.
+	 *
+	 * @param string $status Bestellstatus, mit oder ohne Präfix wc-.
+	 * @return int|null Null bedeutet: gar nichts anzeigen.
+	 */
+	public static function step_for_order_status( $status ) {
+		$status = strtolower( trim( (string) $status ) );
+		$status = preg_replace( '/^wc-/', '', $status );
+
+		// Bezahlt und in Arbeit: Stufe „Bestellt".
+		if ( in_array( $status, array( 'processing', 'on-hold' ), true ) ) {
+			return 0;
+		}
+
+		// In diesem Shop heißt „abgeschlossen" versendet.
+		if ( 'completed' === $status ) {
+			return 1;
+		}
+
+		// Alles andere – unbezahlt, storniert, erstattet, fehlgeschlagen –
+		// bekommt keine Fortschrittsanzeige. Ein Fortschrittsbalken über einer
+		// stornierten Bestellung wäre Hohn.
+		return null;
+	}
+
 	protected static function status_step( $status ) {
 		$s = strtolower( $status );
 		if ( in_array( $s, array( 'zugestellt', 'delivered' ), true ) ) {
@@ -623,12 +733,29 @@ class DhlTracking {
 	public function render_tracking( $order ) {
 		global $wpdb;
 		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE order_id = %d', $order->get_id() ) ); // phpcs:ignore
-		if ( ! $row ) {
+
+		// Ohne Sendungsnummer gab es frueher gar keine Anzeige. Der Kunde stand
+		// dann vor einer leeren Seite und wusste nicht, ob seine Bestellung
+		// ueberhaupt bearbeitet wird - gerade in den ersten Tagen, in denen es
+		// noch keine Nummer gibt. Deshalb zeigt die Ansicht jetzt auch ohne
+		// Sendungsnummer den Stand, abgeleitet aus dem Bestellstatus.
+		$order_step = self::order_step( $order );
+
+		if ( ! $row && null === $order_step ) {
 			return;
 		}
 
-		$events = json_decode( (string) $row->events, true );
-		$step   = $events ? self::status_step( $row->aktueller_status ) : 0;
+		$events = $row ? json_decode( (string) $row->events, true ) : array();
+
+		if ( $row && $events ) {
+			$step = self::status_step( $row->aktueller_status );
+		} elseif ( $row ) {
+			// Sendungsnummer da, aber noch kein Verlauf abgerufen.
+			$step = 1;
+		} else {
+			$step = (int) $order_step;
+		}
+
 		$steps  = array(
 			__( 'Bestellt', 'lindenweg16' ),
 			__( 'Versendet', 'lindenweg16' ),
@@ -640,7 +767,7 @@ class DhlTracking {
 		<section class="lw16-tracking-page">
 			<h2><?php esc_html_e( 'Wo ist mein Paket?', 'lindenweg16' ); ?></h2>
 
-			<?php if ( $row->voraussichtliches_lieferdatum && $step < 4 ) : ?>
+			<?php if ( $row && $row->voraussichtliches_lieferdatum && $step < 4 ) : ?>
 				<div class="lw16-tp-eta">
 					<span class="lw16-tp-eta-label"><?php esc_html_e( 'Voraussichtliche Lieferung', 'lindenweg16' ); ?></span>
 					<span class="lw16-tp-eta-date"><?php echo esc_html( date_i18n( 'l, d. F Y', strtotime( $row->voraussichtliches_lieferdatum ) ) ); ?></span>
@@ -663,9 +790,11 @@ class DhlTracking {
 				<?php endforeach; ?>
 			</div>
 
+			<?php if ( $row && $row->tracking_nummer ) : ?>
 			<p class="lw16-tp-nr">
-				<?php echo esc_html( sprintf( __( 'Sendungsnummer: %s', 'lindenweg16' ), $row->tracking_nummer ) ); ?>
+				<?php echo esc_html( sprintf( /* translators: %s: Sendungsnummer. */ __( 'Sendungsnummer: %s', 'lindenweg16' ), $row->tracking_nummer ) ); ?>
 			</p>
+			<?php endif; ?>
 
 			<?php if ( ! empty( $events ) ) : ?>
 			<div class="lw16-tp-details">
@@ -687,8 +816,10 @@ class DhlTracking {
 					<?php endforeach; ?>
 				</div>
 			</div>
-			<?php elseif ( ! $events ) : ?>
+			<?php elseif ( $row ) : ?>
 				<p class="lw16-tp-pending"><?php esc_html_e( 'Dein Paket wurde soeben versendet. Die Sendungsdetails werden in Kürze aktualisiert.', 'lindenweg16' ); ?></p>
+			<?php else : ?>
+				<p class="lw16-tp-pending"><?php esc_html_e( 'Sobald dein Paket unterwegs ist, erscheint hier die Sendungsnummer und der Verlauf.', 'lindenweg16' ); ?></p>
 			<?php endif; ?>
 		</section>
 		<?php

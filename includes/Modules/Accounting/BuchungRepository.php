@@ -134,6 +134,59 @@ class BuchungRepository {
 	}
 
 	/**
+	 * Zahlungsgebühr einer Bestellung als Ausgabe buchen.
+	 *
+	 * Bewusst mit fester Referenz auf die Bestellung: Ein zweiter Aufruf für
+	 * dieselbe Bestellung findet die vorhandene Buchung und legt keine neue
+	 * an. Der Gebührenabruf läuft bei jedem Statuswechsel – ohne diese Sperre
+	 * stünde die Gebühr mehrfach in der EÜR.
+	 *
+	 * @param \WC_Order $order  Bestellung.
+	 * @param float     $amount Gebührenbetrag.
+	 * @param string    $source Fundstelle, für die Nachvollziehbarkeit.
+	 * @return int Buchungs-ID, 0 wenn bereits gebucht.
+	 */
+	public static function create_from_order_fee( $order, $amount, $source = '' ) {
+		$amount = round( abs( (float) $amount ), 2 );
+
+		if ( $amount <= 0 ) {
+			return 0;
+		}
+
+		$existing = self::get_by_referenz( 'gebuehr', (int) $order->get_id() );
+
+		if ( $existing ) {
+			return 0;
+		}
+
+		$datum = $order->get_date_created()
+			? $order->get_date_created()->format( 'Y-m-d' )
+			: gmdate( 'Y-m-d' );
+
+		$beschreibung = sprintf(
+			/* translators: %s: Bestellnummer. */
+			__( 'Zahlungsgebühr Bestellung #%s', 'lindenweg16' ),
+			$order->get_order_number()
+		);
+
+		if ( $source ) {
+			$beschreibung .= ' – ' . $source;
+		}
+
+		return self::create(
+			array(
+				'buchungsdatum' => $datum,
+				'typ'           => 'ausgabe',
+				'betrag'        => $amount,
+				'kategorie'     => __( 'Nebenkosten des Geldverkehrs', 'lindenweg16' ),
+				'beschreibung'  => $beschreibung,
+				'referenz_typ'  => 'gebuehr',
+				'referenz_id'   => (int) $order->get_id(),
+			)
+		);
+	}
+
+	/**
 	 * Storno-Buchung erzeugen (Gegenbuchung).
 	 *
 	 * @param int    $original_id Ursprüngliche Buchungs-ID.

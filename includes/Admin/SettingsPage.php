@@ -48,6 +48,7 @@ class SettingsPage {
 			),
 			__( 'Buchhaltung', 'lindenweg16' )    => array(
 				'kleinunternehmer'      => array( __( 'Kleinunternehmer §19 UStG', 'lindenweg16' ), 'checkbox' ),
+				'gebuehren_automatisch' => array( __( 'Zahlungsgebühren aus Bestellhinweisen übernehmen', 'lindenweg16' ), 'checkbox' ),
 				'steuersatz_ruecklage'  => array( __( 'Geschätzter Steuersatz für Rücklage (%)', 'lindenweg16' ), 'number' ),
 				'rechnungsnummer_modus' => array( __( 'Rechnungsnummern-Modus (jahr/durchlaufend)', 'lindenweg16' ), 'text' ),
 			),
