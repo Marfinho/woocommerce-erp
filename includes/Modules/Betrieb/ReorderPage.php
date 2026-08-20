@@ -15,6 +15,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Core\Settings;
 
 /**
  * Route, Formular und Entwurfserzeugung.
@@ -239,7 +240,7 @@ class ReorderPage {
 		$contact  = $result['contact'];
 		$profile  = ContactRepository::profile( (int) $contact['id'] );
 		$last     = $this->last_order_items( (int) $contact['id'] );
-		$articles = ArticleRepository::all( true );
+		$articles = self::catalog();
 
 		// Vorbelegung: bevorzugte Artikel aus dem Profil, sonst die letzte
 		// Bestellung.
@@ -268,33 +269,43 @@ class ReorderPage {
 		echo '<table class="lw16-reorder__table"><tbody>';
 
 		foreach ( $articles as $article ) {
-			$id = (int) $article['id'];
+			$id  = (int) $article['id'];
+			$qty = isset( $preset[ $id ] ) ? (int) $preset[ $id ] : 0;
 
-			echo '<tr>';
+			printf( '<tr class="lw16-reorder__row%s">', $qty > 0 ? ' is-preset' : '' );
+
 			echo '<td class="lw16-reorder__thumb">';
-			if ( $article['wc_product_id'] && function_exists( 'wc_get_product' ) ) {
-				$product = wc_get_product( (int) $article['wc_product_id'] );
-				if ( $product ) {
-					echo wp_kses_post( $product->get_image( 'thumbnail' ) );
-				}
-			}
+			echo wp_kses_post( $article['image'] );
 			echo '</td>';
 
 			printf(
-				'<td><strong>%s</strong><br /><small>%s</small></td>',
+				'<td class="lw16-reorder__name"><strong>%s</strong><br /><small>%s%s</small></td>',
 				esc_html( $article['name'] ),
-				esc_html( $article['sku'] )
+				esc_html( $article['sku'] ),
+				$article['price_gross'] > 0
+					? ' · ' . esc_html( number_format_i18n( (float) $article['price_gross'], 2 ) ) . ' €'
+					: ''
 			);
 
 			printf(
-				'<td class="lw16-reorder__qty"><input type="number" inputmode="numeric" min="0" step="1" name="menge[%d]" value="%s" /></td>',
+				'<td class="lw16-reorder__qty"><label class="screen-reader-text" for="lw16-menge-%1$d">%4$s</label>'
+				. '<input type="number" inputmode="numeric" min="0" step="1" id="lw16-menge-%1$d" name="menge[%1$d]" value="%2$s"%3$s /></td>',
 				$id,
-				esc_attr( isset( $preset[ $id ] ) ? (string) (int) $preset[ $id ] : '0' )
+				esc_attr( (string) $qty ),
+				$qty > 0 ? ' data-preset="1"' : '',
+				esc_attr( $article['name'] )
 			);
 			echo '</tr>';
 		}
 
 		echo '</tbody></table>';
+
+		if ( $preset ) {
+			printf(
+				'<p class="lw16-reorder__hint">%s</p>',
+				esc_html__( 'Die vorausgefüllten Mengen entsprechen Ihrer letzten Bestellung. Ändern Sie sie einfach – alles auf 0 lassen, was Sie diesmal nicht brauchen.', 'lindenweg16' )
+			);
+		}
 
 		// Live-Anzeige der eigenen Konditionen: Bestellwert, erreichte Stufe
 		// und was bis zur nächsten fehlt.
@@ -318,6 +329,122 @@ class ReorderPage {
 			ob_get_clean(),
 			$this->staffel_config( $contact, $articles )
 		);
+	}
+
+	/**
+	 * Bestellbarer Katalog, in der Reihenfolge des Shops.
+	 *
+	 * Führend ist WooCommerce: Was dort veröffentlicht und im Katalog
+	 * sichtbar ist, steht auch hier – sonst müsste jede neue Farbe oder
+	 * jedes neue Modul an zwei Stellen freigeschaltet werden.
+	 *
+	 * Bestellbar ist ein Produkt aber nur, wenn dahinter ein verkäuflicher
+	 * Betriebsartikel steht. Ohne ihn gäbe es keinen Preis, keine
+	 * Rabattstufe und keinen Lagerabgang – die Anfrage wäre nicht
+	 * ausführbar. Solche Produkte werden übergangen und im Backend gemeldet,
+	 * damit die Lücke nicht unbemerkt bleibt.
+	 *
+	 * @return array Zeilen mit id, sku, name, price_gross, discountable, image.
+	 */
+	public static function catalog() {
+		$articles = array();
+		foreach ( ArticleRepository::all( true ) as $article ) {
+			$articles[ (int) $article['id'] ] = $article;
+		}
+
+		// Ohne WooCommerce bleibt der Artikelstamm die einzige Quelle.
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return array_values( array_map( array( __CLASS__, 'catalog_row' ), $articles ) );
+		}
+
+		$products = wc_get_products(
+			array(
+				'status'         => 'publish',
+				'catalog_visibility' => 'visible',
+				'limit'          => -1,
+				'orderby'        => 'menu_order',
+				'order'          => 'ASC',
+				'return'         => 'objects',
+			)
+		);
+
+		$rows = array();
+		$seen = array();
+
+		foreach ( (array) $products as $product ) {
+			$article_id = StockOwnership::article_for_product( (int) $product->get_id() );
+
+			if ( ! $article_id || ! isset( $articles[ $article_id ] ) || isset( $seen[ $article_id ] ) ) {
+				continue;
+			}
+
+			$seen[ $article_id ] = true;
+			$rows[]              = self::catalog_row( $articles[ $article_id ], $product );
+		}
+
+		// Verkäufliche Artikel ohne Shop-Produkt kämen sonst gar nicht vor.
+		foreach ( $articles as $id => $article ) {
+			if ( ! isset( $seen[ $id ] ) ) {
+				$rows[] = self::catalog_row( $article );
+			}
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Eine Katalogzeile aufbereiten.
+	 *
+	 * @param array       $article Betriebsartikel.
+	 * @param object|null $product WooCommerce-Produkt, falls vorhanden.
+	 * @return array
+	 */
+	protected static function catalog_row( array $article, $product = null ) {
+		if ( null === $product && ! empty( $article['wc_product_id'] ) && function_exists( 'wc_get_product' ) ) {
+			$product = wc_get_product( (int) $article['wc_product_id'] );
+		}
+
+		return array(
+			'id'           => (int) $article['id'],
+			'sku'          => (string) $article['sku'],
+			'name'         => $product ? $product->get_name() : (string) $article['name'],
+			'price_gross'  => (float) $article['price_gross'],
+			'discountable' => (int) $article['discountable'],
+			'image'        => $product ? $product->get_image( 'thumbnail' ) : '',
+		);
+	}
+
+	/**
+	 * Verkäufliche Shop-Produkte ohne Betriebsartikel.
+	 *
+	 * Wird im Backend gemeldet: Sie fehlen dem Händler auf der
+	 * Nachbestellseite, und das soll auffallen.
+	 *
+	 * @return array Produkt-ID => Name.
+	 */
+	public static function unlinked_products() {
+		if ( ! function_exists( 'wc_get_products' ) ) {
+			return array();
+		}
+
+		$products = wc_get_products(
+			array(
+				'status'             => 'publish',
+				'catalog_visibility' => 'visible',
+				'limit'              => -1,
+				'return'             => 'objects',
+			)
+		);
+
+		$missing = array();
+
+		foreach ( (array) $products as $product ) {
+			if ( ! StockOwnership::article_for_product( (int) $product->get_id() ) ) {
+				$missing[ (int) $product->get_id() ] = $product->get_name();
+			}
+		}
+
+		return $missing;
 	}
 
 	/**
@@ -425,11 +552,74 @@ class ReorderPage {
 	/**
 	 * Seitengerüst.
 	 *
+	 * Zwei Darstellungen: eingebettet in das Website-Design, damit der
+	 * Händler die vertraute Seite mit Logo und Navigation sieht – oder
+	 * schlicht und eigenständig, falls das Theme mit dem Formular nicht
+	 * zurechtkommt. Umschaltbar in den Einstellungen.
+	 *
 	 * @param string $title   Titel.
 	 * @param string $body    Inhalt (bereits escapt).
 	 * @param array  $staffel Konfiguration der Live-Anzeige, leer = keine.
 	 */
 	protected function layout( $title, $body, array $staffel = array() ) {
+		if ( 'schlicht' !== Settings::get( 'betrieb_reorder_layout' ) && ! is_admin() ) {
+			$this->layout_theme( $title, $body, $staffel );
+			return;
+		}
+
+		$this->layout_plain( $title, $body, $staffel );
+	}
+
+	/**
+	 * Eingebettet in das Theme der Website.
+	 *
+	 * @param string $title   Titel.
+	 * @param string $body    Inhalt.
+	 * @param array  $staffel Konfiguration.
+	 */
+	protected function layout_theme( $title, $body, array $staffel ) {
+		global $wp_query;
+
+		// Die Route trifft keinen Beitrag, WordPress haelt sie deshalb fuer
+		// einen 404. Ohne diese Korrektur liefert das Theme die
+		// Fehlerseite samt Status 404 – der Haendler saehe „Seite nicht
+		// gefunden" mit einem Bestellformular darunter.
+		if ( $wp_query instanceof \WP_Query ) {
+			$wp_query->is_404     = false;
+			$wp_query->is_home    = false;
+			$wp_query->is_archive = false;
+		}
+		status_header( 200 );
+
+		add_filter( 'pre_get_document_title', static function () use ( $title ) {
+			return $title;
+		} );
+
+		add_filter( 'body_class', static function ( $classes ) {
+			$classes[] = 'lw16-reorder-body';
+			return $classes;
+		} );
+
+		$this->enqueue_assets( $staffel );
+
+		get_header();
+
+		echo '<div class="lw16-reorder-page"><div class="lw16-reorder">';
+		printf( '<h1 class="lw16-reorder__title">%s</h1>', esc_html( $title ) );
+		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt.
+		echo '</div></div>';
+
+		get_footer();
+	}
+
+	/**
+	 * Eigenständige, schlichte Seite mit Logo.
+	 *
+	 * @param string $title   Titel.
+	 * @param string $body    Inhalt.
+	 * @param array  $staffel Konfiguration.
+	 */
+	protected function layout_plain( $title, $body, array $staffel ) {
 		?><!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -440,7 +630,10 @@ class ReorderPage {
 	<link rel="stylesheet" href="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css?v=' . LW16_VERSION ); ?>" />
 </head>
 <body class="lw16-mobile lw16-reorder">
-	<header class="lw16-mobile__head"><h1><?php echo esc_html( $title ); ?></h1></header>
+	<header class="lw16-reorder__head">
+		<?php echo wp_kses_post( self::brand() ); ?>
+		<h1><?php echo esc_html( $title ); ?></h1>
+	</header>
 	<main class="lw16-mobile__form">
 		<?php echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt. ?>
 	</main>
@@ -451,5 +644,69 @@ class ReorderPage {
 </body>
 </html>
 		<?php
+	}
+
+	/**
+	 * Stil und Skript für die eingebettete Darstellung anmelden.
+	 *
+	 * @param array $staffel Konfiguration der Live-Anzeige.
+	 */
+	protected function enqueue_assets( array $staffel ) {
+		wp_enqueue_style(
+			'lw16-reorder',
+			LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css',
+			array(),
+			LW16_VERSION
+		);
+
+		if ( ! $staffel ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'lw16-betrieb-staffel',
+			LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js',
+			array(),
+			LW16_VERSION,
+			true
+		);
+
+		wp_add_inline_script(
+			'lw16-betrieb-staffel',
+			'window.LW16Staffel = ' . wp_json_encode( $staffel ) . ';',
+			'before'
+		);
+	}
+
+	/**
+	 * Logo oder Schriftzug der Firma.
+	 *
+	 * Genommen wird das in den Einstellungen hinterlegte CI-Logo, sonst das
+	 * Website-Logo des Themes, sonst der Firmenname als Text. Eine Seite
+	 * ohne jeden Absender wirkt beim Händler wie Phishing.
+	 *
+	 * @return string
+	 */
+	public static function brand() {
+		$logo_id = (int) Settings::get( 'ci_logo_id' );
+
+		if ( $logo_id ) {
+			$image = wp_get_attachment_image( $logo_id, 'medium', false, array( 'class' => 'lw16-reorder__logo' ) );
+			if ( $image ) {
+				return $image;
+			}
+		}
+
+		$custom = get_theme_mod( 'custom_logo' );
+		if ( $custom ) {
+			$image = wp_get_attachment_image( (int) $custom, 'medium', false, array( 'class' => 'lw16-reorder__logo' ) );
+			if ( $image ) {
+				return $image;
+			}
+		}
+
+		$name = Settings::get( 'firma_name' );
+
+		return '<span class="lw16-reorder__wordmark">' . esc_html( $name ? $name : get_bloginfo( 'name' ) ) . '</span>';
 	}
 }

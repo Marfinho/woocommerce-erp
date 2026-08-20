@@ -30,6 +30,7 @@ use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
+use Lindenweg16\Modules\Betrieb\ReorderPage;
 use Lindenweg16\Modules\Betrieb\ReorderToken;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
@@ -1179,6 +1180,26 @@ class SimplePages {
 
 		// Nachbestell-Link.
 		echo '<h3>' . esc_html__( 'Nachbestell-Link', 'lindenweg16' ) . '</h3>';
+
+		$unlinked = ReorderPage::unlinked_products();
+		if ( $unlinked ) {
+			printf(
+				'<div class="notice notice-warning inline"><p>%s</p><p>%s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %d: Anzahl Produkte. */
+						_n(
+							'%d Shop-Produkt hat keinen Betriebsartikel und fehlt dem Händler deshalb auf der Nachbestellseite:',
+							'%d Shop-Produkte haben keinen Betriebsartikel und fehlen dem Händler deshalb auf der Nachbestellseite:',
+							count( $unlinked ),
+							'lindenweg16'
+						),
+						count( $unlinked )
+					)
+				),
+				esc_html( implode( ', ', array_slice( $unlinked, 0, 8 ) ) )
+			);
+		}
 		$tokens = ReorderToken::for_contact( $contact_id );
 		$active = array_filter(
 			$tokens,

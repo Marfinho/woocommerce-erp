@@ -241,6 +241,7 @@ class SettingsPage {
 		$default   = isset( $_POST['betrieb_default_color'] ) ? sanitize_text_field( wp_unslash( $_POST['betrieb_default_color'] ) ) : 'anthrazit';
 		$hoheit    = empty( $_POST['betrieb_lagerhoheit'] ) ? 0 : 1;
 		$mail      = empty( $_POST['betrieb_wochenmail'] ) ? 0 : 1;
+		$layout    = isset( $_POST['betrieb_reorder_layout'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_reorder_layout'] ) ) : 'theme';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		Settings::update(
@@ -249,6 +250,7 @@ class SettingsPage {
 				'betrieb_default_color'   => ColorRegistry::normalize( $default ),
 				'betrieb_lagerhoheit'     => $hoheit,
 				'betrieb_wochenmail'      => $mail,
+				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
 		);
 
@@ -322,6 +324,21 @@ class SettingsPage {
 			esc_html__( 'Lagerhoheit', 'lindenweg16' ),
 			checked( StockOwnership::is_active(), true, false ),
 			esc_html__( 'Betrieb bucht die Lagerabgänge der ihm bekannten Artikel', 'lindenweg16' )
+		);
+
+		$layout = Settings::get( 'betrieb_reorder_layout' );
+
+		printf(
+			'<tr><th scope="row">%1$s</th><td><select name="betrieb_reorder_layout">'
+			. '<option value="theme"%2$s>%3$s</option>'
+			. '<option value="schlicht"%4$s>%5$s</option>'
+			. '</select><p class="description">%6$s</p></td></tr>',
+			esc_html__( 'Nachbestellseite', 'lindenweg16' ),
+			'schlicht' === $layout ? '' : ' selected',
+			esc_html__( 'In das Website-Design einbetten', 'lindenweg16' ),
+			'schlicht' === $layout ? ' selected' : '',
+			esc_html__( 'Schlichte eigene Seite mit Logo', 'lindenweg16' ),
+			esc_html__( 'Eingebettet sieht der Händler die vertraute Seite mit Kopfzeile, Logo und Navigation. Schlicht ist die Rückfallebene, falls das Theme mit dem Formular nicht zurechtkommt – dort steht das Logo aus den CI-Einstellungen.', 'lindenweg16' )
 		);
 
 		printf(
