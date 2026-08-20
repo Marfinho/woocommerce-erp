@@ -4,8 +4,7 @@
  *
  * Der Chargencode wird serverseitig nach dem Schema JJMM-SKU-lfd vergeben.
  * Er wird ins Bauteil eingeprägt und ist damit die Klammer zwischen einem
- * ausgelieferten Teil, seinem Druckprofil, seiner Filamentcharge und den
- * Zugversuchen, die es freigegeben haben.
+ * ausgelieferten Teil, seinem Druckprofil und seiner Filamentcharge.
  *
  * @package Lindenweg16
  */

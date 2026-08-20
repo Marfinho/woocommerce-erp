@@ -167,7 +167,6 @@ class Traceability {
 		$revision = $batch['article_revision_id'] ? RevisionRepository::find( (int) $batch['article_revision_id'] ) : null;
 		$lot      = $batch['filament_lot_id'] ? FilamentRepository::find( (int) $batch['filament_lot_id'] ) : null;
 		$printer  = $batch['printer_id'] ? PrinterRepository::find( (int) $batch['printer_id'] ) : null;
-		$tests    = $revision ? TensileRepository::for_revision( (int) $revision['id'] ) : array();
 
 		return array(
 			'batch'    => $batch,
@@ -175,11 +174,6 @@ class Traceability {
 			'revision' => $revision,
 			'lot'      => $lot,
 			'printer'  => $printer,
-			'tests'    => $tests,
-			'release'  => ReleaseGate::evaluate(
-				$tests,
-				$article && null !== $article['load_rating_kg'] ? (float) $article['load_rating_kg'] : 0.0
-			),
 			'orders'   => self::orders_for_batch( $batch ),
 		);
 	}

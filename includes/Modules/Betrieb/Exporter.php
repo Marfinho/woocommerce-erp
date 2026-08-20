@@ -242,29 +242,6 @@ class Exporter {
 				: __( 'Keine Filamentcharge hinterlegt.', 'lindenweg16' ),
 		);
 
-		$lines[] = array( 'h2', __( 'Zugversuche', 'lindenweg16' ) );
-		$release = $dossier['release'];
-		$lines[] = array(
-			'p',
-			sprintf(
-				/* translators: 1: Proben, 2: niedrigste Last, 3: Mittelwert. */
-				__( '%1$d Proben · niedrigste Bruchlast %2$s N · Mittelwert %3$s N', 'lindenweg16' ),
-				$release['sample_count'],
-				number_format_i18n( $release['break_load_min_n'], 0 ),
-				number_format_i18n( $release['break_load_avg_n'], 0 )
-			),
-		);
-		$lines[] = array(
-			'p',
-			sprintf(
-				/* translators: 1: kg, 2: Faktor. */
-				__( 'Entspricht %1$s kg · Sicherheitsfaktor %2$s', 'lindenweg16' ),
-				number_format_i18n( $release['kg_min'], 1 ),
-				number_format_i18n( $release['safety_factor'], 2 )
-			),
-		);
-		$lines[] = array( 'p', $release['released'] ? __( 'Freigabe erteilt.', 'lindenweg16' ) : __( 'Keine Freigabe.', 'lindenweg16' ) );
-
 		$lines[] = array( 'h2', __( 'Umfang', 'lindenweg16' ) );
 		$lines[] = array( 'p', sprintf( /* translators: %s: Stückzahl. */ __( 'Stückzahl der Charge: %s', 'lindenweg16' ), $dossier['batch']['qty'] ) );
 		$lines[] = array( 'p', sprintf( /* translators: %d: Anzahl. */ __( 'Betroffene Bestellungen: %d', 'lindenweg16' ), count( $dossier['orders'] ) ) );

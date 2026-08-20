@@ -256,27 +256,6 @@ class Schema {
 			KEY produced_on (produced_on)
 		) {$charset_collate};";
 
-		$t[] = "CREATE TABLE {$p}tensile_tests (
-			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			test_date DATE NOT NULL,
-			article_id BIGINT UNSIGNED NOT NULL,
-			article_revision_id BIGINT UNSIGNED NOT NULL,
-			filament_lot_id BIGINT UNSIGNED NULL,
-			sample_no SMALLINT UNSIGNED NOT NULL DEFAULT 1,
-			break_load_n DECIMAL(10,3) NOT NULL DEFAULT 0,
-			failure_mode VARCHAR(255) NULL,
-			tester VARCHAR(100) NULL,
-			note TEXT NULL,
-			voided_at DATETIME NULL,
-			void_reason VARCHAR(255) NULL,
-			created_at DATETIME NOT NULL,
-			updated_at DATETIME NULL,
-			created_by BIGINT UNSIGNED NULL,
-			PRIMARY KEY  (id),
-			KEY revision (article_revision_id),
-			KEY article_id (article_id)
-		) {$charset_collate};";
-
 		$t[] = "CREATE TABLE {$p}maintenance_log (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			printer_id BIGINT UNSIGNED NOT NULL,
