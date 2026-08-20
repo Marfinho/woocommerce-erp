@@ -110,6 +110,7 @@ class ReorderPage {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
 		$mengen = isset( $_POST['menge'] ) && is_array( $_POST['menge'] ) ? array_map( 'floatval', wp_unslash( $_POST['menge'] ) ) : array();
+		$farben = isset( $_POST['farbe'] ) && is_array( $_POST['farbe'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['farbe'] ) ) : array();
 		$note   = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
@@ -128,9 +129,18 @@ class ReorderPage {
 				continue;
 			}
 
+			// Farbe nur aus der bekannten Liste übernehmen. Ein Wert aus dem
+			// Formular darf nie ungeprüft in eine Lagerbewegung wandern.
+			$farbe = self::pick_color(
+				isset( $farben[ $article_id ] ) ? $farben[ $article_id ] : '',
+				ColorRegistry::all(),
+				ColorRegistry::default_color()
+			);
+
 			$items[] = array(
 				'article_id'       => (int) $article_id,
 				'qty'              => $qty,
+				'color'            => $farbe,
 				'unit_price_gross' => (float) $article['price_gross'],
 				'discountable'     => (int) $article['discountable'],
 			);
@@ -180,7 +190,12 @@ class ReorderPage {
 
 		foreach ( $items as $item ) {
 			$article  = ArticleRepository::find( (int) $item['article_id'] );
-			$zeilen[] = sprintf( '%s × %s', number_format_i18n( $item['qty'], 0 ), $article ? $article['sku'] . ' – ' . $article['name'] : '' );
+			$zeilen[] = sprintf(
+				'%s × %s%s',
+				number_format_i18n( $item['qty'], 0 ),
+				$article ? $article['sku'] . ' – ' . $article['name'] : '',
+				$this->color_suffix( $item )
+			);
 		}
 
 		// An den Betrieb: mit Wert und Rabattstufe.
@@ -244,7 +259,12 @@ class ReorderPage {
 
 		// Vorbelegung: bevorzugte Artikel aus dem Profil, sonst die letzte
 		// Bestellung.
-		$preset = $last;
+		$farben = ColorRegistry::all();
+		$mehrfarbig = count( $farben ) > 1;
+
+		$preset = $last['mengen'];
+		$preset_farben = $last['farben'];
+
 		if ( $profile && $profile['preferred_articles'] ) {
 			$preferred = json_decode( (string) $profile['preferred_articles'], true );
 			if ( is_array( $preferred ) ) {
@@ -286,6 +306,23 @@ class ReorderPage {
 					? ' · ' . esc_html( number_format_i18n( (float) $article['price_gross'], 2 ) ) . ' €'
 					: ''
 			);
+
+			if ( $mehrfarbig ) {
+				$gewaehlt = isset( $preset_farben[ $id ] ) ? $preset_farben[ $id ] : ColorRegistry::default_color();
+
+				printf( '<td class="lw16-reorder__farbe"><label class="screen-reader-text" for="lw16-farbe-%1$d">%2$s</label><select id="lw16-farbe-%1$d" name="farbe[%1$d]">', $id, esc_html__( 'Farbe', 'lindenweg16' ) );
+
+				foreach ( $farben as $slug => $label ) {
+					printf(
+						'<option value="%s"%s>%s</option>',
+						esc_attr( $slug ),
+						selected( $gewaehlt, $slug, false ),
+						esc_html( $label )
+					);
+				}
+
+				echo '</select></td>';
+			}
 
 			printf(
 				'<td class="lw16-reorder__qty"><label class="screen-reader-text" for="lw16-menge-%1$d">%4$s</label>'
@@ -510,9 +547,10 @@ class ReorderPage {
 		foreach ( $items as $item ) {
 			$article = ArticleRepository::find( (int) $item['article_id'] );
 			printf(
-				'<li>%s × %s</li>',
+				'<li>%s × %s%s</li>',
 				esc_html( number_format_i18n( $item['qty'], 0 ) ),
-				esc_html( $article ? $article['name'] : '' )
+				esc_html( $article ? $article['name'] : '' ),
+				esc_html( $this->color_suffix( $item ) )
 			);
 		}
 
@@ -526,14 +564,64 @@ class ReorderPage {
 	}
 
 	/**
-	 * Positionen der letzten bestätigten Bestellung eines Kontakts.
+	 * Eine Farbe aus dem Formular auf einen bekannten Slug abbilden.
+	 *
+	 * Reine Logik, ohne WordPress-Abfragen. Unbekannte oder leere Werte
+	 * fallen auf die Standardfarbe zurück – nie auf den Rohwert, denn der
+	 * würde sonst ungeprüft in eine Lagerbewegung wandern.
+	 *
+	 * @param string $raw     Rohwert aus dem Formular.
+	 * @param array  $known   Bekannte Farben als Slug => Anzeigename.
+	 * @param string $default Standardfarbe.
+	 * @return string
+	 */
+	public static function pick_color( $raw, array $known, $default ) {
+		$slug = ColorRegistry::normalize( (string) $raw );
+
+		if ( '' !== $slug && array_key_exists( $slug, $known ) ) {
+			return $slug;
+		}
+
+		return (string) $default;
+	}
+
+	/**
+	 * Farbzusatz für eine Positionszeile.
+	 *
+	 * Solange nur eine Farbe gepflegt ist, sagt die Angabe nichts – dann
+	 * bleibt die Zeile kurz.
+	 *
+	 * @param array $item Position.
+	 * @return string Leer oder ' (Farbe)'.
+	 */
+	protected function color_suffix( array $item ) {
+		$farben = ColorRegistry::all();
+
+		if ( count( $farben ) < 2 ) {
+			return '';
+		}
+
+		$slug = isset( $item['color'] ) ? (string) $item['color'] : '';
+
+		if ( '' === $slug || ! isset( $farben[ $slug ] ) ) {
+			return '';
+		}
+
+		return ' (' . $farben[ $slug ] . ')';
+	}
+
+	/**
+	 * Mengen und Farben der letzten bestätigten Bestellung eines Kontakts.
 	 *
 	 * @param int $contact_id Kontakt.
-	 * @return array article_id => Menge.
+	 * @return array mengen => article_id => Menge, farben => article_id => Slug.
 	 */
 	protected function last_order_items( $contact_id ) {
 		$orders = OrderOpsRepository::all( array( 'contact_id' => $contact_id, 'limit' => 20 ) );
-		$preset = array();
+		$preset = array(
+			'mengen' => array(),
+			'farben' => array(),
+		);
 
 		foreach ( $orders as $order ) {
 			if ( 'bestaetigt' !== $order['order_status'] ) {
@@ -541,7 +629,9 @@ class ReorderPage {
 			}
 
 			foreach ( OrderOpsRepository::items( (int) $order['id'] ) as $item ) {
-				$preset[ (int) $item['article_id'] ] = (float) $item['qty'];
+				$id                        = (int) $item['article_id'];
+				$preset['mengen'][ $id ]   = (float) $item['qty'];
+				$preset['farben'][ $id ]   = (string) $item['color'];
 			}
 			break;
 		}

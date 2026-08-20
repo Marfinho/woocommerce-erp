@@ -246,6 +246,14 @@ body.lw16-mobile {
 }
 .lw16-reorder__qty input[data-preset] { border-color: #1f5f52; }
 
+/* Farbspalte erscheint nur, wenn mehr als eine Farbe gepflegt ist. Sie steht
+   zwischen Name und Menge und darf der Menge keinen Platz wegnehmen. */
+.lw16-reorder__farbe { width: 116px; padding: 8px 8px 8px 0; }
+.lw16-reorder__farbe select {
+	width: 100%; max-width: 116px; padding: 11px 8px; font-size: 15px;
+	border: 1px solid #c9cec7; border-radius: 8px; background: #fff;
+}
+
 .lw16-reorder__submit {
 	width: 100%; padding: 16px; margin-top: 14px; font-size: 17px; font-weight: 600;
 	border: 0; border-radius: 10px; background: #1f5f52; color: #fff;
@@ -258,4 +266,6 @@ body.lw16-mobile {
 	.lw16-reorder__thumb img { width: 46px; height: 46px; }
 	.lw16-reorder__qty { width: 76px; }
 	.lw16-reorder__qty input { width: 70px; }
+	.lw16-reorder__farbe { width: 92px; }
+	.lw16-reorder__farbe select { max-width: 92px; padding: 10px 6px; font-size: 14px; }
 }
