@@ -302,6 +302,45 @@ class CostCalculator {
 	}
 
 	/**
+	 * Deckungsbeitrag einer einzelnen Bestellposition.
+	 *
+	 * Bewusst **ohne** Verpackung und feste Zahlungsgebühr: Die fallen einmal
+	 * je Bestellung an, nicht je Position. Wer sie auf jede Position umlegt,
+	 * rechnet eine Bestellung mit fünf Positionen künstlich schlecht. Die
+	 * variable Zahlungsgebühr bleibt drin, weil sie mit dem Preis skaliert.
+	 *
+	 * Diese Größe beantwortet die Frage vor der Zusage: Trägt sich diese
+	 * Position zu diesem Preis noch?
+	 *
+	 * @param array $cost             Ergebnis von manufacturing_cost.
+	 * @param float $unit_price_gross Stückpreis brutto nach Rabatt.
+	 * @param array $settings         Annahmen.
+	 * @return array
+	 */
+	public static function position_contribution( array $cost, $unit_price_gross, array $settings ) {
+		$brutto = (float) $unit_price_gross;
+		$netto  = $brutto / ( 1 + self::setting( $settings, 'vat_rate' ) );
+
+		$herstellkosten = (float) $cost['herstellkosten'];
+		$ausschuss      = $herstellkosten * self::setting( $settings, 'scrap_surcharge_pct' );
+		$zahlung        = $brutto * self::setting( $settings, 'payment_fee_pct' );
+		$handling       = (float) $cost['postprocessing_min'] / 60 * self::setting( $settings, 'labor_rate_per_h' );
+
+		$db1 = $netto - ( $herstellkosten + $ausschuss + $zahlung );
+
+		return array(
+			'price_gross'    => $brutto,
+			'netto_erloes'   => $netto,
+			'herstellkosten' => $herstellkosten,
+			'ausschuss'      => $ausschuss,
+			'zahlung'        => $zahlung,
+			'db1'            => $db1,
+			'handling'       => $handling,
+			'db2'            => $db1 - $handling,
+		);
+	}
+
+	/**
 	 * Annahme lesen.
 	 *
 	 * @param array  $settings Annahmen.

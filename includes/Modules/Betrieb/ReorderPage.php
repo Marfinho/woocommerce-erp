@@ -296,6 +296,10 @@ class ReorderPage {
 
 		echo '</tbody></table>';
 
+		// Live-Anzeige der eigenen Konditionen: Bestellwert, erreichte Stufe
+		// und was bis zur nächsten fehlt.
+		echo '<div id="lw16-staffel" class="lw16-staffel"></div>';
+
 		printf(
 			'<p><label>%s<br /><textarea name="note" rows="3"></textarea></label></p>',
 			esc_html__( 'Anmerkung', 'lindenweg16' )
@@ -309,7 +313,59 @@ class ReorderPage {
 			esc_html__( 'Die Anfrage ist unverbindlich. Wir prüfen Verfügbarkeit und Konditionen und bestätigen Ihnen den Auftrag.', 'lindenweg16' )
 		);
 
-		$this->layout( __( 'Nachbestellung', 'lindenweg16' ), ob_get_clean() );
+		$this->layout(
+			__( 'Nachbestellung', 'lindenweg16' ),
+			ob_get_clean(),
+			$this->staffel_config( $contact, $articles )
+		);
+	}
+
+	/**
+	 * Daten für die Live-Anzeige der Konditionen.
+	 *
+	 * Bewusst nur Preise und die für **diesen** Händler gültigen Stufen.
+	 * Keine Herstellkosten, keine Deckungsbeiträge, keine Bestände und keine
+	 * Konditionen anderer Händler – die Seite steht ohne Login im Netz.
+	 *
+	 * @param array $contact  Kontakt.
+	 * @param array $articles Verkäufliche Artikel.
+	 * @return array
+	 */
+	protected function staffel_config( array $contact, array $articles ) {
+		$list = array();
+
+		foreach ( $articles as $article ) {
+			$list[ (int) $article['id'] ] = array(
+				'sku'          => $article['sku'],
+				'price'        => (float) $article['price_gross'],
+				'discountable' => (bool) $article['discountable'],
+			);
+		}
+
+		$resolved = DiscountResolver::tiers_for_contact( (int) $contact['id'], gmdate( 'Y-m-d' ) );
+		$tiers    = array();
+
+		foreach ( $resolved['tiers'] as $tier ) {
+			$tiers[] = array(
+				'name' => isset( $tier['tier_name'] ) ? $tier['tier_name'] : __( 'Ihre Kondition', 'lindenweg16' ),
+				'min'  => (float) $tier['min_order_value'],
+				'pct'  => (float) $tier['discount_pct'],
+			);
+		}
+
+		return array(
+			'mode'     => 'public',
+			'articles' => $list,
+			'tiers'    => $tiers,
+			'i18n'     => array(
+				'orderValue'      => __( 'Bestellwert', 'lindenweg16' ),
+				'tier'            => __( 'Ihre Rabattstufe', 'lindenweg16' ),
+				'noTier'          => __( 'noch keine erreicht', 'lindenweg16' ),
+				'afterDiscount'   => __( 'Nach Abzug', 'lindenweg16' ),
+				'notDiscountable' => __( 'Davon %s nicht rabattfähig.', 'lindenweg16' ),
+				'nextTier'        => __( 'Noch %1$s bis %2$s mit %3$s – Sie sparen dann %4$s.', 'lindenweg16' ),
+			),
+		);
 	}
 
 	/**
@@ -369,10 +425,11 @@ class ReorderPage {
 	/**
 	 * Seitengerüst.
 	 *
-	 * @param string $title Titel.
-	 * @param string $body  Inhalt (bereits escapt).
+	 * @param string $title   Titel.
+	 * @param string $body    Inhalt (bereits escapt).
+	 * @param array  $staffel Konfiguration der Live-Anzeige, leer = keine.
 	 */
-	protected function layout( $title, $body ) {
+	protected function layout( $title, $body, array $staffel = array() ) {
 		?><!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
@@ -387,6 +444,10 @@ class ReorderPage {
 	<main class="lw16-mobile__form">
 		<?php echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt. ?>
 	</main>
+	<?php if ( $staffel ) : ?>
+	<script>window.LW16Staffel = <?php echo wp_json_encode( $staffel ); ?>;</script>
+	<script src="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js?v=' . LW16_VERSION ); ?>"></script>
+	<?php endif; ?>
 </body>
 </html>
 		<?php
