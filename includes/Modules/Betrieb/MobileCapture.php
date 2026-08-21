@@ -14,6 +14,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Core\Roles;
 
 /**
@@ -73,6 +75,34 @@ class MobileCapture {
 	}
 
 	/**
+	 * Version und Stand der ausgelieferten Dateien.
+	 *
+	 * Beantwortet die eine Frage, die man sich beim Suchen nach einem
+	 * Fehler zuerst stellt: Sieht das Geraet ueberhaupt die neue Fassung,
+	 * oder haengt noch die alte im Zwischenspeicher?
+	 *
+	 * @return string
+	 */
+	protected static function build_label() {
+		$stamp = Assets::version( 'assets/js/betrieb-mobile.js' );
+
+		if ( ctype_digit( (string) $stamp ) ) {
+			return sprintf(
+				/* translators: 1: Plugin-Version, 2: Datum der Skriptdatei. */
+				__( 'Version %1$s · Stand %2$s', 'lindenweg16' ),
+				LW16_VERSION,
+				gmdate( 'd.m.Y H:i', (int) $stamp )
+			);
+		}
+
+		return sprintf(
+			/* translators: %s: Plugin-Version. */
+			__( 'Version %s', 'lindenweg16' ),
+			LW16_VERSION
+		);
+	}
+
+	/**
 	 * Erfassungsseite ausgeben.
 	 */
 	protected function render() {
@@ -88,7 +118,7 @@ class MobileCapture {
 	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 	<meta name="robots" content="noindex, nofollow" />
 	<title><?php esc_html_e( 'Erfassung · Betrieb', 'lindenweg16' ); ?></title>
-	<link rel="stylesheet" href="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css?v=' . LW16_VERSION ); ?>" />
+	<link rel="stylesheet" href="<?php echo esc_url( Assets::url( 'assets/css/betrieb-mobile.css' ) ); ?>" />
 </head>
 <body class="lw16-mobile">
 	<header class="lw16-mobile__head">
@@ -244,6 +274,8 @@ class MobileCapture {
 			<button type="submit" class="lw16-submit"><?php esc_html_e( 'Buchen', 'lindenweg16' ); ?></button>
 		</form>
 
+		<p class="lw16-build"><?php echo esc_html( self::build_label() ); ?></p>
+
 		<section class="lw16-queue" id="lw16-queue" hidden>
 			<h2><?php esc_html_e( 'Wartet auf Verbindung', 'lindenweg16' ); ?></h2>
 			<ul id="lw16-queue-list"></ul>
@@ -301,7 +333,7 @@ class MobileCapture {
 			);
 		?>;
 	</script>
-	<script src="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/js/betrieb-mobile.js?v=' . LW16_VERSION ); ?>"></script>
+	<script src="<?php echo esc_url( Assets::url( 'assets/js/betrieb-mobile.js' ) ); ?>"></script>
 </body>
 </html>
 		<?php

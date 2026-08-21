@@ -135,7 +135,19 @@ if ( ! function_exists( 'home_url' ) ) {
 
 $lw16_root = dirname( __DIR__ );
 
+// Konstanten, die das Plugin sonst in seiner Hauptdatei setzt.
+if ( ! defined( 'LW16_PLUGIN_DIR' ) ) {
+	define( 'LW16_PLUGIN_DIR', $lw16_root . '/' );
+}
+if ( ! defined( 'LW16_PLUGIN_URL' ) ) {
+	define( 'LW16_PLUGIN_URL', 'https://lindenweg16.test/wp-content/plugins/lindenweg16/' );
+}
+if ( ! defined( 'LW16_VERSION' ) ) {
+	define( 'LW16_VERSION', '0.10.0' );
+}
+
 // Kernbausteine.
+require $lw16_root . '/includes/Core/Assets.php';
 require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';

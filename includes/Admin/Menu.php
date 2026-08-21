@@ -9,6 +9,8 @@ namespace Lindenweg16\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 /**
  * Registriert das Hauptmenü und die Untermenüseiten in wp-admin.
  */
@@ -84,8 +86,8 @@ class Menu {
 		if ( false === strpos( (string) $hook, 'lw16' ) && false === strpos( (string) $hook, LW16_MENU_SLUG ) ) {
 			return;
 		}
-		wp_enqueue_style( 'lw16-admin', LW16_PLUGIN_URL . 'assets/css/admin.css', array(), LW16_VERSION );
-		wp_enqueue_script( 'lw16-admin', LW16_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), LW16_VERSION, true );
+		wp_enqueue_style( 'lw16-admin', LW16_PLUGIN_URL . 'assets/css/admin.css', array(), Assets::version( 'assets/css/admin.css' ) );
+		wp_enqueue_script( 'lw16-admin', LW16_PLUGIN_URL . 'assets/js/admin.js', array( 'jquery' ), Assets::version( 'assets/js/admin.js' ), true );
 		wp_localize_script(
 			'lw16-admin',
 			'LW16Admin',

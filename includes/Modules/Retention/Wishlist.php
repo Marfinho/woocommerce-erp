@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Retention;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Modules\Inventory\Repository;
 
 /**
@@ -97,8 +99,8 @@ class Wishlist {
 		if ( ! ( is_shop() || is_product() || is_product_category() || is_product_tag() || is_account_page() || is_woocommerce() ) ) {
 			return;
 		}
-		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
-		wp_enqueue_script( 'lw16-wishlist', LW16_PLUGIN_URL . 'assets/js/wishlist.js', array( 'jquery' ), LW16_VERSION, true );
+		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), Assets::version( 'assets/css/frontend.css' ) );
+		wp_enqueue_script( 'lw16-wishlist', LW16_PLUGIN_URL . 'assets/js/wishlist.js', array( 'jquery' ), Assets::version( 'assets/js/wishlist.js' ), true );
 		wp_localize_script(
 			'lw16-wishlist',
 			'LW16Wishlist',

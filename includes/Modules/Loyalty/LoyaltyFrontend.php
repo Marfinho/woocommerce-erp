@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Loyalty;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Calc;
 
@@ -180,8 +182,8 @@ class LoyaltyFrontend {
 		if ( ! is_checkout() && ! is_account_page() ) {
 			return;
 		}
-		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
-		wp_enqueue_script( 'lw16-loyalty', LW16_PLUGIN_URL . 'assets/js/loyalty.js', array( 'jquery' ), LW16_VERSION, true );
+		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), Assets::version( 'assets/css/frontend.css' ) );
+		wp_enqueue_script( 'lw16-loyalty', LW16_PLUGIN_URL . 'assets/js/loyalty.js', array( 'jquery' ), Assets::version( 'assets/js/loyalty.js' ), true );
 		$credit_balance = 0;
 		if ( is_user_logged_in() ) {
 			$credit_balance = LoyaltyRepository::get_credit( get_current_user_id() );

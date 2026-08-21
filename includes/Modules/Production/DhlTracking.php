@@ -10,6 +10,8 @@ namespace Lindenweg16\Modules\Production;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
 
@@ -53,7 +55,7 @@ class DhlTracking {
 
 	public function enqueue_frontend_assets() {
 		if ( is_account_page() || is_order_received_page() || $this->is_view_shipment_page() ) {
-			wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), LW16_VERSION );
+			wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), Assets::version( 'assets/css/frontend.css' ) );
 		}
 	}
 

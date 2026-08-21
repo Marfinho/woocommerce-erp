@@ -137,6 +137,52 @@ class FrontendAssetsTest extends TestCase {
 	}
 
 	/**
+	 * Kein Stil und kein Skript hängt an der Plugin-Version.
+	 *
+	 * LW16_VERSION stand über viele Korrekturen hinweg unverändert auf
+	 * derselben Nummer. Browser holen eine Datei aber nur neu, wenn sich
+	 * ihre Adresse ändert – korrigierte Dateien lagen auf dem Server und
+	 * kamen auf dem Gerät nie an. Der Stempel muss deshalb von der Datei
+	 * selbst kommen.
+	 */
+	public function test_assets_haengen_nicht_an_der_pluginversion() {
+		$root    = dirname( __DIR__ );
+		$treffer = shell_exec(
+			'grep -rn "assets/\(js\|css\)" ' . escapeshellarg( $root . '/includes' )
+			. ' 2>/dev/null | grep "LW16_VERSION"'
+		);
+
+		$zeilen = array_filter( array_map( 'trim', explode( "\n", (string) $treffer ) ) );
+
+		$this->assertSame(
+			array(),
+			array_values( $zeilen ),
+			"Diese Stellen stempeln Assets mit der Plugin-Version statt mit der Dateizeit:\n" . implode( "\n", $zeilen )
+		);
+	}
+
+	/**
+	 * Der Versionsstempel kommt aus der Änderungszeit der Datei.
+	 */
+	public function test_stempel_ist_die_dateizeit() {
+		$stempel = \Lindenweg16\Core\Assets::version( 'assets/js/betrieb-mobile.js' );
+
+		$this->assertTrue( ctype_digit( (string) $stempel ), 'Der Stempel ist keine Dateizeit.' );
+		$this->assertSame(
+			(string) filemtime( dirname( __DIR__ ) . '/assets/js/betrieb-mobile.js' ),
+			(string) $stempel
+		);
+	}
+
+	/**
+	 * Eine fehlende Datei fällt auf die Plugin-Version zurück, statt zu
+	 * einem leeren Stempel zu führen.
+	 */
+	public function test_fehlende_datei_faellt_zurueck() {
+		$this->assertSame( LW16_VERSION, \Lindenweg16\Core\Assets::version( 'assets/js/gibtesnicht.js' ) );
+	}
+
+	/**
 	 * Jede Stildatei schützt das hidden-Attribut.
 	 *
 	 * Eine Klassenregel mit eigener display-Angabe schlägt sonst das

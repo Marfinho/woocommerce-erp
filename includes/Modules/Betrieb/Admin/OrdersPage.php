@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
@@ -54,7 +55,7 @@ class OrdersPage {
 			'lw16-betrieb-staffel',
 			LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js',
 			array(),
-			LW16_VERSION,
+			Assets::version( 'assets/js/betrieb-staffel.js' ),
 			true
 		);
 

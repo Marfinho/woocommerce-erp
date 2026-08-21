@@ -13,6 +13,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
@@ -717,7 +719,7 @@ class ReorderPage {
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<meta name="robots" content="noindex, nofollow, noarchive" />
 	<title><?php echo esc_html( $title ); ?></title>
-	<link rel="stylesheet" href="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css?v=' . LW16_VERSION ); ?>" />
+	<link rel="stylesheet" href="<?php echo esc_url( Assets::url( 'assets/css/betrieb-mobile.css' ) ); ?>" />
 </head>
 <body class="lw16-mobile lw16-reorder">
 	<header class="lw16-reorder__head">
@@ -729,7 +731,7 @@ class ReorderPage {
 	</main>
 	<?php if ( $staffel ) : ?>
 	<script>window.LW16Staffel = <?php echo wp_json_encode( $staffel ); ?>;</script>
-	<script src="<?php echo esc_url( LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js?v=' . LW16_VERSION ); ?>"></script>
+	<script src="<?php echo esc_url( Assets::url( 'assets/js/betrieb-staffel.js' ) ); ?>"></script>
 	<?php endif; ?>
 </body>
 </html>
@@ -746,7 +748,7 @@ class ReorderPage {
 			'lw16-reorder',
 			LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css',
 			array(),
-			LW16_VERSION
+			Assets::version( 'assets/css/betrieb-mobile.css' )
 		);
 
 		if ( ! $staffel ) {
@@ -757,7 +759,7 @@ class ReorderPage {
 			'lw16-betrieb-staffel',
 			LW16_PLUGIN_URL . 'assets/js/betrieb-staffel.js',
 			array(),
-			LW16_VERSION,
+			Assets::version( 'assets/js/betrieb-staffel.js' ),
 			true
 		);
 

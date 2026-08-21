@@ -281,3 +281,7 @@ body.lw16-mobile {
 	.lw16-reorder__farbe { width: 92px; }
 	.lw16-reorder__farbe select { max-width: 92px; padding: 10px 6px; font-size: 14px; }
 }
+
+/* Versionszeile: klein, aber auffindbar – sie beantwortet die Frage,
+   ob ein Update tatsaechlich auf dem Geraet angekommen ist. */
+.lw16-build { margin: 4px 16px 12px; font-size: 11px; color: #8a959a; }

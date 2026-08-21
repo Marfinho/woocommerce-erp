@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
@@ -57,7 +58,7 @@ class ArticlesPage {
 			'lw16-betrieb-productpicker',
 			LW16_PLUGIN_URL . 'assets/js/betrieb-productpicker.js',
 			array(),
-			LW16_VERSION,
+			Assets::version( 'assets/js/betrieb-productpicker.js' ),
 			true
 		);
 	}

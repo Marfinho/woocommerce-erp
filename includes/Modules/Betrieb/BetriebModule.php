@@ -12,6 +12,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
+
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
 use Lindenweg16\Modules\Betrieb\Admin\DashboardPage;
@@ -135,8 +137,8 @@ class BetriebModule {
 		if ( false === strpos( (string) $hook, self::MENU_SLUG ) ) {
 			return;
 		}
-		wp_enqueue_style( 'lw16-admin', LW16_PLUGIN_URL . 'assets/css/admin.css', array(), LW16_VERSION );
-		wp_enqueue_style( 'lw16-betrieb', LW16_PLUGIN_URL . 'assets/css/betrieb.css', array( 'lw16-admin' ), LW16_VERSION );
+		wp_enqueue_style( 'lw16-admin', LW16_PLUGIN_URL . 'assets/css/admin.css', array(), Assets::version( 'assets/css/admin.css' ) );
+		wp_enqueue_style( 'lw16-betrieb', LW16_PLUGIN_URL . 'assets/css/betrieb.css', array( 'lw16-admin' ), Assets::version( 'assets/css/betrieb.css' ) );
 	}
 
 	/**
