@@ -280,12 +280,10 @@
 			return 'noCameraApi';
 		}
 
-		// Der eingebaute Code-Leser. Chromium hat ihn, WebKit nicht - und
-		// auf iPhone und iPad ist jeder Browser WebKit.
-		if ( ! ( 'BarcodeDetector' in window ) ) {
-			return 'noDecoder';
-		}
-
+		// Ein fehlender BarcodeDetector ist kein Hindernis mehr: Fuer
+		// WebKit - also iPhone und iPad - wird beim ersten Scan ein
+		// Decoder nachgeladen. Nur QR-Codes, aber die eigenen Etiketten
+		// sind QR.
 		return null;
 	}
 
@@ -307,6 +305,84 @@
 		document.getElementById( 'lw16-camera' ).hidden = true;
 	}
 
+	/*
+	 * Den Decoder nachladen, den dieser Browser nicht mitbringt.
+	 *
+	 * Nur fuer WebKit - also iPhone und iPad. Auf Android und am Rechner
+	 * bleibt die Datei ungeladen, dort erledigt es der eingebaute
+	 * BarcodeDetector.
+	 */
+	var fallbackLaden = null;
+
+	function ladeFallback() {
+		if ( fallbackLaden ) {
+			return fallbackLaden;
+		}
+
+		fallbackLaden = new Promise( function ( resolve, reject ) {
+			if ( window.jsQR ) {
+				resolve();
+				return;
+			}
+
+			var script = document.createElement( 'script' );
+			script.src = config.decoderUrl;
+			script.onload = function () {
+				return window.jsQR ? resolve() : reject();
+			};
+			script.onerror = reject;
+			document.head.appendChild( script );
+		} );
+
+		return fallbackLaden;
+	}
+
+	/*
+	 * Ein Leser mit immer derselben Schnittstelle: detect(video) liefert
+	 * eine Liste gefundener Codes. Welcher Weg dahinter steckt, muss der
+	 * Rest des Skripts nicht wissen.
+	 */
+	function ersatzLeser() {
+		var canvas = document.createElement( 'canvas' );
+		var ctx = canvas.getContext( '2d', { willReadFrequently: true } );
+
+		return {
+			detect: function ( video ) {
+				var w = video.videoWidth;
+				var h = video.videoHeight;
+
+				if ( ! w || ! h ) {
+					return Promise.resolve( [] );
+				}
+
+				// Auf Breite 480 herunterrechnen: genug fuer einen Code aus
+				// Armlaenge, und schonend genug fuer ein Telefon, das den
+				// Decoder in JavaScript ausfuehrt.
+				var scale = Math.min( 1, 480 / w );
+				canvas.width = Math.round( w * scale );
+				canvas.height = Math.round( h * scale );
+				ctx.drawImage( video, 0, 0, canvas.width, canvas.height );
+
+				var bild = ctx.getImageData( 0, 0, canvas.width, canvas.height );
+				var treffer = window.jsQR( bild.data, bild.width, bild.height, {
+					inversionAttempts: 'dontInvert'
+				} );
+
+				return Promise.resolve( treffer ? [ { rawValue: treffer.data } ] : [] );
+			}
+		};
+	}
+
+	function leserHolen() {
+		if ( 'BarcodeDetector' in window ) {
+			return Promise.resolve( new window.BarcodeDetector( {
+				formats: [ 'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'itf' ]
+			} ) );
+		}
+
+		return ladeFallback().then( ersatzLeser );
+	}
+
 	function openCamera( onCode ) {
 		var problem = scannerProblem();
 
@@ -318,20 +394,32 @@
 
 		var box = document.getElementById( 'lw16-camera' );
 		var video = document.getElementById( 'lw16-video' );
-		var detector = new window.BarcodeDetector( {
-			formats: [ 'qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'itf' ]
-		} );
 
 		document.getElementById( 'lw16-camera-hint' ).textContent = config.i18n.scanHint;
 		box.hidden = false;
 
-		navigator.mediaDevices.getUserMedia( { video: { facingMode: 'environment' } } ).then( function ( stream ) {
+		var leser = null;
+		var laeuft = false;
+
+		leserHolen().then( function ( geholt ) {
+			leser = geholt;
+			return navigator.mediaDevices.getUserMedia( { video: { facingMode: 'environment' } } );
+		} ).then( function ( stream ) {
 			scanStream = stream;
 			video.srcObject = stream;
 			return video.play();
 		} ).then( function () {
+			// Der nachgeladene Decoder rechnet in JavaScript und braucht
+			// laenger als ein Bildabstand. Ohne diese Sperre stapeln sich
+			// die Auswertungen und das Telefon wird warm und langsam.
 			scanLoop = window.setInterval( function () {
-				detector.detect( video ).then( function ( codes ) {
+				if ( laeuft || ! leser ) {
+					return;
+				}
+				laeuft = true;
+
+				leser.detect( video ).then( function ( codes ) {
+					laeuft = false;
 					if ( ! codes.length ) {
 						return;
 					}
@@ -339,12 +427,17 @@
 					onCode( codes[ 0 ].rawValue );
 				} ).catch( function () {
 					/* Einzelne Bilder duerfen fehlschlagen. */
+					laeuft = false;
 				} );
 			}, 300 );
-		} ).catch( function () {
+		} ).catch( function ( fehler ) {
 			closeCamera();
-			status( config.i18n.noCamera, 'error' );
-			document.getElementById( 'lw16-manual' ).focus();
+
+			// Zwei sehr verschiedene Ursachen: der Decoder kam nicht, oder
+			// die Kamera wurde verweigert. Das darf nicht dieselbe Meldung
+			// geben.
+			status( leser ? config.i18n.noCamera : config.i18n.noDecoderLoad, 'error' );
+			focusManual();
 		} );
 	}
 

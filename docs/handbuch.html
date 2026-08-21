@@ -625,7 +625,9 @@ footer p{max-width:72ch}
 
 	<div class="note">
 		<span class="lbl">Was der Browser können muss</span>
-		<p>Gescannt wird mit dem eingebauten Scanner des Browsers, nicht mit einer nachgeladenen Bibliothek. Auf Android-Chrome und neueren iPhones funktioniert das; kann der Browser es nicht, sagt er das und du tippst den Code ein. Das Lager steht deshalb nie still, nur weil ein Gerät nicht mitspielt.</p>
+		<p>Auf Android und am Rechner scannt der eingebaute Code-Leser des Browsers — er erkennt QR-Codes <em>und</em> die Strichcodes der Lieferanten (EAN, Code 128).</p>
+		<p>Auf <strong>iPhone und iPad</strong> gibt es diesen Leser nicht: Er gehört zu Chromium, und auf iOS ist jeder Browser innen drin Safari. Dort lädt die Seite beim ersten Scan einen Decoder nach. Der liest <strong>nur QR-Codes</strong> — also alle eigenen Etiketten für Lagerplatz, Artikel und Charge. Ein <em>Lieferanten-Strichcode</em> muss auf dem iPhone eingetippt werden.</p>
+		<p>Geht die Kamera gar nicht, sagt die Seite warum — und springt in das Eingabefeld. Ein Code ist kurz genug zum Abtippen; das Lager steht nie still, nur weil ein Gerät nicht mitspielt.</p>
 	</div>
 
 	<h3>6.3 Picken</h3>

@@ -302,6 +302,9 @@ class MobileCapture {
 					'nonce'       => wp_create_nonce( 'wp_rest' ),
 					'printerCode' => $printer,
 					'pickCode'    => $pick,
+					// Wird nur geladen, wenn der Browser keinen eigenen
+					// Code-Leser mitbringt - also auf iPhone und iPad.
+					'decoderUrl'  => Assets::url( 'assets/vendor/jsqr/jsQR.js' ),
 					'movementTypes' => StockLedger::movement_labels(),
 					'colors'        => ColorRegistry::options(),
 					'bins'          => array_map(
@@ -326,7 +329,7 @@ class MobileCapture {
 						'noScanner'  => __( 'Scannen geht hier nicht. Code bitte eintippen.', 'lindenweg16' ),
 						'noSecure'   => __( 'Die Kamera gibt es nur über eine https-Adresse. Diese Seite läuft über http – Code bitte eintippen.', 'lindenweg16' ),
 						'noCameraApi' => __( 'Dieser Browser gibt keinen Kamerazugriff frei. Code bitte eintippen.', 'lindenweg16' ),
-						'noDecoder'  => __( 'Die Kamera ist da, aber dieser Browser kann Codes nicht selbst lesen – das betrifft alle Browser auf iPhone und iPad. Code eintippen, oder das Etikett mit der Kamera-App scannen.', 'lindenweg16' ),
+						'noDecoderLoad' => __( 'Der Code-Leser konnte nicht geladen werden. Code bitte eintippen.', 'lindenweg16' ),
 						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),

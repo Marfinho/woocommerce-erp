@@ -137,6 +137,43 @@ class FrontendAssetsTest extends TestCase {
 	}
 
 	/**
+	 * Der mitgelieferte Fremdcode ist vollständig und ausgewiesen.
+	 *
+	 * Ein Fremdpaket ohne Lizenztext und ohne Herkunftsangabe ist eine
+	 * Altlast: Niemand weiß später, woher es kam und was erlaubt ist.
+	 */
+	public function test_fremdcode_ist_ausgewiesen() {
+		$ordner = dirname( __DIR__ ) . '/assets/vendor/jsqr';
+
+		$this->assertFileExists( $ordner . '/jsQR.js' );
+		$this->assertFileExists( $ordner . '/LICENSE', 'Lizenztext fehlt.' );
+		$this->assertFileExists( $ordner . '/HERKUNFT.md', 'Herkunftsangabe fehlt.' );
+
+		$herkunft = file_get_contents( $ordner . '/HERKUNFT.md' );
+
+		foreach ( array( 'Version', 'Herkunft', 'Lizenz' ) as $feld ) {
+			$this->assertStringContainsString( $feld, $herkunft );
+		}
+	}
+
+	/**
+	 * Der Decoder wird nur nachgeladen, nicht fest eingebunden.
+	 *
+	 * Er ist 250 KB gross und wird nur von WebKit gebraucht. Stuende er
+	 * als festes <script> in der Seite, zahlten alle anderen Geraete dafuer.
+	 */
+	public function test_decoder_wird_nur_nachgeladen() {
+		$php = file_get_contents( $this->markup() );
+
+		$this->assertStringContainsString( 'decoderUrl', $php, 'Die Adresse des Decoders fehlt in der Konfiguration.' );
+		$this->assertStringNotContainsString(
+			'<script src="<?php echo esc_url( Assets::url( \'assets/vendor/jsqr/jsQR.js\' ) ); ?>"',
+			$php,
+			'Der Decoder ist fest eingebunden statt bei Bedarf geladen.'
+		);
+	}
+
+	/**
 	 * Jede Meldung, die das Skript nachschlägt, wird auch geliefert.
 	 *
 	 * Das Skript greift die Texte über config.i18n.<schluessel> ab. Fehlt
