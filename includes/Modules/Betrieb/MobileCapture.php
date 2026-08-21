@@ -211,7 +211,7 @@ class MobileCapture {
 
 			<label class="lw16-field">
 				<span><?php esc_html_e( 'Code eintippen', 'lindenweg16' ); ?></span>
-				<input type="text" id="lw16-manual" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="<?php esc_attr_e( 'Code und Enter', 'lindenweg16' ); ?>" />
+				<input type="text" id="lw16-manual" class="lw16-manual" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="<?php esc_attr_e( 'Code und Enter', 'lindenweg16' ); ?>" />
 			</label>
 
 			<div class="lw16-stock" id="lw16-stock" hidden></div>
@@ -248,6 +248,12 @@ class MobileCapture {
 				<button type="button" class="lw16-scan" data-scan="pick"><?php esc_html_e( 'Position scannen', 'lindenweg16' ); ?></button>
 				<button type="button" class="lw16-scan lw16-scan--ghost" id="lw16-pick-reload"><?php esc_html_e( 'Neu laden', 'lindenweg16' ); ?></button>
 			</div>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Code eintippen', 'lindenweg16' ); ?></span>
+				<input type="text" id="lw16-pick-manual" class="lw16-manual" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="<?php esc_attr_e( 'Artikelnummer und Enter', 'lindenweg16' ); ?>" />
+			</label>
+
 			<div id="lw16-picklists"></div>
 		</section>
 
@@ -317,7 +323,10 @@ class MobileCapture {
 						'noRevision' => __( 'Für diesen Artikel ist keine Revision freigegeben.', 'lindenweg16' ),
 						'scanHint'   => __( 'Code vor die Kamera halten', 'lindenweg16' ),
 						'noCamera'   => __( 'Kein Kamerazugriff. Code bitte eintippen.', 'lindenweg16' ),
-						'noScanner'  => __( 'Dieser Browser hat keinen eingebauten Scanner. Code bitte eintippen.', 'lindenweg16' ),
+						'noScanner'  => __( 'Scannen geht hier nicht. Code bitte eintippen.', 'lindenweg16' ),
+						'noSecure'   => __( 'Die Kamera gibt es nur über eine https-Adresse. Diese Seite läuft über http – Code bitte eintippen.', 'lindenweg16' ),
+						'noCameraApi' => __( 'Dieser Browser gibt keinen Kamerazugriff frei. Code bitte eintippen.', 'lindenweg16' ),
+						'noDecoder'  => __( 'Die Kamera ist da, aber dieser Browser kann Codes nicht selbst lesen – das betrifft alle Browser auf iPhone und iPad. Code eintippen, oder das Etikett mit der Kamera-App scannen.', 'lindenweg16' ),
 						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),

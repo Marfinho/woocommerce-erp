@@ -137,6 +137,32 @@ class FrontendAssetsTest extends TestCase {
 	}
 
 	/**
+	 * Jede Meldung, die das Skript nachschlägt, wird auch geliefert.
+	 *
+	 * Das Skript greift die Texte über config.i18n.<schluessel> ab. Fehlt
+	 * einer, steht dort undefined – der Benutzer bekommt eine leere
+	 * Fehlermeldung und weiß gar nichts.
+	 */
+	public function test_jede_meldung_wird_geliefert() {
+		$js  = file_get_contents( $this->script() );
+		$php = file_get_contents( $this->markup() );
+
+		preg_match_all( '/i18n\.([a-zA-Z]+)/', $js, $treffer );
+
+		$schluessel = array_unique( $treffer[1] );
+		$fehlen     = array();
+
+		foreach ( $schluessel as $key ) {
+			if ( false === strpos( $php, "'" . $key . "'" ) ) {
+				$fehlen[] = $key;
+			}
+		}
+
+		$this->assertGreaterThan( 5, count( $schluessel ), 'Der Test findet kaum Schlüssel – dann prüft er nichts.' );
+		$this->assertSame( array(), $fehlen, 'Vom Skript erwartet, im PHP nicht gesetzt: ' . implode( ', ', $fehlen ) );
+	}
+
+	/**
 	 * Kein Stil und kein Skript hängt an der Plugin-Version.
 	 *
 	 * LW16_VERSION stand über viele Korrekturen hinweg unverändert auf

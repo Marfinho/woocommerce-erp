@@ -258,8 +258,39 @@
 	var scanStream = null;
 	var scanLoop = null;
 
+	/*
+	 * Warum das Scannen nicht geht - falls es nicht geht.
+	 *
+	 * Frueher hiess es pauschal "kein Scanner", was in die Irre fuehrte:
+	 * Auf dem iPhone ist die Kamera da, es fehlt der Decoder. Die drei
+	 * Ursachen brauchen drei verschiedene Antworten, denn nur eine davon
+	 * kann der Benutzer selbst beheben.
+	 *
+	 * @return {string|null} Schluessel der Meldung, null wenn alles da ist.
+	 */
+	function scannerProblem() {
+		// Kamerazugriff gibt es nur im sicheren Kontext. Ueber http bleibt
+		// mediaDevices undefiniert - das sieht aus wie ein fehlendes
+		// Geraet, ist aber die Adresse.
+		if ( window.isSecureContext === false ) {
+			return 'noSecure';
+		}
+
+		if ( ! navigator.mediaDevices || ! navigator.mediaDevices.getUserMedia ) {
+			return 'noCameraApi';
+		}
+
+		// Der eingebaute Code-Leser. Chromium hat ihn, WebKit nicht - und
+		// auf iPhone und iPad ist jeder Browser WebKit.
+		if ( ! ( 'BarcodeDetector' in window ) ) {
+			return 'noDecoder';
+		}
+
+		return null;
+	}
+
 	function scannerAvailable() {
-		return 'BarcodeDetector' in window && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+		return null === scannerProblem();
 	}
 
 	function closeCamera() {
@@ -277,9 +308,11 @@
 	}
 
 	function openCamera( onCode ) {
-		if ( ! scannerAvailable() ) {
-			status( config.i18n.noScanner, 'error' );
-			document.getElementById( 'lw16-manual' ).focus();
+		var problem = scannerProblem();
+
+		if ( problem ) {
+			status( config.i18n[ problem ] || config.i18n.noScanner, 'error' );
+			focusManual();
 			return;
 		}
 
@@ -313,6 +346,22 @@
 			status( config.i18n.noCamera, 'error' );
 			document.getElementById( 'lw16-manual' ).focus();
 		} );
+	}
+
+	/*
+	 * Das Eingabefeld des gerade offenen Reiters ansteuern. Wer nicht
+	 * scannen kann, soll wenigstens sofort tippen koennen - ohne erst das
+	 * richtige Feld zu suchen.
+	 */
+	function focusManual() {
+		var felder = document.querySelectorAll( '.lw16-manual' );
+
+		for ( var i = 0; i < felder.length; i++ ) {
+			if ( felder[ i ].offsetParent !== null ) {
+				felder[ i ].focus();
+				return;
+			}
+		}
 	}
 
 	function lookup( code ) {
@@ -567,6 +616,19 @@
 		document.getElementById( 'lw16-camera-close' ).addEventListener( 'click', closeCamera );
 
 		document.getElementById( 'lw16-pick-reload' ).addEventListener( 'click', loadPicklists );
+
+		// Getippter Code im Reiter Picken: dieselbe Zuordnung wie ein Scan.
+		document.getElementById( 'lw16-pick-manual' ).addEventListener( 'keydown', function ( event ) {
+			if ( 'Enter' !== event.key ) {
+				return;
+			}
+			event.preventDefault();
+			var value = event.target.value.trim();
+			if ( value ) {
+				pickByScan( value );
+				event.target.value = '';
+			}
+		} );
 
 		// Eingetippter Code: Enter loest dieselbe Aufloesung aus wie ein Scan.
 		document.getElementById( 'lw16-manual' ).addEventListener( 'keydown', function ( event ) {
