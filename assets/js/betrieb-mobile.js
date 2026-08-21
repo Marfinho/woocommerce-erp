@@ -783,6 +783,163 @@
 	}
 
 	/* ---------------------------------------------------------------- */
+	/* Zeit-Timer                                                        */
+	/* ---------------------------------------------------------------- */
+
+	/*
+	 * Das Geraet wandert den ganzen Tag mit. Es wird gesperrt, in die
+	 * Tasche gesteckt, die Seite fliegt aus dem Speicher. Ein Zaehler, der
+	 * im Sekundentakt hochzaehlt, ueberlebt das nicht.
+	 *
+	 * Gespeichert wird deshalb nur der Startzeitpunkt als Zeitstempel; die
+	 * Dauer ergibt sich beim Hinsehen aus der Uhr. Der Sekundentakt unten
+	 * bewegt nur die Anzeige, nie den Wert.
+	 */
+
+	var ZEIT_KEY = 'lw16_zeit_timer';
+
+	// Zwoelf Stunden am Stueck, dieselbe Grenze wie beim Fertigungsauftrag:
+	// mehr ist keine Schicht, sondern ein vergessener Timer.
+	var ZEIT_MAX_SEGMENT = 43200;
+
+	var zeitTakt = null;
+
+	function zeitLesen() {
+		try {
+			return JSON.parse( window.localStorage.getItem( ZEIT_KEY ) || '{}' ) || {};
+		} catch ( e ) {
+			return {};
+		}
+	}
+
+	function zeitSchreiben( stand ) {
+		try {
+			window.localStorage.setItem( ZEIT_KEY, JSON.stringify( stand ) );
+		} catch ( e ) {
+			/* Speicher gesperrt - der Timer laeuft dann nur bis zum Neuladen. */
+		}
+	}
+
+	/*
+	 * Reine Rechnung: erfasste Sekunden zu einem Zeitpunkt.
+	 *
+	 * @param {Object} stand {seconds, startedAt}
+	 * @param {number} jetzt Zeitstempel in Millisekunden.
+	 */
+	function zeitSekunden( stand, jetzt ) {
+		var summe = Math.max( 0, Math.floor( stand.seconds || 0 ) );
+
+		if ( ! stand.startedAt ) {
+			return summe;
+		}
+
+		var lauf = Math.floor( ( jetzt - stand.startedAt ) / 1000 );
+
+		// Eine rueckwaerts gestellte Uhr darf keine negative Zeit ergeben.
+		if ( lauf <= 0 ) {
+			return summe;
+		}
+
+		return summe + Math.min( ZEIT_MAX_SEGMENT, lauf );
+	}
+
+	function zeitGekappt( stand, jetzt ) {
+		if ( ! stand.startedAt ) {
+			return false;
+		}
+
+		return Math.floor( ( jetzt - stand.startedAt ) / 1000 ) > ZEIT_MAX_SEGMENT;
+	}
+
+	function zeitFormat( sekunden ) {
+		var h = Math.floor( sekunden / 3600 );
+		var m = Math.floor( ( sekunden % 3600 ) / 60 );
+		var s = Math.floor( sekunden % 60 );
+
+		return h + ':' + ( m < 10 ? '0' : '' ) + m + ':' + ( s < 10 ? '0' : '' ) + s;
+	}
+
+	/*
+	 * Sekunden als Stundenwert fuer das Formular.
+	 *
+	 * Nie auf 0 runden, solange die Uhr lief - der Server wiese einen
+	 * Eintrag ueber null Stunden zurueck, und die Arbeit waere weg.
+	 */
+	function zeitStunden( sekunden ) {
+		if ( sekunden <= 0 ) {
+			return 0;
+		}
+
+		return Math.max( 0.01, Math.round( sekunden / 36 ) / 100 );
+	}
+
+	function zeitAnzeigen() {
+		var stand = zeitLesen();
+		var jetzt = Date.now();
+		var sekunden = zeitSekunden( stand, jetzt );
+		var laeuft = !! stand.startedAt;
+
+		document.getElementById( 'lw16-zeit-anzeige' ).textContent = zeitFormat( sekunden );
+
+		var toggle = document.getElementById( 'lw16-zeit-toggle' );
+		toggle.textContent = laeuft ? config.i18n.timerPause : config.i18n.timerStart;
+		toggle.classList.toggle( 'is-running', laeuft );
+
+		document.getElementById( 'lw16-zeit-reset' ).hidden = sekunden <= 0;
+
+		var hinweis = document.getElementById( 'lw16-zeit-hinweis' );
+		var text = '';
+
+		if ( zeitGekappt( stand, jetzt ) ) {
+			text = config.i18n.timerCapped;
+		} else if ( laeuft ) {
+			text = config.i18n.timerRuns;
+		} else if ( sekunden > 0 ) {
+			text = config.i18n.timerHeld;
+		}
+
+		hinweis.textContent = text;
+		hinweis.hidden = '' === text;
+
+		// Solange die Uhr etwas erfasst hat, gehoert ihr das Stundenfeld.
+		// Wer den Timer nie benutzt, tippt weiter wie bisher.
+		if ( sekunden > 0 ) {
+			document.getElementById( 'lw16-hours' ).value = String( zeitStunden( sekunden ) ).replace( '.', ',' );
+		}
+	}
+
+	function zeitTaktSetzen() {
+		if ( zeitTakt ) {
+			window.clearInterval( zeitTakt );
+			zeitTakt = null;
+		}
+
+		if ( zeitLesen().startedAt ) {
+			zeitTakt = window.setInterval( zeitAnzeigen, 1000 );
+		}
+	}
+
+	function zeitUmschalten() {
+		var stand = zeitLesen();
+
+		if ( stand.startedAt ) {
+			zeitSchreiben( { seconds: zeitSekunden( stand, Date.now() ), startedAt: null } );
+		} else {
+			zeitSchreiben( { seconds: Math.max( 0, stand.seconds || 0 ), startedAt: Date.now() } );
+		}
+
+		zeitAnzeigen();
+		zeitTaktSetzen();
+	}
+
+	function zeitVerwerfen() {
+		zeitSchreiben( {} );
+		document.getElementById( 'lw16-hours' ).value = '1';
+		zeitAnzeigen();
+		zeitTaktSetzen();
+	}
+
+	/* ---------------------------------------------------------------- */
 	/* Bedienung                                                         */
 	/* ---------------------------------------------------------------- */
 
@@ -895,12 +1052,20 @@
 			status( config.i18n.saved, 'ok' );
 		} );
 
+		document.getElementById( 'lw16-zeit-toggle' ).addEventListener( 'click', zeitUmschalten );
+		document.getElementById( 'lw16-zeit-reset' ).addEventListener( 'click', zeitVerwerfen );
+
 		document.getElementById( 'lw16-form-zeit' ).addEventListener( 'submit', function ( event ) {
 			event.preventDefault();
 
 			var data = Object.fromEntries( new FormData( event.target ).entries() );
 			submit( 'zeiten', data );
 			event.target.reset();
+
+			// Gebuchte Zeit ist verbraucht. Bliebe die Uhr stehen, buchte
+			// man dieselben Stunden beim naechsten Mal ein zweites Mal.
+			zeitVerwerfen();
+
 			status( config.i18n.saved, 'ok' );
 		} );
 
@@ -916,6 +1081,11 @@
 			}
 			flush();
 			loadPicklists();
+
+			// Aus der Tasche zurueck: Die Anzeige rechnet aus der Uhr neu,
+			// der Takt haengt sich wieder ein.
+			zeitAnzeigen();
+			zeitTaktSetzen();
 		} );
 	}
 
@@ -963,6 +1133,8 @@
 		loadPicklists();
 
 		zeigeScanHinweis();
+		zeitAnzeigen();
+		zeitTaktSetzen();
 
 		if ( config.pickCode ) {
 			openTab( 'picken' );

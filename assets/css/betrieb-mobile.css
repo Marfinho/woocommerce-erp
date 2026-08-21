@@ -292,3 +292,17 @@ body.lw16-mobile {
 	margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
 	background: #f7e7e4; color: #6b1e18; font-size: 14px; line-height: 1.4;
 }
+
+/* Zeit-Timer: die Zahl ist das Bedienelement, nicht ein Detail am Rand. */
+.lw16-timer {
+	margin: 0 0 18px; padding: 16px; border-radius: 12px;
+	background: #eef3f1; text-align: center;
+}
+.lw16-timer__wert {
+	font-size: 40px; font-weight: 700; line-height: 1.1;
+	font-variant-numeric: tabular-nums; color: #1d2327;
+}
+.lw16-timer__knoepfe { display: flex; gap: 10px; margin-top: 12px; }
+.lw16-timer__knoepfe .lw16-submit { margin: 0; }
+.lw16-timer__start.is-running { background: #8c3327; }
+.lw16-timer__hinweis { margin: 10px 0 0; font-size: 13px; color: #50575e; }

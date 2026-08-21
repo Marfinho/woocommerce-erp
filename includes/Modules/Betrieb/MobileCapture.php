@@ -265,6 +265,15 @@ class MobileCapture {
 		</section>
 
 		<form id="lw16-form-zeit" class="lw16-mobile__form" data-panel="zeit" hidden>
+			<div class="lw16-timer">
+				<div class="lw16-timer__wert" id="lw16-zeit-anzeige" role="timer" aria-live="off">0:00:00</div>
+				<div class="lw16-timer__knoepfe">
+					<button type="button" class="lw16-submit lw16-timer__start" id="lw16-zeit-toggle"><?php esc_html_e( 'Starten', 'lindenweg16' ); ?></button>
+					<button type="button" class="lw16-scan lw16-scan--ghost" id="lw16-zeit-reset" hidden><?php esc_html_e( 'Verwerfen', 'lindenweg16' ); ?></button>
+				</div>
+				<p class="lw16-timer__hinweis" id="lw16-zeit-hinweis" hidden></p>
+			</div>
+
 			<label class="lw16-field">
 				<span><?php esc_html_e( 'Kategorie', 'lindenweg16' ); ?></span>
 				<select name="category" id="lw16-category"></select>
@@ -341,6 +350,11 @@ class MobileCapture {
 						'camNone'    => __( 'Der Browser findet keine Kamera an diesem Gerät.', 'lindenweg16' ),
 						'camBusy'    => __( 'Die Kamera ist gerade von einer anderen App belegt.', 'lindenweg16' ),
 						'qrOnly'     => __( 'Dieser Browser liest nur QR-Codes – Strichcodes von Lieferanten bitte eintippen.', 'lindenweg16' ),
+						'timerStart' => __( 'Starten', 'lindenweg16' ),
+						'timerPause' => __( 'Pause', 'lindenweg16' ),
+						'timerRuns'  => __( 'Läuft mit. Du kannst die Seite schließen – die Zeit läuft weiter.', 'lindenweg16' ),
+						'timerHeld'  => __( 'Angehalten. Kategorie wählen und buchen, oder weiterlaufen lassen.', 'lindenweg16' ),
+						'timerCapped' => __( 'Über zwölf Stunden am Stück – das war vermutlich ein vergessener Timer. Bitte die Stunden prüfen.', 'lindenweg16' ),
 						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),
