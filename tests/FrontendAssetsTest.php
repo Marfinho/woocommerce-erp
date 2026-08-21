@@ -1,6 +1,6 @@
 <?php
 /**
- * Die mobile Erfassung: Skript und Markup müssen zusammenpassen.
+ * Frontend: Skripte, Markup und Dateien müssen zusammenpassen.
  *
  * Das JavaScript greift die Elemente über feste IDs ab. Fehlt eine davon
  * im PHP, wirft der erste Zugriff – und weil das schon beim Aufbau
@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 /**
  * Liest beide Dateien und vergleicht sie.
  */
-class MobileMarkupTest extends TestCase {
+class FrontendAssetsTest extends TestCase {
 
 	/**
 	 * Pfad zum Skript.
@@ -112,5 +112,49 @@ class MobileMarkupTest extends TestCase {
 		foreach ( array( 'druck', 'lager', 'picken', 'zeit' ) as $tab ) {
 			$this->assertStringContainsString( 'data-tab="' . $tab . '"', $html );
 		}
+	}
+
+	/**
+	 * Jedes Skript wird von irgendeiner PHP-Datei eingebunden.
+	 *
+	 * Ein Skript, das niemand lädt, ist entweder tot oder eine vergessene
+	 * Einbindung – beides will man wissen.
+	 */
+	public function test_jedes_skript_wird_eingebunden() {
+		$root  = dirname( __DIR__ );
+		$lose  = array();
+
+		foreach ( glob( $root . '/assets/js/*.js' ) as $datei ) {
+			$name    = basename( $datei );
+			$treffer = shell_exec( 'grep -rl ' . escapeshellarg( $name ) . ' ' . escapeshellarg( $root . '/includes' ) . ' 2>/dev/null' );
+
+			if ( ! trim( (string) $treffer ) ) {
+				$lose[] = $name;
+			}
+		}
+
+		$this->assertSame( array(), $lose, 'Nicht eingebundene Skripte: ' . implode( ', ', $lose ) );
+	}
+
+	/**
+	 * Jede Stildatei, auf die PHP zeigt, liegt auch da.
+	 */
+	public function test_verwiesene_dateien_existieren() {
+		$root = dirname( __DIR__ );
+		$roh  = shell_exec(
+			'grep -rhoE "assets/(js|css)/[a-z0-9.-]+\\.(js|css)" ' . escapeshellarg( $root . '/includes' ) . ' 2>/dev/null'
+		);
+
+		$pfade = array_unique( array_filter( array_map( 'trim', explode( "\n", (string) $roh ) ) ) );
+		$fehlen = array();
+
+		foreach ( $pfade as $pfad ) {
+			if ( ! file_exists( $root . '/' . $pfad ) ) {
+				$fehlen[] = $pfad;
+			}
+		}
+
+		$this->assertNotEmpty( $pfade, 'Der Test findet keine Verweise – dann prüft er nichts.' );
+		$this->assertSame( array(), $fehlen, 'Verwiesen, aber nicht vorhanden: ' . implode( ', ', $fehlen ) );
 	}
 }

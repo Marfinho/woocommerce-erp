@@ -258,6 +258,7 @@ body.lw16-mobile {
 	width: 100%; padding: 16px; margin-top: 14px; font-size: 17px; font-weight: 600;
 	border: 0; border-radius: 10px; background: #1f5f52; color: #fff;
 }
+.lw16-reorder__greeting { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
 .lw16-reorder__hint { font-size: 13px; color: #5a676d; }
 .lw16-reorder__error { padding: 12px 14px; border-radius: 8px; background: #f7e7e4; color: #8c3327; }
 
