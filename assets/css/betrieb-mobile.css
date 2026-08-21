@@ -1,3 +1,14 @@
+/*
+ * Das hidden-Attribut muss jede eigene display-Regel schlagen.
+ *
+ * Ohne diese Zeile gewinnt eine Klassenregel wie `display: flex` gegen
+ * das `display: none` des Browsers - ein als hidden markiertes Element
+ * bleibt dann sichtbar. Beim Kamera-Overlay hiess das: ein schwarzes,
+ * bildschirmfuellendes Feld ueber der ganzen Seite, ohne dass jemand
+ * die Kamera geoeffnet haette.
+ */
+[hidden] { display: none !important; }
+
 /* Mobile Schnellerfassung – große Ziele, eine Spalte, keine Abhängigkeiten. */
 
 :root {

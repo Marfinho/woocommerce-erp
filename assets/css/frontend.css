@@ -1,3 +1,10 @@
+/*
+ * Das hidden-Attribut muss jede eigene display-Regel schlagen. Sonst
+ * gewinnt eine Klassenregel wie `display: flex` gegen das `display: none`
+ * des Browsers, und ein als hidden markiertes Element bleibt sichtbar.
+ */
+[hidden] { display: none !important; }
+
 /* Lindenweg16 ERP – Frontend-Styles */
 
 .lw16-copy-row { display: flex; gap: 8px; margin-bottom: 16px; max-width: 520px; }

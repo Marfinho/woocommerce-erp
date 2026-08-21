@@ -1,3 +1,10 @@
+/*
+ * Das hidden-Attribut muss jede eigene display-Regel schlagen. Sonst
+ * gewinnt eine Klassenregel wie `display: flex` gegen das `display: none`
+ * des Browsers, und ein als hidden markiertes Element bleibt sichtbar.
+ */
+[hidden] { display: none !important; }
+
 /* Lindenweg16 ERP – Admin-Styles */
 
 .lw16-wrap .lw16-tabs {

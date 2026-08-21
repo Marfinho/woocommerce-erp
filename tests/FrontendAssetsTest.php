@@ -137,6 +137,31 @@ class FrontendAssetsTest extends TestCase {
 	}
 
 	/**
+	 * Jede Stildatei schützt das hidden-Attribut.
+	 *
+	 * Eine Klassenregel mit eigener display-Angabe schlägt sonst das
+	 * `display: none`, das der Browser einem hidden-Element gibt. Beim
+	 * Kamera-Overlay hiess das: ein schwarzes, bildschirmfuellendes Feld
+	 * ueber der ganzen Seite, ohne dass jemand die Kamera geoeffnet
+	 * hatte. Statisch war das nicht zu sehen - dieser Test hält es fest.
+	 */
+	public function test_stildateien_schuetzen_hidden() {
+		$dateien = glob( dirname( __DIR__ ) . '/assets/css/*.css' );
+		$ohne    = array();
+
+		foreach ( $dateien as $datei ) {
+			$css = file_get_contents( $datei );
+
+			if ( ! preg_match( '/\[hidden\][^{]*\{[^}]*display\s*:\s*none\s*!important/i', $css ) ) {
+				$ohne[] = basename( $datei );
+			}
+		}
+
+		$this->assertNotEmpty( $dateien, 'Keine Stildateien gefunden – dann prüft der Test nichts.' );
+		$this->assertSame( array(), $ohne, 'Ohne Schutz für hidden: ' . implode( ', ', $ohne ) );
+	}
+
+	/**
 	 * Jede Stildatei, auf die PHP zeigt, liegt auch da.
 	 */
 	public function test_verwiesene_dateien_existieren() {
