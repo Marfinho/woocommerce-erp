@@ -564,36 +564,98 @@
 		} );
 	}
 
+	/*
+	 * Welche Liste ist gewaehlt? Leer heisst: alle.
+	 *
+	 * Beim ersten Laden entscheidet der QR-Code darueber - wer mit einem
+	 * Auftrag ins Regal geht, will nicht erst zwischen sechs offenen
+	 * Listen suchen. Danach entscheidet die Auswahl, damit das Werkzeug
+	 * offen bleiben und mehrere Listen nacheinander abarbeiten kann.
+	 */
+	var pickWahl = null;
+
+	function gewaehlteListe() {
+		if ( null !== pickWahl ) {
+			return pickWahl;
+		}
+
+		return config.pickCode ? String( config.pickCode ).toUpperCase() : '';
+	}
+
 	function visiblePicklists() {
-		// Per QR-Code aufgerufen zeigt das Handy genau die eine Liste. Wer
-		// mit einem Auftrag ins Regal geht, will nicht erst zwischen sechs
-		// offenen Listen suchen.
-		if ( ! config.pickCode ) {
+		var wahl = gewaehlteListe();
+
+		if ( ! wahl ) {
 			return picklists;
 		}
 
-		var wanted = String( config.pickCode ).toUpperCase();
-
 		return picklists.filter( function ( list ) {
-			return String( list.code ).toUpperCase() === wanted;
+			return String( list.code ).toUpperCase() === wahl;
 		} );
+	}
+
+	/*
+	 * Beschriftung einer Liste: woher sie kommt und wie viel noch offen
+	 * ist. Beides zusammen reicht, um ohne Oeffnen zu entscheiden.
+	 */
+	function listenLabel( list ) {
+		var herkunft = 'fertigung' === list.source ? config.i18n.fromWork : config.i18n.fromOrders;
+		var offen = list.open > 0
+			? String( config.i18n.openCount ).replace( '%d', list.open )
+			: config.i18n.listDone;
+
+		return list.code + ' · ' + herkunft + ' · ' + offen;
+	}
+
+	function renderPicklistSelect() {
+		var select = document.getElementById( 'lw16-picklist-select' );
+		var wahl = gewaehlteListe();
+
+		select.textContent = '';
+
+		var alle = document.createElement( 'option' );
+		alle.value = '';
+		alle.textContent = config.i18n.allLists;
+		select.appendChild( alle );
+
+		picklists.forEach( function ( list ) {
+			var option = document.createElement( 'option' );
+			option.value = String( list.code ).toUpperCase();
+			option.textContent = listenLabel( list );
+			select.appendChild( option );
+		} );
+
+		// Eine Liste, die inzwischen abgearbeitet und verschwunden ist,
+		// darf die Auswahl nicht auf einen toten Wert stellen.
+		var vorhanden = wahl && picklists.some( function ( list ) {
+			return String( list.code ).toUpperCase() === wahl;
+		} );
+
+		select.value = vorhanden ? wahl : '';
+
+		if ( wahl && ! vorhanden ) {
+			pickWahl = '';
+		}
 	}
 
 	function renderPicklists() {
 		var box = document.getElementById( 'lw16-picklists' );
+
+		renderPicklistSelect();
+
 		var shown = visiblePicklists();
 
 		box.textContent = '';
 
 		if ( ! shown.length ) {
-			box.textContent = config.pickCode ? config.i18n.pickGone : config.i18n.noPicklist;
+			box.textContent = gewaehlteListe() ? config.i18n.pickGone : config.i18n.noPicklist;
 			return;
 		}
 
 		shown.forEach( function ( list ) {
 			var section = document.createElement( 'section' );
 			var heading = document.createElement( 'h2' );
-			heading.textContent = list.code;
+			heading.textContent = listenLabel( list );
 			section.appendChild( heading );
 
 			list.items.forEach( function ( item ) {
@@ -710,6 +772,11 @@
 
 		document.getElementById( 'lw16-pick-reload' ).addEventListener( 'click', loadPicklists );
 
+		document.getElementById( 'lw16-picklist-select' ).addEventListener( 'change', function ( event ) {
+			pickWahl = event.target.value;
+			renderPicklists();
+		} );
+
 		// Getippter Code im Reiter Picken: dieselbe Zuordnung wie ein Scan.
 		document.getElementById( 'lw16-pick-manual' ).addEventListener( 'keydown', function ( event ) {
 			if ( 'Enter' !== event.key ) {
@@ -789,10 +856,16 @@
 
 		// Beim Wiedererlangen der Verbindung nachsenden.
 		window.addEventListener( 'online', flush );
+
+		// Das Werkzeug soll offen bleiben duerfen. Wer zurueckkommt, sieht
+		// deshalb den aktuellen Stand - auch wenn inzwischen am Rechner
+		// eine Liste dazugekommen ist.
 		document.addEventListener( 'visibilitychange', function () {
-			if ( ! document.hidden ) {
-				flush();
+			if ( document.hidden ) {
+				return;
 			}
+			flush();
+			loadPicklists();
 		} );
 	}
 

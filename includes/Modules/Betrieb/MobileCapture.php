@@ -250,6 +250,11 @@ class MobileCapture {
 			</div>
 
 			<label class="lw16-field">
+				<span><?php esc_html_e( 'Liste', 'lindenweg16' ); ?></span>
+				<select id="lw16-picklist-select"></select>
+			</label>
+
+			<label class="lw16-field">
 				<span><?php esc_html_e( 'Code eintippen', 'lindenweg16' ); ?></span>
 				<input type="text" id="lw16-pick-manual" class="lw16-manual" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="<?php esc_attr_e( 'Artikelnummer und Enter', 'lindenweg16' ); ?>" />
 			</label>
@@ -334,6 +339,11 @@ class MobileCapture {
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),
 						'pickGone'   => __( 'Diese Pickliste ist nicht mehr offen – vermutlich schon abgearbeitet.', 'lindenweg16' ),
+						'allLists'   => __( 'Alle Listen', 'lindenweg16' ),
+						'fromOrders' => __( 'Bestellungen', 'lindenweg16' ),
+						'fromWork'   => __( 'Fertigung', 'lindenweg16' ),
+						'openCount'  => __( '%d offen', 'lindenweg16' ),
+						'listDone'   => __( 'fertig', 'lindenweg16' ),
 						'picked'     => __( 'Entnommen.', 'lindenweg16' ),
 						'noBin'      => __( 'kein Platz', 'lindenweg16' ),
 						'noArticle'  => __( 'kein Artikel', 'lindenweg16' ),

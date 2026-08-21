@@ -322,10 +322,22 @@ class PicklistRepository {
 				);
 			}
 
+			// Offene Positionen mitzaehlen: Am Handy steht die Zahl in der
+			// Auswahlliste, damit sich eine Liste waehlen laesst, ohne sie
+			// erst zu oeffnen.
+			$offen = 0;
+			foreach ( $items as $item ) {
+				if ( ! $item['done'] ) {
+					$offen++;
+				}
+			}
+
 			$out[] = array(
 				'id'     => (int) $list['id'],
 				'code'   => (string) $list['code'],
 				'source' => (string) $list['source'],
+				'note'   => (string) $list['note'],
+				'open'   => $offen,
 				'items'  => $items,
 			);
 		}
