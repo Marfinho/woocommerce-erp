@@ -483,7 +483,7 @@ class DemandPlanner {
 	}
 
 	/**
-	 * Mengen, die bereits in offenen Fertigungsaufträgen stecken.
+	 * Mengen, die bereits in noch nicht abgeschlossenen Aufträgen stecken.
 	 *
 	 * Ohne diese Verrechnung entstünde bei jedem Aufruf ein neuer Vorschlag
 	 * für dasselbe Teil, obwohl der Auftrag längst auf der Werkbank liegt.
@@ -493,7 +493,7 @@ class DemandPlanner {
 	public static function in_work() {
 		$out = array();
 
-		foreach ( WorkOrderRepository::all( 'offen' ) as $order ) {
+		foreach ( WorkOrderRepository::unfinished() as $order ) {
 			$id = (int) $order['article_id'];
 			if ( ! isset( $out[ $id ] ) ) {
 				$out[ $id ] = 0.0;

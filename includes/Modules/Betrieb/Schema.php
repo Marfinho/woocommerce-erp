@@ -355,6 +355,8 @@ class Schema {
 			status VARCHAR(20) NOT NULL DEFAULT 'offen',
 			picklist_id BIGINT UNSIGNED NULL,
 			note TEXT NULL,
+			started_at DATETIME NULL,
+			seconds_worked INT UNSIGNED NOT NULL DEFAULT 0,
 			finished_at DATETIME NULL,
 			created_at DATETIME NOT NULL,
 			created_by BIGINT UNSIGNED NULL,

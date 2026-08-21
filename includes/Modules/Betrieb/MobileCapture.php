@@ -78,6 +78,8 @@ class MobileCapture {
 	protected function render() {
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$printer = isset( $_GET['p'] ) ? sanitize_text_field( wp_unslash( $_GET['p'] ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$pick = isset( $_GET['pick'] ) ? sanitize_text_field( wp_unslash( $_GET['pick'] ) ) : '';
 
 		?><!doctype html>
 <html <?php language_attributes(); ?>>
@@ -96,6 +98,8 @@ class MobileCapture {
 
 	<nav class="lw16-mobile__tabs">
 		<button type="button" class="is-active" data-tab="druck"><?php esc_html_e( 'Druckjob', 'lindenweg16' ); ?></button>
+		<button type="button" data-tab="lager"><?php esc_html_e( 'Lager', 'lindenweg16' ); ?></button>
+		<button type="button" data-tab="picken"><?php esc_html_e( 'Picken', 'lindenweg16' ); ?></button>
 		<button type="button" data-tab="zeit"><?php esc_html_e( 'Zeit', 'lindenweg16' ); ?></button>
 	</nav>
 
@@ -165,6 +169,58 @@ class MobileCapture {
 			<button type="submit" class="lw16-submit"><?php esc_html_e( 'Buchen', 'lindenweg16' ); ?></button>
 		</form>
 
+		<form id="lw16-form-lager" class="lw16-mobile__form" data-panel="lager" hidden>
+			<div class="lw16-scanbox">
+				<button type="button" class="lw16-scan" data-scan="lager"><?php esc_html_e( 'Scannen', 'lindenweg16' ); ?></button>
+				<span class="lw16-slot" id="lw16-slot-bin"><?php esc_html_e( 'kein Platz', 'lindenweg16' ); ?></span>
+			</div>
+			<div class="lw16-scanbox">
+				<button type="button" class="lw16-scan lw16-scan--ghost" data-scan="lager"><?php esc_html_e( 'Scannen', 'lindenweg16' ); ?></button>
+				<span class="lw16-slot" id="lw16-slot-article"><?php esc_html_e( 'kein Artikel', 'lindenweg16' ); ?></span>
+			</div>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Code eintippen', 'lindenweg16' ); ?></span>
+				<input type="text" id="lw16-manual" inputmode="text" autocapitalize="characters" autocomplete="off" placeholder="<?php esc_attr_e( 'Code und Enter', 'lindenweg16' ); ?>" />
+			</label>
+
+			<div class="lw16-stock" id="lw16-stock" hidden></div>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Vorgang', 'lindenweg16' ); ?></span>
+				<select name="movement_type" id="lw16-movetype"></select>
+			</label>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Farbe', 'lindenweg16' ); ?></span>
+				<select name="color" id="lw16-lager-color"></select>
+			</label>
+
+			<div class="lw16-field lw16-stepper">
+				<span><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></span>
+				<div>
+					<button type="button" class="lw16-step" data-step="-1" data-target="lager-qty">&minus;</button>
+					<input type="text" inputmode="decimal" id="lw16-lager-qty" value="1" />
+					<button type="button" class="lw16-step" data-step="1" data-target="lager-qty">+</button>
+				</div>
+			</div>
+
+			<label class="lw16-field" id="lw16-tobin-field" hidden>
+				<span><?php esc_html_e( 'Zielplatz', 'lindenweg16' ); ?></span>
+				<select id="lw16-tobin"></select>
+			</label>
+
+			<button type="submit" class="lw16-submit"><?php esc_html_e( 'Buchen', 'lindenweg16' ); ?></button>
+		</form>
+
+		<section class="lw16-mobile__form" data-panel="picken" hidden>
+			<div class="lw16-scanbox">
+				<button type="button" class="lw16-scan" data-scan="pick"><?php esc_html_e( 'Position scannen', 'lindenweg16' ); ?></button>
+				<button type="button" class="lw16-scan lw16-scan--ghost" id="lw16-pick-reload"><?php esc_html_e( 'Neu laden', 'lindenweg16' ); ?></button>
+			</div>
+			<div id="lw16-picklists"></div>
+		</section>
+
 		<form id="lw16-form-zeit" class="lw16-mobile__form" data-panel="zeit" hidden>
 			<label class="lw16-field">
 				<span><?php esc_html_e( 'Kategorie', 'lindenweg16' ); ?></span>
@@ -207,6 +263,7 @@ class MobileCapture {
 					'root'        => esc_url_raw( rest_url( RestApi::NAMESPACE_V1 . '/' ) ),
 					'nonce'       => wp_create_nonce( 'wp_rest' ),
 					'printerCode' => $printer,
+					'pickCode'    => $pick,
 					'movementTypes' => StockLedger::movement_labels(),
 					'colors'        => ColorRegistry::options(),
 					'bins'          => array_map(
@@ -232,6 +289,7 @@ class MobileCapture {
 						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),
+						'pickGone'   => __( 'Diese Pickliste ist nicht mehr offen – vermutlich schon abgearbeitet.', 'lindenweg16' ),
 						'picked'     => __( 'Entnommen.', 'lindenweg16' ),
 						'noBin'      => __( 'kein Platz', 'lindenweg16' ),
 						'noArticle'  => __( 'kein Artikel', 'lindenweg16' ),

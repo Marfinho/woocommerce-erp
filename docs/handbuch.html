@@ -509,9 +509,24 @@ footer p{max-width:72ch}
 	<ol class="steps">
 		<li><strong>Auftrag anlegen</strong> Artikel wählen — angeboten werden nur Artikel mit Beschaffungsweg <em>Montage</em> und einer Stückliste —, Menge eintragen, anlegen. Der Auftrag bekommt eine eigene Nummer.</li>
 		<li><strong>Die Materialliste entsteht mit</strong> Automatisch, <strong>eine Ebene tief</strong>: genau das, was für diesen Schritt aus dem Regal geholt wird. Willst du das Halbzeug „Stange + Abstandshalter" bauen, stehen dort die Stange und der Abstandshalter — nicht das Filament, aus dem der Abstandshalter mal entstand. Das war der eigene Auftrag eine Stufe tiefer.</li>
+		<li><strong>Materialliste aufs Handy holen</strong> In der Spalte <em>Pickliste</em> steht der Code der Liste und darunter ein QR-Code. Scann ihn mit dem Telefon — die Erfassung öffnet sich direkt im Reiter <em>Picken</em> und zeigt <strong>genau diese eine Liste</strong>, nicht alle offenen. Der Code ist auch ein Link, falls du am selben Rechner bleiben willst.</li>
+		<li><strong>Produktion starten</strong> Der Knopf startet die Uhr. Gebucht wird dabei nichts — der Timer misst, er bewegt keinen Bestand.</li>
 		<li><strong>Picken</strong> Die Liste zeigt je Position den Lagerplatz. Am Handy abarbeiten wie jede andere Pickliste.</li>
-		<li><strong>Fertigmelden</strong> Mit der tatsächlich entstandenen Menge — die kann kleiner sein als geplant, wenn etwas schiefging. Jetzt erst wird gebucht: Das Material geht ab, das Fertigteil kommt zu.</li>
+		<li><strong>Fertigmelden</strong> Mit der tatsächlich entstandenen Menge — die kann kleiner sein als geplant, wenn etwas schiefging. Jetzt erst wird gebucht: Das Material geht ab, das Fertigteil kommt zu. Eine noch laufende Uhr wird dabei mit angehalten.</li>
 	</ol>
+
+	<h4>Die Uhr</h4>
+	<p>Der Timer beantwortet die Frage, die dir sonst niemand beantwortet: <em>Wie lange dauert das eigentlich wirklich?</em></p>
+	<ul>
+		<li><strong>Starten und Pausieren</strong> beliebig oft. Die Segmente addieren sich — eine Unterbrechung fürs Telefon kostet dich keine Messung.</li>
+		<li><strong>In der Spalte Zeit</strong> steht bei laufender Uhr die bisherige Dauer, danach die Gesamtdauer und die daraus gerechneten <strong>Minuten je Stück</strong>. Das ist die Zahl, die in die Kalkulation gehört.</li>
+		<li><strong>Die gemessene Zeit landet in der Zeiterfassung</strong>, Kategorie <em>Produktion</em>, mit dem Auftragscode in der Beschreibung. Du musst sie nicht zusätzlich eintragen — und wenn sie einmal falsch ist, findest du den Eintrag unter <span class="path">Betrieb → Zeiterfassung</span> am Code wieder.</li>
+	</ul>
+
+	<div class="note">
+		<span class="lbl">Vergessene Uhr</span>
+		<p>Ein Segment wird bei zwölf Stunden gekappt. Wer freitags startet und montags fertigmeldet, hat nicht 72 Stunden gearbeitet — das ist ein vergessener Timer, und der soll die Statistik nicht verderben. Die gekappte Zeit steht trotzdem da; korrigieren lässt sie sich über den Eintrag in der Zeiterfassung.</p>
+	</div>
 
 	<div class="rule-box">
 		<span class="lbl">Wo ein Teil verbraucht wird — die eine Regel</span>
@@ -574,7 +589,7 @@ footer p{max-width:72ch}
 			</tbody>
 		</table>
 	</div>
-	<p>Dazu kommen zwei QR-Codes, die keine Codes sondern <strong>Adressen</strong> enthalten: der Aufkleber am Drucker (führt direkt in die mobile Erfassung für genau dieses Gerät) und die Händlerkarte mit dem Nachbestell-Link (Kapitel 7.5). Beide funktionieren mit jeder Kamera-App, nicht nur im Plugin.</p>
+	<p>Dazu kommen drei QR-Codes, die keine Codes sondern <strong>Adressen</strong> enthalten: der Aufkleber am Drucker (führt in die mobile Erfassung für genau dieses Gerät), der Code neben einem Fertigungsauftrag (öffnet dessen Materialliste, Kapitel 5.4) und die Händlerkarte mit dem Nachbestell-Link (Kapitel 7.5). Alle drei funktionieren mit jeder Kamera-App, nicht nur im Plugin.</p>
 
 	<div class="note">
 		<span class="lbl">Zugekaufte Ware braucht kein eigenes Etikett</span>
@@ -598,7 +613,7 @@ footer p{max-width:72ch}
 
 	<h3>6.3 Picken</h3>
 	<p>Unter <span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Picklisten</span> erzeugst du aus allen offenen Bestellungen eine Liste. Sie ist <strong>nach Lagerplatz sortiert, nicht nach Bestellung</strong> — der Weg durchs Regal ist die knappe Ressource, das Zuordnen passiert danach am Packtisch.</p>
-	<p>Die zweite Sorte Pickliste kommt aus einem <strong>Fertigungsauftrag</strong> (Kapitel 5.4) — dort ist die Liste nicht „was raus muss", sondern „was in das Teil reingeht". Auf dem Handy sehen beide gleich aus und werden gleich abgearbeitet.</p>
+	<p>Die zweite Sorte Pickliste kommt aus einem <strong>Fertigungsauftrag</strong> (Kapitel 5.4) — dort ist die Liste nicht „was raus muss", sondern „was in das Teil reingeht". Auf dem Handy sehen beide gleich aus und werden gleich abgearbeitet. Zu jedem Auftrag gehört ein QR-Code, der direkt seine Liste öffnet; über den kommst du am schnellsten hin.</p>
 	<p>Am Handy im Reiter <em>Picken</em> steht jede Zeile mit Platz, Artikel, Farbe und Restmenge. Abhaken geht per Knopf oder per Scan: Scannst du einen Artikel, sucht die App die passende offene Zeile selbst. Ein falscher Code wird abgewiesen — sonst wäre der Scan reine Zierde.</p>
 
 	<div class="rule-box">
@@ -709,7 +724,7 @@ footer p{max-width:72ch}
 		<div class="stage"><b>Rohlinge &amp; Kleinteile</b><span>dieselbe Rechnung eine Stufe tiefer</span></div>
 	</div>
 	<p>Gerechnet wird also von oben nach unten. <strong>Angezeigt wird umgekehrt:</strong> Was am tiefsten in der Stückliste steckt, steht oben in der Liste — es muss zuerst da sein. Arbeite die Seite von oben nach unten ab, dann kommst du nie an einen Fertigungsauftrag, dem noch ein Rohling fehlt.</p>
-	<p>Auf jeder Stufe zählt gegen: was im Regal liegt <em>und</em> was bereits in einem offenen Druckjob oder Fertigungsauftrag steckt. Deshalb schlägt die Seite nichts doppelt vor, wenn du sie zweimal am Tag öffnest.</p>
+	<p>Auf jeder Stufe zählt gegen: was im Regal liegt <em>und</em> was bereits in einem offenen oder laufenden Druckjob oder Fertigungsauftrag steckt. Deshalb schlägt die Seite nichts doppelt vor, wenn du sie zweimal am Tag öffnest.</p>
 
 	<h4>Was du auf der Seite tun kannst</h4>
 	<ul>

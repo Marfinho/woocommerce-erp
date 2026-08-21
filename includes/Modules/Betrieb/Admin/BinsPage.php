@@ -15,6 +15,7 @@ use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ScanResolver;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
@@ -37,6 +38,7 @@ class BinsPage {
 		add_action( 'admin_post_lw16_betrieb_make_picklist', array( $this, 'handle_picklist' ) );
 		add_action( 'admin_post_lw16_betrieb_work_order', array( $this, 'handle_work_order' ) );
 		add_action( 'admin_post_lw16_betrieb_work_done', array( $this, 'handle_work_done' ) );
+		add_action( 'admin_post_lw16_betrieb_work_timer', array( $this, 'handle_work_timer' ) );
 	}
 
 	/**
@@ -440,6 +442,25 @@ class BinsPage {
 	}
 
 	/**
+	 * Uhr an einem Fertigungsauftrag starten oder anhalten.
+	 */
+	public function handle_work_timer() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE . '_work' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
+		$id    = isset( $_POST['work_order_id'] ) ? (int) $_POST['work_order_id'] : 0;
+		$pause = ! empty( $_POST['pause'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$result = $pause
+			? WorkOrderRepository::pause( $id )
+			: WorkOrderRepository::start( $id );
+
+		$this->redirect( $result['message'], $result['success'] ? 'success' : 'error', array( 'view' => 'fertigung' ) );
+	}
+
+	/**
 	 * Auftrag fertigmelden oder stornieren.
 	 */
 	public function handle_work_done() {
@@ -458,6 +479,114 @@ class BinsPage {
 			: WorkOrderRepository::complete( $id, $qty );
 
 		$this->redirect( $result['message'], $result['success'] ? 'success' : 'error', array( 'view' => 'fertigung' ) );
+	}
+
+	/**
+	 * Ampelfarbe je Auftragszustand.
+	 *
+	 * @param string $status Zustand.
+	 * @return string
+	 */
+	protected function status_color( $status ) {
+		if ( 'erledigt' === $status ) {
+			return 'gruen';
+		}
+
+		if ( in_array( $status, WorkOrderRepository::OPEN_STATES, true ) ) {
+			return 'gelb';
+		}
+
+		return 'rot';
+	}
+
+	/**
+	 * Auftragszustand in Klartext.
+	 *
+	 * @param string $status Zustand.
+	 * @return string
+	 */
+	protected function status_label( $status ) {
+		$labels = array(
+			'offen'      => __( 'offen', 'lindenweg16' ),
+			'laufend'    => __( 'läuft', 'lindenweg16' ),
+			'erledigt'   => __( 'erledigt', 'lindenweg16' ),
+			'storniert'  => __( 'storniert', 'lindenweg16' ),
+		);
+
+		return isset( $labels[ $status ] ) ? $labels[ $status ] : (string) $status;
+	}
+
+	/**
+	 * Gemessene Zeit als Text.
+	 *
+	 * Bei einem laufenden Auftrag zählt das angebrochene Segment mit –
+	 * sonst stünde dort minutenlang eine Null, obwohl die Uhr läuft.
+	 *
+	 * @param array $order Auftrag.
+	 * @return string
+	 */
+	protected function duration_label( array $order ) {
+		$seconds = WorkOrderRepository::elapsed( $order, current_time( 'mysql', true ) );
+
+		if ( $seconds <= 0 ) {
+			return '—';
+		}
+
+		$text = WorkOrderRepository::format_duration( $seconds );
+
+		if ( WorkOrderRepository::is_running( $order ) ) {
+			return sprintf( /* translators: %s: Dauer. */ __( '%s (läuft)', 'lindenweg16' ), $text );
+		}
+
+		$je_stueck = WorkOrderRepository::minutes_per_piece( $seconds, (float) $order['qty_done'] );
+
+		if ( null !== $je_stueck ) {
+			return sprintf(
+				/* translators: 1: Dauer, 2: Minuten je Stück. */
+				__( '%1$s · %2$s min/Stk.', 'lindenweg16' ),
+				$text,
+				number_format_i18n( $je_stueck, 2 )
+			);
+		}
+
+		return $text;
+	}
+
+	/**
+	 * Zelle mit Link und QR-Code zur Materialliste.
+	 *
+	 * Der QR-Code ist der eigentliche Zweck: Man legt den Auftrag am
+	 * Rechner an, scannt ihn vom Bildschirm und hat die Liste am Handy –
+	 * ohne sie abzutippen oder sich durch alle offenen Listen zu suchen.
+	 *
+	 * @param array $order Auftrag.
+	 */
+	protected function render_picklist_cell( array $order ) {
+		$picklist_id = isset( $order['picklist_id'] ) ? (int) $order['picklist_id'] : 0;
+
+		if ( ! $picklist_id ) {
+			echo '<span class="description">' . esc_html__( 'keine', 'lindenweg16' ) . '</span>';
+			return;
+		}
+
+		$picklist = PicklistRepository::find( $picklist_id );
+
+		if ( ! $picklist ) {
+			echo '<span class="description">' . esc_html__( 'keine', 'lindenweg16' ) . '</span>';
+			return;
+		}
+
+		$url = DeviceLabel::pick_url( $picklist['code'] );
+
+		printf(
+			'<div class="lw16-pickqr"><a href="%1$s" target="_blank" rel="noopener"><strong>%2$s</strong></a>'
+			. '<div class="lw16-pickqr__code">%3$s</div>'
+			. '<div class="lw16-pickqr__hint">%4$s</div></div>',
+			esc_url( $url ),
+			esc_html( $picklist['code'] ),
+			DeviceLabel::qr( $url, 96, 'M' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- erzeugtes SVG.
+			esc_html__( 'scannen fürs Handy', 'lindenweg16' )
+		);
 	}
 
 	/**
@@ -522,6 +651,8 @@ class BinsPage {
 			__( 'Farbe', 'lindenweg16' ),
 			__( 'Geplant', 'lindenweg16' ),
 			__( 'Material', 'lindenweg16' ),
+			__( 'Pickliste', 'lindenweg16' ),
+			__( 'Zeit', 'lindenweg16' ),
 			__( 'Status', 'lindenweg16' ),
 			'',
 		) as $head ) {
@@ -557,14 +688,37 @@ class BinsPage {
 			printf( '<td>%s</td>', esc_html( ColorRegistry::label( $order['color'] ) ) );
 			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $order['qty_planned'], 0 ) ) );
 			printf( '<td>%s</td>', esc_html( implode( ' · ', $parts ) ) );
+
+			echo '<td>';
+			$this->render_picklist_cell( $order );
+			echo '</td>';
+
+			printf( '<td>%s</td>', esc_html( $this->duration_label( $order ) ) );
+
 			printf(
 				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
-				'offen' === $order['status'] ? 'gelb' : ( 'erledigt' === $order['status'] ? 'gruen' : 'rot' ),
-				esc_html( $order['status'] )
+				esc_attr( $this->status_color( $order['status'] ) ),
+				esc_html( $this->status_label( $order['status'] ) )
 			);
 
 			echo '<td>';
-			if ( 'offen' === $order['status'] ) {
+			if ( in_array( $order['status'], WorkOrderRepository::OPEN_STATES, true ) ) {
+				// Uhr: starten, solange nichts läuft – anhalten, solange sie läuft.
+				$laeuft = WorkOrderRepository::is_running( $order );
+
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-bottom:4px">';
+				wp_nonce_field( self::NONCE . '_work' );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_work_timer" />';
+				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
+				if ( $laeuft ) {
+					echo '<input type="hidden" name="pause" value="1" />';
+				}
+				printf(
+					'<button class="button button-small">%s</button>',
+					esc_html( $laeuft ? __( 'Produktion pausieren', 'lindenweg16' ) : __( 'Produktion starten', 'lindenweg16' ) )
+				);
+				echo '</form>';
+
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 				wp_nonce_field( self::NONCE . '_work' );
 				echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';

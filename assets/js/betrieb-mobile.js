@@ -422,16 +422,33 @@
 		} );
 	}
 
+	function visiblePicklists() {
+		// Per QR-Code aufgerufen zeigt das Handy genau die eine Liste. Wer
+		// mit einem Auftrag ins Regal geht, will nicht erst zwischen sechs
+		// offenen Listen suchen.
+		if ( ! config.pickCode ) {
+			return picklists;
+		}
+
+		var wanted = String( config.pickCode ).toUpperCase();
+
+		return picklists.filter( function ( list ) {
+			return String( list.code ).toUpperCase() === wanted;
+		} );
+	}
+
 	function renderPicklists() {
 		var box = document.getElementById( 'lw16-picklists' );
+		var shown = visiblePicklists();
+
 		box.textContent = '';
 
-		if ( ! picklists.length ) {
-			box.textContent = config.i18n.noPicklist;
+		if ( ! shown.length ) {
+			box.textContent = config.pickCode ? config.i18n.pickGone : config.i18n.noPicklist;
 			return;
 		}
 
-		picklists.forEach( function ( list ) {
+		shown.forEach( function ( list ) {
 			var section = document.createElement( 'section' );
 			var heading = document.createElement( 'h2' );
 			heading.textContent = list.code;
@@ -493,7 +510,7 @@
 		// Die erste offene Position, deren Artikel zum Scan passt.
 		var target = null;
 
-		picklists.some( function ( list ) {
+		visiblePicklists().some( function ( list ) {
 			return list.items.some( function ( item ) {
 				if ( ! item.done && code.toUpperCase().indexOf( item.sku.toUpperCase() ) !== -1 ) {
 					target = item;
@@ -651,11 +668,24 @@
 		} );
 	}
 
+	function openTab( name ) {
+		document.querySelectorAll( '.lw16-mobile__tabs button' ).forEach( function ( button ) {
+			button.classList.toggle( 'is-active', button.dataset.tab === name );
+		} );
+		document.querySelectorAll( '[data-panel]' ).forEach( function ( panel ) {
+			panel.hidden = panel.dataset.panel !== name;
+		} );
+	}
+
 	document.addEventListener( 'DOMContentLoaded', function () {
 		fillLagerSelects();
 		bind();
 		renderQueue( readQueue() );
 		loadContext().then( flush );
 		loadPicklists();
+
+		if ( config.pickCode ) {
+			openTab( 'picken' );
+		}
 	} );
 }() );

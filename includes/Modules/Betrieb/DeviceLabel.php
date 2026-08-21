@@ -47,6 +47,25 @@ class DeviceLabel {
 	}
 
 	/**
+	 * Erfassungs-URL, die direkt auf einer Pickliste aufsetzt.
+	 *
+	 * Gedacht für den QR-Code neben einem Fertigungsauftrag: scannen,
+	 * und das Handy zeigt genau diese Materialliste – nicht alle offenen.
+	 *
+	 * @param string $picklist_code Code der Pickliste.
+	 * @return string
+	 */
+	public static function pick_url( $picklist_code ) {
+		$code = trim( (string) $picklist_code );
+
+		if ( '' === $code ) {
+			return self::url();
+		}
+
+		return add_query_arg( 'pick', rawurlencode( $code ), self::url() );
+	}
+
+	/**
 	 * Nutzt die Seite sprechende Permalinks?
 	 *
 	 * Ohne sie greift keine Rewrite-Regel. Die Kurzadresse waere dann nicht

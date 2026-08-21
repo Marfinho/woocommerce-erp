@@ -296,3 +296,8 @@
 .lw16-table--zahlen td {
 	font-variant-numeric: tabular-nums;
 }
+
+/* Materialliste eines Fertigungsauftrags: Code, QR-Code, Hinweis. */
+.lw16-pickqr { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.lw16-pickqr__code svg { display: block; width: 96px; height: 96px; }
+.lw16-pickqr__hint { font-size: 11px; color: #5a676d; }
