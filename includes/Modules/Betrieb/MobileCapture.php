@@ -204,6 +204,7 @@ class MobileCapture {
 				<button type="button" class="lw16-scan" data-scan="lager"><?php esc_html_e( 'Scannen', 'lindenweg16' ); ?></button>
 				<span class="lw16-slot" id="lw16-slot-bin"><?php esc_html_e( 'kein Platz', 'lindenweg16' ); ?></span>
 			</div>
+			<p class="lw16-scaninfo" data-scaninfo hidden></p>
 			<div class="lw16-scanbox">
 				<button type="button" class="lw16-scan lw16-scan--ghost" data-scan="lager"><?php esc_html_e( 'Scannen', 'lindenweg16' ); ?></button>
 				<span class="lw16-slot" id="lw16-slot-article"><?php esc_html_e( 'kein Artikel', 'lindenweg16' ); ?></span>
@@ -248,6 +249,7 @@ class MobileCapture {
 				<button type="button" class="lw16-scan" data-scan="pick"><?php esc_html_e( 'Position scannen', 'lindenweg16' ); ?></button>
 				<button type="button" class="lw16-scan lw16-scan--ghost" id="lw16-pick-reload"><?php esc_html_e( 'Neu laden', 'lindenweg16' ); ?></button>
 			</div>
+			<p class="lw16-scaninfo" data-scaninfo hidden></p>
 
 			<label class="lw16-field">
 				<span><?php esc_html_e( 'Liste', 'lindenweg16' ); ?></span>
@@ -335,6 +337,10 @@ class MobileCapture {
 						'noSecure'   => __( 'Die Kamera gibt es nur über eine https-Adresse. Diese Seite läuft über http – Code bitte eintippen.', 'lindenweg16' ),
 						'noCameraApi' => __( 'Dieser Browser gibt keinen Kamerazugriff frei. Code bitte eintippen.', 'lindenweg16' ),
 						'noDecoderLoad' => __( 'Der Code-Leser konnte nicht geladen werden. Code bitte eintippen.', 'lindenweg16' ),
+						'camDenied'  => __( 'Der Kamerazugriff ist für diese Seite gesperrt. In den Website-Einstellungen des Browsers die Kamera erlauben und neu laden.', 'lindenweg16' ),
+						'camNone'    => __( 'Der Browser findet keine Kamera an diesem Gerät.', 'lindenweg16' ),
+						'camBusy'    => __( 'Die Kamera ist gerade von einer anderen App belegt.', 'lindenweg16' ),
+						'qrOnly'     => __( 'Dieser Browser liest nur QR-Codes – Strichcodes von Lieferanten bitte eintippen.', 'lindenweg16' ),
 						'notFound'   => __( 'Unbekannter Code:', 'lindenweg16' ),
 						'needBoth'   => __( 'Erst Lagerplatz und Artikel scannen.', 'lindenweg16' ),
 						'noPicklist' => __( 'Keine offene Pickliste.', 'lindenweg16' ),

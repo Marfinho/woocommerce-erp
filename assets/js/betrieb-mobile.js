@@ -433,12 +433,62 @@
 		} ).catch( function ( fehler ) {
 			closeCamera();
 
-			// Zwei sehr verschiedene Ursachen: der Decoder kam nicht, oder
-			// die Kamera wurde verweigert. Das darf nicht dieselbe Meldung
-			// geben.
-			status( leser ? config.i18n.noCamera : config.i18n.noDecoderLoad, 'error' );
+			// Der Decoder kam nicht - oder die Kamera. Zwei sehr
+			// verschiedene Ursachen, und der Browser nennt bei der Kamera
+			// sogar welche genau. Das gehoert weitergegeben, sonst sucht
+			// man an der falschen Stelle.
+			status( leser ? kameraFehlertext( fehler ) : config.i18n.noDecoderLoad, 'error' );
 			focusManual();
 		} );
+	}
+
+	/*
+	 * Aus dem Fehler von getUserMedia eine Antwort machen, mit der sich
+	 * etwas anfangen laesst.
+	 */
+	function kameraFehlertext( fehler ) {
+		var name = fehler && fehler.name ? fehler.name : '';
+
+		if ( 'NotAllowedError' === name || 'SecurityError' === name ) {
+			return config.i18n.camDenied;
+		}
+
+		if ( 'NotFoundError' === name || 'OverconstrainedError' === name ) {
+			return config.i18n.camNone;
+		}
+
+		if ( 'NotReadableError' === name ) {
+			return config.i18n.camBusy;
+		}
+
+		return config.i18n.noCamera + ( name ? ' (' + name + ')' : '' );
+	}
+
+	/*
+	 * Was der Scan-Knopf hier kann - noch bevor jemand darauf drueckt.
+	 *
+	 * Eine Fehlermeldung, die erst nach dem Tippen kommt und wieder
+	 * verschwindet, hilft beim Suchen nicht. Diese Zeile steht fest da.
+	 */
+	function zeigeScanHinweis() {
+		var problem = scannerProblem();
+		var felder = document.querySelectorAll( '[data-scaninfo]' );
+		var text = '';
+
+		if ( 'noSecure' === problem ) {
+			// Die Adresse gehoert dazu: http gegen https ist genau der
+			// Unterschied, um den es hier geht.
+			text = config.i18n.noSecure + ' (' + window.location.protocol + '//' + window.location.host + ')';
+		} else if ( problem ) {
+			text = config.i18n[ problem ] || config.i18n.noScanner;
+		} else if ( ! ( 'BarcodeDetector' in window ) ) {
+			text = config.i18n.qrOnly;
+		}
+
+		for ( var i = 0; i < felder.length; i++ ) {
+			felder[ i ].textContent = text;
+			felder[ i ].hidden = '' === text;
+		}
 	}
 
 	/*
@@ -911,6 +961,8 @@
 		renderQueue( readQueue() );
 		loadContext().then( flush );
 		loadPicklists();
+
+		zeigeScanHinweis();
 
 		if ( config.pickCode ) {
 			openTab( 'picken' );

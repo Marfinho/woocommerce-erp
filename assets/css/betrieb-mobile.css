@@ -285,3 +285,10 @@ body.lw16-mobile {
 /* Versionszeile: klein, aber auffindbar – sie beantwortet die Frage,
    ob ein Update tatsaechlich auf dem Geraet angekommen ist. */
 .lw16-build { margin: 4px 16px 12px; font-size: 11px; color: #8a959a; }
+
+/* Warum das Scannen hier nicht geht - fest sichtbar, nicht als
+   verschwindende Meldung. Beim Suchen zaehlt, dass es stehen bleibt. */
+.lw16-scaninfo {
+	margin: 0 0 12px; padding: 10px 12px; border-radius: 8px;
+	background: #f7e7e4; color: #6b1e18; font-size: 14px; line-height: 1.4;
+}
