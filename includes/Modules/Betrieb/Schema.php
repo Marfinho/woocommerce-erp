@@ -350,6 +350,9 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}work_orders (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			code VARCHAR(32) NOT NULL,
+			kind VARCHAR(20) NOT NULL DEFAULT 'montage',
+			printer_id BIGINT UNSIGNED NULL,
+			print_job_id BIGINT UNSIGNED NULL,
 			article_id BIGINT UNSIGNED NOT NULL,
 			color VARCHAR(50) NULL,
 			qty_planned DECIMAL(10,3) NOT NULL DEFAULT 0,
@@ -365,6 +368,7 @@ class Schema {
 			PRIMARY KEY  (id),
 			UNIQUE KEY code (code),
 			KEY article_id (article_id),
+			KEY kind (kind),
 			KEY status (status)
 		) {$charset_collate};";
 

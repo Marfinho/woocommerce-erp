@@ -77,6 +77,34 @@ class WorkOrderRepository {
 	 * @param array $article Artikel.
 	 * @return bool
 	 */
+	public static function kinds() {
+		return array(
+			'montage' => __( 'Fertigungsauftrag', 'lindenweg16' ),
+			'druck'   => __( 'Druckauftrag', 'lindenweg16' ),
+		);
+	}
+
+	/**
+	 * Passt Artikel und Auftragsart zusammen?
+	 *
+	 * Reine Logik. Ein Rohling entsteht im Drucker, ein Halbzeug durch
+	 * Montage. Der Hybridartikel kann beides – bei ihm wird zuerst
+	 * gedruckt und danach montiert, also braucht er beide Auftragsarten.
+	 *
+	 * @param array  $article Artikel.
+	 * @param string $kind    montage oder druck.
+	 * @return bool
+	 */
+	public static function fits_kind( array $article, $kind ) {
+		$type = isset( $article['sourcing_type'] ) ? (string) $article['sourcing_type'] : '';
+
+		if ( 'druck' === $kind ) {
+			return in_array( $type, array( 'druck', 'hybrid' ), true );
+		}
+
+		return self::is_makeable( $article );
+	}
+
 	public static function is_makeable( array $article ) {
 		$type = isset( $article['sourcing_type'] ) ? (string) $article['sourcing_type'] : '';
 
@@ -236,11 +264,11 @@ class WorkOrderRepository {
 	 *
 	 * @return string
 	 */
-	public static function next_code() {
+	public static function next_code( $kind = 'montage' ) {
 		global $wpdb;
 
 		$table  = self::table();
-		$prefix = 'FA' . gmdate( 'ymd' );
+		$prefix = ( 'druck' === $kind ? 'DA' : 'FA' ) . gmdate( 'ymd' );
 		$count  = (int) $wpdb->get_var(
 			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE code LIKE %s", $prefix . '%' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
@@ -256,13 +284,16 @@ class WorkOrderRepository {
 	 */
 	public static function validate( array $input ) {
 		$errors     = array();
+		$kind       = isset( $input['kind'] ) && 'druck' === $input['kind'] ? 'druck' : 'montage';
 		$article_id = self::int_or( $input, 'article_id', 0 );
 		$article    = $article_id ? ArticleRepository::find( $article_id ) : null;
 
 		if ( ! $article ) {
 			$errors[] = __( 'Bitte einen Artikel wählen.', 'lindenweg16' );
-		} elseif ( ! self::is_makeable( $article ) ) {
-			$errors[] = __( 'Dieser Artikel wird nicht montiert. Gedruckte Rohlinge entstehen im Druckjournal, Zukaufartikel werden bestellt.', 'lindenweg16' );
+		} elseif ( ! self::fits_kind( $article, $kind ) ) {
+			$errors[] = 'druck' === $kind
+				? __( 'Dieser Artikel wird nicht gedruckt. Ein Halbzeug entsteht über einen Fertigungsauftrag, ein Zukaufartikel über eine Bestellung.', 'lindenweg16' )
+				: __( 'Dieser Artikel wird nicht montiert. Gedruckte Rohlinge entstehen über einen Druckauftrag, Zukaufartikel werden bestellt.', 'lindenweg16' );
 		}
 
 		$qty = self::decimal_or( $input, 'qty_planned', 0 );
@@ -270,12 +301,21 @@ class WorkOrderRepository {
 			$errors[] = __( 'Wie viele Stück sollen entstehen?', 'lindenweg16' );
 		}
 
-		if ( $article && ! BomRepository::for_article( $article_id ) ) {
+		// Ein Druckauftrag braucht keine Stückliste: Der Rohling entsteht aus
+		// Filament. Ein Montageauftrag ohne Stückliste haette dagegen nichts
+		// zu montieren und nichts zu picken.
+		if ( 'montage' === $kind && $article && ! BomRepository::for_article( $article_id ) ) {
 			$errors[] = __( 'Dieser Artikel hat keine Stückliste – dann gäbe es nichts zu montieren und nichts zu picken.', 'lindenweg16' );
+		}
+
+		if ( 'druck' === $kind && $article && ! RevisionRepository::active_for_article( $article_id ) ) {
+			$errors[] = __( 'Für diesen Artikel ist keine Revision freigegeben – ohne Druckprofil lässt sich kein Druckauftrag planen.', 'lindenweg16' );
 		}
 
 		return array(
 			'data'   => array(
+				'kind'        => $kind,
+				'printer_id'  => self::int_or( $input, 'printer_id', 0 ) ? self::int_or( $input, 'printer_id', 0 ) : null,
 				'article_id'  => $article_id,
 				'color'       => ColorRegistry::normalize( isset( $input['color'] ) ? $input['color'] : '' ),
 				'qty_planned' => $qty,
@@ -300,7 +340,7 @@ class WorkOrderRepository {
 			$data['color'] = ColorRegistry::default_color();
 		}
 
-		$data['code']       = self::next_code();
+		$data['code']       = self::next_code( isset( $data['kind'] ) ? $data['kind'] : 'montage' );
 		$data['created_at'] = current_time( 'mysql', true );
 		$data['created_by'] = get_current_user_id();
 
@@ -521,6 +561,18 @@ class WorkOrderRepository {
 			);
 		}
 
+		// Ein Druckauftrag wird nicht hier gebucht. Was am Ende eines Drucks
+		// feststeht – Drucker, Filamentcharge, gute Teile, Ausschuss,
+		// Plattenwechsel – kennt nur das Druckjournal. Zwei Buchungsstellen
+		// fuer denselben Zugang waeren genau der Fehler, den das Lager
+		// vermeidet.
+		if ( 'druck' === $order['kind'] ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Ein Druckauftrag wird über das Druckjournal fertiggemeldet – dort stehen Drucker, Charge und Ausschuss.', 'lindenweg16' ),
+			);
+		}
+
 		$qty = (float) $qty;
 		if ( $qty <= 0 ) {
 			$qty = (float) $order['qty_planned'];
@@ -601,6 +653,49 @@ class WorkOrderRepository {
 			'success' => true,
 			'message' => $message,
 		);
+	}
+
+	/**
+	 * Druckauftrag durch einen gebuchten Druckjob abschließen.
+	 *
+	 * Aufgerufen, nachdem das Druckjournal gebucht hat. Der Zugang ist
+	 * dort schon entstanden; hier wird nur der Auftrag geschlossen und die
+	 * gelaufene Zeit festgehalten.
+	 *
+	 * @param int   $id           Auftrag.
+	 * @param int   $print_job_id Gebuchter Druckjob.
+	 * @param float $qty_ok       Gute Teile.
+	 * @return bool
+	 */
+	public static function close_by_print_job( $id, $print_job_id, $qty_ok ) {
+		global $wpdb;
+
+		$order = self::find( $id );
+
+		if ( ! $order || 'druck' !== $order['kind'] || ! in_array( $order['status'], self::OPEN_STATES, true ) ) {
+			return false;
+		}
+
+		$now     = current_time( 'mysql', true );
+		$seconds = self::accumulate( (int) $order['seconds_worked'], (string) $order['started_at'], $now );
+
+		$data = array(
+			'qty_done'       => (float) $qty_ok,
+			'status'         => 'erledigt',
+			'started_at'     => null,
+			'seconds_worked' => $seconds,
+			'finished_at'    => $now,
+			'print_job_id'   => (int) $print_job_id,
+		);
+
+		$wpdb->update( self::table(), $data, array( 'id' => (int) $id ) );
+		BetriebAudit::record( 'update', 'work_orders', (int) $id, $order, $data );
+
+		// Nur die Bedienzeit am Drucker, nicht die Druckdauer selbst: Der
+		// Timer laeuft, waehrend jemand am Geraet steht.
+		self::log_time( $order, $seconds );
+
+		return true;
 	}
 
 	/**

@@ -396,7 +396,9 @@ class BinsPage {
 		$this->redirect(
 			sprintf(
 				/* translators: %s: Auftragscode. */
-				__( 'Fertigungsauftrag %s angelegt. Die Materialliste steht am Handy unter „Picken" bereit.', 'lindenweg16' ),
+				'druck' === $order['kind']
+					? __( 'Druckauftrag %s angelegt. Starten mit „Produktion starten", buchen über „Im Journal buchen".', 'lindenweg16' )
+					: __( 'Fertigungsauftrag %s angelegt. Die Materialliste steht am Handy unter „Picken" bereit.', 'lindenweg16' ),
 				$order['code']
 			),
 			'success',
@@ -558,19 +560,29 @@ class BinsPage {
 	protected function render_work_orders() {
 		$articles = ArticleRepository::all_by_id();
 
-		echo '<h2>' . esc_html__( 'Fertigungsaufträge', 'lindenweg16' ) . '</h2>';
+		echo '<h2>' . esc_html__( 'Aufträge', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Zwischen Rohling und fertigem Artikel liegen Arbeitsschritte, die kein Druckjob sind: Gewindemuttern einschmelzen, Stange und Abstandshalter verbinden. Dafür ist der Fertigungsauftrag da – er ist das Gegenstück zum Druckjob, nur ohne Drucker.', 'lindenweg16' ) . '</p>';
-		echo '<p>' . esc_html__( 'Mit dem Anlegen entsteht automatisch die Materialliste: eine Ebene tief, also genau das, was aus dem Regal geholt werden muss. Gebucht wird erst beim Fertigmelden – dann geht das Material ab und das Fertigteil zu.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Beim Fertigungsauftrag entsteht mit dem Anlegen automatisch die Materialliste: eine Ebene tief, also genau das, was aus dem Regal geholt werden muss. Gebucht wird erst beim Fertigmelden – dann geht das Material ab und das Fertigteil zu.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Der Druckauftrag plant, was aus dem Drucker kommen soll. Gebucht wird er im Druckjournal, weil Drucker, Charge und Ausschuss erst am Ende feststehen – das Formular ist dann schon ausgefüllt.', 'lindenweg16' ) . '</p>';
 
 		// --- Neuer Auftrag ------------------------------------------------
+		// Beide Auftragsarten, in einem Formular. Welche Arten ein Artikel
+		// zulaesst, entscheidet sein Beschaffungsweg; der Hybridartikel
+		// steht in beiden Listen, weil bei ihm erst gedruckt und danach
+		// montiert wird.
 		$makeable = array();
+		$printable = array();
+
 		foreach ( ArticleRepository::all() as $article ) {
-			if ( WorkOrderRepository::is_makeable( $article ) ) {
+			if ( WorkOrderRepository::fits_kind( $article, 'montage' ) ) {
 				$makeable[] = $article;
+			}
+			if ( WorkOrderRepository::fits_kind( $article, 'druck' ) ) {
+				$printable[] = $article;
 			}
 		}
 
-		if ( ! $makeable ) {
+		if ( ! $makeable && ! $printable ) {
 			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Noch kein montierter Artikel angelegt. Ein Halbzeug bekommt unter Artikel & Revisionen den Beschaffungsweg „Halbzeug oder Baugruppe (Montage)" und eine Stückliste – dann erscheint es hier.', 'lindenweg16' ) . '</p></div>';
 		} else {
 			echo '<h3>' . esc_html__( 'Neuen Auftrag anlegen', 'lindenweg16' ) . '</h3>';
@@ -578,8 +590,22 @@ class BinsPage {
 			wp_nonce_field( self::NONCE . '_work' );
 			echo '<input type="hidden" name="action" value="lw16_betrieb_work_order" />';
 
-			echo '<p><select name="article_id">';
-			foreach ( $makeable as $article ) {
+			echo '<p><select name="kind">';
+			foreach ( WorkOrderRepository::kinds() as $key => $label ) {
+				printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
+			}
+			echo '</select> ';
+
+			// Beide Listen stehen im Formular; welche gilt, entscheidet die
+			// Auftragsart beim Speichern. Ein Artikel, der zur gewaehlten Art
+			// nicht passt, wird dort abgewiesen und benannt.
+			$auswahl = array();
+			foreach ( array_merge( $makeable, $printable ) as $article ) {
+				$auswahl[ (int) $article['id'] ] = $article;
+			}
+
+			echo '<select name="article_id">';
+			foreach ( $auswahl as $article ) {
 				printf(
 					'<option value="%d">%s</option>',
 					(int) $article['id'],
@@ -610,6 +636,7 @@ class BinsPage {
 		echo '<table class="widefat striped"><thead><tr>';
 		foreach ( array(
 			__( 'Auftrag', 'lindenweg16' ),
+			__( 'Art', 'lindenweg16' ),
 			__( 'Artikel', 'lindenweg16' ),
 			__( 'Farbe', 'lindenweg16' ),
 			__( 'Geplant', 'lindenweg16' ),
@@ -646,7 +673,10 @@ class BinsPage {
 			}
 
 			echo '<tr>';
+			$kinds = WorkOrderRepository::kinds();
+
 			printf( '<td><strong>%s</strong></td>', esc_html( $order['code'] ) );
+			printf( '<td>%s</td>', esc_html( isset( $kinds[ $order['kind'] ] ) ? $kinds[ $order['kind'] ] : $order['kind'] ) );
 			printf( '<td>%s</td>', esc_html( $article ? $article['sku'] . ' – ' . $article['name'] : '?' ) );
 			printf( '<td>%s</td>', esc_html( ColorRegistry::label( $order['color'] ) ) );
 			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $order['qty_planned'], 0 ) ) );
@@ -682,16 +712,26 @@ class BinsPage {
 				);
 				echo '</form>';
 
-				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-				wp_nonce_field( self::NONCE . '_work' );
-				echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
-				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
-				printf(
-					'<input type="text" name="qty_done" size="4" value="%s" /> <button class="button button-primary button-small">%s</button>',
-					esc_attr( number_format_i18n( (float) $order['qty_planned'], 0 ) ),
-					esc_html__( 'Fertigmelden', 'lindenweg16' )
-				);
-				echo '</form>';
+				if ( 'druck' === $order['kind'] ) {
+					// Ein Druckauftrag wird im Journal fertiggemeldet: Drucker,
+					// Charge und Ausschuss stehen erst am Ende fest.
+					printf(
+						'<a class="button button-primary button-small" href="%s">%s</a>',
+						esc_url( admin_url( 'admin.php?page=lw16-betrieb-druckjournal&work_order=' . (int) $order['id'] ) ),
+						esc_html__( 'Im Journal buchen', 'lindenweg16' )
+					);
+				} else {
+					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+					wp_nonce_field( self::NONCE . '_work' );
+					echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
+					printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
+					printf(
+						'<input type="text" name="qty_done" size="4" value="%s" /> <button class="button button-primary button-small">%s</button>',
+						esc_attr( number_format_i18n( (float) $order['qty_planned'], 0 ) ),
+						esc_html__( 'Fertigmelden', 'lindenweg16' )
+					);
+					echo '</form>';
+				}
 
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:4px">';
 				wp_nonce_field( self::NONCE . '_work' );

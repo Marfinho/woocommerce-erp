@@ -186,6 +186,7 @@ foreach ( array(
 	'WorkOrderRepository',
 	'PriceTierRepository',
 	'DemandPlanner',
+	'ProductionPlan',
 	'ReorderToken',
 	'ReorderPage',
 ) as $lw16_class ) {

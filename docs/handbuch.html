@@ -507,7 +507,7 @@ footer p{max-width:72ch}
 	<p>Zwischen Rohling und fertigem Artikel liegen Arbeitsschritte, die kein Druckjob sind: Gewindemuttern einschmelzen, Stange und Abstandshalter verbinden, ein Modul zusammensetzen. Dafür ist der Fertigungsauftrag da.</p>
 
 	<ol class="steps">
-		<li><strong>Auftrag anlegen</strong> Artikel wählen — angeboten werden nur Artikel mit Beschaffungsweg <em>Montage</em> und einer Stückliste —, Menge eintragen, anlegen. Der Auftrag bekommt eine eigene Nummer.</li>
+		<li><strong>Auftrag anlegen</strong> Zuerst die <strong>Art</strong>: <em>Fertigungsauftrag</em> für Montage, <em>Druckauftrag</em> für Gedrucktes. Dann Artikel und Menge. Der Auftrag bekommt eine eigene Nummer — <span class="mono">FA…</span> für Montage, <span class="mono">DA…</span> für Druck.</li>
 		<li><strong>Die Materialliste entsteht mit</strong> Automatisch, <strong>eine Ebene tief</strong>: genau das, was für diesen Schritt aus dem Regal geholt wird. Willst du das Halbzeug „Stange + Abstandshalter" bauen, stehen dort die Stange und der Abstandshalter — nicht das Filament, aus dem der Abstandshalter mal entstand. Das war der eigene Auftrag eine Stufe tiefer.</li>
 		<li><strong>Materialliste aufs Handy holen</strong> In der Spalte <em>Pickliste</em> steht der Code der Liste und darunter ein QR-Code. Scann ihn mit dem Telefon — die Erfassung öffnet sich direkt im Reiter <em>Picken</em> und zeigt <strong>genau diese eine Liste</strong>, nicht alle offenen. Der Code ist auch ein Link, falls du am selben Rechner bleiben willst.</li>
 		<li><strong>Produktion starten</strong> Der Knopf startet die Uhr. Gebucht wird dabei nichts — der Timer misst, er bewegt keinen Bestand.</li>
@@ -532,6 +532,10 @@ footer p{max-width:72ch}
 		<span class="lbl">Wo ein Teil verbraucht wird — die eine Regel</span>
 		<p>Jedes Teil wird genau dort abgebucht, <strong>wo es verbaut wird</strong>. Gedruckte Rohlinge und ihre Kleinteile beim Druckjob. Alles, was in ein Halbzeug oder eine Baugruppe geht, beim Fertigmelden des Auftrags. Zugekaufte Beigaben, die erst beim Versand dazukommen, beim Packen. Deshalb gibt es keinen doppelten Abgang — jede Stufe bucht nur ihre eigene Ebene.</p>
 	</div>
+
+	<h4>Druckauftrag statt Fertigungsauftrag</h4>
+	<p>Ein <strong>Druckauftrag</strong> plant, was aus dem Drucker kommen soll. Er hat dieselbe Uhr und denselben Ablauf — nur das Fertigmelden läuft anders: Der Knopf heißt <em>Im Journal buchen</em> und führt ins Druckjournal, <strong>mit bereits ausgefülltem Formular</strong> (Drucker, Artikel, Farbe, Menge). Dort ergänzt du, was erst am Ende feststeht — Filamentcharge, gute Teile, Ausschuss, Plattenwechsel — und mit dem Buchen ist der Auftrag erledigt.</p>
+	<p>Der Grund für den Umweg: Ein Druckjob bucht Lagerzugang, Charge, Filament und Kleinteile in einem Zug. Zwei Stellen, die denselben Zugang buchen könnten, wären genau der Fehler, den das Lager sonst überall vermeidet.</p>
 
 	<p>Ein Auftrag lässt sich <strong>stornieren</strong>, solange er offen ist. Ein bereits fertiggemeldeter wird nicht rückwirkend geändert; korrigiert wird über eine Lagerkorrektur mit Begründung — wie überall im Plugin.</p>
 </section>
@@ -750,10 +754,22 @@ footer p{max-width:72ch}
 	<h4>Was du auf der Seite tun kannst</h4>
 	<ul>
 		<li>Jede Zeile hat eine <strong>Handlung</strong>: <em>drucken</em>, <em>montieren</em> oder <em>bestellen</em> — abgeleitet aus dem Beschaffungsweg des Artikels.</li>
-		<li>Direkt daneben der Knopf, der sie ausführt: <strong>Ins Druckjournal</strong> für Rohlinge, <strong>Auftrag anlegen</strong> für Halbzeuge und Baugruppen. Beides mit der gerechneten Menge vorbelegt.</li>
+		<li>Direkt daneben der Knopf, der sie ausführt: <strong>Druckauftrag anlegen</strong> für Rohlinge, <strong>Auftrag anlegen</strong> für Halbzeuge und Baugruppen. Beides mit der gerechneten Menge vorbelegt, beides ein Klick.</li>
 		<li><strong>Kleinteile für diese Bedarfe</strong> listet, was aus dem Komponentenlager dafür gebraucht wird — und sagt es, wenn etwas davon fehlt.</li>
 		<li>Unter <strong>Gedeckt</strong> stehen Bedarfe, die durch Bestand oder laufende Aufträge schon abgedeckt sind. Sie stehen dort, damit sichtbar bleibt, dass sie berücksichtigt wurden — verschwinden ist etwas anderes als erledigt sein.</li>
 	</ul>
+
+	<h4>Der Produktionsplan</h4>
+	<p>Unter der Bedarfsliste steht derselbe Inhalt noch einmal — aber als <strong>Plan</strong>: in Arbeitsreihenfolge, mit geschätztem Aufwand und auf Wochen verteilt. Er entsteht automatisch, es gibt nichts anzustoßen.</p>
+	<ul>
+		<li><strong>Reihenfolge:</strong> Was am tiefsten in der Stückliste steckt, zuerst — ein Modul lässt sich nicht montieren, solange sein Rohling fehlt. Innerhalb einer Stufe zuerst, was am längsten läuft: Die lange Sache soll früh im Drucker liegen, nicht am Freitagabend.</li>
+		<li><strong>Zwei Aufwände, getrennt.</strong> Druckerstunden und Handarbeit stehen in eigenen Spalten und werden nie zusammengezählt — der Drucker läuft ohne dich, die Nachbearbeitung nicht. Wer beides addiert, plant eine Woche, die es nicht gibt.</li>
+		<li><strong>Wochen:</strong> Ein Schritt kommt erst in die Woche, in der <em>beide</em> Töpfe reichen. Grundlage sind die Nettodruckstunden je Gerät und deine Arbeitsstunden je Woche aus <span class="path">Betrieb → Einstellungen → Kalkulationsannahmen</span>.</li>
+	</ul>
+	<div class="note">
+		<span class="lbl">Eine Schätzung, keine Zusage</span>
+		<p>Der Plan rechnet mit Druckzeit je Teil aus der aktiven Revision und der hinterlegten Nachbearbeitungszeit. Fehlt eine Revision, fehlt die Maschinenzeit — dann steht dort ein Strich statt einer erfundenen Zahl.</p>
+	</div>
 
 	<h3>9.2 Montags: Was hat Aufmerksamkeit verdient</h3>
 	<p><span class="path">Betrieb → Dashboard</span> zeigt den laufenden Monat und darunter den Block <em>Was Aufmerksamkeit braucht</em>: Bestände unter Soll, Positionen unter der DB-II-Warnschwelle, ungeklärte Farben, fällige Wartungen, offene Anfragen.</p>

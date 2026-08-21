@@ -40,6 +40,7 @@ class CalcSettings {
 		'vat_rate'               => 0.0,
 		'net_hours_per_printer'  => 65.0,
 		'plate_change_minutes'   => 12.0,
+		'operator_hours_per_week' => 20.0,
 		'customer_acquisition_cost' => 12.0,
 		'min_db2_warning'        => 4.0,
 	);
@@ -66,6 +67,7 @@ class CalcSettings {
 			'vat_rate'                  => __( 'Umsatzsteuersatz (Anteil)', 'lindenweg16' ),
 			'net_hours_per_printer'     => __( 'Nettodruckstunden je Gerät und Woche', 'lindenweg16' ),
 			'plate_change_minutes'      => __( 'Minuten je Plattenwechsel', 'lindenweg16' ),
+			'operator_hours_per_week'   => __( 'Eigene Arbeitsstunden je Woche (Planung)', 'lindenweg16' ),
 			'customer_acquisition_cost' => __( 'Kundengewinnungskosten Direktverkauf (€)', 'lindenweg16' ),
 			'min_db2_warning'           => __( 'Warnschwelle DB II je Position (€)', 'lindenweg16' ),
 		);

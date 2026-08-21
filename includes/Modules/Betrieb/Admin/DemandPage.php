@@ -10,7 +10,13 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
+use Lindenweg16\Modules\Betrieb\CalculationContext;
+use Lindenweg16\Modules\Betrieb\CostCalculator;
+use Lindenweg16\Modules\Betrieb\PrinterRepository;
+use Lindenweg16\Modules\Betrieb\ProductionPlan;
+use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
 use Lindenweg16\Modules\Betrieb\StockRepository;
@@ -71,10 +77,12 @@ class DemandPage {
 		$article_id = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
 		$qty        = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', wp_unslash( $_POST['qty'] ) ) : 0;
 		$color      = isset( $_POST['color'] ) ? sanitize_key( wp_unslash( $_POST['color'] ) ) : '';
+		$kind       = isset( $_POST['kind'] ) && 'druck' === $_POST['kind'] ? 'druck' : 'montage';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		$result = WorkOrderRepository::validate(
 			array(
+				'kind'        => $kind,
 				'article_id'  => $article_id,
 				'qty_planned' => $qty,
 				'color'       => $color,
@@ -101,7 +109,9 @@ class DemandPage {
 		$this->redirect(
 			sprintf(
 				/* translators: %s: Auftragscode. */
-				__( 'Fertigungsauftrag %s angelegt, Materialliste steht bereit.', 'lindenweg16' ),
+				'druck' === $kind
+					? __( 'Druckauftrag %s angelegt. Er steht unter Lagerplätze, Fertigung & Picklisten und lässt sich dort starten.', 'lindenweg16' )
+					: __( 'Fertigungsauftrag %s angelegt, Materialliste steht bereit.', 'lindenweg16' ),
 				$order['code']
 			)
 		);
@@ -156,10 +166,119 @@ class DemandPage {
 			$this->render_articles( $todo );
 		}
 
+		if ( $todo ) {
+			$this->render_plan( $todo );
+		}
+
 		$this->render_components( $plan['components'] );
 		$this->render_covered( $plan['articles'] );
 
 		echo '</div>';
+	}
+
+	/**
+	 * Produktionsplan: Reihenfolge, Aufwand, Wochen.
+	 *
+	 * @param array $todo Zeilen mit Handlungsbedarf.
+	 */
+	protected function render_plan( array $todo ) {
+		$settings = CalculationContext::settings();
+		$articles = ArticleRepository::all_by_id();
+
+		$netto_h    = max( 0.0, (float) $settings['net_hours_per_printer'] ) * max( 1, count( PrinterRepository::all() ) );
+		$plate_min  = (float) $settings['plate_change_minutes'];
+		$hand_h     = max( 0.0, (float) $settings['operator_hours_per_week'] );
+
+		$schritte = array();
+
+		foreach ( $todo as $row ) {
+			$id       = (int) $row['article_id'];
+			$revision = RevisionRepository::active_for_article( $id );
+
+			$aufwand = ProductionPlan::effort(
+				$row,
+				array(
+					'print_time_h'       => $revision ? CostCalculator::print_time_per_part( $revision ) : 0,
+					'parts_per_plate'    => $revision ? (int) $revision['parts_per_plate'] : 1,
+					'postprocessing_min' => isset( $articles[ $id ]['postprocessing_min'] ) ? (float) $articles[ $id ]['postprocessing_min'] : 0,
+				),
+				$plate_min
+			);
+
+			$schritte[] = array_merge(
+				array(
+					'article_id' => $id,
+					'sku'        => (string) $row['sku'],
+					'name'       => (string) $row['name'],
+					'action'     => (string) $row['action'],
+					'depth'      => (int) $row['depth'],
+					'qty'        => (float) $row['net'],
+				),
+				$aufwand
+			);
+		}
+
+		$schritte = ProductionPlan::schedule( ProductionPlan::order( $schritte ), $netto_h, $hand_h );
+		$summen   = ProductionPlan::totals( $schritte );
+		$labels   = DemandPlanner::action_labels();
+
+		echo '<h2>' . esc_html__( 'Produktionsplan', 'lindenweg16' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Dieselben Zeilen, in Arbeitsreihenfolge: was am tiefsten in der Stückliste steckt, zuerst. Maschinen- und Handarbeit stehen getrennt – der Drucker läuft ohne dich, die Nachbearbeitung nicht.', 'lindenweg16' ) . '</p>';
+
+		printf(
+			'<p>%s</p>',
+			esc_html( sprintf(
+				/* translators: 1: Maschinenstunden, 2: Arbeitsstunden, 3: Wochen, 4: Kapazitaet Maschine, 5: Kapazitaet Hand. */
+				__( 'Insgesamt %1$s h Maschine und %2$s h Handarbeit, verteilt auf %3$d Wochen (gerechnet mit %4$s h Drucker und %5$s h Handarbeit je Woche).', 'lindenweg16' ),
+				number_format_i18n( $summen['total']['machine_h'], 1 ),
+				number_format_i18n( $summen['total']['operator_h'], 1 ),
+				count( $summen['weeks'] ),
+				number_format_i18n( $netto_h, 0 ),
+				number_format_i18n( $hand_h, 0 )
+			) )
+		);
+
+		echo '<div class="lw16-scrollx"><table class="widefat striped lw16-table--zahlen"><thead><tr>';
+		foreach ( array(
+			__( 'Woche', 'lindenweg16' ),
+			__( 'Schritt', 'lindenweg16' ),
+			__( 'Artikel', 'lindenweg16' ),
+			__( 'Menge', 'lindenweg16' ),
+			__( 'Platten', 'lindenweg16' ),
+			__( 'Drucker (h)', 'lindenweg16' ),
+			__( 'Hand (h)', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		$letzte = 0;
+
+		foreach ( $schritte as $schritt ) {
+			$neue_woche = $schritt['week'] !== $letzte;
+			$letzte     = $schritt['week'];
+
+			echo '<tr>';
+			printf(
+				'<td>%s</td>',
+				$neue_woche
+					? esc_html( sprintf( /* translators: %d: laufende Woche. */ __( 'Woche %d', 'lindenweg16' ), $schritt['week'] ) )
+					: ''
+			);
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
+				'drucken' === $schritt['action'] ? 'gelb' : ( 'montieren' === $schritt['action'] ? 'gruen' : 'rot' ),
+				esc_html( isset( $labels[ $schritt['action'] ] ) ? $labels[ $schritt['action'] ] : $schritt['action'] )
+			);
+			printf( '<td><strong>%s</strong><br /><small>%s</small></td>', esc_html( $schritt['sku'] ), esc_html( $schritt['name'] ) );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( $schritt['qty'], 0 ) ) );
+			printf( '<td>%s</td>', $schritt['plates'] > 0 ? esc_html( number_format_i18n( $schritt['plates'], 0 ) ) : '—' );
+			printf( '<td>%s</td>', $schritt['machine_h'] > 0 ? esc_html( number_format_i18n( $schritt['machine_h'], 1 ) ) : '—' );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( $schritt['operator_h'], 1 ) ) );
+			echo '</tr>';
+		}
+
+		echo '</tbody></table></div>';
 	}
 
 	/**
@@ -231,20 +350,20 @@ class DemandPage {
 			printf( '<td><small>%s</small></td>', esc_html( implode( ' · ', $why ) ) );
 
 			echo '<td>';
-			if ( 'montieren' === $row['action'] ) {
+			if ( 'montieren' === $row['action'] || 'drucken' === $row['action'] ) {
+				$kind = 'drucken' === $row['action'] ? 'druck' : 'montage';
+
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 				wp_nonce_field( self::NONCE );
 				echo '<input type="hidden" name="action" value="lw16_betrieb_demand_order" />';
+				printf( '<input type="hidden" name="kind" value="%s" />', esc_attr( $kind ) );
 				printf( '<input type="hidden" name="article_id" value="%d" />', (int) $row['article_id'] );
 				printf( '<input type="hidden" name="qty" value="%s" />', esc_attr( (string) $row['net'] ) );
-				printf( '<button class="button button-small button-primary">%s</button>', esc_html__( 'Auftrag anlegen', 'lindenweg16' ) );
-				echo '</form>';
-			} elseif ( 'drucken' === $row['action'] ) {
 				printf(
-					'<a class="button button-small" href="%s">%s</a>',
-					esc_url( admin_url( 'admin.php?page=lw16-betrieb-druckjournal' ) ),
-					esc_html__( 'Ins Druckjournal', 'lindenweg16' )
+					'<button class="button button-small button-primary">%s</button>',
+					esc_html( 'druck' === $kind ? __( 'Druckauftrag anlegen', 'lindenweg16' ) : __( 'Auftrag anlegen', 'lindenweg16' ) )
 				);
+				echo '</form>';
 			} else {
 				printf(
 					'<a class="button button-small" href="%s">%s</a>',

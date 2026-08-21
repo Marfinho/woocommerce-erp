@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
@@ -60,10 +61,21 @@ class PrintJobsPage {
 		}
 
 		$id = PrintJobRepository::insert( $result['data'] );
-		$this->redirect(
-			$id ? __( 'Druckjob erfasst, Lagerzugang und Charge gebucht.', 'lindenweg16' ) : __( 'Druckjob konnte nicht gespeichert werden.', 'lindenweg16' ),
-			$id ? 'success' : 'error'
-		);
+
+		if ( ! $id ) {
+			$this->redirect( __( 'Druckjob konnte nicht gespeichert werden.', 'lindenweg16' ), 'error' );
+		}
+
+		// Kam der Job aus einem Druckauftrag, ist der damit erledigt. Der
+		// Zugang ist oben schon gebucht - der Auftrag wird nur geschlossen.
+		$order_id = isset( $input['work_order_id'] ) ? (int) $input['work_order_id'] : 0;
+		$message  = __( 'Druckjob erfasst, Lagerzugang und Charge gebucht.', 'lindenweg16' );
+
+		if ( $order_id && WorkOrderRepository::close_by_print_job( $order_id, $id, (float) $result['data']['parts_ok'] ) ) {
+			$message = __( 'Druckjob erfasst und Druckauftrag fertiggemeldet.', 'lindenweg16' );
+		}
+
+		$this->redirect( $message, 'success' );
 	}
 
 	/**
@@ -155,9 +167,32 @@ class PrintJobsPage {
 
 		echo '<h2>' . esc_html__( 'Druckjob erfassen', 'lindenweg16' ) . '</h2>';
 
+		// Kommt der Aufruf aus einem Druckauftrag, ist alles Geplante schon
+		// bekannt. Es noch einmal abzutippen waere die Stelle, an der sich
+		// Zahlendreher einschleichen.
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$order = isset( $_GET['work_order'] ) ? WorkOrderRepository::find( (int) $_GET['work_order'] ) : null;
+
+		if ( $order && ( 'druck' !== $order['kind'] || ! in_array( $order['status'], WorkOrderRepository::OPEN_STATES, true ) ) ) {
+			$order = null;
+		}
+
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( self::NONCE );
 		echo '<input type="hidden" name="action" value="lw16_betrieb_save_printjob" />';
+
+		if ( $order ) {
+			printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
+			printf(
+				'<div class="notice notice-info inline"><p>%s</p></div>',
+				esc_html( sprintf(
+					/* translators: %s: Auftragscode. */
+					__( 'Aus Druckauftrag %s. Mit dem Buchen wird er fertiggemeldet.', 'lindenweg16' ),
+					$order['code']
+				) )
+			);
+		}
+
 		echo '<table class="form-table" role="presentation"><tbody>';
 
 		printf(
@@ -169,8 +204,9 @@ class PrintJobsPage {
 		echo '<tr><th scope="row"><label for="lw16-printer">' . esc_html__( 'Drucker', 'lindenweg16' ) . '</label></th><td><select name="printer_id" id="lw16-printer">';
 		foreach ( $printers as $printer ) {
 			printf(
-				'<option value="%d">%s – %s</option>',
+				'<option value="%d"%s>%s – %s</option>',
 				(int) $printer['id'],
+				$order ? selected( (int) $order['printer_id'], (int) $printer['id'], false ) : '',
 				esc_html( $printer['code'] ),
 				esc_html( trim( (string) $printer['manufacturer'] . ' ' . (string) $printer['model'] ) )
 			);
@@ -184,8 +220,9 @@ class PrintJobsPage {
 			}
 			$revision = RevisionRepository::active_for_article( (int) $article['id'] );
 			printf(
-				'<option value="%d">%s – %s%s</option>',
+				'<option value="%d"%s>%s – %s%s</option>',
 				(int) $article['id'],
+				$order ? selected( (int) $order['article_id'], (int) $article['id'], false ) : '',
 				esc_html( $article['sku'] ),
 				esc_html( $article['name'] ),
 				$revision ? ' (' . esc_html( $revision['version'] ) . ')' : ' – ' . esc_html__( 'keine aktive Revision', 'lindenweg16' )
@@ -198,7 +235,7 @@ class PrintJobsPage {
 			printf(
 				'<option value="%s"%s>%s</option>',
 				esc_attr( $slug ),
-				selected( ColorRegistry::default_color(), $slug, false ),
+				selected( $order ? (string) $order['color'] : ColorRegistry::default_color(), $slug, false ),
 				esc_html( $label )
 			);
 		}
@@ -218,9 +255,11 @@ class PrintJobsPage {
 		}
 		echo '</select><p class="description">' . esc_html__( 'Ohne Charge ist im Ernstfall nicht rückverfolgbar, aus welchem Material ein Teil stammt.', 'lindenweg16' ) . '</p></td></tr>';
 
+		$geplant = $order ? (string) (int) $order['qty_planned'] : '';
+
 		foreach ( array(
-			array( 'parts_planned', __( 'Teile geplant', 'lindenweg16' ), '' ),
-			array( 'parts_ok', __( 'Teile in Ordnung', 'lindenweg16' ), '' ),
+			array( 'parts_planned', __( 'Teile geplant', 'lindenweg16' ), $geplant ),
+			array( 'parts_ok', __( 'Teile in Ordnung', 'lindenweg16' ), $geplant ),
 			array( 'print_time_h', __( 'Druckzeit (h)', 'lindenweg16' ), '' ),
 			array( 'plate_changes', __( 'Plattenwechsel', 'lindenweg16' ), '1' ),
 		) as $field ) {
