@@ -1,0 +1,950 @@
+<title>Lindenweg16 Betriebshandbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+	--paper:#F4F6F3;
+	--card:#FFFFFF;
+	--ink:#212A2E;
+	--ink-2:#5A676D;
+	--ink-3:#8A959A;
+	--rule:#DBE0DA;
+	--rule-2:#EBEEE9;
+	--accent:#8B6914;
+	--accent-soft:#F5EEDC;
+	--pine:#1F5F52;
+	--pine-soft:#E4EEEA;
+	--alarm:#8C3327;
+	--alarm-soft:#F7E7E4;
+	--shadow:0 1px 2px rgba(33,42,46,.05),0 8px 24px -16px rgba(33,42,46,.28);
+}
+@media (prefers-color-scheme:dark){
+	:root:not([data-theme="light"]){
+		--paper:#14191B;
+		--card:#1B2225;
+		--ink:#E4E9E6;
+		--ink-2:#A0AEB2;
+		--ink-3:#74838A;
+		--rule:#2C3639;
+		--rule-2:#232B2E;
+		--accent:#D9AC4E;
+		--accent-soft:#2C2517;
+		--pine:#6FBFAA;
+		--pine-soft:#1A2A28;
+		--alarm:#E08878;
+		--alarm-soft:#2E1E1B;
+		--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.6);
+	}
+}
+:root[data-theme="dark"]{
+	--paper:#14191B;
+	--card:#1B2225;
+	--ink:#E4E9E6;
+	--ink-2:#A0AEB2;
+	--ink-3:#74838A;
+	--rule:#2C3639;
+	--rule-2:#232B2E;
+	--accent:#D9AC4E;
+	--accent-soft:#2C2517;
+	--pine:#6FBFAA;
+	--pine-soft:#1A2A28;
+	--alarm:#E08878;
+	--alarm-soft:#2E1E1B;
+	--shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -16px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+	margin:0;
+	background:var(--paper);
+	color:var(--ink);
+	font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+	font-size:17px;
+	line-height:1.62;
+	-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.ui{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+code,.path,.key,.mono{font-family:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace}
+
+/* ---------- Kopf ---------- */
+.masthead{
+	border-bottom:1px solid var(--rule);
+	background:var(--card);
+}
+.masthead .inner{
+	max-width:1180px;margin:0 auto;padding:56px 28px 44px;
+	display:flex;flex-direction:column;gap:18px;
+}
+.eyebrow{
+	font-family:Archivo,sans-serif;font-size:12px;font-weight:600;
+	letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+}
+h1{
+	margin:0;font-size:clamp(2.1rem,5vw,3.3rem);font-weight:700;
+	letter-spacing:-.02em;line-height:1.06;text-wrap:balance;
+}
+.standfirst{
+	margin:0;max-width:62ch;font-size:1.12rem;color:var(--ink-2);
+}
+.meta{
+	display:flex;flex-wrap:wrap;gap:8px 22px;
+	font-family:Archivo,sans-serif;font-size:12.5px;color:var(--ink-3);
+	padding-top:8px;border-top:1px solid var(--rule-2);
+}
+.meta b{color:var(--ink-2);font-weight:600}
+
+/* ---------- Gerüst ---------- */
+.shell{max-width:1180px;margin:0 auto;padding:0 28px 96px}
+@media (min-width:1040px){
+	.shell{display:grid;grid-template-columns:238px minmax(0,1fr);gap:56px;align-items:start}
+}
+nav.toc{
+	position:sticky;top:0;padding:36px 0 24px;
+	font-family:Archivo,sans-serif;font-size:13.5px;
+	max-height:100vh;overflow-y:auto;
+}
+nav.toc .toc-head{
+	font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+	color:var(--ink-3);margin-bottom:14px;
+}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{
+	display:grid;grid-template-columns:26px 1fr;gap:4px;
+	padding:5px 8px;border-radius:5px;text-decoration:none;color:var(--ink-2);
+	border-left:2px solid transparent;
+}
+nav.toc a:hover{background:var(--rule-2);color:var(--ink)}
+nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav.toc a .n{color:var(--ink-3);font-variant-numeric:tabular-nums}
+@media (max-width:1039px){
+	nav.toc{position:static;max-height:none;border-bottom:1px solid var(--rule);margin-bottom:8px}
+}
+
+main{padding-top:36px;min-width:0}
+section{padding:34px 0 12px;border-top:1px solid var(--rule);}
+section:first-of-type{border-top:none;padding-top:8px}
+.chapter{
+	display:flex;align-items:baseline;gap:14px;margin-bottom:6px;
+}
+.chapter .num{
+	font-family:Archivo,sans-serif;font-weight:700;font-size:13px;
+	color:var(--accent);letter-spacing:.05em;font-variant-numeric:tabular-nums;
+	padding-top:2px;
+}
+h2{
+	margin:0;font-size:clamp(1.45rem,3vw,1.9rem);font-weight:700;
+	letter-spacing:-.015em;line-height:1.15;text-wrap:balance;
+}
+h3{
+	margin:30px 0 8px;font-size:1.08rem;font-weight:600;letter-spacing:-.005em;
+}
+h4{
+	margin:22px 0 6px;font-size:.82rem;font-weight:600;letter-spacing:.1em;
+	text-transform:uppercase;color:var(--ink-3);
+}
+p{margin:0 0 14px;max-width:66ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:66ch}
+li{margin-bottom:7px}
+li::marker{color:var(--ink-3)}
+strong{font-weight:600}
+a{color:var(--accent)}
+
+/* ---------- Bausteine ---------- */
+.path,.key{
+	font-size:.83em;padding:1.5px 6px;border-radius:4px;white-space:nowrap;
+	background:var(--rule-2);color:var(--ink-2);border:1px solid var(--rule);
+}
+.path{color:var(--ink)}
+.key{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+
+.steps{list-style:none;padding:0;counter-reset:s;max-width:70ch}
+.steps>li{
+	counter-increment:s;position:relative;padding-left:44px;margin-bottom:16px;
+}
+.steps>li::before{
+	content:counter(s);position:absolute;left:0;top:1px;
+	width:27px;height:27px;border-radius:50%;
+	display:grid;place-items:center;
+	font-family:Archivo,sans-serif;font-size:12.5px;font-weight:600;
+	background:var(--card);border:1px solid var(--rule);color:var(--ink-2);
+	font-variant-numeric:tabular-nums;
+}
+.steps>li>strong:first-child{display:block;margin-bottom:2px}
+
+.note,.warn,.rule-box{
+	margin:20px 0;padding:15px 18px;border-radius:7px;
+	max-width:70ch;font-size:.95rem;
+}
+.note{background:var(--pine-soft);border:1px solid transparent}
+.warn{background:var(--alarm-soft)}
+.rule-box{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow)}
+.note p:last-child,.warn p:last-child,.rule-box p:last-child{margin-bottom:0}
+.note .lbl,.warn .lbl,.rule-box .lbl{
+	display:block;font-family:Archivo,sans-serif;font-size:10.5px;font-weight:600;
+	letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;
+}
+.note .lbl{color:var(--pine)}
+.warn .lbl{color:var(--alarm)}
+.rule-box .lbl{color:var(--accent)}
+
+.scroller{overflow-x:auto;margin:18px 0;border:1px solid var(--rule);border-radius:7px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:520px}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--rule-2);vertical-align:top}
+thead th{
+	font-family:Archivo,sans-serif;font-size:11px;font-weight:600;
+	letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);
+	border-bottom:1px solid var(--rule);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+td code,th code{font-size:.85em}
+
+dl.fields{margin:16px 0;max-width:70ch}
+dl.fields dt{
+	font-family:Archivo,sans-serif;font-weight:600;font-size:.92rem;
+	margin-top:14px;
+}
+dl.fields dd{margin:2px 0 0;color:var(--ink-2);font-size:.95rem}
+
+.flow{
+	display:flex;flex-wrap:wrap;align-items:stretch;gap:8px;margin:20px 0;
+}
+.flow .stage{
+	flex:1 1 130px;min-width:120px;padding:11px 13px;border-radius:6px;
+	background:var(--card);border:1px solid var(--rule);
+	font-family:Archivo,sans-serif;font-size:12.5px;line-height:1.4;
+}
+.flow .stage b{display:block;font-size:13px;margin-bottom:3px}
+.flow .stage span{color:var(--ink-3)}
+
+footer{
+	border-top:1px solid var(--rule);background:var(--card);
+	margin-top:40px;
+}
+footer .inner{max-width:1180px;margin:0 auto;padding:34px 28px 56px;color:var(--ink-2);font-size:.93rem}
+footer p{max-width:72ch}
+
+@media print{
+	body{background:#fff;font-size:11pt}
+	nav.toc,.masthead{border:none}
+	nav.toc{display:none}
+	.shell{display:block;padding:0}
+	section{break-inside:auto;page-break-inside:auto}
+	h2{break-after:avoid}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<header class="masthead">
+	<div class="inner">
+		<div class="eyebrow">Bedienungsanleitung</div>
+		<h1>Lindenweg16 Betriebshandbuch</h1>
+		<p class="standfirst">Wie das Plugin bedient wird — von der Erstinbetriebnahme über den täglichen Druckjob bis zum Jahresabschluss. Geschrieben für den, der den Laden betreibt, nicht für den, der ihn programmiert hat.</p>
+		<div class="meta">
+			<span><b>Plugin</b> Lindenweg16 ERP 0.9.0</span>
+			<span><b>Voraussetzung</b> WordPress + WooCommerce</span>
+			<span><b>Zwei Menüs</b> Lindenweg16 · Betrieb</span>
+			<span><b>Stand</b> August 2026</span>
+			<span><b>Sprache</b> Deutsch</span>
+		</div>
+	</div>
+</header>
+
+<div class="shell">
+<nav class="toc">
+	<div class="toc-head">Kapitel</div>
+	<ol>
+		<li><a href="#k1"><span class="n">01</span><span>Aufbau</span></a></li>
+		<li><a href="#k2"><span class="n">02</span><span>Installation</span></a></li>
+		<li><a href="#k3"><span class="n">03</span><span>Einrichtung</span></a></li>
+		<li><a href="#k4"><span class="n">04</span><span>Artikel anlegen</span></a></li>
+		<li><a href="#k5"><span class="n">05</span><span>Fertigen &amp; buchen</span></a></li>
+		<li><a href="#k6"><span class="n">06</span><span>Lager &amp; Scannen</span></a></li>
+		<li><a href="#k7"><span class="n">07</span><span>Verkauf &amp; B2B</span></a></li>
+		<li><a href="#k8"><span class="n">08</span><span>Qualität</span></a></li>
+		<li><a href="#k9"><span class="n">09</span><span>Bedarf &amp; die Woche</span></a></li>
+		<li><a href="#k10"><span class="n">10</span><span>Buchhaltung</span></a></li>
+		<li><a href="#k11"><span class="n">11</span><span>Übrige Module</span></a></li>
+		<li><a href="#k12"><span class="n">12</span><span>Automatik</span></a></li>
+		<li><a href="#k13"><span class="n">13</span><span>Rollen</span></a></li>
+		<li><a href="#k14"><span class="n">14</span><span>Fehlersuche</span></a></li>
+		<li><a href="#k15"><span class="n">15</span><span>Grundregeln</span></a></li>
+		<li><a href="#k16"><span class="n">16</span><span>Livegang</span></a></li>
+	</ol>
+</nav>
+
+<main>
+
+<!-- ============ 1 ============ -->
+<section id="k1">
+	<div class="chapter"><span class="num">01</span><h2>Wie das Plugin aufgebaut ist</h2></div>
+	<p>Nach der Aktivierung stehen zwei eigene Menüs in der linken Leiste von wp-admin. Sie überschneiden sich nicht: Das eine führt den Handel, das andere die Fertigung.</p>
+
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Menü</th><th>Wofür</th><th>Unterseiten</th></tr></thead>
+			<tbody>
+				<tr>
+					<td><strong>Lindenweg16</strong></td>
+					<td>Handel, Buchhaltung, Kunden</td>
+					<td>Dashboard · Buchhaltung · Loyalty · Produktion · Preiskalkulation · Kasse · Support · Reporting · Einstellungen · Livegang</td>
+				</tr>
+				<tr>
+					<td><strong>Betrieb</strong></td>
+					<td>Fertigung und Lager</td>
+					<td>Dashboard · Bedarf · Druckjournal · Artikel &amp; Revisionen · Drucker &amp; Wartung · Kapazität · Material · Lager · Lagerplätze, Fertigung &amp; Picklisten · Bestellungen · Qualität · Kontakte/B2B · Zeiterfassung · Berichte · Import &amp; Doku · Einstellungen</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="rule-box">
+		<span class="lbl">Nur noch ein Lager</span>
+		<p>Früher gab es zwei Lagerverwaltungen. Die ältere unter <em>Lindenweg16 → Lager</em> ist entfallen; zuständig ist jetzt allein <strong>Betrieb → Lager</strong> zusammen mit <strong>Betrieb → Lagerplätze, Fertigung &amp; Picklisten</strong>. Wer noch Produkte in der alten Verwaltung hatte, übernimmt sie einmalig unter <span class="path">Betrieb → Import &amp; Doku</span> — dort steht eine Vorschau, was übernommen würde, und ein Knopf, der es tut. Gelöscht wird dabei nichts.</p>
+	</div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section id="k2">
+	<div class="chapter"><span class="num">02</span><h2>Installation und Update</h2></div>
+	<ol class="steps">
+		<li><strong>Plugin hochladen</strong> Unter <span class="path">Plugins → Installieren → Plugin hochladen</span> das ZIP wählen und aktivieren. WooCommerce muss vorher aktiv sein.</li>
+		<li><strong>Tabellen entstehen automatisch</strong> Bei der Aktivierung legt das Plugin seine Datenbanktabellen an (Präfix <code>lw16_</code>) und richtet die Rollen ein.</li>
+		<li><strong>Permalinks prüfen</strong> Unter <span class="path">Einstellungen → Permalinks</span> sollte eine Struktur wie <em>Beitragsname</em> eingestellt sein. Steht dort <em>Einfach</em>, funktionieren die beiden Frontend-Adressen trotzdem — nur in der langen Form mit Fragezeichen, und genau so stehen sie dann auch auf dem Geräteaufkleber.</li>
+		<li><strong>Nach jedem Update kurz ins Backend</strong> Beim ersten Aufruf einer Adminseite prüft das Plugin die Datenbankversion, aktualisiert das Schema und meldet seine Frontend-Adressen neu an. Du musst nichts anstoßen.</li>
+	</ol>
+	<div class="note">
+		<span class="lbl">Deaktivieren löscht nichts</span>
+		<p>Beim Deaktivieren bleiben alle Daten und die Rollen erhalten — das ist Absicht: Buchhaltungsdaten müssen aufbewahrt werden. Nur die geplanten Hintergrundaufgaben werden abgemeldet.</p>
+	</div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section id="k3">
+	<div class="chapter"><span class="num">03</span><h2>Einrichtung — in dieser Reihenfolge</h2></div>
+	<p>Die Reihenfolge ist keine Empfehlung, sondern eine Abhängigkeitskette: Ein Artikel braucht Komponenten, eine Kalkulation braucht Annahmen, ein Druckjob braucht einen Drucker.</p>
+
+	<h3>3.1 Firmenstammdaten</h3>
+	<p><span class="path">Lindenweg16 → Einstellungen</span></p>
+	<p>Name, Anschrift, Steuernummer, IBAN, Kleinunternehmerregelung, Rücklagensatz für die Steuer, Rechnungsnummernkreis, Logo und CI-Farbe. Diese Angaben landen auf jeder Rechnung und in jedem erzeugten PDF. Der Schalter <em>Kleinunternehmer</em> steuert, ob überhaupt Umsatzsteuer ausgewiesen wird — setz ihn richtig, bevor die erste Rechnung rausgeht.</p>
+
+	<h3>3.2 Kalkulationsannahmen</h3>
+	<p><span class="path">Betrieb → Einstellungen → Kalkulationsannahmen</span></p>
+	<p>Das Herzstück. Jede Kostenrechnung im Modul Betrieb greift auf diese Werte zu. Sie sind <strong>historisiert</strong>: Du überschreibst nie einen Wert, du schreibst einen neuen ab einem Stichtag fest, mit Begründung. Eine Auswertung vom März rechnet danach weiter mit den März-Werten.</p>
+
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Annahme</th><th>Bedeutung</th></tr></thead>
+			<tbody>
+				<tr><td>Filamentpreis (€/kg)</td><td>Grundlage der Materialkosten je Bauteil</td></tr>
+				<tr><td>Kalkulatorischer Stundensatz (€/h)</td><td>Deine eigene Arbeitszeit — Nachbearbeitung, Handling</td></tr>
+				<tr><td>Lebensdauer je Gerät (Betriebsstunden)</td><td>Über wie viele Stunden sich der Anschaffungspreis verteilt</td></tr>
+				<tr><td>Ersatzteile und Verschleiß (€/Gerät/Jahr)</td><td>Düsen, Riemen, Betten</td></tr>
+				<tr><td>Geplante Betriebsstunden je Gerät und Jahr</td><td>Teiler für Abschreibung und Ersatzteile</td></tr>
+				<tr><td>Leistungsaufnahme (kW) · Strompreis (€/kWh)</td><td>Ergibt die Stromkosten je Druckstunde</td></tr>
+				<tr><td>Flächenkosten je Betriebsstunde (€/h)</td><td>Anteilige Raumkosten</td></tr>
+				<tr><td>Zahlungsgebühr variabel / fix</td><td>PayPal, Stripe &amp; Co. — Anteil plus Betrag je Transaktion</td></tr>
+				<tr><td>Verpackung + Beileger (€ je Bestellung)</td><td>Fällt <em>je Bestellung</em> an, nicht je Position</td></tr>
+				<tr><td>Ausschusszuschlag (Anteil)</td><td>Aufschlag auf die Herstellkosten für Fehldrucke</td></tr>
+				<tr><td>Umsatzsteuersatz (Anteil)</td><td>z. B. 0,19</td></tr>
+				<tr><td>Nettodruckstunden je Gerät und Woche</td><td>Grundlage der Kapazitätsplanung</td></tr>
+				<tr><td>Minuten je Plattenwechsel</td><td>Deine Bedienzeit je Platte</td></tr>
+				<tr><td>Kundengewinnungskosten Direktverkauf (€)</td><td>Fließt in die Kennzahlen</td></tr>
+				<tr><td>Warnschwelle DB II je Position (€)</td><td>Darunter meldet das Dashboard</td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<div class="rule-box">
+		<span class="lbl">Kein Maschinenstundensatz von Hand</span>
+		<p>Es gibt bewusst kein Feld „Maschinenstundensatz". Er wird immer gerechnet:<br>
+		<span class="mono">Anschaffung / Lebensdauer + Ersatzteile je Jahr / Betriebsstunden je Jahr + Strom je Stunde + Fläche je Stunde</span><br>
+		Anschaffungspreis und Ersatzteilkosten kommen dabei aus dem <em>einzelnen Gerät</em>, wenn dort etwas hinterlegt ist — sonst aus den Annahmen oben. So rechnet ein alter Drucker anders als ein neuer.</p>
+	</div>
+
+	<h3>3.3 Farben und Lagerhoheit</h3>
+	<p><span class="path">Betrieb → Einstellungen → Farben &amp; Lagerhoheit</span></p>
+	<dl class="fields">
+		<dt>Farbattribut (Taxonomie)</dt>
+		<dd>Das globale WooCommerce-Produktattribut, aus dem die Farbe einer verkauften Variante gelesen wird — üblicherweise <code>pa_farbe</code>. Muss existieren, sonst kann keine Bestellung einer Farbe zugeordnet werden.</dd>
+		<dt>Standardfarbe</dt>
+		<dd>Wird verwendet, wenn ein Artikel keine Variante mit Farbe hat. Voreingestellt <code>anthrazit</code>.</dd>
+		<dt>Lagerhoheit</dt>
+		<dd>Der Haken „Betrieb bucht die Lagerabgänge der ihm bekannten Artikel". Ist er gesetzt, hält sich die alte Lagerverwaltung bei genau diesen Artikeln heraus. Alle anderen Produkte im Shop bucht sie weiterhin.</dd>
+		<dt>Wochenmail</dt>
+		<dd>Schickt montags eine Zusammenfassung der Vorwoche an die Adresse aus den Einstellungen.</dd>
+	</dl>
+
+	<h3>3.4 Drucker anlegen</h3>
+	<p><span class="path">Betrieb → Drucker &amp; Wartung</span></p>
+	<p>Je Gerät: Gerät-ID (kurz, z. B. <code>P1</code>), Hersteller, Modell, Seriennummer, Anschaffungsdatum und -preis, Ersatzteilkosten je Jahr, Stromkosten bzw. Leistungsaufnahme, Düsendurchmesser und der Stundenstand beim letzten Düsenwechsel. Anschaffungspreis und Ersatzteilkosten sind das, was den Maschinenstundensatz je Gerät unterscheidet.</p>
+	<p>Auf derselben Seite: das Wartungsprotokoll (wöchentlich, monatlich, Verschleiß, Saison) und ein druckbarer Aufkleber je Gerät mit der Kurzadresse für die mobile Erfassung.</p>
+
+	<h3>3.5 Komponenten</h3>
+	<p><span class="path">Betrieb → Artikel &amp; Revisionen → Komponenten</span></p>
+	<p>Alles, was zugekauft und verbaut wird: Schrauben, Dübel, Holzleiste, Beileger, Karton. Erfasst wird der <strong>Gebindepreis netto und die Gebindegröße</strong> — den Stückpreis rechnet das Plugin. Eine 100er-Packung für 8,50 € ergibt 0,085 € je Stück, und wenn du das nächste Mal 500er-Gebinde kaufst, änderst du nur zwei Zahlen.</p>
+</section>
+
+<!-- ============ 4 ============ -->
+<section id="k4">
+	<div class="chapter"><span class="num">04</span><h2>Einen Artikel vollständig anlegen</h2></div>
+	<p><span class="path">Betrieb → Artikel &amp; Revisionen</span> — sieben Reiter, die zusammen einen kalkulierbaren Artikel ergeben.</p>
+
+	<h3>4.1 Rohling, Halbzeug, Artikel — die drei Stufen</h3>
+	<p>Alles, was du in die Hand nimmst, ist im Plugin ein <em>Artikel</em>. Es gibt keine zweite Sorte Datensatz für „Zwischenzeug". Was die Stufen unterscheidet, ist eine einzige Angabe: der <strong>Beschaffungsweg</strong>. Er sagt, wie das Teil entsteht — und damit auch, wo es gebucht wird und was eine Pickliste dafür ausspuckt.</p>
+
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Beschaffungsweg</th><th>Was es ist</th><th>Entsteht durch</th><th>Beispiel</th></tr></thead>
+			<tbody>
+				<tr>
+					<td><strong>Rohling aus dem Drucker</strong></td>
+					<td>Kommt so von der Platte, unbearbeitet</td>
+					<td>Druckjob im <em>Druckjournal</em></td>
+					<td>Wandanker, Abstandshalter</td>
+				</tr>
+				<tr>
+					<td><strong>Halbzeug oder Baugruppe (Montage)</strong></td>
+					<td>Entsteht aus einer Stückliste durch Handarbeit</td>
+					<td>Fertigungsauftrag unter <em>Lagerplätze, Fertigung &amp; Picklisten</em></td>
+					<td>Modulgehäuse mit eingeschmolzenen Gewindemuttern; Stange + Abstandshalter</td>
+				</tr>
+				<tr>
+					<td><strong>Zukauf</strong></td>
+					<td>Wird bestellt</td>
+					<td>Wareneingang, Kosten aus dem Reiter <em>Beschaffung</em></td>
+					<td>Holzstange, Schrauben</td>
+				</tr>
+				<tr>
+					<td><strong>Hybrid</strong></td>
+					<td>Zukauf mit gedruckten Anbauteilen</td>
+					<td>Beides: Bestellung und Druckjob</td>
+					<td>Zugekauftes Teil mit eigener Kappe</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+
+	<h4>Am Beispiel Basismodul</h4>
+	<p>So sieht die Kette aus, nach der du gefragt hast — von unten nach oben gelesen:</p>
+	<div class="flow">
+		<div class="stage"><b>Holzstange</b><span>Zukauf</span></div>
+		<div class="stage"><b>Abstandshalter</b><span>Rohling, Drucker</span></div>
+		<div class="stage"><b>Stange + Abstandshalter</b><span>Halbzeug, Montage</span></div>
+		<div class="stage"><b>Basismodul</b><span>Artikel, Montage</span></div>
+	</div>
+	<p>Die Stückliste des Basismoduls hat dann drei Zeilen: <strong>1×</strong> Halbzeug „Stange + Abstandshalter", <strong>2×</strong> Rohling „Wandanker", <strong>1×</strong> Komponente „Montage-Set". Was in den Halbzeugen steckt, steht dort und nicht noch einmal hier — jede Ebene kennt nur ihre eigene nächste Stufe. Das Auflösen über alle Ebenen macht das Plugin, bis zu fünf tief, mit Erkennung von Zirkelbezügen.</p>
+
+	<div class="rule-box">
+		<span class="lbl">Wann lohnt sich eine eigene Stufe?</span>
+		<p>Ein Halbzeug lohnt sich, wenn du das Zwischenteil <em>auf Vorrat legst</em> oder es in mehr als einem Artikel steckt. Die Stange mit Abstandshalter geht in mehrere Module — also eigener Artikel. Wenn du dagegen eine Schraube nur genau an einer Stelle eindrehst und nie ein Zwischenteil im Regal liegt, ist das kein Halbzeug, sondern einfach eine Zeile in der Stückliste des fertigen Artikels.</p>
+		<p>Faustregel: <strong>Liegt es irgendwann als Stapel im Regal, ist es ein Artikel. Passiert es nur im Arbeitsgang, ist es eine Stücklistenzeile.</strong></p>
+	</div>
+
+	<div class="note">
+		<span class="lbl">Nicht alles muss verkäuflich sein</span>
+		<p>Rohlinge und Halbzeuge bekommen den Haken <em>Im Shop verkäuflich</em> nicht. Sie tauchen dann weder im Nachbestell-Formular noch beim Verkauf auf, zählen aber voll im Lager, in der Kalkulation und in der Bedarfsplanung mit.</p>
+	</div>
+
+	<h3>4.2 Die Reiter der Reihe nach</h3>
+
+	<ol class="steps">
+		<li><strong>Reiter „Artikel" — Stammdaten</strong> Artikelnummer, Bezeichnung, Beschaffungsweg (die vier aus 4.1), Nachbearbeitungszeit in Minuten, Verkaufspreis brutto, Händlerpreis, angegebene Traglast, Verknüpfung zum WooCommerce-Produkt. Der Beschaffungsweg entscheidet über alles Weitere.<br>Das Shop-Produkt suchst du nicht mehr über die ID: Das Feld ist eine Suchliste — tippe Name, Artikelnummer oder ID, die Treffer erscheinen darunter. Die Verknüpfung ist optional, aber ohne sie gibt es beim Verkauf keinen Lagerabgang, kein Produktbild und keinen Eintrag auf der Nachbestellseite.</li>
+		<li><strong>Reiter „Revisionen" — das Druckprofil</strong> Nur für Rohlinge und Hybridartikel; ein Halbzeug hat keins und sagt das auch. Version, Material, Bauteilgewicht in Gramm, Teile je Platte, Druckzeit je Platte, Düse, Schichthöhe, Perimeter, Infill, Temperaturen, Orientierungshinweis. Die Druckzeit je Teil rechnet sich daraus. Neue Revisionen sind zunächst inaktiv; mit <em>Aktiv setzen</em> löst eine Revision die bisherige ab, die dann als abgelöst markiert bleibt.</li>
+		<li><strong>Reiter „Stückliste"</strong> Was in den Artikel geht: Komponenten (Schrauben, Kleinteile) oder andere Artikel — Rohlinge und Halbzeuge —, jeweils mit Menge. Genau hier entsteht die Mehrstufigkeit aus 4.1. Die Auflösung ist rekursiv über bis zu fünf Ebenen; Zirkelbezüge werden erkannt und abgewiesen.</li>
+		<li><strong>Reiter „Beschaffung"</strong> Nur für Zukauf- und Hybridartikel: Lieferant, Einkaufspreis, Mindestabnahme, Lieferzeit. Auch das ist historisiert — ein Preis gilt ab einem Stichtag.</li>
+		<li><strong>Reiter „Kalkulation" — das Ergebnis</strong> Herstellkosten, Ausschusszuschlag, Deckungsbeitrag I und II je Artikel, aufgeschlüsselt nach Eigenmaterial, Maschinenzeit, Komponenten und Unterbaugruppen. Hier siehst du, ob der Preis trägt.</li>
+		<li><strong>Reiter „Bestellart-Rechner"</strong> Rechnet dieselbe Position einmal als Einzelverkauf, einmal im Set und einmal als B2B-Lieferung durch. Verpackung und die fixe Zahlungsgebühr fallen dabei genau einmal je Bestellung an — deshalb trägt eine Position im Set anders als allein.</li>
+	</ol>
+
+	<h4>Wie die Kosten zusammenkommen</h4>
+	<div class="flow">
+		<div class="stage"><b>Eigenmaterial</b><span>Gewicht × Filamentpreis</span></div>
+		<div class="stage"><b>Maschinenzeit</b><span>Druckzeit je Teil × Stundensatz des Geräts</span></div>
+		<div class="stage"><b>Komponenten</b><span>Stückliste, Stückpreis aus dem Gebinde</span></div>
+		<div class="stage"><b>Halbzeuge</b><span>rekursiv, max. 5 Ebenen</span></div>
+		<div class="stage"><b>= Herstellkosten</b><span>+ Ausschusszuschlag</span></div>
+	</div>
+	<p>Davon ab gehen Zahlungsgebühr und — je Bestellung — Verpackung; das ergibt den <strong>Deckungsbeitrag I</strong>. Zieht man die Nachbearbeitungszeit zum kalkulatorischen Stundensatz ab, bleibt der <strong>Deckungsbeitrag II</strong>. Das ist die Zahl, die zählt.</p>
+
+	<div class="note">
+		<span class="lbl">Nichts davon wird gespeichert</span>
+		<p>Keine gerechnete Größe steht in der Datenbank. Jede Auswertung rechnet neu gegen die Annahmen, die zum jeweiligen Stichtag galten. Änderst du heute den Filamentpreis, ändert sich die Kalkulation von morgen — nicht die Auswertung vom letzten Quartal.</p>
+	</div>
+</section>
+
+<!-- ============ 5 ============ -->
+<section id="k5">
+	<div class="chapter"><span class="num">05</span><h2>Fertigen: drucken, montieren, buchen</h2></div>
+	<p>Zwei Belege, ein Prinzip. Der <strong>Druckjob</strong> bringt Rohlinge auf die Welt, der <strong>Fertigungsauftrag</strong> macht daraus Halbzeuge und Artikel. Beide buchen erst, wenn die Arbeit fertig ist — vorher steht nichts im Lager.</p>
+
+	<h3>5.1 Am Rechner</h3>
+	<p><span class="path">Betrieb → Druckjournal → Druckjob erfassen</span></p>
+	<p>Erfasst werden Drucker, Artikel, Farbe, Filamentcharge, geplante Teile, gute Teile, Ausschuss, Plattenwechsel und Datum. Mit dem Buchen passiert vier Dinge auf einmal:</p>
+	<ul>
+		<li>Die guten Teile gehen als <strong>Zugang</strong> ins Lager.</li>
+		<li>Es entsteht eine <strong>Charge</strong> mit einem Code nach dem Schema <span class="mono">JJMM-SKU-lfd</span>.</li>
+		<li>Das verbrauchte <strong>Filament</strong> wird von der angegebenen Spule abgezogen.</li>
+		<li>Die <strong>Kleinteile</strong> aus der Stückliste werden verbraucht.</li>
+	</ul>
+	<p>Die Ausschussquote rechnet sich als <span class="mono">(geplante − gute Teile) / geplante Teile</span> und läuft in die Kennzahlen.</p>
+
+	<h3>5.2 Am Gerät, vom Handy</h3>
+	<p>Adresse: <span class="path">deine-domain.de/betrieb-erfassen/</span> — den Aufkleber dafür druckst du unter <span class="path">Betrieb → Drucker &amp; Wartung → Aufkleber für die Geräte</span> und klebst ihn auf den Drucker. Er trägt einen QR-Code, der die Erfassung mit vorausgewähltem Gerät öffnet; die Adresse steht zusätzlich im Klartext darunter, falls der Aufkleber verschmutzt. Über den Aufklebern steht der Knopf <em>Adressen neu registrieren</em>; ihn brauchst du, wenn der Link nach einem Update ins Leere läuft.</p>
+	<p>Vier Reiter: <em>Druckjob</em>, <em>Lager</em>, <em>Picken</em> und <em>Zeit</em>. Große Plus-/Minus-Knöpfe statt Tastatur, Details eingeklappt. Anmeldung mit dem WordPress-Konto; die Rolle <em>Betrieb</em> reicht.</p>
+	<div class="note">
+		<span class="lbl">Funkloch in der Werkstatt</span>
+		<p>Buchungen ohne Verbindung wandern in eine Warteschlange im Browser und gehen ab, sobald wieder Netz da ist. Der Status oben in der Leiste sagt, ob noch etwas aussteht. Schließ die Seite erst, wenn sie leer gemeldet ist.</p>
+	</div>
+
+	<h3>5.3 Wenn ein Druckjob falsch war</h3>
+	<p>Gelöscht wird nichts. Ein Druckjob wird <strong>storniert</strong> — mit Begründung. Die Stornierung setzt alle vier Wirkungen durch Gegenbuchungen zurück: Lagerzugang, Chargenmenge, Filamentverbrauch und Komponentenverbrauch. Beide Sätze bleiben sichtbar.</p>
+
+	<h3>5.4 Fertigungsaufträge — der Druckjob für Handarbeit</h3>
+	<p><span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Fertigungsaufträge</span></p>
+	<p>Zwischen Rohling und fertigem Artikel liegen Arbeitsschritte, die kein Druckjob sind: Gewindemuttern einschmelzen, Stange und Abstandshalter verbinden, ein Modul zusammensetzen. Dafür ist der Fertigungsauftrag da.</p>
+
+	<ol class="steps">
+		<li><strong>Auftrag anlegen</strong> Artikel wählen — angeboten werden nur Artikel mit Beschaffungsweg <em>Montage</em> und einer Stückliste —, Menge eintragen, anlegen. Der Auftrag bekommt eine eigene Nummer.</li>
+		<li><strong>Die Materialliste entsteht mit</strong> Automatisch, <strong>eine Ebene tief</strong>: genau das, was für diesen Schritt aus dem Regal geholt wird. Willst du das Halbzeug „Stange + Abstandshalter" bauen, stehen dort die Stange und der Abstandshalter — nicht das Filament, aus dem der Abstandshalter mal entstand. Das war der eigene Auftrag eine Stufe tiefer.</li>
+		<li><strong>Picken</strong> Die Liste zeigt je Position den Lagerplatz. Am Handy abarbeiten wie jede andere Pickliste.</li>
+		<li><strong>Fertigmelden</strong> Mit der tatsächlich entstandenen Menge — die kann kleiner sein als geplant, wenn etwas schiefging. Jetzt erst wird gebucht: Das Material geht ab, das Fertigteil kommt zu.</li>
+	</ol>
+
+	<div class="rule-box">
+		<span class="lbl">Wo ein Teil verbraucht wird — die eine Regel</span>
+		<p>Jedes Teil wird genau dort abgebucht, <strong>wo es verbaut wird</strong>. Gedruckte Rohlinge und ihre Kleinteile beim Druckjob. Alles, was in ein Halbzeug oder eine Baugruppe geht, beim Fertigmelden des Auftrags. Zugekaufte Beigaben, die erst beim Versand dazukommen, beim Packen. Deshalb gibt es keinen doppelten Abgang — jede Stufe bucht nur ihre eigene Ebene.</p>
+	</div>
+
+	<p>Ein Auftrag lässt sich <strong>stornieren</strong>, solange er offen ist. Ein bereits fertiggemeldeter wird nicht rückwirkend geändert; korrigiert wird über eine Lagerkorrektur mit Begründung — wie überall im Plugin.</p>
+</section>
+
+<!-- ============ 6 ============ -->
+<section id="k6">
+	<div class="chapter"><span class="num">06</span><h2>Lager, Lagerplätze und Scannen</h2></div>
+	<p><span class="path">Betrieb → Lager</span></p>
+	<p>Es gibt kein Bestandsfeld. Der Bestand ist die Summe aller Bewegungen — wie ein Kontoauszug. Das hat einen Grund: Ein Feld kann falsch werden, eine Summe nicht.</p>
+
+	<h4>Bewegungsarten</h4>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Art</th><th>Wann</th></tr></thead>
+			<tbody>
+				<tr><td>Produktion</td><td>Zugang aus einem gebuchten Druckjob oder einem fertiggemeldeten Fertigungsauftrag</td></tr>
+				<tr><td>Materialverbrauch</td><td>Abgang beim Fertigmelden eines Auftrags — was in das Fertigteil eingegangen ist</td></tr>
+				<tr><td>Verkauf</td><td>Abgang beim Abschluss einer Bestellung</td></tr>
+				<tr><td>Kommission ausgeliefert</td><td>Ware geht zum Händler — verlässt das eigene Lager, nicht den Gesamtbestand</td></tr>
+				<tr><td>Kommission abgerechnet</td><td>Der Händler hat verkauft — jetzt erst wird es Umsatz</td></tr>
+				<tr><td>Kommission zurück</td><td>Unverkauftes kommt zurück ins Lager</td></tr>
+				<tr><td>Muster abgegeben</td><td>Kostenloses Muster</td></tr>
+				<tr><td>Ausschuss</td><td>Bruch, Fehldruck, Beschädigung</td></tr>
+				<tr><td>Retoure</td><td>Kundenrückgabe</td></tr>
+				<tr><td>Umlagerung</td><td>Von einem Lagerplatz auf einen anderen — als Paar gebucht, mengenneutral</td></tr>
+				<tr><td>Korrektur</td><td>Manuelle Berichtigung nach Zählung — immer mit Begründung</td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<p>Jede Bewegung hat außerdem einen <strong>Ort</strong>: <em>Lager</em>, <em>beim Händler</em> oder <em>unterwegs</em>. Die Kommissionskette bewegt Ware zwischen diesen Orten, ohne dass der Gesamtbestand sich ändert — erst die Abrechnung nimmt sie wirklich heraus.</p>
+
+	<h4>Auf der Seite</h4>
+	<ul>
+		<li><strong>Bestand</strong> je Artikel und Farbe, mit Reichweite in Tagen.</li>
+		<li><strong>Sollbestand</strong> je Artikel — darunter meldet sich das Dashboard.</li>
+		<li><strong>Korrekturbuchung</strong> für die Zählung.</li>
+		<li><strong>Letzte Bewegungen</strong> mit Storno-Möglichkeit je Zeile.</li>
+	</ul>
+
+	<h3>6.1 Lagerplätze</h3>
+	<p><span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten</span></p>
+	<p>Ein Lagerplatz ist eine Kiste, ein Fach, ein Regalboden — die Stelle, an der ein Teil tatsächlich liegt. Er hängt als Angabe an der Bewegung, nicht als zweites Bestandsfeld: Der Bestand je Platz ergibt sich genau wie jeder andere aus der Summe der Bewegungen.</p>
+	<p>Der Code steht auf dem Etikett und wird gescannt — halte ihn kurz: <code>A01</code>, <code>KISTE3</code>, <code>VERSAND</code>. Unter dem Reiter <em>Etiketten</em> druckst du sie als Bogen mit QR-Code, dazu Artikeletiketten für Fächer, in denen ein bestimmter Artikel liegt.</p>
+
+	<h4>Die QR-Codes im Plugin</h4>
+	<p>Es sind echte, genormte QR-Codes, im Plugin selbst erzeugt — kein Bild von einem fremden Dienst, keine Internetverbindung nötig, nichts, was ausfallen kann. Drei Sorten kommen vor, jede mit eigenem Präfix, damit ein Scan nie zweideutig ist:</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Präfix</th><th>Meint</th><th>Wo er entsteht</th></tr></thead>
+			<tbody>
+				<tr><td><code>LW16B:</code></td><td>Lagerplatz</td><td>Etikettenbogen unter <em>Lagerplätze</em></td></tr>
+				<tr><td><code>LW16A:</code></td><td>Artikel (die Artikelnummer)</td><td>Artikeletiketten</td></tr>
+				<tr><td><code>LW16C:</code></td><td>Filamentcharge</td><td>Chargenetikett</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p>Dazu kommen zwei QR-Codes, die keine Codes sondern <strong>Adressen</strong> enthalten: der Aufkleber am Drucker (führt direkt in die mobile Erfassung für genau dieses Gerät) und die Händlerkarte mit dem Nachbestell-Link (Kapitel 7.5). Beide funktionieren mit jeder Kamera-App, nicht nur im Plugin.</p>
+
+	<div class="note">
+		<span class="lbl">Zugekaufte Ware braucht kein eigenes Etikett</span>
+		<p>Trägt die Packung schon einen Barcode vom Lieferanten, trag ihn am Artikel oder an der Komponente im Feld <em>Barcode</em> ein. Er wird beim Scannen genauso erkannt wie ein eigener Code — Umetikettieren entfällt.</p>
+	</div>
+
+	<h3>6.2 Am Handy scannen und buchen</h3>
+	<p>Mobile Erfassung, Reiter <em>Lager</em>. Der Ablauf ist immer derselbe:</p>
+	<ol class="steps">
+		<li><strong>Lagerplatz scannen</strong> Das Etikett am Fach. Darunter erscheint sofort, was dort liegen müsste.</li>
+		<li><strong>Artikel scannen</strong> Eigenes Etikett, Lieferantenbarcode oder der Chargencode am Teil — alle drei führen zum selben Artikel. Geht die Kamera nicht, tippst du den Code ins Feld darunter und drückst Enter.</li>
+		<li><strong>Vorgang wählen</strong> Korrektur, Ausschuss, Retoure, Umlagerung und so weiter. Bei Abgangsarten musst du kein Minus tippen — das setzt die Maske selbst.</li>
+		<li><strong>Menge und Buchen</strong> Ohne Verbindung wandert die Buchung in die Warteschlange und geht ab, sobald wieder Netz da ist.</li>
+	</ol>
+	<p><strong>Umlagern</strong> ist ein Sonderfall: Wählst du <em>Umlagerung</em>, erscheint ein Zielplatz. Gebucht wird dann ein Paar — Abgang am einen Platz, Zugang am anderen. Der Gesamtbestand ändert sich nicht, beide Buchungen stehen einzeln im Journal.</p>
+
+	<div class="note">
+		<span class="lbl">Was der Browser können muss</span>
+		<p>Gescannt wird mit dem eingebauten Scanner des Browsers, nicht mit einer nachgeladenen Bibliothek. Auf Android-Chrome und neueren iPhones funktioniert das; kann der Browser es nicht, sagt er das und du tippst den Code ein. Das Lager steht deshalb nie still, nur weil ein Gerät nicht mitspielt.</p>
+	</div>
+
+	<h3>6.3 Picken</h3>
+	<p>Unter <span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Picklisten</span> erzeugst du aus allen offenen Bestellungen eine Liste. Sie ist <strong>nach Lagerplatz sortiert, nicht nach Bestellung</strong> — der Weg durchs Regal ist die knappe Ressource, das Zuordnen passiert danach am Packtisch.</p>
+	<p>Die zweite Sorte Pickliste kommt aus einem <strong>Fertigungsauftrag</strong> (Kapitel 5.4) — dort ist die Liste nicht „was raus muss", sondern „was in das Teil reingeht". Auf dem Handy sehen beide gleich aus und werden gleich abgearbeitet.</p>
+	<p>Am Handy im Reiter <em>Picken</em> steht jede Zeile mit Platz, Artikel, Farbe und Restmenge. Abhaken geht per Knopf oder per Scan: Scannst du einen Artikel, sucht die App die passende offene Zeile selbst. Ein falscher Code wird abgewiesen — sonst wäre der Scan reine Zierde.</p>
+
+	<div class="rule-box">
+		<span class="lbl">Warum das Abhaken keinen Bestand abzieht</span>
+		<p>Der Lagerabgang entsteht weiterhin genau einmal, beim Abschluss der Bestellung. Würde das Picken auch buchen, stünde derselbe Abgang zweimal im Journal und der Bestand liefe schleichend auseinander. Was das Picken beiträgt, ist die <em>Ortsangabe</em>: Beim Abschluss wird der Abgang dem Fach zugeschrieben, aus dem tatsächlich entnommen wurde. Damit stimmt der Platzbestand, ohne dass es eine zweite Buchungsstelle gibt.</p>
+	</div>
+
+	<h3>6.4 Bewegungen ohne eindeutige Farbe</h3>
+	<div class="warn">
+		<span class="lbl">Bewegungen ohne eindeutige Farbe</span>
+		<p>Lässt sich bei einer Bestellung die Farbe nicht bestimmen, wird der Abgang trotzdem gebucht — als <em>ungeklärt</em> — und oben auf der Lagerseite gemeldet. Er verschwindet nie stillschweigend. Kläre solche Zeilen zeitnah, sonst stimmt der Bestand je Farbe nicht mehr.</p>
+	</div>
+</section>
+
+<!-- ============ 7 ============ -->
+<section id="k7">
+	<div class="chapter"><span class="num">07</span><h2>Verkauf, Kontakte und B2B</h2></div>
+
+	<h3>7.1 Bestellungen aus dem Shop</h3>
+	<p>Läuft von allein. Beim Statuswechsel auf <em>in Bearbeitung</em> entsteht der betriebliche Datensatz zur Bestellung, beim Abschluss die Lagerabgänge je Position und Farbe. Unter <span class="path">Betrieb → Bestellungen</span> siehst du die Liste mit Deckungsbeitrag je Bestellung.</p>
+
+	<h3>7.2 Die Rabattstaffel für Händler</h3>
+	<p><span class="path">Betrieb → Einstellungen → Rabattstaffel B2B</span></p>
+	<p>Hier steht die Standardstaffel: ab welchem Bestellwert wie viel Prozent. Sie gilt für <strong>alle Händler ohne Sondervereinbarung</strong>. Wer eigene Konditionen hat, bekommt sie unter <span class="path">Betrieb → Kontakte / B2B</span> beim jeweiligen Kontakt — die gehen der Staffel vor.</p>
+	<ul>
+		<li>Der Rabatt gilt auf den <strong>Bruttopreis der rabattfähigen Positionen</strong>. Personalisierte Artikel nimmst du am Artikel selbst per Haken <em>Rabattfähig</em> aus.</li>
+		<li>Die Staffel ist <strong>historisiert</strong>: Du speicherst sie mit einem Gültigkeitsdatum. Die bisherige bleibt für zurückliegende Auswertungen erhalten — eine alte Bestellung wird nie nachträglich anders gerechnet.</li>
+		<li>Gilt zu einem Stichtag keine Staffel, zahlen Händler den vollen Preis. Die Seite sagt das deutlich, statt es stillschweigend zu tun.</li>
+	</ul>
+
+	<h3>7.3 Bestellungen außerhalb des Shops</h3>
+	<p><span class="path">Betrieb → Bestellungen → Bestellung manuell erfassen</span> — Kontakt wählen, Positionen erfassen, Rabattstaffel wird aufgelöst und auf der Bestellung festgeschrieben. Der Rechner unter dem Formular zeigt live, was die Bestellung trägt.</p>
+
+	<h3>7.4 Kontakte</h3>
+	<p><span class="path">Betrieb → Kontakte / B2B</span> — Händler, Vereine, Leads. Je Kontakt: Aktivitäten (Anrufe, Besuche, Muster), Konditionen (historisiert, mit Gültigkeitsdatum), Kommissionsbestand und die Nachbestell-Token.</p>
+
+	<h3>7.5 Der Nachbestell-Link</h3>
+	<p>Für Händler, die nicht jedes Mal anrufen sollen. Du erzeugst im Kontakt einen persönlichen Link der Form <span class="path">deine-domain.de/nachbestellen/&lt;token&gt;/</span>. Der Händler öffnet ihn ohne Login, sieht seine Artikel zu seinen Konditionen und schickt eine Anfrage.</p>
+
+	<h4>Was der Händler sieht</h4>
+	<p>Die Seite läuft <strong>im Design deiner Website</strong> — mit Logo, Kopf und Fuß wie jede andere Seite. Sie ist keine nackte Formularseite, denn eine Seite ohne erkennbaren Absender wirkt beim Empfänger wie Phishing. Kommt dein Theme mit dem Formular nicht zurecht, schaltest du unter <span class="path">Betrieb → Einstellungen</span> auf die schlichte Darstellung um.</p>
+	<ul>
+		<li><strong>Alle aktiven Artikel mit Bild.</strong> Gelistet wird, was verkäuflich ist und ein veröffentlichtes Shop-Produkt hat — samt Produktbild, Artikelnummer und Preis. Artikel ohne Verknüpfung erscheinen nicht; du siehst im Backend, welche das sind.</li>
+		<li><strong>Mengen sind vorbelegt.</strong> Aus der letzten bestätigten Bestellung dieses Händlers, sonst mit 0. Vorbelegte Zeilen sind hervorgehoben — der Händler ändert nur, was diesmal anders ist.</li>
+		<li><strong>Farbe je Zeile</strong>, sobald mehr als eine Farbe gepflegt ist. Auch sie ist aus der letzten Bestellung vorbelegt. Bei nur einer Farbe fehlt die Spalte ganz.</li>
+		<li><strong>Die Staffel rechnet live mit.</strong> Unter dem Formular steht der laufende Bestellwert, die erreichte Rabattstufe und — wenn eine nächste in Reichweite ist — was bis dahin fehlt und was sie brächte.</li>
+	</ul>
+	<div class="rule-box">
+		<span class="lbl">Was der Link nicht ist</span>
+		<p>Kein Shop. Es entsteht <strong>nur ein Entwurf</strong>. Lagerabgang und offener Posten entstehen erst, wenn du die Anfrage im Backend unter <em>Anfragen zur Bestätigung</em> bestätigst. Kein Checkout, keine Zahlung, keine Kreditlimitprüfung — das war ausdrücklich so gewollt.</p>
+		<p>Der Link wird dir <strong>genau einmal</strong> angezeigt, direkt nach dem Erzeugen — als Händlerkarte mit echtem QR-Code, Name und Adresse im Klartext, die du über <em>Karte drucken</em> ausgibst und dem Händler in die Hand drückst. Er scannt sie mit der Kamera seines Telefons, ohne App, ohne Login. Gespeichert wird nur seine Prüfsumme, nie der Link selbst. Verlierst du ihn, erzeugst du einen neuen. Standardlaufzeit ein Jahr, mit Ratenbegrenzung gegen Missbrauch.</p>
+	</div>
+
+	<h3>7.6 Kommission</h3>
+	<p>Drei Buchungen bilden den ganzen Vorgang ab: <em>ausgeliefert</em> beim Hinbringen, <em>abgerechnet</em> wenn der Händler verkauft hat (dabei entsteht die Bestellung und damit der Umsatz), <em>zurück</em> für Unverkauftes. Den aktuellen Stand je Händler zeigt der Kontakt.</p>
+</section>
+
+<!-- ============ 8 ============ -->
+<section id="k8">
+	<div class="chapter"><span class="num">08</span><h2>Qualität und Rückverfolgung</h2></div>
+	<p><span class="path">Betrieb → Qualität</span> — zwei Reiter.</p>
+
+	<h3>Chargenbuch</h3>
+	<p>Jede Charge mit Code, Artikel, Revision, Filamentcharge, Drucker, Stückzahl und Produktionsdatum. Über <em>Akte</em> öffnest du die Chargenakte, über <em>GPSR-Nachweis als PDF</em> lädst du sie herunter.</p>
+
+	<h3>Rückverfolgung</h3>
+	<p>In beide Richtungen:</p>
+	<div class="flow">
+		<div class="stage"><b>Vorwärts</b><span>Filamentspule → Druckjobs → Chargen → betroffene Bestellungen</span></div>
+		<div class="stage"><b>Rückwärts</b><span>Bestellung → Charge → Druckjob → Filamentspule</span></div>
+	</div>
+	<p>Das ist der Fall, für den das Chargenbuch existiert: Wenn eine Filamentlieferung sich als schlecht herausstellt, willst du binnen Minuten wissen, welche Kunden betroffen sind.</p>
+
+	<div class="note">
+		<span class="lbl">Der Chargencode ist die Klammer</span>
+		<p>Er wird ins Bauteil eingeprägt. Kommt ein Teil zurück, liest du den Code ab und weißt daraus Druckprofil, Material, Gerät und Bestellung. Ohne den Code am Teil ist die Rückverfolgung im System nur die halbe Miete.</p>
+	</div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section id="k9">
+	<div class="chapter"><span class="num">09</span><h2>Bedarf und die Woche</h2></div>
+
+	<h3>9.1 Bedarf — was als Nächstes entstehen muss</h3>
+	<p><span class="path">Betrieb → Bedarf</span></p>
+	<p>Die Seite beantwortet die eine Frage, die morgens zählt: <em>Was muss heute entstehen?</em> Und sie beantwortet sie <strong>bis hinunter zum Rohling</strong>, nicht nur auf Artikelebene.</p>
+
+	<h4>Woher der Bedarf kommt</h4>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Quelle</th><th>Was sie beisteuert</th></tr></thead>
+			<tbody>
+				<tr><td>Bestellung</td><td>Was verkauft, aber noch nicht ausgeliefert ist — der harte Bedarf</td></tr>
+				<tr><td>Sollbestand</td><td>Was unter die gesetzte Untergrenze gerutscht ist</td></tr>
+				<tr><td>Wunschliste</td><td>Was Kunden vorgemerkt haben — weicher Bedarf</td></tr>
+				<tr><td>Warteliste</td><td>Wer auf ein ausverkauftes Teil wartet</td></tr>
+				<tr><td>aus Stückliste</td><td>Entsteht beim Rechnen: Bedarf einer höheren Stufe, weitergereicht nach unten</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p>Wunsch- und Warteliste lassen sich über den Schalter oben ausblenden — dann rechnet die Seite nur mit Bestellungen und Sollbestand.</p>
+
+	<h4>Wie gerechnet wird</h4>
+	<div class="flow">
+		<div class="stage"><b>Fertige Artikel</b><span>Bedarf aus Bestellungen &amp; Listen</span></div>
+		<div class="stage"><b>− Bestand, − in Arbeit</b><span>was schon da oder beauftragt ist</span></div>
+		<div class="stage"><b>Halbzeuge</b><span>Rest über die Stückliste weitergereicht</span></div>
+		<div class="stage"><b>Rohlinge &amp; Kleinteile</b><span>dieselbe Rechnung eine Stufe tiefer</span></div>
+	</div>
+	<p>Gerechnet wird also von oben nach unten. <strong>Angezeigt wird umgekehrt:</strong> Was am tiefsten in der Stückliste steckt, steht oben in der Liste — es muss zuerst da sein. Arbeite die Seite von oben nach unten ab, dann kommst du nie an einen Fertigungsauftrag, dem noch ein Rohling fehlt.</p>
+	<p>Auf jeder Stufe zählt gegen: was im Regal liegt <em>und</em> was bereits in einem offenen Druckjob oder Fertigungsauftrag steckt. Deshalb schlägt die Seite nichts doppelt vor, wenn du sie zweimal am Tag öffnest.</p>
+
+	<h4>Was du auf der Seite tun kannst</h4>
+	<ul>
+		<li>Jede Zeile hat eine <strong>Handlung</strong>: <em>drucken</em>, <em>montieren</em> oder <em>bestellen</em> — abgeleitet aus dem Beschaffungsweg des Artikels.</li>
+		<li>Direkt daneben der Knopf, der sie ausführt: <strong>Ins Druckjournal</strong> für Rohlinge, <strong>Auftrag anlegen</strong> für Halbzeuge und Baugruppen. Beides mit der gerechneten Menge vorbelegt.</li>
+		<li><strong>Kleinteile für diese Bedarfe</strong> listet, was aus dem Komponentenlager dafür gebraucht wird — und sagt es, wenn etwas davon fehlt.</li>
+		<li>Unter <strong>Gedeckt</strong> stehen Bedarfe, die durch Bestand oder laufende Aufträge schon abgedeckt sind. Sie stehen dort, damit sichtbar bleibt, dass sie berücksichtigt wurden — verschwinden ist etwas anderes als erledigt sein.</li>
+	</ul>
+
+	<h3>9.2 Montags: Was hat Aufmerksamkeit verdient</h3>
+	<p><span class="path">Betrieb → Dashboard</span> zeigt den laufenden Monat und darunter den Block <em>Was Aufmerksamkeit braucht</em>: Bestände unter Soll, Positionen unter der DB-II-Warnschwelle, ungeklärte Farben, fällige Wartungen, offene Anfragen.</p>
+
+	<h3>9.3 Kapazität planen</h3>
+	<p><span class="path">Betrieb → Kapazität</span> beantwortet eine Frage: <em>Wie viele Bestellungen schaffe ich diese Woche?</em> Grundlage sind die Nettodruckstunden je Gerät und Woche, die Druckzeit je Teil und deine Bedienzeit je Plattenwechsel. Kalenderwochen laufen nach ISO 8601 — am Jahreswechsel weicht das ISO-Jahr vom Kalenderjahr ab, das ist richtig so.</p>
+
+	<h3>9.4 Zeiterfassung</h3>
+	<p><span class="path">Betrieb → Zeiterfassung</span> — je Woche, je Tätigkeit. Auch vom Handy über die mobile Erfassung. Daraus entsteht die Kennzahl, wie viel deiner Zeit tatsächlich am Produkt hängt.</p>
+
+	<h3>9.5 Material</h3>
+	<p><span class="path">Betrieb → Material</span> — Filamentspulen mit Restmengen, Verbrauchsmaterial und der <strong>Beschaffungsalarm</strong>: Was reicht nicht mehr bis zum Ende der Lieferzeit? Die Reichweite rechnet sich aus dem Durchschnittsverbrauch der letzten vier Wochen.</p>
+
+	<h3>9.6 Wartung</h3>
+	<p><span class="path">Betrieb → Drucker &amp; Wartung</span> — Protokoll je Gerät nach Intervall. Der Stundenstand seit dem letzten Düsenwechsel läuft mit.</p>
+
+	<h3>9.7 Berichte</h3>
+	<p><span class="path">Betrieb → Berichte</span> — die Kennzahlen mit Zielwert und Ampel: Umsatz, Bestellungen, Ø-Warenkorb, Ø Handlingzeit, B2B-Anteil, Reklamations- und Ausschussquote, Teile je Plattenwechsel, Auslastung der Druckfarm, Arbeitsstunden je Woche, Wiederkaufsrate, Kosten je Neukunde, ROAS, organischer Traffic und der Deckungsbeitrag Ist. Diagramme sind lokal erzeugtes SVG — es geht nichts nach außen.</p>
+</section>
+
+<!-- ============ 10 ============ -->
+<section id="k10">
+	<div class="chapter"><span class="num">10</span><h2>Buchhaltung</h2></div>
+	<p><span class="path">Lindenweg16 → Buchhaltung</span> — zwölf Reiter. Das Modul ist auf GoBD ausgelegt: Das Journal ist fortschreibend und hashverkettet, Korrekturen laufen ausschließlich über Stornobuchungen.</p>
+
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
+			<tbody>
+				<tr><td>Dashboard</td><td>Lage auf einen Blick, Steuerrücklage</td></tr>
+				<tr><td>Belege</td><td>Belegliste mit Suchen und Filtern</td></tr>
+				<tr><td>Beleg erfassen</td><td>Neuer Beleg; Foto oder PDF wird ausgelesen, Beträge werden vorgeschlagen</td></tr>
+				<tr><td>Rechnungen</td><td>Ausgangsrechnungen, erzeugt aus WooCommerce-Bestellungen</td></tr>
+				<tr><td>Journal</td><td>Alle Buchungen, fortlaufend, mit Hash-Kette</td></tr>
+				<tr><td>Kassenbuch</td><td>Barbewegungen; für die Kasse (Kapitel 11)</td></tr>
+				<tr><td>EÜR</td><td>Einnahmen-Überschuss-Rechnung je Jahr</td></tr>
+				<tr><td>Dauerbuchungen</td><td>Miete, Versicherungen — laufen automatisch</td></tr>
+				<tr><td>Anlagen</td><td>Anlagevermögen mit Abschreibung</td></tr>
+				<tr><td>E-Rechnung</td><td>Import von XRechnung und ZUGFeRD</td></tr>
+				<tr><td>Betriebsprüfung</td><td>Export nach Z1/Z2/Z3</td></tr>
+				<tr><td>GoBD-Prüfung</td><td>Selbstprüfung; hier liegt auch der Knopf für die Verfahrensdokumentation</td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<h3>10.1 Zahlungsgebühren kommen von allein</h3>
+	<p>Die Gebühr, die WooPayments je Bestellung einbehält, muss als Aufwand ins Journal — sonst ist der Gewinn zu hoch. Das Plugin holt sie sich selbst.</p>
+	<ol class="steps">
+		<li><strong>Beim Zahlungseingang</strong> liest es die Gebühr aus den Daten, die WooPayments an der Bestellung hinterlegt, und bucht sie.</li>
+		<li><strong>Findet es dort nichts</strong>, sucht es in den Bestellhinweisen nach einer Zeile, die eine Gebühr nennt.</li>
+		<li><strong>Täglich noch einmal</strong> läuft ein Nachlauf über die bezahlten Bestellungen der letzten 30 Tage — die Gebühr steht bei manchen Zahlarten erst Stunden später fest. Die Buchung ist gegen Doppelung gesichert; der Lauf kann gefahrlos wiederholt werden.</li>
+	</ol>
+	<p>Ein Betrag, der über der Hälfte des Bestellwerts läge, wird verworfen statt gebucht — das ist dann keine Gebühr, sondern ein Lesefehler. Abschalten lässt sich das Ganze unter <span class="path">Lindenweg16 → Einstellungen</span> mit dem Haken <em>Zahlungsgebühren aus Bestellhinweisen übernehmen</em>.</p>
+
+	<div class="warn">
+		<span class="lbl">Kein Ersatz für den Steuerberater</span>
+		<p>Das Plugin führt die Aufzeichnungen und erzeugt die Auswertungen. Die steuerliche Verantwortung bleibt beim Unternehmer — die Verfahrensdokumentation trägt diesen Hinweis ausdrücklich.</p>
+	</div>
+</section>
+
+<!-- ============ 11 ============ -->
+<section id="k11">
+	<div class="chapter"><span class="num">11</span><h2>Die übrigen Module</h2></div>
+
+	<h3>Produktion und Sendungsverfolgung</h3>
+	<p><span class="path">Lindenweg16 → Produktion</span> — Druck-Queue aus offenen Bestellungen, Druckaufträge, Ist-gegen-Plan.</p>
+	<p>Hier hängt auch die <strong>DHL-Sendungsverfolgung für den Kunden</strong>. Sobald eine Sendungsnummer an der Bestellung steht — von Hand eingetragen oder von Germanized übernommen —, sieht der Käufer den Status dort, wo er ihn sucht:</p>
+	<ul>
+		<li>In den <strong>Bestelldetails</strong> unter der Positionsliste, als Kette mit dem erreichten Schritt: angenommen → unterwegs → in Zustellung → zugestellt.</li>
+		<li>In der <strong>Bestellübersicht</strong> seines Kontos als eigene Spalte, damit er nicht jede Bestellung einzeln öffnen muss.</li>
+	</ul>
+	<p>Die Anzeige läuft über das Plugin, nicht über einen fremden Verfolgungskasten — der wird, wenn ein anderes Plugin einen einblendet, entfernt, damit nicht zwei verschiedene Stände nebeneinander stehen. Bei stornierten oder erstatteten Bestellungen erscheint gar keine Kette; dort wäre ein Lieferfortschritt irreführend.</p>
+
+	<h3>Preiskalkulation</h3>
+	<p><span class="path">Lindenweg16 → Preiskalkulation</span> — die ältere Kalkulation über globale Annahmen für Module und Sets, mit Preisvorschlag und Marge je Produkt. Für Haster-Haken-Artikel ist die Kalkulation im Modul Betrieb die genauere: Sie rechnet je Gerät und je Revision statt mit einem Mittelwert.</p>
+
+	<h3>Kasse</h3>
+	<p><span class="path">Lindenweg16 → Kasse</span> — Kassentag öffnen, verkaufen, Tag abschließen; Historie und Tagesdetail. Eine eigene mobile Ansicht für den Marktstand.</p>
+
+	<h3>Loyalty</h3>
+	<p><span class="path">Lindenweg16 → Loyalty</span> — Punkte, Empfehlungen, Prüf-Warteschlange für Referrals mit Freigabe oder Ablehnung per Klick.</p>
+
+	<h3>Support und Reporting</h3>
+	<p><span class="path">Lindenweg16 → Support</span> für Tickets aus dem Kundenkonto, <span class="path">Lindenweg16 → Reporting</span> für Bestellstatistik und Audit-Log.</p>
+</section>
+
+<!-- ============ 12 ============ -->
+<section id="k12">
+	<div class="chapter"><span class="num">12</span><h2>Was von allein läuft</h2></div>
+	<p>Über den Action Scheduler, nicht über den normalen WordPress-Cron — Aufgaben gehen dadurch nicht verloren, wenn gerade niemand die Seite besucht.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Aufgabe</th><th>Takt</th></tr></thead>
+			<tbody>
+				<tr><td>Warenkorb-Erinnerungen</td><td class="num">stündlich</td></tr>
+				<tr><td>DHL-Sendungsverfolgung aktualisieren</td><td class="num">alle 3 Stunden</td></tr>
+				<tr><td>Loyalty-Prüfung</td><td class="num">täglich</td></tr>
+				<tr><td>Nachkauf-Mails (Danke, Bewertung)</td><td class="num">täglich</td></tr>
+				<tr><td>Lagerbericht</td><td class="num">täglich</td></tr>
+				<tr><td>Dauerbuchungen ausführen</td><td class="num">täglich</td></tr>
+				<tr><td>Wochenzusammenfassung</td><td class="num">wöchentlich</td></tr>
+				<tr><td>Wochenexport</td><td class="num">wöchentlich</td></tr>
+				<tr><td>Wochenmail Betrieb</td><td class="num">wöchentlich</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p>Rechnungen und Lieferscheine werden zusätzlich anlassbezogen erzeugt, wenn eine Bestellung den Status wechselt.</p>
+</section>
+
+<!-- ============ 13 ============ -->
+<section id="k13">
+	<div class="chapter"><span class="num">13</span><h2>Rollen und Rechte</h2></div>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Rolle</th><th>Kennung</th><th>Darf</th></tr></thead>
+			<tbody>
+				<tr><td>Administrator</td><td><code>administrator</code></td><td>Alles</td></tr>
+				<tr><td>Lindenweg16-Manager</td><td><code>lw16_manager</code></td><td>Beide Menüs vollständig, keine WordPress-Adminrechte</td></tr>
+				<tr><td>Betrieb</td><td><code>lw16_betrieb</code></td><td>Das Menü Betrieb vollständig, inklusive Dateiupload</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<h4>Die drei Berechtigungen im Modul Betrieb</h4>
+	<ul>
+		<li><span class="key">lw16_manage_production</span> — Druckjournal, Artikel, Drucker, Kapazität, Material, Lager, Bestellungen, Qualität, Kontakte, Zeiterfassung</li>
+		<li><span class="key">lw16_view_reports</span> — Dashboard und Berichte, sonst nichts</li>
+		<li><span class="key">lw16_manage_settings</span> — Einstellungen sowie Import &amp; Doku</li>
+	</ul>
+	<p>Wer eine Aushilfe nur buchen lassen will, gibt ihr die Rolle <em>Betrieb</em>. Wer jemandem nur Zahlen zeigen will, vergibt einzeln <span class="key">lw16_view_reports</span>.</p>
+</section>
+
+<!-- ============ 14 ============ -->
+<section id="k14">
+	<div class="chapter"><span class="num">14</span><h2>Wenn etwas nicht stimmt</h2></div>
+	<dl class="fields">
+		<dt>Die mobile Erfassung zeigt „Seite nicht gefunden"</dt>
+		<dd>Die Adressen sind noch nicht registriert. Auf <span class="path">Betrieb → Drucker &amp; Wartung</span> steht direkt über den Aufklebern der Knopf <em>Adressen neu registrieren</em> — ein Klick genügt. Gleichwertig, nur umständlicher: <span class="path">Einstellungen → Permalinks → Speichern</span>. Beides gilt auch für den Nachbestell-Link.</dd>
+
+		<dt>Eine Bestellung bucht keinen Lagerabgang</dt>
+		<dd>Drei Ursachen kommen infrage: Der Artikel ist nicht mit dem WooCommerce-Produkt verknüpft; die Lagerhoheit steht auf der anderen Seite; oder die Bestellung hat den abschließenden Status nie erreicht. Prüfe in dieser Reihenfolge.</dd>
+
+		<dt>Bewegungen erscheinen als „ungeklärte Farbe"</dt>
+		<dd>Das Farbattribut in <span class="path">Betrieb → Einstellungen</span> stimmt nicht mit dem Attribut am Produkt überein, oder die Variante hat keine Farbe gesetzt. Die Buchung ist trotzdem da — korrigiere sie über eine Korrekturbuchung, nachdem du das Attribut geradegezogen hast.</dd>
+
+		<dt>Ein gescannter Code wird nicht erkannt</dt>
+		<dd>Drei Ursachen: Der Code gehört zu keinem Lagerplatz, keiner Artikelnummer, keinem Chargencode und keinem hinterlegten Barcode — dann trag ihn am Artikel im Feld <em>Barcode</em> nach. Oder das Etikett ist von einer anderen Installation. Oder der Lagerplatz ist stillgelegt. Der eingetippte Code läuft durch dieselbe Auflösung wie der Scan; wenn Tippen auch nicht geht, liegt es nicht an der Kamera.</dd>
+
+		<dt>Der Platzbestand stimmt nicht, der Gesamtbestand schon</dt>
+		<dd>Dann gibt es Bewegungen ohne Platzangabe — etwa aus der Zeit vor den Lagerplätzen oder aus Bestellungen, die nicht über eine Pickliste liefen. Beim Scannen eines Artikels wird dieser Anteil als <em>ohne Platz</em> ausgewiesen. Buch ihn mit einer Umlagerung auf den richtigen Platz.</dd>
+
+		<dt>Der Maschinenstundensatz sieht falsch aus</dt>
+		<dd>Er ist gerechnet, nicht gepflegt. Prüfe am Gerät den Anschaffungspreis und die Ersatzteilkosten, in den Annahmen die Lebensdauer und die geplanten Betriebsstunden. Ein zu kleiner Wert bei den Betriebsstunden treibt den Satz nach oben.</dd>
+
+		<dt>Eine Kalkulation meldet „Stückliste zu tief"</dt>
+		<dd>Mehr als fünf Ebenen Unterbaugruppen, oder ein Zirkelbezug — ein Artikel enthält sich mittelbar selbst. Prüfe die Stücklistenzeilen der beteiligten Artikel.</dd>
+
+		<dt>Eine Buchung war falsch</dt>
+		<dd>Nie löschen, immer stornieren. Jede Storno-Funktion verlangt eine Begründung; beide Sätze bleiben stehen. Das ist die Grundlage dafür, dass die Bücher einer Prüfung standhalten.</dd>
+
+		<dt>Die Kettenprüfung meldet einen Bruch</dt>
+		<dd><span class="path">Betrieb → Einstellungen → Protokoll &amp; Kettenprüfung</span> nennt den ersten betroffenen Datensatz. Ein Bruch bedeutet, dass an der Datenbank vorbei geschrieben wurde. Notiere den Datensatz, bevor du weiterarbeitest.</dd>
+	</dl>
+</section>
+
+<!-- ============ 15 ============ -->
+<section id="k15">
+	<div class="chapter"><span class="num">15</span><h2>Fünf Grundregeln</h2></div>
+	<p>Alles Vorige lässt sich auf fünf Sätze eindampfen. Wenn du dir nur diese merkst, bedienst du das Plugin richtig.</p>
+
+	<div class="rule-box"><span class="lbl">Eins</span><p><strong>Es wird nichts gelöscht.</strong> Korrekturen laufen über Stornobuchungen mit Begründung. Was einmal gebucht wurde, bleibt sichtbar.</p></div>
+	<div class="rule-box"><span class="lbl">Zwei</span><p><strong>Der Bestand ist ein Konto, kein Feld.</strong> Er ergibt sich aus den Bewegungen. Stimmt er nicht, fehlt eine Bewegung — such sie, statt eine Zahl zu überschreiben.</p></div>
+	<div class="rule-box"><span class="lbl">Drei</span><p><strong>Keine gerechnete Größe wird gespeichert.</strong> Kosten, Deckungsbeiträge und Stundensätze werden bei jeder Auswertung neu gegen die Annahmen des Stichtags gerechnet.</p></div>
+	<div class="rule-box"><span class="lbl">Vier</span><p><strong>Annahmen werden festgeschrieben, nicht überschrieben.</strong> Ein neuer Filamentpreis gilt ab einem Datum. Die Vergangenheit bleibt, wie sie war.</p></div>
+	<div class="rule-box"><span class="lbl">Fünf</span><p><strong>Der Chargencode verbindet alles.</strong> Vom Teil in der Hand zum Druckprofil, zur Spule, zur Bestellung — und zurück.</p></div>
+</section>
+
+<!-- ============ 16 ============ -->
+<section id="k16">
+	<div class="chapter"><span class="num">16</span><h2>Livegang: sauber starten</h2></div>
+	<p><span class="path">Lindenweg16 → Livegang</span></p>
+	<p>Vor dem Start hast du getestet: Probebestellungen, Testdrucke, ausgedachte Belege. Nichts davon soll in den Zahlen des ersten echten Monats auftauchen. Dieses Werkzeug räumt genau das weg — <strong>Bewegungsdaten, keine Stammdaten</strong>.</p>
+
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Bleibt stehen</th><th>Wird gelöscht</th></tr></thead>
+			<tbody>
+				<tr><td>Artikel, Revisionen, Stücklisten, Beschaffungsdaten</td><td>WooCommerce-Bestellungen samt Positionen und Notizen</td></tr>
+				<tr><td>Komponenten, Drucker, Filamentchargen, Lagerplätze</td><td>Lagerbewegungen, Druckjobs, Fertigungsaufträge, Picklisten</td></tr>
+				<tr><td>Kalkulationsannahmen, Rabattstaffel, Sollbestände</td><td>Buchhaltung: Belege, Buchungen, Rechnungen, Kassenbuch</td></tr>
+				<tr><td>Kontenrahmen, Dauerbuchungen, Anlagevermögen</td><td>Kassentage, Punktekonten, Wunsch- und Wartelisten, Tickets</td></tr>
+				<tr><td>Einstellungen, Rollen, WooCommerce-Produkte</td><td>Kontakthistorie, Kommissionsstände, Änderungsprotokolle</td></tr>
+			</tbody>
+		</table>
+	</div>
+
+	<h4>So läuft es ab</h4>
+	<ol class="steps">
+		<li><strong>Bereiche wählen</strong> Jeder Bereich einzeln an- oder abwählbar. Daneben steht, wie viele Datensätze er tatsächlich enthält — du löschst nie ins Blaue.</li>
+		<li><strong>Vorschau lesen</strong> Die Seite zeigt die Summe der betroffenen Datensätze, bevor irgendetwas passiert.</li>
+		<li><strong>Satz eintippen</strong> Zur Bestätigung muss <code>ALLES ZURUECKSETZEN</code> im Feld stehen. Ein Klick allein genügt nicht — dafür ist der Vorgang zu endgültig.</li>
+		<li><strong>Löschen</strong> Danach steht unten im Protokoll, wer wann welche Bereiche zurückgesetzt hat und wie viele Datensätze das waren. Dieses Protokoll bleibt dauerhaft.</li>
+	</ol>
+
+	<div class="warn">
+		<span class="lbl">Das lässt sich nicht rückgängig machen</span>
+		<p>Es gibt keinen Weg zurück und keinen Papierkorb. <strong>Mach vorher eine Datenbanksicherung.</strong> Und benutze das Werkzeug nur vor dem Livegang: Sind erst einmal echte Umsätze gebucht, verbietet die GoBD, sie zu löschen — dann ist eine Storno-Buchung der richtige Weg, nicht dieses Werkzeug.</p>
+	</div>
+
+	<div class="note">
+		<span class="lbl">Nur für Administratoren</span>
+		<p>Der Menüpunkt erscheint ausschließlich für Benutzer, die die Website ohnehin verwalten dürfen. Wer nur den Betrieb bedient, sieht ihn gar nicht.</p>
+	</div>
+
+	<h3>16.1 Auskunft und Löschung nach DSGVO</h3>
+	<p>Fragt ein Kunde nach seinen Daten oder verlangt ihre Löschung, benutzt du die Bordmittel von WordPress unter <span class="path">Werkzeuge → Daten exportieren</span> beziehungsweise <span class="path">Daten löschen</span>. Das Plugin hängt sich dort ein und liefert seine eigenen Bestände mit: Punktekonto, Empfehlungen, Wunsch- und Warteliste, Warenkorbverfolgung und Support-Tickets.</p>
+	<p>Zwei Dinge macht es bewusst anders, als man zuerst erwarten würde:</p>
+	<ul>
+		<li><strong>Offene Punktestände werden anonymisiert, nicht gelöscht.</strong> Ein Konto mit Restguthaben spurlos zu entfernen, würde die Summen auseinanderlaufen lassen. Die Buchung bleibt, der Personenbezug geht.</li>
+		<li><strong>Die Buchhaltung wird nicht angetastet.</strong> Rechnungen und Buchungen unterliegen der Aufbewahrungspflicht; sie zu löschen wäre nicht datenschutzfreundlich, sondern schlicht ein Verstoß gegen das Steuerrecht. Auch das gehört in die Antwort an den Kunden.</li>
+	</ul>
+</section>
+
+</main>
+</div>
+
+<footer>
+	<div class="inner">
+		<p>Diese Anleitung beschreibt den Stand der installierten Fassung. Die drei Prozessdokumentationen, die das Plugin selbst erzeugt — GoBD-Verfahrensdokumentation, Betriebsdokumentation und GPSR-Chargenakte — lesen ihre Werte dagegen live aus dem laufenden System und sind damit immer der tatsächliche Stand. Erzeuge sie nach jedem Update neu und bewahre die Fassung auf.</p>
+	</div>
+</footer>
