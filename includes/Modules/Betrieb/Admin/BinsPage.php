@@ -120,7 +120,7 @@ class BinsPage {
 			$this->redirect( __( 'Keine offenen Bestellungen – es gibt nichts zu picken.', 'lindenweg16' ), 'error', array( 'view' => 'picklisten' ) );
 		}
 
-		$rows = PicklistRepository::condense( $lines, $this->bin_hints() );
+		$rows = PicklistRepository::condense( $lines, BinRepository::article_hints(), BinRepository::component_hints() );
 		$id   = PicklistRepository::create( $rows );
 
 		if ( ! $id ) {
@@ -135,43 +135,6 @@ class BinsPage {
 			),
 			'success',
 			array( 'view' => 'picklisten' )
-		);
-	}
-
-	/**
-	 * Wahrscheinlichster Lagerplatz je Artikel.
-	 *
-	 * Genommen wird der Platz mit dem größten Bestand. Das ist keine feste
-	 * Zuordnung, sondern eine Vermutung aus den Bewegungen – ein Artikel darf
-	 * an mehreren Plätzen liegen, und die Pickliste soll trotzdem eine
-	 * sinnvolle Reihenfolge haben.
-	 *
-	 * @return array article_id => bin_id.
-	 */
-	protected function bin_hints() {
-		$balances = BinRepository::balances( StockRepository::all() );
-		$best     = array();
-
-		foreach ( $balances as $bin_id => $articles ) {
-			foreach ( $articles as $article_id => $colors ) {
-				$sum = array_sum( $colors );
-				if ( $sum <= 0 ) {
-					continue;
-				}
-				if ( ! isset( $best[ $article_id ] ) || $sum > $best[ $article_id ]['qty'] ) {
-					$best[ $article_id ] = array(
-						'bin' => (int) $bin_id,
-						'qty' => $sum,
-					);
-				}
-			}
-		}
-
-		return array_map(
-			static function ( $row ) {
-				return $row['bin'];
-			},
-			$best
 		);
 	}
 
@@ -424,7 +387,7 @@ class BinsPage {
 		}
 
 		$order       = WorkOrderRepository::find( $id );
-		$picklist_id = PicklistRepository::from_work_order( $order, $this->bin_hints() );
+		$picklist_id = PicklistRepository::from_work_order( $order, BinRepository::article_hints(), BinRepository::component_hints() );
 
 		if ( $picklist_id ) {
 			WorkOrderRepository::attach_picklist( $id, $picklist_id );

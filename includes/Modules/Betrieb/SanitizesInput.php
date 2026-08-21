@@ -15,6 +15,37 @@ defined( 'ABSPATH' ) || exit;
 trait SanitizesInput {
 
 	/**
+	 * Standardlagerplatz aus einem Formular übernehmen.
+	 *
+	 * Der Platz ist eine Vorbelegung, keine Bestandsangabe: Er sagt, wo
+	 * ein Teil üblicherweise liegt, damit Buchungsmasken und Picklisten
+	 * einen sinnvollen Vorschlag machen. Der tatsächliche Bestand je
+	 * Platz kommt weiterhin aus den Bewegungen.
+	 *
+	 * Ein unbekannter oder stillgelegter Platz wird zu NULL – lieber
+	 * kein Vorschlag als einer, der ins Leere zeigt.
+	 *
+	 * @param array  $input Eingaben.
+	 * @param string $key   Feldname.
+	 * @return int|null
+	 */
+	protected static function bin_or_null( array $input, $key = 'default_bin_id' ) {
+		$id = isset( $input[ $key ] ) ? (int) $input[ $key ] : 0;
+
+		if ( $id <= 0 ) {
+			return null;
+		}
+
+		$bin = BinRepository::find( $id );
+
+		if ( ! $bin || empty( $bin['is_active'] ) ) {
+			return null;
+		}
+
+		return $id;
+	}
+
+	/**
 	 * Textfeld normalisieren. Leere Eingabe wird NULL.
 	 *
 	 * @param array  $input Eingaben.

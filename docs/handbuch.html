@@ -568,13 +568,30 @@ footer p{max-width:72ch}
 	<ul>
 		<li><strong>Bestand</strong> je Artikel und Farbe, mit Reichweite in Tagen.</li>
 		<li><strong>Sollbestand</strong> je Artikel — darunter meldet sich das Dashboard.</li>
-		<li><strong>Korrekturbuchung</strong> für die Zählung.</li>
+		<li><strong>Korrekturbuchung</strong> für die Zählung — mit Artikel, Farbe, Lagerplatz, Menge und Pflichtbegründung.</li>
 		<li><strong>Letzte Bewegungen</strong> mit Storno-Möglichkeit je Zeile.</li>
 	</ul>
 
 	<h3>6.1 Lagerplätze</h3>
 	<p><span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten</span></p>
 	<p>Ein Lagerplatz ist eine Kiste, ein Fach, ein Regalboden — die Stelle, an der ein Teil tatsächlich liegt. Er hängt als Angabe an der Bewegung, nicht als zweites Bestandsfeld: Der Bestand je Platz ergibt sich genau wie jeder andere aus der Summe der Bewegungen.</p>
+	<div class="rule-box">
+		<span class="lbl">Man weist einem Artikel keinen Platz zu</span>
+		<p>Es gibt kein Feld „Artikel X liegt in Fach A01" — aus demselben Grund, aus dem es kein Bestandsfeld gibt. Der Platz hängt an der <em>Bewegung</em>: Du buchst einen Zugang oder eine Umlagerung auf A01, und ab da weiß das System, dass dort etwas liegt. Ein Teil darf gleichzeitig an mehreren Plätzen liegen — anthrazit in A01, weiß in B03 —, was eine feste Zuordnung gar nicht abbilden könnte.</p>
+		<p>Gebucht wird an zwei Stellen: am Handy im Reiter <em>Lager</em>, und am Rechner in der Korrekturbuchung unter <span class="path">Betrieb → Lager</span>, die neben Artikel, Farbe und Menge auch den Platz aufnimmt. Für den Erstbestand vor dem Livegang ist der Rechner der schnellere Weg.</p>
+	</div>
+
+	<h4>Der Standardplatz</h4>
+	<p>Damit Picklisten von Anfang an eine sinnvolle Reihenfolge haben, trägt jeder Artikel und jedes Kleinteil optional einen <strong>Standardplatz</strong> — beim Artikel unter <span class="path">Betrieb → Artikel &amp; Revisionen → Artikel</span>, beim Kleinteil im Reiter <em>Komponenten</em>.</p>
+	<p>Er ist ausdrücklich <strong>nur ein Vorschlag</strong>. Die Rangfolge, nach der eine Picklistenzeile ihren Platz bekommt:</p>
+	<div class="flow">
+		<div class="stage"><b>1. An der Zeile</b><span>was dort ausdrücklich steht</span></div>
+		<div class="stage"><b>2. Gemessen</b><span>Platz mit dem größten Bestand</span></div>
+		<div class="stage"><b>3. Standardplatz</b><span>was am Teil hinterlegt ist</span></div>
+		<div class="stage"><b>4. Ohne Platz</b><span>Zeile wandert ans Listenende</span></div>
+	</div>
+	<p>Die Messung schlägt den Standardplatz, denn sie sagt, wo das Teil <em>wirklich</em> liegt — der Standardplatz nur, wo es liegen sollte. Bei <strong>Kleinteilen</strong> ist er dagegen die einzige Quelle: Komponenten führen kein Bewegungskonto, dort gibt es nichts zu messen. Ohne Standardplatz steht eine Schraubenzeile also immer ohne Fach da.</p>
+
 	<p>Der Code steht auf dem Etikett und wird gescannt — halte ihn kurz: <code>A01</code>, <code>KISTE3</code>, <code>VERSAND</code>. Unter dem Reiter <em>Etiketten</em> druckst du sie als Bogen mit QR-Code, dazu Artikeletiketten für Fächer, in denen ein bestimmter Artikel liegt.</p>
 
 	<h4>Die QR-Codes im Plugin</h4>

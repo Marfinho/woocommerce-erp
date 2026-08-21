@@ -183,6 +183,7 @@ class ArticleRepository {
 			'sourcing_type'      => $sourcing,
 			'sellable'           => self::flag( $input, 'sellable' ),
 			'discountable'       => self::flag( $input, 'discountable' ),
+			'default_bin_id'     => self::bin_or_null( $input ),
 			'wc_product_id'      => self::decimal( $input, 'wc_product_id' ) ? (int) self::decimal( $input, 'wc_product_id' ) : null,
 			'legacy_produkt_id'  => self::decimal( $input, 'legacy_produkt_id' ) ? (int) self::decimal( $input, 'legacy_produkt_id' ) : null,
 			'price_gross'        => self::decimal( $input, 'price_gross' ),

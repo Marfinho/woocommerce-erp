@@ -92,7 +92,7 @@ class DemandPage {
 		}
 
 		$order       = WorkOrderRepository::find( $id );
-		$picklist_id = PicklistRepository::from_work_order( $order, $this->bin_hints() );
+		$picklist_id = PicklistRepository::from_work_order( $order, BinRepository::article_hints(), BinRepository::component_hints() );
 
 		if ( $picklist_id ) {
 			WorkOrderRepository::attach_picklist( $id, $picklist_id );
@@ -104,35 +104,6 @@ class DemandPage {
 				__( 'Fertigungsauftrag %s angelegt, Materialliste steht bereit.', 'lindenweg16' ),
 				$order['code']
 			)
-		);
-	}
-
-	/**
-	 * Wahrscheinlichster Lagerplatz je Artikel.
-	 *
-	 * @return array article_id => bin_id.
-	 */
-	protected function bin_hints() {
-		$balances = BinRepository::balances( StockRepository::all() );
-		$best     = array();
-
-		foreach ( $balances as $bin_id => $articles ) {
-			foreach ( $articles as $article_id => $colors ) {
-				$sum = array_sum( $colors );
-				if ( $sum <= 0 ) {
-					continue;
-				}
-				if ( ! isset( $best[ $article_id ] ) || $sum > $best[ $article_id ]['qty'] ) {
-					$best[ $article_id ] = array( 'bin' => (int) $bin_id, 'qty' => $sum );
-				}
-			}
-		}
-
-		return array_map(
-			static function ( $row ) {
-				return $row['bin'];
-			},
-			$best
 		);
 	}
 

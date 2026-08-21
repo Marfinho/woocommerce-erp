@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
@@ -54,6 +55,7 @@ class StockPage {
 		$color   = isset( $_POST['color'] ) ? sanitize_text_field( wp_unslash( $_POST['color'] ) ) : '';
 		$qty     = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', sanitize_text_field( wp_unslash( $_POST['qty'] ) ) ) : 0.0;
 		$note    = isset( $_POST['note'] ) ? sanitize_text_field( wp_unslash( $_POST['note'] ) ) : '';
+		$bin     = isset( $_POST['bin_id'] ) ? (int) $_POST['bin_id'] : 0;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		if ( ! $article || 0.0 === $qty ) {
@@ -70,6 +72,7 @@ class StockPage {
 				'qty'           => $qty,
 				'movement_type' => 'korrektur',
 				'location'      => 'lager',
+				'bin_id'        => $bin,
 				'ref_type'      => 'manual',
 				'note'          => $note,
 			)
@@ -277,6 +280,7 @@ class StockPage {
 		echo '<p>';
 		$this->article_select( $articles );
 		$this->color_select();
+		$this->bin_select();
 		printf(
 			'<input type="text" name="qty" placeholder="%s" size="8" /> ',
 			esc_attr__( 'Menge ±', 'lindenweg16' )
@@ -302,6 +306,34 @@ class StockPage {
 		);
 		printf( '<button class="button">%s</button>', esc_html__( 'Speichern', 'lindenweg16' ) );
 		echo '</p></form>';
+	}
+
+	/**
+	 * Lagerplatzauswahl für die Korrekturbuchung.
+	 *
+	 * Ohne dieses Feld liesse sich ein Erstbestand nur am Handy einräumen.
+	 * Der Platz ist auch hier eine Angabe an der Buchung, kein zweites
+	 * Bestandsfeld – „ohne Platz" bleibt deshalb erlaubt.
+	 */
+	protected function bin_select() {
+		$bins = BinRepository::all( true );
+
+		if ( ! $bins ) {
+			return;
+		}
+
+		echo '<select name="bin_id">';
+		printf( '<option value="0">%s</option>', esc_html__( '— ohne Platz —', 'lindenweg16' ) );
+
+		foreach ( $bins as $bin ) {
+			printf(
+				'<option value="%d">%s</option>',
+				(int) $bin['id'],
+				esc_html( trim( $bin['code'] . ' ' . (string) $bin['name'] ) )
+			);
+		}
+
+		echo '</select> ';
 	}
 
 	/**

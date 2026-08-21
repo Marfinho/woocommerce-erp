@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\BomResolver;
 use Lindenweg16\Modules\Betrieb\BundleCalculator;
@@ -547,6 +548,21 @@ class ArticlesPage {
 	}
 
 	/**
+	 * Lagerplätze als Auswahlliste, mit Leereintrag an erster Stelle.
+	 *
+	 * @return array id => Beschriftung.
+	 */
+	protected function bin_options() {
+		$options = array( 0 => __( '— kein fester Platz —', 'lindenweg16' ) );
+
+		foreach ( BinRepository::all( true ) as $bin ) {
+			$options[ (int) $bin['id'] ] = trim( $bin['code'] . ' ' . (string) $bin['name'] );
+		}
+
+		return $options;
+	}
+
+	/**
 	 * Ein Auswahlfeld.
 	 *
 	 * @param string $label   Beschriftung.
@@ -679,6 +695,7 @@ class ArticlesPage {
 		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Angegebene Traglast. Erscheint in der Chargenakte.', 'lindenweg16' ) );
 		$this->field( __( 'Barcode', 'lindenweg16' ), 'barcode', $this->val( $edit, 'barcode' ), 'text', __( 'Fremder Barcode zugekaufter Ware (EAN). Wird beim Scannen erkannt – dann muss nichts umetikettiert werden.', 'lindenweg16' ) );
 		$this->product_picker( __( 'Shop-Produkt', 'lindenweg16' ), 'wc_product_id', (int) $this->val( $edit, 'wc_product_id' ), __( 'Optional, aber nötig für Lagerabgang beim Verkauf, Produktbild und Nachbestellseite. Tippen filtert nach Name, Artikelnummer oder ID.', 'lindenweg16' ) );
+		$this->select( __( 'Standardplatz', 'lindenweg16' ), 'default_bin_id', $this->bin_options(), (int) $this->val( $edit, 'default_bin_id' ), __( 'Wo das Teil üblicherweise liegt. Nur ein Vorschlag für Buchungsmaske und Pickliste – der Bestand je Platz kommt weiter aus den Bewegungen, und das Teil darf auch woanders liegen.', 'lindenweg16' ) );
 
 		echo '<tr><th scope="row"><label for="lw16-notes">' . esc_html__( 'Bemerkung', 'lindenweg16' ) . '</label></th>';
 		printf( '<td><textarea name="notes" id="lw16-notes" rows="3" class="large-text">%s</textarea></td></tr>', esc_textarea( $this->val( $edit, 'notes' ) ) );
@@ -762,6 +779,7 @@ class ArticlesPage {
 		$this->field( __( 'Lieferzeit (Tage)', 'lindenweg16' ), 'lead_time_days', $this->val( $edit, 'lead_time_days' ) );
 		$this->field( __( 'Bestand', 'lindenweg16' ), 'stock_qty', $this->val( $edit, 'stock_qty' ) );
 		$this->field( __( 'Sicherheitspuffer (Tage)', 'lindenweg16' ), 'safety_days', $edit ? $this->val( $edit, 'safety_days' ) : '7', 'text', __( 'Zusätzlich zur Lieferzeit, bevor der Beschaffungsalarm auslöst.', 'lindenweg16' ) );
+		$this->select( __( 'Standardplatz', 'lindenweg16' ), 'default_bin_id', $this->bin_options(), (int) $this->val( $edit, 'default_bin_id' ), __( 'Wo die Kiste steht. Kleinteile führen kein Bewegungskonto – hier ist der Platz deshalb die einzige Angabe, aus der eine Pickliste den Weg kennt.', 'lindenweg16' ) );
 
 		echo '<tr><th scope="row"><label for="lw16-note">' . esc_html__( 'Bemerkung', 'lindenweg16' ) . '</label></th>';
 		printf( '<td><textarea name="note" id="lw16-note" rows="2" class="large-text">%s</textarea></td></tr>', esc_textarea( $this->val( $edit, 'note' ) ) );

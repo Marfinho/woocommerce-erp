@@ -48,6 +48,33 @@ class PicklistRepository {
 	}
 
 	/**
+	 * Lagerplatz einer Picklistenzeile bestimmen.
+	 *
+	 * Reine Logik. Die Reihenfolge ist die Rangfolge: Was an der Zeile
+	 * selbst steht, gilt. Sonst der Platz, an dem tatsächlich der meiste
+	 * Bestand liegt. Sonst der am Teil hinterlegte Standardplatz –
+	 * Kleinteile führen kein Bewegungskonto, für sie ist er die einzige
+	 * Quelle. Bleibt nichts übrig, steht die Zeile ohne Platz und wandert
+	 * ans Ende der Liste.
+	 *
+	 * @param array  $line           Zeile.
+	 * @param string $type           artikel oder komponente.
+	 * @param int    $id             Artikel- oder Komponenten-ID.
+	 * @param array  $bins           Vermutete Plätze je Artikel.
+	 * @param array  $component_bins Standardplätze je Komponente.
+	 * @return int
+	 */
+	protected static function bin_for( array $line, $type, $id, array $bins, array $component_bins ) {
+		if ( ! empty( $line['bin_id'] ) ) {
+			return (int) $line['bin_id'];
+		}
+
+		$quelle = 'komponente' === $type ? $component_bins : $bins;
+
+		return isset( $quelle[ $id ] ) ? (int) $quelle[ $id ] : 0;
+	}
+
+	/**
 	 * Positionen aus Bestellungen zu Pickzeilen zusammenfassen.
 	 *
 	 * Reine Rechnung ohne Datenbank: gleiche Artikel und Farben derselben
@@ -58,7 +85,7 @@ class PicklistRepository {
 	 * @param array $bins  Zuordnung article_id => bin_id, optional.
 	 * @return array
 	 */
-	public static function condense( array $lines, array $bins = array() ) {
+	public static function condense( array $lines, array $bins = array(), array $component_bins = array() ) {
 		$grouped = array();
 
 		foreach ( $lines as $line ) {
@@ -86,7 +113,7 @@ class PicklistRepository {
 					'article_id'   => $article,
 					'color'        => $color,
 					'wc_order_id'  => $order,
-					'bin_id'       => isset( $line['bin_id'] ) ? (int) $line['bin_id'] : ( isset( $bins[ $article ] ) && 'artikel' === $type ? (int) $bins[ $article ] : 0 ),
+					'bin_id'       => self::bin_for( $line, $type, $article, $bins, $component_bins ),
 					'qty_required' => 0.0,
 				);
 			}
@@ -346,7 +373,7 @@ class PicklistRepository {
 	 * @param array $bins  Zuordnung article_id => bin_id.
 	 * @return int Listen-ID oder 0.
 	 */
-	public static function from_work_order( array $order, array $bins = array() ) {
+	public static function from_work_order( array $order, array $bins = array(), array $component_bins = array() ) {
 		$need = WorkOrderRepository::material_need(
 			BomRepository::for_article( (int) $order['article_id'] ),
 			(float) $order['qty_planned']
@@ -363,7 +390,7 @@ class PicklistRepository {
 			);
 		}
 
-		$rows = self::condense( $lines, $bins );
+		$rows = self::condense( $lines, $bins, $component_bins );
 
 		return self::create(
 			$rows,

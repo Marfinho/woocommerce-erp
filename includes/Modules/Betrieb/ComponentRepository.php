@@ -169,6 +169,7 @@ class ComponentRepository {
 			'min_order_qty'  => self::decimal_or( $input, 'min_order_qty', 1 ),
 			'stock_qty'      => self::decimal_or( $input, 'stock_qty', 0 ),
 			'safety_days'    => self::int_or( $input, 'safety_days', 7 ),
+			'default_bin_id' => self::bin_or_null( $input ),
 			'note'           => isset( $input['note'] ) ? sanitize_textarea_field( $input['note'] ) : null,
 		);
 

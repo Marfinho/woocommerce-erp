@@ -190,6 +190,92 @@ class BinRepository {
 	}
 
 	/**
+	 * Wahrscheinlichster Platz je Artikel aus den Beständen.
+	 *
+	 * Reine Rechnung: genommen wird der Platz mit dem größten Bestand.
+	 * Das ist eine Messung, keine Zuordnung – ein Artikel darf an
+	 * mehreren Plätzen liegen.
+	 *
+	 * @param array $balances Bestände je Platz.
+	 * @return array article_id => bin_id.
+	 */
+	public static function busiest( array $balances ) {
+		$best = array();
+
+		foreach ( $balances as $bin_id => $articles ) {
+			foreach ( $articles as $article_id => $colors ) {
+				$sum = array_sum( $colors );
+
+				if ( $sum <= 0 ) {
+					continue;
+				}
+
+				if ( ! isset( $best[ $article_id ] ) || $sum > $best[ $article_id ]['qty'] ) {
+					$best[ $article_id ] = array(
+						'bin' => (int) $bin_id,
+						'qty' => $sum,
+					);
+				}
+			}
+		}
+
+		return array_map(
+			static function ( $row ) {
+				return $row['bin'];
+			},
+			$best
+		);
+	}
+
+	/**
+	 * Gemessene Plätze um hinterlegte Standardplätze ergänzen.
+	 *
+	 * Reine Logik. Der gemessene Platz gewinnt: Er sagt, wo das Teil
+	 * wirklich liegt, der Standardplatz nur, wo es liegen sollte.
+	 *
+	 * @param array $measured Gemessene Plätze, id => bin_id.
+	 * @param array $rows     Artikel oder Komponenten mit default_bin_id.
+	 * @return array id => bin_id.
+	 */
+	public static function with_defaults( array $measured, array $rows ) {
+		foreach ( $rows as $row ) {
+			$id = isset( $row['id'] ) ? (int) $row['id'] : 0;
+
+			if ( ! $id || isset( $measured[ $id ] ) || empty( $row['default_bin_id'] ) ) {
+				continue;
+			}
+
+			$measured[ $id ] = (int) $row['default_bin_id'];
+		}
+
+		return $measured;
+	}
+
+	/**
+	 * Plätze je Artikel: gemessen, sonst hinterlegt.
+	 *
+	 * @return array article_id => bin_id.
+	 */
+	public static function article_hints() {
+		return self::with_defaults(
+			self::busiest( self::balances( StockRepository::all() ) ),
+			ArticleRepository::all()
+		);
+	}
+
+	/**
+	 * Plätze je Kleinteil.
+	 *
+	 * Komponenten führen kein Bewegungskonto – es gibt nichts zu messen,
+	 * der hinterlegte Platz ist die einzige Quelle.
+	 *
+	 * @return array component_id => bin_id.
+	 */
+	public static function component_hints() {
+		return self::with_defaults( array(), ComponentRepository::all() );
+	}
+
+	/**
 	 * Bestand je Lagerplatz aus den Bewegungen summieren.
 	 *
 	 * Reine Rechnung ohne Datenbank, damit sie prüfbar bleibt.
