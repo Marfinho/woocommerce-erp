@@ -571,7 +571,7 @@ footer p{max-width:72ch}
 	<h4>Auf der Seite</h4>
 	<ul>
 		<li><strong>Bestand</strong> je Artikel und Farbe, mit Reichweite in Tagen.</li>
-		<li><strong>Sollbestand</strong> je Artikel — darunter meldet sich das Dashboard.</li>
+		<li><strong>Sollbestand</strong> je Artikel und Farbe — darunter meldet sich das Dashboard, und die Bedarfsplanung schlägt Nachschub vor. Er steht als eigene Spalte in der Bestandstabelle, auch wenn zu dem Artikel <em>noch gar keine Bewegung</em> existiert; genau dann braucht man ihn ja. Ändern und Entfernen geht in derselben Zeile. <em>Entfernen</em> ist dabei etwas anderes als „Soll 0": Bei 0 meldet die Planung jede Unterdeckung, ein entfernter Sollbestand meldet gar nicht mehr.</li>
 		<li><strong>Korrekturbuchung</strong> für die Zählung — mit Artikel, Farbe, Lagerplatz, Menge und Pflichtbegründung.</li>
 		<li><strong>Letzte Bewegungen</strong> mit Storno-Möglichkeit je Zeile.</li>
 	</ul>
@@ -692,7 +692,16 @@ footer p{max-width:72ch}
 		<p>Der Link wird dir <strong>genau einmal</strong> angezeigt, direkt nach dem Erzeugen — als Händlerkarte mit echtem QR-Code, Name und Adresse im Klartext, die du über <em>Karte drucken</em> ausgibst und dem Händler in die Hand drückst. Er scannt sie mit der Kamera seines Telefons, ohne App, ohne Login. Gespeichert wird nur seine Prüfsumme, nie der Link selbst. Verlierst du ihn, erzeugst du einen neuen. Standardlaufzeit ein Jahr, mit Ratenbegrenzung gegen Missbrauch.</p>
 	</div>
 
-	<h3>7.6 Kommission</h3>
+	<h3>7.6 Lieferscheine</h3>
+	<p>Bestellungen, die im Betrieb entstanden sind — manuell erfasst, über den Nachbestell-Link oder als Kommissionsabrechnung —, bekommen ihren Lieferschein unter <span class="path">Betrieb → Bestellungen</span>: In der Bestellliste steht je Zeile der Knopf <em>Lieferschein</em>, das PDF öffnet sich sofort.</p>
+	<p>Voraussetzung ist eine vollständige Anschrift am Kontakt (Straße, PLZ, Ort). Fehlt etwas davon, sagt das Plugin das <strong>bevor</strong> der Schein entsteht, statt eine halbe Adresse zu drucken.</p>
+	<div class="note">
+		<span class="lbl">Zwei Wege, kein Durcheinander</span>
+		<p>Shop-Bestellungen bekommen ihre Packliste weiterhin aus <span class="path">Lindenweg16 → Produktion</span>. Der Knopf hier erscheint deshalb nur bei Bestellungen ohne WooCommerce-Nummer — zwei Lieferscheine für dieselbe Sendung wären nur verwirrend.</p>
+		<p>Preise stehen nicht darauf. Ein Lieferschein sagt, was in der Kiste liegt; was es kostet, sagt die Rechnung.</p>
+	</div>
+
+	<h3>7.7 Kommission</h3>
 	<p>Drei Buchungen bilden den ganzen Vorgang ab: <em>ausgeliefert</em> beim Hinbringen, <em>abgerechnet</em> wenn der Händler verkauft hat (dabei entsteht die Bestellung und damit der Umsatz), <em>zurück</em> für Unverkauftes. Den aktuellen Stand je Händler zeigt der Kontakt.</p>
 </section>
 
@@ -789,7 +798,7 @@ footer p{max-width:72ch}
 	<p>Nach dem Buchen setzt sich die Uhr zurück — sonst bucht man dieselben Stunden beim nächsten Mal ein zweites Mal. <em>Verwerfen</em> wirft eine Messung weg, ohne sie zu buchen. Ein Abschnitt über zwölf Stunden wird gekappt und gemeldet: Das ist keine Schicht, sondern ein vergessener Timer.</p>
 
 	<h3>9.5 Material</h3>
-	<p><span class="path">Betrieb → Material</span> — Filamentspulen mit Restmengen, Verbrauchsmaterial und der <strong>Beschaffungsalarm</strong>: Was reicht nicht mehr bis zum Ende der Lieferzeit? Die Reichweite rechnet sich aus dem Durchschnittsverbrauch der letzten vier Wochen.</p>
+	<p><span class="path">Betrieb → Material</span> — Filamentspulen mit Restmengen, Verbrauchsmaterial (anlegen, <strong>bearbeiten</strong> und <strong>löschen</strong>) und der <strong>Beschaffungsalarm</strong>: Was reicht nicht mehr bis zum Ende der Lieferzeit? Die Reichweite rechnet sich aus dem Durchschnittsverbrauch der letzten vier Wochen.</p>
 
 	<h3>9.6 Wartung</h3>
 	<p><span class="path">Betrieb → Drucker &amp; Wartung</span> — Protokoll je Gerät nach Intervall. Der Stundenstand seit dem letzten Düsenwechsel läuft mit.</p>

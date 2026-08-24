@@ -16,6 +16,7 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\DeliveryNote;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 
@@ -35,6 +36,7 @@ class OrdersPage {
 		add_action( 'admin_post_lw16_betrieb_save_order', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_lw16_betrieb_manual_order', array( $this, 'handle_manual' ) );
 		add_action( 'admin_post_lw16_betrieb_confirm_order', array( $this, 'handle_confirm' ) );
+		add_action( 'admin_post_lw16_betrieb_delivery_note', array( $this, 'handle_delivery_note' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -263,13 +265,16 @@ class OrdersPage {
 	 * @param string $msg  Meldung.
 	 * @param string $type Typ.
 	 */
-	protected function redirect( $msg, $type ) {
+	protected function redirect( $msg, $type, array $extra = array() ) {
 		wp_safe_redirect(
 			add_query_arg(
-				array(
-					'page'     => self::SLUG,
-					'lw16_msg' => rawurlencode( $msg ),
-					'lw16_typ' => $type,
+				array_merge(
+					array(
+						'page'     => self::SLUG,
+						'lw16_msg' => rawurlencode( $msg ),
+						'lw16_typ' => $type,
+					),
+					$extra
 				),
 				admin_url( 'admin.php' )
 			)
@@ -367,6 +372,7 @@ class OrdersPage {
 			__( 'Handling', 'lindenweg16' ),
 			__( 'Rechnung', 'lindenweg16' ),
 			__( 'Status', 'lindenweg16' ),
+			'',
 		) as $head ) {
 			echo '<th>' . esc_html( $head ) . '</th>';
 		}
@@ -395,10 +401,78 @@ class OrdersPage {
 				esc_html( $overdue ? __( 'überfällig', 'lindenweg16' ) : $order['invoice_status'] )
 			);
 			printf( '<td>%s</td>', esc_html( $order['order_status'] ) );
+
+			// Nur fuer Bestellungen, die im Betrieb entstanden sind.
+			// WooCommerce-Bestellungen bekommen ihre Packliste aus dem
+			// Produktionsmodul - zwei Lieferscheine fuer dieselbe Sendung
+			// waeren nur verwirrend.
+			echo '<td>';
+			if ( ! $order['wc_order_id'] && 'entwurf' !== $order['order_status'] ) {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				wp_nonce_field( self::NONCE );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_delivery_note" />';
+				printf( '<input type="hidden" name="order_op_id" value="%d" />', (int) $order['id'] );
+				printf( '<button class="button button-small">%s</button>', esc_html__( 'Lieferschein', 'lindenweg16' ) );
+				echo '</form>';
+			}
+			echo '</td>';
+
 			echo '</tr>';
 		}
 
 		echo '</tbody></table>';
+	}
+
+	/**
+	 * Lieferschein erzeugen und zum Herunterladen anbieten.
+	 */
+	public function handle_delivery_note() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$id    = isset( $_POST['order_op_id'] ) ? (int) $_POST['order_op_id'] : 0;
+		$order = $id ? OrderOpsRepository::find( $id ) : null;
+
+		if ( ! $order ) {
+			$this->redirect( __( 'Bestellung nicht gefunden.', 'lindenweg16' ), 'error' );
+		}
+
+		$contact = $order['contact_id'] ? ContactRepository::find( (int) $order['contact_id'] ) : null;
+
+		if ( ! $contact ) {
+			$this->redirect( __( 'Ohne Kontakt gibt es keine Lieferadresse – bitte der Bestellung einen Kontakt zuordnen.', 'lindenweg16' ), 'error' );
+		}
+
+		// Eine unvollstaendige Anschrift ist kein Grund, den Schein nicht zu
+		// erzeugen - aber einer, es zu sagen, bevor er im Karton liegt.
+		if ( DeliveryNote::address_incomplete( $contact ) ) {
+			$this->redirect(
+				__( 'Der Kontakt hat keine vollständige Anschrift. Straße, PLZ und Ort unter Kontakte / B2B ergänzen – sonst steht auf dem Lieferschein eine halbe Adresse.', 'lindenweg16' ),
+				'error'
+			);
+		}
+
+		$filename = DeliveryNote::generate( $id );
+
+		if ( ! $filename ) {
+			$this->redirect( __( 'Lieferschein konnte nicht erzeugt werden.', 'lindenweg16' ), 'error' );
+		}
+
+		$path = trailingslashit( \Lindenweg16\Core\Installer::docs_dir() ) . $filename;
+
+		if ( ! is_file( $path ) ) {
+			$this->redirect( __( 'Lieferschein wurde erzeugt, ist aber nicht lesbar.', 'lindenweg16' ), 'error' );
+		}
+
+		// Direkt ausliefern statt zu verlinken: Das Dokumentverzeichnis ist
+		// bewusst nicht oeffentlich erreichbar.
+		nocache_headers();
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Disposition: inline; filename="' . $filename . '"' );
+		header( 'Content-Length: ' . filesize( $path ) );
+		readfile( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		exit;
 	}
 
 	/**

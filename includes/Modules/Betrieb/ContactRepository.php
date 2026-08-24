@@ -152,6 +152,8 @@ class ContactRepository {
 		$data = array(
 			'type'           => self::enum( $input, 'type', self::TYPES, 'lead' ),
 			'company'        => $company,
+			'street'         => self::text( $input, 'street' ),
+			'zip'            => self::text( $input, 'zip' ),
 			'city'           => self::text( $input, 'city' ),
 			'contact_person' => self::text( $input, 'contact_person' ),
 			'phone'          => self::text( $input, 'phone' ),

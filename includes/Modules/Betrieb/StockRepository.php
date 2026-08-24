@@ -273,6 +273,41 @@ class StockRepository {
 	}
 
 	/**
+	 * Sollbestand entfernen.
+	 *
+	 * Kein Buchungssatz, sondern eine Planungsvorgabe – die darf weg. Die
+	 * Bewegungen des Artikels bleiben davon unberührt.
+	 *
+	 * @param int    $article_id Artikel.
+	 * @param string $color      Farbe.
+	 * @return bool
+	 */
+	public static function remove_target( $article_id, $color ) {
+		global $wpdb;
+
+		$table = self::targets_table();
+		$color = ColorRegistry::normalize( $color );
+
+		$existing = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE article_id = %d AND color = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $article_id,
+				$color
+			),
+			ARRAY_A
+		);
+
+		if ( ! $existing ) {
+			return false;
+		}
+
+		$wpdb->delete( $table, array( 'id' => (int) $existing['id'] ) );
+		BetriebAudit::record( 'delete', 'stock_targets', (int) $existing['id'], $existing, null );
+
+		return true;
+	}
+
+	/**
 	 * Sollbestand setzen.
 	 *
 	 * @param int    $article_id Artikel.

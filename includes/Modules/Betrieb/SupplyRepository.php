@@ -56,6 +56,32 @@ class SupplyRepository {
 	}
 
 	/**
+	 * Verbrauchsmaterial löschen.
+	 *
+	 * Erlaubt, weil es Stammdaten sind und keine Buchung: Ein Karton, den
+	 * es nicht mehr gibt, soll auch nicht mehr je Bestellung abgebucht
+	 * werden. Was in der Vergangenheit verbraucht wurde, steht im
+	 * Änderungsprotokoll und bleibt dort.
+	 *
+	 * @param int $id Datensatz.
+	 * @return bool
+	 */
+	public static function delete( $id ) {
+		global $wpdb;
+
+		$before = self::find( $id );
+
+		if ( ! $before ) {
+			return false;
+		}
+
+		$wpdb->delete( self::table(), array( 'id' => (int) $id ) );
+		BetriebAudit::record( 'delete', 'supplies', (int) $id, $before, null );
+
+		return true;
+	}
+
+	/**
 	 * Position anlegen oder ändern.
 	 *
 	 * @param array $input Eingaben.

@@ -541,6 +541,8 @@ class Schema {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			type VARCHAR(20) NOT NULL DEFAULT 'lead',
 			company VARCHAR(255) NOT NULL,
+			street VARCHAR(255) NULL,
+			zip VARCHAR(20) NULL,
 			city VARCHAR(100) NULL,
 			contact_person VARCHAR(255) NULL,
 			phone VARCHAR(50) NULL,

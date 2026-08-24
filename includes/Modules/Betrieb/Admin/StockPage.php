@@ -108,11 +108,22 @@ class StockPage {
 		$article = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
 		$color   = isset( $_POST['color'] ) ? sanitize_text_field( wp_unslash( $_POST['color'] ) ) : '';
 		$qty     = isset( $_POST['target_qty'] ) ? (float) str_replace( ',', '.', sanitize_text_field( wp_unslash( $_POST['target_qty'] ) ) ) : 0.0;
+		$remove  = ! empty( $_POST['remove'] );
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		if ( $article ) {
-			StockRepository::set_target( $article, $color, $qty );
+		if ( ! $article ) {
+			$this->redirect( __( 'Bitte einen Artikel wählen.', 'lindenweg16' ), 'error' );
 		}
+
+		// Entfernen ist etwas anderes als „Soll 0": Bei 0 meldet die
+		// Bedarfsplanung jeden Bestand darunter, es gibt aber keinen
+		// Bestand unter 0. Ein entfernter Sollbestand meldet gar nicht mehr.
+		if ( $remove ) {
+			StockRepository::remove_target( $article, $color );
+			$this->redirect( __( 'Sollbestand entfernt.', 'lindenweg16' ), 'success' );
+		}
+
+		StockRepository::set_target( $article, $color, $qty );
 
 		$this->redirect( __( 'Sollbestand gespeichert.', 'lindenweg16' ), 'success' );
 	}
@@ -195,15 +206,35 @@ class StockPage {
 			__( 'Soll', 'lindenweg16' ),
 			__( 'Differenz', 'lindenweg16' ),
 			__( 'Reichweite', 'lindenweg16' ),
+			'',
 		) as $head ) {
 			echo '<th>' . esc_html( $head ) . '</th>';
 		}
 		echo '</tr></thead><tbody>';
 
-		foreach ( $balances as $article_id => $colors ) {
-			$consumption = StockRepository::consumption( $article_id, 4 );
+		// Ein Sollbestand ohne Bewegung waere sonst unsichtbar - und das ist
+		// genau der haeufige Fall: Man setzt ihn fuer etwas, das gerade
+		// nicht da ist. Deshalb zeigt die Tabelle die Vereinigung aus
+		// beidem, nicht nur die Bewegungen.
+		$zeilen = array();
 
-			foreach ( $colors as $color => $locations ) {
+		foreach ( $balances as $article_id => $colors ) {
+			foreach ( $colors as $color => $unused ) {
+				$zeilen[ (int) $article_id ][ (string) $color ] = true;
+			}
+		}
+
+		foreach ( $targets as $article_id => $colors ) {
+			foreach ( $colors as $color => $unused ) {
+				$zeilen[ (int) $article_id ][ (string) $color ] = true;
+			}
+		}
+
+		foreach ( $zeilen as $article_id => $colors ) {
+			$consumption = StockRepository::consumption( $article_id, 4 );
+			ksort( $colors );
+
+			foreach ( $colors as $color => $unused ) {
 				$balance = StockLedger::pick( $balances, $article_id, $color );
 				$target  = isset( $targets[ $article_id ][ $color ] ) ? $targets[ $article_id ][ $color ] : null;
 				$diff    = null === $target ? null : $balance['gesamt'] - $target;
@@ -236,6 +267,34 @@ class StockPage {
 					'<td>%s</td>',
 					esc_html( null === $reach ? __( 'kein Verbrauch', 'lindenweg16' ) : number_format_i18n( $reach, 1 ) . ' ' . __( 'Wochen', 'lindenweg16' ) )
 				);
+
+				// Sollbestand aendern oder entfernen - ohne diesen Knopf war
+				// ein einmal gesetzter Wert nicht mehr zu erreichen.
+				echo '<td>';
+				if ( null !== $target ) {
+					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+					wp_nonce_field( self::NONCE );
+					echo '<input type="hidden" name="action" value="lw16_betrieb_stock_target" />';
+					printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
+					printf( '<input type="hidden" name="color" value="%s" />', esc_attr( $color ) );
+					printf(
+						'<input type="text" name="target_qty" size="4" value="%s" /> <button class="button button-small">%s</button>',
+						esc_attr( number_format_i18n( $target, 0 ) ),
+						esc_html__( 'Soll ändern', 'lindenweg16' )
+					);
+					echo '</form>';
+
+					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:4px">';
+					wp_nonce_field( self::NONCE );
+					echo '<input type="hidden" name="action" value="lw16_betrieb_stock_target" />';
+					echo '<input type="hidden" name="remove" value="1" />';
+					printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
+					printf( '<input type="hidden" name="color" value="%s" />', esc_attr( $color ) );
+					printf( '<button class="button button-small">%s</button>', esc_html__( 'Soll entfernen', 'lindenweg16' ) );
+					echo '</form>';
+				}
+				echo '</td>';
+
 				echo '</tr>';
 			}
 		}

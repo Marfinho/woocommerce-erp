@@ -32,6 +32,7 @@ class MaterialPage {
 		add_action( 'admin_post_lw16_betrieb_save_lot', array( $this, 'handle_lot' ) );
 		add_action( 'admin_post_lw16_betrieb_dry_lot', array( $this, 'handle_dry' ) );
 		add_action( 'admin_post_lw16_betrieb_save_supply', array( $this, 'handle_supply' ) );
+		add_action( 'admin_post_lw16_betrieb_delete_supply', array( $this, 'handle_delete_supply' ) );
 	}
 
 	/**
@@ -74,6 +75,24 @@ class MaterialPage {
 
 		FilamentRepository::mark_dried( $id );
 		$this->redirect( __( 'Trocknung vermerkt.', 'lindenweg16' ), 'success' );
+	}
+
+	/**
+	 * Verbrauchsmaterial löschen.
+	 */
+	public function handle_delete_supply() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$id = isset( $_POST['supply_id'] ) ? (int) $_POST['supply_id'] : 0;
+
+		$this->redirect(
+			SupplyRepository::delete( $id )
+				? __( 'Verbrauchsmaterial gelöscht.', 'lindenweg16' )
+				: __( 'Dieses Verbrauchsmaterial gibt es nicht mehr.', 'lindenweg16' ),
+			'success'
+		);
 	}
 
 	/**
@@ -307,6 +326,7 @@ class MaterialPage {
 				__( 'Puffer', 'lindenweg16' ),
 				__( 'Lieferant', 'lindenweg16' ),
 				__( 'Preis', 'lindenweg16' ),
+				'',
 			) as $head ) {
 				echo '<th>' . esc_html( $head ) . '</th>';
 			}
@@ -322,27 +342,69 @@ class MaterialPage {
 				printf( '<td>%s</td>', esc_html( (int) $supply['safety_days'] ) );
 				printf( '<td>%s</td>', esc_html( (string) $supply['supplier'] ) );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $supply['price_per_unit'], 2 ) ) );
+
+				echo '<td>';
+				printf(
+					'<a class="button button-small" href="%s">%s</a> ',
+					esc_url( admin_url( 'admin.php?page=lw16-betrieb-material&supply=' . (int) $supply['id'] ) ),
+					esc_html__( 'Bearbeiten', 'lindenweg16' )
+				);
+
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+				wp_nonce_field( self::NONCE );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_delete_supply" />';
+				printf( '<input type="hidden" name="supply_id" value="%d" />', (int) $supply['id'] );
+				printf(
+					'<button class="button button-small" onclick="return confirm(%s)">%s</button>',
+					esc_attr( wp_json_encode( __( 'Wirklich löschen? Es wird danach nicht mehr je Bestellung abgebucht.', 'lindenweg16' ) ) ),
+					esc_html__( 'Löschen', 'lindenweg16' )
+				);
+				echo '</form>';
+				echo '</td>';
+
 				echo '</tr>';
 			}
 
 			echo '</tbody></table>';
 		}
 
-		echo '<h3>' . esc_html__( 'Verbrauchsmaterial anlegen', 'lindenweg16' ) . '</h3>';
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$edit = isset( $_GET['supply'] ) ? SupplyRepository::find( (int) $_GET['supply'] ) : null;
+
+		echo '<h3>' . esc_html( $edit ? __( 'Verbrauchsmaterial bearbeiten', 'lindenweg16' ) : __( 'Verbrauchsmaterial anlegen', 'lindenweg16' ) ) . '</h3>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( self::NONCE );
 		echo '<input type="hidden" name="action" value="lw16_betrieb_save_supply" />';
+
+		if ( $edit ) {
+			printf( '<input type="hidden" name="supply_id" value="%d" />', (int) $edit['id'] );
+		}
+
+		$wert = static function ( $feld, $vorgabe = '' ) use ( $edit ) {
+			return $edit && isset( $edit[ $feld ] ) && '' !== (string) $edit[ $feld ]
+				? (string) $edit[ $feld ]
+				: $vorgabe;
+		};
+
 		echo '<p>';
-		printf( '<input type="text" name="name" placeholder="%s" size="18" /> ', esc_attr__( 'Bezeichnung', 'lindenweg16' ) );
-		printf( '<input type="text" name="unit" placeholder="%s" size="8" value="Stück" /> ', esc_attr__( 'Einheit', 'lindenweg16' ) );
-		printf( '<input type="text" name="stock_qty" placeholder="%s" size="6" /> ', esc_attr__( 'Bestand', 'lindenweg16' ) );
-		printf( '<input type="text" name="consumption_per_order" placeholder="%s" size="8" /> ', esc_attr__( 'je Bestellung', 'lindenweg16' ) );
-		printf( '<input type="text" name="lead_time_days" placeholder="%s" size="6" /> ', esc_attr__( 'Lieferzeit', 'lindenweg16' ) );
-		printf( '<input type="text" name="safety_days" placeholder="%s" size="6" value="7" /> ', esc_attr__( 'Puffer', 'lindenweg16' ) );
-		printf( '<input type="text" name="min_order_qty" placeholder="%s" size="8" /> ', esc_attr__( 'Mindestmenge', 'lindenweg16' ) );
-		printf( '<input type="text" name="supplier" placeholder="%s" size="12" /> ', esc_attr__( 'Lieferant', 'lindenweg16' ) );
-		printf( '<input type="text" name="price_per_unit" placeholder="%s" size="6" /> ', esc_attr__( 'Preis', 'lindenweg16' ) );
-		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Anlegen', 'lindenweg16' ) );
+		printf( '<input type="text" name="name" placeholder="%s" size="18" value="%s" /> ', esc_attr__( 'Bezeichnung', 'lindenweg16' ), esc_attr( $wert( 'name' ) ) );
+		printf( '<input type="text" name="unit" placeholder="%s" size="8" value="%s" /> ', esc_attr__( 'Einheit', 'lindenweg16' ), esc_attr( $wert( 'unit', 'Stück' ) ) );
+		printf( '<input type="text" name="stock_qty" placeholder="%s" size="6" value="%s" /> ', esc_attr__( 'Bestand', 'lindenweg16' ), esc_attr( $wert( 'stock_qty' ) ) );
+		printf( '<input type="text" name="consumption_per_order" placeholder="%s" size="8" value="%s" /> ', esc_attr__( 'je Bestellung', 'lindenweg16' ), esc_attr( $wert( 'consumption_per_order' ) ) );
+		printf( '<input type="text" name="lead_time_days" placeholder="%s" size="6" value="%s" /> ', esc_attr__( 'Lieferzeit', 'lindenweg16' ), esc_attr( $wert( 'lead_time_days' ) ) );
+		printf( '<input type="text" name="safety_days" placeholder="%s" size="6" value="%s" /> ', esc_attr__( 'Puffer', 'lindenweg16' ), esc_attr( $wert( 'safety_days', '7' ) ) );
+		printf( '<input type="text" name="min_order_qty" placeholder="%s" size="8" value="%s" /> ', esc_attr__( 'Mindestmenge', 'lindenweg16' ), esc_attr( $wert( 'min_order_qty' ) ) );
+		printf( '<input type="text" name="supplier" placeholder="%s" size="12" value="%s" /> ', esc_attr__( 'Lieferant', 'lindenweg16' ), esc_attr( $wert( 'supplier' ) ) );
+		printf( '<input type="text" name="price_per_unit" placeholder="%s" size="6" value="%s" /> ', esc_attr__( 'Preis', 'lindenweg16' ), esc_attr( $wert( 'price_per_unit' ) ) );
+		printf( '<button class="button button-primary">%s</button>', esc_html( $edit ? __( 'Speichern', 'lindenweg16' ) : __( 'Anlegen', 'lindenweg16' ) ) );
+
+		if ( $edit ) {
+			printf(
+				' <a class="button" href="%s">%s</a>',
+				esc_url( admin_url( 'admin.php?page=lw16-betrieb-material' ) ),
+				esc_html__( 'Abbrechen', 'lindenweg16' )
+			);
+		}
 		echo '</p></form>';
 	}
 }

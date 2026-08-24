@@ -939,6 +939,8 @@ class SimplePages {
 			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
 		}
 		echo '</select> ';
+		printf( '<input type="text" name="street" placeholder="%s" size="20" /> ', esc_attr__( 'Straße und Nr.', 'lindenweg16' ) );
+		printf( '<input type="text" name="zip" placeholder="%s" size="6" /> ', esc_attr__( 'PLZ', 'lindenweg16' ) );
 		printf( '<input type="text" name="city" placeholder="%s" size="14" /> ', esc_attr__( 'Ort', 'lindenweg16' ) );
 		printf( '<input type="text" name="contact_person" placeholder="%s" size="16" /> ', esc_attr__( 'Ansprechpartner', 'lindenweg16' ) );
 		printf( '<input type="text" name="phone" placeholder="%s" size="14" /> ', esc_attr__( 'Telefon', 'lindenweg16' ) );
