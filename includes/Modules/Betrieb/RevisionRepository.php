@@ -320,9 +320,10 @@ class RevisionRepository {
 	 * @param string $original Ursprünglicher Dateiname.
 	 * @param string $sha1     Prüfsumme.
 	 * @param int    $bytes    Dateigrösse.
+	 * @param string $kind     modell oder druckdatei.
 	 * @return bool
 	 */
-	public static function set_model( $id, $name, $original, $sha1, $bytes ) {
+	public static function set_model( $id, $name, $original, $sha1, $bytes, $kind = '' ) {
 		global $wpdb;
 
 		$before = self::find( $id );
@@ -333,6 +334,7 @@ class RevisionRepository {
 		$data = array(
 			'model_file'        => (string) $name,
 			'model_name'        => (string) $original,
+			'model_kind'        => (string) $kind,
 			'model_sha1'        => (string) $sha1,
 			'model_bytes'       => (int) $bytes,
 			'model_uploaded_at' => current_time( 'mysql', true ),
@@ -364,6 +366,7 @@ class RevisionRepository {
 		$data = array(
 			'model_file'        => null,
 			'model_name'        => null,
+			'model_kind'        => null,
 			'model_sha1'        => null,
 			'model_bytes'       => 0,
 			'model_uploaded_at' => null,

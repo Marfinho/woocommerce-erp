@@ -20,6 +20,7 @@ use Lindenweg16\Modules\Betrieb\BundleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ModelFile;
+use Lindenweg16\Modules\Betrieb\ThreeMf;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\SourcingRepository;
@@ -302,12 +303,12 @@ class ArticlesPage {
 		if ( $id ) {
 			RevisionRepository::update( $id, $result['data'], $reason );
 			$hint = $this->maybe_store_model( $id );
-			$this->redirect( __( 'Revision gespeichert.', 'lindenweg16' ) . $hint, $hint ? 'error' : 'success', $args );
+			$this->redirect( __( 'Revision gespeichert.', 'lindenweg16' ) . $hint, 'success', $args );
 		}
 
 		$new  = RevisionRepository::insert( $result['data'] );
 		$hint = $new ? $this->maybe_store_model( $new ) : '';
-		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – setze sie in der Liste aktiv.', 'lindenweg16' ) . $hint, $hint ? 'error' : 'success', $args );
+		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – setze sie in der Liste aktiv.', 'lindenweg16' ) . $hint, 'success', $args );
 	}
 
 	/**
@@ -343,10 +344,62 @@ class ArticlesPage {
 			$stored['name'],
 			sanitize_file_name( (string) $file['name'] ),
 			$stored['sha1'],
-			$stored['size']
+			$stored['size'],
+			$stored['kind']
 		);
 
-		return '';
+		return $this->adopt_slice_values( $revision_id, $stored );
+	}
+
+	/**
+	 * Aus einer geslicten Druckdatei die Zahlen des Slicers übernehmen.
+	 *
+	 * Übernommen wird nur, was noch leer ist. Eine gemessene Angabe zu
+	 * überschreiben, weil zufällig eine Datei hochgeladen wurde, wäre eine
+	 * stille Änderung an der Kalkulation.
+	 *
+	 * @param int   $revision_id Revision.
+	 * @param array $stored      Ergebnis von ModelFile::store().
+	 * @return string Hinweistext, leer wenn nichts zu sagen ist.
+	 */
+	protected function adopt_slice_values( $revision_id, array $stored ) {
+		if ( 'druckdatei' !== $stored['kind'] ) {
+			return '';
+		}
+
+		$info = ModelFile::slice_info( ModelFile::path( $stored['name'] ) );
+
+		if ( ! $info ) {
+			return ' ' . __( 'Die Datei ist eine geslicte Druckdatei ohne lesbare Slicer-Angaben.', 'lindenweg16' );
+		}
+
+		$werte    = ThreeMf::revision_values( $info );
+		$revision = RevisionRepository::find( $revision_id );
+		$data     = array();
+
+		// Nur leere Felder füllen.
+		if ( $revision && (float) $revision['print_time_plate_h'] <= 0 && null !== $werte['print_time_plate_h'] ) {
+			$data['print_time_plate_h'] = $werte['print_time_plate_h'];
+		}
+		if ( $revision && (float) $revision['weight_g'] <= 0 && null !== $werte['weight_g'] ) {
+			$data['weight_g']        = $werte['weight_g'];
+			$data['parts_per_plate'] = $werte['parts_per_plate'];
+		}
+
+		if ( $data ) {
+			RevisionRepository::update( $revision_id, $data, __( 'Aus der geslicten Druckdatei übernommen.', 'lindenweg16' ) );
+		}
+
+		return ' ' . sprintf(
+			/* translators: 1: Druckzeit, 2: Gewicht, 3: Teile, 4: übernommen oder nicht. */
+			__( 'Geslicte Druckdatei erkannt: %1$s h Druckzeit, %2$s g Material, %3$d Teile auf der Platte. %4$s', 'lindenweg16' ),
+			null === $werte['print_time_plate_h'] ? '?' : number_format_i18n( $werte['print_time_plate_h'], 3 ),
+			null === $info['weight_g'] ? '?' : number_format_i18n( $info['weight_g'], 2 ),
+			(int) $werte['parts_per_plate'],
+			$data
+				? __( 'Die leeren Felder der Revision wurden damit gefüllt.', 'lindenweg16' )
+				: __( 'Die Revision hat bereits eigene Werte – die bleiben stehen.', 'lindenweg16' )
+		);
 	}
 
 	/**
@@ -1167,7 +1220,7 @@ class ArticlesPage {
 		echo '<tr><th scope="row"><label for="lw16-model">' . esc_html__( '3MF-Datei', 'lindenweg16' ) . '</label></th>';
 		printf(
 			'<td><input type="file" name="model" id="lw16-model" accept=".3mf" /><p class="description">%s</p></td></tr>',
-			esc_html__( 'Die Datei, aus der diese Version gedruckt wird. Sie hängt an der Revision – wer die aktive Revision lädt, hat immer den freigegebenen Stand.', 'lindenweg16' )
+			esc_html__( 'Die Datei, aus der diese Version gedruckt wird. Sie hängt an der Revision – wer die aktive Revision lädt, hat immer den freigegebenen Stand. Beides ist erlaubt: die Projektdatei mit dem Körper (daraus lässt sich eine volle Platte erzeugen) oder die geslicte Druckdatei (.gcode.3mf, die an den Drucker geht). Aus einer Druckdatei liest das System Druckzeit, Materialverbrauch und Teile je Platte selbst aus.', 'lindenweg16' )
 		);
 
 		echo '<tr><th scope="row"><label for="lw16-orientation_note">' . esc_html__( 'Orientierung', 'lindenweg16' ) . '</label></th>';
@@ -1202,9 +1255,10 @@ class ArticlesPage {
 			);
 
 			printf(
-				'<a href="%s">%s</a><br /><span class="description">%s</span><br />',
+				'<a href="%s">%s</a><br /><span class="description">%s · %s</span><br />',
 				esc_url( $link ),
 				esc_html( (string) $row['model_name'] ),
+				esc_html( ModelFile::kind_label( (string) $row['model_kind'] ) ),
 				esc_html( size_format( (int) $row['model_bytes'] ) )
 			);
 
@@ -1247,9 +1301,11 @@ class ArticlesPage {
 	 * @param int   $article_id Artikel.
 	 */
 	protected function plate_form( array $rows, $article_id ) {
+		// Nur Dateien mit Geometrie: Aus einer geslicten Druckdatei lässt
+		// sich nichts vervielfältigen, sie enthält keinen Körper mehr.
 		$with_file = array();
 		foreach ( $rows as $row ) {
-			if ( ! empty( $row['model_file'] ) ) {
+			if ( ! empty( $row['model_file'] ) && 'druckdatei' !== $row['model_kind'] ) {
 				$with_file[ (int) $row['id'] ] = $row['version'] . ' – ' . $row['model_name'];
 			}
 		}

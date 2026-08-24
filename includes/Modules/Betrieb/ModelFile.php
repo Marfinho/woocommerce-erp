@@ -110,6 +110,88 @@ class ModelFile {
 	}
 
 	/**
+	 * Was für eine Datei ist das?
+	 *
+	 * Bambu Studio kennt zwei sehr verschiedene 3MF: die Projektdatei mit
+	 * der Geometrie und die geslicte Druckdatei (.gcode.3mf), die man an
+	 * den Drucker schickt. Letztere enthält fertigen G-Code, aber **kein
+	 * Modell mehr** – ihr 3dmodel.model ist leer. Beide sind nützlich, aber
+	 * für Verschiedenes, und beide heissen .3mf.
+	 *
+	 * @param string $path Absoluter Pfad.
+	 * @return string modell, druckdatei oder leerer String.
+	 */
+	public static function kind( $path ) {
+		if ( ! class_exists( '\ZipArchive' ) || ! is_file( $path ) ) {
+			return '';
+		}
+
+		$zip = new \ZipArchive();
+		if ( true !== $zip->open( $path ) ) {
+			return '';
+		}
+
+		$gcode = false;
+		for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+			$name = (string) $zip->getNameIndex( $i );
+
+			if ( 0 === strpos( $name, 'Metadata/' ) && '.gcode' === substr( $name, -6 ) ) {
+				$gcode = true;
+				break;
+			}
+		}
+
+		$xml = $zip->getFromName( ThreeMf::MODEL_PATH );
+		$zip->close();
+
+		$doc   = is_string( $xml ) ? ThreeMf::document( $xml ) : null;
+		$items = $doc ? ThreeMf::items( $doc ) : array();
+
+		if ( $items ) {
+			return 'modell';
+		}
+
+		return $gcode ? 'druckdatei' : '';
+	}
+
+	/**
+	 * Beschriftung einer Dateiart.
+	 *
+	 * @param string $kind Art.
+	 * @return string
+	 */
+	public static function kind_label( $kind ) {
+		$labels = array(
+			'modell'     => __( 'Modell', 'lindenweg16' ),
+			'druckdatei' => __( 'Druckdatei (geslict)', 'lindenweg16' ),
+		);
+
+		return isset( $labels[ $kind ] ) ? $labels[ $kind ] : __( 'unbekannt', 'lindenweg16' );
+	}
+
+	/**
+	 * Die Zahlen des Slicers aus einer Druckdatei.
+	 *
+	 * @param string $path Absoluter Pfad.
+	 * @return array|null
+	 */
+	public static function slice_info( $path ) {
+		if ( ! class_exists( '\ZipArchive' ) || ! is_file( $path ) ) {
+			return null;
+		}
+
+		$zip = new \ZipArchive();
+		if ( true !== $zip->open( $path ) ) {
+			return null;
+		}
+
+		$xml = $zip->getFromName( ThreeMf::SLICE_INFO );
+		$zip->close();
+
+		return is_string( $xml ) ? ThreeMf::slice_info( $xml ) : null;
+	}
+
+	/**
 	 * Prüfen, ob eine Datei ein brauchbares 3MF ist.
 	 *
 	 * @param string $path Absoluter Pfad.
@@ -127,6 +209,7 @@ class ModelFile {
 		if ( '' === $xml ) {
 			return array(
 				'ok'      => false,
+				'kind'    => '',
 				'message' => __( 'Das ist keine 3MF-Datei – 3D/3dmodel.model fehlt darin.', 'lindenweg16' ),
 			);
 		}
@@ -134,11 +217,22 @@ class ModelFile {
 		if ( ! ThreeMf::document( $xml ) ) {
 			return array(
 				'ok'      => false,
+				'kind'    => '',
 				'message' => __( 'Das Modell in der Datei lässt sich nicht lesen.', 'lindenweg16' ),
 			);
 		}
 
-		return array( 'ok' => true, 'message' => '' );
+		$kind = self::kind( $path );
+
+		if ( '' === $kind ) {
+			return array(
+				'ok'      => false,
+				'kind'    => '',
+				'message' => __( 'In dieser Datei ist kein Bauteil und kein G-Code – sie ist leer.', 'lindenweg16' ),
+			);
+		}
+
+		return array( 'ok' => true, 'kind' => $kind, 'message' => '' );
 	}
 
 	/**
@@ -151,6 +245,7 @@ class ModelFile {
 		$fail = array(
 			'success' => false,
 			'name'    => '',
+			'kind'    => '',
 			'size'    => 0,
 			'sha1'    => '',
 			'message' => '',
@@ -194,6 +289,7 @@ class ModelFile {
 		return array(
 			'success' => true,
 			'name'    => $name,
+			'kind'    => $check['kind'],
 			'size'    => (int) filesize( $target ),
 			'sha1'    => (string) sha1_file( $target ),
 			'message' => '',
@@ -233,6 +329,11 @@ class ModelFile {
 			'size'    => array( 0.0, 0.0, 0.0 ),
 			'message' => '',
 		);
+
+		if ( 'druckdatei' === self::kind( $source ) ) {
+			$fail['message'] = __( 'Das ist eine geslicte Druckdatei. Sie enthält fertigen G-Code, aber keine Geometrie – vervielfältigen lässt sich daraus nichts. Dafür braucht es die Projektdatei mit dem Körper.', 'lindenweg16' );
+			return $fail;
+		}
 
 		$xml = self::read_model( $source );
 		if ( '' === $xml ) {

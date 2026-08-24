@@ -252,6 +252,12 @@ bleibt, solange nicht alle Altdaten übernommen sind.
   wird nur über `admin-post.php` mit Capability-Prüfung ausgeliefert. Auf
   nginx greift die `.htaccess` nicht – dort gehört eine `location`-Regel für
   das Verzeichnis in die Serverkonfiguration.
+- **Zwei Dateiarten unter einer Endung**: `ModelFile::kind()` unterscheidet die
+  Projektdatei (hat Build-Items) von der geslicten `.gcode.3mf` (leeres
+  `3dmodel.model`, dafür `Metadata/plate_*.gcode`). Aus letzterer liest
+  `ThreeMf::slice_info()` die Slicer-Zahlen; `revision_values()` rechnet den
+  Plattenverbrauch über die Objektzahl auf das Einzelteil herunter und füllt
+  nur leere Revisionsfelder.
 - **Platte füllen** (`ThreeMf`) vervielfältigt nur die `<item>`-Einträge im
   `<build>`, nie das Netz: Die Geometrie bleibt bitgenau die freigegebene und
   die Datei so groß wie vorher. Vorausgesetzt wird eine Datei mit genau einer

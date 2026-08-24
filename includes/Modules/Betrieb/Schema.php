@@ -143,6 +143,7 @@ class Schema {
 			orientation_image_id BIGINT UNSIGNED NULL,
 			model_file VARCHAR(190) NULL,
 			model_name VARCHAR(190) NULL,
+			model_kind VARCHAR(20) NULL,
 			model_sha1 CHAR(40) NULL,
 			model_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
 			model_uploaded_at DATETIME NULL,
