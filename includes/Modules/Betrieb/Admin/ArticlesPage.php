@@ -583,9 +583,14 @@ class ArticlesPage {
 			'revisionen'   => __( 'Revisionen', 'lindenweg16' ),
 			'stueckliste'  => __( 'Stückliste', 'lindenweg16' ),
 			'beschaffung'  => __( 'Beschaffung', 'lindenweg16' ),
-			'kalkulation'  => __( 'Kalkulation', 'lindenweg16' ),
-			'bestellarten' => __( 'Bestellart-Rechner', 'lindenweg16' ),
 		);
+
+		// Geld ist ein eigenes Recht: Wer Stammdaten pflegen darf, muss
+		// deshalb noch lange nicht die Kalkulation sehen.
+		if ( Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
+			$tabs['kalkulation']  = __( 'Kalkulation', 'lindenweg16' );
+			$tabs['bestellarten'] = __( 'Bestellart-Rechner', 'lindenweg16' );
+		}
 
 		if ( ! isset( $tabs[ $tab ] ) ) {
 			$tab = 'artikel';

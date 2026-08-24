@@ -315,7 +315,7 @@ class RestApi {
 	 * @return bool|WP_Error
 	 */
 	public function can_produce() {
-		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_production' ) ) {
+		if ( ! Roles::current_user_can_betrieb( 'lw16_capture' ) ) {
 			return new WP_Error(
 				'lw16_forbidden',
 				__( 'Keine Berechtigung.', 'lindenweg16' ),

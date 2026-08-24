@@ -484,6 +484,7 @@ class Schema {
 			category VARCHAR(30) NOT NULL DEFAULT 'sonstiges',
 			description VARCHAR(255) NULL,
 			hours DECIMAL(8,3) NOT NULL DEFAULT 0,
+			work_order_id BIGINT UNSIGNED NULL,
 			phase_block VARCHAR(2) NULL,
 			note TEXT NULL,
 			created_at DATETIME NOT NULL,
@@ -492,7 +493,22 @@ class Schema {
 			PRIMARY KEY  (id),
 			KEY entry_date (entry_date),
 			KEY iso (iso_year, iso_week),
-			KEY category (category)
+			KEY category (category),
+			KEY work_order_id (work_order_id)
+		) {$charset_collate};";
+
+		// Stundenlöhne: nie überschrieben, immer mit Stichtag.
+		$t[] = "CREATE TABLE {$p}user_rates (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			user_id BIGINT UNSIGNED NOT NULL,
+			rate_per_h DECIMAL(10,4) NOT NULL DEFAULT 0,
+			valid_from DATE NOT NULL,
+			note VARCHAR(255) NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY user_from (user_id, valid_from),
+			KEY user_id (user_id)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}capacity_weeks (

@@ -18,7 +18,10 @@ use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
+use Lindenweg16\Modules\Betrieb\LaborCost;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
+use Lindenweg16\Modules\Betrieb\TimeRepository;
+use Lindenweg16\Modules\Betrieb\WageRepository;
 use Lindenweg16\Modules\Betrieb\ScanResolver;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\StockRepository;
@@ -55,8 +58,8 @@ class BinsPage {
 	/**
 	 * Zugriff prüfen.
 	 */
-	protected function require_cap() {
-		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_production' ) ) {
+	protected function require_cap( $cap = 'lw16_manage_production' ) {
+		if ( ! Roles::current_user_can_betrieb( $cap ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 	}
@@ -142,7 +145,7 @@ class BinsPage {
 	 * Pickliste aus den offenen Bestellungen erzeugen.
 	 */
 	public function handle_picklist() {
-		$this->require_cap();
+		$this->require_cap( 'lw16_capture' );
 		check_admin_referer( self::NONCE . '_pick' );
 
 		$lines = WooIntegration::open_order_lines();
@@ -441,7 +444,7 @@ class BinsPage {
 	 * Uhr an einem Fertigungsauftrag starten oder anhalten.
 	 */
 	public function handle_work_timer() {
-		$this->require_cap();
+		$this->require_cap( 'lw16_capture' );
 		check_admin_referer( self::NONCE_WORK );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
@@ -460,7 +463,7 @@ class BinsPage {
 	 * Auftrag fertigmelden oder stornieren.
 	 */
 	public function handle_work_done() {
-		$this->require_cap();
+		$this->require_cap( 'lw16_capture' );
 		check_admin_referer( self::NONCE_WORK );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
@@ -583,6 +586,43 @@ class BinsPage {
 			DeviceLabel::qr( $url, 96, 'M' ), // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- erzeugtes SVG.
 			esc_html__( 'scannen fürs Handy', 'lindenweg16' )
 		);
+	}
+
+	/**
+	 * Was die erfasste Arbeit an diesem Auftrag gekostet hat.
+	 *
+	 * Gerechnet wird aus den Zeitbuchungen, nicht aus dem Timerstand: Nur
+	 * die Buchung weiss, wer gearbeitet hat, und nur dann lässt sich der
+	 * richtige Stundenlohn ansetzen.
+	 *
+	 * @param array $order Auftrag.
+	 * @param array $wages Lohnzeilen.
+	 * @return string
+	 */
+	protected function labor_label( array $order, array $wages ) {
+		$entries = TimeRepository::for_work_order( (int) $order['id'] );
+
+		if ( ! $entries ) {
+			return '—';
+		}
+
+		$total = LaborCost::total( $entries, $wages );
+
+		if ( $total['hours_unpriced'] > 0 && $total['hours'] <= 0 ) {
+			return __( 'kein Lohn hinterlegt', 'lindenweg16' );
+		}
+
+		$text = number_format_i18n( $total['cost'], 2 ) . ' €';
+
+		if ( $total['hours_unpriced'] > 0 ) {
+			$text .= ' ' . sprintf(
+				/* translators: %s: Stunden. */
+				__( '(+%s h ohne Lohn)', 'lindenweg16' ),
+				number_format_i18n( $total['hours_unpriced'], 2 )
+			);
+		}
+
+		return $text;
 	}
 
 	/**
@@ -712,6 +752,18 @@ class BinsPage {
 			__( 'Material', 'lindenweg16' ),
 			__( 'Pickliste', 'lindenweg16' ),
 			__( 'Zeit', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+
+		// Was die Arbeit gekostet hat, sieht nur, wer Kosten sehen darf.
+		$mit_kosten = Roles::current_user_can_betrieb( 'lw16_view_costs' );
+
+		if ( $mit_kosten ) {
+			echo '<th>' . esc_html__( 'Lohnkosten', 'lindenweg16' ) . '</th>';
+		}
+
+		foreach ( array(
 			__( 'Status', 'lindenweg16' ),
 			'',
 		) as $head ) {
@@ -725,6 +777,7 @@ class BinsPage {
 		}
 
 		$revisions = RevisionRepository::active_by_article();
+		$wages     = $mit_kosten ? WageRepository::all() : array();
 
 		foreach ( $orders as $order ) {
 			$article = isset( $articles[ (int) $order['article_id'] ] ) ? $articles[ (int) $order['article_id'] ] : null;
@@ -762,6 +815,10 @@ class BinsPage {
 			echo '</td>';
 
 			printf( '<td>%s</td>', esc_html( $this->duration_label( $order ) ) );
+
+			if ( $mit_kosten ) {
+				printf( '<td>%s</td>', esc_html( $this->labor_label( $order, $wages ) ) );
+			}
 
 			printf(
 				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',

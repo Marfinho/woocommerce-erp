@@ -294,7 +294,7 @@ footer p{max-width:72ch}
 				<tr>
 					<td><strong>Betrieb</strong></td>
 					<td>Fertigung und Lager</td>
-					<td>Dashboard · Bedarf · Druckjournal · Artikel &amp; Revisionen · Drucker &amp; Wartung · Kapazität · Material · Lager · Lagerplätze, Fertigung &amp; Picklisten · Bestellungen · Qualität · Kontakte/B2B · Zeiterfassung · Berichte · Import &amp; Doku · Einstellungen</td>
+					<td>Dashboard · Bedarf · Druckjournal · Artikel &amp; Revisionen · Drucker &amp; Wartung · Kapazität · Material · Lager · Lagerplätze, Fertigung &amp; Picklisten · Bestellungen · Qualität · Kontakte/B2B · Zeiterfassung · Berichte · Benutzer &amp; Rechte · Import &amp; Doku · Einstellungen</td>
 				</tr>
 			</tbody>
 		</table>
@@ -966,13 +966,41 @@ footer p{max-width:72ch}
 			</tbody>
 		</table>
 	</div>
-	<h4>Die drei Berechtigungen im Modul Betrieb</h4>
+	<h4>Rechte vergibst du im Plugin, nicht in WordPress</h4>
+	<p><span class="path">Betrieb → Benutzer &amp; Rechte</span> — je Nutzer ein <strong>Profil</strong>. Die Rechte hängen am Nutzer, nicht an einer WordPress-Rolle: Jemand kann Redakteur des Shops und zugleich Aushilfe in der Werkstatt sein.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Profil</th><th>Darf</th><th>Darf nicht</th></tr></thead>
+			<tbody>
+				<tr><td><strong>Werkstatt</strong><br>(Aushilfe, Minijob)</td><td>Erfassen und protokollieren: Zeit, Scans, Picklisten, Druckaufträge buchen, Aufträge starten und fertigmelden. Dabei sehen, was zum Arbeiten nötig ist.</td><td>Stammdaten ändern, Preise und Kosten sehen, Berichte öffnen, Einstellungen ändern</td></tr>
+				<tr><td><strong>Fertigung</strong></td><td>Zusätzlich Stammdaten pflegen und Auswertungen sehen</td><td>Preise, Kosten und Löhne sehen; Einstellungen; Rechte vergeben</td></tr>
+				<tr><td><strong>Betriebsleitung</strong></td><td>Alles Fachliche samt Kalkulation, Kosten und Analyse-Auszug</td><td>Grundeinstellungen ändern, Rechte und Löhne vergeben</td></tr>
+				<tr><td><strong>Vollzugriff</strong></td><td>Alles</td><td>—</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p>Die Profile bauen aufeinander auf: Jedes höhere kann alles, was das darunter kann. Eine Beförderung nimmt also nie ein Recht weg.</p>
+
+	<h4>Die sechs Berechtigungen dahinter</h4>
 	<ul>
-		<li><span class="key">lw16_manage_production</span> — Druckjournal, Artikel, Drucker, Kapazität, Material, Lager, Bestellungen, Qualität, Kontakte, Zeiterfassung</li>
-		<li><span class="key">lw16_view_reports</span> — Dashboard und Berichte, sonst nichts</li>
-		<li><span class="key">lw16_manage_settings</span> — Einstellungen sowie Import &amp; Doku</li>
+		<li><span class="key">lw16_capture</span> — erfassen und protokollieren</li>
+		<li><span class="key">lw16_manage_production</span> — Stammdaten ändern</li>
+		<li><span class="key">lw16_view_reports</span> — Auswertungen sehen</li>
+		<li><span class="key">lw16_view_costs</span> — Preise, Kosten und Löhne sehen</li>
+		<li><span class="key">lw16_manage_settings</span> — Grundeinstellungen, Import und Doku</li>
+		<li><span class="key">lw16_manage_users</span> — Rechte und Löhne vergeben, das Protokoll aller Nutzer einsehen</li>
 	</ul>
-	<p>Wer eine Aushilfe nur buchen lassen will, gibt ihr die Rolle <em>Betrieb</em>. Wer jemandem nur Zahlen zeigen will, vergibt einzeln <span class="key">lw16_view_reports</span>.</p>
+	<p><strong>Geld ist ein eigenes Recht.</strong> Ohne <span class="key">lw16_view_costs</span> fehlen die Reiter <em>Kalkulation</em> und <em>Bestellart-Rechner</em>, die Spalte Lohnkosten bei den Aufträgen, der Analyse-Auszug und in den Berichten alle Kennzahlen in Euro. Die Ausschussquote bleibt sichtbar — sie sagt etwas über die Arbeit, nicht über den Ertrag.</p>
+	<p>Die eigenen Rechte kannst du hier nicht ändern; das muss ein zweiter Verwalter tun. So sperrt sich niemand versehentlich selbst aus. Wer WordPress-Administrator ist, hat über <span class="key">manage_lw16</span> ohnehin vollen Zugriff — daran ändert ein Profil nichts, und die Seite sagt das auch.</p>
+
+	<h4>Wer hat was gemacht</h4>
+	<p>Auf derselben Seite. Die Übersicht zeigt je Nutzer Profil, Stundenlohn, erfasste Stunden, Lohnkosten und die Zahl der protokollierten Vorgänge im gewählten Zeitraum. Über <em>Ansehen</em> kommst du zu seinem Protokoll: jede Änderung als Satz — „Revision #12 geändert", „Lagerbuchung #308 angelegt" — mit Zeit und Begründung, dazu seine Zeiteinträge mit Kosten.</p>
+	<p>Das Protokoll ist dasselbe hashverkettete Journal, das ohnehin für jede Änderung geschrieben wird; neu ist nur die Sicht darauf. Es sagt, <em>was</em> geschah — nicht, ob es richtig war. Als Leistungsmessung taugt es nicht: Wer sorgfältig arbeitet, erzeugt nicht mehr Zeilen, sondern weniger Korrekturen. Auch die Rechtevergabe selbst wird protokolliert.</p>
+
+	<h4>Stundenlohn und was er kostet</h4>
+	<p>Je Nutzer ein Stundenlohn <strong>ab einem Stichtag</strong>. Eine Erhöhung ist eine neue Zeile, keine Korrektur: Wer im Mai 14 € bekam, dessen Maiarbeit hat 14 € gekostet. Würde eine Erhöhung rückwirkend gelten, wäre jeder Vorjahresvergleich wertlos.</p>
+	<p>Daraus rechnet das System die <strong>Ist-Lohnkosten</strong>: je Zeiteintrag, je Mitarbeiter, je Fertigungsauftrag (Spalte <em>Lohnkosten</em> in der Auftragsliste) und im Analyse-Auszug. Stunden ohne hinterlegten Lohn werden getrennt ausgewiesen und <em>nicht</em> mit null bewertet — sonst sähe der Betrieb billiger aus, als er ist.</p>
+	<p><strong>Wie der Lohn in die Produktionskosten kommt.</strong> Nicht automatisch, und das ist Absicht. Die Kalkulation rechnet weiter mit dem <em>kalkulatorischen Stundensatz</em> aus den Einstellungen, denn der steckt in jedem Preis — ein Satz, der sich mit jeder Lohnbuchung von selbst verschiebt, verschöbe jeden Preis mit, rückwirkend und unbemerkt. Stattdessen steht auf der Benutzerseite der Vergleich: <em>tatsächlich bezahlt</em> gegen <em>gerechnet</em>, mit Ampel. Weicht er ab, änderst du den kalkulatorischen Satz unter <span class="path">Betrieb → Einstellungen</span> mit einem Stichtag — bewusst und datiert, und die alten Kalkulationen bleiben, wie sie waren.</p>
 </section>
 
 <!-- ============ 14 ============ -->

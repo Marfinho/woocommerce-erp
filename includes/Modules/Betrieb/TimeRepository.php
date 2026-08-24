@@ -171,6 +171,10 @@ class TimeRepository {
 				'iso_year'    => $iso['iso_year'],
 				'category'    => self::enum( $input, 'category', self::CATEGORIES, 'sonstiges' ),
 				'description' => self::text( $input, 'description' ),
+				// Kommt die Zeit von einem Auftrag, bleibt die Verbindung
+				// erhalten – erst dadurch sind Ist-Lohnkosten je Auftrag
+				// überhaupt zu rechnen.
+				'work_order_id' => self::int_or( $input, 'work_order_id', 0 ) ? self::int_or( $input, 'work_order_id', 0 ) : null,
 				'hours'       => $hours,
 				'phase_block' => self::text( $input, 'phase_block' ),
 				'note'        => isset( $input['note'] ) ? sanitize_textarea_field( $input['note'] ) : null,
@@ -199,5 +203,66 @@ class TimeRepository {
 		BetriebAudit::record( 'create', 'time_entries', $id, null, $data );
 
 		return $id;
+	}
+
+	/**
+	 * Zeitbuchungen eines Zeitraums – Grundlage der Lohnrechnung.
+	 *
+	 * @param string $von Von (Y-m-d).
+	 * @param string $bis Bis (Y-m-d).
+	 * @return array
+	 */
+	public static function between( $von, $bis ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE entry_date BETWEEN %s AND %s ORDER BY entry_date DESC, id DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$von,
+				$bis
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Zeitbuchungen eines Nutzers, neueste zuerst.
+	 *
+	 * @param int $user_id Nutzer.
+	 * @param int $limit   Obergrenze.
+	 * @return array
+	 */
+	public static function for_user( $user_id, $limit = 200 ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE created_by = %d ORDER BY entry_date DESC, id DESC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $user_id,
+				(int) $limit
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Zeitbuchungen zu einem Fertigungsauftrag.
+	 *
+	 * @param int $work_order_id Auftrag.
+	 * @return array
+	 */
+	public static function for_work_order( $work_order_id ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE work_order_id = %d ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $work_order_id
+			),
+			ARRAY_A
+		);
 	}
 }

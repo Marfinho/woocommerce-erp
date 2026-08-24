@@ -61,7 +61,9 @@ class Exporter {
 	 * Auszug zur Analyse als Textdatei.
 	 */
 	public function handle_analyse() {
-		if ( ! Roles::current_user_can_betrieb( 'lw16_view_reports' ) ) {
+		// Der Auszug enthält Herstellkosten, Preise und Umsätze – er gehört
+		// deshalb hinter dasselbe Recht wie die Kalkulation.
+		if ( ! Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( 'lw16_betrieb_export' );

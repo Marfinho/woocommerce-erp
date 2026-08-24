@@ -27,6 +27,7 @@ use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
+use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
 
 /**
  * Registriert Menü, Seiten und Formular-Handler des Moduls.
@@ -42,21 +43,22 @@ class BetriebModule {
 	 */
 	public static function pages() {
 		return array(
-			self::MENU_SLUG            => array( __( 'Dashboard', 'lindenweg16' ), 'lw16_view_reports' ),
+			self::MENU_SLUG            => array( __( 'Dashboard', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-bedarf'       => array( __( 'Bedarf', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-druckjournal' => array( __( 'Druckjournal', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-druckjournal' => array( __( 'Druckjournal', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-artikel'      => array( __( 'Artikel & Revisionen', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-drucker'      => array( __( 'Drucker & Wartung', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-kapazitaet'   => array( __( 'Kapazität', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-material'     => array( __( 'Material', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-lager'        => array( __( 'Lager', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze, Fertigung & Picklisten', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-lager'        => array( __( 'Lager', 'lindenweg16' ), 'lw16_capture' ),
+			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze, Fertigung & Picklisten', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-bestellungen' => array( __( 'Bestellungen', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-qualitaet'    => array( __( 'Qualität', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-qualitaet'    => array( __( 'Qualität', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-kontakte'     => array( __( 'Kontakte / B2B', 'lindenweg16' ), 'lw16_manage_production' ),
-			'lw16-betrieb-zeit'         => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-zeit'         => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-berichte'     => array( __( 'Berichte', 'lindenweg16' ), 'lw16_view_reports' ),
 			'lw16-betrieb-import'       => array( __( 'Import & Doku', 'lindenweg16' ), 'lw16_manage_settings' ),
+			'lw16-betrieb-benutzer'     => array( __( 'Benutzer & Rechte', 'lindenweg16' ), 'lw16_manage_users' ),
 			'lw16-betrieb-einstellungen' => array( __( 'Einstellungen', 'lindenweg16' ), 'lw16_manage_settings' ),
 		);
 	}
@@ -113,6 +115,7 @@ class BetriebModule {
 			( new OrdersPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();
+			( new UsersPage() )->register();
 		}
 	}
 
@@ -123,7 +126,7 @@ class BetriebModule {
 		add_menu_page(
 			__( 'Betrieb', 'lindenweg16' ),
 			__( 'Betrieb', 'lindenweg16' ),
-			'lw16_view_reports',
+			'lw16_capture',
 			self::MENU_SLUG,
 			array( $this, 'render_page' ),
 			'dashicons-hammer',

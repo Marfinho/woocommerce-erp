@@ -80,10 +80,11 @@ class SimplePages {
 	/**
 	 * POST-Daten holen.
 	 *
+	 * @param string $cap Erforderliches Recht.
 	 * @return array
 	 */
-	protected function input() {
-		$this->require_cap();
+	protected function input( $cap = 'lw16_manage_production' ) {
+		$this->require_cap( $cap );
 		check_admin_referer( self::NONCE );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
@@ -163,7 +164,8 @@ class SimplePages {
 	 * Zeiteintrag erfassen.
 	 */
 	public function handle_time() {
-		$input  = $this->input();
+		// Zeit erfassen darf, wer arbeitet – nicht nur, wer Stammdaten pflegt.
+		$input  = $this->input( 'lw16_capture' );
 		$result = TimeRepository::validate( $input );
 
 		if ( $result['errors'] ) {
@@ -336,7 +338,7 @@ class SimplePages {
 	 * Wartung erfassen.
 	 */
 	public function handle_maintenance() {
-		$input = $this->input();
+		$input = $this->input( 'lw16_capture' );
 		MaintenanceRepository::insert( $input );
 
 		$this->redirect( 'lw16-betrieb-drucker', __( 'Wartung erfasst.', 'lindenweg16' ) );
@@ -1320,7 +1322,7 @@ class SimplePages {
 		echo '</form>';
 
 		$metrics     = Reporting::metrics( $von, $bis );
-		$definitions = Kpi::definitions();
+		$definitions = self::visible_kpis( Kpi::definitions() );
 
 		$this->thead(
 			array(
@@ -1383,6 +1385,46 @@ class SimplePages {
 
 		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 
+		if ( Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
+			$this->analyse_export( $von, $bis );
+		}
+
+		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
+		$this->freeze_form();
+
+		echo '</div>';
+	}
+
+	/**
+	 * Kennzahlen, die dieser Nutzer sehen darf.
+	 *
+	 * Geldgrössen fallen ohne das Kostenrecht heraus. Die Ausschussquote
+	 * fällt nicht heraus – sie sagt etwas über die Arbeit, nicht über den
+	 * Ertrag.
+	 *
+	 * @param array $definitions Alle Kennzahlen.
+	 * @return array
+	 */
+	public static function visible_kpis( array $definitions ) {
+		if ( Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
+			return $definitions;
+		}
+
+		return array_filter(
+			$definitions,
+			static function ( $definition ) {
+				return '€' !== ( isset( $definition['unit'] ) ? $definition['unit'] : '' );
+			}
+		);
+	}
+
+	/**
+	 * Knöpfe für den Auszug zur Analyse.
+	 *
+	 * @param string $von Von.
+	 * @param string $bis Bis.
+	 */
+	protected function analyse_export( $von, $bis ) {
 		echo '<h2>' . esc_html__( 'Auszug zur Analyse', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Lädt den Betriebszustand als eine Textdatei herunter: Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen, Druckjournal, Arbeitszeit, offene Aufträge und die Befunde der Systemprüfung. Die Datei erklärt sich selbst – sie nennt ihre Einheiten und am Ende die bekannten Lücken – und lässt sich so einer Auswertung übergeben, ohne dass jemand die Zahlen erst deuten muss.', 'lindenweg16' ) . '</p>';
 		echo '<p>' . esc_html__( 'Namen von Geschäftskunden bleiben draußen, solange du sie nicht ausdrücklich mitgibst; die Kunden sind dann durchnummeriert. Was du weitergibst, verlässt den Betrieb – prüf die Datei vorher, sie ist lesbarer Text.', 'lindenweg16' ) . '</p>';
@@ -1407,7 +1449,12 @@ class SimplePages {
 			);
 		}
 
-		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
+	}
+
+	/**
+	 * Formular für den Monatsabschluss.
+	 */
+	protected function freeze_form() {
 		echo '<p>' . esc_html__( 'Friert die automatischen Kennzahlen des gewählten Monats ein. Eingefrorene Werte ändern sich danach nicht mehr, auch wenn Daten nachgetragen werden.', 'lindenweg16' ) . '</p>';
 
 		$this->form( 'freeze' );
@@ -1416,7 +1463,5 @@ class SimplePages {
 		printf( '<input type="number" name="month" min="1" max="12" value="%s" style="width:70px" /> ', esc_attr( gmdate( 'n' ) ) );
 		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Abschließen', 'lindenweg16' ) );
 		echo '</p></form>';
-
-		echo '</div>';
 	}
 }

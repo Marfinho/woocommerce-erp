@@ -39,8 +39,8 @@ class PrintJobsPage {
 	/**
 	 * Zugriff prüfen.
 	 */
-	protected function require_cap() {
-		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_production' ) ) {
+	protected function require_cap( $cap = 'lw16_manage_production' ) {
+		if ( ! Roles::current_user_can_betrieb( $cap ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 	}
@@ -49,7 +49,7 @@ class PrintJobsPage {
 	 * Druckjob erfassen.
 	 */
 	public function handle_save() {
-		$this->require_cap();
+		$this->require_cap( 'lw16_capture' );
 		check_admin_referer( self::NONCE );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.

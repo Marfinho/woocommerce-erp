@@ -131,6 +131,7 @@ class BetriebAnalyseExportTest extends TestCase {
 			'Druckjournal',
 			'Ausschussursachen',
 			'Arbeitszeit',
+			'Lohnkosten je Mitarbeiter',
 			'Offene Aufträge',
 			'Lagerbewegungen',
 			'Verkauf',
@@ -173,7 +174,7 @@ class BetriebAnalyseExportTest extends TestCase {
 	public function test_die_hinterlegten_luecken_nennen_das_wesentliche() {
 		$text = implode( ' ', AnalyseExport::gaps() );
 
-		foreach ( array( 'Buchhaltung', 'Kommissionsware', 'Reichweite', 'Arbeitszeit' ) as $stichwort ) {
+		foreach ( array( 'Buchhaltung', 'Kommissionsware', 'Reichweite', 'Arbeitszeit', 'Doppelzählung' ) as $stichwort ) {
 			$this->assertStringContainsString( $stichwort, $text );
 		}
 	}

@@ -119,7 +119,8 @@ class VerfahrensDokuBetrieb {
 			'reorder_tokens'    => __( 'Nachbestell-Links; gespeichert wird nur der Hash, nie der Link', 'lindenweg16' ),
 
 			// Auswertung.
-			'time_entries'      => __( 'Zeiterfassung je Woche und Tätigkeit', 'lindenweg16' ),
+			'time_entries'      => __( 'Zeiterfassung je Woche und Tätigkeit, bei Auftragszeiten mit dem zugehörigen Fertigungsauftrag', 'lindenweg16' ),
+			'user_rates'        => __( 'Stundenlöhne je Nutzer mit Stichtag; frühere Sätze bleiben stehen, damit vergangene Kosten vergangene Kosten bleiben', 'lindenweg16' ),
 			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
 			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
 		);

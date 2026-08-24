@@ -724,7 +724,8 @@ class WorkOrderRepository {
 
 		$result = TimeRepository::validate(
 			array(
-				'category'    => 'produktion',
+				'category'      => 'produktion',
+				'work_order_id' => (int) $order['id'],
 				'hours'       => round( $seconds / 3600, 3 ),
 				'description' => sprintf(
 					/* translators: 1: Auftragscode, 2: Artikelbezeichnung. */

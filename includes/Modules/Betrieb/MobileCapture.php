@@ -66,7 +66,7 @@ class MobileCapture {
 			exit;
 		}
 
-		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_production' ) ) {
+		if ( ! Roles::current_user_can_betrieb( 'lw16_capture' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
 		}
 

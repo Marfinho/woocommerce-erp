@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
@@ -42,10 +43,21 @@ class DashboardPage {
 
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Betrieb', 'lindenweg16' ) . '</h1>';
 
-		self::render_kpis( $von, $today );
+		// Wer nur erfasst, sieht seine Arbeit – nicht die Auswertung des
+		// Betriebs. Die offenen Aufträge braucht dagegen jeder, der sie
+		// abarbeiten soll.
+		$auswertung = Roles::current_user_can_betrieb( 'lw16_view_reports' );
+
+		if ( $auswertung ) {
+			self::render_kpis( $von, $today );
+		}
+
 		self::render_open_orders();
-		self::render_week( $iso );
-		self::render_alerts();
+
+		if ( $auswertung ) {
+			self::render_week( $iso );
+			self::render_alerts();
+		}
 
 		echo '</div>';
 	}
@@ -58,7 +70,7 @@ class DashboardPage {
 	 */
 	protected static function render_kpis( $von, $bis ) {
 		$metrics     = Reporting::metrics( $von, $bis );
-		$definitions = Kpi::definitions();
+		$definitions = SimplePages::visible_kpis( Kpi::definitions() );
 
 		echo '<h2>' . esc_html__( 'Laufender Monat', 'lindenweg16' ) . '</h2>';
 		echo '<div class="lw16-tiles">';

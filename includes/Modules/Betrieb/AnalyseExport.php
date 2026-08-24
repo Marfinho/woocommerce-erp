@@ -232,6 +232,19 @@ class AnalyseExport {
 			$get( 'time_weeks' )
 		) . "\n";
 
+		$out .= '## 7b. ' . __( 'Lohnkosten je Mitarbeiter', 'lindenweg16' ) . "\n\n";
+		$out .= __( 'Tatsächliche Lohnkosten aus der erfassten Zeit, bewertet mit dem Stundenlohn, der am Tag der Arbeit galt. Stunden ohne hinterlegten Lohn stehen in einer eigenen Spalte – sie sind nicht kostenlos, sondern unbewertet.', 'lindenweg16' ) . "\n\n";
+		$out .= self::table(
+			array(
+				__( 'Mitarbeiter', 'lindenweg16' ),
+				__( 'Stunden bewertet', 'lindenweg16' ),
+				__( 'Stunden ohne Lohn', 'lindenweg16' ),
+				__( 'Lohnkosten', 'lindenweg16' ),
+				__( 'Mischsatz', 'lindenweg16' ),
+			),
+			$get( 'labor' )
+		) . "\n";
+
 		$out .= '## 8. ' . __( 'Offene Aufträge', 'lindenweg16' ) . "\n\n";
 		$out .= self::table(
 			array(
@@ -331,6 +344,7 @@ class AnalyseExport {
 			'failures'        => self::rows_failures( $von, $bis ),
 			'time_categories' => self::rows_time_categories( $von, $bis ),
 			'time_weeks'      => self::rows_time_weeks(),
+			'labor'           => self::rows_labor( $von, $bis ),
 			'orders'          => self::rows_orders( $articles ),
 			'movements'       => self::rows_movements( $von, $bis ),
 			'sales'           => self::rows_sales( $von, $bis ),
@@ -609,6 +623,38 @@ class AnalyseExport {
 	}
 
 	/**
+	 * Lohnkosten je Mitarbeiter im Zeitraum.
+	 *
+	 * Namen bleiben draußen: Löhne sind Personaldaten. Für die Auswertung
+	 * zählt, wie viele Stunden zu welchem Satz anfielen, nicht wer sie
+	 * geleistet hat.
+	 *
+	 * @param string $von Von.
+	 * @param string $bis Bis.
+	 * @return array
+	 */
+	protected static function rows_labor( $von, $bis ) {
+		$entries = TimeRepository::between( $von, $bis );
+		$wages   = WageRepository::all();
+		$rows    = array();
+		$nr      = 0;
+
+		foreach ( LaborCost::by_user( $entries, $wages ) as $costs ) {
+			$nr++;
+
+			$rows[] = array(
+				sprintf( /* translators: %d: laufende Nummer. */ __( 'Mitarbeiter %d', 'lindenweg16' ), $nr ),
+				self::num( $costs['hours'], 2 ),
+				self::num( $costs['hours_unpriced'], 2 ),
+				self::num( $costs['cost'], 2 ),
+				null === $costs['rate'] ? '' : self::num( $costs['rate'], 2 ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
 	 * Offene Fertigungs- und Druckaufträge.
 	 *
 	 * @param array $articles Artikel.
@@ -761,6 +807,7 @@ class AnalyseExport {
 			__( 'Die Reichweite rechnet mit dem Verbrauch der letzten vier Wochen. Bei einem jungen Sortiment oder nach einer Aktion ist dieser Wert wenig aussagekräftig.', 'lindenweg16' ),
 			__( 'Arbeitszeit wird von Hand erfasst. Fehlende Stunden sehen in den Zahlen wie Leerlauf aus.', 'lindenweg16' ),
 			__( 'Kommissionsware ist aus dem Lager herausgebucht und liegt beim Kunden. Sie steckt in der Spalte Bestand also nicht mehr drin.', 'lindenweg16' ),
+			__( 'Lohnkosten sind die tatsächlich bezahlte Arbeit aus der Zeiterfassung. Sie stecken nicht in den Herstellkosten der Artikelliste – die rechnet mit dem kalkulatorischen Stundensatz. Beides gegeneinander zu halten ist der Zweck, sie zu addieren wäre eine Doppelzählung.', 'lindenweg16' ),
 			__( 'Bestellungen zählen nur, wenn sie bestätigt sind. Ein schwacher Zeitraum kann auch ein unbestätigter Zeitraum sein.', 'lindenweg16' ),
 			__( 'Solange die Systemprüfung Befunde zur alten Lagerverwaltung meldet, buchen zwei Stellen Bestand. Bestandszahlen sind dann mit Vorsicht zu lesen.', 'lindenweg16' ),
 		);

@@ -77,9 +77,24 @@ und die Papierformulare ab.
   Verweis auf den Ursprungssatz. Stammdaten (Artikel, Verbrauchsmaterial,
   Lagerplätze) lassen sich dagegen stilllegen und – solange keine Buchung
   daran hängt – löschen.
-- **Capabilities** `lw16_manage_production`, `lw16_view_reports`,
-  `lw16_manage_settings` und die Rolle `lw16_betrieb`. Wer `manage_lw16`
-  besitzt, behält vollen Zugriff.
+- **Capabilities** `lw16_capture`, `lw16_manage_production`,
+  `lw16_view_reports`, `lw16_view_costs`, `lw16_manage_settings`,
+  `lw16_manage_users` und die Rolle `lw16_betrieb`. Wer `manage_lw16` besitzt,
+  behält vollen Zugriff.
+- **Rechteprofile** (`AccessProfiles`) bündeln diese Capabilities zu Werkstatt,
+  Fertigung, Betriebsleitung und Vollzugriff und werden je Nutzer über
+  `Roles::set_betrieb_profile()` als User-Caps gesetzt – nicht über eine
+  WordPress-Rolle, damit jemand zugleich Shop-Redakteur und Aushilfe sein kann.
+  Sehen und Ändern sind getrennt: Erfassungsseiten hängen an `lw16_capture`,
+  die schreibenden Stammdaten-Handler an `lw16_manage_production`. Geld ist ein
+  eigenes Recht (`lw16_view_costs`).
+- **Löhne** (`WageRepository`, `LaborCost`) je Nutzer mit Stichtag, nie
+  rückwirkend. Daraus die Ist-Lohnkosten je Eintrag, Mitarbeiter und
+  Fertigungsauftrag. Der kalkulatorische Stundensatz wird bewusst **nicht**
+  automatisch nachgezogen – stattdessen zeigt die Benutzerseite den Vergleich.
+- **Protokollsicht** (`UserActivity`) übersetzt die Audit-Zeilen in Sätze; ein
+  Drift-Test prüft, dass jede tatsächlich protokollierte Tabelle eine
+  Beschriftung hat.
 - **Protokollierung** über das bestehende hashverkettete Audit-Log, ergänzt um
   Vorher-/Nachher-Abbild und Begründung.
 
