@@ -1383,6 +1383,30 @@ class SimplePages {
 
 		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 
+		echo '<h2>' . esc_html__( 'Auszug zur Analyse', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Lädt den Betriebszustand als eine Textdatei herunter: Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen, Druckjournal, Arbeitszeit, offene Aufträge und die Befunde der Systemprüfung. Die Datei erklärt sich selbst – sie nennt ihre Einheiten und am Ende die bekannten Lücken – und lässt sich so einer Auswertung übergeben, ohne dass jemand die Zahlen erst deuten muss.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Namen von Geschäftskunden bleiben draußen, solange du sie nicht ausdrücklich mitgibst; die Kunden sind dann durchnummeriert. Was du weitergibst, verlässt den Betrieb – prüf die Datei vorher, sie ist lesbarer Text.', 'lindenweg16' ) . '</p>';
+
+		foreach ( array(
+			array( 0, __( 'Auszug herunterladen (ohne Kundennamen)', 'lindenweg16' ), 'button button-primary' ),
+			array( 1, __( 'Mit Kundennamen', 'lindenweg16' ), 'button' ),
+		) as $variant ) {
+			printf(
+				'<a class="%1$s" href="%2$s" style="margin-right:8px">%3$s</a>',
+				esc_attr( $variant[2] ),
+				esc_url(
+					wp_nonce_url(
+						admin_url(
+							'admin-post.php?action=lw16_betrieb_analyse&namen=' . (int) $variant[0]
+							. '&von=' . rawurlencode( $von ) . '&bis=' . rawurlencode( $bis )
+						),
+						'lw16_betrieb_export'
+					)
+				),
+				esc_html( $variant[1] )
+			);
+		}
+
 		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Friert die automatischen Kennzahlen des gewählten Monats ein. Eingefrorene Werte ändern sich danach nicht mehr, auch wenn Daten nachgetragen werden.', 'lindenweg16' ) . '</p>';
 

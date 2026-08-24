@@ -743,7 +743,8 @@ class BinsPage {
 				$parts[] = number_format_i18n( $row['qty'], 0 ) . '× ' . $label;
 			}
 
-			echo '<tr>';
+			// Laeuft der Timer, faellt die Zeile durch ihre Farbe auf.
+			printf( '<tr%s>', WorkOrderRepository::is_running( $order ) ? ' class="lw16-row--laeuft"' : '' );
 			$kinds = WorkOrderRepository::kinds();
 
 			printf( '<td><strong>%s</strong></td>', esc_html( $order['code'] ) );

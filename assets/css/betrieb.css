@@ -357,8 +357,10 @@
 .lw16-pickqr__hint { font-size: 11px; color: #5a676d; }
 
 /* Laufender Auftrag in der Dashboard-Liste: erkennbar, ohne zu schreien. */
-.lw16-row--laeuft td { background: #eef3f1; }
-.lw16-row--laeuft td:first-child { box-shadow: inset 3px 0 0 #1f5f52; }
+/* Laeuft der Timer, ist die Zeile gruen - das muss man im Vorbeigehen
+   sehen, ohne die Statusspalte zu lesen. */
+.lw16-row--laeuft td { background: #e3f6e4; }
+.lw16-row--laeuft td:first-child { box-shadow: inset 4px 0 0 #0ca30c; }
 /* Auftrags- und Chargencodes brechen nie um - ein zerrissener Code
    laesst sich weder vorlesen noch vergleichen. */
 .lw16-nowrap { white-space: nowrap; }

@@ -227,6 +227,11 @@ bleibt, solange nicht alle Altdaten übernommen sind.
   Key ruht der Cron.
 - Der Produktionsplan schätzt die Maschinenzeit aus der aktiven Revision.
   Fehlt eine, steht dort ein Strich statt einer erfundenen Zahl.
+- **Analyse-Export** (`AnalyseExport`) gibt den Betriebszustand als eine
+  Markdown-Datei aus – gedacht zur Übergabe an eine Auswertung. Sie nennt ihre
+  Einheiten, unterscheidet „nicht erfasst" von null und listet am Ende die
+  bekannten Lücken; Kundennamen bleiben ohne ausdrückliche Wahl draußen.
+  `render()` ist rein und getestet, `collect()` holt die Daten.
 - **3MF an der Revision**: Die Druckdatei hängt an der Revision, liegt in
   `uploads/lw16-modelle` (per `.htaccess` gesperrt, Verzeichnislisting aus) und
   wird nur über `admin-post.php` mit Capability-Prüfung ausgeliefert. Auf

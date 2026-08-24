@@ -63,4 +63,24 @@ class BetriebDashboardOrdersTest extends TestCase {
 		$this->assertStringContainsString( 'value="lw16_betrieb_work_timer"', $dashboard );
 		$this->assertStringContainsString( "admin_post_lw16_betrieb_work_timer", $bins );
 	}
+
+	/**
+	 * Wo ein Auftrag mit laufendem Timer stehen kann, muss die Zeile auch
+	 * als laufend erkennbar sein – und die Auszeichnung dafür geben.
+	 */
+	public function test_laufende_auftraege_werden_farbig_markiert() {
+		$css = file_get_contents( dirname( __DIR__ ) . '/assets/css/betrieb.css' );
+
+		$this->assertStringContainsString( '.lw16-row--laeuft td', $css );
+
+		foreach ( array( 'DashboardPage', 'BinsPage' ) as $page ) {
+			$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/Admin/' . $page . '.php' );
+
+			$this->assertStringContainsString(
+				'lw16-row--laeuft',
+				$quelle,
+				$page . ' markiert laufende Aufträge nicht.'
+			);
+		}
+	}
 }

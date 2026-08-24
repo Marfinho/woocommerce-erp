@@ -24,6 +24,7 @@ class Exporter {
 		add_action( 'admin_post_lw16_betrieb_export', array( $this, 'handle_csv' ) );
 		add_action( 'admin_post_lw16_betrieb_gpsr', array( $this, 'handle_gpsr' ) );
 		add_action( 'admin_post_lw16_betrieb_verfahren', array( $this, 'handle_verfahren' ) );
+		add_action( 'admin_post_lw16_betrieb_analyse', array( $this, 'handle_analyse' ) );
 	}
 
 	/**
@@ -54,6 +55,32 @@ class Exporter {
 			default:
 				wp_die( esc_html__( 'Unbekannter Export.', 'lindenweg16' ) );
 		}
+	}
+
+	/**
+	 * Auszug zur Analyse als Textdatei.
+	 */
+	public function handle_analyse() {
+		if ( ! Roles::current_user_can_betrieb( 'lw16_view_reports' ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_betrieb_export' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- oben geprüft.
+		$von     = isset( $_GET['von'] ) ? sanitize_text_field( wp_unslash( $_GET['von'] ) ) : gmdate( 'Y-m-01' );
+		$bis     = isset( $_GET['bis'] ) ? sanitize_text_field( wp_unslash( $_GET['bis'] ) ) : gmdate( 'Y-m-d' );
+		$namen   = ! empty( $_GET['namen'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$text = AnalyseExport::render( AnalyseExport::collect( $von, $bis, $namen ) );
+
+		nocache_headers();
+		header( 'Content-Type: text/markdown; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="lw16-analyse-' . gmdate( 'Y-m-d' ) . '.md"' );
+		header( 'Content-Length: ' . strlen( $text ) );
+		header( 'X-Content-Type-Options: nosniff' );
+		echo $text; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Textdatei, kein HTML.
+		exit;
 	}
 
 	/**
