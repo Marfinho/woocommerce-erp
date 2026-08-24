@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '16';
+	const DB_VERSION = '17';
 
 	/**
 	 * Aktivierungsroutine.
@@ -99,10 +99,23 @@ class Installer {
 	}
 
 	/**
+	 * Absoluter Pfad zum geschützten Verzeichnis der 3MF-Modelle.
+	 *
+	 * Konstruktionsdaten liegen bewusst nicht in der Mediathek: dort wäre
+	 * jede Datei über ihre Adresse öffentlich abrufbar.
+	 *
+	 * @return string
+	 */
+	public static function models_dir() {
+		$upload = wp_upload_dir();
+		return trailingslashit( $upload['basedir'] ) . 'lw16-modelle';
+	}
+
+	/**
 	 * Beleg-Verzeichnis außerhalb des öffentlichen Zugriffs absichern.
 	 */
 	protected static function protect_belege_directory() {
-		foreach ( array( self::belege_dir(), self::docs_dir() ) as $dir ) {
+		foreach ( array( self::belege_dir(), self::docs_dir(), self::models_dir() ) as $dir ) {
 			if ( ! file_exists( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}

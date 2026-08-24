@@ -66,8 +66,10 @@ class Consistency {
 		}
 
 		$revisions = array();
-		foreach ( (array) $wpdb->get_col( "SELECT DISTINCT article_id FROM {$p}article_revisions WHERE is_active = 1" ) as $id ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$revisions[ (int) $id ] = true;
+		$models    = array();
+		foreach ( (array) $wpdb->get_results( "SELECT article_id, model_file FROM {$p}article_revisions WHERE is_active = 1", ARRAY_A ) as $row ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$revisions[ (int) $row['article_id'] ] = true;
+			$models[ (int) $row['article_id'] ]    = ! empty( $row['model_file'] );
 		}
 
 		// Verknüpfungen ins Leere: Ein Produkt, das es nicht mehr gibt,
@@ -193,6 +195,7 @@ class Consistency {
 	 *     @type array $articles     article_id => Stammsatz.
 	 *     @type array $bom_parents  article_id => Anzahl Stücklistenzeilen.
 	 *     @type array $revisions    article_id => true, wenn aktive Revision.
+	 *     @type array $models       article_id => true, wenn die aktive Revision eine 3MF hat.
 	 *     @type array $wc_missing   article_id => Produkt-ID, die es nicht mehr gibt.
 	 *     @type array $stock        article_id => Gesamtbestand.
 	 *     @type array $targets      Zeilen mit article_id.
@@ -207,6 +210,11 @@ class Consistency {
 		$findings = array_merge(
 			self::check_makeable( $articles, isset( $ctx['bom_parents'] ) ? (array) $ctx['bom_parents'] : array() ),
 			self::check_printable( $articles, isset( $ctx['revisions'] ) ? (array) $ctx['revisions'] : array() ),
+			self::check_models(
+				$articles,
+				isset( $ctx['revisions'] ) ? (array) $ctx['revisions'] : array(),
+				isset( $ctx['models'] ) ? (array) $ctx['models'] : array()
+			),
 			self::check_shop_links( $articles, isset( $ctx['wc_missing'] ) ? (array) $ctx['wc_missing'] : array() ),
 			self::check_stock( $articles, isset( $ctx['stock'] ) ? (array) $ctx['stock'] : array() ),
 			self::check_targets( $articles, isset( $ctx['targets'] ) ? (array) $ctx['targets'] : array() ),
@@ -312,6 +320,52 @@ class Consistency {
 					__( 'Revision anlegen und aktiv setzen – ohne Bauteilgewicht gibt es weder Kalkulation noch Druckauftrag.', 'lindenweg16' )
 				);
 			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Freigegebene Revision ohne hinterlegte 3MF-Datei.
+	 *
+	 * Kein Fehler – gedruckt werden kann trotzdem. Aber solange die Datei
+	 * nur auf einem Rechner liegt, ist nicht nachweisbar, dass aus der
+	 * freigegebenen Version gedruckt wurde.
+	 *
+	 * @param array $articles  Artikel.
+	 * @param array $revisions article_id => true.
+	 * @param array $models    article_id => true, wenn eine Datei hängt.
+	 * @return array
+	 */
+	public static function check_models( array $articles, array $revisions, array $models ) {
+		$out = array();
+
+		foreach ( $articles as $id => $article ) {
+			if ( ! ArticleRepository::is_active( $article ) ) {
+				continue;
+			}
+
+			$type = isset( $article['sourcing_type'] ) ? (string) $article['sourcing_type'] : '';
+
+			if ( ! in_array( $type, array( 'druck', 'hybrid' ), true ) ) {
+				continue;
+			}
+
+			// Fehlt schon die Revision, meldet das bereits check_printable.
+			if ( empty( $revisions[ (int) $id ] ) || ! empty( $models[ (int) $id ] ) ) {
+				continue;
+			}
+
+			$out[] = self::finding(
+				'warnung',
+				__( 'Artikel', 'lindenweg16' ),
+				sprintf(
+					/* translators: %s: Artikel. */
+					__( 'Zur freigegebenen Revision von %s ist keine 3MF-Datei hinterlegt.', 'lindenweg16' ),
+					self::label( $article )
+				),
+				__( 'Datei bei der Revision anhängen – dann druckt jeder aus derselben Version.', 'lindenweg16' )
+			);
 		}
 
 		return $out;

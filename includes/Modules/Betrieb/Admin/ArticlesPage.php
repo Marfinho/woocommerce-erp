@@ -19,6 +19,7 @@ use Lindenweg16\Modules\Betrieb\BundleCalculator;
 use Lindenweg16\Modules\Betrieb\BundleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
+use Lindenweg16\Modules\Betrieb\ModelFile;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\SourcingRepository;
@@ -37,11 +38,13 @@ class ArticlesPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_artikel', array( $this, 'render' ) );
 
-		foreach ( array( 'article', 'component', 'revision', 'bom', 'sourcing', 'activate', 'bom_delete', 'bundle' ) as $what ) {
+		foreach ( array( 'article', 'component', 'revision', 'bom', 'sourcing', 'activate', 'bom_delete', 'bundle', 'model_plate', 'model_remove' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_save_' . $what, array( $this, 'handle_' . $what ) );
 		}
 
 		add_action( 'admin_post_lw16_betrieb_article_state', array( $this, 'handle_article_state' ) );
+		add_action( 'admin_post_lw16_betrieb_model_get', array( $this, 'handle_model_get' ) );
+
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -298,11 +301,167 @@ class ArticlesPage {
 
 		if ( $id ) {
 			RevisionRepository::update( $id, $result['data'], $reason );
-			$this->redirect( __( 'Revision gespeichert.', 'lindenweg16' ), 'success', $args );
+			$hint = $this->maybe_store_model( $id );
+			$this->redirect( __( 'Revision gespeichert.', 'lindenweg16' ) . $hint, $hint ? 'error' : 'success', $args );
 		}
 
-		RevisionRepository::insert( $result['data'] );
-		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – setze sie in der Liste aktiv.', 'lindenweg16' ), 'success', $args );
+		$new  = RevisionRepository::insert( $result['data'] );
+		$hint = $new ? $this->maybe_store_model( $new ) : '';
+		$this->redirect( __( 'Revision angelegt. Sie ist noch nicht aktiv – setze sie in der Liste aktiv.', 'lindenweg16' ) . $hint, $hint ? 'error' : 'success', $args );
+	}
+
+	/**
+	 * Mitgeschickte 3MF-Datei ablegen, falls eine dabei war.
+	 *
+	 * Ein Fehler beim Anhang verwirft die Revision nicht: die Stammdaten
+	 * sind gespeichert, nur die Datei fehlt – und genau das steht dann in
+	 * der Meldung.
+	 *
+	 * @param int $revision_id Revision.
+	 * @return string Leerer String, wenn alles gut ging.
+	 */
+	protected function maybe_store_model( $revision_id ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- in post_input() geprüft.
+		$file = isset( $_FILES['model'] ) ? $_FILES['model'] : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput
+
+		if ( ! $file || empty( $file['name'] ) ) {
+			return '';
+		}
+
+		$stored = ModelFile::store( $file );
+		if ( ! $stored['success'] ) {
+			return ' ' . $stored['message'];
+		}
+
+		$old = RevisionRepository::clear_model( $revision_id );
+		if ( '' !== $old ) {
+			ModelFile::delete( $old );
+		}
+
+		RevisionRepository::set_model(
+			$revision_id,
+			$stored['name'],
+			sanitize_file_name( (string) $file['name'] ),
+			$stored['sha1'],
+			$stored['size']
+		);
+
+		return '';
+	}
+
+	/**
+	 * Hinterlegte 3MF-Datei ausliefern.
+	 */
+	public function handle_model_get() {
+		$this->require_cap();
+
+		$id = isset( $_GET['revision'] ) ? (int) $_GET['revision'] : 0;
+		check_admin_referer( 'lw16_betrieb_model_' . $id );
+
+		$revision = RevisionRepository::find( $id );
+		$path     = $revision ? ModelFile::safe_path( (string) $revision['model_file'] ) : '';
+
+		if ( '' === $path ) {
+			wp_die( esc_html__( 'Zu dieser Revision ist keine Datei hinterlegt.', 'lindenweg16' ) );
+		}
+
+		$this->stream( $path, $this->model_download_name( $revision ) );
+	}
+
+	/**
+	 * Aus der hinterlegten Datei eine gefüllte Platte erzeugen und
+	 * ausliefern. Die Vorlage bleibt unverändert liegen.
+	 */
+	public function handle_model_plate() {
+		$input = $this->post_input();
+
+		$id      = isset( $input['revision_id'] ) ? (int) $input['revision_id'] : 0;
+		$article = isset( $input['article_id'] ) ? (int) $input['article_id'] : 0;
+		$args    = array( 'tab' => 'revisionen', 'article' => $article );
+		$count   = isset( $input['count'] ) ? (int) $input['count'] : 0;
+
+		$revision = RevisionRepository::find( $id );
+		$source   = $revision ? ModelFile::safe_path( (string) $revision['model_file'] ) : '';
+
+		if ( '' === $source ) {
+			$this->redirect( __( 'Zu dieser Revision ist keine Datei hinterlegt.', 'lindenweg16' ), 'error', $args );
+		}
+
+		$target = wp_tempnam( 'lw16-platte.3mf' );
+		if ( ! $target ) {
+			$this->redirect( __( 'Es liess sich keine Arbeitsdatei anlegen.', 'lindenweg16' ), 'error', $args );
+		}
+
+		$result = ModelFile::fill_plate(
+			$source,
+			$target,
+			$count,
+			array(
+				'gap'     => isset( $input['gap'] ) ? (float) str_replace( ',', '.', (string) $input['gap'] ) : 6.0,
+				'plate_w' => isset( $input['plate_w'] ) ? (float) str_replace( ',', '.', (string) $input['plate_w'] ) : 256.0,
+				'plate_d' => isset( $input['plate_d'] ) ? (float) str_replace( ',', '.', (string) $input['plate_d'] ) : 256.0,
+			)
+		);
+
+		if ( ! $result['success'] ) {
+			@unlink( $target ); // phpcs:ignore
+			$this->redirect( $result['message'], 'error', $args );
+		}
+
+		$name = $result['placed'] . 'x-' . $this->model_download_name( $revision );
+		$this->stream( $target, $name, true );
+	}
+
+	/**
+	 * Hinterlegte Datei wieder entfernen.
+	 */
+	public function handle_model_remove() {
+		$input   = $this->post_input();
+		$id      = isset( $input['revision_id'] ) ? (int) $input['revision_id'] : 0;
+		$article = isset( $input['article_id'] ) ? (int) $input['article_id'] : 0;
+		$args    = array( 'tab' => 'revisionen', 'article' => $article );
+
+		$old = RevisionRepository::clear_model( $id );
+		if ( '' === $old ) {
+			$this->redirect( __( 'Es war keine Datei hinterlegt.', 'lindenweg16' ), 'error', $args );
+		}
+
+		ModelFile::delete( $old );
+		$this->redirect( __( 'Datei entfernt.', 'lindenweg16' ), 'success', $args );
+	}
+
+	/**
+	 * Sprechender Dateiname für den Download.
+	 *
+	 * @param array $revision Revision.
+	 * @return string
+	 */
+	protected function model_download_name( array $revision ) {
+		$article = ArticleRepository::find( (int) $revision['article_id'] );
+		$sku     = $article ? $article['sku'] : 'artikel';
+
+		return sanitize_file_name( $sku . '-' . $revision['version'] . '.3mf' );
+	}
+
+	/**
+	 * Datei ausliefern und danach beenden.
+	 *
+	 * @param string $path      Absoluter Pfad.
+	 * @param string $name      Dateiname für den Browser.
+	 * @param bool   $temporary Datei nach dem Senden löschen.
+	 */
+	protected function stream( $path, $name, $temporary = false ) {
+		nocache_headers();
+		header( 'Content-Type: model/3mf' );
+		header( 'Content-Length: ' . filesize( $path ) );
+		header( 'Content-Disposition: attachment; filename="' . $name . '"' );
+		header( 'X-Content-Type-Options: nosniff' );
+		readfile( $path ); // phpcs:ignore
+
+		if ( $temporary ) {
+			@unlink( $path ); // phpcs:ignore
+		}
+		exit;
 	}
 
 	/**
@@ -518,10 +677,15 @@ class ArticlesPage {
 	/**
 	 * Formularkopf.
 	 *
-	 * @param string $action admin_post-Aktion.
+	 * @param string $action    admin_post-Aktion.
+	 * @param bool   $multipart Formular nimmt Dateien entgegen.
 	 */
-	protected function form_open( $action ) {
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+	protected function form_open( $action, $multipart = false ) {
+		printf(
+			'<form method="post"%s action="%s">',
+			$multipart ? ' enctype="multipart/form-data"' : '',
+			esc_url( admin_url( 'admin-post.php' ) )
+		);
 		wp_nonce_field( self::NONCE );
 		printf( '<input type="hidden" name="action" value="lw16_betrieb_save_%s" />', esc_attr( $action ) );
 	}
@@ -927,6 +1091,7 @@ class ArticlesPage {
 				__( 'Teile je Platte', 'lindenweg16' ),
 				__( 'Druckzeit Platte', 'lindenweg16' ),
 				__( 'Druckzeit je Teil', 'lindenweg16' ),
+				__( '3MF', 'lindenweg16' ),
 				__( 'Status', 'lindenweg16' ),
 				'',
 			) as $head ) {
@@ -942,6 +1107,10 @@ class ArticlesPage {
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $row['parts_per_plate'], 0 ) ) );
 				printf( '<td>%s h</td>', esc_html( number_format_i18n( (float) $row['print_time_plate_h'], 2 ) ) );
 				printf( '<td><strong>%s h</strong></td>', esc_html( number_format_i18n( CostCalculator::print_time_per_part( $row ), 3 ) ) );
+
+				echo '<td>';
+				$this->model_cell( $row, $article_id );
+				echo '</td>';
 
 				echo '<td>';
 				if ( $row['is_active'] ) {
@@ -966,10 +1135,12 @@ class ArticlesPage {
 			echo '<p>' . esc_html__( 'Noch keine Revision erfasst.', 'lindenweg16' ) . '</p>';
 		}
 
+		$this->plate_form( $rows, $article_id );
+
 		echo '<h2>' . esc_html__( 'Revision anlegen', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Neue Revisionen sind zunächst inaktiv. Aktiv gesetzt wird immer genau eine Revision je Artikel – sie löst die bisherige ab.', 'lindenweg16' ) . '</p>';
 
-		$this->form_open( 'revision' );
+		$this->form_open( 'revision', true );
 		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
 		echo '<table class="form-table" role="presentation"><tbody>';
 
@@ -988,6 +1159,12 @@ class ArticlesPage {
 		$this->field( __( 'Kühlung (%)', 'lindenweg16' ), 'cooling_pct' );
 		$this->checkbox( __( 'Stützen', 'lindenweg16' ), 'supports', false );
 
+		echo '<tr><th scope="row"><label for="lw16-model">' . esc_html__( '3MF-Datei', 'lindenweg16' ) . '</label></th>';
+		printf(
+			'<td><input type="file" name="model" id="lw16-model" accept=".3mf" /><p class="description">%s</p></td></tr>',
+			esc_html__( 'Die Datei, aus der diese Version gedruckt wird. Sie hängt an der Revision – wer die aktive Revision lädt, hat immer den freigegebenen Stand.', 'lindenweg16' )
+		);
+
 		echo '<tr><th scope="row"><label for="lw16-orientation_note">' . esc_html__( 'Orientierung', 'lindenweg16' ) . '</label></th>';
 		printf(
 			'<td><textarea name="orientation_note" id="lw16-orientation_note" rows="2" class="large-text" placeholder="%s"></textarea></td></tr>',
@@ -996,6 +1173,101 @@ class ArticlesPage {
 
 		echo '</tbody></table>';
 		printf( '<p><button class="button button-primary">%s</button></p></form>', esc_html__( 'Revision anlegen', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Die 3MF-Spalte einer Revisionszeile.
+	 *
+	 * @param array $row        Revision.
+	 * @param int   $article_id Artikel.
+	 */
+	protected function model_cell( array $row, $article_id ) {
+		$has = ! empty( $row['model_file'] );
+
+		if ( $has ) {
+			$link = wp_nonce_url(
+				add_query_arg(
+					array(
+						'action'   => 'lw16_betrieb_model_get',
+						'revision' => (int) $row['id'],
+					),
+					admin_url( 'admin-post.php' )
+				),
+				'lw16_betrieb_model_' . (int) $row['id']
+			);
+
+			printf(
+				'<a href="%s">%s</a><br /><span class="description">%s</span><br />',
+				esc_url( $link ),
+				esc_html( (string) $row['model_name'] ),
+				esc_html( size_format( (int) $row['model_bytes'] ) )
+			);
+
+			$this->form_open( 'model_remove' );
+			printf( '<input type="hidden" name="revision_id" value="%d" />', (int) $row['id'] );
+			printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
+			printf(
+				'<button class="button-link delete" onclick="return confirm(\'%s\')">%s</button>',
+				esc_attr__( 'Datei wirklich entfernen?', 'lindenweg16' ),
+				esc_html__( 'entfernen', 'lindenweg16' )
+			);
+			echo '</form>';
+			return;
+		}
+
+		echo '<span class="description">' . esc_html__( 'keine Datei', 'lindenweg16' ) . '</span><br />';
+
+		$this->form_open( 'revision', true );
+		printf( '<input type="hidden" name="revision_id" value="%d" />', (int) $row['id'] );
+		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
+
+		// Die Revision wird mit ihren eigenen Werten erneut gespeichert –
+		// so bleibt der Datensatz unverändert und nur die Datei kommt dazu.
+		foreach ( array( 'version', 'material', 'weight_g', 'parts_per_plate', 'print_time_plate_h', 'nozzle_mm', 'layer_mm', 'perimeters', 'infill_pct', 'infill_pattern', 'nozzle_temp', 'bed_temp', 'cooling_pct', 'orientation_note' ) as $keep ) {
+			printf( '<input type="hidden" name="%s" value="%s" />', esc_attr( $keep ), esc_attr( (string) $row[ $keep ] ) );
+		}
+		if ( ! empty( $row['supports'] ) ) {
+			echo '<input type="hidden" name="supports" value="1" />';
+		}
+
+		echo '<input type="file" name="model" accept=".3mf" style="max-width:12em" /> ';
+		printf( '<button class="button button-small">%s</button>', esc_html__( 'anhängen', 'lindenweg16' ) );
+		echo '</form>';
+	}
+
+	/**
+	 * Aus einer hinterlegten Datei eine gefüllte Platte erzeugen.
+	 *
+	 * @param array $rows       Revisionen.
+	 * @param int   $article_id Artikel.
+	 */
+	protected function plate_form( array $rows, $article_id ) {
+		$with_file = array();
+		foreach ( $rows as $row ) {
+			if ( ! empty( $row['model_file'] ) ) {
+				$with_file[ (int) $row['id'] ] = $row['version'] . ' – ' . $row['model_name'];
+			}
+		}
+
+		if ( ! $with_file ) {
+			return;
+		}
+
+		echo '<h2>' . esc_html__( 'Platte füllen', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Aus der hinterlegten Datei mit einem Körper wird eine Kopie erzeugt, in der dasselbe Bauteil mehrfach nebeneinander liegt. Die Geometrie wird dabei nicht angefasst – nur die Anzahl der Platzierungen. Die hinterlegte Vorlage bleibt unverändert.', 'lindenweg16' ) . '</p>';
+
+		$this->form_open( 'model_plate' );
+		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
+		echo '<table class="form-table" role="presentation"><tbody>';
+
+		$this->select( __( 'Revision', 'lindenweg16' ), 'revision_id', $with_file );
+		$this->field( __( 'Stückzahl', 'lindenweg16' ), 'count', '10' );
+		$this->field( __( 'Abstand (mm)', 'lindenweg16' ), 'gap', '6', 'text', __( 'Luft zwischen zwei Teilen.', 'lindenweg16' ) );
+		$this->field( __( 'Plattenbreite (mm)', 'lindenweg16' ), 'plate_w', '256' );
+		$this->field( __( 'Plattentiefe (mm)', 'lindenweg16' ), 'plate_d', '256' );
+
+		echo '</tbody></table>';
+		printf( '<p><button class="button button-primary">%s</button></p></form>', esc_html__( 'Platte erzeugen und herunterladen', 'lindenweg16' ) );
 	}
 
 	/**

@@ -18,6 +18,7 @@ use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
+use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\ScanResolver;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\StockRepository;
@@ -585,6 +586,44 @@ class BinsPage {
 	}
 
 	/**
+	 * Verweis auf die 3MF-Datei der freigegebenen Revision.
+	 *
+	 * Steht direkt beim Auftrag, weil genau hier die Frage aufkommt: aus
+	 * welcher Datei wird das jetzt gedruckt?
+	 *
+	 * @param array $order     Auftrag.
+	 * @param array $revisions article_id => aktive Revision.
+	 */
+	protected function render_model_link( array $order, array $revisions ) {
+		if ( 'druck' !== $order['kind'] ) {
+			return;
+		}
+
+		$revision = isset( $revisions[ (int) $order['article_id'] ] ) ? $revisions[ (int) $order['article_id'] ] : null;
+
+		if ( ! $revision || empty( $revision['model_file'] ) ) {
+			return;
+		}
+
+		$url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'   => 'lw16_betrieb_model_get',
+					'revision' => (int) $revision['id'],
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'lw16_betrieb_model_' . (int) $revision['id']
+		);
+
+		printf(
+			'<br /><a href="%s">%s</a>',
+			esc_url( $url ),
+			esc_html( sprintf( /* translators: %s: Version. */ __( '3MF %s laden', 'lindenweg16' ), $revision['version'] ) )
+		);
+	}
+
+	/**
 	 * Fertigungsaufträge.
 	 */
 	protected function render_work_orders() {
@@ -685,6 +724,8 @@ class BinsPage {
 			$components[ (int) $component['id'] ] = $component;
 		}
 
+		$revisions = RevisionRepository::active_by_article();
+
 		foreach ( $orders as $order ) {
 			$article = isset( $articles[ (int) $order['article_id'] ] ) ? $articles[ (int) $order['article_id'] ] : null;
 
@@ -707,7 +748,10 @@ class BinsPage {
 
 			printf( '<td><strong>%s</strong></td>', esc_html( $order['code'] ) );
 			printf( '<td>%s</td>', esc_html( isset( $kinds[ $order['kind'] ] ) ? $kinds[ $order['kind'] ] : $order['kind'] ) );
-			printf( '<td>%s</td>', esc_html( $article ? $article['sku'] . ' – ' . $article['name'] : '?' ) );
+			echo '<td>';
+			echo esc_html( $article ? $article['sku'] . ' – ' . $article['name'] : '?' );
+			$this->render_model_link( $order, $revisions );
+			echo '</td>';
 			printf( '<td>%s</td>', esc_html( ColorRegistry::label( $order['color'] ) ) );
 			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $order['qty_planned'], 0 ) ) );
 			printf( '<td>%s</td>', esc_html( implode( ' · ', $parts ) ) );

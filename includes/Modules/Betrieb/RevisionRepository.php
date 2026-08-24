@@ -310,4 +310,71 @@ class RevisionRepository {
 			'reasons' => array(),
 		);
 	}
+
+	/**
+	 * 3MF-Datei an eine Revision hängen. Eine bereits hinterlegte Datei wird
+	 * dabei ersetzt – je Revision gibt es genau eine Geometrie.
+	 *
+	 * @param int    $id       Revision.
+	 * @param string $name     Abgelegter Dateiname.
+	 * @param string $original Ursprünglicher Dateiname.
+	 * @param string $sha1     Prüfsumme.
+	 * @param int    $bytes    Dateigrösse.
+	 * @return bool
+	 */
+	public static function set_model( $id, $name, $original, $sha1, $bytes ) {
+		global $wpdb;
+
+		$before = self::find( $id );
+		if ( ! $before ) {
+			return false;
+		}
+
+		$data = array(
+			'model_file'        => (string) $name,
+			'model_name'        => (string) $original,
+			'model_sha1'        => (string) $sha1,
+			'model_bytes'       => (int) $bytes,
+			'model_uploaded_at' => current_time( 'mysql', true ),
+			'updated_at'        => current_time( 'mysql', true ),
+		);
+
+		if ( false === $wpdb->update( self::table(), $data, array( 'id' => (int) $id ) ) ) {
+			return false;
+		}
+
+		BetriebAudit::record( 'update', 'article_revisions', (int) $id, $before, $data, __( '3MF hinterlegt.', 'lindenweg16' ) );
+		return true;
+	}
+
+	/**
+	 * Hinterlegte Datei von der Revision lösen.
+	 *
+	 * @param int $id Revision.
+	 * @return string Bisheriger Dateiname, damit der Aufrufer sie löschen kann.
+	 */
+	public static function clear_model( $id ) {
+		global $wpdb;
+
+		$before = self::find( $id );
+		if ( ! $before || empty( $before['model_file'] ) ) {
+			return '';
+		}
+
+		$data = array(
+			'model_file'        => null,
+			'model_name'        => null,
+			'model_sha1'        => null,
+			'model_bytes'       => 0,
+			'model_uploaded_at' => null,
+			'updated_at'        => current_time( 'mysql', true ),
+		);
+
+		if ( false === $wpdb->update( self::table(), $data, array( 'id' => (int) $id ) ) ) {
+			return '';
+		}
+
+		BetriebAudit::record( 'update', 'article_revisions', (int) $id, $before, $data, __( '3MF entfernt.', 'lindenweg16' ) );
+		return (string) $before['model_file'];
+	}
 }

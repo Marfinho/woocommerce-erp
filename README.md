@@ -90,7 +90,7 @@ und die Papierformulare ab.
 | Dashboard | Kennzahlenkacheln mit Messbalken (Ziel/Alarm), offene Aufträge zum Starten, Wochenbudget, Alarme |
 | Bedarf | Bedarf über alle Fertigungsstufen, Druck-/Fertigungsaufträge per Klick, automatischer Produktionsplan |
 | Druckjournal | Erfassung, Journal mit Quoten, Storno |
-| Artikel & Revisionen | Stammdaten, Revisionen, Komponenten, Stückliste, Beschaffung, Kalkulation, Bestellart-Rechner |
+| Artikel & Revisionen | Stammdaten, Revisionen samt 3MF-Datei, Komponenten, Stückliste, Beschaffung, Kalkulation, Bestellart-Rechner |
 | Drucker & Wartung | Geräte mit berechnetem Stundensatz, Wartungsfälligkeiten, Aufkleber |
 | Kapazität | Wochenvorschau, Rückwärtsrechnung, Auslastungsverlauf |
 | Material | Filamentchargen, Verbrauchsmaterial, Beschaffungsalarm |
@@ -227,6 +227,18 @@ bleibt, solange nicht alle Altdaten übernommen sind.
   Key ruht der Cron.
 - Der Produktionsplan schätzt die Maschinenzeit aus der aktiven Revision.
   Fehlt eine, steht dort ein Strich statt einer erfundenen Zahl.
+- **3MF an der Revision**: Die Druckdatei hängt an der Revision, liegt in
+  `uploads/lw16-modelle` (per `.htaccess` gesperrt, Verzeichnislisting aus) und
+  wird nur über `admin-post.php` mit Capability-Prüfung ausgeliefert. Auf
+  nginx greift die `.htaccess` nicht – dort gehört eine `location`-Regel für
+  das Verzeichnis in die Serverkonfiguration.
+- **Platte füllen** (`ThreeMf`) vervielfältigt nur die `<item>`-Einträge im
+  `<build>`, nie das Netz: Die Geometrie bleibt bitgenau die freigegebene und
+  die Datei so groß wie vorher. Vorausgesetzt wird eine Datei mit genau einer
+  Platzierung; liegen schon mehrere Teile darin, wird abgelehnt statt geraten.
+  Projektdateien aus Bambu Studio/Orca führen ihre Plattenbelegung zusätzlich
+  in `Metadata/model_settings.config` – dort kann ein *Alle anordnen* im
+  Slicer nötig sein. Benötigt die ZIP-Erweiterung von PHP.
 
 ## Tests
 

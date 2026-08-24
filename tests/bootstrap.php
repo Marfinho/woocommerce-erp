@@ -227,6 +227,8 @@ foreach ( array(
 	'DemandPlanner',
 	'ProductionPlan',
 	'DeliveryNote',
+	'ThreeMf',
+	'ModelFile',
 	'KpiMeter',
 	'BetriebModule',
 	'Consistency',

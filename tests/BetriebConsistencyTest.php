@@ -44,12 +44,53 @@ class BetriebConsistencyTest extends TestCase {
 			array(
 				'articles'   => array( 1 => $this->artikel() ),
 				'revisions'  => array( 1 => true ),
+				'models'     => array( 1 => true ),
 				'stock'      => array( 1 => 5 ),
 				'wc_missing' => array(),
 			)
 		);
 
 		$this->assertSame( array(), $befunde );
+	}
+
+	/**
+	 * Eine freigegebene Revision ohne 3MF ist ein Hinweis, kein Fehler.
+	 */
+	public function test_freigegebene_revision_ohne_datei() {
+		$befunde = Consistency::check_models(
+			array( 1 => $this->artikel() ),
+			array( 1 => true ),
+			array()
+		);
+
+		$this->assertCount( 1, $befunde );
+		$this->assertSame( 'warnung', $befunde[0]['level'] );
+		$this->assertStringContainsString( '3MF', $befunde[0]['text'] );
+	}
+
+	/**
+	 * Fehlt schon die Revision, wird die Datei nicht zusätzlich angemahnt –
+	 * sonst stünden zwei Befunde für dieselbe Lücke da.
+	 */
+	public function test_ohne_revision_keine_zweite_meldung() {
+		$this->assertSame(
+			array(),
+			Consistency::check_models( array( 1 => $this->artikel() ), array(), array() )
+		);
+	}
+
+	/**
+	 * Zukaufartikel haben keine Druckdatei.
+	 */
+	public function test_zukauf_braucht_keine_datei() {
+		$this->assertSame(
+			array(),
+			Consistency::check_models(
+				array( 1 => $this->artikel( array( 'sourcing_type' => 'zukauf' ) ) ),
+				array( 1 => true ),
+				array()
+			)
+		);
 	}
 
 	/**
