@@ -246,6 +246,48 @@ class FrontendAssetsTest extends TestCase {
 	}
 
 	/**
+	 * Jede Ampelstufe ist ein Etikett, kein Punkt.
+	 *
+	 * admin.css definiert .lw16-ampel als runden 14x14-Punkt, betrieb.css
+	 * als beschriftetes Etikett. Wurden die Etikettregeln je Stufe
+	 * aufgezaehlt, fiel jede neue Stufe auf den Punkt zurueck und ihr Text
+	 * zerfiel in einen Zeichenturm. Genau so ist „neutral" durchgerutscht –
+	 * zweimal.
+	 */
+	public function test_jede_ampelstufe_ist_ein_etikett() {
+		$css = file_get_contents( dirname( __DIR__ ) . '/assets/css/betrieb.css' );
+
+		// Die Grundregel muss ueber einen Attributselektor greifen, nicht
+		// ueber eine Liste einzelner Stufen.
+		$this->assertMatchesRegularExpression(
+			'/\[class\*=["\']lw16-ampel--["\']\]/',
+			$css,
+			'Die Etikettregel zaehlt Stufen auf, statt jede zu treffen.'
+		);
+
+		// Jede im PHP verwendete Stufe braucht ausserdem eine Farbe.
+		$stufen = array();
+
+		foreach ( glob( dirname( __DIR__ ) . '/includes/Modules/Betrieb/*.php' ) as $datei ) {
+			if ( preg_match_all( "/'level'\s*=>\s*'([a-z]+)'/", file_get_contents( $datei ), $treffer ) ) {
+				$stufen = array_merge( $stufen, $treffer[1] );
+			}
+		}
+
+		$stufen = array_unique( $stufen );
+		$fehlen = array();
+
+		foreach ( $stufen as $stufe ) {
+			if ( false === strpos( $css, '.lw16-ampel--' . $stufe ) ) {
+				$fehlen[] = $stufe;
+			}
+		}
+
+		$this->assertNotEmpty( $stufen, 'Keine Stufen gefunden – dann prüft der Test nichts.' );
+		$this->assertSame( array(), $fehlen, 'Stufen ohne eigene Farbe: ' . implode( ', ', $fehlen ) );
+	}
+
+	/**
 	 * Jede Stildatei schützt das hidden-Attribut.
 	 *
 	 * Eine Klassenregel mit eigener display-Angabe schlägt sonst das

@@ -58,13 +58,14 @@
  * sein Text zerfiel in einen Zeichenturm - besonders auffaellig dort, wo
  * ein Betrag wie "+16,00 EUR" darin steht.
  *
- * Deshalb haengen die Regeln hier ausdruecklich an den Modifikatoren mit
- * doppeltem Bindestrich: Sie sind spezifischer als .lw16-ampel und lassen
- * den Punkt aus admin.css unberuehrt.
+ * Deshalb greift die Regel ueber jeden Modifikator mit doppeltem
+ * Bindestrich: spezifischer als .lw16-ampel, laesst den Punkt aus
+ * admin.css unberuehrt - und gilt fuer jede Stufe, auch fuer spaeter
+ * hinzukommende. Eine Aufzaehlung einzelner Stufen holte den Zeichenturm
+ * jedes Mal zurueck, wenn eine neue dazukam; genau so ist 'neutral'
+ * durchgerutscht.
  */
-.lw16-ampel--gruen,
-.lw16-ampel--gelb,
-.lw16-ampel--rot {
+[class*="lw16-ampel--"] {
 	display: inline-block;
 	width: auto;
 	height: auto;
@@ -82,6 +83,8 @@
 .lw16-ampel--gruen { background: #d5e5d5; color: #1e4620; }
 .lw16-ampel--gelb  { background: #f8e5b9; color: #5c4813; }
 .lw16-ampel--rot   { background: #f4c7c3; color: #6b1e18; }
+/* Kein Ziel hinterlegt: sichtbar, aber ohne Wertung. */
+.lw16-ampel--neutral { background: #e8eaed; color: #50575e; }
 
 /* Geräteaufkleber in der Geräteliste. */
 .lw16-labels { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
@@ -128,7 +131,40 @@
 
 .lw16-tile__label { font-size: 12px; color: #50575e; }
 .lw16-tile__value { font-size: 22px; font-weight: 700; line-height: 1.2; }
-.lw16-tile__target { font-size: 11px; color: #787c82; }
+.lw16-tile__target { font-size: 11px; color: #787c82; font-variant-numeric: tabular-nums; }
+
+/*
+ * Messbalken in der Kachel: eine Spur, ein Wert, zwei Marken.
+ *
+ * Prozentbreiten statt fester Pixel - die Kachel darf jede Breite haben.
+ */
+.lw16-meter { margin: 6px 0 4px; }
+.lw16-meter__track {
+	position: relative; height: 8px; border-radius: 4px;
+	background: #eceeef; overflow: visible;
+}
+.lw16-meter__value {
+	position: absolute; left: 0; top: 0; height: 8px;
+	border-radius: 4px; min-width: 2px;
+}
+.lw16-meter__value--gruen   { background: #0ca30c; }
+.lw16-meter__value--gelb    { background: #fab219; }
+.lw16-meter__value--rot     { background: #d03b3b; }
+.lw16-meter__value--neutral { background: #8a959a; }
+
+.lw16-meter__mark { position: absolute; top: -4px; width: 2px; height: 16px; margin-left: -1px; }
+/* Zwei Pixel Rand in Flaechenfarbe: Die Marke bleibt sichtbar, auch wenn
+   der Balken genau darunter endet. */
+.lw16-meter__mark--ziel  { background: #3a434d; box-shadow: 0 0 0 1px #fff; }
+.lw16-meter__mark--alarm { background: #d03b3b; opacity: .6; }
+
+.lw16-meter__legend {
+	display: flex; align-items: center; gap: 6px;
+	margin: 0 0 20px; font-size: 11px; color: #787c82;
+}
+.lw16-meter__key { display: inline-block; width: 2px; height: 12px; vertical-align: -2px; }
+.lw16-meter__key--ziel { background: #3a434d; }
+.lw16-meter__key--alarm { background: #d03b3b; opacity: .6; margin-left: 10px; }
 
 /* Alarmblöcke. */
 .lw16-alerts {

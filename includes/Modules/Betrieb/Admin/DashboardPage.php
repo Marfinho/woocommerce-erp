@@ -16,6 +16,7 @@ use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
+use Lindenweg16\Modules\Betrieb\KpiMeter;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\ProcurementAlert;
@@ -63,18 +64,41 @@ class DashboardPage {
 			$value      = isset( $metrics[ $key ] ) ? $metrics[ $key ] : null;
 			$evaluation = Kpi::evaluate( $key, $value );
 
+			// Marken im Klartext unter dem Balken: Die Linie sagt wo, die
+			// Zahl sagt wie viel. Beides zusammen, sonst muss man raten.
+			$marken = array();
+
+			if ( null !== $definition['target'] ) {
+				/* translators: %s: Zielwert. */
+				$marken[] = sprintf( __( 'Ziel %s', 'lindenweg16' ), Kpi::format( $key, $definition['target'] ) );
+			}
+
+			if ( null !== $definition['alarm'] ) {
+				/* translators: %s: Alarmgrenze. */
+				$marken[] = sprintf( __( 'Alarm %s', 'lindenweg16' ), Kpi::format( $key, $definition['alarm'] ) );
+			}
+
 			printf(
-				'<div class="lw16-tile lw16-tile--%s"><span class="lw16-tile__label">%s</span><span class="lw16-tile__value">%s</span>%s</div>',
+				'<div class="lw16-tile lw16-tile--%s"><span class="lw16-tile__label">%s</span><span class="lw16-tile__value">%s</span>%s%s</div>',
 				esc_attr( $evaluation['level'] ),
 				esc_html( $definition['label'] ),
 				esc_html( Kpi::format( $key, $value ) ),
-				null !== $definition['target']
-					? '<span class="lw16-tile__target">' . esc_html( sprintf( /* translators: %s: Zielwert. */ __( 'Ziel %s', 'lindenweg16' ), Kpi::format( $key, $definition['target'] ) ) ) . '</span>'
-					: ''
+				KpiMeter::bar( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- erzeugte Auszeichnung.
+					array(
+						'level'  => $evaluation['level'],
+						'value'  => $value,
+						'target' => $definition['target'],
+						'alarm'  => $definition['alarm'],
+						'aria'   => $definition['label'] . ': ' . Kpi::format( $key, $value ) . '. ' . implode( ', ', $marken ),
+					)
+				),
+				$marken ? '<span class="lw16-tile__target">' . esc_html( implode( ' · ', $marken ) ) . '</span>' : ''
 			);
 		}
 
 		echo '</div>';
+
+		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 	}
 
 	/**

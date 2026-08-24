@@ -59,6 +59,43 @@ if ( ! function_exists( 'number_format_i18n' ) ) {
 	}
 }
 
+if ( ! function_exists( 'esc_attr' ) ) {
+	/**
+	 * Platzhalter fuer die WordPress-Escapefunktion.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	function esc_attr( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'esc_html' ) ) {
+	/**
+	 * Platzhalter fuer die WordPress-Escapefunktion.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	function esc_html( $text ) {
+		return htmlspecialchars( (string) $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+if ( ! function_exists( 'esc_html__' ) ) {
+	/**
+	 * Platzhalter: uebersetzt nicht, escapt aber wie im Betrieb.
+	 *
+	 * @param string $text   Text.
+	 * @param string $domain Textdomain.
+	 * @return string
+	 */
+	function esc_html__( $text, $domain = 'default' ) {
+		return esc_html( $text );
+	}
+}
+
 if ( ! function_exists( 'get_option' ) ) {
 	/**
 	 * Liefert im Test immer den Vorgabewert – die Rechenklassen greifen nur
@@ -188,6 +225,7 @@ foreach ( array(
 	'DemandPlanner',
 	'ProductionPlan',
 	'DeliveryNote',
+	'KpiMeter',
 	'ReorderToken',
 	'ReorderPage',
 ) as $lw16_class ) {

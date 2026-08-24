@@ -1262,6 +1262,27 @@ class SimplePages {
 		}
 	}
 
+	/**
+	 * Beschriftung einer Kennzahl-Ampel.
+	 *
+	 * „neutral" heißt: kein Ziel hinterlegt oder kein Wert im Zeitraum.
+	 * Es als „beobachten" auszugeben wäre eine Wertung, die niemand
+	 * getroffen hat.
+	 *
+	 * @param string $level Stufe.
+	 * @return string
+	 */
+	public static function kpi_status_label( $level ) {
+		$labels = array(
+			'gruen'   => __( 'erreicht', 'lindenweg16' ),
+			'rot'     => __( 'Alarm', 'lindenweg16' ),
+			'gelb'    => __( 'beobachten', 'lindenweg16' ),
+			'neutral' => __( 'kein Ziel', 'lindenweg16' ),
+		);
+
+		return isset( $labels[ $level ] ) ? $labels[ $level ] : (string) $level;
+	}
+
 	/* ====================================================================
 	 * Berichte
 	 * ================================================================== */
@@ -1322,11 +1343,7 @@ class SimplePages {
 			printf(
 				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
 				esc_attr( $evaluation['level'] ),
-				esc_html(
-					'gruen' === $evaluation['level']
-						? __( 'erreicht', 'lindenweg16' )
-						: ( 'rot' === $evaluation['level'] ? __( 'Alarm', 'lindenweg16' ) : __( 'beobachten', 'lindenweg16' ) )
-				)
+				esc_html( self::kpi_status_label( $evaluation['level'] ) )
 			);
 			echo '</tr>';
 		}
