@@ -107,8 +107,52 @@ class Consistency {
 			$bins[ (int) $bin['id'] ] = ! empty( $bin['is_active'] );
 		}
 
+		// Welche verkauften Produkte kennt der Artikelstamm nicht? Genau die
+		// bucht noch die alte Lagerverwaltung.
+		$bekannt = array();
+		foreach ( $articles as $article ) {
+			if ( ! empty( $article['wc_product_id'] ) ) {
+				$bekannt[ (int) $article['wc_product_id'] ] = true;
+			}
+		}
+
+		$legacy = array();
+
+		if ( function_exists( 'wc_get_products' ) ) {
+			$produkte = wc_get_products(
+				array(
+					'status' => 'publish',
+					'limit'  => 200,
+					'type'   => array( 'simple', 'variable' ),
+				)
+			);
+
+			foreach ( (array) $produkte as $produkt ) {
+				if ( ! is_object( $produkt ) || ! method_exists( $produkt, 'get_id' ) ) {
+					continue;
+				}
+
+				// Nur was tatsaechlich ein Lager braucht.
+				if ( method_exists( $produkt, 'is_virtual' ) && $produkt->is_virtual() ) {
+					continue;
+				}
+
+				$id = (int) $produkt->get_id();
+
+				if ( isset( $bekannt[ $id ] ) ) {
+					continue;
+				}
+
+				$legacy[] = array(
+					'id'   => $id,
+					'name' => method_exists( $produkt, 'get_name' ) ? (string) $produkt->get_name() : '',
+				);
+			}
+		}
+
 		return array(
 			'articles'    => $articles,
+			'legacy_products' => $legacy,
 			'bom_parents' => $bom_parents,
 			'revisions'   => $revisions,
 			'wc_missing'  => $wc_missing,
@@ -167,7 +211,8 @@ class Consistency {
 			self::check_stock( $articles, isset( $ctx['stock'] ) ? (array) $ctx['stock'] : array() ),
 			self::check_targets( $articles, isset( $ctx['targets'] ) ? (array) $ctx['targets'] : array() ),
 			self::check_bins( $articles, isset( $ctx['bins'] ) ? (array) $ctx['bins'] : array() ),
-			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() )
+			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() ),
+			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() )
 		);
 
 		// Fehler zuerst: Was einen Vorgang blockiert, gehört nach oben.
@@ -441,6 +486,57 @@ class Consistency {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Shop-Produkte, die noch an der alten Lagerverwaltung hängen.
+	 *
+	 * Es gibt zwei Lagerverwaltungen im Plugin: die ältere unter
+	 * `Modules/Inventory` und das Modul Betrieb. Zuständig ist Betrieb für
+	 * genau die Produkte, die auf einen Artikel zeigen; alles andere bucht
+	 * weiterhin die alte. Deren Oberfläche ist längst aus dem Menü
+	 * verschwunden – die Buchungen laufen aber weiter, unsichtbar.
+	 *
+	 * Diese Liste ist deshalb das Maß dafür, wie weit der Umzug ist. Ist
+	 * sie leer, bucht nur noch eine Verwaltung, und die alte kann
+	 * ausgebaut werden.
+	 *
+	 * @param array $products Produkte ohne Betrieb-Artikel: {id, name}.
+	 * @return array
+	 */
+	public static function check_legacy_stock( array $products ) {
+		if ( ! $products ) {
+			return array();
+		}
+
+		$namen = array();
+
+		foreach ( array_slice( $products, 0, 5 ) as $product ) {
+			$namen[] = isset( $product['name'] ) && '' !== $product['name']
+				? (string) $product['name']
+				: '#' . ( isset( $product['id'] ) ? (int) $product['id'] : 0 );
+		}
+
+		$liste = implode( ', ', $namen );
+
+		if ( count( $products ) > 5 ) {
+			/* translators: 1: Namen, 2: Anzahl weiterer. */
+			$liste = sprintf( __( '%1$s und %2$d weitere', 'lindenweg16' ), $liste, count( $products ) - 5 );
+		}
+
+		return array(
+			self::finding(
+				'warnung',
+				__( 'Lagerhoheit', 'lindenweg16' ),
+				sprintf(
+					/* translators: 1: Anzahl, 2: Namen. */
+					__( '%1$d Shop-Produkte werden noch von der alten Lagerverwaltung gebucht: %2$s.', 'lindenweg16' ),
+					count( $products ),
+					$liste
+				),
+				__( 'Solange hier etwas steht, führt das Plugin zwei Lager parallel. Diese Produkte unter Betrieb → Artikel & Revisionen mit einem Artikel verknüpfen oder unter Import & Doku übernehmen – dann bucht nur noch eine Stelle.', 'lindenweg16' )
+			),
+		);
 	}
 
 	/**

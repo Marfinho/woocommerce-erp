@@ -247,6 +247,57 @@ class BetriebConsistencyTest extends TestCase {
 	}
 
 	/**
+	 * Solange Produkte an der alten Lagerverwaltung hängen, sagt die
+	 * Prüfung das – sie ist das Maß dafür, wie weit der Umzug ist.
+	 */
+	public function test_alte_lagerverwaltung_wird_gemeldet() {
+		$befunde = Consistency::check_legacy_stock(
+			array(
+				array( 'id' => 10, 'name' => 'Wandhaken klein' ),
+				array( 'id' => 11, 'name' => 'Wandhaken groß' ),
+			)
+		);
+
+		$this->assertCount( 1, $befunde );
+		$this->assertStringContainsString( '2 Shop-Produkte', $befunde[0]['text'] );
+		$this->assertStringContainsString( 'Wandhaken klein', $befunde[0]['text'] );
+	}
+
+	/**
+	 * Ist die Liste leer, bucht nur noch eine Verwaltung – kein Befund.
+	 */
+	public function test_ohne_altlasten_kein_befund() {
+		$this->assertSame( array(), Consistency::check_legacy_stock( array() ) );
+	}
+
+	/**
+	 * Viele Produkte werden zusammengefasst, nicht alle aufgezählt.
+	 */
+	public function test_viele_produkte_werden_zusammengefasst() {
+		$produkte = array();
+
+		for ( $i = 1; $i <= 9; $i++ ) {
+			$produkte[] = array( 'id' => $i, 'name' => 'Produkt ' . $i );
+		}
+
+		$befunde = Consistency::check_legacy_stock( $produkte );
+
+		$this->assertStringContainsString( '9 Shop-Produkte', $befunde[0]['text'] );
+		$this->assertStringContainsString( 'weitere', $befunde[0]['text'] );
+		$this->assertStringNotContainsString( 'Produkt 9', $befunde[0]['text'] );
+	}
+
+	/**
+	 * Ein Produkt ohne Namen wird über seine Nummer benannt, nicht mit
+	 * einer Leerstelle.
+	 */
+	public function test_produkt_ohne_namen() {
+		$befunde = Consistency::check_legacy_stock( array( array( 'id' => 42, 'name' => '' ) ) );
+
+		$this->assertStringContainsString( '#42', $befunde[0]['text'] );
+	}
+
+	/**
 	 * Die Zusammenfassung zählt nach Schwere.
 	 */
 	public function test_zusammenfassung_zaehlt() {
