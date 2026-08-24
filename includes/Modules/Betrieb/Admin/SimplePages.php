@@ -26,6 +26,7 @@ use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
+use Lindenweg16\Modules\Betrieb\KpiMeter;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
@@ -1327,6 +1328,7 @@ class SimplePages {
 				__( 'Wert', 'lindenweg16' ),
 				__( 'Ziel', 'lindenweg16' ),
 				__( 'Alarm bei', 'lindenweg16' ),
+				__( 'Lage', 'lindenweg16' ),
 				__( 'Status', 'lindenweg16' ),
 			)
 		);
@@ -1340,6 +1342,35 @@ class SimplePages {
 			printf( '<td><strong>%s</strong></td>', esc_html( Kpi::format( $key, $value ) ) );
 			printf( '<td>%s</td>', esc_html( null === $definition['target'] ? '—' : Kpi::format( $key, $definition['target'] ) ) );
 			printf( '<td>%s</td>', esc_html( null === $definition['alarm'] ? '—' : Kpi::format( $key, $definition['alarm'] ) ) );
+
+			// Dieselben Zahlen als Bild: Die Spalten links sagen wie viel,
+			// der Balken sagt wo dazwischen. Zahlen ohne Ziel bekommen
+			// keinen - es gaebe nichts, wogegen sie laegen.
+			$marken = array();
+
+			if ( null !== $definition['target'] ) {
+				/* translators: %s: Zielwert. */
+				$marken[] = sprintf( __( 'Ziel %s', 'lindenweg16' ), Kpi::format( $key, $definition['target'] ) );
+			}
+
+			if ( null !== $definition['alarm'] ) {
+				/* translators: %s: Alarmgrenze. */
+				$marken[] = sprintf( __( 'Alarm %s', 'lindenweg16' ), Kpi::format( $key, $definition['alarm'] ) );
+			}
+
+			printf(
+				'<td class="lw16-cell--meter">%s</td>',
+				KpiMeter::bar( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- erzeugte Auszeichnung.
+					array(
+						'level'  => $evaluation['level'],
+						'value'  => $value,
+						'target' => $definition['target'],
+						'alarm'  => $definition['alarm'],
+						'aria'   => $definition['label'] . ': ' . Kpi::format( $key, $value ) . '. ' . implode( ', ', $marken ),
+					)
+				)
+			);
+
 			printf(
 				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
 				esc_attr( $evaluation['level'] ),
@@ -1349,6 +1380,8 @@ class SimplePages {
 		}
 
 		echo '</tbody></table>';
+
+		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 
 		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Friert die automatischen Kennzahlen des gewählten Monats ein. Eingefrorene Werte ändern sich danach nicht mehr, auch wenn Daten nachgetragen werden.', 'lindenweg16' ) . '</p>';

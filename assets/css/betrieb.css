@@ -160,11 +160,18 @@
 
 .lw16-meter__legend {
 	display: flex; align-items: center; gap: 6px;
-	margin: 0 0 20px; font-size: 11px; color: #787c82;
+	margin: 10px 0 20px; font-size: 11px; color: #787c82;
 }
 .lw16-meter__key { display: inline-block; width: 2px; height: 12px; vertical-align: -2px; }
 .lw16-meter__key--ziel { background: #3a434d; }
 .lw16-meter__key--alarm { background: #d03b3b; opacity: .6; margin-left: 10px; }
+
+/*
+ * Messbalken in einer Tabellenzelle. Ohne Mindestbreite drueckt die
+ * Tabelle die Spalte auf null - der Balken hat ja keinen eigenen Inhalt.
+ */
+.lw16-cell--meter { width: 220px; min-width: 160px; vertical-align: middle; }
+.lw16-cell--meter .lw16-meter { margin: 0; }
 
 /* Alarmblöcke. */
 .lw16-alerts {
