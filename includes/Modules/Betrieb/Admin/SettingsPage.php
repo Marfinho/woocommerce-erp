@@ -16,6 +16,7 @@ use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Betrieb\BetriebAudit;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
+use Lindenweg16\Modules\Betrieb\Consistency;
 use Lindenweg16\Modules\Betrieb\PriceTierRepository;
 
 /**
@@ -126,16 +127,24 @@ class SettingsPage {
 			esc_html__( 'Rabattstaffel B2B', 'lindenweg16' )
 		);
 		printf(
-			'<a href="%s" class="%s">%s</a>',
+			'<a href="%s" class="%s">%s</a> ',
 			esc_url( add_query_arg( 'view', 'protokoll', $base ) ),
 			'protokoll' === $view ? 'active' : '',
 			esc_html__( 'Protokoll & Kettenprüfung', 'lindenweg16' )
+		);
+		printf(
+			'<a href="%s" class="%s">%s</a>',
+			esc_url( add_query_arg( 'view', 'systempruefung', $base ) ),
+			'systempruefung' === $view ? 'active' : '',
+			esc_html__( 'Systemprüfung', 'lindenweg16' )
 		);
 		echo '</nav>';
 
 		$this->render_notice();
 
-		if ( 'protokoll' === $view ) {
+		if ( 'systempruefung' === $view ) {
+			$this->render_systempruefung();
+		} elseif ( 'protokoll' === $view ) {
 			$this->render_protokoll();
 		} elseif ( 'lager' === $view ) {
 			$this->render_lager();
@@ -512,6 +521,65 @@ class SettingsPage {
 			echo '</tr>';
 		}
 		echo '</tbody></table>';
+	}
+
+	/**
+	 * Systemprüfung: Widersprüche im Zusammenspiel.
+	 *
+	 * Die Kettenprüfung nebenan beantwortet „wurde etwas manipuliert".
+	 * Diese hier beantwortet „passt das alles noch zusammen" – eine
+	 * andere Frage, die kein Formular beim Speichern stellen kann.
+	 */
+	protected function render_systempruefung() {
+		$findings = Consistency::check( Consistency::collect() );
+		$summe    = Consistency::summarize( $findings );
+
+		echo '<h2>' . esc_html__( 'Systemprüfung', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Jedes Formular prüft seine eigene Eingabe. Diese Prüfung sucht Widersprüche, die erst später entstehen: ein Artikel, dessen Beschaffungsweg nachträglich geändert wurde, eine Verknüpfung auf ein gelöschtes Shop-Produkt, ein Bestand unter null.', 'lindenweg16' ) . '</p>';
+
+		if ( ! $findings ) {
+			echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Keine Widersprüche gefunden.', 'lindenweg16' ) . '</p></div>';
+			return;
+		}
+
+		printf(
+			'<div class="notice notice-%s inline"><p>%s</p></div>',
+			$summe['fehler'] > 0 ? 'error' : 'warning',
+			esc_html(
+				sprintf(
+					/* translators: 1: Fehler, 2: Warnungen. */
+					__( '%1$d Fehler, %2$d Warnungen. Ein Fehler blockiert einen Vorgang; eine Warnung ist etwas, das niemand mehr braucht.', 'lindenweg16' ),
+					$summe['fehler'],
+					$summe['warnung']
+				)
+			)
+		);
+
+		echo '<div class="lw16-scrollx"><table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Schwere', 'lindenweg16' ),
+			__( 'Bereich', 'lindenweg16' ),
+			__( 'Befund', 'lindenweg16' ),
+			__( 'Was zu tun ist', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $findings as $finding ) {
+			echo '<tr>';
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
+				'fehler' === $finding['level'] ? 'rot' : 'gelb',
+				esc_html( 'fehler' === $finding['level'] ? __( 'Fehler', 'lindenweg16' ) : __( 'Warnung', 'lindenweg16' ) )
+			);
+			printf( '<td>%s</td>', esc_html( $finding['area'] ) );
+			printf( '<td>%s</td>', esc_html( $finding['text'] ) );
+			printf( '<td class="description">%s</td>', esc_html( $finding['fix'] ) );
+			echo '</tr>';
+		}
+
+		echo '</tbody></table></div>';
 	}
 
 	/**

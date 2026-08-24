@@ -227,6 +227,7 @@ foreach ( array(
 	'DeliveryNote',
 	'KpiMeter',
 	'BetriebModule',
+	'Consistency',
 	'ReorderToken',
 	'ReorderPage',
 ) as $lw16_class ) {
