@@ -448,7 +448,20 @@ footer p{max-width:72ch}
 		<p>Rohlinge und Halbzeuge bekommen den Haken <em>Im Shop verkäuflich</em> nicht. Sie tauchen dann weder im Nachbestell-Formular noch beim Verkauf auf, zählen aber voll im Lager, in der Kalkulation und in der Bedarfsplanung mit.</p>
 	</div>
 
-	<h3>4.2 Die Reiter der Reihe nach</h3>
+	<h3>4.2 Stilllegen und Löschen</h3>
+	<p>Ein Artikel, den du nicht mehr baust, verschwindet über den Status. In der Artikelliste steht dafür je Zeile <strong>Stilllegen</strong> — das setzt ihn auf <em>ausgelaufen</em>.</p>
+	<p>Ab dann steht er in <strong>keiner Auswahlliste</strong> mehr: nicht in der Kasse, nicht auf der Nachbestellseite, nicht bei Druck- und Fertigungsaufträgen, nicht in der manuellen Bestellerfassung, nicht in der Preispflege und nicht im Beschaffungsalarm. <em>Wieder aufnehmen</em> macht es rückgängig.</p>
+	<div class="rule-box">
+		<span class="lbl">Was Stilllegen nicht tut</span>
+		<p>Bestand, Bewegungen, Chargen, alte Bestellungen und alle Auswertungen bleiben unangetastet. Ein ausgelaufener Artikel liegt weiter im Regal und steht weiter in den Büchern — du kannst ihn auch weiter im Lager korrigieren und ausliefern.</p>
+		<p>Auch die <strong>Bedarfsplanung</strong> unterscheidet: Sollbestand und Wunschliste erzeugen für ihn keinen Bedarf mehr, eine <em>offene Bestellung</em> aber schon. Wer vor der Stilllegung bestellt hat, bekommt seine Ware.</p>
+	</div>
+
+	<h4>Löschen</h4>
+	<p>Löschen geht nur, solange <strong>nichts daran hängt</strong> — also praktisch nur bei einem Fehlgriff beim Anlegen. Sobald es eine Lagerbewegung, einen Druckjob, eine Charge, eine Bestellposition, eine Pickliste, einen Auftrag oder einen Platz in einer fremden Stückliste gibt, steht dort <em>nicht löschbar</em>, und der Grund erscheint, wenn du mit der Maus darüber gehst.</p>
+	<p>Das ist Absicht: Eine Bestellposition, deren Artikel verschwunden ist, macht die Bücher unlesbar. Mit einem löschbaren Artikel gehen seine eigenen Stammdaten mit — Stückliste, Revisionen, Beschaffungsdaten und Sollbestände.</p>
+
+	<h3>4.3 Die Reiter der Reihe nach</h3>
 
 	<ol class="steps">
 		<li><strong>Reiter „Artikel" — Stammdaten</strong> Artikelnummer, Bezeichnung, Beschaffungsweg (die vier aus 4.1), Nachbearbeitungszeit in Minuten, Verkaufspreis brutto, Händlerpreis, angegebene Traglast, Verknüpfung zum WooCommerce-Produkt. Der Beschaffungsweg entscheidet über alles Weitere.<br>Das Shop-Produkt suchst du nicht mehr über die ID: Das Feld ist eine Suchliste — tippe Name, Artikelnummer oder ID, die Treffer erscheinen darunter. Die Verknüpfung ist optional, aber ohne sie gibt es beim Verkauf keinen Lagerabgang, kein Produktbild und keinen Eintrag auf der Nachbestellseite.</li>

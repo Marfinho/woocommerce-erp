@@ -86,7 +86,7 @@ class ProcurementAlert {
 		// die größte des Moduls.
 		$balances = StockLedger::balances( StockRepository::all() );
 
-		foreach ( ArticleRepository::all() as $article ) {
+		foreach ( ArticleRepository::selectable() as $article ) {
 			// Gedruckte Rohlinge und montierte Halbzeuge werden gefertigt,
 			// nicht bestellt – sie gehören nicht in den Beschaffungsalarm.
 			if ( in_array( $article['sourcing_type'], array( 'druck', 'montage' ), true ) ) {

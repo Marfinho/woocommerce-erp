@@ -573,7 +573,7 @@ class BinsPage {
 		$makeable = array();
 		$printable = array();
 
-		foreach ( ArticleRepository::all() as $article ) {
+		foreach ( ArticleRepository::selectable() as $article ) {
 			if ( WorkOrderRepository::fits_kind( $article, 'montage' ) ) {
 				$makeable[] = $article;
 			}

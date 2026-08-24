@@ -366,6 +366,18 @@ class DemandPlanner {
 	public static function collect( $with_soft = true ) {
 		$demands = array();
 
+		// Ausgelaufene Artikel erzeugen keinen Bedarf mehr - ausser aus
+		// einer Bestellung. Wer vor der Stilllegung bestellt hat, bekommt
+		// seine Ware; auf Vorrat wird dafuer nichts mehr gebaut.
+		$aktiv = array();
+		foreach ( ArticleRepository::all() as $article ) {
+			$aktiv[ (int) $article['id'] ] = ArticleRepository::is_active( $article );
+		}
+
+		$noch_aktiv = static function ( $article_id ) use ( $aktiv ) {
+			return ! isset( $aktiv[ (int) $article_id ] ) || $aktiv[ (int) $article_id ];
+		};
+
 		// 1. Offene Bestellungen – das Verbindlichste, was es gibt.
 		foreach ( WooIntegration::open_order_lines() as $line ) {
 			$demands[] = array(
@@ -383,7 +395,7 @@ class DemandPlanner {
 			$have = StockLedger::pick( $balances, (int) $target['article_id'], (string) $target['color'] );
 			$gap  = (float) $target['qty'] - $have['lager'];
 
-			if ( $gap > 0 ) {
+			if ( $gap > 0 && $noch_aktiv( $target['article_id'] ) ) {
 				$demands[] = array(
 					'article_id' => (int) $target['article_id'],
 					'qty'        => $gap,
@@ -400,6 +412,10 @@ class DemandPlanner {
 		// 3. Wunschliste – ein Hinweis, keine Bestellung. Sie wird getrennt
 		// ausgewiesen, damit niemand auf Verdacht die Werkstatt vollstellt.
 		foreach ( self::wishlist_demand() as $article_id => $count ) {
+			if ( ! $noch_aktiv( $article_id ) ) {
+				continue;
+			}
+
 			$demands[] = array(
 				'article_id' => (int) $article_id,
 				'qty'        => (float) $count,

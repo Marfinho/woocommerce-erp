@@ -41,6 +41,7 @@ class ArticlesPage {
 			add_action( 'admin_post_lw16_betrieb_save_' . $what, array( $this, 'handle_' . $what ) );
 		}
 
+		add_action( 'admin_post_lw16_betrieb_article_state', array( $this, 'handle_article_state' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -612,6 +613,104 @@ class ArticlesPage {
 		echo '</td></tr>';
 	}
 
+	/**
+	 * Artikel stilllegen, wieder aufnehmen oder löschen.
+	 */
+	public function handle_article_state() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$id  = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
+		$was = isset( $_POST['was'] ) ? sanitize_key( wp_unslash( $_POST['was'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$article = $id ? ArticleRepository::find( $id ) : null;
+
+		if ( ! $article ) {
+			$this->redirect( __( 'Diesen Artikel gibt es nicht mehr.', 'lindenweg16' ), 'error' );
+		}
+
+		if ( 'loeschen' === $was ) {
+			$result = ArticleRepository::delete( $id );
+			$this->redirect( $result['message'], $result['success'] ? 'success' : 'error' );
+		}
+
+		// Stilllegen heisst ausgelaufen, nicht gesperrt: Gesperrt ist ein
+		// Qualitaetsurteil, ausgelaufen eine Sortimentsentscheidung.
+		$neu = 'stilllegen' === $was ? 'ausgelaufen' : 'aktiv';
+
+		ArticleRepository::set_status( $id, $neu );
+
+		$this->redirect(
+			sprintf(
+				/* translators: 1: Artikelnummer, 2: neuer Status. */
+				__( '%1$s ist jetzt %2$s.', 'lindenweg16' ),
+				$article['sku'],
+				ArticleRepository::status_labels()[ $neu ]
+			),
+			'success'
+		);
+	}
+
+	/**
+	 * Stilllegen, wieder aufnehmen, löschen.
+	 *
+	 * Löschen steht nur da, wenn es auch geht. Ein Knopf, der jedes Mal
+	 * mit einer Fehlermeldung antwortet, ist schlimmer als keiner.
+	 *
+	 * @param array $row Artikel.
+	 */
+	protected function render_state_actions( array $row ) {
+		$id     = (int) $row['id'];
+		$aktiv  = ArticleRepository::is_active( $row );
+		$knopf  = static function ( $was, $label, $frage = '' ) use ( $id ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+			wp_nonce_field( self::NONCE );
+			echo '<input type="hidden" name="action" value="lw16_betrieb_article_state" />';
+			printf( '<input type="hidden" name="was" value="%s" />', esc_attr( $was ) );
+			printf( '<input type="hidden" name="article_id" value="%d" />', $id );
+			printf(
+				'<button class="button-link"%s>%s</button>',
+				$frage ? ' onclick="return confirm(' . esc_attr( wp_json_encode( $frage ) ) . ')"' : '',
+				esc_html( $label )
+			);
+			echo '</form> ';
+		};
+
+		if ( $aktiv ) {
+			$knopf(
+				'stilllegen',
+				__( 'Stilllegen', 'lindenweg16' ),
+				__( 'Stilllegen? Der Artikel verschwindet aus allen Auswahllisten. Bestand, Bewegungen und Auswertungen bleiben.', 'lindenweg16' )
+			);
+		} else {
+			$knopf( 'aufnehmen', __( 'Wieder aufnehmen', 'lindenweg16' ) );
+		}
+
+		$blocker = ArticleRepository::delete_blockers( $id );
+
+		if ( $blocker ) {
+			printf(
+				'<span class="description" title="%s">%s</span>',
+				esc_attr( sprintf(
+					/* translators: %s: Aufzählung. */
+					__( 'Nicht löschbar: %s', 'lindenweg16' ),
+					implode( ', ', $blocker )
+				) ),
+				esc_html__( 'nicht löschbar', 'lindenweg16' )
+			);
+
+			return;
+		}
+
+		$knopf(
+			'loeschen',
+			__( 'Löschen', 'lindenweg16' ),
+			__( 'Wirklich löschen? An diesem Artikel hängt nichts – Stückliste, Revisionen und Beschaffungsdaten gehen mit.', 'lindenweg16' )
+		);
+	}
+
 	/* ====================================================================
 	 * Reiter
 	 * ================================================================== */
@@ -671,6 +770,9 @@ class ArticlesPage {
 						esc_html( $link[0] )
 					);
 				}
+
+				$this->render_state_actions( $row );
+
 				echo '</td></tr>';
 			}
 			echo '</tbody></table>';

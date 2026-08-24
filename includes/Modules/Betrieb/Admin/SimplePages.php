@@ -622,7 +622,7 @@ class SimplePages {
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$mengen = isset( $_GET['bundle'] ) && is_array( $_GET['bundle'] ) ? array_map( 'floatval', wp_unslash( $_GET['bundle'] ) ) : array();
 
-		$articles = ArticleRepository::all( true );
+		$articles = ArticleRepository::selectable( true );
 
 		echo '<h2>' . esc_html__( 'Vorschau', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Erwartete Bestellungen je Artikel und Woche eintragen. Die Rechnung löst Stücklisten auf und weist Druckzeit, Nachbearbeitung und benötigte Zukaufmengen aus.', 'lindenweg16' ) . '</p>';
@@ -1127,7 +1127,7 @@ class SimplePages {
 			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
 		}
 		echo '</select> <select name="article_id">';
-		foreach ( ArticleRepository::all( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
 			printf( '<option value="%d">%s</option>', (int) $article['id'], esc_html( $article['sku'] ) );
 		}
 		echo '</select> <select name="color">';

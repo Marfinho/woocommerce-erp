@@ -346,7 +346,7 @@ class RestApi {
 		}
 
 		$articles = array();
-		foreach ( ArticleRepository::all() as $article ) {
+		foreach ( ArticleRepository::selectable() as $article ) {
 			// Die Druckmaske zeigt nur, was auch gedruckt wird.
 			if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
 				continue;

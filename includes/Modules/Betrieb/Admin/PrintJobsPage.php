@@ -135,7 +135,12 @@ class PrintJobsPage {
 		// phpcs:enable WordPress.Security.NonceVerification
 
 		$printers = PrinterRepository::all();
-		$articles = ArticleRepository::all();
+
+		// Zwei Listen mit Absicht: Neu drucken laesst sich nur, was noch
+		// angeboten wird - aber ein alter Druckjob muss seinen Artikel
+		// weiterhin beim Namen nennen koennen, auch einen ausgelaufenen.
+		$articles     = ArticleRepository::selectable();
+		$all_articles = ArticleRepository::all();
 
 		if ( ! $printers || ! $articles ) {
 			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Vor dem ersten Druckjob braucht es mindestens einen Drucker und einen Artikel.', 'lindenweg16' ) . '</p></div>';
@@ -149,7 +154,7 @@ class PrintJobsPage {
 		);
 
 		$this->render_form( $printers, $articles );
-		$this->render_list( $printers, $articles, $filter_printer, $filter_article );
+		$this->render_list( $printers, $all_articles, $filter_printer, $filter_article );
 
 		echo '</div>';
 	}

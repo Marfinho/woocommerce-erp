@@ -387,7 +387,7 @@ class ReorderPage {
 	 */
 	public static function catalog() {
 		$articles = array();
-		foreach ( ArticleRepository::all( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
 			$articles[ (int) $article['id'] ] = $article;
 		}
 

@@ -65,6 +65,203 @@ class ArticleRepository {
 	}
 
 	/**
+	 * Nur den Status setzen.
+	 *
+	 * Getrennt von validate(): Stilllegen soll nicht daran scheitern,
+	 * dass irgendein anderes Pflichtfeld heute strenger geprüft wird als
+	 * beim Anlegen.
+	 *
+	 * @param int    $id     Artikel.
+	 * @param string $status Neuer Status.
+	 * @return bool
+	 */
+	public static function set_status( $id, $status ) {
+		global $wpdb;
+
+		$id     = (int) $id;
+		$labels = self::status_labels();
+
+		if ( ! isset( $labels[ $status ] ) ) {
+			return false;
+		}
+
+		$before = self::find( $id );
+
+		if ( ! $before ) {
+			return false;
+		}
+
+		$data = array(
+			'status'     => $status,
+			'updated_at' => current_time( 'mysql', true ),
+		);
+
+		$wpdb->update( self::table(), $data, array( 'id' => $id ) );
+		BetriebAudit::record( 'update', 'articles', $id, $before, $data );
+
+		return true;
+	}
+
+	/**
+	 * Zustände, in denen ein Artikel nicht mehr angeboten wird.
+	 *
+	 * Der Status gab es schon, er hatte nur nie eine Wirkung: Gefiltert
+	 * wurde allein nach „verkäuflich". Ein gesperrter Artikel stand
+	 * deshalb weiter in jeder Auswahlliste.
+	 */
+	const INACTIVE_STATES = array( 'gesperrt', 'ausgelaufen' );
+
+	/**
+	 * Wird dieser Artikel noch angeboten?
+	 *
+	 * Reine Logik.
+	 *
+	 * @param array $article Artikel.
+	 * @return bool
+	 */
+	public static function is_active( array $article ) {
+		$status = isset( $article['status'] ) ? (string) $article['status'] : '';
+
+		return ! in_array( $status, self::INACTIVE_STATES, true );
+	}
+
+	/**
+	 * Artikel, die für etwas Neues in Frage kommen.
+	 *
+	 * Für Auswahllisten: Was hier nicht steht, lässt sich nicht neu
+	 * verkaufen, drucken, montieren oder bestellen. Bestand, Bewegungen
+	 * und Auswertungen bleiben davon unberührt – ein ausgelaufener
+	 * Artikel liegt weiter im Regal und steht weiter in den Büchern.
+	 *
+	 * @param bool $only_sellable Nur verkäufliche Artikel.
+	 * @return array
+	 */
+	public static function selectable( $only_sellable = false ) {
+		return array_values(
+			array_filter(
+				self::all( $only_sellable ),
+				static function ( $article ) {
+					return self::is_active( $article );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Hängt an diesem Artikel Geschichte?
+	 *
+	 * Gelöscht wird nur, was nie benutzt wurde – ein Fehlgriff beim
+	 * Anlegen. Alles andere wird stillgelegt: Eine Bewegung, ein
+	 * Druckjob oder eine Bestellposition, deren Artikel verschwindet,
+	 * macht die Bücher unlesbar.
+	 *
+	 * @param int $id Artikel.
+	 * @return array Liste der Gründe; leer heißt löschbar.
+	 */
+	public static function delete_blockers( $id ) {
+		global $wpdb;
+
+		$id = (int) $id;
+		$p  = $wpdb->prefix . 'lw16_';
+
+		$pruefungen = array(
+			array( $p . 'stock_movements', 'article_id', __( 'Lagerbewegungen', 'lindenweg16' ) ),
+			array( $p . 'print_jobs', 'article_id', __( 'Druckjobs', 'lindenweg16' ) ),
+			array( $p . 'batches', 'article_id', __( 'Chargen', 'lindenweg16' ) ),
+			array( $p . 'order_op_items', 'article_id', __( 'Bestellpositionen', 'lindenweg16' ) ),
+			array( $p . 'picklist_items', 'article_id', __( 'Picklisten', 'lindenweg16' ) ),
+			array( $p . 'work_orders', 'article_id', __( 'Aufträge', 'lindenweg16' ) ),
+		);
+
+		$gruende = array();
+
+		foreach ( $pruefungen as $pruefung ) {
+			list( $tabelle, $spalte, $label ) = $pruefung;
+
+			$anzahl = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM {$tabelle} WHERE {$spalte} = %d", $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			);
+
+			if ( $anzahl > 0 ) {
+				/* translators: 1: Anzahl, 2: Bereich. */
+				$gruende[] = sprintf( __( '%1$d × %2$s', 'lindenweg16' ), $anzahl, $label );
+			}
+		}
+
+		// Steckt er in der Stückliste eines anderen Artikels, wäre dessen
+		// Kalkulation danach falsch – ohne dass es jemand merkt.
+		$verbaut = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$p}bom WHERE child_type = 'artikel' AND child_id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$id
+			)
+		);
+
+		if ( $verbaut > 0 ) {
+			/* translators: %d: Anzahl Stücklisten. */
+			$gruende[] = sprintf( __( 'in %d Stückliste(n) verbaut', 'lindenweg16' ), $verbaut );
+		}
+
+		return $gruende;
+	}
+
+	/**
+	 * Artikel löschen – nur ohne Geschichte.
+	 *
+	 * Mit ihm gehen seine eigenen Stammdatenzeilen: Stückliste,
+	 * Revisionen, Beschaffung, Sollbestände. Die hängen an ihm und
+	 * ergeben ohne ihn nichts.
+	 *
+	 * @param int $id Artikel.
+	 * @return array {success, message}
+	 */
+	public static function delete( $id ) {
+		global $wpdb;
+
+		$id      = (int) $id;
+		$article = self::find( $id );
+
+		if ( ! $article ) {
+			return array(
+				'success' => false,
+				'message' => __( 'Diesen Artikel gibt es nicht mehr.', 'lindenweg16' ),
+			);
+		}
+
+		$gruende = self::delete_blockers( $id );
+
+		if ( $gruende ) {
+			return array(
+				'success' => false,
+				'message' => sprintf(
+					/* translators: %s: Aufzählung der Gründe. */
+					__( 'Dieser Artikel lässt sich nicht löschen, es hängt Geschichte daran: %s. Setz ihn stattdessen auf „ausgelaufen" – dann verschwindet er aus allen Auswahllisten, und die Bücher bleiben lesbar.', 'lindenweg16' ),
+					implode( ', ', $gruende )
+				),
+			);
+		}
+
+		$p = $wpdb->prefix . 'lw16_';
+
+		$wpdb->delete( $p . 'bom', array( 'parent_article_id' => $id ) );
+		$wpdb->delete( $p . 'article_revisions', array( 'article_id' => $id ) );
+		$wpdb->delete( $p . 'article_sourcing', array( 'article_id' => $id ) );
+		$wpdb->delete( $p . 'stock_targets', array( 'article_id' => $id ) );
+		$wpdb->delete( self::table(), array( 'id' => $id ) );
+
+		BetriebAudit::record( 'delete', 'articles', $id, $article, null );
+
+		return array(
+			'success' => true,
+			'message' => sprintf(
+				/* translators: %s: Artikelnummer. */
+				__( 'Artikel %s gelöscht.', 'lindenweg16' ),
+				$article['sku']
+			),
+		);
+	}
+
+	/**
 	 * Alle Artikel.
 	 *
 	 * @param bool $only_sellable Nur verkäufliche Artikel.

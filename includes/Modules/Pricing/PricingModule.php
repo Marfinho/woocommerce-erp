@@ -85,7 +85,7 @@ class PricingModule {
 	protected function render_article_table( $margin ) {
 		$ctx      = CalculationContext::build();
 		$settings = CalculationContext::settings();
-		$articles = ArticleRepository::all( true );
+		$articles = ArticleRepository::selectable( true );
 
 		if ( ! $articles ) {
 			echo '<p>' . esc_html__( 'Noch kein verkäuflicher Artikel angelegt.', 'lindenweg16' ) . '</p>';
@@ -219,7 +219,7 @@ class PricingModule {
 		$margin = $this->target_margin();
 		$count  = 0;
 
-		foreach ( ArticleRepository::all( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
 			if ( $this->apply_price( (int) $article['id'], $margin )['success'] ) {
 				$count++;
 			}

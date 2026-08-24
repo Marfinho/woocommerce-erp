@@ -537,7 +537,7 @@ class POSModule {
 		$options = array();
 		$legacy  = array();
 
-		foreach ( ArticleRepository::all( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
 			$options[] = array(
 				'value' => 'a:' . (int) $article['id'],
 				'label' => $article['sku'] . ' – ' . $article['name'],
