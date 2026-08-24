@@ -243,7 +243,7 @@ footer p{max-width:72ch}
 		<h1>Lindenweg16 Betriebshandbuch</h1>
 		<p class="standfirst">Wie das Plugin bedient wird — von der Erstinbetriebnahme über den täglichen Druckjob bis zum Jahresabschluss. Geschrieben für den, der den Laden betreibt, nicht für den, der ihn programmiert hat.</p>
 		<div class="meta">
-			<span><b>Plugin</b> Lindenweg16 ERP 0.9.0</span>
+			<span><b>Plugin</b> Lindenweg16 ERP 0.10.0</span>
 			<span><b>Voraussetzung</b> WordPress + WooCommerce</span>
 			<span><b>Zwei Menüs</b> Lindenweg16 · Betrieb</span>
 			<span><b>Stand</b> August 2026</span>
@@ -841,7 +841,7 @@ footer p{max-width:72ch}
 			<tbody>
 				<tr><td>Dashboard</td><td>Lage auf einen Blick, Steuerrücklage</td></tr>
 				<tr><td>Belege</td><td>Belegliste mit Suchen und Filtern</td></tr>
-				<tr><td>Beleg erfassen</td><td>Neuer Beleg; Foto oder PDF wird ausgelesen, Beträge werden vorgeschlagen</td></tr>
+				<tr><td>Beleg erfassen</td><td>Neuer Beleg; Foto oder PDF wird ausgelesen, Betrag, Datum und Händler werden vorgeschlagen — siehe 10.2</td></tr>
 				<tr><td>Rechnungen</td><td>Ausgangsrechnungen, erzeugt aus WooCommerce-Bestellungen</td></tr>
 				<tr><td>Journal</td><td>Alle Buchungen, fortlaufend, mit Hash-Kette</td></tr>
 				<tr><td>Kassenbuch</td><td>Barbewegungen; für die Kasse (Kapitel 11)</td></tr>
@@ -855,7 +855,33 @@ footer p{max-width:72ch}
 		</table>
 	</div>
 
-	<h3>10.1 Zahlungsgebühren kommen von allein</h3>
+	<h3>10.1 Belege auslesen</h3>
+	<p>Beim Erfassen wählst du Foto oder PDF und drückst <strong>Beleg auslesen</strong>. Betrag, Datum und Händler werden vorgeschlagen — prüfen musst du sie trotzdem, es bleibt ein Vorschlag.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Belegart</th><th>Was passiert</th><th>Genauigkeit</th></tr></thead>
+			<tbody>
+				<tr>
+					<td><strong>PDF vom Lieferanten</strong></td>
+					<td>Der Text steckt bereits im PDF und wird gelesen</td>
+					<td><strong>Exakt</strong> — es wird nichts geraten</td>
+				</tr>
+				<tr>
+					<td><strong>Foto, Scan</strong></td>
+					<td>Zeichenerkennung (Tesseract), falls auf dem Server vorhanden</td>
+					<td>Vorschlag, Tippfehler möglich</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div class="note">
+		<span class="lbl">Warum PDFs besser sind</span>
+		<p>Eine am Rechner erzeugte Rechnung enthält ihren Text bereits — er muss nur ausgelesen werden. Eine Zeichenerkennung dagegen <em>rät</em> aus Pixeln, und aus einer 8 wird schnell eine 3. Wo du die Wahl hast, nimm das PDF.</p>
+		<p>Steht auf dem Server keine Zeichenerkennung zur Verfügung, sagt das Formular das offen. PDFs funktionieren trotzdem.</p>
+	</div>
+	<p>Bei mehreren Beträgen auf einem Beleg gewinnt der <strong>Gesamtbetrag</strong>: Zuerst zählt ein Betrag hinter einem Wort wie „Summe" oder „Rechnungsbetrag", und unter gleichrangigen Funden der größte — keine Position ist größer als die Summe.</p>
+
+	<h3>10.2 Zahlungsgebühren kommen von allein</h3>
 	<p>Die Gebühr, die WooPayments je Bestellung einbehält, muss als Aufwand ins Journal — sonst ist der Gewinn zu hoch. Das Plugin holt sie sich selbst.</p>
 	<ol class="steps">
 		<li><strong>Beim Zahlungseingang</strong> liest es die Gebühr aus den Daten, die WooPayments an der Bestellung hinterlegt, und bucht sie.</li>
@@ -944,6 +970,31 @@ footer p{max-width:72ch}
 <!-- ============ 14 ============ -->
 <section id="k14">
 	<div class="chapter"><span class="num">14</span><h2>Wenn etwas nicht stimmt</h2></div>
+	<h3>14.1 Zuerst: die Systemprüfung</h3>
+	<p><span class="path">Betrieb → Einstellungen → Systemprüfung</span></p>
+	<p>Bevor du einzelnen Symptomen nachgehst, lass diese Prüfung laufen. Jedes Formular prüft beim Speichern seine eigene Eingabe — aber Widersprüche entstehen meist <em>später</em>: Ein Artikel war gedruckt und hatte eine Revision, jemand stellt ihn auf Montage um. Ein Shop-Produkt wird gelöscht, die Verknüpfung bleibt. Beide Datensätze sind für sich gültig, zusammen ergeben sie keinen Sinn mehr.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Schwere</th><th>Was gefunden wird</th></tr></thead>
+			<tbody>
+				<tr>
+					<td><strong>Fehler</strong><br><small>blockiert einen Vorgang</small></td>
+					<td>Montageartikel ohne Stückliste · gedruckter Artikel ohne freigegebene Revision · verkäuflicher Artikel ohne Shop-Verknüpfung · Verknüpfung auf ein gelöschtes Produkt · zwei Artikel auf demselben Produkt · Bestand unter null</td>
+				</tr>
+				<tr>
+					<td><strong>Warnung</strong><br><small>etwas, das niemand mehr braucht</small></td>
+					<td>Sollbestand für einen stillgelegten Artikel · Standardplatz auf einem stillgelegten Fach · offener Auftrag, dessen Beschaffungsweg sich geändert hat</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<div class="warn">
+		<span class="lbl">Der teuerste Befund</span>
+		<p><strong>Verkäuflich, aber ohne Shop-Verknüpfung</strong> — dann entsteht beim Verkauf kein Lagerabgang. Das fällt erst auf, wenn der Bestand seit Wochen nicht mehr stimmt. Lauf die Prüfung vor dem Livegang einmal durch.</p>
+	</div>
+	<p>Findet sie nichts, meldet sie das auch. Eine Prüfung, die immer etwas anzeigt, liest nach kurzer Zeit niemand mehr.</p>
+
+	<h3>14.2 Einzelne Symptome</h3>
 	<dl class="fields">
 		<dt>Die mobile Erfassung zeigt „Seite nicht gefunden"</dt>
 		<dd>Die Adressen sind noch nicht registriert. Auf <span class="path">Betrieb → Drucker &amp; Wartung</span> steht direkt über den Aufklebern der Knopf <em>Adressen neu registrieren</em> — ein Klick genügt. Gleichwertig, nur umständlicher: <span class="path">Einstellungen → Permalinks → Speichern</span>. Beides gilt auch für den Nachbestell-Link.</dd>
@@ -970,7 +1021,7 @@ footer p{max-width:72ch}
 		<dd>Nie löschen, immer stornieren. Jede Storno-Funktion verlangt eine Begründung; beide Sätze bleiben stehen. Das ist die Grundlage dafür, dass die Bücher einer Prüfung standhalten.</dd>
 
 		<dt>Die Kettenprüfung meldet einen Bruch</dt>
-		<dd><span class="path">Betrieb → Einstellungen → Protokoll &amp; Kettenprüfung</span> nennt den ersten betroffenen Datensatz. Ein Bruch bedeutet, dass an der Datenbank vorbei geschrieben wurde. Notiere den Datensatz, bevor du weiterarbeitest.</dd>
+		<dd>Sie beantwortet eine andere Frage als die Systemprüfung: nicht „passt das zusammen", sondern „wurde etwas manipuliert". <span class="path">Betrieb → Einstellungen → Protokoll &amp; Kettenprüfung</span> nennt den ersten betroffenen Datensatz. Ein Bruch bedeutet, dass an der Datenbank vorbei geschrieben wurde. Notiere den Datensatz, bevor du weiterarbeitest.</dd>
 	</dl>
 </section>
 
