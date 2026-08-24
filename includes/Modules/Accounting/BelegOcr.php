@@ -18,6 +18,66 @@ defined( 'ABSPATH' ) || exit;
 class BelegOcr {
 
 	/**
+	 * Sieht die Datei nach einem PDF aus?
+	 *
+	 * @param string $path Pfad.
+	 * @return bool
+	 */
+	public static function looks_like_pdf( $path ) {
+		$handle = @fopen( $path, 'rb' ); // phpcs:ignore
+
+		if ( ! $handle ) {
+			return false;
+		}
+
+		$head = fread( $handle, 8 );
+		fclose( $handle );
+
+		return PdfText::looks_like_pdf( (string) $head );
+	}
+
+	/**
+	 * Reicht dieser Text, um etwas daraus zu lesen?
+	 *
+	 * Ein PDF, das nur ein Bild enthält, liefert ein paar Steuerzeichen –
+	 * daraus einen Betrag zu raten wäre schlimmer als zuzugeben, dass es
+	 * nicht geht.
+	 *
+	 * @param string $text Gelesener Text.
+	 * @return bool
+	 */
+	public static function is_useful( $text ) {
+		$text = trim( (string) $text );
+
+		if ( mb_strlen( $text ) < 20 ) {
+			return false;
+		}
+
+		// Mindestens ein paar Buchstaben – reine Zahlenkolonnen sind meist
+		// Reste einer Grafik.
+		return (bool) preg_match( '/\p{L}{3,}/u', $text );
+	}
+
+	/**
+	 * Aus fertigem Text die Felder ziehen.
+	 *
+	 * @param string $text   Text.
+	 * @param string $quelle pdf oder ocr.
+	 * @return array
+	 */
+	public static function from_text( $text, $quelle = 'ocr' ) {
+		return array(
+			'raw_text' => $text,
+			'betrag'   => self::extract_betrag( $text ),
+			'datum'    => self::extract_datum( $text ),
+			'haendler' => self::extract_haendler( $text ),
+			'success'  => true,
+			'error'    => '',
+			'quelle'   => $quelle,
+		);
+	}
+
+	/**
 	 * Prüft, ob Tesseract auf dem Server verfügbar ist.
 	 *
 	 * @return bool
@@ -92,9 +152,22 @@ class BelegOcr {
 			return $result;
 		}
 
+		// PDFs zuerst über ihre Textschicht: Ein am Rechner erzeugter Beleg
+		// enthält den Text bereits. Ihn zu lesen ist genauer als jede
+		// Zeichenerkennung – es wird nichts geraten. Tesseract kann PDFs
+		// ohnehin nicht lesen; bisher lief hier jede Rechnung ins Leere.
+		$text = PdfText::from_file( $image_path );
+
+		if ( self::is_useful( $text ) ) {
+			return self::from_text( $text, 'pdf' );
+		}
+
 		$tesseract = self::tesseract_path();
 		if ( ! $tesseract ) {
-			$result['error'] = __( 'Tesseract OCR ist nicht installiert. Bitte den Server-Administrator kontaktieren (apt install tesseract-ocr tesseract-ocr-deu).', 'lindenweg16' );
+			$result['error'] = self::looks_like_pdf( $image_path )
+				? __( 'Dieses PDF enthält keinen lesbaren Text – vermutlich ein Scan. Für solche Belege wird Tesseract OCR auf dem Server gebraucht.', 'lindenweg16' )
+				: __( 'Für Fotos wird Tesseract OCR auf dem Server gebraucht (apt install tesseract-ocr tesseract-ocr-deu). PDFs mit Textschicht werden auch ohne gelesen.', 'lindenweg16' );
+
 			return $result;
 		}
 
@@ -170,24 +243,58 @@ class BelegOcr {
 	 * @param string $text OCR-Volltext.
 	 * @return string Betrag oder ''.
 	 */
-	protected static function extract_betrag( $text ) {
+	/**
+	 * Eine gefundene Zahl in einen Betrag verwandeln.
+	 *
+	 * Deutsche Belege schreiben 1.234,56, englische 1,234.56. Wer stur
+	 * das Komma durch einen Punkt ersetzt, macht aus 1.234,56 die Zahl
+	 * 1.23456 – und bucht 1,23 € statt 1234,56 €.
+	 *
+	 * @param string $roh Gefundene Zeichenkette.
+	 * @return float
+	 */
+	public static function to_amount( $roh ) {
+		$roh = trim( (string) $roh );
+
+		// Das letzte Trennzeichen trennt die Nachkommastellen; alles
+		// davor ist Tausendergruppierung.
+		$komma = strrpos( $roh, ',' );
+		$punkt = strrpos( $roh, '.' );
+
+		if ( false !== $komma && ( false === $punkt || $komma > $punkt ) ) {
+			$roh = str_replace( '.', '', $roh );
+			$roh = str_replace( ',', '.', $roh );
+		} else {
+			$roh = str_replace( ',', '', $roh );
+		}
+
+		return (float) $roh;
+	}
+
+	public static function extract_betrag( $text ) {
+		$zahl = '(\d{1,3}(?:[.\s]\d{3})*[.,]\d{2}|\d{1,6}[.,]\d{2})';
+
+		// Reihenfolge ist Verlässlichkeit, nicht Vorkommen: Ein Betrag
+		// hinter dem Wort „Summe" ist die Summe. Ein Betrag irgendwo auf
+		// dem Zettel ist eine Zahl.
 		$patterns = array(
-			// „SUMME", „GESAMT", „TOTAL", „BETRAG", „ZU ZAHLEN" gefolgt von Betrag.
-			'/(?:SUMME|GESAMT|TOTAL|BETRAG|ZU\s*ZAHLEN|ENDBETRAG)\s*[:\s]*(\d{1,6}[.,]\d{2})\s*(?:€|EUR)?/iu',
-			// Betrag mit € Zeichen.
-			'/(\d{1,6}[.,]\d{2})\s*€/u',
-			// EUR vor/nach Betrag.
-			'/(?:EUR)\s*(\d{1,6}[.,]\d{2})/iu',
-			// Letzter Betrag im Text (oft der Gesamtbetrag).
-			'/(\d{1,6}[.,]\d{2})\s*$/m',
+			// Schlüsselwort, dann Betrag – auch über einen Zeilenumbruch
+			// hinweg, denn Belege setzen die Summe gern rechts daneben.
+			'/(?:SUMME|GESAMT|TOTAL|ZU\s*ZAHLEN|ENDBETRAG|RECHNUNGSBETRAG|GESAMTBETRAG|BETRAG)\s*[:\s]*' . $zahl . '\s*(?:€|EUR)?/iu',
+			// Betrag mit Währung dahinter – die deutsche Schreibweise.
+			'/' . $zahl . '\s*(?:€|EUR)\b/iu',
+			// Währung davor.
+			'/(?:€|EUR)\s*' . $zahl . '/iu',
+			// Letzter Betrag einer Zeile.
+			'/' . $zahl . '\s*$/m',
 		);
 
 		$candidates = array();
 		foreach ( $patterns as $priority => $pattern ) {
 			if ( preg_match_all( $pattern, $text, $matches ) ) {
 				foreach ( $matches[1] as $match ) {
-					$betrag = str_replace( ',', '.', $match );
-					$betrag = (float) $betrag;
+					$betrag = self::to_amount( $match );
+
 					if ( $betrag > 0 && $betrag < 999999 ) {
 						$candidates[] = array(
 							'betrag'   => $betrag,
@@ -202,10 +309,20 @@ class BelegOcr {
 			return '';
 		}
 
-		// Höchste Priorität (niedrigster Index) bevorzugen.
-		usort( $candidates, function ( $a, $b ) {
-			return $a['priority'] - $b['priority'];
-		} );
+		// Erst die verlässlichste Fundart, dann innerhalb dieser der größte
+		// Betrag: Auf einem Beleg stehen viele Zahlen, aber keine Position
+		// ist größer als die Summe. Nur den ersten Treffer zu nehmen, holte
+		// bei „12,00 € / 12,00 € / Summe 24,00 €" die falsche Zahl.
+		usort(
+			$candidates,
+			static function ( $a, $b ) {
+				if ( $a['priority'] !== $b['priority'] ) {
+					return $a['priority'] - $b['priority'];
+				}
+
+				return $b['betrag'] <=> $a['betrag'];
+			}
+		);
 
 		return number_format( $candidates[0]['betrag'], 2, '.', '' );
 	}
@@ -216,7 +333,7 @@ class BelegOcr {
 	 * @param string $text OCR-Volltext.
 	 * @return string Datum (Y-m-d) oder ''.
 	 */
-	protected static function extract_datum( $text ) {
+	public static function extract_datum( $text ) {
 		$patterns = array(
 			// DD.MM.YYYY oder DD.MM.YY.
 			'/(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})/',
@@ -265,7 +382,7 @@ class BelegOcr {
 	 * @param string $text OCR-Volltext.
 	 * @return string Händlername oder ''.
 	 */
-	protected static function extract_haendler( $text ) {
+	public static function extract_haendler( $text ) {
 		$lines = explode( "\n", $text );
 		$skip_words = array(
 			'RECHNUNG', 'QUITTUNG', 'KASSENBON', 'BELEG', 'SUMME',

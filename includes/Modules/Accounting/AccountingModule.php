@@ -388,16 +388,21 @@ class AccountingModule {
 			<input type="hidden" name="action" value="lw16_save_beleg">
 			<?php wp_nonce_field( 'lw16_save_beleg' ); ?>
 			<table class="form-table"><tbody>
-				<tr><th><?php esc_html_e( 'Beleg-Foto', 'lindenweg16' ); ?></th><td>
-					<input type="file" name="beleg_foto" accept="image/*" id="lw16-beleg-foto">
-					<?php if ( $ocr_available ) : ?>
-						<button type="button" class="button" id="lw16-ocr-btn" style="margin-left:8px" disabled>
-							<?php esc_html_e( 'OCR auslesen', 'lindenweg16' ); ?>
-						</button>
-						<span id="lw16-ocr-status" style="margin-left:8px;color:#6E7882"></span>
-					<?php else : ?>
-						<p class="description"><?php esc_html_e( 'Tipp: Tesseract OCR installieren für automatische Belegauswertung (apt install tesseract-ocr tesseract-ocr-deu).', 'lindenweg16' ); ?></p>
-					<?php endif; ?>
+				<tr><th><?php esc_html_e( 'Beleg (Foto oder PDF)', 'lindenweg16' ); ?></th><td>
+					<input type="file" name="beleg_foto" accept="image/*,application/pdf" id="lw16-beleg-foto">
+					<button type="button" class="button" id="lw16-ocr-btn" style="margin-left:8px" disabled>
+						<?php esc_html_e( 'Beleg auslesen', 'lindenweg16' ); ?>
+					</button>
+					<span id="lw16-ocr-status" style="margin-left:8px;color:#6E7882"></span>
+					<p class="description">
+						<?php
+						echo esc_html(
+							$ocr_available
+								? __( 'PDFs mit Textschicht werden exakt gelesen, Fotos und Scans über die Zeichenerkennung.', 'lindenweg16' )
+								: __( 'PDFs mit Textschicht werden exakt gelesen – das sind die meisten Lieferantenrechnungen. Für Fotos und Scans wäre Tesseract OCR auf dem Server nötig (apt install tesseract-ocr tesseract-ocr-deu).', 'lindenweg16' )
+						);
+						?>
+					</p>
 				</td></tr>
 				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" id="lw16-betrag" class="small-text" required></td></tr>
 				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" id="lw16-datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
@@ -413,7 +418,7 @@ class AccountingModule {
 			</tbody></table>
 			<?php submit_button( __( 'Beleg speichern', 'lindenweg16' ) ); ?>
 		</form>
-		<?php if ( $ocr_available ) : ?>
+		<?php // Das Skript laeuft immer: PDFs kommen auch ohne Tesseract durch. ?>
 		<script>
 		(function(){
 			var fileInput = document.getElementById('lw16-beleg-foto');
@@ -457,7 +462,6 @@ class AccountingModule {
 			});
 		})();
 		</script>
-		<?php endif; ?>
 		<?php
 	}
 
