@@ -62,6 +62,20 @@ class BetriebModule {
 	}
 
 	/**
+	 * Gibt es diese Seite im Modul?
+	 *
+	 * Reine Prüfung ohne Datenbank. Sie entscheidet, ob ein aus einem
+	 * Formular mitgeschicktes Rücksprungziel übernommen werden darf –
+	 * ungeprüft wäre das eine offene Weiterleitung.
+	 *
+	 * @param string $slug Seitenkennung.
+	 * @return bool
+	 */
+	public static function is_page( $slug ) {
+		return '' !== (string) $slug && array_key_exists( (string) $slug, self::pages() );
+	}
+
+	/**
 	 * In welchem Meilenstein die jeweilige Seite Inhalt bekommt.
 	 * Dient nur der ehrlichen Beschriftung noch leerer Seiten.
 	 *

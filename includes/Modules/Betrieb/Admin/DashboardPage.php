@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
@@ -23,6 +24,7 @@ use Lindenweg16\Modules\Betrieb\ProcurementAlert;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
+use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 
 /**
@@ -41,6 +43,7 @@ class DashboardPage {
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Betrieb', 'lindenweg16' ) . '</h1>';
 
 		self::render_kpis( $von, $today );
+		self::render_open_orders();
 		self::render_week( $iso );
 		self::render_alerts();
 
@@ -99,6 +102,97 @@ class DashboardPage {
 		echo '</div>';
 
 		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
+	}
+
+	/**
+	 * Offene Druck- und Fertigungsaufträge – startbar von hier aus.
+	 *
+	 * Das Dashboard ist die erste Seite des Tages. Wer hier sieht, was
+	 * ansteht, soll nicht erst durch zwei Menüs klicken, um die Uhr zu
+	 * starten.
+	 */
+	protected static function render_open_orders() {
+		$orders = WorkOrderRepository::unfinished();
+
+		echo '<h2>' . esc_html__( 'Offene Aufträge', 'lindenweg16' ) . '</h2>';
+
+		if ( ! $orders ) {
+			echo '<p>' . esc_html__( 'Kein offener Auftrag. Neue entstehen unter Bedarf oder unter Lagerplätze, Fertigung & Picklisten.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		$articles = ArticleRepository::all_by_id();
+		$kinds    = WorkOrderRepository::kinds();
+		$now      = current_time( 'mysql', true );
+
+		echo '<div class="lw16-scrollx"><table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Auftrag', 'lindenweg16' ),
+			__( 'Art', 'lindenweg16' ),
+			__( 'Artikel', 'lindenweg16' ),
+			__( 'Farbe', 'lindenweg16' ),
+			__( 'Menge', 'lindenweg16' ),
+			__( 'Zeit', 'lindenweg16' ),
+			'',
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $orders as $order ) {
+			$id      = (int) $order['id'];
+			$article = isset( $articles[ (int) $order['article_id'] ] ) ? $articles[ (int) $order['article_id'] ] : null;
+			$laeuft  = WorkOrderRepository::is_running( $order );
+			$seconds = WorkOrderRepository::elapsed( $order, $now );
+
+			printf( '<tr%s>', $laeuft ? ' class="lw16-row--laeuft"' : '' );
+			printf( '<td class="lw16-nowrap"><strong>%s</strong></td>', esc_html( $order['code'] ) );
+			printf( '<td>%s</td>', esc_html( isset( $kinds[ $order['kind'] ] ) ? $kinds[ $order['kind'] ] : $order['kind'] ) );
+			printf( '<td>%s</td>', esc_html( $article ? $article['sku'] . ' – ' . $article['name'] : '?' ) );
+			printf( '<td>%s</td>', esc_html( ColorRegistry::label( (string) $order['color'] ) ) );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $order['qty_planned'], 0 ) ) );
+
+			printf(
+				'<td>%s</td>',
+				$seconds > 0
+					? esc_html( WorkOrderRepository::format_duration( $seconds ) . ( $laeuft ? ' ' . __( '(läuft)', 'lindenweg16' ) : '' ) )
+					: '—'
+			);
+
+			echo '<td>';
+
+			// Die Uhr: starten oder anhalten, ohne die Seite zu wechseln.
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">';
+			wp_nonce_field( BinsPage::NONCE_WORK );
+			echo '<input type="hidden" name="action" value="lw16_betrieb_work_timer" />';
+			printf( '<input type="hidden" name="zurueck" value="%s" />', esc_attr( BetriebModule::MENU_SLUG ) );
+			printf( '<input type="hidden" name="work_order_id" value="%d" />', $id );
+			if ( $laeuft ) {
+				echo '<input type="hidden" name="pause" value="1" />';
+			}
+			printf(
+				'<button class="button button-small%s">%s</button>',
+				$laeuft ? '' : ' button-primary',
+				esc_html( $laeuft ? __( 'Pausieren', 'lindenweg16' ) : __( 'Produktion starten', 'lindenweg16' ) )
+			);
+			echo '</form> ';
+
+			// Fertigmelden braucht Angaben, die hier nicht hingehoeren -
+			// deshalb ein Weg dorthin, kein zweites Formular.
+			printf(
+				'<a class="button button-small" href="%s">%s</a>',
+				esc_url(
+					'druck' === $order['kind']
+						? admin_url( 'admin.php?page=lw16-betrieb-druckjournal&work_order=' . $id )
+						: admin_url( 'admin.php?page=lw16-betrieb-lagerplaetze&view=fertigung' )
+				),
+				esc_html( 'druck' === $order['kind'] ? __( 'Im Journal buchen', 'lindenweg16' ) : __( 'Fertigmelden', 'lindenweg16' ) )
+			);
+
+			echo '</td></tr>';
+		}
+
+		echo '</tbody></table></div>';
 	}
 
 	/**

@@ -355,3 +355,10 @@
 .lw16-pickqr { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
 .lw16-pickqr__code svg { display: block; width: 96px; height: 96px; }
 .lw16-pickqr__hint { font-size: 11px; color: #5a676d; }
+
+/* Laufender Auftrag in der Dashboard-Liste: erkennbar, ohne zu schreien. */
+.lw16-row--laeuft td { background: #eef3f1; }
+.lw16-row--laeuft td:first-child { box-shadow: inset 3px 0 0 #1f5f52; }
+/* Auftrags- und Chargencodes brechen nie um - ein zerrissener Code
+   laesst sich weder vorlesen noch vergleichen. */
+.lw16-nowrap { white-space: nowrap; }

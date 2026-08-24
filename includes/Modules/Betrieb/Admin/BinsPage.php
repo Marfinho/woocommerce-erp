@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
@@ -28,6 +29,15 @@ use Lindenweg16\Modules\Betrieb\WooIntegration;
 class BinsPage {
 
 	const NONCE = 'lw16_betrieb_bins';
+
+	/**
+	 * Nonce der Auftragsformulare.
+	 *
+	 * Eigene Konstante, weil auch das Dashboard damit sendet: Ein dort
+	 * abgetippter Name bräche stillschweigend, sobald er hier anders
+	 * hiesse – und ein falscher Nonce sieht aus wie ein Rechtefehler.
+	 */
+	const NONCE_WORK = self::NONCE . '_work';
 
 	/**
 	 * Hooks registrieren.
@@ -51,6 +61,26 @@ class BinsPage {
 	}
 
 	/**
+	 * Wohin nach dem Speichern?
+	 *
+	 * Normalerweise zurück auf diese Seite. Kommt der Klick von woanders –
+	 * etwa dem Dashboard –, soll er auch dorthin zurückführen; sonst
+	 * reisst jeder Knopf den Benutzer aus seinem Kontext.
+	 *
+	 * Geprüft wird gegen die bekannten Seiten des Moduls. Ein Ziel aus
+	 * dem Formular ungeprüft zu übernehmen, wäre eine offene
+	 * Weiterleitung.
+	 *
+	 * @return string
+	 */
+	protected function target_page() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- die Handler pruefen den Nonce vorher.
+		$wunsch = isset( $_POST['zurueck'] ) ? sanitize_key( wp_unslash( $_POST['zurueck'] ) ) : '';
+
+		return BetriebModule::is_page( $wunsch ) ? $wunsch : 'lw16-betrieb-lagerplaetze';
+	}
+
+	/**
 	 * Zurück zur Seite.
 	 *
 	 * @param string $msg  Meldung.
@@ -62,7 +92,7 @@ class BinsPage {
 			add_query_arg(
 				array_merge(
 					array(
-						'page'     => 'lw16-betrieb-lagerplaetze',
+						'page'     => $this->target_page(),
 						'lw16_msg' => rawurlencode( $msg ),
 						'lw16_typ' => $type,
 					),
@@ -363,7 +393,7 @@ class BinsPage {
 	 */
 	public function handle_work_order() {
 		$this->require_cap();
-		check_admin_referer( self::NONCE . '_work' );
+		check_admin_referer( self::NONCE_WORK );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
 		$input = array_map(
@@ -411,7 +441,7 @@ class BinsPage {
 	 */
 	public function handle_work_timer() {
 		$this->require_cap();
-		check_admin_referer( self::NONCE . '_work' );
+		check_admin_referer( self::NONCE_WORK );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
 		$id    = isset( $_POST['work_order_id'] ) ? (int) $_POST['work_order_id'] : 0;
@@ -430,7 +460,7 @@ class BinsPage {
 	 */
 	public function handle_work_done() {
 		$this->require_cap();
-		check_admin_referer( self::NONCE . '_work' );
+		check_admin_referer( self::NONCE_WORK );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
 		$id     = isset( $_POST['work_order_id'] ) ? (int) $_POST['work_order_id'] : 0;
@@ -587,7 +617,7 @@ class BinsPage {
 		} else {
 			echo '<h3>' . esc_html__( 'Neuen Auftrag anlegen', 'lindenweg16' ) . '</h3>';
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-			wp_nonce_field( self::NONCE . '_work' );
+			wp_nonce_field( self::NONCE_WORK );
 			echo '<input type="hidden" name="action" value="lw16_betrieb_work_order" />';
 
 			echo '<p><select name="kind">';
@@ -700,7 +730,7 @@ class BinsPage {
 				$laeuft = WorkOrderRepository::is_running( $order );
 
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-bottom:4px">';
-				wp_nonce_field( self::NONCE . '_work' );
+				wp_nonce_field( self::NONCE_WORK );
 				echo '<input type="hidden" name="action" value="lw16_betrieb_work_timer" />';
 				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
 				if ( $laeuft ) {
@@ -722,7 +752,7 @@ class BinsPage {
 					);
 				} else {
 					echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-					wp_nonce_field( self::NONCE . '_work' );
+					wp_nonce_field( self::NONCE_WORK );
 					echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
 					printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
 					printf(
@@ -734,7 +764,7 @@ class BinsPage {
 				}
 
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:4px">';
-				wp_nonce_field( self::NONCE . '_work' );
+				wp_nonce_field( self::NONCE_WORK );
 				echo '<input type="hidden" name="action" value="lw16_betrieb_work_done" />';
 				echo '<input type="hidden" name="cancel" value="1" />';
 				printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $order['id'] );
