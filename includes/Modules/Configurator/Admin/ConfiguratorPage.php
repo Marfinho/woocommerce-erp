@@ -104,28 +104,58 @@ class ConfiguratorPage {
 			}
 		}
 
-		$message = __( 'Teil gespeichert.', 'lindenweg16' );
+		$this->redirect( $this->save_model( $id, (int) $result['data']['article_id'] ), 'success' );
+	}
 
-		if ( ! empty( $_FILES['model']['name'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
-			$article = ArticleRepository::find( (int) $result['data']['article_id'] );
+	/**
+	 * Das Modell eines Teils setzen: hochgeladen, mitgeliefert oder keines.
+	 *
+	 * Eine hochgeladene Datei sticht die Auswahl – wer eine Datei wählt,
+	 * meint sie auch. Die abgelöste Datei wird erst entfernt, wenn die
+	 * neue steht.
+	 *
+	 * @param int $id         Teil.
+	 * @param int $article_id Artikel, für den Dateinamen.
+	 * @return string Meldung für die Rückkehr.
+	 */
+	protected function save_model( $id, $article_id ) {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer in handle_save abgedeckt.
+		$choice   = isset( $_POST['model_choice'] ) ? sanitize_text_field( wp_unslash( $_POST['model_choice'] ) ) : '';
+		$hochgeladen = ! empty( $_FILES['model']['name'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$before = PartRepository::find( $id );
+		$alt    = $before ? (string) $before['model_file'] : '';
+
+		if ( $hochgeladen ) {
+			$article = ArticleRepository::find( $article_id );
 			$stored  = WebModel::store( (array) $_FILES['model'], $article ? $article['sku'] : 'teil' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 			if ( $stored['errors'] ) {
 				$this->redirect( implode( ' ', $stored['errors'] ), 'error', $id );
 			}
 
-			$before = PartRepository::find( $id );
 			PartRepository::set_model( $id, $stored['name'] );
+			WebModel::delete( $alt );
 
-			// Die abgelöste Datei wird erst entfernt, wenn die neue steht.
-			if ( $before && $before['model_file'] ) {
-				WebModel::delete( (string) $before['model_file'] );
-			}
-
-			$message = __( 'Teil und Modell gespeichert.', 'lindenweg16' );
+			return __( 'Teil und Modell gespeichert.', 'lindenweg16' );
 		}
 
-		$this->redirect( $message, 'success' );
+		if ( 'keines' === $choice ) {
+			PartRepository::set_model( $id, '' );
+			WebModel::delete( $alt );
+
+			return __( 'Teil gespeichert, das Modell ist entfernt – es zeigt jetzt den Ersatzkörper.', 'lindenweg16' );
+		}
+
+		if ( '' !== WebModel::demo_key( $choice ) ) {
+			PartRepository::set_model( $id, $choice );
+			WebModel::delete( $alt );
+
+			return __( 'Teil gespeichert, es zeigt ein mitgeliefertes Demo-Modell.', 'lindenweg16' );
+		}
+
+		return __( 'Teil gespeichert.', 'lindenweg16' );
 	}
 
 	/**
@@ -246,6 +276,8 @@ class ConfiguratorPage {
 		esc_html_e( 'Die Modelle sind Schaustücke, keine Konstruktionsdaten: aus dem CAD als STL oder 3MF exportieren, im Netz auf wenige tausend Dreiecke reduzieren und als .glb hochladen. Innengeometrie, Gewinde und Toleranzen gehören dort nicht hinein – die Datei ist im Netz öffentlich abrufbar.', 'lindenweg16' );
 		echo '</p><p>';
 		esc_html_e( 'Ohne hochgeladenes Modell zeigt der Konfigurator einen maßhaltigen Ersatzkörper aus Höhe, Breite und Tiefe. Bestellen lässt sich damit alles, es sieht nur nicht nach dem Haken aus.', 'lindenweg16' );
+		echo '</p><p>';
+		esc_html_e( 'Zum Ausprobieren liegen drei Demo-Modelle bei: eine Schiene mit zwei Schraubaugen (600 mm), ein Haken (80 mm) und eine Ablage (150 mm). Sie lassen sich unten je Teil auswählen. Passend dazu gehören am Basismodul zwei Sperrbereiche von 40 bis 90 mm und von 500 bis 550 mm – dort sitzen die Schraubaugen.', 'lindenweg16' );
 		echo '</p></div>';
 	}
 
@@ -403,18 +435,50 @@ class ConfiguratorPage {
 			esc_html__( 'Im Konfigurator anbieten', 'lindenweg16' )
 		);
 
-		echo '<tr><th scope="row"><label for="lw16-modell">' . esc_html__( 'Schaumodell (.glb)', 'lindenweg16' ) . '</label></th><td>';
-		echo '<input type="file" name="model" id="lw16-modell" accept=".glb">';
+		$aktuell = $edit ? (string) $edit['model_file'] : '';
+		$demo    = WebModel::demo_key( $aktuell );
 
-		if ( $edit && $edit['model_file'] ) {
+		echo '<tr><th scope="row"><label for="lw16-modellwahl">' . esc_html__( 'Schaumodell', 'lindenweg16' ) . '</label></th><td>';
+		echo '<select name="model_choice" id="lw16-modellwahl">';
+
+		if ( '' !== $aktuell && '' === $demo ) {
 			printf(
-				'<p class="description">%s <code>%s</code></p>',
-				esc_html__( 'Hinterlegt:', 'lindenweg16' ),
-				esc_html( (string) $edit['model_file'] )
+				'<option value="">%s</option>',
+				esc_html__( '— hochgeladene Datei behalten —', 'lindenweg16' )
 			);
 		}
 
-		echo '<p class="description">' . esc_html__( 'Millimeter als Einheit, Ursprung an der Unterkante der Montagefläche, Y nach oben. Nur so sitzt jedes Modul ohne Nacharbeit an seiner Position.', 'lindenweg16' ) . '</p>';
+		printf(
+			'<option value="keines" %s>%s</option>',
+			selected( '', $aktuell, false ),
+			esc_html__( 'Kein Modell – maßhaltiger Ersatzkörper', 'lindenweg16' )
+		);
+
+		foreach ( WebModel::demo_models() as $key => $label ) {
+			printf(
+				'<option value="%s" %s>%s</option>',
+				esc_attr( WebModel::DEMO_PREFIX . $key ),
+				selected( $key, $demo, false ),
+				esc_html( $label )
+			);
+		}
+
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'Die Demo-Modelle gehören zum Plugin und zeigen nicht den Haster Haken. Sie sind zum Einrichten und Ausprobieren da – vor dem Verkauf gehört das eigene Modell hierher.', 'lindenweg16' ) . '</p>';
+		echo '</td></tr>';
+
+		echo '<tr><th scope="row"><label for="lw16-modell">' . esc_html__( 'Eigenes Modell hochladen (.glb)', 'lindenweg16' ) . '</label></th><td>';
+		echo '<input type="file" name="model" id="lw16-modell" accept=".glb">';
+
+		if ( '' !== $aktuell ) {
+			printf(
+				'<p class="description">%s <code>%s</code></p>',
+				esc_html__( 'Hinterlegt:', 'lindenweg16' ),
+				esc_html( $aktuell )
+			);
+		}
+
+		echo '<p class="description">' . esc_html__( 'Ursprung an der Unterkante der Montagefläche, Y nach oben. Die Einheit ist gleichgültig – die Ansicht skaliert das Modell auf die oben gepflegte Höhe. Eine hochgeladene Datei sticht die Auswahl darüber.', 'lindenweg16' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '</tbody></table>';

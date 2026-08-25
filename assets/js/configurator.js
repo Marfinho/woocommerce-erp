@@ -814,15 +814,36 @@ class Ansicht {
 	}
 
 	/**
-	 * Abstand und Ziel so wählen, dass das Basismodul das Bild füllt.
+	 * Abstand und Ziel so wählen, dass der Haken das Bild füllt.
+	 *
+	 * Maßgeblich ist der Umriss dessen, was gerade in der Szene steht –
+	 * eine breite Ablage darf nicht am Rand abgeschnitten werden, nur
+	 * weil das Basismodul schmal ist. Gerechnet wird gegen beide
+	 * Richtungen des Bildwinkels; der größere Abstand gewinnt.
 	 */
 	richteKameraAus() {
+		const THREE = this.THREE;
 		const basis = this.k.basis();
-		const hoehe = ( basis.height / MM ) * 1.35;
 		const winkel = ( this.kamera.fov * Math.PI ) / 180;
 
-		this.mitte = ( basis.height / MM ) / 2;
-		this.abstand = ( hoehe / 2 ) / Math.tan( winkel / 2 ) / Math.min( 1, this.kamera.aspect );
+		let hoehe = basis.height / MM;
+		let breite = ( basis.width || 60 ) / MM;
+
+		this.mitte = hoehe / 2;
+
+		const umriss = new THREE.Box3().setFromObject( this.gruppe );
+
+		if ( ! umriss.isEmpty() ) {
+			hoehe = umriss.max.y - umriss.min.y;
+			breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
+			this.mitte = ( umriss.min.y + umriss.max.y ) / 2;
+		}
+
+		const luft = 1.2;
+		const senkrecht = ( hoehe * luft / 2 ) / Math.tan( winkel / 2 );
+		const waagerecht = ( breite * luft / 2 ) / ( Math.tan( winkel / 2 ) * this.kamera.aspect );
+
+		this.abstand = Math.max( senkrecht, waagerecht );
 		this.wand.position.set( 0, this.mitte, -0.06 );
 	}
 
@@ -843,7 +864,7 @@ class Ansicht {
 			if ( teil.model ) {
 				try {
 					const geladen = await this.lader.loadAsync( teil.model );
-					return this.richteAus( geladen.scene );
+					return this.richteAus( geladen.scene, teil );
 				} catch ( fehler ) {
 					// Ein fehlendes Modell darf die Bestellung nicht aufhalten.
 					return this.ersatzkoerper( teil );
@@ -859,20 +880,38 @@ class Ansicht {
 	}
 
 	/**
-	 * Ein geladenes Modell auf die Unterkante stellen.
+	 * Ein geladenes Modell auf Maß bringen und auf die Unterkante stellen.
 	 *
-	 * Die Höhe entscheidet über die Position am Haken; sie muss deshalb
-	 * dort beginnen, wo das Teil aufsetzt. Die Lage in Breite und Tiefe
-	 * bleibt, wie sie konstruiert wurde – ein Haken zeigt nach vorn.
+	 * Skaliert wird auf die gepflegte Bauhöhe. Das erspart die Frage, in
+	 * welcher Einheit jemand exportiert hat – ein Modell in Millimetern
+	 * wäre sonst tausendmal zu groß –, und stellt sicher, dass das Bild
+	 * dieselbe Höhe zeigt, mit der die Positionen gerechnet werden.
+	 * Weicht das Modell von der gepflegten Höhe ab, gewinnt die gepflegte
+	 * Höhe: Sie ist es, an der die Module hängen.
+	 *
+	 * Die Lage in Breite und Tiefe bleibt, wie sie konstruiert wurde – ein
+	 * Haken zeigt nach vorn.
 	 *
 	 * @param {object} objekt Szene aus der Datei.
+	 * @param {object} teil   Katalogeintrag.
 	 * @returns {object}
 	 */
-	richteAus( objekt ) {
+	richteAus( objekt, teil ) {
 		const THREE = this.THREE;
-		const kasten = new THREE.Box3().setFromObject( objekt );
 
-		objekt.position.y -= kasten.min.y;
+		objekt.updateMatrixWorld( true );
+
+		const kasten = new THREE.Box3().setFromObject( objekt );
+		const hoehe = kasten.max.y - kasten.min.y;
+
+		if ( hoehe > 0 && teil.height > 0 ) {
+			objekt.scale.setScalar( ( teil.height / MM ) / hoehe );
+			objekt.updateMatrixWorld( true );
+		}
+
+		const skaliert = new THREE.Box3().setFromObject( objekt );
+
+		objekt.position.y -= skaliert.min.y;
 		objekt.traverse( ( knoten ) => {
 			if ( knoten.isMesh ) {
 				knoten.castShadow = true;
@@ -985,24 +1024,34 @@ class Ansicht {
 
 		this.sperren = new THREE.Group();
 
+		// Zwei Marken links und rechts am Umriss statt einer Fläche vor dem
+		// Teil: Eine Fläche schwebt bei jedem Profil irgendwo in der Luft,
+		// sobald das Basismodul nicht durchgehend gleich breit ist. Marken
+		// am Rand sitzen immer an der Silhouette und bleiben auch gedreht
+		// sichtbar.
+		const halb = ( ( basis.width || 60 ) / MM ) / 2;
+		const tiefe = ( basis.depth || 20 ) / MM;
+		const stoff = new THREE.MeshBasicMaterial( {
+			color: 0xb6262a,
+			transparent: true,
+			opacity: 0.5,
+			depthWrite: false,
+		} );
+
 		basis.blocks.forEach( ( block ) => {
 			const hoehe = ( block.to - block.from ) / MM;
-			const breite = ( ( basis.width || 60 ) / MM ) * 1.02;
+			const mitte = ( block.from / MM ) + hoehe / 2;
 
-			const band = new THREE.Mesh(
-				new THREE.PlaneGeometry( breite, hoehe ),
-				new THREE.MeshBasicMaterial( {
-					color: 0xb6262a,
-					transparent: true,
-					opacity: 0.18,
-					depthWrite: false,
-					side: THREE.DoubleSide,
-				} )
-			);
+			[ -1, 1 ].forEach( ( seite ) => {
+				const marke = new THREE.Mesh(
+					new THREE.BoxGeometry( halb * 0.14, hoehe, tiefe * 0.9 ),
+					stoff
+				);
 
-			band.position.set( 0, ( block.from / MM ) + hoehe / 2, ( ( basis.depth || 20 ) / MM ) + 0.002 );
-			band.userData.istSperre = true;
-			this.sperren.add( band );
+				marke.position.set( seite * ( halb + halb * 0.12 ), mitte, tiefe / 2 );
+				marke.userData.istSperre = true;
+				this.sperren.add( marke );
+			} );
 		} );
 
 		this.gruppe.add( this.sperren );

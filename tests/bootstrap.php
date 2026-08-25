@@ -262,6 +262,7 @@ foreach ( array(
 	'Layout',
 	'ConfigCodec',
 	'ColorHex',
+	'WebModel',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Configurator/' . $lw16_class . '.php';
 }

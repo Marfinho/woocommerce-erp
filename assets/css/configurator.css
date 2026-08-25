@@ -49,7 +49,9 @@
 .lw16-haken__ansicht {
 	position: relative;
 	aspect-ratio: 3 / 4;
-	background: radial-gradient(circle at 50% 35%, #ffffff 0%, var(--lw16-flaeche) 70%);
+	/* Deutlich abgesetzt vom Teil: Der Haken ist heute weiß, und weiß auf
+	   fast weiß ist kein Bild, sondern ein Suchbild. */
+	background: radial-gradient(circle at 50% 30%, #ffffff 0%, #ebeae5 55%, #dedcd5 100%);
 	border: 1px solid var(--lw16-rand);
 	border-radius: 4px;
 	overflow: hidden;

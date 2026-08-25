@@ -52,6 +52,7 @@ assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.
                              betrieb-staffel.js, loyalty.js, wishlist.js
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
+assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
 docs/handbuch.html           Bedienungsanleitung
 ```
 
@@ -245,6 +246,13 @@ vertikal frei verschiebbar sind. Eingebunden wird er mit dem Shortcode
   Verzeichnis.
 - **Ohne Modell zeigt der Konfigurator einen maßhaltigen Ersatzkörper** aus
   Höhe, Breite und Tiefe. Bestellen lässt sich damit alles.
+- **Drei Demo-Modelle liegen bei** (`assets/models/demo/`, erzeugt von
+  `erzeugen.py` daneben): Schiene 600 mm mit Schraubaugen bei 40–90 und
+  500–550 mm, Haken 80 mm, Ablage 150 mm. Sie sind je Teil auswählbar, zum
+  Einrichten und Ausprobieren – nicht zum Verkaufen.
+- **Die Einheit des Modells ist gleichgültig.** Die Ansicht skaliert es auf
+  die gepflegte Bauhöhe; sie ist es, an der die Module hängen. Wichtig sind
+  nur Y nach oben und der Ursprung an der Unterkante.
 
 **Aufbauregeln.** Positionen sind Millimeter von der Unterkante des
 Basismoduls, gemessen an der Unterkante des Moduls. Zwei Module dürfen sich

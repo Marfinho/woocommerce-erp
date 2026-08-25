@@ -51,12 +51,63 @@ class WebModel {
 	}
 
 	/**
+	 * Kennzeichen einer mitgelieferten Vorlage.
+	 *
+	 * In `model_file` steht dann nicht der Name einer hochgeladenen Datei,
+	 * sondern `demo:haken`. Das braucht keine zweite Spalte und macht
+	 * beim Lesen sofort klar, woher das Modell kommt.
+	 */
+	const DEMO_PREFIX = 'demo:';
+
+	/**
+	 * Die mitgelieferten Demo-Modelle.
+	 *
+	 * Sie zeigen, dass Maßstab, Anordnung und Sperrbereiche zusammen-
+	 * passen – nicht den Haster Haken. Wer sie stehen lässt, verkauft ein
+	 * Bild, das nicht zum Teil gehört; sie sind zum Einrichten da, nicht
+	 * zum Betrieb.
+	 *
+	 * @return array Kennung => Beschriftung.
+	 */
+	public static function demo_models() {
+		return array(
+			'schiene' => __( 'Demo: Schiene mit zwei Schraubaugen (600 mm)', 'lindenweg16' ),
+			'haken'   => __( 'Demo: Haken (80 mm)', 'lindenweg16' ),
+			'ablage'  => __( 'Demo: Ablage (150 mm)', 'lindenweg16' ),
+		);
+	}
+
+	/**
+	 * Zeigt ein Verweis auf ein mitgeliefertes Modell?
+	 *
+	 * @param string $name Wert aus model_file.
+	 * @return string Kennung des Demo-Modells oder leer.
+	 */
+	public static function demo_key( $name ) {
+		$name = (string) $name;
+
+		if ( 0 !== strpos( $name, self::DEMO_PREFIX ) ) {
+			return '';
+		}
+
+		$key = substr( $name, strlen( self::DEMO_PREFIX ) );
+
+		return array_key_exists( $key, self::demo_models() ) ? $key : '';
+	}
+
+	/**
 	 * Adresse einer abgelegten Datei.
 	 *
-	 * @param string $name Dateiname ohne Pfad.
+	 * @param string $name Dateiname ohne Pfad oder `demo:`-Verweis.
 	 * @return string Leer, wenn nichts hinterlegt ist.
 	 */
 	public static function url( $name ) {
+		$demo = self::demo_key( $name );
+
+		if ( '' !== $demo ) {
+			return \Lindenweg16\Core\Assets::url( 'assets/models/demo/' . $demo . '.glb' );
+		}
+
 		$name = basename( (string) $name );
 
 		if ( '' === $name || ! is_readable( trailingslashit( self::dir() ) . $name ) ) {
@@ -155,6 +206,12 @@ class WebModel {
 	 * @param string $name Dateiname ohne Pfad.
 	 */
 	public static function delete( $name ) {
+		// Ein Demo-Modell gehört zum Plugin und wird nie gelöscht – sonst
+		// nimmt das Entfernen eines Teils die Vorlage für alle mit.
+		if ( '' !== self::demo_key( $name ) ) {
+			return;
+		}
+
 		$name = basename( (string) $name );
 
 		if ( '' === $name ) {
