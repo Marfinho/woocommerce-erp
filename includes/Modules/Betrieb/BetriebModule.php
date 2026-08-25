@@ -48,6 +48,7 @@ class BetriebModule {
 			'lw16-betrieb-druckjournal' => array( __( 'Druckjournal', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-artikel'      => array( __( 'Artikel & Revisionen', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-drucker'      => array( __( 'Drucker & Wartung', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-konfigurator' => array( __( 'Konfigurator', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-kapazitaet'   => array( __( 'Kapazität', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-material'     => array( __( 'Material', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-lager'        => array( __( 'Lager', 'lindenweg16' ), 'lw16_capture' ),

@@ -44,10 +44,14 @@ includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
 includes/Modules/POS/        POSModule
 includes/Modules/Support/    SupportModule
 includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, BetriebModule, Admin/
+includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, ConfigCodec,
+                             Catalog, ShopLink, ColorHex, WebModel, CartIntegration, Frontend,
+                             ConfiguratorModule, Admin/ConfiguratorPage
 assets/css/                  admin.css, betrieb.css, betrieb-mobile.css, frontend.css
 assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.js,
                              betrieb-staffel.js, loyalty.js, wishlist.js
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
+assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 docs/handbuch.html           Bedienungsanleitung
 ```
 
@@ -209,6 +213,59 @@ ihre Kleinteile beim Druckjob, Bestandteile eines Halbzeugs beim Fertigmelden
 des Auftrags, zugekaufte Beigaben beim Packen. Picklisten buchen nie – sie
 liefern nur die Ortsangabe.
 
+### Modul Konfigurator
+
+Der Haster Haken zum Zusammenstellen: ein Basismodul und Module, die daran
+vertikal frei verschiebbar sind. Eingebunden wird er mit dem Shortcode
+`[lw16_konfigurator]`; gepflegt wird er unter **Betrieb → Konfigurator**.
+
+**Grundsätze**
+
+- **Der Konfigurator erfindet keine Artikel.** Basismodule und Module sind
+  Artikel aus dem Stamm mit einem Produkt im Shop. Gepflegt wird hier nur,
+  was der Artikelstamm nicht wissen kann: Rolle, Maße, Schaumodell und die
+  Sperrbereiche des Basismoduls.
+- **Eine Konfiguration wird zu echten Bestellpositionen** – Basismodul plus
+  je Modul eine Zeile, jede zum Preis ihres Produkts. Lager, Picklisten und
+  Bestandsführung brauchen deshalb keine Sonderbehandlung. Eine
+  Gruppenkennung hält die Zeilen zusammen: Wer das Basismodul entfernt,
+  entfernt den ganzen Haken, und die Menge gilt für alle Teile.
+- **Der Preis kommt nie aus dem Browser.** Der Konfigurator schickt Artikel
+  und Positionen, den Rest entscheidet WooCommerce.
+- **Das Formular ist die Wahrheit, die 3D-Ansicht ist Zugabe.** Alles, was im
+  Bild passiert, landet in denselben Feldern, die auch ohne JavaScript
+  ausgefüllt werden können. Ohne WebGL fehlt die Ansicht und sonst nichts.
+- **Die Regeln stehen zweimal.** Verbindlich ist `Layout.php` auf dem Server;
+  die Fassung im Browser sorgt nur dafür, dass sich ein Modul beim Ziehen
+  sofort sperrig anfühlt.
+- **Schaumodelle sind keine Konstruktionsdaten.** Die `.glb`-Dateien liegen
+  öffentlich im Upload-Verzeichnis (`lw16-konfigurator/`) und gehören
+  reduziert exportiert – ohne Innengeometrie, Gewinde und Toleranzen. Die
+  3MF-Dateien der Revisionen bleiben davon unberührt im geschützten
+  Verzeichnis.
+- **Ohne Modell zeigt der Konfigurator einen maßhaltigen Ersatzkörper** aus
+  Höhe, Breite und Tiefe. Bestellen lässt sich damit alles.
+
+**Aufbauregeln.** Positionen sind Millimeter von der Unterkante des
+Basismoduls, gemessen an der Unterkante des Moduls. Zwei Module dürfen sich
+nicht überlappen, keines über die Schiene hinausragen und keines auf einem
+Sperrbereich sitzen – dort wird der Haken an die Wand geschraubt.
+
+**Geteilte Links.** Eine Konfiguration lässt sich als Code weitergeben
+(`?haken=v1.<Basis>.<Farbe>.<Artikel>@<Position>,…`). Gelesen wird er streng:
+Was nicht der Form entspricht, wird abgewiesen; was der Katalog nicht mehr
+kennt, fällt beim Öffnen still heraus.
+
+**Farbe.** Der Konfigurator nutzt das Farbsystem des Moduls Betrieb. Ist das
+Shop-Produkt variabel, wird die Variante zur gewählten Farbe gesucht – gibt
+es sie nicht, ist das Teil in dieser Farbe nicht bestellbar und sagt das
+auch. Die Bildschirmfarbe der Vorschau kommt aus `ColorHex` und lässt sich
+über den Filter `lw16_konfigurator_farbwert` je Slug anpassen.
+
+**An der Bestellung** steht die Konfiguration als Text: Gruppenkennung an
+jeder Zeile, die Position je Modul, der vollständige Code an der Zeile des
+Basismoduls.
+
 ## Umsetzungsstand
 
 Das Plugin ist im Einsatz. Die folgende Liste beschreibt, was tatsächlich
@@ -226,6 +283,11 @@ vorhanden ist – nicht, was geplant war.
   E-Rechnung (XRechnung/ZUGFeRD), Betriebsprüfungs-Export, GoBD-Selbstprüfung,
   Verfahrensdokumentation.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
+- **Konfigurator:** Basismodul und frei verschiebbare Module in einer
+  räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
+  für die Wandbefestigung, Prüfung des Aufbaus auf dem Server, echte
+  Bestellpositionen je Teil, teilbare Konfigurationslinks, vollständig
+  bedienbar ohne WebGL.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
 - **Produktion:** Druck-Queue, Packliste/Versandschein-PDF, DHL-Verlinkung und

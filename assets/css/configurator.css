@@ -1,0 +1,257 @@
+/**
+ * Konfigurator für den Haster Haken.
+ *
+ * Zwei Spalten am Schreibtisch, eine untereinander am Telefon. Die
+ * Ansicht bleibt beim Blättern stehen, solange Platz dafür ist – wer
+ * unten ein Modul wählt, soll oben sehen, was passiert.
+ *
+ * Farben kommen aus Eigenschaften mit Vorgabewert: Ein Theme kann sie
+ * überschreiben, ohne diese Datei anzufassen.
+ */
+
+/*
+ * Ein verstecktes Element bleibt versteckt. Ohne diese Regel schlägt
+ * jede Klasse mit eigener display-Angabe das display:none, das der
+ * Browser einem hidden-Element gibt – die Modulauswahl stünde dann
+ * schon da, bevor die Bedienung sie freigibt.
+ */
+.lw16-haken [hidden] {
+	display: none !important;
+}
+
+.lw16-haken {
+	--lw16-rand: #dcdcd6;
+	--lw16-flaeche: #f6f5f2;
+	--lw16-text: #1f1f1d;
+	--lw16-gedaempft: #6b6b66;
+	--lw16-akzent: #2b4a6b;
+
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 2rem;
+	color: var(--lw16-text);
+}
+
+@media (min-width: 60em) {
+	.lw16-haken {
+		grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+		align-items: start;
+	}
+
+	.lw16-haken__buehne {
+		position: sticky;
+		top: 2rem;
+	}
+}
+
+/* Ansicht ------------------------------------------------------------ */
+
+.lw16-haken__ansicht {
+	position: relative;
+	aspect-ratio: 3 / 4;
+	background: radial-gradient(circle at 50% 35%, #ffffff 0%, var(--lw16-flaeche) 70%);
+	border: 1px solid var(--lw16-rand);
+	border-radius: 4px;
+	overflow: hidden;
+	touch-action: none;
+}
+
+.lw16-haken__leinwand {
+	display: block;
+	width: 100%;
+	height: 100%;
+	outline: none;
+}
+
+.lw16-haken__leinwand:focus-visible {
+	outline: 2px solid var(--lw16-akzent);
+	outline-offset: -2px;
+}
+
+.lw16-haken__hinweis {
+	position: absolute;
+	inset: auto 1rem 1rem;
+	margin: 0;
+	color: var(--lw16-gedaempft);
+	font-size: 0.9rem;
+	text-align: center;
+}
+
+.lw16-haken__werkzeuge {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+	min-height: 2rem;
+}
+
+.lw16-haken__knopf {
+	background: none;
+	border: 1px solid var(--lw16-rand);
+	border-radius: 3px;
+	padding: 0.35rem 0.75rem;
+	font-size: 0.85rem;
+	color: var(--lw16-gedaempft);
+	cursor: pointer;
+}
+
+.lw16-haken__knopf:hover {
+	border-color: var(--lw16-akzent);
+	color: var(--lw16-akzent);
+}
+
+.lw16-haken__meldung {
+	font-size: 0.85rem;
+	color: var(--lw16-akzent);
+}
+
+/* Formular ----------------------------------------------------------- */
+
+.lw16-haken__titel {
+	margin: 1.5rem 0 0.5rem;
+	font-size: 1rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__titel:first-child {
+	margin-top: 0;
+}
+
+.lw16-haken__erklaerung {
+	margin: 0 0 0.75rem;
+	font-size: 0.9rem;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__feld {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.lw16-haken__feld select,
+.lw16-haken__feld input {
+	max-width: 100%;
+}
+
+.lw16-haken__einheit {
+	font-size: 0.85rem;
+	color: var(--lw16-gedaempft);
+}
+
+/* Modulliste --------------------------------------------------------- */
+
+.lw16-haken__module {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.lw16-haken__zeile {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 6rem auto auto;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4rem 0.5rem;
+	border: 1px solid var(--lw16-rand);
+	border-radius: 3px;
+	background: #fff;
+}
+
+.lw16-haken__zeile.is-aktiv {
+	border-color: var(--lw16-akzent);
+	box-shadow: inset 0 0 0 1px var(--lw16-akzent);
+}
+
+.lw16-haken__weg {
+	background: none;
+	border: none;
+	padding: 0.2rem 0.4rem;
+	font-size: 0.8rem;
+	color: var(--lw16-gedaempft);
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.lw16-haken__weg:hover {
+	color: #b6262a;
+}
+
+.lw16-haken__leer {
+	margin: 0;
+	padding: 0.75rem;
+	border: 1px dashed var(--lw16-rand);
+	border-radius: 3px;
+	font-size: 0.9rem;
+	color: var(--lw16-gedaempft);
+}
+
+/* Angebot ------------------------------------------------------------ */
+
+.lw16-haken__auswahl {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+	gap: 0.5rem;
+	margin-top: 0.75rem;
+}
+
+.lw16-haken__modulknopf {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	padding: 0.6rem;
+	background: var(--lw16-flaeche);
+	border: 1px solid var(--lw16-rand);
+	border-radius: 3px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.lw16-haken__modulknopf:hover {
+	border-color: var(--lw16-akzent);
+	background: #fff;
+}
+
+.lw16-haken__modulname {
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.lw16-haken__modulmass {
+	font-size: 0.8rem;
+	color: var(--lw16-gedaempft);
+}
+
+/* Abschluss ---------------------------------------------------------- */
+
+.lw16-haken__abschluss {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	margin-top: 1.5rem;
+	padding-top: 1rem;
+	border-top: 1px solid var(--lw16-rand);
+}
+
+.lw16-haken__preis {
+	margin: 0;
+	font-size: 1.4rem;
+	font-weight: 600;
+}
+
+.lw16-haken--leer {
+	padding: 1rem;
+	border: 1px dashed var(--lw16-rand);
+	color: var(--lw16-gedaempft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lw16-haken * {
+		transition: none !important;
+	}
+}

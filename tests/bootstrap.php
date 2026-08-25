@@ -96,6 +96,19 @@ if ( ! function_exists( 'esc_html__' ) ) {
 	}
 }
 
+if ( ! function_exists( 'apply_filters' ) ) {
+	/**
+	 * Gibt den Wert unverändert zurück – ohne WordPress hängt kein Filter.
+	 *
+	 * @param string $hook  Filtername.
+	 * @param mixed  $value Wert.
+	 * @return mixed
+	 */
+	function apply_filters( $hook, $value ) { // phpcs:ignore
+		return $value;
+	}
+}
+
 if ( ! function_exists( 'get_option' ) ) {
 	/**
 	 * Liefert im Test immer den Vorgabewert – die Rechenklassen greifen nur
@@ -242,4 +255,13 @@ foreach ( array(
 	'ReorderPage',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';
+}
+
+// Seiteneffektfreie Klassen des Moduls Konfigurator.
+foreach ( array(
+	'Layout',
+	'ConfigCodec',
+	'ColorHex',
+) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Configurator/' . $lw16_class . '.php';
 }

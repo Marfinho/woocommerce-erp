@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '19';
+	const DB_VERSION = '20';
 
 	/**
 	 * Aktivierungsroutine.
@@ -643,6 +643,9 @@ class Installer {
 
 		// --- Modul Betrieb ------------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Betrieb\Schema::tables( $p, $charset_collate ) );
+
+		// --- Modul Konfigurator -------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\Configurator\Schema::tables( $p, $charset_collate ) );
 
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
