@@ -44,7 +44,7 @@ class ArticleRepository {
 	public static function sourcing_labels() {
 		return array(
 			'druck'   => __( 'Rohling aus dem Drucker', 'lindenweg16' ),
-			'montage' => __( 'Halbzeug oder Baugruppe (Montage)', 'lindenweg16' ),
+			'montage' => __( 'Set, Baugruppe oder Halbzeug (aus Stückliste)', 'lindenweg16' ),
 			'zukauf'  => __( 'Zukauf', 'lindenweg16' ),
 			'hybrid'  => __( 'Hybrid (Zukauf mit gedruckten Anbauteilen)', 'lindenweg16' ),
 		);
@@ -369,6 +369,16 @@ class ArticleRepository {
 		$name = isset( $input['name'] ) ? sanitize_text_field( $input['name'] ) : '';
 		if ( '' === $name ) {
 			$errors[] = __( 'Eine Bezeichnung ist Pflicht.', 'lindenweg16' );
+		}
+
+		// Der Beschaffungsweg entscheidet über alles Weitere: ob der Artikel
+		// eine Revision braucht, ob er eine Stückliste hat, wie er kalkuliert
+		// wird. Ein stillschweigend gesetzter Standard macht aus einem Set
+		// einen Rohling, der dann grundlos nach einem Druckprofil verlangt.
+		// Schickt das Formular das Feld leer mit, ist das eine fehlende
+		// Angabe und kein Grund zu raten.
+		if ( array_key_exists( 'sourcing_type', $input ) && '' === trim( (string) $input['sourcing_type'] ) ) {
+			$errors[] = __( 'Bitte den Beschaffungsweg wählen – er entscheidet, ob der Artikel ein Druckprofil, eine Stückliste oder Beschaffungsdaten braucht.', 'lindenweg16' );
 		}
 
 		$sourcing = self::enum( $input, 'sourcing_type', self::SOURCING, 'druck' );

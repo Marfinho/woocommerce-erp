@@ -961,7 +961,18 @@ class ArticlesPage {
 
 		$this->field( __( 'Artikelnummer', 'lindenweg16' ), 'sku', $this->val( $edit, 'sku' ), 'text', __( 'Pflicht, eindeutig, z. B. HH-001.', 'lindenweg16' ) );
 		$this->field( __( 'Bezeichnung', 'lindenweg16' ), 'name', $this->val( $edit, 'name' ) );
-		$this->select( __( 'Beschaffungsweg', 'lindenweg16' ), 'sourcing_type', $sourcing, $edit ? $edit['sourcing_type'] : 'druck', __( 'Rohling = kommt aus dem Drucker, braucht eine Revision. Halbzeug/Baugruppe = entsteht durch Montage aus der Stückliste, Fertigungsauftrag unter Lagerplätze &amp; Picklisten. Zukauf = wird bestellt, Kosten aus dem Reiter Beschaffung.', 'lindenweg16' ) );
+		// Bei einem neuen Artikel steht bewusst nichts vorne: Der
+		// Beschaffungsweg entscheidet über alles Weitere, den soll niemand
+		// versehentlich übernehmen.
+		$wege = $edit ? $sourcing : array( '' => __( '— bitte wählen —', 'lindenweg16' ) ) + $sourcing;
+
+		$this->select(
+			__( 'Beschaffungsweg', 'lindenweg16' ),
+			'sourcing_type',
+			$wege,
+			$edit ? $edit['sourcing_type'] : '',
+			__( 'Rohling = kommt aus dem Drucker, braucht eine Revision mit Gewicht und Druckzeit. Set/Baugruppe/Halbzeug = besteht aus anderen Artikeln und Komponenten, hat selbst kein Druckprofil – die Teile darin sind einzeln revisioniert; erfasst wird das im Reiter Stückliste. Zukauf = wird bestellt, Kosten aus dem Reiter Beschaffung. Hybrid = beides.', 'lindenweg16' )
+		);
 		$this->select( __( 'Status', 'lindenweg16' ), 'status', $status, $edit ? $edit['status'] : 'entwicklung' );
 		$this->checkbox( __( 'Im Shop verkäuflich', 'lindenweg16' ), 'sellable', $edit ? $edit['sellable'] : 1, __( 'Abstandshalter und Wandanker sind eigene Artikel, aber nicht verkäuflich.', 'lindenweg16' ) );
 		$this->checkbox( __( 'Rabattfähig', 'lindenweg16' ), 'discountable', $edit ? $edit['discountable'] : 1, __( 'Personalisierte Artikel sind von der Händlerstaffel ausgenommen.', 'lindenweg16' ) );
@@ -1083,7 +1094,7 @@ class ArticlesPage {
 		}
 
 		if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
-			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Dieser Artikel hat kein Druckprofil. Ein Halbzeug entsteht durch Montage aus seiner Stückliste, ein Zukaufartikel kommt aus dem Reiter Beschaffung.', 'lindenweg16' ) . '</p></div>';
+			echo '<div class="notice notice-info inline"><p>' . esc_html__( 'Dieser Artikel hat kein eigenes Druckprofil und braucht auch keins. Ein Set oder eine Baugruppe besteht aus anderen Artikeln und Komponenten – die sind jeweils für sich revisioniert. Was drin ist, steht im Reiter Stückliste; ein Zukaufartikel kommt aus dem Reiter Beschaffung.', 'lindenweg16' ) . '</p></div>';
 			return;
 		}
 

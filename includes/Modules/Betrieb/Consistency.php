@@ -209,7 +209,11 @@ class Consistency {
 
 		$findings = array_merge(
 			self::check_makeable( $articles, isset( $ctx['bom_parents'] ) ? (array) $ctx['bom_parents'] : array() ),
-			self::check_printable( $articles, isset( $ctx['revisions'] ) ? (array) $ctx['revisions'] : array() ),
+			self::check_printable(
+				$articles,
+				isset( $ctx['revisions'] ) ? (array) $ctx['revisions'] : array(),
+				isset( $ctx['bom_parents'] ) ? (array) $ctx['bom_parents'] : array()
+			),
 			self::check_models(
 				$articles,
 				isset( $ctx['revisions'] ) ? (array) $ctx['revisions'] : array(),
@@ -290,11 +294,12 @@ class Consistency {
 	/**
 	 * Gedruckte Artikel ohne freigegebene Revision.
 	 *
-	 * @param array $articles  Artikel.
-	 * @param array $revisions article_id => true.
+	 * @param array $articles    Artikel.
+	 * @param array $revisions   article_id => true.
+	 * @param array $bom_parents article_id => Anzahl Stücklistenzeilen.
 	 * @return array
 	 */
-	public static function check_printable( array $articles, array $revisions ) {
+	public static function check_printable( array $articles, array $revisions, array $bom_parents = array() ) {
 		$out = array();
 
 		foreach ( $articles as $id => $article ) {
@@ -308,18 +313,39 @@ class Consistency {
 				continue;
 			}
 
-			if ( empty( $revisions[ (int) $id ] ) ) {
+			if ( ! empty( $revisions[ (int) $id ] ) ) {
+				continue;
+			}
+
+			// Ein gedruckter Artikel mit Stückliste ist fast immer ein Set,
+			// das beim Anlegen den falschen Beschaffungsweg bekommen hat.
+			// Dann fehlt nicht die Revision – dann stimmt die Einordnung
+			// nicht, und die Meldung soll das sagen statt zur Blindarbeit
+			// aufzufordern.
+			if ( ! empty( $bom_parents[ (int) $id ] ) ) {
 				$out[] = self::finding(
 					'fehler',
 					__( 'Artikel', 'lindenweg16' ),
 					sprintf(
 						/* translators: %s: Artikel. */
-						__( '%s wird gedruckt, hat aber keine freigegebene Revision.', 'lindenweg16' ),
+						__( '%s ist als gedruckter Rohling eingetragen, hat aber eine Stückliste und kein Druckprofil.', 'lindenweg16' ),
 						self::label( $article )
 					),
-					__( 'Revision anlegen und aktiv setzen – ohne Bauteilgewicht gibt es weder Kalkulation noch Druckauftrag.', 'lindenweg16' )
+					__( 'Das sieht nach einem Set aus. Dann gehört der Beschaffungsweg auf „Set, Baugruppe oder Halbzeug" – ein Set braucht keine eigene Revision, die Teile darin sind einzeln revisioniert.', 'lindenweg16' )
 				);
+				continue;
 			}
+
+			$out[] = self::finding(
+				'fehler',
+				__( 'Artikel', 'lindenweg16' ),
+				sprintf(
+					/* translators: %s: Artikel. */
+					__( '%s wird gedruckt, hat aber keine freigegebene Revision.', 'lindenweg16' ),
+					self::label( $article )
+				),
+				__( 'Revision anlegen und aktiv setzen – ohne Bauteilgewicht gibt es weder Kalkulation noch Druckauftrag. Besteht der Artikel in Wahrheit aus mehreren Teilen, gehört der Beschaffungsweg auf „Set, Baugruppe oder Halbzeug".', 'lindenweg16' )
+			);
 		}
 
 		return $out;

@@ -94,6 +94,51 @@ class BetriebConsistencyTest extends TestCase {
 	}
 
 	/**
+	 * Ein gedruckter Artikel mit Stückliste ist fast immer ein Set, das
+	 * beim Anlegen den falschen Beschaffungsweg bekommen hat. Die Meldung
+	 * soll das sagen, statt eine Revision zu verlangen, die es nie geben
+	 * wird.
+	 */
+	public function test_gedruckter_artikel_mit_stueckliste_ist_wohl_ein_set() {
+		$befunde = Consistency::check_printable(
+			array( 1 => $this->artikel() ),
+			array(),
+			array( 1 => 3 )
+		);
+
+		$this->assertCount( 1, $befunde );
+		$this->assertStringContainsString( 'Stückliste', $befunde[0]['text'] );
+		$this->assertStringContainsString( 'Set', $befunde[0]['fix'] );
+	}
+
+	/**
+	 * Ohne Stückliste bleibt es bei der fehlenden Revision – aber der
+	 * Hinweis auf das Set steht auch dort, weil genau das der häufigste
+	 * Grund ist.
+	 */
+	public function test_ohne_stueckliste_fehlt_schlicht_die_revision() {
+		$befunde = Consistency::check_printable( array( 1 => $this->artikel() ), array() );
+
+		$this->assertCount( 1, $befunde );
+		$this->assertStringContainsString( 'keine freigegebene Revision', $befunde[0]['text'] );
+		$this->assertStringContainsString( 'Set', $befunde[0]['fix'] );
+	}
+
+	/**
+	 * Ein Set verlangt keine Revision.
+	 */
+	public function test_ein_set_verlangt_keine_revision() {
+		$this->assertSame(
+			array(),
+			Consistency::check_printable(
+				array( 1 => $this->artikel( array( 'sourcing_type' => 'montage' ) ) ),
+				array(),
+				array( 1 => 3 )
+			)
+		);
+	}
+
+	/**
 	 * Montageartikel ohne Stückliste lässt sich nicht fertigen.
 	 */
 	public function test_montage_ohne_stueckliste() {
