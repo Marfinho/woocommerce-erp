@@ -669,7 +669,7 @@ class BinsPage {
 			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $layout['label'] ) );
 		}
 		echo '</optgroup>';
-		printf( '<optgroup label="%s">', esc_attr__( 'Etikettendrucker Brother QL · 62-mm-Rolle, eine Seite = ein Etikett', 'lindenweg16' ) );
+		printf( '<optgroup label="%s">', esc_attr__( 'Etikettendrucker Brother QL · eine Seite = ein Etikett', 'lindenweg16' ) );
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
 			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $roll['label'] ) );
 		}
@@ -683,7 +683,7 @@ class BinsPage {
 		echo '</ul>';
 
 		echo '<p class="description">' . esc_html__( 'In jedem Fall ohne Skalierung drucken: im Druckdialog „Tatsächliche Grösse" und nicht „An Seite anpassen". Sonst schrumpft der Bogen um ein paar Prozent – auf dem Klebebogen liegen die Etiketten dann neben der Stanzung, auf der Rolle wird der QR-Code so klein, dass ihn keine Kamera mehr liest.', 'lindenweg16' ) . '</p>';
-		echo '<p class="description">' . esc_html__( 'Die Formate für den Etikettendrucker sind alle 62 mm breit – das ist die Rollenbreite des QL-710W, nicht die Etikettenlänge. Jede Seite des PDFs ist genau ein Etikett. Im Druckdialog den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus.', 'lindenweg16' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Bei den Formaten für den Etikettendrucker ist die erste Zahl die Rollenbreite, die zweite die Etikettenlänge – so benennt Brother seine Rollen. Das gewählte Format muss zu der Rolle passen, die gerade im Gerät liegt: 62 × 29 gehört auf die breite Rolle, 29 × 90 auf die schmale. Das Adressetikett 29 × 90 wird der Länge nach beschriftet; gedreht ist dabei der Aufdruck, nicht die Seite – im Druckdialog also nichts auf Querformat stellen. Jede Seite des PDFs ist genau ein Etikett. Im Druckdialog den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus.', 'lindenweg16' ) . '</p>';
 		echo '<p class="description">' . esc_html__( 'Direkt aus dem Plugin heraus drucken kann der Server nicht: Der Drucker steht in deinem Netz, die Webseite beim Hoster – die beiden sehen einander nicht. Was hier geht, ist der kurze Weg: Knopf drücken, das PDF öffnet sich im Browser, Strg+P, fertig.', 'lindenweg16' ) . '</p>';
 		echo '</form>';
 	}

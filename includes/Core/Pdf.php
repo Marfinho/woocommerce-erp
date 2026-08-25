@@ -199,6 +199,42 @@ class Pdf {
 	}
 
 	/**
+	 * Den weiteren Inhalt der Seite um eine Vierteldrehung gekippt zeichnen.
+	 *
+	 * Gedacht für Etiketten, die längs beschriftet werden: Ein
+	 * Adressetikett ist 29 mm breit und 90 mm lang, gelesen wird es aber
+	 * quer. Die Seite muss trotzdem genau so gross bleiben wie das
+	 * Etikett – sonst dreht oder skaliert der Druckertreiber, und beides
+	 * verdirbt einen QR-Code.
+	 *
+	 * Deshalb bleibt die Seite, wie sie ist, und der Inhalt wird gedreht.
+	 * Zwischen `begin_quarter_turn()` und `end_quarter_turn()` rechnet
+	 * alles in der gedrehten Seite: Breite und Höhe sind vertauscht, x
+	 * läuft die lange Kante entlang.
+	 */
+	public function begin_quarter_turn() {
+		// Die Matrix dreht um 90 Grad und schiebt das Ergebnis wieder auf
+		// die Seite. `q` sichert den Zustand, `Q` in end_quarter_turn()
+		// holt ihn zurück.
+		$this->buffer .= sprintf( "q 0 1 -1 0 %.3F 0 cm\n", $this->page_w );
+
+		$dreh          = $this->page_w;
+		$this->page_w  = $this->page_h;
+		$this->page_h  = $dreh;
+	}
+
+	/**
+	 * Die Drehung beenden.
+	 */
+	public function end_quarter_turn() {
+		$dreh         = $this->page_w;
+		$this->page_w = $this->page_h;
+		$this->page_h = $dreh;
+
+		$this->buffer .= "Q\n";
+	}
+
+	/**
 	 * Geschätzte Textbreite in pt.
 	 */
 	public function text_width( $text, $size, $bold = false ) {

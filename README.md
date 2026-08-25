@@ -93,12 +93,22 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
-- **Etikettendrucker**: `LabelSheet::rolls()` liefert Formate für die
-  62-mm-Rolle des Brother QL (Rollenbreite, nicht Etikettenlänge –
-  DK-11209 ist 62 × 29). `LabelPdf::build_roll()` erzeugt eine Seite je
-  Etikett mit `new Pdf( $w, $h, 0 )`; die Seitengrösse von `Core\Pdf` ist
-  dafür instanzweise statt konstant. Hohe Etiketten (h ≥ 0,9 · w) werden
+- **Etikettendrucker**: `LabelSheet::rolls()` liefert die Rollenformate des
+  Brother QL. Die erste Zahl ist immer die Rollenbreite, die zweite die
+  Etikettenlänge – so benennt Brother seine Rollen: DK-11209 ist 62 × 29,
+  DK-11201 ist 29 × 90. Das gewählte Format muss zur eingelegten Rolle
+  passen. `LabelPdf::build_roll()` erzeugt eine Seite je Etikett mit
+  `new Pdf( $w, $h, 0 )`; die Seitengrösse von `Core\Pdf` ist dafür
+  instanzweise statt konstant. Hohe Etiketten (h ≥ 0,9 · w) werden
   gestapelt gesetzt, damit der Code die volle Breite bekommt.
+  Das Adressetikett wird der Länge nach beschriftet (`'quer' => true`):
+  Die **Seite bleibt das Etikett**, gedreht wird der Aufdruck – über
+  `Pdf::begin_quarter_turn()`, das eine Transformationsmatrix in den
+  Inhaltsstrom schreibt und Breite und Höhe für die Dauer der Drehung
+  tauscht. Eine Seite, die anders herum steht als die Rolle, würde den
+  Treiber drehen oder skalieren lassen; skaliert ist der QR-Code
+  unlesbar. `roll_page()` liefert deshalb das Seitenmass, `roll_cell()`
+  das Zeichenfeld in Beschriftungsrichtung.
 - **Wartungscheckliste** (`MaintenanceChecklist`) je Intervall, kumulativ
   aufgebaut (monatlich enthält wöchentlich). Bei periodischen Intervallen
   müssen alle Punkte abgehakt sein; geprüft wird serverseitig in
