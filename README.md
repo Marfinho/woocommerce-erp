@@ -81,6 +81,13 @@ und die Papierformulare ab.
   `lw16_view_reports`, `lw16_view_costs`, `lw16_manage_settings`,
   `lw16_manage_users` und die Rolle `lw16_betrieb`. Wer `manage_lw16` besitzt,
   behält vollen Zugriff.
+- **Etikettenbogen** (`LabelSheet`, `LabelPdf`): alle QR-Codes für Lagerplätze
+  und Artikel als ein PDF. `LabelSheet` hält das Sollmass des Etiketts statt
+  die Seite zu teilen (sonst läuft ein Klebebogen nach unten aus der
+  Stanzung) und fasst waagerechte Modulläufe zu Rechtecken zusammen.
+  `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
+  nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
+  Vergleich gegen `QrCode::matrix()`.
 - **Wartungscheckliste** (`MaintenanceChecklist`) je Intervall, kumulativ
   aufgebaut (monatlich enthält wöchentlich). Bei periodischen Intervallen
   müssen alle Punkte abgehakt sein; geprüft wird serverseitig in

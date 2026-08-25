@@ -235,6 +235,7 @@ foreach ( array(
 	'LaborCost',
 	'UserActivity',
 	'MaintenanceChecklist',
+	'LabelSheet',
 	'BetriebModule',
 	'Consistency',
 	'ReorderToken',

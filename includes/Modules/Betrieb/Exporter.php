@@ -25,6 +25,7 @@ class Exporter {
 		add_action( 'admin_post_lw16_betrieb_gpsr', array( $this, 'handle_gpsr' ) );
 		add_action( 'admin_post_lw16_betrieb_verfahren', array( $this, 'handle_verfahren' ) );
 		add_action( 'admin_post_lw16_betrieb_analyse', array( $this, 'handle_analyse' ) );
+		add_action( 'admin_post_lw16_betrieb_labels', array( $this, 'handle_labels' ) );
 	}
 
 	/**
@@ -55,6 +56,49 @@ class Exporter {
 			default:
 				wp_die( esc_html__( 'Unbekannter Export.', 'lindenweg16' ) );
 		}
+	}
+
+	/**
+	 * Alle Etiketten als ein PDF.
+	 *
+	 * Zum Erstausstatten eines Lagers: einmal drucken statt vierzig Seiten
+	 * einzeln zu öffnen.
+	 */
+	public function handle_labels() {
+		if ( ! Roles::current_user_can_betrieb( 'lw16_capture' ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
+		}
+		check_admin_referer( 'lw16_betrieb_export' );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- oben geprüft.
+		$was    = isset( $_GET['was'] ) ? (array) wp_unslash( $_GET['was'] ) : array();
+		$layout = isset( $_GET['layout'] ) ? sanitize_key( wp_unslash( $_GET['layout'] ) ) : 'bogen';
+		$alle   = ! empty( $_GET['alle'] );
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+		$was    = array_map( 'sanitize_key', $was );
+		$labels = array();
+
+		if ( in_array( 'bins', $was, true ) ) {
+			$labels = array_merge( $labels, LabelPdf::bin_labels( ! $alle ) );
+		}
+
+		if ( in_array( 'articles', $was, true ) ) {
+			$labels = array_merge( $labels, LabelPdf::article_labels( ! $alle ) );
+		}
+
+		$pdf = LabelPdf::build( $labels, $layout );
+
+		if ( ! $pdf ) {
+			wp_die( esc_html__( 'Es gibt nichts zu drucken – bitte mindestens eine Sorte wählen, zu der es auch Datensätze gibt.', 'lindenweg16' ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Disposition: inline; filename="lw16-etiketten-' . gmdate( 'Y-m-d' ) . '.pdf"' );
+
+		echo $pdf->output(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Binärdaten.
+		exit;
 	}
 
 	/**

@@ -259,6 +259,49 @@ class Pdf {
 	}
 
 	/**
+	 * Gefülltes Rechteck in der aktuellen Füllfarbe.
+	 *
+	 * Die Koordinate ist wie überall in dieser Klasse von oben gemessen;
+	 * PDF selbst rechnet von unten.
+	 *
+	 * @param float $x     Linke Kante.
+	 * @param float $y_top Obere Kante.
+	 * @param float $w     Breite.
+	 * @param float $h     Höhe.
+	 */
+	public function rect( $x, $y_top, $w, $h ) {
+		$this->buffer .= sprintf(
+			"%s %.3F %.3F %.3F %.3F re f\n",
+			$this->color_cmd(),
+			(float) $x,
+			self::PAGE_HEIGHT - (float) $y_top - (float) $h,
+			(float) $w,
+			(float) $h
+		);
+	}
+
+	/**
+	 * Linie in der aktuellen Strichfarbe.
+	 *
+	 * @param float $x1        Start x.
+	 * @param float $y1_top    Start y von oben.
+	 * @param float $x2        Ende x.
+	 * @param float $y2_top    Ende y von oben.
+	 * @param float $thickness Strichstärke.
+	 */
+	public function line( $x1, $y1_top, $x2, $y2_top, $thickness = 0.4 ) {
+		$this->buffer .= sprintf(
+			"%s %.3F %.3F m %.3F %.3F l %.2F w S\n",
+			$this->stroke_cmd(),
+			(float) $x1,
+			self::PAGE_HEIGHT - (float) $y1_top,
+			(float) $x2,
+			self::PAGE_HEIGHT - (float) $y2_top,
+			(float) $thickness
+		);
+	}
+
+	/**
 	 * JPEG-Bild einbetten (fließend, linksbündig).
 	 */
 	public function image_jpeg( $file, $max_w = 400, $max_h = 500 ) {

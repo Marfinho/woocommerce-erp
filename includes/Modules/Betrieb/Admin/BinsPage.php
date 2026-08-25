@@ -19,6 +19,7 @@ use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\LaborCost;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\WageRepository;
@@ -297,6 +298,8 @@ class BinsPage {
 		} else {
 			echo '<p>' . esc_html__( 'Noch kein Lagerplatz angelegt. Ohne Plätze ist der Bestand da, aber niemand weiß wo.', 'lindenweg16' ) . '</p>';
 		}
+
+		$this->render_label_sheet();
 
 		echo '<h2>' . esc_html( $current ? __( 'Lagerplatz bearbeiten', 'lindenweg16' ) : __( 'Lagerplatz anlegen', 'lindenweg16' ) ) . '</h2>';
 		echo '<p>' . esc_html__( 'Der Code steht auf dem Etikett und wird gescannt. Kurz halten: A01, KISTE3, VERSAND.', 'lindenweg16' ) . '</p>';
@@ -623,6 +626,56 @@ class BinsPage {
 		}
 
 		return $text;
+	}
+
+	/**
+	 * Alle Etiketten als ein PDF.
+	 *
+	 * Einzelne QR-Codes stehen an ihrem Datensatz; zum Erstausstatten eines
+	 * Lagers braucht es aber einen Bogen, den man einmal druckt.
+	 */
+	protected function render_label_sheet() {
+		echo '<h2>' . esc_html__( 'Etiketten als PDF', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Alle QR-Codes auf einem Bogen – Lagerplätze, Artikel oder beides. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske.', 'lindenweg16' ) . '</p>';
+
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="lw16_betrieb_labels" />';
+		wp_nonce_field( 'lw16_betrieb_export', '_wpnonce', false );
+
+		echo '<p>';
+		printf(
+			'<label style="margin-right:16px"><input type="checkbox" name="was[]" value="bins" checked /> %s</label>',
+			esc_html__( 'Lagerplätze', 'lindenweg16' )
+		);
+		printf(
+			'<label style="margin-right:16px"><input type="checkbox" name="was[]" value="articles" checked /> %s</label>',
+			esc_html__( 'Artikel', 'lindenweg16' )
+		);
+		printf(
+			'<label><input type="checkbox" name="alle" value="1" /> %s</label>',
+			esc_html__( 'auch stillgelegte', 'lindenweg16' )
+		);
+		echo '</p>';
+
+		echo '<p><select name="layout">';
+		foreach ( LabelSheet::layouts() as $key => $layout ) {
+			printf(
+				'<option value="%s">%s</option>',
+				esc_attr( $key ),
+				esc_html( $layout['label'] )
+			);
+		}
+		echo '</select> ';
+		printf( '<button class="button button-primary">%s</button></p>', esc_html__( 'Etikettenbogen erzeugen', 'lindenweg16' ) );
+
+		echo '<ul class="ul-disc" style="max-width:52em">';
+		foreach ( LabelSheet::layouts() as $layout ) {
+			printf( '<li><strong>%s</strong> – %s</li>', esc_html( $layout['label'] ), esc_html( $layout['hint'] ) );
+		}
+		echo '</ul>';
+
+		echo '<p class="description">' . esc_html__( 'Drucke ohne Skalierung („Tatsächliche Grösse", nicht „An Seite anpassen"), sonst passen die Etiketten nicht auf die Stanzung.', 'lindenweg16' ) . '</p>';
+		echo '</form>';
 	}
 
 	/**
