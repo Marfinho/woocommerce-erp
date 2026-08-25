@@ -39,7 +39,7 @@ class ArticlesPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_artikel', array( $this, 'render' ) );
 
-		foreach ( array( 'article', 'component', 'revision', 'bom', 'sourcing', 'activate', 'bom_delete', 'bundle', 'model_plate', 'model_remove' ) as $what ) {
+		foreach ( array( 'article', 'component', 'revision', 'bom', 'sourcing', 'activate', 'bom_delete', 'bundle', 'model_remove' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_save_' . $what, array( $this, 'handle_' . $what ) );
 		}
 
@@ -422,50 +422,6 @@ class ArticlesPage {
 	}
 
 	/**
-	 * Aus der hinterlegten Datei eine gefüllte Platte erzeugen und
-	 * ausliefern. Die Vorlage bleibt unverändert liegen.
-	 */
-	public function handle_model_plate() {
-		$input = $this->post_input();
-
-		$id      = isset( $input['revision_id'] ) ? (int) $input['revision_id'] : 0;
-		$article = isset( $input['article_id'] ) ? (int) $input['article_id'] : 0;
-		$args    = array( 'tab' => 'revisionen', 'article' => $article );
-		$count   = isset( $input['count'] ) ? (int) $input['count'] : 0;
-
-		$revision = RevisionRepository::find( $id );
-		$source   = $revision ? ModelFile::safe_path( (string) $revision['model_file'] ) : '';
-
-		if ( '' === $source ) {
-			$this->redirect( __( 'Zu dieser Revision ist keine Datei hinterlegt.', 'lindenweg16' ), 'error', $args );
-		}
-
-		$target = wp_tempnam( 'lw16-platte.3mf' );
-		if ( ! $target ) {
-			$this->redirect( __( 'Es liess sich keine Arbeitsdatei anlegen.', 'lindenweg16' ), 'error', $args );
-		}
-
-		$result = ModelFile::fill_plate(
-			$source,
-			$target,
-			$count,
-			array(
-				'gap'     => isset( $input['gap'] ) ? (float) str_replace( ',', '.', (string) $input['gap'] ) : 6.0,
-				'plate_w' => isset( $input['plate_w'] ) ? (float) str_replace( ',', '.', (string) $input['plate_w'] ) : 256.0,
-				'plate_d' => isset( $input['plate_d'] ) ? (float) str_replace( ',', '.', (string) $input['plate_d'] ) : 256.0,
-			)
-		);
-
-		if ( ! $result['success'] ) {
-			@unlink( $target ); // phpcs:ignore
-			$this->redirect( $result['message'], 'error', $args );
-		}
-
-		$name = $result['placed'] . 'x-' . $this->model_download_name( $revision );
-		$this->stream( $target, $name, true );
-	}
-
-	/**
 	 * Hinterlegte Datei wieder entfernen.
 	 */
 	public function handle_model_remove() {
@@ -499,21 +455,16 @@ class ArticlesPage {
 	/**
 	 * Datei ausliefern und danach beenden.
 	 *
-	 * @param string $path      Absoluter Pfad.
-	 * @param string $name      Dateiname für den Browser.
-	 * @param bool   $temporary Datei nach dem Senden löschen.
+	 * @param string $path Absoluter Pfad.
+	 * @param string $name Dateiname für den Browser.
 	 */
-	protected function stream( $path, $name, $temporary = false ) {
+	protected function stream( $path, $name ) {
 		nocache_headers();
 		header( 'Content-Type: model/3mf' );
 		header( 'Content-Length: ' . filesize( $path ) );
 		header( 'Content-Disposition: attachment; filename="' . $name . '"' );
 		header( 'X-Content-Type-Options: nosniff' );
 		readfile( $path ); // phpcs:ignore
-
-		if ( $temporary ) {
-			@unlink( $path ); // phpcs:ignore
-		}
 		exit;
 	}
 
@@ -1193,8 +1144,6 @@ class ArticlesPage {
 			echo '<p>' . esc_html__( 'Noch keine Revision erfasst.', 'lindenweg16' ) . '</p>';
 		}
 
-		$this->plate_form( $rows, $article_id );
-
 		echo '<h2>' . esc_html__( 'Revision anlegen', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Neue Revisionen sind zunächst inaktiv. Aktiv gesetzt wird immer genau eine Revision je Artikel – sie löst die bisherige ab.', 'lindenweg16' ) . '</p>';
 
@@ -1220,7 +1169,7 @@ class ArticlesPage {
 		echo '<tr><th scope="row"><label for="lw16-model">' . esc_html__( '3MF-Datei', 'lindenweg16' ) . '</label></th>';
 		printf(
 			'<td><input type="file" name="model" id="lw16-model" accept=".3mf" /><p class="description">%s</p></td></tr>',
-			esc_html__( 'Die Datei, aus der diese Version gedruckt wird. Sie hängt an der Revision – wer die aktive Revision lädt, hat immer den freigegebenen Stand. Beides ist erlaubt: die Projektdatei mit dem Körper (daraus lässt sich eine volle Platte erzeugen) oder die geslicte Druckdatei (.gcode.3mf, die an den Drucker geht). Aus einer Druckdatei liest das System Druckzeit, Materialverbrauch und Teile je Platte selbst aus.', 'lindenweg16' )
+			esc_html__( 'Die Datei, aus der diese Version gedruckt wird – am besten die Projektdatei mit dem Modell und allen Druckeinstellungen. Sie hängt an der Revision: wer die aktive Revision lädt, hat immer den freigegebenen Stand. Vervielfältigt wird im Slicer, der ordnet die Teile besser an. Auch eine geslicte Druckdatei (.gcode.3mf) ist erlaubt; aus ihr liest das System Druckzeit, Materialverbrauch und Teile je Platte selbst aus.', 'lindenweg16' )
 		);
 
 		echo '<tr><th scope="row"><label for="lw16-orientation_note">' . esc_html__( 'Orientierung', 'lindenweg16' ) . '</label></th>';
@@ -1292,43 +1241,6 @@ class ArticlesPage {
 		echo '<input type="file" name="model" accept=".3mf" style="max-width:12em" /> ';
 		printf( '<button class="button button-small">%s</button>', esc_html__( 'anhängen', 'lindenweg16' ) );
 		echo '</form>';
-	}
-
-	/**
-	 * Aus einer hinterlegten Datei eine gefüllte Platte erzeugen.
-	 *
-	 * @param array $rows       Revisionen.
-	 * @param int   $article_id Artikel.
-	 */
-	protected function plate_form( array $rows, $article_id ) {
-		// Nur Dateien mit Geometrie: Aus einer geslicten Druckdatei lässt
-		// sich nichts vervielfältigen, sie enthält keinen Körper mehr.
-		$with_file = array();
-		foreach ( $rows as $row ) {
-			if ( ! empty( $row['model_file'] ) && 'druckdatei' !== $row['model_kind'] ) {
-				$with_file[ (int) $row['id'] ] = $row['version'] . ' – ' . $row['model_name'];
-			}
-		}
-
-		if ( ! $with_file ) {
-			return;
-		}
-
-		echo '<h2>' . esc_html__( 'Platte füllen', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Aus der hinterlegten Datei mit einem Körper wird eine Kopie erzeugt, in der dasselbe Bauteil mehrfach nebeneinander liegt. Die Geometrie wird dabei nicht angefasst – nur die Anzahl der Platzierungen. Die hinterlegte Vorlage bleibt unverändert.', 'lindenweg16' ) . '</p>';
-
-		$this->form_open( 'model_plate' );
-		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article_id );
-		echo '<table class="form-table" role="presentation"><tbody>';
-
-		$this->select( __( 'Revision', 'lindenweg16' ), 'revision_id', $with_file );
-		$this->field( __( 'Stückzahl', 'lindenweg16' ), 'count', '10' );
-		$this->field( __( 'Abstand (mm)', 'lindenweg16' ), 'gap', '6', 'text', __( 'Luft zwischen zwei Teilen.', 'lindenweg16' ) );
-		$this->field( __( 'Plattenbreite (mm)', 'lindenweg16' ), 'plate_w', '256' );
-		$this->field( __( 'Plattentiefe (mm)', 'lindenweg16' ), 'plate_d', '256' );
-
-		echo '</tbody></table>';
-		printf( '<p><button class="button button-primary">%s</button></p></form>', esc_html__( 'Platte erzeugen und herunterladen', 'lindenweg16' ) );
 	}
 
 	/**

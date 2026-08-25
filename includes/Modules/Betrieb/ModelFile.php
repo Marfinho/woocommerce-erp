@@ -21,7 +21,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Installer;
 
 /**
- * Speichern, Ausliefern und Vervielfältigen von 3MF-Dateien.
+ * Speichern und Ausliefern von 3MF-Dateien.
  */
 class ModelFile {
 
@@ -81,32 +81,6 @@ class ModelFile {
 		$zip->close();
 
 		return is_string( $xml ) ? $xml : '';
-	}
-
-	/**
-	 * Ist das eine Projektdatei aus Bambu Studio oder Orca Slicer?
-	 *
-	 * Solche Dateien führen ihre Plattenbelegung in einer eigenen Beilage.
-	 * Das Modell selbst bleibt gültig, die zusätzlichen Positionen sieht der
-	 * Slicer aber erst nach dem Anordnen – darauf wird hingewiesen.
-	 *
-	 * @param string $path Absoluter Pfad.
-	 * @return bool
-	 */
-	public static function is_project( $path ) {
-		if ( ! class_exists( '\ZipArchive' ) || ! is_file( $path ) ) {
-			return false;
-		}
-
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $path ) ) {
-			return false;
-		}
-
-		$found = false !== $zip->locateName( ThreeMf::PROJECT_MARKER );
-		$zip->close();
-
-		return $found;
 	}
 
 	/**
@@ -308,74 +282,5 @@ class ModelFile {
 			return false;
 		}
 		return @unlink( $path ); // phpcs:ignore
-	}
-
-	/**
-	 * Kopie der Datei anlegen, in der das Bauteil mehrfach auf der Platte
-	 * liegt. Das Original bleibt unangetastet.
-	 *
-	 * @param string $source  Absoluter Pfad zur Vorlage.
-	 * @param string $target  Absoluter Pfad zur neuen Datei.
-	 * @param int    $count   Stückzahl.
-	 * @param array  $options gap, plate_w, plate_d.
-	 * @return array {success, placed, cols, rows, size, message}
-	 */
-	public static function fill_plate( $source, $target, $count, array $options = array() ) {
-		$fail = array(
-			'success' => false,
-			'placed'  => 0,
-			'cols'    => 0,
-			'rows'    => 0,
-			'size'    => array( 0.0, 0.0, 0.0 ),
-			'message' => '',
-		);
-
-		if ( 'druckdatei' === self::kind( $source ) ) {
-			$fail['message'] = __( 'Das ist eine geslicte Druckdatei. Sie enthält fertigen G-Code, aber keine Geometrie – vervielfältigen lässt sich daraus nichts. Dafür braucht es die Projektdatei mit dem Körper.', 'lindenweg16' );
-			return $fail;
-		}
-
-		$xml = self::read_model( $source );
-		if ( '' === $xml ) {
-			$fail['message'] = __( 'Die hinterlegte Datei lässt sich nicht lesen.', 'lindenweg16' );
-			return $fail;
-		}
-
-		$result = ThreeMf::fill_plate( $xml, $count, $options );
-		if ( ! $result['success'] ) {
-			$fail['message'] = $result['message'];
-			$fail['size']    = $result['size'];
-			return $fail;
-		}
-
-		if ( ! @copy( $source, $target ) ) { // phpcs:ignore
-			$fail['message'] = __( 'Die Kopie liess sich nicht anlegen.', 'lindenweg16' );
-			return $fail;
-		}
-
-		$zip = new \ZipArchive();
-		if ( true !== $zip->open( $target ) ) {
-			@unlink( $target ); // phpcs:ignore
-			$fail['message'] = __( 'Die Kopie liess sich nicht schreiben.', 'lindenweg16' );
-			return $fail;
-		}
-
-		$written = $zip->addFromString( ThreeMf::MODEL_PATH, $result['xml'] );
-		$zip->close();
-
-		if ( ! $written ) {
-			@unlink( $target ); // phpcs:ignore
-			$fail['message'] = __( 'Das Modell liess sich nicht in die Kopie schreiben.', 'lindenweg16' );
-			return $fail;
-		}
-
-		return array(
-			'success' => true,
-			'placed'  => $result['placed'],
-			'cols'    => $result['cols'],
-			'rows'    => $result['rows'],
-			'size'    => $result['size'],
-			'message' => '',
-		);
 	}
 }

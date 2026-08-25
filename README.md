@@ -257,43 +257,12 @@ bleibt, solange nicht alle Altdaten übernommen sind.
   `3dmodel.model`, dafür `Metadata/plate_*.gcode`). Aus letzterer liest
   `ThreeMf::slice_info()` die Slicer-Zahlen; `revision_values()` rechnet den
   Plattenverbrauch über die Objektzahl auf das Einzelteil herunter und füllt
-  nur leere Revisionsfelder.
-- **Platte füllen** (`ThreeMf`) vervielfältigt nur die `<item>`-Einträge im
-  `<build>`, nie das Netz: Die Geometrie bleibt bitgenau die freigegebene und
-  die Datei so groß wie vorher. Vorausgesetzt wird eine Datei mit genau einer
-  Platzierung; liegen schon mehrere Teile darin, wird abgelehnt statt geraten.
-  Projektdateien aus Bambu Studio/Orca führen ihre Plattenbelegung zusätzlich
-  in `Metadata/model_settings.config` – dort kann ein *Alle anordnen* im
-  Slicer nötig sein. Benötigt die ZIP-Erweiterung von PHP.
-
-## Tests
-
-Die Rechenregeln sind in reinen Klassen gekapselt und laufen ohne die volle
-WordPress-Testsuite; `tests/bootstrap.php` stellt die benötigten WordPress-
-Funktionen nach und lädt die Klassen einzeln.
-
-```
-composer install
-composer test        # oder: php vendor/phpunit/phpunit/phpunit
-```
-
-497 Tests. Abgedeckt sind unter anderem: Reward- und Punkterechnung, EÜR und
-Steuerrücklage, Rechnungsnummern, Stücklistenauflösung und Kalkulation,
-Rabattstaffel, Bedarfsplanung über alle Stufen, Produktionsplan, Zeitmessung an
-Aufträgen, QR-Encoder, Scan-Auflösung, Lagerplatz-Vorschläge, Gebührenerkennung,
-DHL-Status, Livegang-Reset, DSGVO-Abdeckung, Systemprüfung und das Auslesen
-eines echten PDF-Belegs.
-
-Einige Tests lesen den Quelltext, statt ihn auszuführen – sie halten fest, was
-sonst stillschweigend auseinanderläuft: dass jede Ampelstufe eine Farbe hat,
-dass Assets nicht an der Plugin-Version hängen, dass Markup und Skript der
-mobilen Erfassung dieselben Element-IDs benutzen, dass die Verfahrens-
-dokumentation jede Tabelle nennt und dass Auswahllisten stillgelegte Artikel
-ausschließen. Jeder dieser Tests wurde gegengeprüft, indem der Fehler künstlich
-wieder eingebaut wurde.
-
-## Sicherheit
-
+  nur leere Revisionsfelder. Benötigt die ZIP-Erweiterung von PHP.
+- **Kein serverseitiges Anordnen.** Ein früherer `ThreeMf::fill_plate()` legte
+  mehrere Instanzen als `<item>`-Einträge auf die Platte. Das Raster rechnete
+  mit achsparallelen Hüllquadern und verschenkte damit bei ineinander legbaren
+  Konturen (T-Formen) die halbe Platte. Richtiges Nesting braucht die
+  Bauteilkontur; das kann der Slicer besser, dort bleibt es auch.
 - Beleg-Fotos liegen in `wp-content/uploads/lw16-belege/` mit `.htaccess`-Schutz
   und werden nur über einen authentifizierten Endpoint mit `manage_lw16`-Prüfung
   und Path-Traversal-Schutz ausgeliefert. Dasselbe gilt für erzeugte PDFs.
