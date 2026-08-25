@@ -210,11 +210,21 @@ class BetriebLabelSheetTest extends TestCase {
 	/**
 	 * Auch auf der Rolle bleiben die Module gross genug. Das ist der Grund,
 	 * warum es kein 17-mm-Format gibt.
+	 *
+	 * Gemessen wird die Aufteilung, die für dieses Etikett auch wirklich
+	 * gedruckt wird. Die erste Fassung dieses Tests hat für jede Rolle das
+	 * Nebeneinander gerechnet – auf dem schmalen 29er Etikett kam damit
+	 * ein Code heraus, den es so nie gibt: Dort steht der Text unter dem
+	 * Code, und der Code darf die volle Breite nutzen.
 	 */
 	public function test_die_module_bleiben_auch_auf_der_rolle_druckbar() {
 		foreach ( array_keys( LabelSheet::rolls() ) as $key ) {
-			$cell = LabelSheet::roll_cell( LabelSheet::roll( $key ) );
-			$box  = LabelSheet::qr_box( $cell, 29, LabelSheet::padding( $cell['h'] ) );
+			$cell    = LabelSheet::roll_cell( LabelSheet::roll( $key ) );
+			$padding = LabelSheet::padding( $cell['h'] );
+
+			$box = LabelSheet::is_stacked( $cell )
+				? LabelSheet::qr_box_stacked( $cell, 29, $padding, LabelSheet::stacked_text( $cell )['box'] )
+				: LabelSheet::qr_box( $cell, 29, $padding );
 
 			$this->assertGreaterThan(
 				0.5,
@@ -231,47 +241,104 @@ class BetriebLabelSheetTest extends TestCase {
 	public function test_das_rollenetikett_ist_die_ganze_seite() {
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
 			$cell = LabelSheet::roll_cell( $roll );
+			$quer = LabelSheet::is_landscape( $roll );
 
 			$this->assertSame( 0.0, $cell['x'], $key );
 			$this->assertSame( 0.0, $cell['y'], $key );
-			$this->assertEqualsWithDelta( $roll['w'], $cell['w'] / LabelSheet::MM, 0.001, $key );
-			$this->assertEqualsWithDelta( $roll['h'], $cell['h'] / LabelSheet::MM, 0.001, $key );
+			$this->assertEqualsWithDelta( $quer ? $roll['h'] : $roll['w'], $cell['w'] / LabelSheet::MM, 0.001, $key );
+			$this->assertEqualsWithDelta( $quer ? $roll['w'] : $roll['h'], $cell['h'] / LabelSheet::MM, 0.001, $key );
 		}
 	}
 
 	/**
-	 * Jedes Rollenformat ist genau so breit wie die Rolle im Gerät.
+	 * Die Seite bleibt das Etikett – auch beim quer beschrifteten.
+	 *
+	 * Gedreht wird der Aufdruck, nicht die Seite. Eine Seite, die anders
+	 * herum steht als die Rolle im Gerät, lässt den Treiber drehen oder
+	 * skalieren; skaliert wird der QR-Code unlesbar.
+	 */
+	public function test_die_seite_bleibt_das_etikett() {
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			$page = LabelSheet::roll_page( $roll );
+
+			$this->assertEqualsWithDelta( $roll['w'], $page['w'] / LabelSheet::MM, 0.001, $key . ': Seitenbreite' );
+			$this->assertEqualsWithDelta( $roll['h'], $page['h'] / LabelSheet::MM, 0.001, $key . ': Seitenhöhe' );
+		}
+	}
+
+	/**
+	 * Das quer beschriftete Etikett wird auch quer aufgeteilt: die lange
+	 * Kante ist die Breite, der Klartext steht neben dem Code.
+	 */
+	public function test_quer_beschriftet_heisst_quer_aufgeteilt() {
+		$cell = LabelSheet::roll_cell( LabelSheet::roll( 'dk11201' ) );
+
+		$this->assertTrue( LabelSheet::is_landscape( LabelSheet::roll( 'dk11201' ) ) );
+		$this->assertGreaterThan( $cell['h'], $cell['w'], 'Quer heisst: die lange Kante ist die Breite.' );
+		$this->assertFalse( LabelSheet::is_stacked( $cell ), 'Auf einem queren Etikett steht der Text neben dem Code.' );
+
+		$this->assertFalse( LabelSheet::is_landscape( LabelSheet::roll( 'dk11209' ) ) );
+	}
+
+	/**
+	 * Jedes Rollenformat trägt die Masse seiner Brother-Rolle: erst die
+	 * Breite, dann die Länge.
 	 *
 	 * Das war der Fehler der ersten Fassung: Brother nennt seine Rollen
 	 * „Breite × Länge", und aus DK-11201 (29 mm breit, 90 mm lang) wurde
-	 * versehentlich ein 90 mm breites Etikett. Auf einer 62-mm-Rolle
-	 * druckt so etwas nicht.
+	 * versehentlich ein 90 mm breites Etikett. Die Tabelle hier hält jedes
+	 * Paar einzeln fest – vertauscht fällt sofort auf.
 	 */
-	public function test_jedes_rollenformat_ist_62_mm_breit() {
+	public function test_rollenformate_tragen_die_masse_ihrer_rolle() {
+		$erwartet = array(
+			'dk11209'  => array( 62.0, 29.0 ),
+			'dk11201'  => array( 29.0, 90.0 ),
+			'endlos30' => array( 62.0, 30.0 ),
+			'endlos40' => array( 62.0, 40.0 ),
+			'endlos62' => array( 62.0, 62.0 ),
+		);
+
+		$this->assertSame(
+			array_keys( $erwartet ),
+			array_keys( LabelSheet::rolls() ),
+			'Ein Rollenformat ist dazugekommen oder weggefallen, ohne dass hier jemand nachgesehen hat.'
+		);
+
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
-			$this->assertSame(
-				LabelSheet::ROLL_WIDTH_MM,
-				$roll['w'],
-				$key . ' ist nicht so breit wie die Rolle im Gerät.'
-			);
+			$this->assertSame( $erwartet[ $key ][0], $roll['w'], $key . ': falsche Rollenbreite.' );
+			$this->assertSame( $erwartet[ $key ][1], $roll['h'], $key . ': falsche Etikettenlänge.' );
+		}
+	}
+
+	/**
+	 * Keine Rolle ist breiter, als das Gerät aufnimmt.
+	 */
+	public function test_keine_rolle_ist_breiter_als_das_geraet() {
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			$this->assertLessThanOrEqual( LabelSheet::MAX_ROLL_WIDTH_MM, $roll['w'], $key );
 		}
 	}
 
 	/**
 	 * Der Inhalt bleibt innerhalb der bedruckbaren Breite. Der Druckkopf
-	 * ist schmaler als die Rolle – ganz am Rand käme nichts heraus.
+	 * erreicht die äusserste Kante nicht, und die Rolle läuft nie auf den
+	 * Zehntelmillimeter mittig – ganz am Rand käme nichts heraus.
 	 */
 	public function test_der_inhalt_bleibt_im_druckbaren_bereich() {
-		$unbedruckbar = ( LabelSheet::ROLL_WIDTH_MM - LabelSheet::PRINTABLE_WIDTH_MM ) / 2;
-
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
 			$cell    = LabelSheet::roll_cell( $roll );
-			$padding = LabelSheet::padding( $cell['h'] );
+			$padding = LabelSheet::padding( $cell['h'] ) / LabelSheet::MM;
 
-			$this->assertGreaterThan(
-				$unbedruckbar,
-				$padding / LabelSheet::MM,
-				$key . ': Der Rand ist schmaler als der Bereich, den der Druckkopf nicht erreicht.'
+			$this->assertGreaterThanOrEqual(
+				LabelSheet::UNPRINTABLE_EDGE_MM,
+				$padding,
+				$key . ': Der Rand ist schmaler als der Streifen, auf dem nichts ankommt.'
+			);
+
+			$this->assertLessThanOrEqual(
+				LabelSheet::printable_width( $roll ),
+				$roll['w'] - 2 * $padding,
+				$key . ': Der Inhalt ist breiter als der Bereich, den der Druckkopf erreicht.'
 			);
 		}
 	}

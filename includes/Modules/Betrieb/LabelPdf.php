@@ -104,8 +104,8 @@ class LabelPdf {
 	 * Etikett, die Seite genau so gross wie das Etikett.
 	 *
 	 * Nur so setzt der Brother-Treiber das Bild ohne Skalierung auf die
-	 * Rolle. Ein A4-Bogen, den der Treiber auf 62 mm herunterrechnet, ergibt
-	 * einen QR-Code, den keine Kamera mehr liest.
+	 * Rolle. Ein A4-Bogen, den der Treiber auf die Rollenbreite
+	 * herunterrechnet, ergibt einen QR-Code, den keine Kamera mehr liest.
 	 *
 	 * @param array  $labels Etiketten.
 	 * @param string $roll   Kennung des Rollenformats.
@@ -118,7 +118,10 @@ class LabelPdf {
 
 		$roll = LabelSheet::roll( $roll );
 		$cell = LabelSheet::roll_cell( $roll );
-		$pdf  = new Pdf( $cell['w'], $cell['h'], 0 );
+		$page = LabelSheet::roll_page( $roll );
+		$quer = LabelSheet::is_landscape( $roll );
+
+		$pdf = new Pdf( $page['w'], $page['h'], 0 );
 
 		$erste = true;
 
@@ -128,7 +131,15 @@ class LabelPdf {
 			}
 			$erste = false;
 
+			if ( $quer ) {
+				$pdf->begin_quarter_turn();
+			}
+
 			self::render_label( $pdf, $cell, $label, array( 'cut' => false ) );
+
+			if ( $quer ) {
+				$pdf->end_quarter_turn();
+			}
 		}
 
 		return $pdf;
@@ -237,13 +248,12 @@ class LabelPdf {
 	 * @param float $padding Rand.
 	 */
 	protected static function render_stacked( Pdf $pdf, array $cell, array $label, array $matrix, $padding ) {
-		$gross = max( 10.0, min( 24.0, $cell['w'] / 7 ) );
-		$klein = max( 7.0, $gross * 0.5 );
-
 		$hat_name = '' !== trim( $label['name'] );
-		$text_box = $gross + ( $hat_name ? $klein + 4 : 0 ) + 6;
+		$text     = LabelSheet::stacked_text( $cell, $hat_name );
+		$gross    = $text['gross'];
+		$klein    = $text['klein'];
 
-		$box = LabelSheet::qr_box_stacked( $cell, count( $matrix ), $padding, $text_box );
+		$box = LabelSheet::qr_box_stacked( $cell, count( $matrix ), $padding, $text['box'] );
 		self::render_matrix( $pdf, $box, $matrix );
 
 		$breite = $cell['w'] - 2 * $padding;
