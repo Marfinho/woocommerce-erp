@@ -698,6 +698,7 @@ class Ansicht {
 		this.basisKoerper = null;
 		this.laeuft = true;
 
+		this.ziel = new THREE.Vector3( 0, 0.3, 0 );
 		this.azimut = 0;
 		this.polar = Math.PI / 2;
 		this.zielAzimut = 0;
@@ -830,6 +831,7 @@ class Ansicht {
 		let breite = ( basis.width || 60 ) / MM;
 
 		this.mitte = hoehe / 2;
+		this.ziel = new THREE.Vector3( 0, this.mitte, 0 );
 
 		const umriss = new THREE.Box3().setFromObject( this.gruppe );
 
@@ -837,6 +839,11 @@ class Ansicht {
 			hoehe = umriss.max.y - umriss.min.y;
 			breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
 			this.mitte = ( umriss.min.y + umriss.max.y ) / 2;
+
+			// Gedreht wird um die Mitte des Umrisses, nicht um die Achse
+			// des Basismoduls: Module bauen nach vorn, und wer um die
+			// Achse dreht, schiebt den Haken aus dem Bild.
+			umriss.getCenter( this.ziel );
 		}
 
 		const luft = 1.2;
@@ -1188,7 +1195,7 @@ class Ansicht {
 		richtung.y = 0;
 		richtung.normalize();
 
-		this.ebene.setFromNormalAndCoplanarPoint( richtung, new THREE.Vector3( 0, this.mitte, 0 ) );
+		this.ebene.setFromNormalAndCoplanarPoint( richtung, this.ziel );
 		this.strahl.setFromCamera( this.zeiger, this.kamera );
 
 		if ( ! this.strahl.ray.intersectPlane( this.ebene, this.treffer ) ) {
@@ -1288,13 +1295,13 @@ class Ansicht {
 
 			const r = this.abstand;
 			this.kamera.position.set(
-				r * Math.sin( this.polar ) * Math.sin( this.azimut ),
-				this.mitte + r * Math.cos( this.polar ),
-				r * Math.sin( this.polar ) * Math.cos( this.azimut )
+				this.ziel.x + r * Math.sin( this.polar ) * Math.sin( this.azimut ),
+				this.ziel.y + r * Math.cos( this.polar ),
+				this.ziel.z + r * Math.sin( this.polar ) * Math.cos( this.azimut )
 			);
-			this.kamera.lookAt( 0, this.mitte, 0 );
+			this.kamera.lookAt( this.ziel );
 
-			this.licht.target.position.set( 0, this.mitte, 0 );
+			this.licht.target.position.copy( this.ziel );
 			this.licht.target.updateMatrixWorld();
 
 			this.renderer.render( this.szene, this.kamera );
@@ -1342,6 +1349,11 @@ function kannWebGl() {
  */
 async function start() {
 	if ( ! DATEN ) {
+		// Ohne den Katalog gibt es nichts zu bedienen. Das ist kein
+		// Zustand, den ein Besucher beheben kann - aber einer, den man
+		// beim Suchen sofort sehen will, statt vor einem Hinweis zu
+		// stehen, der ewig „wird geladen" sagt.
+		window.console.warn( 'Konfigurator: window.LW16_HAKEN fehlt - das Skript wurde ohne seine Daten ausgeliefert.' );
 		return;
 	}
 
@@ -1349,6 +1361,8 @@ async function start() {
 
 	for ( const wurzel of wurzeln ) {
 		const konfigurator = new Konfigurator( wurzel );
+
+		konfigurator.hinweis.textContent = konfigurator.texte.laedt;
 
 		if ( ! kannWebGl() ) {
 			konfigurator.hinweis.textContent = konfigurator.texte.kein_webgl;

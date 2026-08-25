@@ -250,6 +250,11 @@ vertikal frei verschiebbar sind. Eingebunden wird er mit dem Shortcode
   `erzeugen.py` daneben): Schiene 600 mm mit Schraubaugen bei 40–90 und
   500–550 mm, Haken 80 mm, Ablage 150 mm. Sie sind je Teil auswählbar, zum
   Einrichten und Ausprobieren – nicht zum Verkaufen.
+- **Das Skript ist ein ganz gewöhnliches, kein Modul.** three.js wird über
+  `import()` nachgeladen; nackte Namen löst die Zuordnung im Seitenkopf
+  (`importmap`) auch aus einem klassischen Skript auf. Der Tag darf nicht
+  über `script_loader_tag` ersetzt werden – der Filter bekommt ihn samt der
+  Zeile, die den Katalog trägt.
 - **Die Einheit des Modells ist gleichgültig.** Die Ansicht skaliert es auf
   die gepflegte Bauhöhe; sie ist es, an der die Module hängen. Wichtig sind
   nur Y nach oben und der Ursprung an der Unterkante.
