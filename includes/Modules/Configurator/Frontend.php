@@ -56,7 +56,6 @@ class Frontend {
 		add_shortcode( self::SHORTCODE, array( $this, 'render' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'wp_head', array( $this, 'print_import_map' ), 1 );
-		add_filter( 'script_loader_tag', array( $this, 'as_module' ), 10, 3 );
 		add_action( 'admin_post_' . self::ACTION, array( $this, 'handle_submit' ) );
 		add_action( 'admin_post_nopriv_' . self::ACTION, array( $this, 'handle_submit' ) );
 	}
@@ -100,6 +99,22 @@ class Frontend {
 			Assets::version( 'assets/css/configurator.css' )
 		);
 
+		/*
+		 * Ein ganz gewöhnliches Skript, kein `type="module"`.
+		 *
+		 * Der erste Anlauf hat das Skript über den Filter
+		 * `script_loader_tag` zum Modul umgeschrieben – und damit den
+		 * halben Konfigurator abgeschaltet: Der Filter bekommt den Tag
+		 * **samt** der davorgesetzten Datenzeile, und wer ihn durch
+		 * eigenes Markup ersetzt, wirft die Daten weg. Der Katalog kam
+		 * nie im Browser an, und die Ansicht blieb beim Ladehinweis
+		 * stehen.
+		 *
+		 * Gebraucht wird das Modul auch gar nicht: Die Datei lädt three.js
+		 * über `import()` nach, und das löst nackte Namen über die
+		 * Zuordnung im Seitenkopf auf – aus einem klassischen Skript
+		 * genauso wie aus einem Modul.
+		 */
 		wp_enqueue_script(
 			'lw16-konfigurator',
 			LW16_PLUGIN_URL . 'assets/js/configurator.js',
@@ -130,6 +145,7 @@ class Frontend {
 				'belegt'       => __( 'Dort sitzt schon ein Modul.', 'lindenweg16' ),
 				'leer'         => __( 'Noch kein Modul gewählt. Das Basismodul allein ist auch eine gültige Bestellung.', 'lindenweg16' ),
 				'kein_webgl'   => __( 'Dieses Gerät kann die räumliche Ansicht nicht darstellen. Die Auswahl unten funktioniert trotzdem vollständig.', 'lindenweg16' ),
+				'laedt'        => __( 'Räumliche Ansicht wird geladen …', 'lindenweg16' ),
 				'position'     => __( '%s mm von unten', 'lindenweg16' ),
 				'kopiert'      => __( 'Link kopiert.', 'lindenweg16' ),
 				'ansicht_neu'  => __( 'Ansicht zurückgesetzt.', 'lindenweg16' ),
@@ -162,22 +178,6 @@ class Frontend {
 		);
 
 		echo '<script type="importmap">' . wp_json_encode( $map ) . '</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode escapt bereits.
-	}
-
-	/**
-	 * Das Skript als Modul ausliefern.
-	 *
-	 * @param string $tag    Bisheriger Tag.
-	 * @param string $handle Kennung.
-	 * @param string $src    Adresse.
-	 * @return string
-	 */
-	public function as_module( $tag, $handle, $src ) {
-		if ( 'lw16-konfigurator' !== $handle ) {
-			return $tag;
-		}
-
-		return sprintf( '<script type="module" src="%s"></script>' . "\n", esc_url( $src ) );
 	}
 
 	/**
@@ -301,7 +301,13 @@ class Frontend {
 			<div class="lw16-haken__buehne">
 				<div class="lw16-haken__ansicht" data-lw16-ansicht>
 					<p class="lw16-haken__hinweis" data-lw16-ansicht-hinweis>
-						<?php esc_html_e( 'Räumliche Ansicht wird geladen …', 'lindenweg16' ); ?>
+						<?php
+						// Der Ausgangstext gilt für den Fall, dass gar nichts
+						// läuft. Sobald das Skript anläuft, ersetzt es ihn –
+						// ein „wird geladen", das ewig stehen bleibt, wäre
+						// eine Lüge über den Zustand der Seite.
+						esc_html_e( 'Die räumliche Ansicht braucht JavaScript. Die Auswahl unten funktioniert auch ohne sie vollständig.', 'lindenweg16' );
+						?>
 					</p>
 				</div>
 				<div class="lw16-haken__werkzeuge">
