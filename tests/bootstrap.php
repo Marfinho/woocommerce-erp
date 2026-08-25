@@ -234,6 +234,7 @@ foreach ( array(
 	'AccessProfiles',
 	'LaborCost',
 	'UserActivity',
+	'MaintenanceChecklist',
 	'BetriebModule',
 	'Consistency',
 	'ReorderToken',

@@ -29,7 +29,7 @@ class MaintenanceRepository {
 	/**
 	 * Erlaubte Intervalle.
 	 */
-	const INTERVALS = array( 'woechentlich', 'monatlich', 'verschleiss', 'saison' );
+	const INTERVALS = array( 'woechentlich', 'monatlich', 'jaehrlich', 'verschleiss', 'saison' );
 
 	/**
 	 * Tabellenname.
@@ -123,9 +123,12 @@ class MaintenanceRepository {
 			);
 		}
 
+		$labels = MaintenanceChecklist::periodic();
+
 		foreach ( array(
 			'woechentlich' => 7,
 			'monatlich'    => 30,
+			'jaehrlich'    => 365,
 		) as $interval => $days ) {
 			$last = self::last( $printer_id, $interval );
 
@@ -133,7 +136,7 @@ class MaintenanceRepository {
 				$reasons[] = sprintf(
 					/* translators: %s: Intervall. */
 					__( 'Noch keine %s Wartung erfasst', 'lindenweg16' ),
-					'woechentlich' === $interval ? __( 'wöchentliche', 'lindenweg16' ) : __( 'monatliche', 'lindenweg16' )
+					$labels[ $interval ]
 				);
 				continue;
 			}
@@ -143,8 +146,8 @@ class MaintenanceRepository {
 			if ( $age > $days ) {
 				$reasons[] = sprintf(
 					/* translators: 1: Intervall, 2: Tage. */
-					__( '%1$s Wartung seit %2$s Tagen fällig', 'lindenweg16' ),
-					'woechentlich' === $interval ? __( 'Wöchentliche', 'lindenweg16' ) : __( 'Monatliche', 'lindenweg16' ),
+					__( 'Wartung %1$s seit %2$s Tagen fällig', 'lindenweg16' ),
+					$labels[ $interval ],
 					number_format_i18n( $age - $days, 0 )
 				);
 			}
@@ -154,26 +157,67 @@ class MaintenanceRepository {
 	}
 
 	/**
+	 * Eingaben prüfen, bevor etwas geschrieben wird.
+	 *
+	 * Die Checkliste wird hier geprüft und nicht erst im Browser: Ein
+	 * abgeschaltetes JavaScript darf keine halbe Wartung durchlassen.
+	 *
+	 * @param array $input Eingaben.
+	 * @return array {errors, missing}
+	 */
+	public static function validate( array $input ) {
+		$errors = array();
+
+		if ( ! self::int_or( $input, 'printer_id', 0 ) ) {
+			$errors[] = __( 'Bitte ein Gerät wählen.', 'lindenweg16' );
+		}
+
+		$interval = self::enum( $input, 'interval_type', self::INTERVALS, 'woechentlich' );
+		$tasks    = isset( $input['tasks'] ) ? array_map( 'strval', (array) $input['tasks'] ) : array();
+		$check    = MaintenanceChecklist::validate( $interval, $tasks );
+
+		if ( ! $check['ok'] ) {
+			$errors[] = sprintf(
+				/* translators: 1: offene Punkte, 2: Gesamtzahl, 3: Aufzählung. */
+				__( 'Die Wartung ist noch nicht vollständig: %1$d von %2$d Punkten offen (%3$s).', 'lindenweg16' ),
+				count( $check['missing'] ),
+				$check['total'],
+				implode( '; ', $check['missing'] )
+			);
+		}
+
+		return array(
+			'errors'  => $errors,
+			'missing' => $check['missing'],
+		);
+	}
+
+	/**
 	 * Wartung erfassen.
 	 *
 	 * @param array $input Eingaben.
-	 * @return int
+	 * @return int Angelegte ID oder 0, wenn die Prüfung nicht bestanden ist.
 	 */
 	public static function insert( array $input ) {
 		global $wpdb;
 
-		$printer_id = self::int_or( $input, 'printer_id', 0 );
-		if ( ! $printer_id ) {
+		$check = self::validate( $input );
+
+		if ( $check['errors'] ) {
 			return 0;
 		}
+
+		$printer_id = self::int_or( $input, 'printer_id', 0 );
+		$interval   = self::enum( $input, 'interval_type', self::INTERVALS, 'woechentlich' );
+		$tasks      = MaintenanceChecklist::sanitize( $interval, isset( $input['tasks'] ) ? (array) $input['tasks'] : array() );
 
 		$hours = PrintJobRepository::operating_hours( $printer_id );
 
 		$data = array(
 			'printer_id'         => $printer_id,
 			'performed_on'       => self::date_or_today( $input, 'performed_on' ),
-			'interval_type'      => self::enum( $input, 'interval_type', self::INTERVALS, 'woechentlich' ),
-			'tasks_json'         => isset( $input['tasks'] ) ? wp_json_encode( (array) $input['tasks'] ) : null,
+			'interval_type'      => $interval,
+			'tasks_json'         => wp_json_encode( $tasks ),
 			'operating_hours_at' => $hours,
 			'part_replaced'      => self::text( $input, 'part_replaced' ),
 			'next_due_hours'     => $hours + self::NOZZLE_HOURS_MAX,

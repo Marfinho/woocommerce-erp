@@ -364,3 +364,17 @@
 /* Auftrags- und Chargencodes brechen nie um - ein zerrissener Code
    laesst sich weder vorlesen noch vergleichen. */
 .lw16-nowrap { white-space: nowrap; }
+
+/* Wartungscheckliste: die Punkte muessen einzeln abgehakt werden, deshalb
+   stehen sie untereinander und nicht als Fliesstext. */
+.lw16-checkliste fieldset {
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 8px 14px 12px;
+	margin: 0 0 12px;
+	max-width: 46em;
+}
+.lw16-checkliste legend { font-weight: 600; padding: 0 6px; }
+.lw16-checkliste__punkte { margin: 6px 0 0; }
+.lw16-checkliste__punkte li { margin: 0 0 6px; }
+.lw16-checkliste__punkte label { display: block; line-height: 1.5; }

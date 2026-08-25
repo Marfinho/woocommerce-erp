@@ -382,7 +382,7 @@ footer p{max-width:72ch}
 	<h3>3.4 Drucker anlegen</h3>
 	<p><span class="path">Betrieb → Drucker &amp; Wartung</span></p>
 	<p>Je Gerät: Gerät-ID (kurz, z. B. <code>P1</code>), Hersteller, Modell, Seriennummer, Anschaffungsdatum und -preis, Ersatzteilkosten je Jahr, Stromkosten bzw. Leistungsaufnahme, Düsendurchmesser und der Stundenstand beim letzten Düsenwechsel. Anschaffungspreis und Ersatzteilkosten sind das, was den Maschinenstundensatz je Gerät unterscheidet.</p>
-	<p>Auf derselben Seite: das Wartungsprotokoll (wöchentlich, monatlich, Verschleiß, Saison) und ein druckbarer Aufkleber je Gerät mit der Kurzadresse für die mobile Erfassung.</p>
+	<p>Auf derselben Seite: das Wartungsprotokoll und ein druckbarer Aufkleber je Gerät mit der Kurzadresse für die mobile Erfassung.</p>
 
 	<h3>3.5 Komponenten</h3>
 	<p><span class="path">Betrieb → Artikel &amp; Revisionen → Komponenten</span></p>
@@ -833,6 +833,22 @@ footer p{max-width:72ch}
 
 	<h3>9.6 Wartung</h3>
 	<p><span class="path">Betrieb → Drucker &amp; Wartung</span> — Protokoll je Gerät nach Intervall. Der Stundenstand seit dem letzten Düsenwechsel läuft mit.</p>
+
+	<h4>Die Checkliste</h4>
+	<p>Gerät und Intervall wählen — <strong>wöchentlich, monatlich, jährlich</strong> —, und darunter erscheint die passende Liste. Jeder Punkt wird einzeln abgehakt; solange einer offen ist, bleibt <em>Wartung erfassen</em> gesperrt und daneben steht, wie viele noch fehlen. Eine Wartung, die man mit einem Klick als erledigt meldet, ist keine Wartung, sondern ein Eintrag.</p>
+	<p>Die Listen <strong>bauen aufeinander auf</strong>: Die Monatswartung enthält die Wochenpunkte, die Jahreswartung beides. In der Werkstatt ist es genauso — wer die Achsen schmiert, saugt vorher aus.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Intervall</th><th>Was neu dazukommt</th></tr></thead>
+			<tbody>
+				<tr><td><strong>wöchentlich</strong></td><td>Druckplatte reinigen und auf Kratzer prüfen · Düse und Heizblock ansehen · Innenraum aussaugen · Riemen prüfen · Lüfter hören · Filament und Restmenge</td></tr>
+				<tr><td><strong>monatlich</strong></td><td>Linearachsen reinigen und schmieren · Z-Spindel fetten · Schrauben nachziehen · Extruder öffnen und Förderräder reinigen · Lüfter ausblasen · Kalibrierung fahren · Kabel prüfen</td></tr>
+				<tr><td><strong>jährlich</strong></td><td>Düse tauschen · PTFE-Schlauch prüfen · Hotend zerlegen und reinigen · Riemen auf Verschleiß · Netzteil und Filter · Firmware-Stand · Sicherheitsprüfung</td></tr>
+				<tr><td><strong>Verschleiß, Saison</strong></td><td>keine feste Liste — anlassbezogen. Wer einen gerissenen Riemen tauscht, fettet dabei nicht zwangsläufig die Spindel; was gemacht wurde, gehört in <em>Ersatzteil</em> und die Notiz.</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p>Geprüft wird auf dem Server, nicht nur im Browser: Ohne JavaScript stehen schlicht alle Listen da, und beim Speichern sagt die Meldung, welche Punkte fehlen. Was abgehakt wurde, steht im Protokolleintrag — wenn ein Gerät ausfällt, ist die erste Frage, was beim letzten Mal geprüft wurde.</p>
 
 	<h3>9.7 Berichte</h3>
 	<p><span class="path">Betrieb → Berichte</span> — die Kennzahlen mit Zielwert und Ampel: Umsatz, Bestellungen, Ø-Warenkorb, Ø Handlingzeit, B2B-Anteil, Reklamations- und Ausschussquote, Teile je Plattenwechsel, Auslastung der Druckfarm, Arbeitsstunden je Woche, Wiederkaufsrate, Kosten je Neukunde, ROAS, organischer Traffic und der Deckungsbeitrag Ist. Diagramme sind lokal erzeugtes SVG — es geht nichts nach außen.</p>

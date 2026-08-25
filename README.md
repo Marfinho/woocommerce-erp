@@ -81,6 +81,12 @@ und die Papierformulare ab.
   `lw16_view_reports`, `lw16_view_costs`, `lw16_manage_settings`,
   `lw16_manage_users` und die Rolle `lw16_betrieb`. Wer `manage_lw16` besitzt,
   behält vollen Zugriff.
+- **Wartungscheckliste** (`MaintenanceChecklist`) je Intervall, kumulativ
+  aufgebaut (monatlich enthält wöchentlich). Bei periodischen Intervallen
+  müssen alle Punkte abgehakt sein; geprüft wird serverseitig in
+  `MaintenanceRepository::validate()`, das JavaScript blendet nur um und
+  sperrt den Knopf. Anlassbezogene Wartungen (Verschleiß, Saison) haben
+  bewusst keine Pflichtliste.
 - **Rechteprofile** (`AccessProfiles`) bündeln diese Capabilities zu Werkstatt,
   Fertigung, Betriebsleitung und Vollzugriff und werden je Nutzer über
   `Roles::set_betrieb_profile()` als User-Caps gesetzt – nicht über eine

@@ -339,6 +339,16 @@ class SimplePages {
 	 */
 	public function handle_maintenance() {
 		$input = $this->input( 'lw16_capture' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- in input() geprüft.
+		$input['tasks'] = isset( $_POST['tasks'] ) ? (array) wp_unslash( $_POST['tasks'] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput
+
+		$check = MaintenanceRepository::validate( $input );
+
+		if ( $check['errors'] ) {
+			$this->redirect( 'lw16-betrieb-drucker', implode( ' ', $check['errors'] ), 'error' );
+		}
+
 		MaintenanceRepository::insert( $input );
 
 		$this->redirect( 'lw16-betrieb-drucker', __( 'Wartung erfasst.', 'lindenweg16' ) );

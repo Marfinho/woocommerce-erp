@@ -9,9 +9,11 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
+use Lindenweg16\Modules\Betrieb\MaintenanceChecklist;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\MachineRate;
@@ -31,6 +33,26 @@ class PrintersPage {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_drucker', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_save_printer', array( $this, 'handle_save' ) );
 		add_action( 'admin_post_lw16_betrieb_flush_routes', array( $this, 'handle_flush' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	}
+
+	/**
+	 * Die Checklisten-Steuerung nur auf dieser Seite laden.
+	 *
+	 * @param string $hook Aktueller Admin-Hook.
+	 */
+	public function enqueue( $hook ) {
+		if ( false === strpos( (string) $hook, 'lw16-betrieb-drucker' ) ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'lw16-betrieb-wartung',
+			LW16_PLUGIN_URL . 'assets/js/betrieb-wartung.js',
+			array(),
+			Assets::version( 'assets/js/betrieb-wartung.js' ),
+			true
+		);
 	}
 
 	/**
@@ -274,30 +296,89 @@ class PrintersPage {
 			echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Keine Wartung fällig.', 'lindenweg16' ) . '</p></div>';
 		}
 
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<form method="post" id="lw16-wartung" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'lw16_betrieb_pages' );
 		echo '<input type="hidden" name="action" value="lw16_betrieb_maintenance" />';
 		echo '<p><select name="printer_id">';
 		foreach ( $printers as $printer ) {
 			printf( '<option value="%d">%s</option>', (int) $printer['id'], esc_html( $printer['code'] ) );
 		}
-		echo '</select> <select name="interval_type">';
-		foreach ( array(
-			'woechentlich' => __( 'wöchentlich', 'lindenweg16' ),
-			'monatlich'    => __( 'monatlich', 'lindenweg16' ),
-			'verschleiss'  => __( 'Verschleiß', 'lindenweg16' ),
-			'saison'       => __( 'Saison', 'lindenweg16' ),
-		) as $key => $label ) {
+		echo '</select> <select name="interval_type" id="lw16-wartung-intervall">';
+		foreach ( MaintenanceChecklist::intervals() as $key => $label ) {
 			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
 		}
 		echo '</select> ';
 		printf( '<input type="date" name="performed_on" value="%s" /> ', esc_attr( gmdate( 'Y-m-d' ) ) );
 		printf( '<input type="text" name="part_replaced" placeholder="%s" size="18" /> ', esc_attr__( 'Ersatzteil', 'lindenweg16' ) );
 		printf(
-			'<label><input type="checkbox" name="nozzle_changed" value="1" /> %s</label> ',
+			'<label><input type="checkbox" name="nozzle_changed" value="1" /> %s</label>',
 			esc_html__( 'Düse gewechselt', 'lindenweg16' )
 		);
-		printf( '<button class="button">%s</button></p></form>', esc_html__( 'Wartung erfassen', 'lindenweg16' ) );
+		echo '</p>';
+
+		$this->render_checklists();
+
+		printf(
+			'<p><button class="button button-primary" id="lw16-wartung-senden">%s</button> <span id="lw16-wartung-stand" class="description" data-offen="%s" data-fertig="%s" data-frei="%s"></span></p></form>',
+			esc_html__( 'Wartung erfassen', 'lindenweg16' ),
+			esc_attr__( '%1 von %2 Punkten erledigt.', 'lindenweg16' ),
+			esc_attr__( 'Alle Punkte erledigt.', 'lindenweg16' ),
+			esc_attr__( 'Anlassbezogen – hier gibt es keine feste Liste. Was gemacht wurde, gehört ins Feld Ersatzteil oder in die Notiz.', 'lindenweg16' )
+		);
+	}
+
+	/**
+	 * Die Checklisten aller Intervalle. Sichtbar ist immer nur eine; ohne
+	 * JavaScript stehen alle da und der Server prüft beim Speichern.
+	 */
+	protected function render_checklists() {
+		echo '<div class="lw16-checkliste">';
+
+		foreach ( MaintenanceChecklist::intervals() as $key => $label ) {
+			$items   = MaintenanceChecklist::items( $key );
+			$pflicht = MaintenanceChecklist::requires_all( $key );
+
+			printf(
+				'<fieldset data-intervall="%s" data-pflicht="%d"><legend>%s</legend>',
+				esc_attr( $key ),
+				$pflicht ? 1 : 0,
+				esc_html(
+					sprintf(
+						/* translators: %s: Intervall. */
+						__( 'Checkliste %s', 'lindenweg16' ),
+						$label
+					)
+				)
+			);
+
+			if ( ! $items ) {
+				printf(
+					'<p class="description">%s</p>',
+					esc_html__( 'Für eine anlassbezogene Wartung gibt es keine feste Liste – was gemacht wurde, gehört in Ersatzteil und Notiz.', 'lindenweg16' )
+				);
+				echo '</fieldset>';
+				continue;
+			}
+
+			if ( 'woechentlich' !== $key ) {
+				printf(
+					'<p class="description">%s</p>',
+					esc_html__( 'Enthält die Punkte der kürzeren Intervalle: Wer die Achsen schmiert, saugt vorher aus.', 'lindenweg16' )
+				);
+			}
+
+			echo '<ul class="lw16-checkliste__punkte">';
+			foreach ( $items as $item_key => $text ) {
+				printf(
+					'<li><label><input type="checkbox" name="tasks[]" value="%s" /> %s</label></li>',
+					esc_attr( $item_key ),
+					esc_html( $text )
+				);
+			}
+			echo '</ul></fieldset>';
+		}
+
+		echo '</div>';
 	}
 
 	/**
