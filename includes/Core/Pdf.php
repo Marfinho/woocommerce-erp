@@ -25,6 +25,19 @@ class Pdf {
 	const COLOR_TINTE  = '#3A434D';
 	const COLOR_COGNAC = '#8B6914';
 
+	/**
+	 * Seitengrösse und Rand dieses Dokuments.
+	 *
+	 * Die Konstanten oben sind der Normalfall A4. Ein Etikettendrucker
+	 * bekommt dagegen eine Seite, die genau das Etikett ist – nur dann
+	 * druckt der Treiber ohne Skalierung an die richtige Stelle.
+	 *
+	 * @var float
+	 */
+	protected $page_w = self::PAGE_WIDTH;
+	protected $page_h = self::PAGE_HEIGHT;
+	protected $margin = self::MARGIN;
+
 	protected $pages = array();
 	protected $buffer = '';
 	protected $y = self::MARGIN;
@@ -39,9 +52,44 @@ class Pdf {
 	protected $stroke_g = 0.0;
 	protected $stroke_b = 0.0;
 
-	public function __construct() {
+	/**
+	 * @param float|null $width  Seitenbreite in pt, null = A4.
+	 * @param float|null $height Seitenhöhe in pt, null = A4.
+	 * @param float|null $margin Rand in pt, null = Standard.
+	 */
+	public function __construct( $width = null, $height = null, $margin = null ) {
+		if ( null !== $width && $width > 0 ) {
+			$this->page_w = (float) $width;
+		}
+		if ( null !== $height && $height > 0 ) {
+			$this->page_h = (float) $height;
+		}
+		if ( null !== $margin && $margin >= 0 ) {
+			$this->margin = (float) $margin;
+		}
+
+		$this->y = $this->margin;
+
 		$this->set_color( self::COLOR_TINTE );
 		$this->add_page();
+	}
+
+	/**
+	 * Seitenbreite dieses Dokuments.
+	 *
+	 * @return float
+	 */
+	public function page_width() {
+		return $this->page_w;
+	}
+
+	/**
+	 * Seitenhöhe dieses Dokuments.
+	 *
+	 * @return float
+	 */
+	public function page_height() {
+		return $this->page_h;
 	}
 
 	/**
@@ -68,7 +116,7 @@ class Pdf {
 		if ( $logo_id ) {
 			$path = get_attached_file( $logo_id );
 			if ( $path && is_readable( $path ) ) {
-				$logo_h = $this->image_jpeg_at( $path, self::MARGIN, $header_y, 160, 60 );
+				$logo_h = $this->image_jpeg_at( $path, $this->margin, $header_y, 160, 60 );
 			}
 		}
 
@@ -78,7 +126,7 @@ class Pdf {
 		$text_y     = $header_y;
 		$this->set_color( '#6E7882' );
 		foreach ( $info_lines as $line ) {
-			$this->text_xy_right( $line, self::PAGE_WIDTH - self::MARGIN, $text_y, $info_size );
+			$this->text_xy_right( $line, $this->page_w - $this->margin, $text_y, $info_size );
 			$text_y += $line_h;
 		}
 		$this->set_color( self::COLOR_TINTE );
@@ -92,7 +140,7 @@ class Pdf {
 			$this->pages[] = $this->buffer;
 		}
 		$this->buffer = '';
-		$this->y      = self::MARGIN;
+		$this->y      = $this->margin;
 
 		if ( $this->ci_enabled ) {
 			$this->render_ci_header();
@@ -108,7 +156,7 @@ class Pdf {
 
 	protected function ensure_space( $needed ) {
 		$footer_reserve = $this->ci_enabled ? 30 : 0;
-		if ( $this->y + $needed > self::PAGE_HEIGHT - self::MARGIN - $footer_reserve ) {
+		if ( $this->y + $needed > $this->page_h - $this->margin - $footer_reserve ) {
 			$this->add_page();
 		}
 	}
@@ -163,7 +211,7 @@ class Pdf {
 	 */
 	public function text_xy( $text, $x, $y_top, $size, $bold = false ) {
 		$font = $bold ? '/F2' : '/F1';
-		$ty   = self::PAGE_HEIGHT - $y_top - $size;
+		$ty   = $this->page_h - $y_top - $size;
 		$this->buffer .= sprintf(
 			"BT %s %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
 			$this->color_cmd(),
@@ -188,7 +236,7 @@ class Pdf {
 	 */
 	public function text( $text, $size = 11, $bold = false, $indent = 0 ) {
 		$this->ensure_space( $size + 4 );
-		$x = self::MARGIN + $indent;
+		$x = $this->margin + $indent;
 		$this->text_xy( $text, $x, $this->y, $size, $bold );
 		$this->y += $size + 4;
 	}
@@ -198,7 +246,7 @@ class Pdf {
 	 */
 	public function text_right( $text, $size = 11, $bold = false ) {
 		$this->ensure_space( $size + 4 );
-		$this->text_xy_right( $text, self::PAGE_WIDTH - self::MARGIN, $this->y, $size, $bold );
+		$this->text_xy_right( $text, $this->page_w - $this->margin, $this->y, $size, $bold );
 		$this->y += $size + 4;
 	}
 
@@ -207,8 +255,8 @@ class Pdf {
 	 */
 	public function row( $left, $right, $size = 11, $bold = false ) {
 		$this->ensure_space( $size + 4 );
-		$this->text_xy( $left, self::MARGIN, $this->y, $size, $bold );
-		$this->text_xy_right( $right, self::PAGE_WIDTH - self::MARGIN, $this->y, $size, $bold );
+		$this->text_xy( $left, $this->margin, $this->y, $size, $bold );
+		$this->text_xy_right( $right, $this->page_w - $this->margin, $this->y, $size, $bold );
 		$this->y += $size + 4;
 	}
 
@@ -223,7 +271,7 @@ class Pdf {
 	 */
 	public function table_cols( array $cols, array $widths, array $aligns, $size = 11, $bold = false ) {
 		$this->ensure_space( $size + 8 );
-		$x = self::MARGIN;
+		$x = $this->margin;
 		foreach ( $cols as $i => $txt ) {
 			$w = isset( $widths[ $i ] ) ? $widths[ $i ] : 60;
 			if ( isset( $aligns[ $i ] ) && 'r' === $aligns[ $i ] ) {
@@ -245,13 +293,13 @@ class Pdf {
 	 */
 	public function hr( $thickness = 0.5 ) {
 		$this->ensure_space( 6 );
-		$yy = self::PAGE_HEIGHT - $this->y;
+		$yy = $this->page_h - $this->y;
 		$this->buffer .= sprintf(
 			"%s %.2F %.2F m %.2F %.2F l %.2F w S\n",
 			$this->stroke_cmd(),
-			self::MARGIN,
+			$this->margin,
 			$yy,
-			self::PAGE_WIDTH - self::MARGIN,
+			$this->page_w - $this->margin,
 			$yy,
 			$thickness
 		);
@@ -274,7 +322,7 @@ class Pdf {
 			"%s %.3F %.3F %.3F %.3F re f\n",
 			$this->color_cmd(),
 			(float) $x,
-			self::PAGE_HEIGHT - (float) $y_top - (float) $h,
+			$this->page_h - (float) $y_top - (float) $h,
 			(float) $w,
 			(float) $h
 		);
@@ -294,9 +342,9 @@ class Pdf {
 			"%s %.3F %.3F m %.3F %.3F l %.2F w S\n",
 			$this->stroke_cmd(),
 			(float) $x1,
-			self::PAGE_HEIGHT - (float) $y1_top,
+			$this->page_h - (float) $y1_top,
 			(float) $x2,
-			self::PAGE_HEIGHT - (float) $y2_top,
+			$this->page_h - (float) $y2_top,
 			(float) $thickness
 		);
 	}
@@ -305,7 +353,7 @@ class Pdf {
 	 * JPEG-Bild einbetten (fließend, linksbündig).
 	 */
 	public function image_jpeg( $file, $max_w = 400, $max_h = 500 ) {
-		$h = $this->embed_image( $file, self::MARGIN, $this->y, $max_w, $max_h );
+		$h = $this->embed_image( $file, $this->margin, $this->y, $max_w, $max_h );
 		if ( false === $h ) {
 			return false;
 		}
@@ -346,7 +394,7 @@ class Pdf {
 			'h'    => $ih,
 		);
 
-		$yy = self::PAGE_HEIGHT - $y_top - $h;
+		$yy = $this->page_h - $y_top - $h;
 		$this->buffer .= sprintf(
 			"q %.2F 0 0 %.2F %.2F %.2F cm /%s Do Q\n",
 			$w,
@@ -376,7 +424,7 @@ class Pdf {
 	 * Nutzbare Inhaltsbreite (zwischen den Rändern).
 	 */
 	public function content_width() {
-		return self::PAGE_WIDTH - 2 * self::MARGIN;
+		return $this->page_w - 2 * $this->margin;
 	}
 
 	/**
@@ -409,9 +457,9 @@ class Pdf {
 				$line_y = 42;
 				$stream .= sprintf(
 					"0.85 0.85 0.85 RG %.2F %.2F m %.2F %.2F l 0.3 w S\n",
-					self::MARGIN,
+					$this->margin,
 					$line_y,
-					self::PAGE_WIDTH - self::MARGIN,
+					$this->page_w - $this->margin,
 					$line_y
 				);
 
@@ -420,14 +468,14 @@ class Pdf {
 				$stream .= sprintf(
 					"BT %s /F2 7 Tf %.2F %.2F Td (%s) Tj ET\n",
 					$tinte_cmd,
-					self::MARGIN,
+					$this->margin,
 					30.0,
 					$firma
 				);
 
 				if ( $footer_info ) {
 					$info_w = strlen( $footer_info ) * 3.5;
-					$info_x = ( self::PAGE_WIDTH - $info_w ) / 2;
+					$info_x = ( $this->page_w - $info_w ) / 2;
 					$stream .= sprintf(
 						"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
 						$grey,
@@ -441,7 +489,7 @@ class Pdf {
 				$stream .= sprintf(
 					"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
 					$grey,
-					self::PAGE_WIDTH - self::MARGIN - $page_w,
+					$this->page_w - $this->margin - $page_w,
 					30.0,
 					$page_str
 				);
@@ -489,8 +537,8 @@ class Pdf {
 			$content_obj = $page_obj + 1;
 			$objects[ $page_obj ] = sprintf(
 				'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %.2F %.2F] /Resources %s /Contents %d 0 R >>',
-				self::PAGE_WIDTH,
-				self::PAGE_HEIGHT,
+				$this->page_w,
+				$this->page_h,
 				$resources,
 				$content_obj
 			);

@@ -208,6 +208,95 @@ class BetriebLabelSheetTest extends TestCase {
 	}
 
 	/**
+	 * Auch auf der Rolle bleiben die Module gross genug. Das ist der Grund,
+	 * warum es kein 17-mm-Format gibt.
+	 */
+	public function test_die_module_bleiben_auch_auf_der_rolle_druckbar() {
+		foreach ( array_keys( LabelSheet::rolls() ) as $key ) {
+			$cell = LabelSheet::roll_cell( LabelSheet::roll( $key ) );
+			$box  = LabelSheet::qr_box( $cell, 29, LabelSheet::padding( $cell['h'] ) );
+
+			$this->assertGreaterThan(
+				0.5,
+				$box['module'] / LabelSheet::MM,
+				$key . ': Module unter einem halben Millimeter sind nicht mehr zuverlässig scannbar.'
+			);
+		}
+	}
+
+	/**
+	 * Ein Rollenetikett ist die ganze Seite – ohne Rand, sonst skaliert der
+	 * Treiber.
+	 */
+	public function test_das_rollenetikett_ist_die_ganze_seite() {
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			$cell = LabelSheet::roll_cell( $roll );
+
+			$this->assertSame( 0.0, $cell['x'], $key );
+			$this->assertSame( 0.0, $cell['y'], $key );
+			$this->assertEqualsWithDelta( $roll['w'], $cell['w'] / LabelSheet::MM, 0.001, $key );
+			$this->assertEqualsWithDelta( $roll['h'], $cell['h'] / LabelSheet::MM, 0.001, $key );
+		}
+	}
+
+	/**
+	 * Jedes Rollenformat ist genau so breit wie die Rolle im Gerät.
+	 *
+	 * Das war der Fehler der ersten Fassung: Brother nennt seine Rollen
+	 * „Breite × Länge", und aus DK-11201 (29 mm breit, 90 mm lang) wurde
+	 * versehentlich ein 90 mm breites Etikett. Auf einer 62-mm-Rolle
+	 * druckt so etwas nicht.
+	 */
+	public function test_jedes_rollenformat_ist_62_mm_breit() {
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			$this->assertSame(
+				LabelSheet::ROLL_WIDTH_MM,
+				$roll['w'],
+				$key . ' ist nicht so breit wie die Rolle im Gerät.'
+			);
+		}
+	}
+
+	/**
+	 * Der Inhalt bleibt innerhalb der bedruckbaren Breite. Der Druckkopf
+	 * ist schmaler als die Rolle – ganz am Rand käme nichts heraus.
+	 */
+	public function test_der_inhalt_bleibt_im_druckbaren_bereich() {
+		$unbedruckbar = ( LabelSheet::ROLL_WIDTH_MM - LabelSheet::PRINTABLE_WIDTH_MM ) / 2;
+
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			$cell    = LabelSheet::roll_cell( $roll );
+			$padding = LabelSheet::padding( $cell['h'] );
+
+			$this->assertGreaterThan(
+				$unbedruckbar,
+				$padding / LabelSheet::MM,
+				$key . ': Der Rand ist schmaler als der Bereich, den der Druckkopf nicht erreicht.'
+			);
+		}
+	}
+
+	/**
+	 * Unbekanntes Rollenformat fällt auf das gängigste zurück.
+	 */
+	public function test_unbekannte_rolle_faellt_zurueck() {
+		$this->assertFalse( LabelSheet::has_roll( 'ausgedacht' ) );
+		$this->assertSame( LabelSheet::roll( 'dk11209' ), LabelSheet::roll( 'ausgedacht' ) );
+	}
+
+	/**
+	 * Bogen und Rolle sind zwei verschiedene Dinge und dürfen sich in den
+	 * Kennungen nicht überschneiden – sonst entscheidet der Zufall, welches
+	 * Format der Export nimmt.
+	 */
+	public function test_bogen_und_rolle_teilen_keine_kennung() {
+		$this->assertSame(
+			array(),
+			array_intersect( array_keys( LabelSheet::layouts() ), array_keys( LabelSheet::rolls() ) )
+		);
+	}
+
+	/**
 	 * Zu langer Text wird sichtbar gekürzt, kurzer bleibt unangetastet.
 	 */
 	public function test_langer_text_wird_sichtbar_gekuerzt() {

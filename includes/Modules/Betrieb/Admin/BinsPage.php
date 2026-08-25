@@ -257,6 +257,7 @@ class BinsPage {
 				__( 'Art', 'lindenweg16' ),
 				__( 'Liegt dort', 'lindenweg16' ),
 				__( 'Status', 'lindenweg16' ),
+				__( 'Etikett', 'lindenweg16' ),
 				'',
 			) as $head ) {
 				echo '<th>' . esc_html( $head ) . '</th>';
@@ -286,6 +287,11 @@ class BinsPage {
 					'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
 					$bin['is_active'] ? 'gruen' : 'rot',
 					$bin['is_active'] ? esc_html__( 'aktiv', 'lindenweg16' ) : esc_html__( 'stillgelegt', 'lindenweg16' )
+				);
+				printf(
+					'<td><a class="button button-small" href="%s" target="_blank" rel="noopener">%s</a></td>',
+					esc_url( self::label_link( 'bins', $bin['code'] ) ),
+					esc_html__( 'drucken', 'lindenweg16' )
 				);
 				printf(
 					'<td><a href="%s">%s</a></td>',
@@ -657,25 +663,52 @@ class BinsPage {
 		);
 		echo '</p>';
 
-		echo '<p><select name="layout">';
+		echo '<p><select name="format">';
+		printf( '<optgroup label="%s">', esc_attr__( 'A4-Bogen zum Ausschneiden oder Abziehen', 'lindenweg16' ) );
 		foreach ( LabelSheet::layouts() as $key => $layout ) {
-			printf(
-				'<option value="%s">%s</option>',
-				esc_attr( $key ),
-				esc_html( $layout['label'] )
-			);
+			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $layout['label'] ) );
 		}
-		echo '</select> ';
+		echo '</optgroup>';
+		printf( '<optgroup label="%s">', esc_attr__( 'Etikettendrucker Brother QL · 62-mm-Rolle, eine Seite = ein Etikett', 'lindenweg16' ) );
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $roll['label'] ) );
+		}
+		echo '</optgroup></select> ';
 		printf( '<button class="button button-primary">%s</button></p>', esc_html__( 'Etikettenbogen erzeugen', 'lindenweg16' ) );
 
 		echo '<ul class="ul-disc" style="max-width:52em">';
-		foreach ( LabelSheet::layouts() as $layout ) {
-			printf( '<li><strong>%s</strong> – %s</li>', esc_html( $layout['label'] ), esc_html( $layout['hint'] ) );
+		foreach ( array_merge( LabelSheet::layouts(), LabelSheet::rolls() ) as $format ) {
+			printf( '<li><strong>%s</strong> – %s</li>', esc_html( $format['label'] ), esc_html( $format['hint'] ) );
 		}
 		echo '</ul>';
 
-		echo '<p class="description">' . esc_html__( 'Drucke ohne Skalierung („Tatsächliche Grösse", nicht „An Seite anpassen"), sonst passen die Etiketten nicht auf die Stanzung.', 'lindenweg16' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'In jedem Fall ohne Skalierung drucken: im Druckdialog „Tatsächliche Grösse" und nicht „An Seite anpassen". Sonst schrumpft der Bogen um ein paar Prozent – auf dem Klebebogen liegen die Etiketten dann neben der Stanzung, auf der Rolle wird der QR-Code so klein, dass ihn keine Kamera mehr liest.', 'lindenweg16' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Die Formate für den Etikettendrucker sind alle 62 mm breit – das ist die Rollenbreite des QL-710W, nicht die Etikettenlänge. Jede Seite des PDFs ist genau ein Etikett. Im Druckdialog den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus.', 'lindenweg16' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Direkt aus dem Plugin heraus drucken kann der Server nicht: Der Drucker steht in deinem Netz, die Webseite beim Hoster – die beiden sehen einander nicht. Was hier geht, ist der kurze Weg: Knopf drücken, das PDF öffnet sich im Browser, Strg+P, fertig.', 'lindenweg16' ) . '</p>';
 		echo '</form>';
+	}
+
+	/**
+	 * Verweis zum Nachdrucken eines einzelnen Etiketts.
+	 *
+	 * @param string $was  bins oder articles.
+	 * @param string $code Code des Datensatzes.
+	 * @return string
+	 */
+	public static function label_link( $was, $code ) {
+		return wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'lw16_betrieb_labels',
+					'was[]'  => $was,
+					'format' => 'dk11209',
+					'alle'   => 1,
+					'code'   => rawurlencode( $code ),
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'lw16_betrieb_export'
+		);
 	}
 
 	/**

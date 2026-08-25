@@ -88,6 +88,12 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Etikettendrucker**: `LabelSheet::rolls()` liefert Formate für die
+  62-mm-Rolle des Brother QL (Rollenbreite, nicht Etikettenlänge –
+  DK-11209 ist 62 × 29). `LabelPdf::build_roll()` erzeugt eine Seite je
+  Etikett mit `new Pdf( $w, $h, 0 )`; die Seitengrösse von `Core\Pdf` ist
+  dafür instanzweise statt konstant. Hohe Etiketten (h ≥ 0,9 · w) werden
+  gestapelt gesetzt, damit der Code die volle Breite bekommt.
 - **Wartungscheckliste** (`MaintenanceChecklist`) je Intervall, kumulativ
   aufgebaut (monatlich enthält wöchentlich). Bei periodischen Intervallen
   müssen alle Punkte abgehakt sein; geprüft wird serverseitig in

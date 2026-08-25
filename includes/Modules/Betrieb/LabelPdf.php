@@ -100,6 +100,41 @@ class LabelPdf {
 	}
 
 	/**
+	 * Einen Stapel für den Etikettendrucker erzeugen: eine Seite je
+	 * Etikett, die Seite genau so gross wie das Etikett.
+	 *
+	 * Nur so setzt der Brother-Treiber das Bild ohne Skalierung auf die
+	 * Rolle. Ein A4-Bogen, den der Treiber auf 62 mm herunterrechnet, ergibt
+	 * einen QR-Code, den keine Kamera mehr liest.
+	 *
+	 * @param array  $labels Etiketten.
+	 * @param string $roll   Kennung des Rollenformats.
+	 * @return Pdf|null
+	 */
+	public static function build_roll( array $labels, $roll = 'dk11209' ) {
+		if ( ! $labels ) {
+			return null;
+		}
+
+		$roll = LabelSheet::roll( $roll );
+		$cell = LabelSheet::roll_cell( $roll );
+		$pdf  = new Pdf( $cell['w'], $cell['h'], 0 );
+
+		$erste = true;
+
+		foreach ( $labels as $label ) {
+			if ( ! $erste ) {
+				$pdf->add_page();
+			}
+			$erste = false;
+
+			self::render_label( $pdf, $cell, $label, array( 'cut' => false ) );
+		}
+
+		return $pdf;
+	}
+
+	/**
 	 * Ein einzelnes Etikett zeichnen.
 	 *
 	 * @param Pdf   $pdf    Dokument.
@@ -116,13 +151,31 @@ class LabelPdf {
 			$pdf->line( $cell['x'] + $cell['w'], $cell['y'], $cell['x'] + $cell['w'], $cell['y'] + $cell['h'] );
 		}
 
-		$padding = $cell['h'] > 120 ? 10.0 : 6.0;
+		// Der Rand wächst mit dem Etikett, bleibt aber nie unter 1,5 mm:
+		// Der Druckkopf des QL ist schmaler als die Rolle, ganz am Rand
+		// würde abgeschnitten.
+		$padding = LabelSheet::padding( $cell['h'] );
 
 		// Fehlerkorrektur Q: Ein Etikett im Lager bekommt Staub, Fett und
 		// Kratzer ab. Die höhere Stufe kostet Fläche und spart Ärger.
 		$matrix = QrCode::matrix( $label['payload'], 'Q' );
-		$box    = LabelSheet::qr_box( $cell, count( $matrix ), $padding );
 
+		if ( LabelSheet::is_stacked( $cell ) ) {
+			self::render_stacked( $pdf, $cell, $label, $matrix, $padding );
+			return;
+		}
+
+		self::render_beside( $pdf, $cell, $label, $matrix, $padding );
+	}
+
+	/**
+	 * Das Raster als Rechtecke zeichnen.
+	 *
+	 * @param Pdf   $pdf    Dokument.
+	 * @param array $box    Ergebnis von qr_box() oder qr_box_stacked().
+	 * @param array $matrix Raster.
+	 */
+	protected static function render_matrix( Pdf $pdf, array $box, array $matrix ) {
 		$pdf->set_color( '#000000' );
 
 		foreach ( LabelSheet::runs( $matrix ) as $run ) {
@@ -133,6 +186,20 @@ class LabelPdf {
 				$box['module']
 			);
 		}
+	}
+
+	/**
+	 * Breites Etikett: Code links, Text rechts.
+	 *
+	 * @param Pdf   $pdf     Dokument.
+	 * @param array $cell    Feld.
+	 * @param array $label   Etikett.
+	 * @param array $matrix  Raster.
+	 * @param float $padding Rand.
+	 */
+	protected static function render_beside( Pdf $pdf, array $cell, array $label, array $matrix, $padding ) {
+		$box = LabelSheet::qr_box( $cell, count( $matrix ), $padding );
+		self::render_matrix( $pdf, $box, $matrix );
 
 		$text_x = $box['x'] + $box['size'] + $padding;
 		$breite = $cell['x'] + $cell['w'] - $padding - $text_x;
@@ -145,7 +212,6 @@ class LabelPdf {
 		// sein, ein Fachetikett muss klein bleiben.
 		$gross = max( 9.0, min( 20.0, $cell['h'] / 5 ) );
 		$klein = max( 6.0, $gross * 0.5 );
-
 		$mitte = $cell['y'] + $cell['h'] / 2;
 
 		$pdf->set_color( '#3A434D' );
@@ -158,5 +224,41 @@ class LabelPdf {
 			$pdf->set_color( '#6E7882' );
 			$pdf->text_xy( LabelSheet::shorten( $label['name'], (int) ( $breite / ( $klein * 0.52 ) ) ), $text_x, $mitte + 3, $klein );
 		}
+	}
+
+	/**
+	 * Quadratisches oder hohes Etikett: Code oben über die volle Breite,
+	 * Text mittig darunter.
+	 *
+	 * @param Pdf   $pdf     Dokument.
+	 * @param array $cell    Feld.
+	 * @param array $label   Etikett.
+	 * @param array $matrix  Raster.
+	 * @param float $padding Rand.
+	 */
+	protected static function render_stacked( Pdf $pdf, array $cell, array $label, array $matrix, $padding ) {
+		$gross = max( 10.0, min( 24.0, $cell['w'] / 7 ) );
+		$klein = max( 7.0, $gross * 0.5 );
+
+		$hat_name = '' !== trim( $label['name'] );
+		$text_box = $gross + ( $hat_name ? $klein + 4 : 0 ) + 6;
+
+		$box = LabelSheet::qr_box_stacked( $cell, count( $matrix ), $padding, $text_box );
+		self::render_matrix( $pdf, $box, $matrix );
+
+		$breite = $cell['w'] - 2 * $padding;
+		$y      = $box['y'] + $box['size'] + 4;
+
+		$code = LabelSheet::shorten( $label['code'], (int) ( $breite / ( $gross * 0.54 ) ) );
+		$pdf->set_color( '#000000' );
+		$pdf->text_xy( $code, $cell['x'] + ( $cell['w'] - $pdf->text_width( $code, $gross, true ) ) / 2, $y, $gross, true );
+
+		if ( ! $hat_name ) {
+			return;
+		}
+
+		$name = LabelSheet::shorten( $label['name'], (int) ( $breite / ( $klein * 0.52 ) ) );
+		$pdf->set_color( '#6E7882' );
+		$pdf->text_xy( $name, $cell['x'] + ( $cell['w'] - $pdf->text_width( $name, $klein ) ) / 2, $y + $gross + 2, $klein );
 	}
 }

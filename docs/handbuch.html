@@ -620,6 +620,23 @@ footer p{max-width:72ch}
 		</table>
 	</div>
 	<p>Jedes Etikett trägt den QR-Code, darüber die Art (Lagerplatz oder Artikel), daneben gross den Code und darunter die Bezeichnung. <strong>Der Klartext steht bewusst dabei</strong> — bei leerem Handyakku ist ein reiner QR-Code wertlos.</p>
+
+	<h4>Etikettendrucker (Brother QL-710W)</h4>
+	<p>In derselben Auswahlliste steht eine zweite Gruppe: Formate für den Etikettendrucker. Dort ist <strong>jede Seite des PDFs genau ein Etikett</strong> — nur so setzt der Brother-Treiber das Bild ohne Skalierung auf die Rolle.</p>
+	<div class="scroller">
+		<table>
+			<thead><tr><th>Format</th><th>Wofür</th></tr></thead>
+			<tbody>
+				<tr><td><strong>DK-11209</strong><br>62 × 29 mm</td><td>Gestanzte Einzeletiketten. Der Allrounder für Fächer und Artikel.</td></tr>
+				<tr><td><strong>DK-22205, 30 mm</strong></td><td>Endlosrolle, kurz geschnitten — spart Material.</td></tr>
+				<tr><td><strong>DK-22205, 40 mm</strong></td><td>Mehr Luft für lange Bezeichnungen, grösserer Code.</td></tr>
+				<tr><td><strong>DK-22205, 62 mm</strong><br>quadratisch</td><td>Code oben über die volle Breite (rund 37 mm), Text darunter. Für Regalböden, die man aus zwei Metern scannt.</td></tr>
+			</tbody>
+		</table>
+	</div>
+	<p><strong>Die 62 mm sind die Rollenbreite, nicht die Etikettenlänge.</strong> Brother benennt seine Rollen in dieser Reihenfolge: DK-11209 ist 62 mm breit und 29 mm lang. Eine DK-11201 wäre nur 29 mm breit und passt zwar ins Gerät, aber nicht zu einer eingelegten 62-mm-Rolle — solche Formate stehen hier deshalb nicht zur Wahl. Der Druckkopf ist mit 720 Punkten bei 300 dpi knapp 61 mm breit; der Inhalt hält darum mindestens 1,5 mm Abstand zum Rand.</p>
+	<p><strong>So druckst du:</strong> Knopf drücken, das PDF öffnet sich im Browser, Strg+P, als Drucker den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus. In den Listen der Lagerplätze und der Artikel steht ausserdem je Zeile ein Knopf <em>drucken</em> beziehungsweise <em>Etikett</em> — damit druckst du ein einzelnes Etikett nach, ohne den ganzen Bestand zu erzeugen.</p>
+	<p><strong>Was nicht geht:</strong> ohne Druckdialog direkt aus dem Plugin auf das Gerät drucken. Der Drucker steht in deinem Netz, die Webseite beim Hoster — die beiden sehen einander nicht. Dafür bräuchte es ein kleines Hilfsprogramm auf einem Rechner in der Werkstatt; sag Bescheid, wenn dir der Druckdialog auf Dauer zu umständlich ist.</p>
 	<p><strong>Wichtig beim Drucken:</strong> ohne Skalierung ausgeben — im Druckdialog <em>Tatsächliche Grösse</em> und nicht <em>An Seite anpassen</em>. Sonst schrumpft der Bogen um ein paar Prozent und die Etiketten liegen neben der Stanzung. Das Häkchen <em>auch stillgelegte</em> nimmt Plätze und Artikel mit, die nicht mehr in Gebrauch sind; normalerweise willst du das nicht.</p>
 	<p>Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske. Es entsteht nichts Neues, es wird nur alles auf einmal gedruckt.</p>
 

@@ -84,6 +84,109 @@ class LabelSheet {
 	}
 
 	/**
+	 * Formate für einen Etikettendrucker mit Endlos- oder Einzelrolle.
+	 *
+	 * Hier ist die Seite das Etikett: eine Seite, ein Etikett, kein Rand.
+	 * Nur so setzt der Druckertreiber das Bild ohne Skalierung auf die
+	 * Rolle.
+	 *
+	 * **Alle Formate sind 62 mm breit** – das ist die Rollenbreite des
+	 * Geräts, nicht die Etikettenlänge. Brother benennt seine Rollen in
+	 * dieser Reihenfolge: DK-11209 ist 62 mm breit und 29 mm lang, DK-11201
+	 * dagegen nur 29 mm breit. Eine 29er oder 38er Rolle steht hier deshalb
+	 * nicht zur Wahl – sie passt zwar ins Gerät, aber wer 62 mm eingelegt
+	 * hat, will sie nicht.
+	 *
+	 * Die Länge ist bei einer Endlosrolle frei wählbar; sie bestimmt, wo
+	 * geschnitten wird.
+	 *
+	 * @return array
+	 */
+	public static function rolls() {
+		return array(
+			'dk11209'  => array(
+				'label' => __( 'DK-11209 · Einzeletiketten 62 × 29 mm', 'lindenweg16' ),
+				'hint'  => __( 'Gestanzte Etiketten auf der 62-mm-Rolle. Der Allrounder für Fächer und Artikel.', 'lindenweg16' ),
+				'w'     => 62.0,
+				'h'     => 29.0,
+			),
+			'endlos30' => array(
+				'label' => __( 'DK-22205 · endlos, auf 30 mm geschnitten', 'lindenweg16' ),
+				'hint'  => __( 'Endlosrolle 62 mm. Kurzes Etikett, so viel wie nötig – spart Material.', 'lindenweg16' ),
+				'w'     => 62.0,
+				'h'     => 30.0,
+			),
+			'endlos40' => array(
+				'label' => __( 'DK-22205 · endlos, auf 40 mm geschnitten', 'lindenweg16' ),
+				'hint'  => __( 'Etwas mehr Luft für lange Bezeichnungen und einen grösseren Code.', 'lindenweg16' ),
+				'w'     => 62.0,
+				'h'     => 40.0,
+			),
+			'endlos62' => array(
+				'label' => __( 'DK-22205 · endlos, auf 62 mm geschnitten (quadratisch)', 'lindenweg16' ),
+				'hint'  => __( 'Code oben über die volle Breite (rund 37 mm), Text darunter – für Regalböden, die man aus zwei Metern scannt.', 'lindenweg16' ),
+				'w'     => 62.0,
+				'h'     => 62.0,
+			),
+		);
+	}
+
+	/**
+	 * Breite der Rolle, für die alle Rollenformate gemacht sind.
+	 *
+	 * Beim QL-710W ist das die Bauform: mehr als 62 mm nimmt das Gerät
+	 * nicht auf.
+	 */
+	const ROLL_WIDTH_MM = 62.0;
+
+	/**
+	 * Tatsächlich bedruckbare Breite in Millimetern.
+	 *
+	 * Der Druckkopf hat 720 Punkte bei 300 dpi, das sind 60,96 mm. Rechts
+	 * und links der Rolle bleibt also je ein halber Millimeter weiss. Der
+	 * Inhalt hält deshalb Abstand zum Rand, statt bis an die Kante zu
+	 * laufen und dort abgeschnitten zu werden.
+	 */
+	const PRINTABLE_WIDTH_MM = 60.96;
+
+	/**
+	 * Gibt es dieses Rollenformat?
+	 *
+	 * @param string $key Kennung.
+	 * @return bool
+	 */
+	public static function has_roll( $key ) {
+		return array_key_exists( (string) $key, self::rolls() );
+	}
+
+	/**
+	 * Ein Rollenformat mit Rückfall auf das gängigste.
+	 *
+	 * @param string $key Kennung.
+	 * @return array
+	 */
+	public static function roll( $key ) {
+		$rolls = self::rolls();
+
+		return isset( $rolls[ $key ] ) ? $rolls[ $key ] : $rolls['dk11209'];
+	}
+
+	/**
+	 * Das eine Feld eines Rollenetiketts: die ganze Seite.
+	 *
+	 * @param array $roll Rollenformat.
+	 * @return array
+	 */
+	public static function roll_cell( array $roll ) {
+		return array(
+			'x' => 0.0,
+			'y' => 0.0,
+			'w' => (float) $roll['w'] * self::MM,
+			'h' => (float) $roll['h'] * self::MM,
+		);
+	}
+
+	/**
 	 * Gibt es diese Aufteilung?
 	 *
 	 * @param string $key Kennung.
@@ -233,6 +336,66 @@ class LabelSheet {
 			'size'   => $size,
 			'quiet'  => (int) $quiet,
 		);
+	}
+
+	/**
+	 * Steht der Text unter dem Code statt daneben?
+	 *
+	 * Auf einem breiten Etikett ist nebeneinander richtig: der Code links,
+	 * der Klartext rechts. Auf einem quadratischen oder hohen Etikett
+	 * verschenkt das die halbe Fläche – dort gehört der Code nach oben und
+	 * der Text darunter, und der Code darf so gross werden, wie das
+	 * Etikett breit ist.
+	 *
+	 * @param array $cell Feld.
+	 * @return bool
+	 */
+	public static function is_stacked( array $cell ) {
+		return $cell['h'] >= $cell['w'] * 0.9;
+	}
+
+	/**
+	 * Der Code eines gestapelten Etiketts: oben, mittig, so gross wie
+	 * möglich – abzüglich des Platzes, den der Text darunter braucht.
+	 *
+	 * @param array $cell     Feld.
+	 * @param int   $modules  Kantenlänge des Rasters in Modulen.
+	 * @param float $padding  Innenabstand.
+	 * @param float $text_box Höhe des Textblocks darunter.
+	 * @param int   $quiet    Ruhezone in Modulen.
+	 * @return array {x, y, module, size, quiet}
+	 */
+	public static function qr_box_stacked( array $cell, $modules, $padding, $text_box, $quiet = 2 ) {
+		$modules = max( 1, (int) $modules );
+		$total   = $modules + 2 * (int) $quiet;
+
+		$verfuegbar = min(
+			$cell['w'] - 2 * $padding,
+			$cell['h'] - 2 * $padding - (float) $text_box
+		);
+
+		$module = floor( ( $verfuegbar / $total ) * 100 ) / 100;
+		$size   = $module * $total;
+
+		return array(
+			'x'      => $cell['x'] + ( $cell['w'] - $size ) / 2,
+			'y'      => $cell['y'] + $padding,
+			'module' => $module,
+			'size'   => $size,
+			'quiet'  => (int) $quiet,
+		);
+	}
+
+	/**
+	 * Der Rand, den ein Etikett dieser Höhe bekommt.
+	 *
+	 * Eine Stelle, damit Zeichnung und Prüfung nicht auseinanderlaufen.
+	 *
+	 * @param float $height Etikettenhöhe in pt.
+	 * @return float
+	 */
+	public static function padding( $height ) {
+		return max( 1.5 * self::MM, min( 10.0, (float) $height / 12 ) );
 	}
 
 	/**

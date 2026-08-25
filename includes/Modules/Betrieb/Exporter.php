@@ -72,8 +72,9 @@ class Exporter {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- oben geprüft.
 		$was    = isset( $_GET['was'] ) ? (array) wp_unslash( $_GET['was'] ) : array();
-		$layout = isset( $_GET['layout'] ) ? sanitize_key( wp_unslash( $_GET['layout'] ) ) : 'bogen';
+		$format = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : 'bogen';
 		$alle   = ! empty( $_GET['alle'] );
+		$code   = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$was    = array_map( 'sanitize_key', $was );
@@ -87,7 +88,23 @@ class Exporter {
 			$labels = array_merge( $labels, LabelPdf::article_labels( ! $alle ) );
 		}
 
-		$pdf = LabelPdf::build( $labels, $layout );
+		// Ein einzelnes Etikett nachdrucken: dieselbe Liste, nur gefiltert.
+		if ( '' !== $code ) {
+			$labels = array_values(
+				array_filter(
+					$labels,
+					static function ( $label ) use ( $code ) {
+						return $label['code'] === $code;
+					}
+				)
+			);
+		}
+
+		// Rollenformate bekommen eine Seite je Etikett, Bögen eine Seite
+		// voller Etiketten.
+		$pdf = LabelSheet::has_roll( $format )
+			? LabelPdf::build_roll( $labels, $format )
+			: LabelPdf::build( $labels, $format );
 
 		if ( ! $pdf ) {
 			wp_die( esc_html__( 'Es gibt nichts zu drucken – bitte mindestens eine Sorte wählen, zu der es auch Datensätze gibt.', 'lindenweg16' ) );

@@ -912,6 +912,7 @@ class ArticlesPage {
 				__( 'Händlerpreis', 'lindenweg16' ),
 				__( 'Traglast', 'lindenweg16' ),
 				__( 'verkäuflich', 'lindenweg16' ),
+				__( 'Etikett', 'lindenweg16' ),
 				'',
 			) as $head ) {
 				echo '<th>' . esc_html( $head ) . '</th>';
@@ -929,6 +930,12 @@ class ArticlesPage {
 				printf( '<td>%s</td>', esc_html( null === $row['dealer_price'] ? '—' : $this->money( $row['dealer_price'] ) ) );
 				printf( '<td>%s</td>', esc_html( null === $row['load_rating_kg'] ? '—' : number_format_i18n( (float) $row['load_rating_kg'], 1 ) . ' kg' ) );
 				printf( '<td>%s</td>', $row['sellable'] ? esc_html__( 'ja', 'lindenweg16' ) : esc_html__( 'nein', 'lindenweg16' ) );
+
+				printf(
+					'<td><a class="button button-small" href="%s" target="_blank" rel="noopener">%s</a></td>',
+					esc_url( BinsPage::label_link( 'articles', $row['sku'] ) ),
+					esc_html__( 'Etikett', 'lindenweg16' )
+				);
 
 				echo '<td>';
 				foreach ( array(
