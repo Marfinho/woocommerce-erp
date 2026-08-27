@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '20';
+	const DB_VERSION = '21';
 
 	/**
 	 * Aktivierungsroutine.
@@ -273,6 +273,7 @@ class Installer {
 			datum DATE NOT NULL,
 			haendler VARCHAR(255) NULL,
 			eur_kategorie VARCHAR(100) NULL,
+			konto VARCHAR(10) NULL,
 			notiz TEXT NULL,
 			quelle VARCHAR(20) NOT NULL DEFAULT 'manuell',
 			festgeschrieben TINYINT(1) NOT NULL DEFAULT 0,
@@ -287,6 +288,7 @@ class Installer {
 			PRIMARY KEY  (id),
 			KEY datum (datum),
 			KEY eur_kategorie (eur_kategorie),
+			KEY konto (konto),
 			KEY festgeschrieben (festgeschrieben),
 			KEY quelle (quelle),
 			KEY beleg_jahr (beleg_jahr),
@@ -472,6 +474,7 @@ class Installer {
 		$tables[] = "CREATE TABLE {$p}kasse_tage (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			markt_name VARCHAR(255) NOT NULL,
+			kampagne_id BIGINT UNSIGNED NULL,
 			datum DATE NOT NULL,
 			kassenbestand_anfang DECIMAL(12,2) NOT NULL DEFAULT 0,
 			kassenbestand_ende DECIMAL(12,2) NULL,
@@ -485,7 +488,8 @@ class Installer {
 			PRIMARY KEY  (id),
 			KEY datum (datum),
 			KEY status (status),
-			KEY beleg_id (beleg_id)
+			KEY beleg_id (beleg_id),
+			KEY kampagne_id (kampagne_id)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}kasse_positionen (
@@ -627,6 +631,49 @@ class Installer {
 		) {$charset_collate};";
 
 		// --- Modul 1: GoBD-Prüfprotokoll ---------------------------------
+		// --- Modul 11: Marketing (Kostenstellen) --------------------------
+		$tables[] = "CREATE TABLE {$p}kampagnen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			kostenstelle VARCHAR(20) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			typ VARCHAR(20) NOT NULL DEFAULT 'event',
+			kanal VARCHAR(100) NULL,
+			start_datum DATE NULL,
+			ende_datum DATE NULL,
+			event_datum DATE NULL,
+			budget_geplant DECIMAL(12,2) NOT NULL DEFAULT 0,
+			utm_campaign VARCHAR(100) NULL,
+			gutschein_code VARCHAR(50) NULL,
+			gefahrene_km DECIMAL(10,1) NOT NULL DEFAULT 0,
+			km_beleg_id BIGINT UNSIGNED NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'geplant',
+			notiz TEXT NULL,
+			erstellt_am DATETIME NOT NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY kostenstelle (kostenstelle),
+			KEY typ (typ),
+			KEY status (status),
+			KEY utm_campaign (utm_campaign),
+			KEY gutschein_code (gutschein_code)
+		) {$charset_collate};";
+
+		// Zuordnung Beleg zu Kostenstelle: bewusst eine eigene Tabelle. Belege
+		// sind nach der Festschreibung unveraenderlich, die Zuordnung ist reine
+		// Auswertung und muss auch danach noch korrigierbar bleiben - und ein
+		// Beleg kann sich auf mehrere Kostenstellen aufteilen.
+		$tables[] = "CREATE TABLE {$p}kampagne_beleg (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			kampagne_id BIGINT UNSIGNED NOT NULL,
+			beleg_id BIGINT UNSIGNED NOT NULL,
+			anteil_prozent DECIMAL(6,3) NOT NULL DEFAULT 100,
+			erstellt_am DATETIME NOT NULL,
+			erstellt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY kampagne_beleg (kampagne_id, beleg_id),
+			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
 		$tables[] = "CREATE TABLE {$p}gobd_pruefung (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			pruef_datum DATETIME NOT NULL,
@@ -658,6 +705,9 @@ class Installer {
 		// Migration: Bestehende Daten mit Hash-Ketten versehen (einmalig).
 		self::maybe_backfill_hashes();
 
+		// Migration: Altbelege auf den Kontenrahmen heben.
+		self::maybe_backfill_konten();
+
 		// Migration: Tabellen entfernter Funktionen abräumen.
 		self::drop_removed_tables();
 	}
@@ -675,6 +725,36 @@ class Installer {
 		// DB_VERSION 8: Zugversuche wurden ersatzlos entfernt.
 		$table = $wpdb->prefix . 'lw16_tensile_tests';
 		$wpdb->query( "DROP TABLE IF EXISTS {$table}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+	}
+
+	/**
+	 * Belege ohne Kontonummer aus ihrer alten Freitext-Kategorie ableiten.
+	 *
+	 * `eur_kategorie` bleibt dabei unangetastet: Das Feld steckt in der
+	 * Hash-Kette, ein Überschreiben würde jede Prüfung der Belegkette
+	 * scheitern lassen. Die Kontonummer kommt daneben.
+	 */
+	protected static function maybe_backfill_konten() {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'lw16_belege';
+
+		$has_col = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'konto'",
+			DB_NAME,
+			$table
+		) );
+		if ( ! $has_col ) {
+			return;
+		}
+
+		foreach ( \Lindenweg16\Modules\Accounting\Kontenrahmen::legacy_map() as $kategorie => $konto ) {
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$table} SET konto = %s WHERE (konto IS NULL OR konto = '') AND eur_kategorie = %s", // phpcs:ignore
+				$konto,
+				$kategorie
+			) );
+		}
 	}
 
 	/**

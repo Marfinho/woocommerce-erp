@@ -95,7 +95,7 @@ class ResetTool {
 			),
 			'buchhaltung'  => array(
 				'label'  => __( 'Buchhaltung', 'lindenweg16' ),
-				'hint'   => __( 'Belege, Buchungen, Rechnungen, Kassenbuch, E-Rechnungseingang und GoBD-Prüfungen. Kontenrahmen, Dauerbuchungen und Anlagen bleiben.', 'lindenweg16' ),
+				'hint'   => __( 'Belege, Buchungen, Rechnungen, Kassenbuch, E-Rechnungseingang und GoBD-Prüfungen. Kontenrahmen, Dauerbuchungen und Anlagen bleiben. Wer die Belege wegräumt, sollte auch Marketing ankreuzen – sonst zeigen die Kostenstellenzuordnungen ins Leere.', 'lindenweg16' ),
 				'tables' => array(
 					'belege',
 					'buchungen',
@@ -109,6 +109,11 @@ class ResetTool {
 				'label'  => __( 'Kasse', 'lindenweg16' ),
 				'hint'   => __( 'Kassentage und ihre Positionen.', 'lindenweg16' ),
 				'tables' => array( 'kasse_tage', 'kasse_positionen' ),
+			),
+			'marketing'    => array(
+				'label'  => __( 'Marketing', 'lindenweg16' ),
+				'hint'   => __( 'Kampagnen samt Kostenstellennummern und ihren Belegzuordnungen.', 'lindenweg16' ),
+				'tables' => array( 'kampagne_beleg', 'kampagnen' ),
 			),
 			'kunden'       => array(
 				'label'  => __( 'Kundenbindung und Support', 'lindenweg16' ),
@@ -164,7 +169,7 @@ class ResetTool {
 	 * @return array
 	 */
 	public static function default_scopes() {
-		return array( 'woocommerce', 'betrieb', 'buchhaltung', 'kasse', 'kunden', 'protokoll' );
+		return array( 'woocommerce', 'betrieb', 'buchhaltung', 'kasse', 'marketing', 'kunden', 'protokoll' );
 	}
 
 	/**

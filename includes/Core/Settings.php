@@ -36,6 +36,9 @@ class Settings {
 			'kleinunternehmer'          => 1,
 			'steuersatz_ruecklage'      => 25,
 			'rechnungsnummer_modus'     => 'jahr', // jahr | durchlaufend.
+			// Marketing.
+			'km_pauschale'              => 0.30,
+			'marketing_nachlauf_tage'   => 30,
 			// Loyalty.
 			'referral_cookie_tage'      => 30,
 			'referral_prozent'          => 5,

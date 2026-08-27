@@ -206,6 +206,8 @@ require $lw16_root . '/includes/Core/Privacy.php';
 require $lw16_root . '/includes/Modules/Accounting/PdfText.php';
 require $lw16_root . '/includes/Modules/Accounting/BelegOcr.php';
 require $lw16_root . '/includes/Modules/Accounting/FeeExtractor.php';
+require $lw16_root . '/includes/Modules/Accounting/Kontenrahmen.php';
+require $lw16_root . '/includes/Modules/Marketing/Kampagnenrechnung.php';
 require $lw16_root . '/includes/Modules/Production/DhlTracking.php';
 require $lw16_root . '/includes/Modules/POS/POSModule.php';
 

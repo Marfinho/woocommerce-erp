@@ -59,13 +59,36 @@ class VerfahrensDoku {
 		// 2. Belegerfassung.
 		self::section( $pdf, '2. Belegerfassung' );
 		self::para( $pdf, 'Ausgabenbelege werden auf zwei Wegen erfasst:' );
-		self::bullet( $pdf, 'Manuell: Beleg-Foto hochladen, Betrag, Datum, Händler, EÜR-Kategorie eingeben.' );
+		self::bullet( $pdf, 'Manuell: Beleg-Foto hochladen, Betrag, Datum, Händler, Aufwandskonto eingeben.' );
 		self::bullet( $pdf, 'Automatisch: Bei Wareneingang wird ein Beleg mit Verknüpfung zum Einkauf erzeugt.' );
 		self::bullet( $pdf, 'E-Rechnung: Upload von XRechnung (XML) oder ZUGFeRD (PDF+XML), automatische Datenextraktion.' );
+		self::bullet( $pdf, 'Eigenbeleg: Für Fahrten mit dem privaten Fahrzeug erzeugt das System aus den '
+			. 'erfassten Kilometern und der hinterlegten Pauschale einen Eigenbeleg auf dem Reisekostenkonto. '
+			. 'Grundlage, Kilometerzahl, Satz und Anlass stehen auf dem Beleg. Eine Korrektur der '
+			. 'Kilometerangabe storniert den bisherigen Eigenbeleg und bucht einen neuen; überschrieben '
+			. 'wird nichts.' );
 		self::para( $pdf, 'Einnahmen werden automatisch aus abgeschlossenen WooCommerce-Bestellungen ermittelt. '
 			. 'Für jede abgeschlossene Bestellung wird eine Rechnung mit lückenloser Rechnungsnummer erstellt.' );
 		self::para( $pdf, 'Zeitgerechte Erfassung: Die GoBD-Prüffunktion überwacht, ob Belege innerhalb von '
 			. '10 Tagen nach Belegdatum erfasst werden.' );
+
+		// 2a. Kontierung.
+		self::section( $pdf, '2a. Kontierung: Kostenart und Kostenstelle' );
+		self::para( $pdf, 'Jeder Ausgabenbeleg trägt zwei voneinander unabhängige Merkmale. '
+			. 'Die Kostenart ist ein Konto aus dem Standardkontenrahmen SKR03 (kuratierter Auszug) '
+			. 'und bestimmt die Zuordnung in der Einnahmen-Überschuss-Rechnung. '
+			. 'Die Kostenstelle ist eine Kampagne im Format K-JJJJ-NNN und dient ausschließlich der '
+			. 'innerbetrieblichen Auswertung; sie hat keine steuerliche Wirkung.' );
+		self::para( $pdf, 'Nicht abziehbare Anteile werden über das Konto abgebildet: Bewirtungsaufwendungen '
+			. 'auf Konto 4650 gehen nur zu 70 Prozent in die Betriebsausgaben ein. Die Kürzung wird in der '
+			. 'EÜR-Auswertung gesondert ausgewiesen, der Belegbetrag bleibt unverändert.' );
+		self::para( $pdf, 'Die Kostenstellenzuordnung liegt in einer eigenen Tabelle und lässt den '
+			. 'festgeschriebenen Beleg unberührt. Sie kann nachträglich korrigiert und über einen '
+			. 'Prozentanteil auf mehrere Kostenstellen verteilt werden; in Summe nie über 100 Prozent. '
+			. 'Jede Zuordnung und jede Änderung steht im Audit-Log.' );
+		self::para( $pdf, 'Belege aus der Zeit vor Einführung des Kontenrahmens behalten ihre '
+			. 'ursprüngliche Kategoriebezeichnung; das Konto wurde einmalig daraus abgeleitet und in '
+			. 'einem eigenen Feld ergänzt. Die Hash-Kette der Belege blieb dabei unverändert.' );
 
 		// 3. Nummernvergabe.
 		self::section( $pdf, '3. Nummernvergabe' );
@@ -77,6 +100,8 @@ class VerfahrensDoku {
 		) );
 		self::para( $pdf, 'Belegnummern: Format B-JJJJ-NNNN (z. B. B-2026-0001), fortlaufend pro Kalenderjahr.' );
 		self::para( $pdf, 'Buchungsnummern: Format BU-JJJJ-NNNN (z. B. BU-2026-0001), fortlaufend pro Kalenderjahr.' );
+		self::para( $pdf, 'Kostenstellennummern: Format K-JJJJ-NNN (z. B. K-2026-004), fortlaufend pro '
+			. 'Kalenderjahr. Rein innerbetrieblich, ohne steuerliche Wirkung.' );
 		self::para( $pdf, 'Die Lückenlosigkeit aller Nummernkreise wird durch die GoBD-Prüffunktion überwacht.' );
 
 		// 4. Unveränderbarkeit.
