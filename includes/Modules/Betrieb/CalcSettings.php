@@ -13,6 +13,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+
 /**
  * Lesen, Schreiben und Auflösen der historisierten Kalkulationsannahmen.
  */
@@ -238,19 +240,21 @@ class CalcSettings {
 
 		$now   = current_time( 'mysql', true );
 		$start = gmdate( 'Y-m-d' );
+		$nutzer = get_current_user_id();
+		$zeilen = array();
+
 		foreach ( self::DEFAULTS as $key => $value ) {
-			$wpdb->insert(
-				$table,
-				array(
-					'setting_key'   => $key,
-					'value_decimal' => (float) $value,
-					'valid_from'    => $start,
-					'note'          => 'Startwert',
-					'created_at'    => $now,
-					'created_by'    => get_current_user_id(),
-				)
+			$zeilen[] = array(
+				'setting_key'   => $key,
+				'value_decimal' => (float) $value,
+				'valid_from'    => $start,
+				'note'          => 'Startwert',
+				'created_at'    => $now,
+				'created_by'    => $nutzer,
 			);
 		}
+
+		Db::insert_many( $table, $zeilen );
 	}
 
 	/**

@@ -22,6 +22,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+
 /**
  * Erzeugen und Abarbeiten der Picklisten.
  */
@@ -194,22 +196,26 @@ class PicklistRepository {
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'picklists', $id, null, $list );
 
+		// Eine Pickliste ueber zwanzig Bestellungen hat schnell hundert
+		// Positionen. Einzeln geschrieben waeren das hundert Rundreisen zur
+		// Datenbank, und der Lagerist wartet solange auf seine Liste.
+		$positionen = array();
+
 		foreach ( $rows as $index => $row ) {
-			$wpdb->insert(
-				self::items_table(),
-				array(
-					'picklist_id'  => $id,
-					'item_type'    => isset( $row['item_type'] ) ? (string) $row['item_type'] : 'artikel',
-					'article_id'   => (int) $row['article_id'],
-					'color'        => (string) $row['color'],
-					'bin_id'       => ! empty( $row['bin_id'] ) ? (int) $row['bin_id'] : null,
-					'wc_order_id'  => ! empty( $row['wc_order_id'] ) ? (int) $row['wc_order_id'] : null,
-					'qty_required' => (float) $row['qty_required'],
-					'qty_picked'   => 0,
-					'sort_order'   => (int) $index,
-				)
+			$positionen[] = array(
+				'picklist_id'  => $id,
+				'item_type'    => isset( $row['item_type'] ) ? (string) $row['item_type'] : 'artikel',
+				'article_id'   => (int) $row['article_id'],
+				'color'        => (string) $row['color'],
+				'bin_id'       => ! empty( $row['bin_id'] ) ? (int) $row['bin_id'] : null,
+				'wc_order_id'  => ! empty( $row['wc_order_id'] ) ? (int) $row['wc_order_id'] : null,
+				'qty_required' => (float) $row['qty_required'],
+				'qty_picked'   => 0,
+				'sort_order'   => (int) $index,
 			);
 		}
+
+		Db::insert_many( self::items_table(), $positionen );
 
 		return $id;
 	}

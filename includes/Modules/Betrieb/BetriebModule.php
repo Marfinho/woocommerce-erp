@@ -206,10 +206,16 @@ class BetriebModule {
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Betrieb', 'lindenweg16' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Das Fundament steht: Tabellen, Rechte, Einstellungen und Protokoll. Die Kennzahlen folgen in Meilenstein 10.', 'lindenweg16' ) . '</p>';
 
+		// Eine Abfrage für alle rund dreißig Tabellen statt einer je Tabelle.
+		$vorhanden = array_flip(
+			(array) $wpdb->get_col(
+				$wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->prefix . 'lw16_%' )
+			)
+		);
+
 		$missing = array();
 		foreach ( self::table_names() as $table ) {
-			$full = $wpdb->prefix . 'lw16_' . $table;
-			if ( $full !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $full ) ) ) {
+			if ( ! isset( $vorhanden[ $wpdb->prefix . 'lw16_' . $table ] ) ) {
 				$missing[] = $table;
 			}
 		}

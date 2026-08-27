@@ -16,6 +16,7 @@
 
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'DAY_IN_SECONDS', 86400 );
+define( 'ARRAY_A', 'ARRAY_A' );
 define( 'HOUR_IN_SECONDS', 3600 );
 
 if ( ! function_exists( '__' ) ) {
@@ -198,6 +199,8 @@ if ( ! defined( 'LW16_VERSION' ) ) {
 
 // Kernbausteine.
 require $lw16_root . '/includes/Core/Assets.php';
+require $lw16_root . '/includes/Core/Db.php';
+require $lw16_root . '/includes/Modules/Inventory/Repository.php';
 require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';

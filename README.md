@@ -34,7 +34,9 @@ WooCommerce, ohne externen Sync.
 ```
 lindenweg16.php              Bootstrap, Aktivierung, HPOS-Deklaration, Autoloader
 includes/Core/               Installer, Plugin, Roles, Settings, Scheduler, AuditLog,
-                             Assets, Calc, HashChain, MailTemplate, Pdf, Privacy, ResetTool
+                             Assets, Calc, HashChain, MailTemplate, Pdf, Privacy, ResetTool,
+                             Lazy (verzögerte Haken), Db (Stapel-Einfüger),
+                             ProductCache (Produkte vorladen)
 includes/Admin/              Menu, Dashboard, GlobalSearch, SettingsPage, ResetPage
 includes/Modules/Inventory/  Repository, StockManager, InventoryModule (Altbestand, siehe unten)
 includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
@@ -334,7 +336,7 @@ Ein ERP im selben Plugin wie der Shop hat eine unangenehme Eigenschaft: Der
 Kunde, der nur eine Produktseite ansieht, lädt sonst die halbe Buchhaltung mit.
 Deshalb gelten hier vier Regeln, die beim Erweitern einzuhalten sind.
 
-**1. Backend-Haken gehören ins Backend.** `admin_post_*`, `wp_ajax_*`,
+**1. Backend-Haken gehören ins Backend, schwere Module gar nicht erst hinein.** `admin_post_*`, `wp_ajax_*`,
 `add_meta_boxes` und die eigenen `lw16_render_page_*` laufen ausschließlich im
 Adminkontext – auch `admin-post.php` und `admin-ajax.php` setzen `is_admin()`.
 Sie stehen deshalb in einem `register_admin()`, das nur dort aufgerufen wird.
@@ -344,11 +346,43 @@ werden im Frontend gar nicht erst geladen (`Plugin::module_classes()`).
 Was **nicht** dorthin darf: Statuswechsel von Bestellungen und die Hooks des
 Action Schedulers. Beide passieren in gewöhnlichen Seitenaufrufen.
 
+Lager, Buchhaltung und Produktion sind zusammen gut dreitausendsiebenhundert
+Zeilen, von denen das Frontend eine Handvoll Methoden braucht – und die hängen
+an seltenen Ereignissen. Für sie steht je eine schlanke Hooks-Klasse im
+Modulverzeichnis (`InventoryHooks`, `AccountingHooks`, `ProductionHooks`), die
+über `Core\Lazy` anmeldet: In der Hakentabelle liegt ein Verschluss, der nur
+den Klassennamen als Zeichenkette kennt, und den löst der Autoloader nicht auf.
+Geladen wird die Klasse erst, wenn ihr Haken tatsächlich auslöst. Wer ein
+weiteres schweres Modul so behandelt, legt eine Hooks-Klasse daneben – nicht
+die Haken selbst ins Bootstrapping.
+
+`Lazy` lohnt nur für seltene Ereignisse. Ein Haken, der ohnehin bei jedem
+Aufruf auslöst, wird dadurch nicht schneller, nur umständlicher.
+
 **2. Keine Abfrage je Zeile.** Der Merken-Knopf fragte früher für jedes Produkt
 einzeln nach – auf einer Kategorieseite zwei Dutzend Mal für eine Information,
 die in eine einzige Abfrage passt (`Wishlist::ids_for_user()`). Dasselbe gilt
 für die Zuordnung Produkt → Artikel (`StockOwnership::article_for_product()`).
 Wer in einer Schleife etwas nachschlägt, holt es vorher gebündelt.
+
+Dafür gibt es drei Werkzeuge, und eines davon passt fast immer:
+
+- `Core\ProductCache::prime( $ids )` vor jeder Liste, die `wc_get_product()`,
+  `get_permalink()` oder Produktbilder je Zeile braucht. Danach kosten diese
+  Aufrufe keine Abfrage mehr.
+- `Core\Db::insert_many( $tabelle, $zeilen )` statt einer Schleife über
+  `$wpdb->insert()`. Eine Pickliste über zwanzig Bestellungen hat schnell
+  hundert Positionen; als ein Befehl ist das eine Rundreise statt hundert.
+- Eine eigene Mengen-Abfrage im Repository, wenn es um eigene Tabellen geht –
+  `Repository::get_stock_map()` ist das Muster: gleiche Rückgabe wie die
+  Einzelabfrage, nur für viele Kennungen auf einmal, und Zeilen ohne Treffer
+  erscheinen mit Nullwert statt zu fehlen.
+
+**2b. Nie unbegrenzt in den Speicher laden.** `'limit' => -1` auf
+`wc_get_orders()` oder ein `SELECT *` über eine ganze Tabelle hält so lange,
+bis der Shop groß genug ist, und scheitert dann ausgerechnet beim
+Jahresabschluss oder im unbeobachteten Wochenjob. Solche Läufe arbeiten
+stapelweise (`EuerCalculator::STAPEL`, `SupportModule::EXPORT_STAPEL`).
 
 **3. Wartung nicht im Seitenaufbau.** `Scheduler::ensure_recurring()` prüfte den
 Jobplan bei jedem Aufruf – zehn Abfragen gegen den Action Scheduler, auch für

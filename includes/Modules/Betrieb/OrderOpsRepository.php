@@ -14,6 +14,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+
 /**
  * Lesen und Schreiben der Bestelldaten.
  */
@@ -243,20 +245,22 @@ class OrderOpsRepository {
 
 		$id = (int) $wpdb->insert_id;
 
+		$jetzt      = current_time( 'mysql', true );
+		$positionen = array();
+
 		foreach ( $items as $item ) {
-			$wpdb->insert(
-				self::items_table(),
-				array(
-					'order_op_id'      => $id,
-					'article_id'       => (int) $item['article_id'],
-					'color'            => isset( $item['color'] ) ? ColorRegistry::normalize( $item['color'] ) : ColorRegistry::default_color(),
-					'qty'              => (float) $item['qty'],
-					'unit_price_gross' => isset( $item['unit_price_gross'] ) ? (float) $item['unit_price_gross'] : 0.0,
-					'discountable'     => isset( $item['discountable'] ) ? (int) $item['discountable'] : 1,
-					'created_at'       => current_time( 'mysql', true ),
-				)
+			$positionen[] = array(
+				'order_op_id'      => $id,
+				'article_id'       => (int) $item['article_id'],
+				'color'            => isset( $item['color'] ) ? ColorRegistry::normalize( $item['color'] ) : ColorRegistry::default_color(),
+				'qty'              => (float) $item['qty'],
+				'unit_price_gross' => isset( $item['unit_price_gross'] ) ? (float) $item['unit_price_gross'] : 0.0,
+				'discountable'     => isset( $item['discountable'] ) ? (int) $item['discountable'] : 1,
+				'created_at'       => $jetzt,
 			);
 		}
+
+		Db::insert_many( self::items_table(), $positionen );
 
 		BetriebAudit::record( 'create', 'order_ops', $id, null, array_merge( $row, array( 'items' => $items ) ) );
 

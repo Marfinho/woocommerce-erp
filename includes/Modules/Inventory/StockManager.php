@@ -129,8 +129,15 @@ class StockManager {
 	 * @param object $produkt Produktobjekt.
 	 * @return string gruen|gelb|rot.
 	 */
-	public static function ampel( $produkt ) {
-		$bestand = Repository::get_stock( $produkt->id );
+	public static function ampel( $produkt, $bestand = null ) {
+		// In Listenansichten steht der Bestand längst da – er kommt dort
+		// für alle Zeilen in einer Abfrage. Ohne diesen Durchreicher fragte
+		// die Ampel ihn je Zeile ein zweites Mal einzeln nach.
+		if ( null === $bestand ) {
+			$bestand = Repository::get_stock( $produkt->id );
+		}
+
+		$bestand = (float) $bestand;
 		$min     = (float) $produkt->mindestbestand;
 
 		if ( $min <= 0 ) {

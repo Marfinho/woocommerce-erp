@@ -661,12 +661,27 @@ class SupportModule {
 	protected function lager_warnungen() {
 		$produkte = \Lindenweg16\Modules\Inventory\Repository::get_products();
 		$lines    = array();
+
+		// Der Wochenbericht lief über den gesamten Stamm und fragte je
+		// Produkt zweimal nach dem Bestand – einmal für die Ampel, einmal
+		// für die Zeile. Jetzt kommt er in einer Abfrage.
+		$bestaende = \Lindenweg16\Modules\Inventory\Repository::get_stock_map(
+			array_map(
+				static function ( $p ) {
+					return (int) $p->id;
+				},
+				$produkte
+			)
+		);
+
 		foreach ( $produkte as $p ) {
-			$ampel = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p );
+			$bestand = isset( $bestaende[ (int) $p->id ] ) ? $bestaende[ (int) $p->id ] : 0.0;
+			$ampel   = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p, $bestand );
+
 			if ( 'gruen' === $ampel ) {
 				continue;
 			}
-			$bestand = \Lindenweg16\Modules\Inventory\Repository::get_stock( $p->id );
+
 			$lines[] = '- ' . $p->name . ' (' . $ampel . '): ' . rtrim( rtrim( number_format( $bestand, 2, ',', '.' ), '0' ), ',' ) . ' ' . $p->basis_einheit;
 		}
 		return implode( "\n", $lines );

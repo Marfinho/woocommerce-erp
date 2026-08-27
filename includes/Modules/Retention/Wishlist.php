@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Assets;
 
 use Lindenweg16\Modules\Inventory\Repository;
+use Lindenweg16\Core\ProductCache;
 
 /**
  * „Merken"-Funktion für eingeloggte Kunden, Mein-Konto-Tab und ein
@@ -239,7 +240,7 @@ class Wishlist {
 			return (int) $row->woo_product_id;
 		}, $rows );
 
-		self::prime_products( $product_ids );
+		ProductCache::prime( $product_ids );
 		$bestaende = self::stock_for_products( $product_ids );
 
 		echo '<div class="lw16-wishlist-grid">';
@@ -287,38 +288,6 @@ class Wishlist {
 		}
 		set_transient( 'lw16_most_wished', $out, 30 * MINUTE_IN_SECONDS );
 		return $out;
-	}
-
-	/**
-	 * Produkte und ihre Beitragsdaten in einem Rutsch vorladen.
-	 *
-	 * WooCommerce und WordPress puffern beides – aber nur, wenn es
-	 * gebündelt kommt. Einzeln abgeholt entsteht je Produkt eine eigene
-	 * Abfrage für den Beitrag, eine für die Metadaten und eine für den
-	 * Dauerlink.
-	 *
-	 * @param int[] $product_ids Produkt-IDs.
-	 */
-	protected static function prime_products( array $product_ids ) {
-		$product_ids = array_values( array_unique( array_filter( array_map( 'intval', $product_ids ) ) ) );
-
-		if ( ! $product_ids ) {
-			return;
-		}
-
-		if ( function_exists( 'wc_get_products' ) ) {
-			wc_get_products(
-				array(
-					'include' => $product_ids,
-					'limit'   => count( $product_ids ),
-					'status'  => array( 'publish', 'private' ),
-					'return'  => 'ids',
-				)
-			);
-		}
-
-		// Füllt Beitrags- und Metadatenpuffer für Bild, Name und Dauerlink.
-		_prime_post_caches( $product_ids, true, true );
 	}
 
 	/**

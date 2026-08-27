@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+
 /**
  * Lesen und Schreiben der Bestellarten samt Positionen.
  */
@@ -141,16 +143,17 @@ class BundleRepository {
 
 		$id = (int) $wpdb->insert_id;
 
+		$positionen = array();
+
 		foreach ( $clean as $article_id => $qty ) {
-			$wpdb->insert(
-				self::items_table(),
-				array(
-					'bundle_id'  => $id,
-					'article_id' => $article_id,
-					'qty'        => $qty,
-				)
+			$positionen[] = array(
+				'bundle_id'  => $id,
+				'article_id' => $article_id,
+				'qty'        => $qty,
 			);
 		}
+
+		Db::insert_many( self::items_table(), $positionen );
 
 		BetriebAudit::record( 'create', 'bundles', $id, null, array_merge( $data, array( 'items' => $clean ) ) );
 

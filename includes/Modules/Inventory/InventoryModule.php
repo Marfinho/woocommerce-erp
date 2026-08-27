@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Modules\Accounting\BelegRepository;
+use Lindenweg16\Core\ProductCache;
 
 /**
  * Verdrahtet die Lagerverwaltung: Echtzeit-Abzug bei Bestellabschluss,
@@ -198,9 +199,26 @@ class InventoryModule {
 		echo '<th>' . esc_html__( 'Aktion', 'lindenweg16' ) . '</th>';
 		echo '</tr></thead><tbody>';
 
+		// Vorher liefen je Zeile fünf Abfragen: Bestand, Bestand noch einmal
+		// für die Ampel, die Lagerorte und zweimal das Shop-Produkt. Bei
+		// zweihundert Produkten war das eine vierstellige Zahl für eine
+		// einzige Seite. Jetzt sind es drei Abfragen für die ganze Liste.
+		$produkt_ids = array_map( static function ( $p ) {
+			return (int) $p->id;
+		}, $produkte );
+
+		$bestaende = Repository::get_stock_map( $produkt_ids );
+		$orte      = Repository::get_stock_by_location_map( $produkt_ids );
+
+		ProductCache::prime(
+			array_map( static function ( $p ) {
+				return (int) $p->woo_product_id;
+			}, $produkte )
+		);
+
 		foreach ( $produkte as $p ) {
-			$ampel   = StockManager::ampel( $p );
-			$bestand = Repository::get_stock( $p->id );
+			$bestand = isset( $bestaende[ (int) $p->id ] ) ? $bestaende[ (int) $p->id ] : 0.0;
+			$ampel   = StockManager::ampel( $p, $bestand );
 			echo '<tr>';
 			echo '<td><span class="lw16-ampel lw16-ampel-' . esc_attr( $ampel ) . '" title="' . esc_attr( $ampel ) . '"></span></td>';
 			echo '<td>' . esc_html( $p->name ) . '</td>';
@@ -218,7 +236,7 @@ class InventoryModule {
 			echo '</td>';
 			echo '<td>' . esc_html( $this->fmt( $bestand ) . ' ' . $p->basis_einheit ) . '</td>';
 			// Lagerorte mit Bestand.
-			$ort_bestaende = Repository::get_stock_by_location( $p->id );
+			$ort_bestaende = isset( $orte[ (int) $p->id ] ) ? $orte[ (int) $p->id ] : array();
 			echo '<td>';
 			if ( ! empty( $ort_bestaende ) ) {
 				$ort_parts = array();

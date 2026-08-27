@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Inventory;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+
 /**
  * Kapselt alle DB-Zugriffe rund um Produkte, Stücklisten, Rezepturen,
  * Lagerbestand und Lagerbewegungen. Alle Statements sind prepared.
@@ -134,20 +136,21 @@ class Repository {
 	public static function set_stueckliste( $set_id, array $positions ) {
 		global $wpdb;
 		$wpdb->delete( self::table( 'stueckliste' ), array( 'set_id' => (int) $set_id ) );
+
+		$zeilen = array();
+
 		foreach ( $positions as $modul_id => $menge ) {
 			if ( (float) $menge <= 0 ) {
 				continue;
 			}
-			$wpdb->insert(
-				self::table( 'stueckliste' ),
-				array(
-					'set_id'   => (int) $set_id,
-					'modul_id' => (int) $modul_id,
-					'menge'    => (float) $menge,
-				),
-				array( '%d', '%d', '%f' )
+			$zeilen[] = array(
+				'set_id'   => (int) $set_id,
+				'modul_id' => (int) $modul_id,
+				'menge'    => (float) $menge,
 			);
 		}
+
+		Db::insert_many( self::table( 'stueckliste' ), $zeilen );
 	}
 
 	/* --------------------------------------------------------------------
@@ -175,20 +178,21 @@ class Repository {
 	public static function set_rezeptur( $modul_id, array $positions ) {
 		global $wpdb;
 		$wpdb->delete( self::table( 'rezeptur' ), array( 'modul_id' => (int) $modul_id ) );
+
+		$zeilen = array();
+
 		foreach ( $positions as $roh_id => $menge ) {
 			if ( (float) $menge <= 0 ) {
 				continue;
 			}
-			$wpdb->insert(
-				self::table( 'rezeptur' ),
-				array(
-					'modul_id'       => (int) $modul_id,
-					'rohmaterial_id' => (int) $roh_id,
-					'menge'          => (float) $menge,
-				),
-				array( '%d', '%d', '%f' )
+			$zeilen[] = array(
+				'modul_id'       => (int) $modul_id,
+				'rohmaterial_id' => (int) $roh_id,
+				'menge'          => (float) $menge,
 			);
 		}
+
+		Db::insert_many( self::table( 'rezeptur' ), $zeilen );
 	}
 
 	/* --------------------------------------------------------------------
@@ -268,6 +272,91 @@ class Repository {
 	 * Lagerbestand pro Ort
 	 * ------------------------------------------------------------------ */
 
+	/**
+	 * Bestände mehrerer Produkte in einer Abfrage.
+	 *
+	 * Für Listenansichten: Die Lagerübersicht zeigt zweihundert Zeilen und
+	 * fragte je Zeile zweimal einzeln nach – einmal für die Zahl, einmal
+	 * für die Ampel.
+	 *
+	 * @param int[] $produkt_ids Produkt-IDs.
+	 * @return array<int,float> Produkt-ID => Menge.
+	 */
+	public static function get_stock_map( array $produkt_ids ) {
+		global $wpdb;
+
+		$produkt_ids = array_values( array_unique( array_filter( array_map( 'intval', $produkt_ids ) ) ) );
+
+		if ( ! $produkt_ids ) {
+			return array();
+		}
+
+		$t           = self::table( 'lagerbestand' );
+		$platzhalter = implode( ',', array_fill( 0, count( $produkt_ids ), '%d' ) );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT produkt_id, menge FROM {$t} WHERE produkt_id IN ({$platzhalter})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Platzhalter oben erzeugt, Werte gebunden.
+				$produkt_ids
+			),
+			ARRAY_A
+		);
+
+		// Produkte ohne Zeile haben Bestand null – wie in get_stock().
+		$map = array_fill_keys( $produkt_ids, 0.0 );
+
+		foreach ( (array) $rows as $row ) {
+			$map[ (int) $row['produkt_id'] ] = (float) $row['menge'];
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Lagerortbestände für mehrere Produkte in einer Abfrage.
+	 *
+	 * @param int[] $produkt_ids Produkt-IDs.
+	 * @return array<int,array> Produkt-ID => Zeilen wie get_stock_by_location().
+	 */
+	public static function get_stock_by_location_map( array $produkt_ids ) {
+		global $wpdb;
+
+		$produkt_ids = array_values( array_unique( array_filter( array_map( 'intval', $produkt_ids ) ) ) );
+
+		if ( ! $produkt_ids ) {
+			return array();
+		}
+
+		$tb          = self::table( 'lagerbestand_ort' );
+		$tl          = self::table( 'lagerorte' );
+		$platzhalter = implode( ',', array_fill( 0, count( $produkt_ids ), '%d' ) );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT bo.*, l.kuerzel, l.name AS lagerort_name
+				 FROM {$tb} bo
+				 LEFT JOIN {$tl} l ON l.id = bo.lagerort_id
+				 WHERE bo.produkt_id IN ({$platzhalter})
+				 ORDER BY bo.produkt_id, l.kuerzel", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Platzhalter oben erzeugt, Werte gebunden.
+				$produkt_ids
+			)
+		);
+
+		$map = array();
+
+		foreach ( (array) $rows as $row ) {
+			$map[ (int) $row->produkt_id ][] = $row;
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Lagerortbestände eines Produkts.
+	 *
+	 * @param int $produkt_id Produkt.
+	 * @return array
+	 */
 	public static function get_stock_by_location( $produkt_id ) {
 		global $wpdb;
 		$tb = self::table( 'lagerbestand_ort' );

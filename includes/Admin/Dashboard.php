@@ -188,8 +188,17 @@ class Dashboard {
 	protected function render_low_stock_warning() {
 		$produkte = Repository::get_products();
 		$warnings = array();
+
+		// Bestände in einer Abfrage statt einer je Produkt – das Widget
+		// läuft über den gesamten Stamm, zeigt aber nur die Warnungen.
+		$bestaende = Repository::get_stock_map(
+			array_map( static function ( $p ) {
+				return (int) $p->id;
+			}, $produkte )
+		);
+
 		foreach ( $produkte as $p ) {
-			$ampel = StockManager::ampel( $p );
+			$ampel = StockManager::ampel( $p, isset( $bestaende[ (int) $p->id ] ) ? $bestaende[ (int) $p->id ] : 0.0 );
 			if ( 'gruen' !== $ampel ) {
 				$warnings[] = array(
 					'name'    => $p->name,

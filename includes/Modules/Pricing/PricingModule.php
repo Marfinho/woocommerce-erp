@@ -13,6 +13,7 @@ use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
+use Lindenweg16\Core\ProductCache;
 
 /**
  * Admin-Oberfläche für die Preiskalkulation samt „Preis übernehmen".
@@ -107,6 +108,18 @@ class PricingModule {
 		echo '</tr></thead><tbody>';
 
 		$uebernehmbar = 0;
+
+		// Die Liste geht über den ganzen Artikelstamm und holt je Zeile das
+		// Shop-Produkt. Einmal gebündelt vorgeladen, kostet keiner dieser
+		// Aufrufe mehr eine Abfrage.
+		ProductCache::prime(
+			array_map(
+				static function ( $article ) {
+					return isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
+				},
+				$articles
+			)
+		);
 
 		foreach ( $articles as $article ) {
 			$id   = (int) $article['id'];

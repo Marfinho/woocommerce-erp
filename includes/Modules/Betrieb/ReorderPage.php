@@ -18,6 +18,7 @@ use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Core\ProductCache;
 
 /**
  * Route, Formular und Entwurfserzeugung.
@@ -500,12 +501,17 @@ class ReorderPage {
 		);
 
 		$missing = array();
+		$luecken = array();
 
 		foreach ( (array) $ids as $id ) {
-			if ( StockOwnership::article_for_product( (int) $id ) ) {
-				continue;
+			if ( ! StockOwnership::article_for_product( (int) $id ) ) {
+				$luecken[] = (int) $id;
 			}
+		}
 
+		ProductCache::prime( $luecken );
+
+		foreach ( $luecken as $id ) {
 			$product = wc_get_product( (int) $id );
 
 			if ( $product ) {

@@ -16,6 +16,7 @@ namespace Lindenweg16\Modules\Configurator;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Core\ProductCache;
 
 /**
  * Baut die Angebotsdaten des Konfigurators.
@@ -353,7 +354,20 @@ class Catalog {
 		$key      = 'attribute_' . $taxonomy;
 		$prices   = array();
 
-		foreach ( $product->get_available_variations() as $variation ) {
+		$variations = $product->get_available_variations();
+
+		// Jede Variante wird gleich einzeln aufgebaut. Gebündelt vorgeladen
+		// kostet keiner dieser Aufrufe mehr eine Abfrage.
+		ProductCache::prime(
+			array_map(
+				static function ( $variation ) {
+					return isset( $variation['variation_id'] ) ? (int) $variation['variation_id'] : 0;
+				},
+				(array) $variations
+			)
+		);
+
+		foreach ( $variations as $variation ) {
 			$child = wc_get_product( (int) $variation['variation_id'] );
 
 			if ( ! $child || ! $child->is_purchasable() || ! $child->is_in_stock() ) {
