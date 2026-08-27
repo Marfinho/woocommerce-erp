@@ -62,7 +62,7 @@ class BetriebArticleStateTest extends TestCase {
 	 * angebotenen Artikeln – nicht nach allen.
 	 *
 	 * Diese vier Dateien kennen nur Auswahllisten: Kasse, Nachbestellung,
-	 * Preispflege, Beschaffungsalarm. Taucht dort wieder ein all() auf,
+	 * Preisübergabe, Beschaffungsalarm. Taucht dort wieder ein all() auf,
 	 * steht ein stillgelegter Artikel erneut zur Wahl.
 	 */
 	public function test_auswahllisten_fragen_nach_angebotenen_artikeln() {
@@ -71,7 +71,7 @@ class BetriebArticleStateTest extends TestCase {
 		$dateien = array(
 			'POS/POSModule.php',
 			'Betrieb/ReorderPage.php',
-			'Pricing/PricingModule.php',
+			'Betrieb/PriceSync.php',
 			'Betrieb/ProcurementAlert.php',
 		);
 

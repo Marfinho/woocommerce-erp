@@ -17,7 +17,6 @@ use Lindenweg16\Admin\GlobalSearch;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
-use Lindenweg16\Modules\Pricing\PricingModule;
 use Lindenweg16\Modules\Production\ProductionModule;
 use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
@@ -89,7 +88,6 @@ class Plugin {
 			'inventory'  => new InventoryModule(),
 			'accounting' => new AccountingModule(),
 			'loyalty'    => new LoyaltyModule(),
-			'pricing'    => new PricingModule(),
 			'production' => new ProductionModule(),
 			'retention'  => new RetentionModule(),
 			'support'    => new SupportModule(),

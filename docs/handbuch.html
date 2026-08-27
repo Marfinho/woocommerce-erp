@@ -289,7 +289,7 @@ footer p{max-width:72ch}
 				<tr>
 					<td><strong>Lindenweg16</strong></td>
 					<td>Handel, Buchhaltung, Kunden</td>
-					<td>Dashboard · Buchhaltung · Loyalty · Produktion · Preiskalkulation · Kasse · Support · Reporting · Einstellungen · Livegang</td>
+					<td>Dashboard · Buchhaltung · Loyalty · Produktion · Kasse · Support · Reporting · Einstellungen · Livegang</td>
 				</tr>
 				<tr>
 					<td><strong>Betrieb</strong></td>
@@ -466,7 +466,7 @@ footer p{max-width:72ch}
 	<h3>4.3 Die Reiter der Reihe nach</h3>
 
 	<ol class="steps">
-		<li><strong>Reiter „Artikel" — Stammdaten</strong> Artikelnummer, Bezeichnung, Beschaffungsweg (die vier aus 4.1), Nachbearbeitungszeit in Minuten, Verkaufspreis brutto, Händlerpreis, angegebene Traglast, Verknüpfung zum WooCommerce-Produkt. Der Beschaffungsweg entscheidet über alles Weitere.<br>Das Shop-Produkt suchst du nicht mehr über die ID: Das Feld ist eine Suchliste — tippe Name, Artikelnummer oder ID, die Treffer erscheinen darunter. Die Verknüpfung ist optional, aber ohne sie gibt es beim Verkauf keinen Lagerabgang, kein Produktbild und keinen Eintrag auf der Nachbestellseite.</li>
+		<li><strong>Reiter „Artikel" — Stammdaten</strong> Artikelnummer, Bezeichnung, Beschaffungsweg (die vier aus 4.1), Nachbearbeitungszeit in Minuten, Verkaufspreis brutto, Händlerpreis, angegebene Traglast, Verknüpfung zum WooCommerce-Produkt. Der Verkaufspreis brutto ist <strong>der</strong> Preis: Ist ein Shop-Produkt verknüpft, bekommt es ihn beim Speichern als Normalpreis — ohne zweiten Handgriff. Ein laufendes Angebot in WooCommerce bleibt unberührt, sonst wäre eine Preisaktion mit einem Klick weg. Der Beschaffungsweg entscheidet über alles Weitere.<br>Das Shop-Produkt suchst du nicht mehr über die ID: Das Feld ist eine Suchliste — tippe Name, Artikelnummer oder ID, die Treffer erscheinen darunter. Die Verknüpfung ist optional, aber ohne sie gibt es beim Verkauf keinen Lagerabgang, kein Produktbild und keinen Eintrag auf der Nachbestellseite.</li>
 		<li><strong>Reiter „Revisionen" — das Druckprofil</strong> Nur für Rohlinge und Hybridartikel. Ein Set oder eine Baugruppe hat keins und sagt das auch: Es besteht aus anderen Artikeln, und die sind jeweils für sich revisioniert. Verlangt das System bei einem Set trotzdem eine Revision, steht der Beschaffungsweg falsch — die Systemprüfung erkennt genau diesen Fall (gedruckter Artikel <em>mit</em> Stückliste) und sagt es. Version, Material, Bauteilgewicht in Gramm, Teile je Platte, Druckzeit je Platte, Düse, Schichthöhe, Perimeter, Infill, Temperaturen, Orientierungshinweis. Die Druckzeit je Teil rechnet sich daraus. Neue Revisionen sind zunächst inaktiv; mit <em>Aktiv setzen</em> löst eine Revision die bisherige ab, die dann als abgelöst markiert bleibt.<br>Zu jeder Revision gehört ihre <strong>.3mf-Datei</strong>. Sie hängt an der Revision, nicht am Artikel — wer die aktive Revision lädt, hat damit den Stand, nach dem auch kalkuliert wird. Die Dateien liegen in einem geschützten Verzeichnis und sind nur angemeldet abrufbar; in der Mediathek tauchen sie nicht auf. Beim Fertigungsauftrag steht der Verweis <em>3MF laden</em> direkt neben dem Artikel.</li>
 		<li><strong>Zwei Sorten .3mf — und der Unterschied ist wichtig</strong> Bambu Studio exportiert beides unter derselben Endung:
 			<ul>
@@ -476,7 +476,7 @@ footer p{max-width:72ch}
 			Beide Arten darfst du hinterlegen, das System erkennt selbst welche es ist und schreibt die Art in die Liste. Aus einer Druckdatei liest es zusätzlich die Zahlen des Slicers aus — Druckzeit, Materialverbrauch, Düse, Drucker und wie viele Teile auf der Platte liegen — und füllt damit die <em>noch leeren</em> Felder der Revision. Vorhandene Werte bleiben stehen; eine gemessene Angabe still zu überschreiben wäre eine unbemerkte Änderung an der Kalkulation. Beachte die Umrechnung: Der Slicer nennt Verbrauch und Dauer für die ganze Platte, die Revision führt das Gewicht je Teil — geteilt wird durch die Zahl der Objekte auf der Platte.</li>
 		<li><strong>Reiter „Stückliste"</strong> Was in den Artikel geht: Komponenten (Schrauben, Kleinteile) oder andere Artikel — Rohlinge und Halbzeuge —, jeweils mit Menge. Genau hier entsteht die Mehrstufigkeit aus 4.1. Die Auflösung ist rekursiv über bis zu fünf Ebenen; Zirkelbezüge werden erkannt und abgewiesen.</li>
 		<li><strong>Reiter „Beschaffung"</strong> Nur für Zukauf- und Hybridartikel: Lieferant, Einkaufspreis, Mindestabnahme, Lieferzeit. Auch das ist historisiert — ein Preis gilt ab einem Stichtag.</li>
-		<li><strong>Reiter „Kalkulation" — das Ergebnis</strong> Herstellkosten, Ausschusszuschlag, Deckungsbeitrag I und II je Artikel, aufgeschlüsselt nach Eigenmaterial, Maschinenzeit, Komponenten und Unterbaugruppen. Hier siehst du, ob der Preis trägt.</li>
+		<li><strong>Reiter „Kalkulation" — das Ergebnis und der Preis</strong> Herstellkosten, Ausschusszuschlag, Deckungsbeitrag I und II je Artikel, aufgeschlüsselt nach Eigenmaterial, Maschinenzeit, Komponenten und Unterbaugruppen. Hier siehst du, ob der Preis trägt. Ganz unten steht <em>Preis festlegen</em>: Zielmarge eintragen, den Vorschlag mit einem Klick als Artikelpreis übernehmen, daneben der Stand im Shop. Der frühere Menüpunkt <em>Lindenweg16 → Preiskalkulation</em> ist damit weg — er rechnete dasselbe zwei Menüs entfernt.</li>
 		<li><strong>Reiter „Bestellart-Rechner"</strong> Rechnet dieselbe Position einmal als Einzelverkauf, einmal im Set und einmal als B2B-Lieferung durch. Verpackung und die fixe Zahlungsgebühr fallen dabei genau einmal je Bestellung an — deshalb trägt eine Position im Set anders als allein.</li>
 	</ol>
 
@@ -751,12 +751,21 @@ footer p{max-width:72ch}
 	<p>Voraussetzung ist eine vollständige Anschrift am Kontakt (Straße, PLZ, Ort). Fehlt etwas davon, sagt das Plugin das <strong>bevor</strong> der Schein entsteht, statt eine halbe Adresse zu drucken.</p>
 	<div class="note">
 		<span class="lbl">Zwei Wege, kein Durcheinander</span>
-		<p>Shop-Bestellungen bekommen ihre Packliste weiterhin aus <span class="path">Lindenweg16 → Produktion</span>. Der Knopf hier erscheint deshalb nur bei Bestellungen ohne WooCommerce-Nummer — zwei Lieferscheine für dieselbe Sendung wären nur verwirrend.</p>
+		<p>Shop-Bestellungen bekommen ihren Lieferschein unter <span class="path">Betrieb → Versand</span>. Der Knopf hier erscheint deshalb nur bei Bestellungen ohne WooCommerce-Nummer — zwei Lieferscheine für dieselbe Sendung wären nur verwirrend.</p>
 		<p>Preise stehen nicht darauf. Ein Lieferschein sagt, was in der Kiste liegt; was es kostet, sagt die Rechnung.</p>
 	</div>
 
 	<h3>7.7 Kommission</h3>
 	<p>Drei Buchungen bilden den ganzen Vorgang ab: <em>ausgeliefert</em> beim Hinbringen, <em>abgerechnet</em> wenn der Händler verkauft hat (dabei entsteht die Bestellung und damit der Umsatz), <em>zurück</em> für Unverkauftes. Den aktuellen Stand je Händler zeigt der Kontakt.</p>
+
+	<h3>7.8 Versand</h3>
+	<p><span class="path">Betrieb → Versand</span> — eine Zeile je Shop-Bestellung, älteste zuerst: die, die am längsten wartet, steht oben. Drei Ansichten: <em>Zu versenden</em> (bezahlt und in Wartestellung), <em>Versendet</em>, <em>Alle</em>.</p>
+	<p>Je Zeile Empfänger mit Zielort, der Inhalt in Kurzfassung, der Lieferschein (wird bei jedem Klick frisch erzeugt, damit eine späte Adressänderung nicht auf einem alten PDF steht) und die Sendungsnummer. Die Nummer lässt sich direkt in der Liste eintragen; danach bleibst du in der Liste, statt in der Bestellung zu landen.</p>
+	<div class="note">
+		<span class="lbl">Wer das Label erzeugt</span>
+		<p>Dieses Plugin <strong>frankiert nicht</strong>. Es verfolgt Sendungen: Es liest die Sendungsnummer — aus dem Versandplugin, aus Germanized oder von Hand eingetragen — und fragt damit die Sendungsverfolgung der DHL ab. Ein eigenes Label bräuchte den Geschäftskundenzugang der DHL mit Kunden- und Teilnahmenummern und einen revisionssicheren Ablageort für die PDFs.</p>
+		<p>Die Seite sagt oben, was sie vorfindet: Ist ein Versandplugin aktiv, führt der Knopf <em>Label erstellen</em> zur Bestellung, wo dieses Plugin sein Frankierfenster einblendet — die Sendungsnummer holt sich die Verfolgung von dort automatisch ab. Ist keins aktiv, sagt sie auch das, statt einen Knopf anzubieten, hinter dem nichts liegt.</p>
+	</div>
 </section>
 
 <!-- ============ 8 ============ -->
@@ -977,16 +986,13 @@ footer p{max-width:72ch}
 	<div class="chapter"><span class="num">11</span><h2>Die übrigen Module</h2></div>
 
 	<h3>Produktion und Sendungsverfolgung</h3>
-	<p><span class="path">Lindenweg16 → Produktion</span> — Druck-Queue aus offenen Bestellungen, Druckaufträge, Ist-gegen-Plan.</p>
+	<p><span class="path">Lindenweg16 → Produktion</span> — Druckaufträge und Ist-gegen-Plan aus der Zeit vor dem Modul Betrieb. Die Fertigungsvorschläge stehen unter <span class="path">Betrieb → Bedarf</span>, der Versand unter <span class="path">Betrieb → Versand</span>.</p>
 	<p>Hier hängt auch die <strong>DHL-Sendungsverfolgung für den Kunden</strong>. Sobald eine Sendungsnummer an der Bestellung steht — von Hand eingetragen oder von Germanized übernommen —, sieht der Käufer den Status dort, wo er ihn sucht:</p>
 	<ul>
 		<li>In den <strong>Bestelldetails</strong> unter der Positionsliste, als Kette mit dem erreichten Schritt: angenommen → unterwegs → in Zustellung → zugestellt.</li>
 		<li>In der <strong>Bestellübersicht</strong> seines Kontos als eigene Spalte, damit er nicht jede Bestellung einzeln öffnen muss.</li>
 	</ul>
 	<p>Die Anzeige läuft über das Plugin, nicht über einen fremden Verfolgungskasten — der wird, wenn ein anderes Plugin einen einblendet, entfernt, damit nicht zwei verschiedene Stände nebeneinander stehen. Bei stornierten oder erstatteten Bestellungen erscheint gar keine Kette; dort wäre ein Lieferfortschritt irreführend.</p>
-
-	<h3>Preiskalkulation</h3>
-	<p><span class="path">Lindenweg16 → Preiskalkulation</span> — die ältere Kalkulation über globale Annahmen für Module und Sets, mit Preisvorschlag und Marge je Produkt. Für Haster-Haken-Artikel ist die Kalkulation im Modul Betrieb die genauere: Sie rechnet je Gerät und je Revision statt mit einem Mittelwert.</p>
 
 	<h3>Kasse</h3>
 	<p><span class="path">Lindenweg16 → Kasse</span> — Kassentag öffnen, verkaufen, Tag abschließen; Historie und Tagesdetail. Eine eigene mobile Ansicht für den Marktstand.</p>

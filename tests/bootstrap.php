@@ -255,9 +255,13 @@ foreach ( array(
 	'Consistency',
 	'ReorderToken',
 	'ReorderPage',
+	'ShippingLabel',
+	'PriceSync',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';
 }
+
+require $lw16_root . '/includes/Modules/Betrieb/Admin/ShippingPage.php';
 
 // Seiteneffektfreie Klassen des Moduls Konfigurator.
 foreach ( array(

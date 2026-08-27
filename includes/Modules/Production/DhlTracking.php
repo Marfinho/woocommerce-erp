@@ -335,6 +335,32 @@ class DhlTracking {
 	}
 
 	/**
+	 * Wohin nach dem Speichern oder Abrufen?
+	 *
+	 * Normalerweise zurück zur Bestellung. Kommt der Klick aus der
+	 * Versandliste im Betrieb, gehört er auch dorthin zurück – sonst
+	 * reisst jede eingetippte Sendungsnummer den Packer aus seiner Liste
+	 * und er sucht sich die nächste Zeile neu.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return string
+	 */
+	protected function after_action_url( $order_id ) {
+		// phpcs:ignore WordPress.Security.NonceVerification -- die Handler pruefen den Nonce vorher.
+		$wunsch = isset( $_REQUEST['zurueck'] ) ? sanitize_key( wp_unslash( $_REQUEST['zurueck'] ) ) : '';
+
+		if ( 'versand' === $wunsch ) {
+			return admin_url( 'admin.php?page=lw16-betrieb-versand' );
+		}
+
+		if ( function_exists( 'wc_get_container' ) ) {
+			return admin_url( 'admin.php?page=wc-orders&action=edit&id=' . (int) $order_id );
+		}
+
+		return admin_url( 'post.php?post=' . (int) $order_id . '&action=edit' );
+	}
+
+	/**
 	 * Tracking-Nummer manuell speichern.
 	 */
 	public function handle_save_tracking() {
@@ -373,12 +399,7 @@ class DhlTracking {
 			);
 		}
 
-		// Zurück zur Bestellung.
-		$edit_url = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
-		if ( function_exists( 'wc_get_container' ) ) {
-			$edit_url = admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order_id );
-		}
-		wp_safe_redirect( $edit_url );
+		wp_safe_redirect( $this->after_action_url( $order_id ) );
 		exit;
 	}
 
@@ -403,11 +424,7 @@ class DhlTracking {
 			$this->refresh_one( $row, $api_key );
 		}
 
-		$edit_url = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
-		if ( function_exists( 'wc_get_container' ) ) {
-			$edit_url = admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order_id );
-		}
-		wp_safe_redirect( $edit_url );
+		wp_safe_redirect( $this->after_action_url( $order_id ) );
 		exit;
 	}
 
