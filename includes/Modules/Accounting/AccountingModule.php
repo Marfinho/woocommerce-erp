@@ -18,48 +18,10 @@ use Lindenweg16\Core\AuditLog;
  */
 class AccountingModule {
 
-	/**
-	 * Hooks registrieren.
-	 */
-	public function register() {
-		// Diese Haken laufen auch ohne Backend: Bestellungen wechseln ihren
-		// Status im Kundenkonto, an der Kasse und per Webhook, und der
-		// Action Scheduler arbeitet seine Warteschlange in ganz normalen
-		// Seitenaufrufen ab.
-
-		// Automatische Rechnungserstellung: bei Abschluss asynchron einreihen.
-		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( $this, 'generate_invoice' ), 10, 1 );
-
-		// Zahlungsgebühr übernehmen. Bewusst an mehreren Statuswechseln: Die
-		// Gebühr schreibt der Zahlungsdienstleister mal beim Bezahlen, mal
-		// erst Tage später in eine Notiz. Die Buchung selbst ist gegen
-		// Doppelung gesichert, also schadet ein Aufruf zu viel nicht.
-		add_action( 'woocommerce_order_status_processing', array( $this, 'capture_order_fee' ), 40, 1 );
-		add_action( 'woocommerce_order_status_completed', array( $this, 'capture_order_fee' ), 40, 1 );
-		add_action( 'woocommerce_payment_complete', array( $this, 'capture_order_fee' ), 40, 1 );
-		add_action( 'woocommerce_order_note_added', array( $this, 'capture_fee_from_note' ), 10, 2 );
-
-		// Nachlauf: WooPayments traegt die Gebuehr per Webhook nach, oft
-		// Stunden nach dem Kauf und ohne dass ein Status wechselt oder eine
-		// Notiz entsteht. Ohne diesen taeglichen Nachlauf bliebe sie liegen.
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_FEES, array( $this, 'sync_recent_fees' ) );
-
-		// Dauerbuchungen automatisch ausführen (Scheduler-Hook).
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_RECURRING_BOOKINGS, array( $this, 'run_recurring_bookings' ) );
-
-		// Rechnung im Kundenkonto verlinken.
-		add_filter( 'woocommerce_my_account_my_orders_actions', array( $this, 'account_order_invoice_action' ), 10, 2 );
-
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		$this->register_admin();
-	}
 
 	/**
-	 * Alles, was nur im Backend gebraucht wird.
+	 * Alles, was nur im Backend gebraucht wird. Angemeldet von
+	 * {@see AccountingHooks}, und nur dort.
 	 *
 	 * Formularempfänger, AJAX-Antworten und Bildschirmmasken. Sie hängen an
 	 * `admin_post_*`, `wp_ajax_*` und den eigenen Seiten-Hooks – und die
@@ -67,7 +29,7 @@ class AccountingModule {
 	 * eingeschlossen. Im Frontend wären es nur Einträge in der Hakentabelle,
 	 * die nie zum Zug kommen.
 	 */
-	protected function register_admin() {
+	public function register_admin() {
 		add_action( 'lw16_render_page_lw16_buchhaltung', array( $this, 'render_admin' ) );
 
 		add_action( 'admin_post_lw16_save_beleg', array( $this, 'handle_save_beleg' ) );

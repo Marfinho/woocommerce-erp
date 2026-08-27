@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '20';
+	const DB_VERSION = '21';
 
 	/**
 	 * Aktivierungsroutine.
@@ -414,7 +414,8 @@ class Installer {
 			PRIMARY KEY  (id),
 			KEY email (email),
 			KEY user_id (user_id),
-			KEY umgewandelt (umgewandelt)
+			KEY umgewandelt (umgewandelt),
+			KEY offen_je_email (email, umgewandelt, id)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}wishlist (

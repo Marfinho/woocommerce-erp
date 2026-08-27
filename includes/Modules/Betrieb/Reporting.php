@@ -18,6 +18,11 @@ defined( 'ABSPATH' ) || exit;
 class Reporting {
 
 	/**
+	 * Wie viele Bestellungen gleichzeitig im Speicher stehen dürfen.
+	 */
+	const STAPEL = 500;
+
+	/**
 	 * Alle Kennzahlen eines Zeitraums.
 	 *
 	 * @param string $von Von (Y-m-d).
@@ -140,26 +145,39 @@ class Reporting {
 			return null;
 		}
 
-		$orders = wc_get_orders(
-			array(
-				'limit'        => -1,
-				'status'       => array( 'completed', 'processing' ),
-				'date_created' => '>' . ( time() - 365 * DAY_IN_SECONDS ),
-				'return'       => 'objects',
-			)
-		);
-
 		$per_customer = array();
 
-		foreach ( (array) $orders as $order ) {
-			$key = $order->get_customer_id() ? 'u' . $order->get_customer_id() : 'e' . strtolower( $order->get_billing_email() );
+		// Ein Jahr Bestellungen auf einmal als vollständige Objekte zu
+		// laden, wächst sich mit dem Shop zum Speicherproblem aus –
+		// gebraucht werden je Bestellung genau zwei Angaben. Also
+		// stapelweise, gezählt wird wie zuvor.
+		$seite = 1;
 
-			if ( '' === trim( str_replace( array( 'u', 'e' ), '', $key ) ) ) {
-				continue;
+		do {
+			$orders = wc_get_orders(
+				array(
+					'limit'        => self::STAPEL,
+					'paged'        => $seite,
+					'status'       => array( 'completed', 'processing' ),
+					'date_created' => '>' . ( time() - 365 * DAY_IN_SECONDS ),
+					'orderby'      => 'ID',
+					'order'        => 'ASC',
+					'return'       => 'objects',
+				)
+			);
+
+			foreach ( (array) $orders as $order ) {
+				$key = $order->get_customer_id() ? 'u' . $order->get_customer_id() : 'e' . strtolower( $order->get_billing_email() );
+
+				if ( '' === trim( str_replace( array( 'u', 'e' ), '', $key ) ) ) {
+					continue;
+				}
+
+				$per_customer[ $key ] = isset( $per_customer[ $key ] ) ? $per_customer[ $key ] + 1 : 1;
 			}
 
-			$per_customer[ $key ] = isset( $per_customer[ $key ] ) ? $per_customer[ $key ] + 1 : 1;
-		}
+			$seite++;
+		} while ( count( (array) $orders ) === self::STAPEL );
 
 		if ( ! $per_customer ) {
 			return null;
@@ -221,20 +239,28 @@ class Reporting {
 		$table = $wpdb->prefix . 'lw16_kpi_snapshots';
 		$count = 0;
 
+		// Der Bestand des Monats kommt in einer Abfrage, nicht in einer je
+		// Kennzahl. Es sind rund zwei Dutzend – und der Abschluss läuft im
+		// Hintergrundjob, wo jede eingesparte Rundreise zur Datenbank zählt.
+		$vorhanden = array();
+
+		foreach ( (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE period_year = %d AND period_month = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$year,
+				$month
+			),
+			ARRAY_A
+		) as $row ) {
+			$vorhanden[ (string) $row['metric_key'] ] = $row;
+		}
+
 		foreach ( self::metrics( $von, $bis ) as $key => $value ) {
 			if ( null === $value ) {
 				continue;
 			}
 
-			$existing = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT * FROM {$table} WHERE period_year = %d AND period_month = %d AND metric_key = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					$year,
-					$month,
-					$key
-				),
-				ARRAY_A
-			);
+			$existing = isset( $vorhanden[ $key ] ) ? $vorhanden[ $key ] : null;
 
 			// Bereits eingefrorene Werte bleiben stehen – das ist der Zweck
 			// des Abschlusses.

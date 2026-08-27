@@ -16,6 +16,11 @@ defined( 'ABSPATH' ) || exit;
 class EuerCalculator {
 
 	/**
+	 * Wie viele Bestellungen gleichzeitig im Speicher stehen dürfen.
+	 */
+	const STAPEL = 500;
+
+	/**
 	 * Netto-Einnahmen (abgeschlossene Bestellungen abzgl. Rückerstattungen)
 	 * für den Zeitraum berechnen. Ergebnis wird per Transient gecacht.
 	 *
@@ -32,19 +37,35 @@ class EuerCalculator {
 
 		$summe = 0.0;
 
-		$orders = wc_get_orders(
-			array(
-				'status'       => array( 'wc-completed' ),
-				'date_created' => $from . '...' . $to,
-				'limit'        => -1,
-				'return'       => 'objects',
-			)
-		);
+		// Bewusst seitenweise: Ein Jahresabschluss holte sonst jede
+		// abgeschlossene Bestellung des Zeitraums gleichzeitig als
+		// vollständiges Objekt in den Speicher – samt Positionen und
+		// Metadaten. Das hält so lange, bis der Shop groß genug ist, und
+		// scheitert dann ausgerechnet beim Jahresabschluss. Gerechnet wird
+		// unverändert Zeile für Zeile, nur nie mehr als ein Stapel auf
+		// einmal.
+		$seite = 1;
 
-		foreach ( $orders as $order ) {
-			// Bruttosumme abzüglich bereits erfasster Rückerstattungen.
-			$summe += (float) $order->get_total() - (float) $order->get_total_refunded();
-		}
+		do {
+			$orders = wc_get_orders(
+				array(
+					'status'       => array( 'wc-completed' ),
+					'date_created' => $from . '...' . $to,
+					'limit'        => self::STAPEL,
+					'paged'        => $seite,
+					'orderby'      => 'ID',
+					'order'        => 'ASC',
+					'return'       => 'objects',
+				)
+			);
+
+			foreach ( $orders as $order ) {
+				// Bruttosumme abzüglich bereits erfasster Rückerstattungen.
+				$summe += (float) $order->get_total() - (float) $order->get_total_refunded();
+			}
+
+			$seite++;
+		} while ( count( $orders ) === self::STAPEL );
 
 		set_transient( $cache_key, $summe, 30 * MINUTE_IN_SECONDS );
 		return $summe;

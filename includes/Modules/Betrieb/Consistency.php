@@ -75,16 +75,48 @@ class Consistency {
 		// Verknüpfungen ins Leere: Ein Produkt, das es nicht mehr gibt,
 		// nimmt beim Verkauf keinen Bestand mit.
 		$wc_missing = array();
+		$verknuepft = array();
+
 		foreach ( $articles as $id => $article ) {
 			$product = isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
 
-			if ( ! $product ) {
-				continue;
+			if ( $product ) {
+				$verknuepft[ (int) $id ] = $product;
 			}
+		}
 
-			if ( ! function_exists( 'wc_get_product' ) || ! wc_get_product( $product ) ) {
-				$wc_missing[ (int) $id ] = $product;
+		if ( $verknuepft && function_exists( 'wc_get_products' ) ) {
+			// Eine Abfrage für alle statt eine je Artikel. Die Prüfung läuft
+			// über den gesamten Stamm; einzeln nachzufragen hieße, für jeden
+			// Artikel einen Beitrag samt Metadaten aufzubauen, nur um zu
+			// erfahren, dass es ihn gibt.
+			$vorhanden = array_flip(
+				array_map(
+					'intval',
+					(array) wc_get_products(
+						array(
+							'include' => array_values( array_unique( $verknuepft ) ),
+							'limit'   => count( array_unique( $verknuepft ) ),
+							// Alle Zustände, auch Papierkorb und Entwurf: Gemeldet
+							// wird die Verknüpfung ins Leere, nicht ein
+							// unveröffentlichtes Produkt. Genau das tat die
+							// vorherige Einzelabfrage auch.
+							'status'  => array_keys( get_post_stati() ),
+							'return'  => 'ids',
+						)
+					)
+				)
+			);
+
+			foreach ( $verknuepft as $id => $product ) {
+				if ( ! isset( $vorhanden[ $product ] ) ) {
+					$wc_missing[ (int) $id ] = $product;
+				}
 			}
+		} elseif ( $verknuepft ) {
+			// Ohne WooCommerce lässt sich nichts prüfen – dann gilt keine
+			// Verknüpfung als kaputt, statt alle zu melden.
+			$wc_missing = array();
 		}
 
 		// Geprüft wird der Bestand im eigenen Lager, nicht die Summe über

@@ -14,11 +14,11 @@ use Lindenweg16\Admin\SettingsPage;
 use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
-use Lindenweg16\Modules\Inventory\InventoryModule;
-use Lindenweg16\Modules\Accounting\AccountingModule;
+use Lindenweg16\Modules\Inventory\InventoryHooks;
+use Lindenweg16\Modules\Accounting\AccountingHooks;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
 use Lindenweg16\Modules\Pricing\PricingModule;
-use Lindenweg16\Modules\Production\ProductionModule;
+use Lindenweg16\Modules\Production\ProductionHooks;
 use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
 use Lindenweg16\Modules\POS\POSModule;
@@ -109,14 +109,20 @@ class Plugin {
 	 * ihren Status außerhalb des Backends, und der Action Scheduler
 	 * arbeitet seine Warteschlange in gewöhnlichen Seitenaufrufen ab.
 	 *
+	 * Lager, Buchhaltung und Produktion sind dabei die dicksten Brocken –
+	 * zusammen gut dreitausendsiebenhundert Zeilen, von denen das Frontend
+	 * eine Handvoll Methoden braucht. Für sie steht hier eine schlanke
+	 * Hooks-Klasse, die die eigentliche Modulklasse erst lädt, wenn einer
+	 * ihrer Haken tatsächlich auslöst.
+	 *
 	 * @return array<string,string> Schlüssel => Klassenname.
 	 */
 	protected function module_classes() {
 		$module_classes = array(
-			'inventory'    => InventoryModule::class,
-			'accounting'   => AccountingModule::class,
+			'inventory'    => InventoryHooks::class,
+			'accounting'   => AccountingHooks::class,
 			'loyalty'      => LoyaltyModule::class,
-			'production'   => ProductionModule::class,
+			'production'   => ProductionHooks::class,
 			'retention'    => RetentionModule::class,
 			'support'      => SupportModule::class,
 			'betrieb'      => BetriebModule::class,

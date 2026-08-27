@@ -18,33 +18,15 @@ use Lindenweg16\Modules\Accounting\BelegRepository;
  */
 class InventoryModule {
 
-	/**
-	 * Hooks registrieren.
-	 */
-	public function register() {
-		// Echtzeit-Lagerabzug bei abgeschlossener Bestellung. Laeuft auch
-		// ohne Backend – der Status wechselt im Kundenkonto und per Webhook.
-		add_action( 'woocommerce_order_status_completed', array( $this, 'deduct_stock_for_order' ), 20, 1 );
-
-		// Täglicher Bestandsreport. Der Action Scheduler arbeitet seine
-		// Warteschlange in gewoehnlichen Seitenaufrufen ab.
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_STOCK, array( $this, 'send_daily_stock_report' ) );
-
-		if ( ! is_admin() ) {
-			return;
-		}
-
-		$this->register_admin();
-	}
 
 	/**
 	 * Bildschirmmasken und Formularempfänger – nur im Backend.
 	 *
-	 * `admin_post_*` und die eigenen Seiten-Hooks kommen ausschliesslich im
-	 * Adminkontext zum Zug. Im Frontend waeren es tote Eintraege in der
-	 * Hakentabelle, die WordPress bei jedem `do_action` mitschleppt.
+	 * Angemeldet von {@see InventoryHooks}, und nur dort. `admin_post_*`
+	 * und die eigenen Seiten-Hooks kommen ausschliesslich im Adminkontext
+	 * zum Zug; im Frontend waeren es tote Eintraege in der Hakentabelle.
 	 */
-	protected function register_admin() {
+	public function register_admin() {
 		// Admin-Seite.
 		add_action( 'lw16_render_page_lw16_lager', array( $this, 'render_admin' ) );
 		add_action( 'admin_post_lw16_save_product', array( $this, 'handle_save_product' ) );

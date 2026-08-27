@@ -21,6 +21,11 @@ use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
  */
 class SupportModule {
 
+	/**
+	 * Wie viele Zeilen der Datenexport gleichzeitig im Speicher hält.
+	 */
+	const EXPORT_STAPEL = 2000;
+
 	const ENDPOINT = 'problem-melden';
 
 	/**
@@ -101,34 +106,79 @@ class SupportModule {
 	 * @return string[]
 	 */
 	protected function build_export_files() {
-		global $wpdb;
-		$dir   = get_temp_dir();
 		$files = array();
 
-		$exports = array(
-			'belege'        => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_belege ORDER BY id',
-			'lagerbewegung' => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_lagerbewegung ORDER BY id',
-			'rechnungen'    => 'SELECT * FROM ' . $wpdb->prefix . 'lw16_rechnungen ORDER BY id',
-		);
+		foreach ( array( 'belege', 'lagerbewegung', 'rechnungen' ) as $name ) {
+			$path = $this->export_table( $name );
 
-		foreach ( $exports as $name => $sql ) {
-			$rows = $wpdb->get_results( $sql, ARRAY_A ); // phpcs:ignore
-			if ( empty( $rows ) ) {
-				continue;
+			if ( '' !== $path ) {
+				$files[] = $path;
 			}
-			$path = trailingslashit( $dir ) . 'lw16-' . $name . '-' . gmdate( 'Ymd' ) . '.csv';
-			$fh   = fopen( $path, 'w' ); // phpcs:ignore
-			if ( ! $fh ) {
-				continue;
+		}
+
+		return $files;
+	}
+
+	/**
+	 * Eine Tabelle stapelweise in eine CSV-Datei schreiben.
+	 *
+	 * Bisher holte der Export jede Tabelle in einem Zug in den Speicher.
+	 * Bei den Lagerbewegungen sind das nach ein paar Jahren Betrieb
+	 * hunderttausende Zeilen – der Wochenjob stirbt dann am Speicherlimit,
+	 * und zwar still, weil ihn niemand beobachtet. Geschrieben wird
+	 * deshalb in Stapeln: Im Speicher steht immer nur einer.
+	 *
+	 * @param string $name Tabellenname ohne Präfix.
+	 * @return string Pfad der Datei, leer wenn nichts zu schreiben war.
+	 */
+	protected function export_table( $name ) {
+		global $wpdb;
+
+		$table  = $wpdb->prefix . 'lw16_' . $name;
+		$path   = trailingslashit( get_temp_dir() ) . 'lw16-' . $name . '-' . gmdate( 'Ymd' ) . '.csv';
+		$fh     = null;
+		$offset = 0;
+
+		do {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT * FROM {$table} ORDER BY id LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					self::EXPORT_STAPEL,
+					$offset
+				),
+				ARRAY_A
+			);
+
+			if ( ! $rows ) {
+				break;
 			}
-			fputcsv( $fh, array_keys( $rows[0] ) );
+
+			// Erst öffnen, wenn wirklich etwas drinsteht – eine leere
+			// Tabelle soll keine leere Datei anhängen.
+			if ( null === $fh ) {
+				$fh = fopen( $path, 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
+
+				if ( ! $fh ) {
+					return '';
+				}
+
+				fputcsv( $fh, array_keys( $rows[0] ) );
+			}
+
 			foreach ( $rows as $row ) {
 				fputcsv( $fh, $row );
 			}
-			fclose( $fh ); // phpcs:ignore
-			$files[] = $path;
+
+			$offset += self::EXPORT_STAPEL;
+		} while ( count( $rows ) === self::EXPORT_STAPEL );
+
+		if ( null === $fh ) {
+			return '';
 		}
-		return $files;
+
+		fclose( $fh ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+
+		return $path;
 	}
 
 	/**

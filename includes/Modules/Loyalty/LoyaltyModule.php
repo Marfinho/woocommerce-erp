@@ -191,8 +191,28 @@ class LoyaltyModule {
 		$referral_prozent_wert = (float) Settings::get( 'referral_prozent', 5 );
 		$margin_fallback_wert  = (float) Settings::get( 'referral_margin_fallback', 40 );
 
+		$items = $order->get_items();
+
+		// Ohne diese Vorladung fragt jede Position ihre Marge einzeln nach.
+		// WordPress puffert Metadaten je Beitrag, füllt den Puffer aber nur,
+		// wenn man ihn gebündelt darum bittet – eine Abfrage statt einer je
+		// Position, und das bei jeder abgeschlossenen Bestellung.
+		$product_ids = array();
+
+		foreach ( $items as $item ) {
+			$product_id = (int) $item->get_product_id();
+
+			if ( $product_id ) {
+				$product_ids[ $product_id ] = true;
+			}
+		}
+
+		if ( $product_ids ) {
+			update_meta_cache( 'post', array_keys( $product_ids ) );
+		}
+
 		$reward = 0.0;
-		foreach ( $order->get_items() as $item ) {
+		foreach ( $items as $item ) {
 			$line_total = (float) $item->get_total();
 			$product_id = $item->get_product_id();
 			$margin     = get_post_meta( $product_id, '_lw16_margin_percent', true );

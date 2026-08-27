@@ -231,14 +231,24 @@ class Wishlist {
 			return;
 		}
 
+		// Vier Abfragen je gemerktem Produkt wären es sonst: Produkt,
+		// Dauerlink, Altbestand-Datensatz, Bestand. Bei zwanzig Merkzetteln
+		// sind das achtzig – für eine Seite im Kundenkonto. Alles, was sich
+		// bündeln lässt, wird hier einmal geholt.
+		$product_ids = array_map( static function ( $row ) {
+			return (int) $row->woo_product_id;
+		}, $rows );
+
+		self::prime_products( $product_ids );
+		$bestaende = self::stock_for_products( $product_ids );
+
 		echo '<div class="lw16-wishlist-grid">';
 		foreach ( $rows as $row ) {
 			$wc = wc_get_product( $row->woo_product_id );
 			if ( ! $wc ) {
 				continue;
 			}
-			$produkt   = Repository::get_by_woo_id( $row->woo_product_id );
-			$bestand   = $produkt ? Repository::get_stock( $produkt->id ) : null;
+			$bestand    = array_key_exists( (int) $row->woo_product_id, $bestaende ) ? $bestaende[ (int) $row->woo_product_id ] : null;
 			$verfuegbar = null === $bestand ? $wc->is_in_stock() : ( $bestand > 0 );
 
 			echo '<div class="lw16-wishlist-card">';
@@ -276,6 +286,81 @@ class Wishlist {
 			$out[ (int) $r->woo_product_id ] = (int) $r->anzahl;
 		}
 		set_transient( 'lw16_most_wished', $out, 30 * MINUTE_IN_SECONDS );
+		return $out;
+	}
+
+	/**
+	 * Produkte und ihre Beitragsdaten in einem Rutsch vorladen.
+	 *
+	 * WooCommerce und WordPress puffern beides – aber nur, wenn es
+	 * gebündelt kommt. Einzeln abgeholt entsteht je Produkt eine eigene
+	 * Abfrage für den Beitrag, eine für die Metadaten und eine für den
+	 * Dauerlink.
+	 *
+	 * @param int[] $product_ids Produkt-IDs.
+	 */
+	protected static function prime_products( array $product_ids ) {
+		$product_ids = array_values( array_unique( array_filter( array_map( 'intval', $product_ids ) ) ) );
+
+		if ( ! $product_ids ) {
+			return;
+		}
+
+		if ( function_exists( 'wc_get_products' ) ) {
+			wc_get_products(
+				array(
+					'include' => $product_ids,
+					'limit'   => count( $product_ids ),
+					'status'  => array( 'publish', 'private' ),
+					'return'  => 'ids',
+				)
+			);
+		}
+
+		// Füllt Beitrags- und Metadatenpuffer für Bild, Name und Dauerlink.
+		_prime_post_caches( $product_ids, true, true );
+	}
+
+	/**
+	 * Bestände der abgelösten Lagerverwaltung für mehrere Produkte.
+	 *
+	 * Zwei Abfragen statt zwei je Produkt. Fehlt ein Produkt in der alten
+	 * Verwaltung, fehlt es auch im Ergebnis – der Aufrufer fällt dann auf
+	 * die Bestandsangabe von WooCommerce zurück.
+	 *
+	 * @param int[] $product_ids Produkt-IDs.
+	 * @return array<int,float> Produkt-ID => Bestand.
+	 */
+	protected static function stock_for_products( array $product_ids ) {
+		global $wpdb;
+
+		$product_ids = array_values( array_unique( array_filter( array_map( 'intval', $product_ids ) ) ) );
+
+		if ( ! $product_ids ) {
+			return array();
+		}
+
+		$platzhalter = implode( ',', array_fill( 0, count( $product_ids ), '%d' ) );
+		$produkte    = Repository::table( 'produkte' );
+		$bestand     = Repository::table( 'lagerbestand' );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT p.woo_product_id, COALESCE( b.menge, 0 ) AS menge
+				 FROM {$produkte} p
+				 LEFT JOIN {$bestand} b ON b.produkt_id = p.id
+				 WHERE p.woo_product_id IN ({$platzhalter})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Platzhalter oben erzeugt, Werte unten gebunden.
+				$product_ids
+			),
+			ARRAY_A
+		);
+
+		$out = array();
+
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row['woo_product_id'] ] = (float) $row['menge'];
+		}
+
 		return $out;
 	}
 }

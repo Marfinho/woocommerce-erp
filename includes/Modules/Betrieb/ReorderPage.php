@@ -387,8 +387,19 @@ class ReorderPage {
 	 */
 	public static function catalog() {
 		$articles = array();
+		$by_product = array();
+
 		foreach ( ArticleRepository::selectable( true ) as $article ) {
 			$articles[ (int) $article['id'] ] = $article;
+
+			$product_id = isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
+
+			// Zeigen zwei Artikel auf dasselbe Produkt, gewinnt der erste –
+			// genau wie vorher, als die Schleife über die Produkte lief und
+			// den zweiten Treffer übersprang.
+			if ( $product_id && ! isset( $by_product[ $product_id ] ) ) {
+				$by_product[ $product_id ] = (int) $article['id'];
+			}
 		}
 
 		// Ohne WooCommerce bleibt der Artikelstamm die einzige Quelle.
@@ -396,22 +407,32 @@ class ReorderPage {
 			return array_values( array_map( array( __CLASS__, 'catalog_row' ), $articles ) );
 		}
 
-		$products = wc_get_products(
-			array(
-				'status'         => 'publish',
-				'catalog_visibility' => 'visible',
-				'limit'          => -1,
-				'orderby'        => 'menu_order',
-				'order'          => 'ASC',
-				'return'         => 'objects',
+		// Diese Seite steht ohne Login im Netz, und sie holte bisher jedes
+		// veröffentlichte Produkt des Shops als vollständiges Objekt, um
+		// hinterher fast alle wieder wegzuwerfen. Gebraucht wird nur, was
+		// an einem verkäuflichen Artikel hängt – und welche das sind, steht
+		// im Artikelstamm, der ohnehin schon geladen ist. Die Reihenfolge
+		// bleibt die des Shops, die Sichtbarkeitsregeln bleiben seine.
+		$products = $by_product
+			? wc_get_products(
+				array(
+					'include'            => array_keys( $by_product ),
+					'status'             => 'publish',
+					'catalog_visibility' => 'visible',
+					'limit'              => count( $by_product ),
+					'orderby'            => 'menu_order',
+					'order'              => 'ASC',
+					'return'             => 'objects',
+				)
 			)
-		);
+			: array();
 
 		$rows = array();
 		$seen = array();
 
 		foreach ( (array) $products as $product ) {
-			$article_id = StockOwnership::article_for_product( (int) $product->get_id() );
+			$product_id = (int) $product->get_id();
+			$article_id = isset( $by_product[ $product_id ] ) ? $by_product[ $product_id ] : 0;
 
 			if ( ! $article_id || ! isset( $articles[ $article_id ] ) || isset( $seen[ $article_id ] ) ) {
 				continue;
@@ -466,20 +487,29 @@ class ReorderPage {
 			return array();
 		}
 
-		$products = wc_get_products(
+		// Erst die Kennungen, dann nur für die Lücken ein Produktobjekt.
+		// Der Regelfall ist, dass alles verknüpft ist – dann wird hier gar
+		// kein Produkt mehr aufgebaut.
+		$ids = wc_get_products(
 			array(
 				'status'             => 'publish',
 				'catalog_visibility' => 'visible',
 				'limit'              => -1,
-				'return'             => 'objects',
+				'return'             => 'ids',
 			)
 		);
 
 		$missing = array();
 
-		foreach ( (array) $products as $product ) {
-			if ( ! StockOwnership::article_for_product( (int) $product->get_id() ) ) {
-				$missing[ (int) $product->get_id() ] = $product->get_name();
+		foreach ( (array) $ids as $id ) {
+			if ( StockOwnership::article_for_product( (int) $id ) ) {
+				continue;
+			}
+
+			$product = wc_get_product( (int) $id );
+
+			if ( $product ) {
+				$missing[ (int) $id ] = $product->get_name();
 			}
 		}
 
