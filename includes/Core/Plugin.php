@@ -84,26 +84,51 @@ class Plugin {
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.
-		$this->modules = array(
-			'inventory'  => new InventoryModule(),
-			'accounting' => new AccountingModule(),
-			'loyalty'    => new LoyaltyModule(),
-			'pricing'    => new PricingModule(),
-			'production' => new ProductionModule(),
-			'retention'  => new RetentionModule(),
-			'support'    => new SupportModule(),
-			'pos'        => new POSModule(),
-			'betrieb'    => new BetriebModule(),
-			'konfigurator' => new ConfiguratorModule(),
-		);
+		foreach ( $this->module_classes() as $key => $class ) {
+			$this->modules[ $key ] = new $class();
 
-		foreach ( $this->modules as $module ) {
-			if ( method_exists( $module, 'register' ) ) {
-				$module->register();
+			if ( method_exists( $this->modules[ $key ], 'register' ) ) {
+				$this->modules[ $key ]->register();
 			}
 		}
 
 		do_action( 'lw16_booted', $this );
+	}
+
+	/**
+	 * Welche Module dieser Aufruf überhaupt braucht.
+	 *
+	 * Kasse und Preiskalkulation sind reine Backend-Werkzeuge: Sie hängen
+	 * ausschließlich an `lw16_render_page_*`, `admin_post_*` und
+	 * `wp_ajax_*`. Alle drei laufen im Adminkontext – auch admin-post.php
+	 * und admin-ajax.php setzen `is_admin()`. Ein Besucher auf einer
+	 * Produktseite hat also nichts davon, zahlt aber für das Laden und
+	 * Auswerten der Klassen. Deshalb bleiben sie dort weg.
+	 *
+	 * Alles andere wird auch im Frontend gebraucht: Bestellungen wechseln
+	 * ihren Status außerhalb des Backends, und der Action Scheduler
+	 * arbeitet seine Warteschlange in gewöhnlichen Seitenaufrufen ab.
+	 *
+	 * @return array<string,string> Schlüssel => Klassenname.
+	 */
+	protected function module_classes() {
+		$module_classes = array(
+			'inventory'    => InventoryModule::class,
+			'accounting'   => AccountingModule::class,
+			'loyalty'      => LoyaltyModule::class,
+			'production'   => ProductionModule::class,
+			'retention'    => RetentionModule::class,
+			'support'      => SupportModule::class,
+			'betrieb'      => BetriebModule::class,
+			'konfigurator' => ConfiguratorModule::class,
+		);
+
+		if ( is_admin() ) {
+			$module_classes['pricing'] = PricingModule::class;
+			$module_classes['pos']     = POSModule::class;
+		}
+
+		return $module_classes;
 	}
 
 	/**
@@ -118,6 +143,9 @@ class Plugin {
 
 	/**
 	 * Ein Modul-Objekt holen.
+	 *
+	 * Im Frontend sind reine Backend-Module nicht gebootet; für sie kommt
+	 * dort `null` zurück.
 	 *
 	 * @param string $key Modul-Schlüssel.
 	 * @return object|null

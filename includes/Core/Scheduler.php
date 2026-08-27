@@ -41,6 +41,21 @@ class Scheduler {
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
 
 	/**
+	 * Merker, dass der Plan bereits geprueft wurde.
+	 *
+	 * Der Wert enthaelt die Signatur des Plans. Aendert sich ein Intervall
+	 * oder kommt ein Job dazu, passt die Signatur nicht mehr und die
+	 * Pruefung laeuft beim naechsten Aufruf erneut.
+	 */
+	const CHECK_OPTION = 'lw16_scheduler_checked';
+
+	/**
+	 * Wie lange der Merker gilt. Sicherheitsnetz, falls jemand die Jobs
+	 * ausserhalb des Plugins loescht – dann fehlen sie hoechstens einen Tag.
+	 */
+	const CHECK_TTL = DAY_IN_SECONDS;
+
+	/**
 	 * Alle vom Plugin genutzten Hook-Namen (für Cleanup beim Deaktivieren).
 	 *
 	 * @return string[]
@@ -63,34 +78,90 @@ class Scheduler {
 	}
 
 	/**
-	 * Wiederkehrende Jobs sicherstellen. Wird bei jedem Boot aufgerufen –
-	 * as_schedule_recurring_action ist idempotent bei gesetztem unique-Flag.
+	 * Der Plan: Hook-Name => Intervall in Sekunden.
+	 *
+	 * @return array<string,int>
+	 */
+	protected static function recurring_plan() {
+		return array(
+			self::HOOK_DAILY_LOYALTY      => DAY_IN_SECONDS,
+			self::HOOK_DHL_TRACKING       => 3 * HOUR_IN_SECONDS,
+			self::HOOK_CART_REMINDERS     => HOUR_IN_SECONDS,
+			self::HOOK_POSTPURCHASE       => DAY_IN_SECONDS,
+			self::HOOK_WEEKLY_DIGEST      => WEEK_IN_SECONDS,
+			self::HOOK_WEEKLY_EXPORT      => WEEK_IN_SECONDS,
+			self::HOOK_DAILY_STOCK        => DAY_IN_SECONDS,
+			self::HOOK_DAILY_FEES         => DAY_IN_SECONDS,
+			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
+			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
+		);
+	}
+
+	/**
+	 * Wiederkehrende Jobs sicherstellen.
+	 *
+	 * Frueher lief das bei jedem einzelnen Seitenaufruf: zehn Hooks, zehn
+	 * ungepufferte Abfragen gegen die Tabelle des Action Schedulers – auch
+	 * fuer den Besucher, der nur eine Produktseite ansieht. Die Jobs aendern
+	 * sich aber hoechstens bei einer neuen Fassung des Plugins.
+	 *
+	 * Deshalb merkt sich das Plugin die Signatur des Plans in einer Option.
+	 * Stimmt sie, ist nichts zu tun und der Aufruf kostet nichts, weil
+	 * WordPress die Optionen ohnehin gebuendelt laedt. Nur wenn die
+	 * Signatur fehlt, veraltet ist oder der Merker abgelaufen ist, laufen
+	 * die Pruefabfragen – und zwar nicht im Seitenaufbau eines Besuchers,
+	 * sondern im Adminbereich, in Cron-Laeufen und auf der Kommandozeile.
 	 */
 	public static function ensure_recurring() {
 		if ( ! function_exists( 'as_schedule_recurring_action' ) || ! function_exists( 'as_has_scheduled_action' ) ) {
 			return;
 		}
 
+		$plan      = self::recurring_plan();
+		$signature = md5( LW16_VERSION . '|' . wp_json_encode( $plan ) );
+		$checked   = get_option( self::CHECK_OPTION );
+
+		if ( is_array( $checked )
+			&& isset( $checked['signature'], $checked['time'] )
+			&& $checked['signature'] === $signature
+			&& ( time() - (int) $checked['time'] ) < self::CHECK_TTL
+		) {
+			return;
+		}
+
+		// Ein Besucher soll nie fuer die Wartung bezahlen. Kommt der Aufruf
+		// aus dem Frontend, bleibt der Merker ungesetzt und der naechste
+		// Admin- oder Cron-Lauf erledigt es.
+		if ( ! is_admin() && ! wp_doing_cron() && ! ( defined( 'WP_CLI' ) && WP_CLI ) ) {
+			return;
+		}
+
 		$now = time();
 
-		$recurring = array(
-			self::HOOK_DAILY_LOYALTY  => DAY_IN_SECONDS,
-			self::HOOK_DHL_TRACKING   => 3 * HOUR_IN_SECONDS,
-			self::HOOK_CART_REMINDERS => HOUR_IN_SECONDS,
-			self::HOOK_POSTPURCHASE   => DAY_IN_SECONDS,
-			self::HOOK_WEEKLY_DIGEST  => WEEK_IN_SECONDS,
-			self::HOOK_WEEKLY_EXPORT  => WEEK_IN_SECONDS,
-			self::HOOK_DAILY_STOCK       => DAY_IN_SECONDS,
-			self::HOOK_DAILY_FEES        => DAY_IN_SECONDS,
-			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
-			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
-		);
-
-		foreach ( $recurring as $hook => $interval ) {
+		foreach ( $plan as $hook => $interval ) {
 			if ( ! as_has_scheduled_action( $hook, array(), self::GROUP ) ) {
 				as_schedule_recurring_action( $now + MINUTE_IN_SECONDS, $interval, $hook, array(), self::GROUP );
 			}
 		}
+
+		// Ausdruecklich mitgeladen: Der Merker wird bei jedem Aufruf gelesen.
+		// Läge er ausserhalb der gebuendelten Optionen, kostete das genau
+		// die Abfrage, die hier eingespart werden soll.
+		update_option(
+			self::CHECK_OPTION,
+			array(
+				'signature' => $signature,
+				'time'      => $now,
+			),
+			true
+		);
+	}
+
+	/**
+	 * Merker verwerfen, damit der Plan beim naechsten Lauf neu geprueft wird.
+	 */
+	public static function forget_check() {
+		delete_option( self::CHECK_OPTION );
 	}
 
 	/**

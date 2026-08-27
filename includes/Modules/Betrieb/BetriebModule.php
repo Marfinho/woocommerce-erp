@@ -100,9 +100,12 @@ class BetriebModule {
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
 		( new WeeklyMail() )->register();
-		( new Exporter() )->register();
 
 		if ( is_admin() ) {
+			// Der Exporter empfaengt ausschliesslich Formulare an
+			// admin-post.php – dort gilt `is_admin()`.
+			( new Exporter() )->register();
+
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 			( new SettingsPage() )->register();

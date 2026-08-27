@@ -23,6 +23,34 @@ use Lindenweg16\Modules\Betrieb\ColorRegistry;
 class Catalog {
 
 	/**
+	 * Wo der fertige Katalog liegt.
+	 */
+	const TRANSIENT = 'lw16_konfigurator_katalog';
+
+	/**
+	 * Option mit der Fassung der Stammdaten.
+	 */
+	const VERSION_OPTION = 'lw16_katalog_version';
+
+	/**
+	 * Wie lange der Katalog höchstens gilt. Änderungen wirken schon über
+	 * die Fassung sofort – das hier ist nur das Sicherheitsnetz.
+	 */
+	const TTL = 12 * HOUR_IN_SECONDS;
+
+	/**
+	 * Wie viele Preiskontexte gleichzeitig abgelegt werden.
+	 */
+	const MAX_CONTEXTS = 8;
+
+	/**
+	 * Hat dieser Aufruf Stammdaten oder Produkte geaendert?
+	 *
+	 * @var bool
+	 */
+	protected static $geaendert = false;
+
+	/**
 	 * Vollständige Angebotsdaten.
 	 *
 	 * @return array {bases, modules, colors, default_color, currency}
@@ -37,6 +65,34 @@ class Catalog {
 			return $cache;
 		}
 
+		$context_key = self::price_context();
+		$stored      = self::stored();
+
+		if ( isset( $stored['payload'][ $context_key ] ) ) {
+			$cache = $stored['payload'][ $context_key ];
+
+			return $cache;
+		}
+
+		$cache = self::build();
+
+		self::remember( $stored, $context_key, $cache );
+
+		return $cache;
+	}
+
+	/**
+	 * Den Katalog aus den Stammdaten und dem Shop zusammenstellen.
+	 *
+	 * Das ist der teure Teil: je Teil ein Produkt aus WooCommerce, bei
+	 * variablen Produkten dazu jede einzelne Variante mit Preis und
+	 * Bestand. Bei zwanzig Teilen in fünf Farben sind das über hundert
+	 * Produktobjekte – für eine Seite, die sich zwischen zwei Bestellungen
+	 * nicht ändert. Deshalb steht darüber der Zwischenspeicher.
+	 *
+	 * @return array
+	 */
+	protected static function build() {
 		$context = PartRepository::context( true );
 		$colors  = ColorRegistry::all();
 		$bases   = array();
@@ -62,15 +118,155 @@ class Catalog {
 			$modules[] = $entry;
 		}
 
-		$cache = array(
+		return array(
 			'bases'         => $bases,
 			'modules'       => $modules,
 			'colors'        => self::colors( $colors ),
 			'default_color' => ColorRegistry::default_color(),
 			'currency'      => self::currency(),
 		);
+	}
 
-		return $cache;
+	/**
+	 * Den abgelegten Katalog holen, sofern er noch zur Fassung passt.
+	 *
+	 * @return array {version, payload}
+	 */
+	protected static function stored() {
+		$leer = array(
+			'version' => self::version(),
+			'payload' => array(),
+		);
+
+		if ( ! function_exists( 'get_transient' ) ) {
+			return $leer;
+		}
+
+		$stored = get_transient( self::TRANSIENT );
+
+		if ( ! is_array( $stored )
+			|| ! isset( $stored['version'], $stored['payload'] )
+			|| ! is_array( $stored['payload'] )
+			|| (string) $stored['version'] !== $leer['version']
+		) {
+			return $leer;
+		}
+
+		return $stored;
+	}
+
+	/**
+	 * Den frisch gebauten Katalog ablegen.
+	 *
+	 * @param array  $stored      Bisheriger Stand.
+	 * @param string $context_key Preiskontext.
+	 * @param array  $payload     Katalogdaten.
+	 */
+	protected static function remember( array $stored, $context_key, array $payload ) {
+		if ( ! function_exists( 'set_transient' ) ) {
+			return;
+		}
+
+		// Wer in diesem Aufruf noch etwas aendert, wuerde einen halb
+		// veralteten Katalog festschreiben. Dann lieber gar nichts ablegen
+		// und den naechsten Aufruf neu bauen lassen.
+		if ( self::$geaendert ) {
+			return;
+		}
+
+		// Der Preiskontext unterscheidet sich nur, wenn Steuern im Spiel
+		// sind und der Shop brutto anzeigt. Ein paar Steuergebiete sind
+		// realistisch, eine unbegrenzte Liste nicht – sie würde die Zeile
+		// in der Datenbank aufblähen.
+		if ( count( $stored['payload'] ) >= self::MAX_CONTEXTS ) {
+			$stored['payload'] = array();
+		}
+
+		$stored['payload'][ $context_key ] = $payload;
+
+		set_transient( self::TRANSIENT, $stored, self::TTL );
+	}
+
+	/**
+	 * Fassung der Stammdaten. Ändert sie sich, ist der Speicher hinfällig.
+	 *
+	 * @return string
+	 */
+	protected static function version() {
+		return (string) get_option( self::VERSION_OPTION, '1' );
+	}
+
+	/**
+	 * Den abgelegten Katalog verwerfen.
+	 *
+	 * Aufgerufen, sobald sich ein Teil, ein Artikel, ein Sperrbereich oder
+	 * ein Produkt im Shop ändert. Statt den Speicher zu löschen, zählt die
+	 * Fassung hoch: Das wirkt sofort und über alle Preiskontexte hinweg,
+	 * auch wenn parallel gerade jemand den alten Stand liest.
+	 */
+	public static function invalidate() {
+		// Ein Import oder ein Massenlauf ruft das hundertfach auf. Einmal je
+		// Aufruf hochzuzaehlen reicht vollkommen – der Speicher ist danach
+		// so hinfaellig wie nach hundert Malen, kostet aber einen einzigen
+		// Schreibvorgang statt hundert.
+		if ( self::$geaendert ) {
+			return;
+		}
+
+		self::$geaendert = true;
+
+		update_option( self::VERSION_OPTION, (string) ( (int) get_option( self::VERSION_OPTION, '1' ) + 1 ), true );
+	}
+
+	/**
+	 * Die Haken, die den Speicher hinfällig machen.
+	 */
+	public static function register_invalidation() {
+		$hooks = array(
+			// Stammdaten des Konfigurators und der Artikelverwaltung.
+			'lw16_katalog_veraltet',
+			// Produkte und Varianten im Shop: Preis, Bestand, Status.
+			'woocommerce_update_product',
+			'woocommerce_new_product',
+			'woocommerce_trash_product',
+			'woocommerce_delete_product',
+			'woocommerce_update_product_variation',
+			'woocommerce_new_product_variation',
+			'woocommerce_product_set_stock',
+			'woocommerce_variation_set_stock',
+			'woocommerce_product_set_stock_status',
+			'woocommerce_variation_set_stock_status',
+		);
+
+		foreach ( $hooks as $hook ) {
+			add_action( $hook, array( __CLASS__, 'invalidate' ), 10, 0 );
+		}
+	}
+
+	/**
+	 * Kennung des Preiskontexts.
+	 *
+	 * `wc_get_price_to_display` rechnet je nach Einstellung mit oder ohne
+	 * Steuer und, bei Bruttoanzeige, nach dem Steuergebiet des Kunden. Ein
+	 * Katalog, der unter dem falschen Kontext ausgeliefert wird, zeigte
+	 * falsche Preise – deshalb steckt der Kontext im Schlüssel.
+	 *
+	 * Für den Kleinunternehmer ohne Umsatzsteuer gibt es genau einen.
+	 *
+	 * @return string
+	 */
+	protected static function price_context() {
+		if ( ! function_exists( 'wc_tax_enabled' ) || ! wc_tax_enabled() ) {
+			return 'netto';
+		}
+
+		$teile = array( (string) get_option( 'woocommerce_tax_display_shop', 'incl' ) );
+
+		if ( function_exists( 'WC' ) && WC() && isset( WC()->customer ) && WC()->customer ) {
+			$teile[] = implode( '-', (array) WC()->customer->get_taxable_address() );
+		}
+
+		return md5( implode( '|', $teile ) );
 	}
 
 	/**

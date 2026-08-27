@@ -22,13 +22,10 @@ class AccountingModule {
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_action( 'lw16_render_page_lw16_buchhaltung', array( $this, 'render_admin' ) );
-
-		add_action( 'admin_post_lw16_save_beleg', array( $this, 'handle_save_beleg' ) );
-		add_action( 'admin_post_lw16_festschreiben', array( $this, 'handle_festschreiben' ) );
-
-		// Geschützte Beleg-Foto-Auslieferung (nur mit Capability).
-		add_action( 'admin_post_lw16_beleg_datei', array( $this, 'serve_beleg_file' ) );
+		// Diese Haken laufen auch ohne Backend: Bestellungen wechseln ihren
+		// Status im Kundenkonto, an der Kasse und per Webhook, und der
+		// Action Scheduler arbeitet seine Warteschlange in ganz normalen
+		// Seitenaufrufen ab.
 
 		// Automatische Rechnungserstellung: bei Abschluss asynchron einreihen.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
@@ -47,6 +44,37 @@ class AccountingModule {
 		// Stunden nach dem Kauf und ohne dass ein Status wechselt oder eine
 		// Notiz entsteht. Ohne diesen taeglichen Nachlauf bliebe sie liegen.
 		add_action( \Lindenweg16\Core\Scheduler::HOOK_DAILY_FEES, array( $this, 'sync_recent_fees' ) );
+
+		// Dauerbuchungen automatisch ausführen (Scheduler-Hook).
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_RECURRING_BOOKINGS, array( $this, 'run_recurring_bookings' ) );
+
+		// Rechnung im Kundenkonto verlinken.
+		add_filter( 'woocommerce_my_account_my_orders_actions', array( $this, 'account_order_invoice_action' ), 10, 2 );
+
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		$this->register_admin();
+	}
+
+	/**
+	 * Alles, was nur im Backend gebraucht wird.
+	 *
+	 * Formularempfänger, AJAX-Antworten und Bildschirmmasken. Sie hängen an
+	 * `admin_post_*`, `wp_ajax_*` und den eigenen Seiten-Hooks – und die
+	 * laufen sämtlich im Adminkontext, admin-post.php und admin-ajax.php
+	 * eingeschlossen. Im Frontend wären es nur Einträge in der Hakentabelle,
+	 * die nie zum Zug kommen.
+	 */
+	protected function register_admin() {
+		add_action( 'lw16_render_page_lw16_buchhaltung', array( $this, 'render_admin' ) );
+
+		add_action( 'admin_post_lw16_save_beleg', array( $this, 'handle_save_beleg' ) );
+		add_action( 'admin_post_lw16_festschreiben', array( $this, 'handle_festschreiben' ) );
+
+		// Geschützte Beleg-Foto-Auslieferung (nur mit Capability).
+		add_action( 'admin_post_lw16_beleg_datei', array( $this, 'serve_beleg_file' ) );
 
 		// Gebühr von Hand nachtragen oder erneut suchen.
 		add_action( 'admin_post_lw16_fee_rescan', array( $this, 'handle_fee_rescan' ) );
@@ -87,9 +115,6 @@ class AccountingModule {
 		// Beleg-OCR (AJAX).
 		add_action( 'wp_ajax_lw16_ocr_scan', array( $this, 'handle_ocr_scan' ) );
 
-		// Dauerbuchungen automatisch ausführen (Scheduler-Hook).
-		add_action( \Lindenweg16\Core\Scheduler::HOOK_RECURRING_BOOKINGS, array( $this, 'run_recurring_bookings' ) );
-
 		// EÜR-PDF-Export.
 		add_action( 'admin_post_lw16_euer_pdf', array( $this, 'export_euer_pdf' ) );
 
@@ -97,9 +122,8 @@ class AccountingModule {
 		add_action( 'admin_post_lw16_rechnung', array( $this, 'serve_invoice' ) );
 		add_action( 'admin_post_nopriv_lw16_rechnung', array( $this, 'serve_invoice' ) );
 
-		// Rechnung in der Bestellansicht (Admin) und im Kundenkonto verlinken.
+		// Rechnung in der Bestellansicht (Admin) verlinken.
 		add_action( 'woocommerce_admin_order_data_after_order_details', array( $this, 'admin_order_invoice_link' ) );
-		add_filter( 'woocommerce_my_account_my_orders_actions', array( $this, 'account_order_invoice_action' ), 10, 2 );
 	}
 
 	/**

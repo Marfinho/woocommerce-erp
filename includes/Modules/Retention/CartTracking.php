@@ -20,6 +20,13 @@ use Lindenweg16\Core\MailTemplate;
 class CartTracking {
 
 	/**
+	 * Fingerabdruck des zuletzt geschriebenen Warenkorbs in diesem Aufruf.
+	 *
+	 * @var string|null
+	 */
+	protected static $last_write = null;
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
@@ -128,6 +135,22 @@ class CartTracking {
 				'qty'        => $item['quantity'],
 			);
 		}
+
+		// `woocommerce_cart_updated` faellt mehrfach je Seitenaufbau an, und
+		// im Checkout schickt WooCommerce bei jeder Eingabe eine neue
+		// Uebersicht. Steht dasselbe schon in der Zeile, waeren Abfrage und
+		// Schreibvorgang reine Last – gerade im Checkout, wo es auf jede
+		// Millisekunde ankommt.
+		$fingerprint = md5( $email . '|' . wp_json_encode( $snapshot ) );
+
+		if ( self::$last_write === $fingerprint ) {
+			if ( $show_errors ) {
+				$wpdb->show_errors();
+			}
+			return;
+		}
+
+		self::$last_write = $fingerprint;
 
 		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT id FROM ' . self::table() . ' WHERE email = %s AND umgewandelt = 0 ORDER BY id DESC LIMIT 1', $email ) ); // phpcs:ignore
 

@@ -50,6 +50,13 @@ class Frontend {
 	protected $needed = false;
 
 	/**
+	 * Ergebnis der Prüfung, ob diese Seite den Konfigurator braucht.
+	 *
+	 * @var bool|null
+	 */
+	protected $wanted = null;
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
@@ -70,6 +77,14 @@ class Frontend {
 			return true;
 		}
 
+		// Gefragt wird zweimal je Seite: einmal für die Zuordnung im Kopf,
+		// einmal beim Anmelden der Dateien. `has_shortcode` schickt einen
+		// regulären Ausdruck über den gesamten Seiteninhalt – das lohnt
+		// kein zweites Mal, die Antwort ist dieselbe.
+		if ( null !== $this->wanted ) {
+			return $this->wanted;
+		}
+
 		$post   = get_post();
 		$wanted = $post instanceof \WP_Post && has_shortcode( (string) $post->post_content, self::SHORTCODE );
 
@@ -81,7 +96,9 @@ class Frontend {
 		 *
 		 * @param bool $wanted Bisherige Entscheidung.
 		 */
-		return (bool) apply_filters( 'lw16_konfigurator_assets_laden', $wanted );
+		$this->wanted = (bool) apply_filters( 'lw16_konfigurator_assets_laden', $wanted );
+
+		return $this->wanted;
 	}
 
 	/**

@@ -38,10 +38,18 @@ use Lindenweg16\Core\Settings;
 class StockOwnership {
 
 	/**
+	 * Produkt-ID => Artikel-ID fuer die Dauer eines Aufrufs.
+	 *
+	 * @var array<int,int>
+	 */
+	protected static $zuordnung = array();
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
 		add_filter( 'lw16_inventory_skip_product', array( __CLASS__, 'filter_skip_product' ), 10, 2 );
+		add_action( 'lw16_katalog_veraltet', array( __CLASS__, 'forget_map' ) );
 	}
 
 	/**
@@ -60,21 +68,41 @@ class StockOwnership {
 	 * @return int Artikel-ID oder 0.
 	 */
 	public static function article_for_product( $wc_product_id ) {
-		global $wpdb;
-
 		$wc_product_id = (int) $wc_product_id;
 		if ( ! $wc_product_id ) {
 			return 0;
 		}
 
+		// Dieselbe Frage faellt in einem Aufruf oft mehrfach an: einmal je
+		// Bestellposition, einmal je Produkt in der Nachbestellliste, einmal
+		// je Zeile der Bedarfsplanung. Die Zuordnung aendert sich dabei
+		// nicht – sie wird gemerkt, statt sie jedes Mal neu zu erfragen.
+		if ( isset( self::$zuordnung[ $wc_product_id ] ) ) {
+			return self::$zuordnung[ $wc_product_id ];
+		}
+
+		global $wpdb;
+
 		$table = ArticleRepository::table();
 
-		return (int) $wpdb->get_var(
+		self::$zuordnung[ $wc_product_id ] = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT id FROM {$table} WHERE wc_product_id = %d LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$wc_product_id
 			)
 		);
+
+		return self::$zuordnung[ $wc_product_id ];
+	}
+
+	/**
+	 * Die gemerkte Zuordnung verwerfen.
+	 *
+	 * Noetig, sobald ein Artikel angelegt, geaendert oder geloescht wird –
+	 * dann kann sich die Verknuepfung zum Shop-Produkt verschoben haben.
+	 */
+	public static function forget_map() {
+		self::$zuordnung = array();
 	}
 
 	/**

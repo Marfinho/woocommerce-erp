@@ -391,6 +391,10 @@ class ResetTool {
 			$deleted['dateien'] = self::purge_files();
 		}
 
+		// Der Konfigurator haelt seinen Katalog zwischengespeichert. Nach
+		// einem Reset stuenden dort Teile, die es nicht mehr gibt.
+		do_action( 'lw16_katalog_veraltet' );
+
 		self::log( $scopes, $deleted );
 
 		return array(

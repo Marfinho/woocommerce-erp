@@ -32,17 +32,28 @@ class Assets {
 	 */
 	public static function version( $relative ) {
 		$relative = ltrim( (string) $relative, '/' );
+
+		// Zwei Zugriffe auf das Dateisystem je Datei, und dieselbe Datei
+		// wird auf einer Seite mehrfach angemeldet – etwa frontend.css aus
+		// drei verschiedenen Modulen. Innerhalb eines Aufrufs aendert sich
+		// die Zeit nicht, also wird sie gemerkt.
+		static $stamps = array();
+
+		if ( isset( $stamps[ $relative ] ) ) {
+			return $stamps[ $relative ];
+		}
+
 		$absolute = LW16_PLUGIN_DIR . $relative;
 
 		// Fehlt die Datei oder lässt sich ihre Zeit nicht lesen, bleibt es
 		// bei der Plugin-Version. Lieber ein grober Stempel als gar keiner.
-		if ( ! is_readable( $absolute ) ) {
-			return LW16_VERSION;
-		}
+		// `filemtime` meldet bei fehlender Datei selbst false, eine eigene
+		// Pruefung davor waere ein zweiter Gang zur Platte.
+		$time = @filemtime( $absolute ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Fehlende Datei ist ein erwarteter Fall, der Rueckfallwert steht darunter.
 
-		$time = filemtime( $absolute );
+		$stamps[ $relative ] = $time ? (string) $time : LW16_VERSION;
 
-		return $time ? (string) $time : LW16_VERSION;
+		return $stamps[ $relative ];
 	}
 
 	/**

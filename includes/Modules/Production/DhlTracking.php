@@ -47,6 +47,10 @@ class DhlTracking {
 		// Tracking-Nummer aus DHL-Label-Plugin übernehmen.
 		add_action( 'woocommerce_order_status_changed', array( $this, 'maybe_capture_tracking' ), 10, 3 );
 
+		if ( ! is_admin() ) {
+			return;
+		}
+
 		// Admin: Tracking-Metabox in der Bestellung.
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
 		add_action( 'admin_post_lw16_save_tracking', array( $this, 'handle_save_tracking' ) );

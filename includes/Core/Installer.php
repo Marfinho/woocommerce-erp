@@ -34,6 +34,10 @@ class Installer {
 		self::protect_belege_directory();
 		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 
+		// Der Scheduler prueft seinen Plan nur, wenn der Merker fehlt oder
+		// veraltet ist. Nach einer Aktivierung muss er das tun.
+		Scheduler::forget_check();
+
 		// Standard-Einstellungen setzen, falls noch nicht vorhanden.
 		Settings::maybe_set_defaults();
 
@@ -58,6 +62,12 @@ class Installer {
 				as_unschedule_all_actions( $hook );
 			}
 		}
+
+		// Die Jobs sind eben geloescht worden. Bliebe der Merker stehen,
+		// haette der Scheduler beim naechsten Start keinen Anlass mehr,
+		// sie wieder anzulegen – und das Plugin liefe still ohne Nachlauf.
+		Scheduler::forget_check();
+
 		flush_rewrite_rules();
 	}
 
@@ -70,6 +80,7 @@ class Installer {
 			Roles::add_role();
 			self::protect_belege_directory();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+			Scheduler::forget_check();
 
 			// Ein Update laeuft ohne Aktivierung durch. Ohne diesen Merker
 			// blieben Rewrite-Regeln, die erst in der neuen Fassung dazukommen,

@@ -121,6 +121,7 @@ class BlockRepository {
 
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'config_blocks', $id, null, $data );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return array(
 			'id'     => $id,
@@ -151,6 +152,7 @@ class BlockRepository {
 		}
 
 		BetriebAudit::record( 'delete', 'config_blocks', (int) $id, $before, null );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return true;
 	}
@@ -164,6 +166,7 @@ class BlockRepository {
 		global $wpdb;
 
 		$wpdb->delete( self::table(), array( 'part_id' => (int) $part_id ) );
+		do_action( 'lw16_katalog_veraltet' );
 	}
 
 	/**

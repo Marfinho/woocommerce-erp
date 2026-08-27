@@ -17,12 +17,29 @@ class Settings {
 	const OPTION = 'lw16_settings';
 
 	/**
+	 * Zusammengefuehrte Werte fuer die Dauer eines Aufrufs.
+	 *
+	 * @var array|null
+	 */
+	protected static $cache = null;
+
+	/**
 	 * Standardwerte für alle Einstellungen.
 	 *
 	 * @return array
 	 */
 	public static function defaults() {
-		return array(
+		// Die Vorgaben ziehen vier Werte aus den Seiteninformationen. Sie
+		// aendern sich innerhalb eines Aufrufs nicht, und `get()` wird an
+		// vielen Stellen gebraucht – ohne diesen Merker liefe der Aufbau
+		// pro Aufruf erneut.
+		static $defaults = null;
+
+		if ( null !== $defaults ) {
+			return $defaults;
+		}
+
+		$defaults = array(
 			// Firmendaten für Rechnungen / EÜR.
 			'firma_name'                => get_bloginfo( 'name' ),
 			'firma_strasse'             => '',
@@ -73,6 +90,8 @@ class Settings {
 			'dhl_tracking_api_key'      => '',
 			'dhl_tracking_sandbox'      => 1,
 		);
+
+		return $defaults;
 	}
 
 	/**
@@ -83,8 +102,9 @@ class Settings {
 		if ( ! is_array( $current ) ) {
 			$current = array();
 		}
-		$merged = wp_parse_args( $current, self::defaults() );
+		$merged = $current + self::defaults();
 		update_option( self::OPTION, $merged );
+		self::$cache = $merged;
 	}
 
 	/**
@@ -95,14 +115,12 @@ class Settings {
 	 * @return mixed
 	 */
 	public static function get( $key, $default = null ) {
-		$all = get_option( self::OPTION, array() );
-		if ( is_array( $all ) && array_key_exists( $key, $all ) ) {
+		$all = self::all();
+
+		if ( array_key_exists( $key, $all ) ) {
 			return $all[ $key ];
 		}
-		$defaults = self::defaults();
-		if ( array_key_exists( $key, $defaults ) ) {
-			return $defaults[ $key ];
-		}
+
 		return $default;
 	}
 
@@ -112,7 +130,33 @@ class Settings {
 	 * @return array
 	 */
 	public static function all() {
-		return wp_parse_args( get_option( self::OPTION, array() ), self::defaults() );
+		// Zusammengefuehrt wird einmal je Aufruf. `get_option` selbst ist
+		// zwar gepuffert, `wp_parse_args` gegen ueber vierzig Vorgaben aber
+		// nicht umsonst – und `get()` faellt an manchen Stellen dutzendfach
+		// an, etwa im Warenkorb.
+		if ( null !== self::$cache ) {
+			return self::$cache;
+		}
+
+		$stored = get_option( self::OPTION, array() );
+
+		if ( ! is_array( $stored ) ) {
+			$stored = array();
+		}
+
+		// Gespeicherte Werte gewinnen, fehlende kommen aus den Vorgaben.
+		// `wp_parse_args` macht bei zwei Feldern nichts anderes, geht dafür
+		// aber über eine Fallunterscheidung und `array_merge`.
+		self::$cache = $stored + self::defaults();
+
+		return self::$cache;
+	}
+
+	/**
+	 * Den Merker verwerfen. Noetig, sobald jemand die Werte schreibt.
+	 */
+	public static function flush_cache() {
+		self::$cache = null;
 	}
 
 	/**
@@ -121,7 +165,8 @@ class Settings {
 	 * @param array $values Neue Werte.
 	 */
 	public static function update( array $values ) {
-		$merged = wp_parse_args( $values, self::all() );
+		$merged = $values + self::all();
 		update_option( self::OPTION, $merged );
+		self::$cache = $merged;
 	}
 }

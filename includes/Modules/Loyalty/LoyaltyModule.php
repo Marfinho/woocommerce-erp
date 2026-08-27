@@ -44,12 +44,16 @@ class LoyaltyModule {
 		// Referral-Code bei Registrierung erzeugen.
 		add_action( 'user_register', array( LoyaltyRepository::class, 'get_or_create_code' ) );
 
+		// Frontend: Checkout-Einlösung + Mein-Konto-Tab.
+		( new LoyaltyFrontend() )->register();
+
+		if ( ! is_admin() ) {
+			return;
+		}
+
 		// Admin: Prüf-Warteschlange.
 		add_action( 'lw16_render_page_lw16_loyalty', array( $this, 'render_admin' ) );
 		add_action( 'admin_post_lw16_referral_decision', array( $this, 'handle_review_decision' ) );
-
-		// Frontend: Checkout-Einlösung + Mein-Konto-Tab.
-		( new LoyaltyFrontend() )->register();
 	}
 
 	/* --------------------------------------------------------------------

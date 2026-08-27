@@ -61,19 +61,31 @@ class Waitlist {
 		// der Übernahme eine eingefrorene Zahl und taugt nicht mehr als
 		// Grundlage für „ausverkauft".
 		$article_id = StockOwnership::article_for_product( $product->get_id() );
-		$produkt    = Repository::get_by_woo_id( $product->get_id() );
+		$produkt    = null;
 
 		if ( $article_id ) {
 			if ( self::article_stock( $article_id ) > 0 ) {
 				return;
 			}
 		} else {
+			// Erst hier gebraucht: Im Regelfall gehört das Produkt dem
+			// Modul Betrieb und ist auf Lager – dann ist die Seite schon
+			// oben fertig, ohne die abgelöste Verwaltung überhaupt zu
+			// fragen. Das spart auf jeder Produktseite eine Abfrage.
+			$produkt = Repository::get_by_woo_id( $product->get_id() );
+
 			if ( ! $produkt ) {
 				return;
 			}
 			if ( Repository::get_stock( $produkt->id ) > 0 ) {
 				return;
 			}
+		}
+
+		// Für das Formular wird die alte Kennung mitgeschickt, sofern es
+		// sie gibt. Hierher kommt nur, wer wirklich ausverkauft ist.
+		if ( null === $produkt ) {
+			$produkt = Repository::get_by_woo_id( $product->get_id() );
 		}
 
 		$email = '';

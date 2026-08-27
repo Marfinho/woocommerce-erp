@@ -26,6 +26,8 @@ WooCommerce, ohne externen Sync.
 - Alle DB-Zugriffe über `$wpdb` mit prepared statements, Ausgaben escaped.
 - Zentrale Bausteine unter `includes/Core/`: `Installer`, `Plugin`, `Roles`,
   `Settings`, `Scheduler`, `AuditLog`.
+- Das Plugin lädt im Frontend nur, was der Besucher wirklich braucht – siehe
+  [Was der Besucher kostet](#was-der-besucher-kostet).
 
 ### Verzeichnisstruktur
 
@@ -325,6 +327,44 @@ vorhanden ist – nicht, was geplant war.
   VIP-Report, Wochen-Digest.
 - **Absicherung:** wöchentlicher CSV-Export per E-Mail, Audit-Log,
   DSGVO-Auskunft und -Löschung über die WordPress-Bordmittel, Livegang-Reset.
+
+### Was der Besucher kostet
+
+Ein ERP im selben Plugin wie der Shop hat eine unangenehme Eigenschaft: Der
+Kunde, der nur eine Produktseite ansieht, lädt sonst die halbe Buchhaltung mit.
+Deshalb gelten hier vier Regeln, die beim Erweitern einzuhalten sind.
+
+**1. Backend-Haken gehören ins Backend.** `admin_post_*`, `wp_ajax_*`,
+`add_meta_boxes` und die eigenen `lw16_render_page_*` laufen ausschließlich im
+Adminkontext – auch `admin-post.php` und `admin-ajax.php` setzen `is_admin()`.
+Sie stehen deshalb in einem `register_admin()`, das nur dort aufgerufen wird.
+Die Module *Kasse* und *Preiskalkulation* bestehen nur aus solchen Haken und
+werden im Frontend gar nicht erst geladen (`Plugin::module_classes()`).
+
+Was **nicht** dorthin darf: Statuswechsel von Bestellungen und die Hooks des
+Action Schedulers. Beide passieren in gewöhnlichen Seitenaufrufen.
+
+**2. Keine Abfrage je Zeile.** Der Merken-Knopf fragte früher für jedes Produkt
+einzeln nach – auf einer Kategorieseite zwei Dutzend Mal für eine Information,
+die in eine einzige Abfrage passt (`Wishlist::ids_for_user()`). Dasselbe gilt
+für die Zuordnung Produkt → Artikel (`StockOwnership::article_for_product()`).
+Wer in einer Schleife etwas nachschlägt, holt es vorher gebündelt.
+
+**3. Wartung nicht im Seitenaufbau.** `Scheduler::ensure_recurring()` prüfte den
+Jobplan bei jedem Aufruf – zehn Abfragen gegen den Action Scheduler, auch für
+den Besucher. Jetzt merkt sich eine Option die Signatur des Plans; geprüft wird
+nur im Adminbereich, im Cron und auf der Kommandozeile, und auch dort höchstens
+täglich. Wer Jobs ändert, muss nichts tun (die Fassung steckt in der Signatur);
+wer sie außerhalb des Plugins löscht, ruft `Scheduler::forget_check()`.
+
+**4. Teures wird abgelegt, nicht neu gerechnet.** Der Katalog des Konfigurators
+lädt je Teil ein Produkt und je Variante ein weiteres – über hundert Objekte für
+eine Seite, die sich zwischen zwei Bestellungen nicht ändert. Er liegt deshalb
+in einem Transient, geschlüsselt nach einer Fassungsnummer und nach dem
+Preiskontext (Steuern ändern die angezeigten Preise). Ungültig wird er über
+`Catalog::invalidate()`, angebunden an die Produkt- und Bestandshaken von
+WooCommerce sowie an die Aktion `lw16_katalog_veraltet`, die Artikel-, Teil- und
+Sperrbereich-Änderungen auslösen. Wer Stammdaten schreibt, feuert diese Aktion.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

@@ -33,6 +33,10 @@ class ConfiguratorModule {
 		( new Frontend() )->register();
 		( new CartIntegration() )->register();
 
+		// Der Katalog liegt zwischengespeichert. Diese Haken melden, wenn
+		// er nicht mehr stimmt – Preis, Bestand, Teil oder Artikel.
+		Catalog::register_invalidation();
+
 		if ( is_admin() ) {
 			( new ConfiguratorPage() )->register();
 		}

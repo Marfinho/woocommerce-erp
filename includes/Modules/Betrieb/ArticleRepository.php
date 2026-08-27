@@ -250,6 +250,7 @@ class ArticleRepository {
 		$wpdb->delete( self::table(), array( 'id' => $id ) );
 
 		BetriebAudit::record( 'delete', 'articles', $id, $article, null );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return array(
 			'success' => true,
@@ -436,6 +437,7 @@ class ArticleRepository {
 		}
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'articles', $id, null, $data );
+		do_action( 'lw16_katalog_veraltet' );
 		return $id;
 	}
 
@@ -461,6 +463,7 @@ class ArticleRepository {
 			return false;
 		}
 		BetriebAudit::record( 'update', 'articles', (int) $id, $before, $data, $reason );
+		do_action( 'lw16_katalog_veraltet' );
 		return true;
 	}
 }

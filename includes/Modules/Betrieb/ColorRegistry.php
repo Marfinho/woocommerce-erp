@@ -73,6 +73,15 @@ class ColorRegistry {
 	 * @return array
 	 */
 	public static function all() {
+		// Die Begriffe des Farbattributs holt sonst jeder Aufrufer neu.
+		// Innerhalb eines Aufrufs sind sie dieselben, und die Liste wird
+		// beim Aufbau des Katalogs je Teil gebraucht.
+		static $cache = null;
+
+		if ( null !== $cache ) {
+			return $cache;
+		}
+
 		$taxonomy = self::taxonomy();
 		$colors   = array();
 
@@ -95,7 +104,9 @@ class ColorRegistry {
 			$colors[ $default ] = ucfirst( str_replace( '-', ' ', $default ) );
 		}
 
-		return $colors;
+		$cache = $colors;
+
+		return $cache;
 	}
 
 	/**

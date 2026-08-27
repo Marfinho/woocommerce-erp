@@ -32,18 +32,32 @@ class SupportModule {
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_filter( 'woocommerce_account_menu_items', array( $this, 'menu_item' ) );
 		add_action( 'woocommerce_account_' . self::ENDPOINT . '_endpoint', array( $this, 'render_account' ) );
+
+		// Wochen-Digest und wöchentlicher Datenexport laufen über den
+		// Action Scheduler, der seine Warteschlange auch im Frontend
+		// abarbeitet.
+		add_action( Scheduler::HOOK_WEEKLY_DIGEST, array( $this, 'send_digest' ) );
+		add_action( Scheduler::HOOK_WEEKLY_EXPORT, array( $this, 'weekly_export' ) );
+
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		$this->register_admin();
+	}
+
+	/**
+	 * Bildschirmmasken und Formularempfänger – nur im Backend.
+	 *
+	 * Auch das Ticket-Formular des Kunden schickt an admin-post.php, und
+	 * dort gilt `is_admin()`.
+	 */
+	protected function register_admin() {
 		add_action( 'admin_post_lw16_ticket_create', array( $this, 'handle_ticket_create' ) );
 
-		// Admin.
 		add_action( 'lw16_render_page_lw16_support', array( $this, 'render_support_admin' ) );
 		add_action( 'lw16_render_page_lw16_reporting', array( $this, 'render_reporting_admin' ) );
 		add_action( 'admin_post_lw16_ticket_action', array( $this, 'handle_ticket_action' ) );
-
-		// Wochen-Digest.
-		add_action( Scheduler::HOOK_WEEKLY_DIGEST, array( $this, 'send_digest' ) );
-
-		// Phase 9: wöchentlicher Datenexport + Audit-Log.
-		add_action( Scheduler::HOOK_WEEKLY_EXPORT, array( $this, 'weekly_export' ) );
 		add_action( 'admin_post_lw16_export_now', array( $this, 'export_now' ) );
 	}
 

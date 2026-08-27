@@ -245,6 +245,7 @@ class PartRepository {
 
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'config_parts', $id, null, $data );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return $id;
 	}
@@ -271,6 +272,7 @@ class PartRepository {
 		}
 
 		BetriebAudit::record( 'update', 'config_parts', (int) $id, $before, $data );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return true;
 	}
@@ -300,6 +302,7 @@ class PartRepository {
 		}
 
 		BetriebAudit::record( 'update', 'config_parts', (int) $id, $before, $data );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return true;
 	}
@@ -329,6 +332,7 @@ class PartRepository {
 		}
 
 		BetriebAudit::record( 'delete', 'config_parts', (int) $id, $before, null );
+		do_action( 'lw16_katalog_veraltet' );
 
 		return true;
 	}

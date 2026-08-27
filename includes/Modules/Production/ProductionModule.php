@@ -24,11 +24,27 @@ class ProductionModule {
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_action( 'lw16_render_page_lw16_produktion', array( $this, 'render_admin' ) );
-
-		// Packliste automatisch bei Status processing (asynchron).
+		// Packliste automatisch bei Status processing (asynchron). Der
+		// Statuswechsel und der Lauf des Action Schedulers passieren beide
+		// auch ausserhalb des Backends.
 		add_action( 'woocommerce_order_status_processing', array( $this, 'enqueue_packing_slip' ), 20, 1 );
 		add_action( Scheduler::HOOK_GENERATE_PACKING, array( $this, 'generate_packing_slip' ), 10, 1 );
+
+		// DHL-Sendungsverfolgung: zeigt dem Kunden seinen Stand im Konto.
+		( new DhlTracking() )->register();
+
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		$this->register_admin();
+	}
+
+	/**
+	 * Bildschirmmasken und Formularempfänger – nur im Backend.
+	 */
+	protected function register_admin() {
+		add_action( 'lw16_render_page_lw16_produktion', array( $this, 'render_admin' ) );
 		add_action( 'admin_post_lw16_packliste', array( $this, 'serve_or_generate_packing_slip' ) );
 
 		// Druckauftrag-Status + Ist-Zeit-Erfassung.
@@ -38,9 +54,6 @@ class ProductionModule {
 
 		// Dashboard: vorausschauende Mengenvorschläge.
 		add_action( 'lw16_dashboard_widgets', array( $this, 'render_forecast_widget' ) );
-
-		// DHL-Sendungsverfolgung.
-		( new DhlTracking() )->register();
 	}
 
 	/* --------------------------------------------------------------------

@@ -22,6 +22,13 @@ class Wishlist {
 	const ENDPOINT = 'wunschliste';
 
 	/**
+	 * Gemerkte Produkte je Nutzer fuer die Dauer eines Aufrufs.
+	 *
+	 * @var array<int,array<int,bool>>
+	 */
+	protected static $merkliste = array();
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
@@ -34,11 +41,14 @@ class Wishlist {
 		add_action( 'woocommerce_after_shop_loop_item', array( $this, 'render_button' ), 15 );
 		add_action( 'woocommerce_single_product_summary', array( $this, 'render_button' ), 33 );
 
-		// AJAX toggle.
-		add_action( 'wp_ajax_lw16_wishlist_toggle', array( $this, 'ajax_toggle' ) );
-
 		// Assets.
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
+
+		// AJAX toggle. admin-ajax.php setzt `is_admin()`, im Seitenaufbau
+		// eines Besuchers waere der Haken nie zu gebrauchen.
+		if ( is_admin() ) {
+			add_action( 'wp_ajax_lw16_wishlist_toggle', array( $this, 'ajax_toggle' ) );
+		}
 	}
 
 	/**
@@ -142,6 +152,7 @@ class Wishlist {
 		global $wpdb;
 		if ( $this->has( $user_id, $pid ) ) {
 			$wpdb->delete( self::table(), array( 'user_id' => $user_id, 'woo_product_id' => $pid ) );
+			self::forget_user( $user_id );
 			wp_send_json_success( array( 'active' => false ) );
 		}
 		$wpdb->insert(
@@ -149,6 +160,7 @@ class Wishlist {
 			array( 'user_id' => $user_id, 'woo_product_id' => $pid, 'hinzugefuegt_am' => current_time( 'mysql' ) ),
 			array( '%d', '%d', '%s' )
 		);
+		self::forget_user( $user_id );
 		wp_send_json_success( array( 'active' => true ) );
 	}
 
@@ -160,8 +172,50 @@ class Wishlist {
 	 * @return bool
 	 */
 	public function has( $user_id, $pid ) {
+		$ids = self::ids_for_user( $user_id );
+
+		return isset( $ids[ (int) $pid ] );
+	}
+
+	/**
+	 * Alle gemerkten Produkte eines Nutzers – einmal je Aufruf.
+	 *
+	 * Vorher fragte jeder Merken-Knopf einzeln nach. Auf einer
+	 * Kategorieseite mit vierundzwanzig Produkten waren das
+	 * vierundzwanzig Abfragen fuer eine Information, die in eine
+	 * einzige passt. Die Liste eines Kunden ist klein, sie kommt
+	 * vollstaendig und wird als Schluesselfeld gemerkt.
+	 *
+	 * @param int $user_id Nutzer.
+	 * @return array<int,bool> Produkt-ID => true.
+	 */
+	protected static function ids_for_user( $user_id ) {
+		$user_id = (int) $user_id;
+
+		if ( ! $user_id ) {
+			return array();
+		}
+
+		if ( isset( self::$merkliste[ $user_id ] ) ) {
+			return self::$merkliste[ $user_id ];
+		}
+
 		global $wpdb;
-		return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table() . ' WHERE user_id = %d AND woo_product_id = %d', $user_id, $pid ) ); // phpcs:ignore
+
+		$rows = $wpdb->get_col( $wpdb->prepare( 'SELECT woo_product_id FROM ' . self::table() . ' WHERE user_id = %d', $user_id ) ); // phpcs:ignore
+
+		self::$merkliste[ $user_id ] = array_fill_keys( array_map( 'intval', (array) $rows ), true );
+
+		return self::$merkliste[ $user_id ];
+	}
+
+	/**
+	 * Den Merker verwerfen, sobald sich die Liste aendert.
+	 *
+	 * @param int $user_id Nutzer.
+	 */
+	protected static function forget_user( $user_id ) {
+		unset( self::$merkliste[ (int) $user_id ] );
 	}
 
 	/**
