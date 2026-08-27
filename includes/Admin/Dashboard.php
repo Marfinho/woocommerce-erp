@@ -198,12 +198,17 @@ class Dashboard {
 		);
 
 		foreach ( $produkte as $p ) {
-			$ampel = StockManager::ampel( $p, isset( $bestaende[ (int) $p->id ] ) ? $bestaende[ (int) $p->id ] : 0.0 );
+			// Derselbe Wert für Ampel und Anzeige: Zwei getrennte Lesungen
+			// koennten sich unterscheiden, wenn dazwischen gebucht wird –
+			// dann stuende eine rote Ampel neben einer auskoemmlichen Zahl.
+			$bestand = isset( $bestaende[ (int) $p->id ] ) ? $bestaende[ (int) $p->id ] : 0.0;
+			$ampel   = StockManager::ampel( $p, $bestand );
+
 			if ( 'gruen' !== $ampel ) {
 				$warnings[] = array(
 					'name'    => $p->name,
 					'ampel'   => $ampel,
-					'bestand' => Repository::get_stock( $p->id ),
+					'bestand' => $bestand,
 					'einheit' => $p->basis_einheit,
 					'min'     => (float) $p->mindestbestand,
 				);

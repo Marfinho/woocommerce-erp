@@ -96,6 +96,57 @@ class StockOwnership {
 	}
 
 	/**
+	 * Die Zuordnung für viele Produkte in einer Abfrage.
+	 *
+	 * Bewusst ohne Rücksicht auf den Status des Artikels – gefragt ist,
+	 * ob es überhaupt eine Verknüpfung gibt, nicht ob der Artikel noch
+	 * angeboten wird. Ein stillgelegter Artikel ist verknüpft.
+	 *
+	 * @param int[] $wc_product_ids Produkt-IDs.
+	 * @return array<int,int> Produkt-ID => Artikel-ID, nur für Treffer.
+	 */
+	public static function articles_for_products( array $wc_product_ids ) {
+		$wc_product_ids = array_values( array_unique( array_filter( array_map( 'intval', $wc_product_ids ) ) ) );
+
+		if ( ! $wc_product_ids ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table       = ArticleRepository::table();
+		$platzhalter = implode( ',', array_fill( 0, count( $wc_product_ids ), '%d' ) );
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, wc_product_id FROM {$table} WHERE wc_product_id IN ({$platzhalter})", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Platzhalter oben erzeugt, Werte gebunden.
+				$wc_product_ids
+			),
+			ARRAY_A
+		);
+
+		$treffer = array();
+
+		foreach ( (array) $rows as $row ) {
+			$product_id = (int) $row['wc_product_id'];
+
+			// Zeigen zwei Artikel auf dasselbe Produkt, gewinnt der erste –
+			// wie beim LIMIT 1 der Einzelabfrage.
+			if ( ! isset( $treffer[ $product_id ] ) ) {
+				$treffer[ $product_id ] = (int) $row['id'];
+			}
+		}
+
+		// Auch die Fehlanzeigen merken, damit eine spätere Einzelfrage
+		// nach demselben Produkt nicht doch noch zur Datenbank geht.
+		foreach ( $wc_product_ids as $product_id ) {
+			self::$zuordnung[ $product_id ] = isset( $treffer[ $product_id ] ) ? $treffer[ $product_id ] : 0;
+		}
+
+		return $treffer;
+	}
+
+	/**
 	 * Die gemerkte Zuordnung verwerfen.
 	 *
 	 * Noetig, sobald ein Artikel angelegt, geaendert oder geloescht wird –

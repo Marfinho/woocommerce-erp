@@ -15,10 +15,13 @@ use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
 use Lindenweg16\Modules\Inventory\InventoryHooks;
+use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingHooks;
+use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
 use Lindenweg16\Modules\Pricing\PricingModule;
 use Lindenweg16\Modules\Production\ProductionHooks;
+use Lindenweg16\Modules\Production\ProductionModule;
 use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
 use Lindenweg16\Modules\POS\POSModule;
@@ -150,6 +153,11 @@ class Plugin {
 	/**
 	 * Ein Modul-Objekt holen.
 	 *
+	 * Geliefert wird immer das Modul selbst, nie die Hooks-Klasse davor:
+	 * Wer hier fragt, will eine Methode aufrufen. Für die drei verzögert
+	 * gebauten Module kostet das den Ladevorgang, den das Bootstrapping
+	 * gerade vermieden hat – aber nur, wenn wirklich jemand fragt.
+	 *
 	 * Im Frontend sind reine Backend-Module nicht gebootet; für sie kommt
 	 * dort `null` zurück.
 	 *
@@ -157,6 +165,20 @@ class Plugin {
 	 * @return object|null
 	 */
 	public function module( $key ) {
-		return isset( $this->modules[ $key ] ) ? $this->modules[ $key ] : null;
+		if ( ! isset( $this->modules[ $key ] ) ) {
+			return null;
+		}
+
+		$verzoegert = array(
+			'inventory'  => InventoryModule::class,
+			'accounting' => AccountingModule::class,
+			'production' => ProductionModule::class,
+		);
+
+		if ( isset( $verzoegert[ $key ] ) ) {
+			return Lazy::instance( $verzoegert[ $key ] );
+		}
+
+		return $this->modules[ $key ];
 	}
 }

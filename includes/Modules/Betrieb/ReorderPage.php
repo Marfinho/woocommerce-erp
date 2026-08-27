@@ -500,11 +500,16 @@ class ReorderPage {
 			)
 		);
 
+		// Die Zuordnung für alle Produkte in einer Abfrage statt einer je
+		// Produkt. Gefragt ist hier jede Verknüpfung, auch die zu einem
+		// stillgelegten Artikel – der ist verknüpft, nur nicht bestellbar.
+		$verknuepft = StockOwnership::articles_for_products( array_map( 'intval', (array) $ids ) );
+
 		$missing = array();
 		$luecken = array();
 
 		foreach ( (array) $ids as $id ) {
-			if ( ! StockOwnership::article_for_product( (int) $id ) ) {
+			if ( ! isset( $verknuepft[ (int) $id ] ) ) {
 				$luecken[] = (int) $id;
 			}
 		}

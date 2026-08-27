@@ -85,24 +85,32 @@ class Consistency {
 			}
 		}
 
-		if ( $verknuepft && function_exists( 'wc_get_products' ) ) {
-			// Eine Abfrage für alle statt eine je Artikel. Die Prüfung läuft
-			// über den gesamten Stamm; einzeln nachzufragen hieße, für jeden
-			// Artikel einen Beitrag samt Metadaten aufzubauen, nur um zu
-			// erfahren, dass es ihn gibt.
+		if ( $verknuepft && function_exists( 'wc_get_product' ) ) {
+			global $wpdb;
+
+			$gesucht     = array_values( array_unique( $verknuepft ) );
+			$platzhalter = implode( ',', array_fill( 0, count( $gesucht ), '%d' ) );
+
+			// Direkt in der Beitragstabelle nachsehen statt je Artikel ein
+			// Produktobjekt aufzubauen. Bewusst ohne `wc_get_products()`:
+			// Das fragt nur den Beitragstyp `product` ab, und ein Artikel
+			// darf durchaus auf eine Variante zeigen. Die waere dort nicht
+			// dabei und wuerde faelschlich als kaputte Verknuepfung
+			// gemeldet.
+			//
+			// Der Zustand spielt keine Rolle, Papierkorb und Entwurf
+			// eingeschlossen: Gemeldet wird die Verknuepfung ins Leere,
+			// nicht ein unveroeffentlichtes Produkt. Genau so verhielt sich
+			// die vorherige Einzelabfrage.
 			$vorhanden = array_flip(
 				array_map(
 					'intval',
-					(array) wc_get_products(
-						array(
-							'include' => array_values( array_unique( $verknuepft ) ),
-							'limit'   => count( array_unique( $verknuepft ) ),
-							// Alle Zustände, auch Papierkorb und Entwurf: Gemeldet
-							// wird die Verknüpfung ins Leere, nicht ein
-							// unveröffentlichtes Produkt. Genau das tat die
-							// vorherige Einzelabfrage auch.
-							'status'  => array_keys( get_post_stati() ),
-							'return'  => 'ids',
+					(array) $wpdb->get_col(
+						$wpdb->prepare(
+							"SELECT ID FROM {$wpdb->posts}
+							 WHERE ID IN ({$platzhalter})
+							   AND post_type IN ('product', 'product_variation')", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Platzhalter oben erzeugt, Werte gebunden.
+							$gesucht
 						)
 					)
 				)
@@ -113,10 +121,6 @@ class Consistency {
 					$wc_missing[ (int) $id ] = $product;
 				}
 			}
-		} elseif ( $verknuepft ) {
-			// Ohne WooCommerce lässt sich nichts prüfen – dann gilt keine
-			// Verknüpfung als kaputt, statt alle zu melden.
-			$wc_missing = array();
 		}
 
 		// Geprüft wird der Bestand im eigenen Lager, nicht die Summe über

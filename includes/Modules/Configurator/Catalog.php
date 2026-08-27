@@ -354,20 +354,13 @@ class Catalog {
 		$key      = 'attribute_' . $taxonomy;
 		$prices   = array();
 
-		$variations = $product->get_available_variations();
+		// Vor dem Aufbau vorladen, nicht danach: `get_available_variations()`
+		// holt jede Variante selbst einzeln herbei, und danach ist nichts
+		// mehr zu sparen. Die Kennungen der Varianten stehen aber schon
+		// vorher fest.
+		ProductCache::prime( $product->get_children() );
 
-		// Jede Variante wird gleich einzeln aufgebaut. Gebündelt vorgeladen
-		// kostet keiner dieser Aufrufe mehr eine Abfrage.
-		ProductCache::prime(
-			array_map(
-				static function ( $variation ) {
-					return isset( $variation['variation_id'] ) ? (int) $variation['variation_id'] : 0;
-				},
-				(array) $variations
-			)
-		);
-
-		foreach ( $variations as $variation ) {
+		foreach ( $product->get_available_variations() as $variation ) {
 			$child = wc_get_product( (int) $variation['variation_id'] );
 
 			if ( ! $child || ! $child->is_purchasable() || ! $child->is_in_stock() ) {
