@@ -36,7 +36,10 @@ includes/Core/               Installer, Plugin, Roles, Settings, Scheduler, Audi
 includes/Admin/              Menu, Dashboard, GlobalSearch, SettingsPage, ResetPage
 includes/Modules/Inventory/  Repository, StockManager, InventoryModule (Altbestand, siehe unten)
 includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
-                             FeeExtractor, GobdChecker, InvoiceGenerator, AccountingModule
+                             FeeExtractor, GobdChecker, InvoiceGenerator, Kontenrahmen,
+                             AccountingModule
+includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
+                             Kampagnenrechnung, KampagnenReport, MarketingModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -302,9 +305,13 @@ vorhanden ist – nicht, was geplant war.
   authentifizierte Auslieferung), Belege auslesen (PDF-Textschicht exakt,
   Fotos über Tesseract falls vorhanden), GoBD-Festschreibung, Einnahmen
   automatisch aus WooCommerce, **Zahlungsgebühren von WooPayments automatisch
-  als Aufwand**, EÜR nach Kategorie, EÜR-PDF, lückenlose PDF-Rechnungen,
+  als Aufwand**, EÜR nach Kontengruppe (SKR03), EÜR-PDF, lückenlose PDF-Rechnungen,
   E-Rechnung (XRechnung/ZUGFeRD), Betriebsprüfungs-Export, GoBD-Selbstprüfung,
   Verfahrensdokumentation.
+- **Marketing:** Kampagnen als Kostenstellen (Events, Anzeigen, Print),
+  Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
+  Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
+  WooCommerce.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
@@ -325,6 +332,56 @@ vorhanden ist – nicht, was geplant war.
   VIP-Report, Wochen-Digest.
 - **Absicherung:** wöchentlicher CSV-Export per E-Mail, Audit-Log,
   DSGVO-Auskunft und -Löschung über die WordPress-Bordmittel, Livegang-Reset.
+
+### Zwei Achsen: Kostenart und Kostenstelle
+
+Jede Ausgabe trägt zwei voneinander unabhängige Merkmale.
+
+- Die **Kostenart** ist ein Konto aus SKR03 (`Kontenrahmen`, ein kurierter
+  Auszug, erweiterbar über den Filter `lw16_kontenrahmen`). Sie sagt, *was*
+  gekauft wurde, und bestimmt die EÜR-Zeile. Nur sie interessiert das
+  Finanzamt.
+- Die **Kostenstelle** ist eine Kampagne (`lw16_kampagnen`, Nummer im Format
+  `K-JJJJ-NNN`). Sie sagt, *wofür* – ein Markt, eine Anzeigenschaltung, eine
+  Flyeraktion. Nur sie beantwortet, ob sich etwas gelohnt hat.
+
+Beides in eine Nummer zu falten funktioniert nicht: Ein Marktbesuch erzeugt
+Standgebühr (4600), Fahrtkosten (4672), Verbrauchsmaterial (4980) und
+womöglich Bewirtung (4650) – vier Kostenarten, eine Kostenstelle. Dieselbe
+Trennung macht DATEV mit `Konto` gegen `KOST1`.
+
+Die Zuordnung liegt in `lw16_kampagne_beleg` statt in einer Spalte des Belegs:
+Belege sind nach der Festschreibung unveränderlich, die Zuordnung ist reine
+Auswertung und muss korrigierbar bleiben. Über `anteil_prozent` lässt sich ein
+Beleg auf mehrere Kostenstellen aufteilen (eine Flyerrechnung für zwei
+Märkte); über alle Kostenstellen zusammen sind nie mehr als 100 % möglich.
+
+`eur_kategorie` bleibt als Klartext im Beleg stehen und wird nie überschrieben
+– das Feld steckt in der Hash-Kette (`HashChain::HASH_FIELDS`). Die
+Kontonummer kommt in der eigenen Spalte `konto` daneben; für Altbelege füllt
+`Installer::maybe_backfill_konten()` sie aus der alten Kategorie.
+
+### Was einer Kampagne als Umsatz zugerechnet wird
+
+Nur drei Nachweise, bewusst keine Schätzung darüber hinaus:
+
+1. **Marktkasse** – ein Kassentag mit `kampagne_id` zählt mit seinem
+   Tagesumsatz. Das ist gemessen, nicht attribuiert.
+2. **Gutscheincode** – ein Code, den es nur bei dieser Kampagne gab. Die
+   einzige belastbare Brücke von einem Flyer zu einer späteren Bestellung.
+3. **Kampagnenkennung** – `utm_campaign`, die WooCommerce ab Version 8.5 von
+   sich aus an jede Bestellung schreibt (`_wc_order_attribution_utm_campaign`).
+
+Der Umsatz zählt über das Kampagnenende hinaus (Einstellung
+*Nachlauffenster*, Standard 30 Tage); die Kosten hängen dagegen am Beleg. Was
+sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet.
+
+### Zeitpunkt: EÜR gegen Kampagne
+
+Bei der EÜR gilt das Abflussprinzip – eine im Dezember gezahlte Standgebühr
+für den Januar-Markt ist eine Dezember-Ausgabe. Die Kampagnenauswertung will
+sie beim Januar-Markt sehen. Darum hat die Kampagne ein eigenes
+`event_datum`, und beide Sichten bleiben getrennte Abfragen.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

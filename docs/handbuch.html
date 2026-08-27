@@ -952,6 +952,20 @@ footer p{max-width:72ch}
 	</ol>
 	<p>Ein Betrag, der über der Hälfte des Bestellwerts läge, wird verworfen statt gebucht — das ist dann keine Gebühr, sondern ein Lesefehler. Abschalten lässt sich das Ganze unter <span class="path">Lindenweg16 → Einstellungen</span> mit dem Haken <em>Zahlungsgebühren aus Bestellhinweisen übernehmen</em>.</p>
 
+	<h3>10.3 Konto und Kostenstelle — zwei getrennte Fragen</h3>
+	<p>Jede Ausgabe trägt zwei Merkmale, die nichts miteinander zu tun haben:</p>
+	<ul>
+		<li>Das <strong>Konto</strong> (SKR03) sagt, <em>was</em> gekauft wurde — Werbekosten, Fahrtkosten, Verbrauchsmaterial. Es bestimmt die EÜR-Zeile. Nur das interessiert das Finanzamt.</li>
+		<li>Die <strong>Kostenstelle</strong> sagt, <em>wofür</em> — welcher Markt, welche Anzeigenschaltung. Nur das beantwortet, ob sich etwas gelohnt hat.</li>
+	</ul>
+	<p>Beides in eine Nummer zu packen geht schief: Ein einziger Marktbesuch erzeugt Standgebühr, Fahrtkosten, Flyer und vielleicht Bewirtung — vier Konten, aber eine Kostenstelle. Deshalb stehen im Belegformular zwei getrennte Auswahlfelder.</p>
+	<p><strong>Bewirtung</strong> ist der eine Posten, bei dem Belegbetrag und abziehbarer Betrag auseinanderfallen: Auf Konto 4650 zählen nur 70 % als Betriebsausgabe. Die EÜR zieht das automatisch ab und weist die Kürzung in einer eigenen Zeile aus.</p>
+
+	<div class="warn">
+		<span class="lbl">Google Ads: Reverse-Charge beachten</span>
+		<p>Google Ireland rechnet ohne Umsatzsteuer ab; die Steuerschuld geht nach §13b UStG auf den Leistungsempfänger über. Das gilt <strong>auch für Kleinunternehmer</strong> — dann sind eine USt-IdNr. und eine Umsatzsteuervoranmeldung nötig. Das gehört vor der ersten Anzeige mit dem Steuerberater geklärt, nicht danach.</p>
+	</div>
+
 	<div class="warn">
 		<span class="lbl">Kein Ersatz für den Steuerberater</span>
 		<p>Das Plugin führt die Aufzeichnungen und erzeugt die Auswertungen. Die steuerliche Verantwortung bleibt beim Unternehmer — die Verfahrensdokumentation trägt diesen Hinweis ausdrücklich.</p>
@@ -976,6 +990,18 @@ footer p{max-width:72ch}
 
 	<h3>Kasse</h3>
 	<p><span class="path">Lindenweg16 → Kasse</span> — Kassentag öffnen, verkaufen, Tag abschließen; Historie und Tagesdetail. Eine eigene mobile Ansicht für den Marktstand.</p>
+	<p>Beim Öffnen des Kassentags lässt sich eine <strong>Kostenstelle</strong> wählen. Dann steht der Tagesumsatz in der Marketing-Auswertung den Standkosten gegenüber — aus einer Schätzung wird eine gemessene Rechnung.</p>
+
+	<h3>Marketing</h3>
+	<p><span class="path">Lindenweg16 → Marketing</span> — Kampagnen als Kostenstellen. Ein Marktbesuch, eine Anzeigenschaltung und eine Flyeraktion sind dasselbe: ein Topf, auf den gebucht wird und der hinterher gegen einen Umsatz steht.</p>
+	<ol class="steps">
+		<li><strong>Kampagne anlegen</strong> — sie bekommt automatisch eine Kostenstellennummer (K-JJJJ-NNN). Bei einem Event den <em>Veranstaltungstag</em> eintragen: Die Auswertung ordnet die Kampagne diesem Tag zu, auch wenn die Standgebühr steuerlich schon im Vorjahr abgeflossen ist.</li>
+		<li><strong>Budget setzen</strong> — die Übersicht zeigt die Auslastung als Ampel, ab 80 % gelb, darüber rot.</li>
+		<li><strong>Belege zuordnen</strong> — entweder direkt beim Erfassen des Belegs oder nachträglich in der Kampagne. Eine Rechnung lässt sich über <em>Anteil</em> auf mehrere Kampagnen aufteilen; über alle zusammen sind nie mehr als 100 % möglich.</li>
+		<li><strong>Kilometer eintragen</strong> — daraus entsteht ein Eigenbeleg auf dem Reisekostenkonto. Bei Märkten ist das oft der zweitgrößte Posten und wird sonst leicht vergessen. Ändert man die Kilometer, wird der alte Beleg storniert und neu gebucht — überschrieben wird nichts, er ist festgeschrieben.</li>
+	</ol>
+	<p>Als <strong>Umsatz</strong> zählt nur, was sich nachweisen lässt: der Tagesumsatz eines Kassentags, der beim Öffnen mit der Kampagne verknüpft wurde; Bestellungen mit dem Gutscheincode der Kampagne; und Bestellungen, an denen WooCommerce die passende Kampagnenkennung (<em>utm_campaign</em>) hinterlegt hat. Alles andere bleibt unzugeordnet — eine geschätzte Nachwirkung wäre Bauchgefühl mit Nachkommastellen.</p>
+	<p>Der Umsatz zählt über das Kampagnenende hinaus; wie lange, steht in den Einstellungen unter <em>Nachlauffenster</em> (Standard 30 Tage).</p>
 
 	<h3>Loyalty</h3>
 	<p><span class="path">Lindenweg16 → Loyalty</span> — Punkte, Empfehlungen, Prüf-Warteschlange für Referrals mit Freigabe oder Ablehnung per Klick.</p>

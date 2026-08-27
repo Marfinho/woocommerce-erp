@@ -45,6 +45,7 @@ class Menu {
 			'lw16-produktion'          => __( 'Produktion', 'lindenweg16' ),
 			'lw16-preiskalkulation'    => __( 'Preiskalkulation', 'lindenweg16' ),
 			'lw16-kasse'               => __( 'Kasse', 'lindenweg16' ),
+			'lw16-marketing'           => __( 'Marketing', 'lindenweg16' ),
 			'lw16-support'             => __( 'Support', 'lindenweg16' ),
 			'lw16-reporting'           => __( 'Reporting', 'lindenweg16' ),
 			'lw16-einstellungen'       => __( 'Einstellungen', 'lindenweg16' ),

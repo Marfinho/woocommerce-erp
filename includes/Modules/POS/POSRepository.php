@@ -21,13 +21,14 @@ class POSRepository {
 			$wpdb->prefix . 'lw16_kasse_tage',
 			array(
 				'markt_name'           => $data['markt_name'] ?? '',
+				'kampagne_id'          => empty( $data['kampagne_id'] ) ? null : (int) $data['kampagne_id'],
 				'datum'                => $data['datum'] ?? gmdate( 'Y-m-d' ),
 				'kassenbestand_anfang' => $data['kassenbestand_anfang'] ?? 0,
 				'status'               => 'offen',
 				'erstellt_von'         => get_current_user_id(),
 				'erstellt_am'          => current_time( 'mysql' ),
 			),
-			array( '%s', '%s', '%f', '%s', '%d', '%s' )
+			array( '%s', '%d', '%s', '%f', '%s', '%d', '%s' )
 		);
 		return $wpdb->insert_id;
 	}

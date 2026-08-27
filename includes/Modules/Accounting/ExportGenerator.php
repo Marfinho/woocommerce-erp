@@ -123,10 +123,21 @@ class ExportGenerator {
 			$from, $to
 		), ARRAY_A );
 
+		// Kostenstelle je Beleg dazustellen. Ein Beleg kann auf mehrere
+		// verteilt sein – dann stehen alle mit ihrem Anteil in der Spalte.
+		foreach ( $rows as &$row ) {
+			$teile = array();
+			foreach ( \Lindenweg16\Modules\Marketing\KampagnenRepository::fuer_beleg( (int) $row['id'] ) as $k ) {
+				$teile[] = $k->kostenstelle . ' (' . number_format( (float) $k->anteil_prozent, 1, ',', '' ) . '%)';
+			}
+			$row['kostenstelle'] = implode( ' + ', $teile );
+		}
+		unset( $row );
+
 		return self::build_csv(
-			array( 'ID', 'Belegnummer', 'Datum', 'Betrag', 'Haendler', 'EÜR-Kategorie', 'Notiz', 'Quelle', 'Festgeschrieben', 'Festgeschrieben_am', 'Storniert', 'Storno_von_ID', 'Storno_Grund', 'Hash', 'Erstellt_am', 'Erstellt_von' ),
+			array( 'ID', 'Belegnummer', 'Datum', 'Betrag', 'Haendler', 'Konto', 'EÜR-Kategorie', 'Kostenstelle', 'Notiz', 'Quelle', 'Festgeschrieben', 'Festgeschrieben_am', 'Storniert', 'Storno_von_ID', 'Storno_Grund', 'Hash', 'Erstellt_am', 'Erstellt_von' ),
 			$rows,
-			array( 'id', 'belegnummer', 'datum', 'betrag', 'haendler', 'eur_kategorie', 'notiz', 'quelle', 'festgeschrieben', 'festgeschrieben_am', 'storniert', 'storno_von_id', 'storno_grund', 'hash', 'erstellt_am', 'erstellt_von' )
+			array( 'id', 'belegnummer', 'datum', 'betrag', 'haendler', 'konto', 'eur_kategorie', 'kostenstelle', 'notiz', 'quelle', 'festgeschrieben', 'festgeschrieben_am', 'storniert', 'storno_von_id', 'storno_grund', 'hash', 'erstellt_am', 'erstellt_von' )
 		);
 	}
 
@@ -202,10 +213,13 @@ class ExportGenerator {
 		$csv = "\xEF\xBB\xBF";
 		$csv .= 'Position;Betrag' . self::NEWLINE;
 		$csv .= '"Einnahmen (WooCommerce, abzgl. Refunds)";"' . number_format( $rep['einnahmen'], 2, ',', '' ) . '"' . self::NEWLINE;
-		foreach ( $rep['ausgaben_kategorien'] as $kat => $summe ) {
-			$csv .= '"Ausgabe: ' . $kat . '";"' . number_format( $summe, 2, ',', '' ) . '"' . self::NEWLINE;
+		foreach ( $rep['ausgaben_gruppen'] as $gruppe => $summe ) {
+			$csv .= '"Ausgabe: ' . $gruppe . '";"' . number_format( $summe, 2, ',', '' ) . '"' . self::NEWLINE;
 		}
-		$csv .= '"Ausgaben gesamt";"' . number_format( $rep['ausgaben_summe'], 2, ',', '' ) . '"' . self::NEWLINE;
+		if ( $rep['ausgaben_kuerzung'] > 0 ) {
+			$csv .= '"davon nicht abziehbar (bereits abgezogen)";"' . number_format( $rep['ausgaben_kuerzung'], 2, ',', '' ) . '"' . self::NEWLINE;
+		}
+		$csv .= '"Ausgaben gesamt (abziehbar)";"' . number_format( $rep['ausgaben_summe'], 2, ',', '' ) . '"' . self::NEWLINE;
 		$csv .= '"Gewinn";"' . number_format( $rep['gewinn'], 2, ',', '' ) . '"' . self::NEWLINE;
 		return $csv;
 	}
@@ -328,7 +342,9 @@ class ExportGenerator {
 					array( 'Datum', 'Date', 'Belegdatum (YYYY-MM-DD)' ),
 					array( 'Betrag', 'Numeric', 'Belegbetrag in EUR' ),
 					array( 'Haendler', 'AlphaNumeric', 'Händler/Lieferant' ),
-					array( 'EÜR-Kategorie', 'AlphaNumeric', 'Zuordnung zur EÜR-Kategorie' ),
+					array( 'Konto', 'AlphaNumeric', 'Aufwandskonto nach SKR03 (Kostenart)' ),
+					array( 'EÜR-Kategorie', 'AlphaNumeric', 'Klartextbezeichnung des Kontos' ),
+					array( 'Kostenstelle', 'AlphaNumeric', 'Kampagne/Kostenstelle mit Anteil, mehrere durch + getrennt' ),
 					array( 'Notiz', 'AlphaNumeric', 'Freitext-Notiz' ),
 					array( 'Quelle', 'AlphaNumeric', 'manuell/wareneingang' ),
 					array( 'Festgeschrieben', 'Numeric', '1 = festgeschrieben (unveränderbar)' ),

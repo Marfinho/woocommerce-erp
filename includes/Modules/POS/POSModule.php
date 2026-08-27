@@ -108,6 +108,19 @@ class POSModule {
 			wp_nonce_field( 'lw16_pos_tag_start' );
 			echo '<table class="form-table"><tbody>';
 			echo '<tr><th>' . esc_html__( 'Markt / Anlass', 'lindenweg16' ) . '</th><td><input type="text" name="markt_name" class="regular-text" placeholder="' . esc_attr__( 'z. B. Weihnachtsmarkt Altstadt', 'lindenweg16' ) . '" required></td></tr>';
+
+			// Der Kassentag ist die Umsatzseite einer Kampagne. Ohne diese
+			// Verknuepfung bliebe der Marktumsatz eine Zahl ohne Gegenstueck
+			// zu den Standkosten.
+			$kampagnen = \Lindenweg16\Modules\Marketing\KampagnenRepository::options();
+			if ( $kampagnen ) {
+				echo '<tr><th>' . esc_html__( 'Kostenstelle', 'lindenweg16' ) . '</th><td><select name="kampagne_id">';
+				echo '<option value="0">' . esc_html__( '– keine –', 'lindenweg16' ) . '</option>';
+				foreach ( $kampagnen as $kid => $label ) {
+					printf( '<option value="%d">%s</option>', (int) $kid, esc_html( $label ) );
+				}
+				echo '</select><p class="description">' . esc_html__( 'Der Tagesumsatz zählt dann in der Marketing-Auswertung gegen die Kosten dieses Events.', 'lindenweg16' ) . '</p></td></tr>';
+			}
 			echo '<tr><th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><td><input type="date" name="datum" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '" required></td></tr>';
 			echo '<tr><th>' . esc_html__( 'Kassenbestand Anfang (€)', 'lindenweg16' ) . '</th><td><input type="number" step="0.01" name="kassenbestand_anfang" class="small-text" value="0.00" required></td></tr>';
 			echo '</tbody></table>';
@@ -515,6 +528,7 @@ class POSModule {
 
 		$id = POSRepository::create_tag( array(
 			'markt_name'           => sanitize_text_field( wp_unslash( $_POST['markt_name'] ?? '' ) ),
+			'kampagne_id'          => (int) ( $_POST['kampagne_id'] ?? 0 ),
 			'datum'                => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
 			'kassenbestand_anfang' => (float) ( $_POST['kassenbestand_anfang'] ?? 0 ),
 		) );
@@ -734,6 +748,9 @@ class POSModule {
 				'betrag'        => $umsatz,
 				'datum'         => $tag->datum,
 				'haendler'      => $tag->markt_name,
+				'konto'         => \Lindenweg16\Modules\Accounting\Kontenrahmen::erloes_konto(
+					1 === (int) \Lindenweg16\Core\Settings::get( 'kleinunternehmer', 1 )
+				),
 				'eur_kategorie' => 'Marktverkauf',
 				'notiz'         => $notiz ?: sprintf( __( 'Tagesumsatz Markt: %s', 'lindenweg16' ), $tag->markt_name ),
 				'quelle'        => 'marktkasse',
