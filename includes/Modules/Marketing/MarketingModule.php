@@ -87,7 +87,7 @@ class MarketingModule {
 		echo '<th>' . esc_html__( 'Typ', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Zeitraum', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Budget', 'lindenweg16' ) . '</th>';
-		echo '<th>' . esc_html__( 'Kosten', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Kosten (gebucht)', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Auslastung', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th>';
 		echo '</tr></thead><tbody>';
@@ -113,6 +113,11 @@ class MarketingModule {
 		}
 
 		echo '</tbody></table>';
+
+		// Die Liste zeigt bewusst nur die gebuchten Kosten: Den Rabattanteil
+		// zu ermitteln hieße, je Kampagne die Bestellungen des Zeitraums zu
+		// durchsuchen – für eine Übersicht zu teuer.
+		echo '<p class="description">' . esc_html__( 'Die Spalte zeigt die gebuchten Kosten aus Belegen. Gewährte Rabatte sind keine Betriebsausgabe und stehen deshalb nicht darin – den vollständigen Einsatz einer Kampagne zeigt ihre Einzelansicht.', 'lindenweg16' ) . '</p>';
 	}
 
 	/**
@@ -221,7 +226,9 @@ class MarketingModule {
 
 		// ── Kennzahlen ──
 		echo '<table class="widefat striped" style="max-width:720px"><tbody>';
-		echo '<tr><th>' . esc_html__( 'Kosten (zugeordnet)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['kosten'] ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Kosten (gebucht)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['kosten'] ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Rabatt (nicht gebucht)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['rabatt'] ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Einsatz gesamt', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['einsatz'] ) ) . '</strong></td></tr>';
 		echo '<tr><th>' . esc_html__( 'Budget', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['budget']['budget'] ) ) . ' ' . wp_kses_post( self::ampel_html( $rep['budget'] ) ) . '</td></tr>';
 		echo '<tr><th>' . esc_html__( 'Umsatz Marktkasse', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['markt']['summe'] ) ) . '</td></tr>';
 		echo '<tr><th>' . esc_html__( 'Umsatz Shop (nachgewiesen)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['shop']['summe'] ) );
@@ -239,10 +246,14 @@ class MarketingModule {
 		}
 		echo '</td></tr>';
 		echo '<tr><th>' . esc_html__( 'Umsatz gesamt', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['umsatz'] ) ) . '</strong></td></tr>';
-		echo '<tr><th>' . esc_html__( 'Ergebnis (Umsatz − Kosten)', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['ergebnis'] ) ) . '</strong></td></tr>';
-		echo '<tr><th>' . esc_html__( 'Umsatz je Euro Werbekosten', 'lindenweg16' ) . '</th><td>' . esc_html( null === $rep['roas'] ? '–' : number_format( $rep['roas'], 2, ',', '.' ) ) . '</td></tr>';
-		echo '<tr><th>' . esc_html__( 'Kosten je Bestellung', 'lindenweg16' ) . '</th><td>' . esc_html( null === $rep['cpo'] ? '–' : self::euro( $rep['cpo'] ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Ergebnis (Umsatz − Einsatz)', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['ergebnis'] ) ) . '</strong></td></tr>';
+		echo '<tr><th>' . esc_html__( 'Umsatz je Euro Einsatz', 'lindenweg16' ) . '</th><td>' . esc_html( null === $rep['roas'] ? '–' : number_format( $rep['roas'], 2, ',', '.' ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Einsatz je Bestellung', 'lindenweg16' ) . '</th><td>' . esc_html( null === $rep['cpo'] ? '–' : self::euro( $rep['cpo'] ) ) . '</td></tr>';
 		echo '</tbody></table>';
+
+		if ( $rep['rabatt'] > 0 ) {
+			echo '<p class="description">' . esc_html__( 'Der Rabatt steht bewusst nicht in der Buchhaltung: Ein gewährter Nachlass ist Erlösschmälerung, keine Betriebsausgabe – es gibt keinen Beleg, und der Bestellwert ist bereits gemindert. Für die Frage, was die Kampagne gekostet hat, zählt er trotzdem. Deshalb misst sich das Budget nur an den gebuchten Kosten, Ergebnis und Kennzahlen dagegen am Einsatz gesamt.', 'lindenweg16' ) . '</p>';
+		}
 
 		echo '<p class="description">' . esc_html( sprintf(
 			/* translators: 1: Startdatum, 2: Enddatum. */

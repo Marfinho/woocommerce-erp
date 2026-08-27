@@ -374,7 +374,40 @@ Nur drei Nachweise, bewusst keine Schätzung darüber hinaus:
 
 Der Umsatz zählt über das Kampagnenende hinaus (Einstellung
 *Nachlauffenster*, Standard 30 Tage); die Kosten hängen dagegen am Beleg. Was
-sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet.
+sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet. Eine
+vollständig erstattete Bestellung zählt gar nicht; eine Bestellung mit
+Gesamtsumme 0 (100 % Rabatt) dagegen schon – sie hat die Kampagne etwas
+gekostet.
+
+### Rabatt ist Einsatz, aber keine Ausgabe
+
+Ein gewährter Nachlass (Startgutschein, Aktionscode) ist **Erlösschmälerung**,
+keine Betriebsausgabe: Es gibt keinen Beleg, es fließt nichts ab, der
+Bestellwert ist bereits gemindert. Die EÜR ist damit von sich aus richtig –
+`EuerCalculator::einnahmen()` rechnet mit `$order->get_total()`, also nach
+Abzug. Wer den Rabatt zusätzlich als Aufwand buchte, hätte ihn doppelt drin.
+
+Für die Kampagnenauswertung zählt er trotzdem, sonst stünde eine reine
+Gutscheinaktion mit null Kosten und grüner Ampel da. Die Kostenstelle weist
+deshalb drei Zahlen aus:
+
+| Größe | Quelle | in der EÜR |
+|---|---|---|
+| Kosten (gebucht) | zugeordnete Belege | ja |
+| Rabatt (nicht gebucht) | `get_discount_total()` der zugeordneten Bestellungen | nein |
+| Einsatz gesamt | Summe beider | – |
+
+Ergebnis, ROAS und Einsatz je Bestellung rechnen gegen den Einsatz gesamt.
+Das **Budget misst sich weiter nur an den gebuchten Kosten** – ein Budget
+zahlt man aus, einen Rabatt gewährt man. Die Kampagnenübersicht zeigt aus
+Kostengründen nur die gebuchten Kosten; den vollen Einsatz zeigt die
+Einzelansicht.
+
+Nicht erfasst ist die Einlösung von Punkten und Guthaben: Die läuft im
+Loyalty-Modul als negative Gebühr (`LoyaltyFrontend::apply_redeem_fee()`),
+nicht als Coupon, und taucht in `get_discount_total()` darum nicht auf. Ob
+sie überhaupt einer Marketingkampagne zuzurechnen wäre, ist eine eigene
+Frage.
 
 ### Zeitpunkt: EÜR gegen Kampagne
 
