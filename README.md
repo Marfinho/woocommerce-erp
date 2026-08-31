@@ -96,6 +96,20 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Stoppuhr** (`Stopwatch`, `TimeCategoryGuess`, `TimerState`, `Admin\TimerBar`):
+  Start und Stopp in der Adminleiste, für jeden Nutzer ab dem Profil
+  Werkstatt. Die laufende Uhr liegt als User-Meta, nicht als Tabellenzeile –
+  sie ist ein Zustand, kein Vorgang; gebucht wird erst beim bestätigten
+  Stoppen, und `handle_time()` weist einen zweiten Versand ab, wenn die Uhr
+  schon weg ist. `Stopwatch` kappt nichts heimlich: Eine Uhr über zehn
+  Stunden gilt als vergessen und wird im Formular hinterfragt, statt still
+  auf acht gekürzt zu werden. Gebucht wird auf den **Start**tag – wer um
+  23:40 anfängt, hat am Vortag gearbeitet. `TimeCategoryGuess` leitet aus
+  den während der Laufzeit besuchten Seiten einen **Vorschlag** ab, keine
+  Festlegung: Er kommt nur bei mindestens zwei Dritteln Anteil, nie bei
+  Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
+  Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
+  Minuten.
 - **Verlauf und Ziele** (`Period`, `KpiGoals`, `TrendChart`): Der Bericht
   zeigt jede Kennzahl als Verlauf, umschaltbar zwischen Tag, Woche, Monat,
   Quartal und Jahr. `Period` bildet die Eimer – ISO-Wochen über `IsoWeek`,

@@ -40,7 +40,10 @@ use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
+use Lindenweg16\Modules\Betrieb\Stopwatch;
+use Lindenweg16\Modules\Betrieb\TimeCategoryGuess;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
+use Lindenweg16\Modules\Betrieb\TimerState;
 use Lindenweg16\Modules\Betrieb\TrendChart;
 use Lindenweg16\Modules\Betrieb\Traceability;
 
@@ -169,7 +172,20 @@ class SimplePages {
 	 */
 	public function handle_time() {
 		// Zeit erfassen darf, wer arbeitet – nicht nur, wer Stammdaten pflegt.
-		$input  = $this->input( 'lw16_capture' );
+		$input      = $this->input( 'lw16_capture' );
+		$aus_der_uhr = ! empty( $input['stoppuhr'] );
+
+		// Kommt der Eintrag aus der Stoppuhr, muss die Uhr auch noch laufen.
+		// Sonst bucht ein zweiter Klick auf „Erfassen" – oder die
+		// zurückgeschickte Seite – dieselbe Zeit ein weiteres Mal.
+		if ( $aus_der_uhr && ! TimerState::is_running() ) {
+			$this->redirect(
+				'lw16-betrieb-zeit',
+				__( 'Die Uhr wurde inzwischen gestoppt oder verworfen – es wurde nichts gebucht.', 'lindenweg16' ),
+				'error'
+			);
+		}
+
 		$result = TimeRepository::validate( $input );
 
 		if ( $result['errors'] ) {
@@ -177,6 +193,11 @@ class SimplePages {
 		}
 
 		TimeRepository::insert( $result['data'] );
+
+		if ( $aus_der_uhr ) {
+			TimerState::discard();
+		}
+
 		$this->redirect( 'lw16-betrieb-zeit', __( 'Zeit erfasst.', 'lindenweg16' ) );
 	}
 
@@ -390,7 +411,10 @@ class SimplePages {
 	 * Qualitätsseite.
 	 */
 	public function quality() {
-		$this->require_cap();
+		// Wie im Menü: Wer erfasst, darf hierher. Stand hier das
+		// Stammdatenrecht, sähe die Werkstatt den Menüpunkt und bekäme
+		// beim Klick „Keine Berechtigung".
+		$this->require_cap( 'lw16_capture' );
 
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Qualität', 'lindenweg16' ) . '</h1>';
 		$this->notice();
@@ -804,10 +828,13 @@ class SimplePages {
 	 * Zeiterfassungsseite.
 	 */
 	public function time() {
-		$this->require_cap();
+		// Zeit erfasst, wer arbeitet – dasselbe Recht wie im Menü.
+		$this->require_cap( 'lw16_capture' );
 
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Zeiterfassung', 'lindenweg16' ) . '</h1>';
 		$this->notice();
+
+		$this->stopwatch_form();
 
 		echo '<h2>' . esc_html__( 'Eintrag', 'lindenweg16' ) . '</h2>';
 		$this->form( 'time' );
@@ -860,6 +887,109 @@ class SimplePages {
 		}
 
 		echo '</tbody></table></div>';
+	}
+
+	/**
+	 * Das Formular zum Stoppen der Uhr.
+	 *
+	 * Es steht nur da, wenn eine Uhr läuft. Vorbelegt sind Datum, Stunden
+	 * und – falls das System sich sicher genug ist – die Tätigkeit. Bestätigt
+	 * wird von Hand: Ein Klick, der stumm bucht, erzeugt Einträge, die
+	 * niemand später zuordnen kann.
+	 */
+	protected function stopwatch_form() {
+		$stopp = TimerState::stop_form();
+
+		if ( ! $stopp ) {
+			return;
+		}
+
+		echo '<div class="lw16-stoppuhr-box" id="lw16-stoppuhr-formular">';
+		echo '<h2>' . esc_html__( 'Laufende Zeit', 'lindenweg16' ) . '</h2>';
+
+		printf(
+			'<p class="lw16-stoppuhr-box__zeit">%s <strong>%s</strong> %s</p>',
+			esc_html__( 'Die Uhr läuft seit', 'lindenweg16' ),
+			esc_html( Stopwatch::format( $stopp['seconds'] ) ),
+			esc_html__( 'Stunden.', 'lindenweg16' )
+		);
+
+		if ( $stopp['implausible'] ) {
+			printf(
+				'<div class="notice notice-warning inline"><p>%s</p></div>',
+				esc_html__( 'Das sieht nach einer vergessenen Uhr aus. Trag die tatsächlich gearbeitete Zeit ein, bevor du erfasst – die Vorgabe unten ist die volle Laufzeit.', 'lindenweg16' )
+			);
+		} elseif ( ! $stopp['bookable'] ) {
+			printf(
+				'<div class="notice notice-info inline"><p>%s</p></div>',
+				esc_html__( 'Unter einer Minute – vermutlich ein Fehlklick. Du kannst die Uhr verwerfen, statt sie zu buchen.', 'lindenweg16' )
+			);
+		}
+
+		if ( $stopp['explanation'] ) {
+			printf(
+				'<p class="description">%s %s</p>',
+				esc_html__( 'Währenddessen warst du hier:', 'lindenweg16' ),
+				esc_html( $stopp['explanation'] )
+			);
+		}
+
+		$vorschlag = $stopp['suggestion'];
+
+		if ( ! $vorschlag['confident'] ) {
+			printf(
+				'<p class="description">%s</p>',
+				esc_html__( 'Die Zeit verteilt sich auf mehrere Bereiche – such die Tätigkeit selbst aus, geraten wird hier nicht.', 'lindenweg16' )
+			);
+		}
+
+		$this->form( 'time' );
+		echo '<input type="hidden" name="stoppuhr" value="1" />';
+
+		if ( $stopp['work_order_id'] ) {
+			printf( '<input type="hidden" name="work_order_id" value="%d" />', (int) $stopp['work_order_id'] );
+		}
+
+		echo '<p>';
+		printf( '<input type="date" name="entry_date" value="%s" /> ', esc_attr( $stopp['entry_date'] ) );
+
+		echo '<select name="category">';
+		foreach ( TimeRepository::category_labels() as $key => $label ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $key ),
+				selected( $key, $vorschlag['confident'] ? $vorschlag['category'] : 'sonstiges', false ),
+				esc_html( $label )
+			);
+		}
+		echo '</select> ';
+
+		printf(
+			'<input type="text" name="hours" value="%s" size="5" /> ',
+			esc_attr( number_format( $stopp['hours'], 2, ',', '' ) )
+		);
+		printf( '<input type="text" name="description" placeholder="%s" size="34" /> ', esc_attr__( 'Tätigkeit', 'lindenweg16' ) );
+		printf( '<button class="button button-primary">%s</button> ', esc_html__( 'Stoppen und erfassen', 'lindenweg16' ) );
+		echo '</p></form>';
+
+		printf(
+			'<p><a class="button-link-delete" href="%s">%s</a></p>',
+			esc_url(
+				wp_nonce_url(
+					add_query_arg(
+						array(
+							'action'  => 'lw16_timer_discard',
+							'zurueck' => rawurlencode( add_query_arg( array( 'page' => 'lw16-betrieb-zeit' ), admin_url( 'admin.php' ) ) ),
+						),
+						admin_url( 'admin-post.php' )
+					),
+					TimerBar::NONCE
+				)
+			),
+			esc_html__( 'Verwerfen, ohne zu buchen', 'lindenweg16' )
+		);
+
+		echo '</div>';
 	}
 
 	/* ====================================================================

@@ -181,7 +181,10 @@ class BinsPage {
 	 * Seite ausgeben.
 	 */
 	public function render() {
-		$this->require_cap();
+		// Picklisten und Fertigungsauftraege sind Erfassung – dafuer ist die
+		// Seite im Menue freigegeben. Der Reiter mit den Lagerplaetzen selbst
+		// ist Stammdatenpflege und bleibt weiter unten zu.
+		$this->require_cap( 'lw16_capture' );
 
 		// phpcs:disable WordPress.Security.NonceVerification
 		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'plaetze';
@@ -192,13 +195,28 @@ class BinsPage {
 		$this->notice();
 
 		$base = admin_url( 'admin.php?page=lw16-betrieb-lagerplaetze' );
-		echo '<nav class="lw16-tabs">';
-		foreach ( array(
-			'plaetze'    => __( 'Lagerplätze', 'lindenweg16' ),
-			'etiketten'  => __( 'Etiketten', 'lindenweg16' ),
+		$stammdaten = Roles::current_user_can_betrieb( 'lw16_manage_production' );
+
+		// Ein Reiter, der beim Klick abweist, ist schlimmer als keiner.
+		$tabs = array(
 			'fertigung'  => __( 'Fertigungsaufträge', 'lindenweg16' ),
 			'picklisten' => __( 'Picklisten', 'lindenweg16' ),
-		) as $key => $label ) {
+		);
+
+		if ( $stammdaten ) {
+			$tabs = array_merge(
+				array(
+					'plaetze'   => __( 'Lagerplätze', 'lindenweg16' ),
+					'etiketten' => __( 'Etiketten', 'lindenweg16' ),
+				),
+				$tabs
+			);
+		} else {
+			$view = in_array( $view, array_keys( $tabs ), true ) ? $view : 'picklisten';
+		}
+
+		echo '<nav class="lw16-tabs">';
+		foreach ( $tabs as $key => $label ) {
 			printf(
 				'<a href="%s" class="%s">%s</a> ',
 				esc_url( add_query_arg( 'view', $key, $base ) ),
@@ -208,13 +226,13 @@ class BinsPage {
 		}
 		echo '</nav>';
 
-		if ( 'etiketten' === $view ) {
+		if ( 'etiketten' === $view && $stammdaten ) {
 			$this->render_labels();
 		} elseif ( 'fertigung' === $view ) {
 			$this->render_work_orders();
 		} elseif ( 'picklisten' === $view ) {
 			$this->render_picklists();
-		} else {
+		} elseif ( $stammdaten ) {
 			$this->render_bins( $edit );
 		}
 

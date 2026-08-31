@@ -118,7 +118,8 @@ class PrintJobsPage {
 	 * Seite ausgeben.
 	 */
 	public function render() {
-		$this->require_cap();
+		// Wie im Menue: Wer Druckjobs bucht, darf das Journal auch sehen.
+		$this->require_cap( 'lw16_capture' );
 
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Druckjournal', 'lindenweg16' ) . '</h1>';
 

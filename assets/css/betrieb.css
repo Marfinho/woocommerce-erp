@@ -437,3 +437,28 @@
 .lw16-verlauf__zahlen summary { cursor: pointer; color: #2271b1; }
 .lw16-verlauf__zahlen table { margin-top: 8px; }
 .lw16-verlauf__quartale { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* Stoppuhr.
+ *
+ * In der Adminleiste faellt eine laufende Uhr sonst nicht auf – und eine
+ * Uhr, die man uebersieht, laeuft ueber Nacht weiter. Deshalb traegt der
+ * laufende Zustand Farbe, der ruhende nicht. */
+#wpadminbar .lw16-stoppuhr--laeuft > .ab-item {
+	background: #135e96;
+	color: #fff;
+}
+#wpadminbar .lw16-stoppuhr--laeuft > .ab-item .ab-icon:before { color: #fff; }
+#wpadminbar .lw16-stoppuhr__zeit { font-variant-numeric: tabular-nums; }
+
+.lw16-stoppuhr-box {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-left: 4px solid #135e96;
+	border-radius: 4px;
+	padding: 4px 16px 12px;
+	margin: 16px 0;
+	max-width: 62em;
+}
+.lw16-stoppuhr-box h2 { margin-top: 10px; }
+.lw16-stoppuhr-box__zeit { font-size: 15px; }
+.lw16-stoppuhr-box__zeit strong { font-variant-numeric: tabular-nums; font-size: 20px; }
