@@ -199,6 +199,7 @@ if ( ! defined( 'LW16_VERSION' ) ) {
 // Kernbausteine.
 require $lw16_root . '/includes/Core/Assets.php';
 require $lw16_root . '/includes/Core/Calc.php';
+require $lw16_root . '/includes/Core/Lock.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';
 require $lw16_root . '/includes/Core/ResetTool.php';

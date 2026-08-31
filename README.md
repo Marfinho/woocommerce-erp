@@ -96,6 +96,16 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Lagerabgang genau einmal** (`Core\Lock`, `WooIntegration::book_stock()`):
+  Die Doppelbuchungssperre fragte „schon gebucht?", buchte dann und setzte
+  die Marke erst am Ende. Ein wiederholter Webhook, ein Doppelklick oder
+  eine Sammelaktion neben einem Webhook laufen gleichzeitig: Beide sahen die
+  Bestellung als ungebucht, beide zogen den Bestand ab. Prüfung und Buchung
+  liegen jetzt hinter einer Sperre je Bestellung, und die Bestellung wird
+  darin frisch geladen. Wer die Sperre nicht bekommt, bucht nicht – ein
+  anderer Lauf tut es gerade. `Core\Lock` kapselt `GET_LOCK` und wird auch
+  von der Hashkette benutzt; Transients taugen dafür nicht, weil sie selbst
+  „prüfen, dann setzen" sind.
 - **GoBD-Kette gegen sich selbst gesichert** (`HashChain::insert()`,
   `HashChain::check_rows()`): Vorgängerhash lesen und Datensatz schreiben
   liefen getrennt. Zwei gleichzeitige Schreiber lasen denselben Vorgänger,

@@ -78,6 +78,29 @@ class StockOwnership {
 	}
 
 	/**
+	 * Die Zuordnung Produkt zu Artikel am Stück.
+	 *
+	 * Wer über die Positionen vieler Bestellungen läuft, fragt sonst je
+	 * Position einzeln nach – bei zweihundert offenen Bestellungen sind das
+	 * mehrere hundert Abfragen für dieselbe kleine Tabelle.
+	 *
+	 * @return array wc_product_id => article_id.
+	 */
+	public static function article_map() {
+		global $wpdb;
+
+		$table = ArticleRepository::table();
+		$rows  = $wpdb->get_results( "SELECT id, wc_product_id FROM {$table} WHERE wc_product_id > 0", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$out   = array();
+
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row['wc_product_id'] ] = (int) $row['id'];
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Kennt Betrieb ein Produkt der abgelösten Lagerverwaltung?
 	 *
 	 * Die Übernahme setzt legacy_produkt_id, sodass ein altes Produkt und

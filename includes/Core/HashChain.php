@@ -93,7 +93,7 @@ class HashChain {
 		global $wpdb;
 
 		$table_full = $wpdb->prefix . 'lw16_' . $table_key;
-		$gesperrt   = self::lock( $table_key );
+		$gesperrt   = Lock::acquire( 'chain_' . $table_key );
 
 		try {
 			$prev = self::get_last_hash( $table_full );
@@ -106,40 +106,9 @@ class HashChain {
 			return $ok ? (int) $wpdb->insert_id : 0;
 		} finally {
 			if ( $gesperrt ) {
-				self::unlock( $table_key );
+				Lock::release( 'chain_' . $table_key );
 			}
 		}
-	}
-
-	/**
-	 * Sperre für das Anhängen an eine Kette.
-	 *
-	 * @param string $table_key Kurzname.
-	 * @return bool Ob die Sperre gehalten wird.
-	 */
-	protected static function lock( $table_key ) {
-		global $wpdb;
-
-		// Der Name enthält die Datenbank, damit sich zwei Anlagen auf
-		// demselben Server nicht gegenseitig ausbremsen.
-		$name = substr( 'lw16_chain_' . DB_NAME . '_' . $table_key, 0, 64 );
-
-		return '1' === (string) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $name, 5 )
-		);
-	}
-
-	/**
-	 * Sperre wieder freigeben.
-	 *
-	 * @param string $table_key Kurzname.
-	 */
-	protected static function unlock( $table_key ) {
-		global $wpdb;
-
-		$name = substr( 'lw16_chain_' . DB_NAME . '_' . $table_key, 0, 64 );
-
-		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $name ) );
 	}
 
 	/**
