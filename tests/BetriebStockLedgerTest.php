@@ -161,4 +161,39 @@ class BetriebStockLedgerTest extends TestCase {
 	public function test_reichweite_ohne_verbrauch() {
 		$this->assertNull( StockLedger::coverage_weeks( 40, 0, 4 ) );
 	}
+
+	/**
+	 * Der Gesamtbestand umfasst jeden bekannten Lagerort.
+	 *
+	 * Vorher standen in pick() drei fest geschriebene Namen. Käme ein vierter
+	 * Lagerort dazu, fehlte er in der Summe – jede Spalte für sich wäre
+	 * richtig, nur der Gesamtbestand zu niedrig, und nichts würde rot.
+	 */
+	public function test_der_gesamtbestand_umfasst_jeden_lagerort() {
+		$orte = array_keys( StockLedger::location_labels() );
+
+		$bewegungen = array();
+
+		foreach ( $orte as $i => $ort ) {
+			$bewegungen[] = array(
+				'article_id' => 7,
+				'color'      => 'weiss',
+				'location'   => $ort,
+				'qty'        => $i + 1,
+			);
+		}
+
+		$stand = StockLedger::balance_for( $bewegungen, 7, 'weiss' );
+
+		foreach ( $orte as $i => $ort ) {
+			$this->assertSame( (float) ( $i + 1 ), $stand[ $ort ], $ort );
+		}
+
+		$this->assertSame(
+			array_sum( range( 1, count( $orte ) ) ) * 1.0,
+			$stand['gesamt'],
+			'Ein Lagerort fehlt in der Summe.'
+		);
+	}
 }
+

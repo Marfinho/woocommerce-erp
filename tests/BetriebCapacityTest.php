@@ -135,4 +135,45 @@ class BetriebCapacityTest extends TestCase {
 		$this->assertSame( 'deine Arbeitszeit', CapacityPlanner::limit_label( 'arbeitszeit' ) );
 		$this->assertSame( 'Zukaufbestand', CapacityPlanner::limit_label( 'zukauf' ) );
 	}
+
+	/**
+	 * Ein Tag ist ein Siebtel einer Woche.
+	 *
+	 * Der Fehler, den dieser Test festhält: Die Kapazität wurde früher auf
+	 * mindestens eine Woche geklemmt. Ein Tagesbericht verglich damit einen
+	 * Tag Druckzeit gegen eine ganze Woche Kapazität und meldete ein Siebtel
+	 * der echten Auslastung – eine Zahl, die niemandem auffällt, weil sie
+	 * plausibel klein ist.
+	 */
+	public function test_ein_tag_ist_ein_siebtel_einer_woche() {
+		$this->assertEqualsWithDelta( 1 / 7, CapacityPlanner::weeks( '2026-08-15', '2026-08-15' ), 0.0001 );
+		$this->assertEqualsWithDelta( 1.0, CapacityPlanner::weeks( '2026-08-10', '2026-08-16' ), 0.0001 );
+	}
+
+	/**
+	 * Der letzte Tag zählt mit.
+	 *
+	 * Ein August hat 31 Tage, nicht 30. Die alte Rechnung nahm die Differenz
+	 * zweier Zeitstempel und verlor damit stillschweigend einen Tag – gut
+	 * zwei Prozent, jeden Monat, in dieselbe Richtung.
+	 */
+	public function test_der_letzte_tag_zaehlt_mit() {
+		$this->assertEqualsWithDelta( 31 / 7, CapacityPlanner::weeks( '2026-08-01', '2026-08-31' ), 0.0001 );
+		$this->assertEqualsWithDelta( 92 / 7, CapacityPlanner::weeks( '2026-07-01', '2026-09-30' ), 0.0001 );
+	}
+
+	/**
+	 * Die Kapazität ist Geräte mal Nettostunden mal Wochen.
+	 */
+	public function test_die_kapazitaet_ist_das_produkt() {
+		$this->assertEqualsWithDelta(
+			3 * 40.0 * 4.0,
+			CapacityPlanner::capacity_hours( 3, 40.0, 4.0 ),
+			0.0001
+		);
+
+		// Ohne Gerät keine Kapazität – und keine negative.
+		$this->assertSame( 0.0, CapacityPlanner::capacity_hours( 0, 40.0, 4.0 ) );
+		$this->assertSame( 0.0, CapacityPlanner::capacity_hours( -3, 40.0, 4.0 ) );
+	}
 }

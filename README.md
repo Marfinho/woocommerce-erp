@@ -96,6 +96,25 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Kennzahlen, korrigiert** (`RepeatRate`, `CapacityPlanner::weeks()`,
+  `MachineRate::productive_at()`): Beim Bau der Verlaufsgraphen kamen drei
+  Rechenfehler heraus, die vorher nicht auffielen, weil es immer nur einen
+  Zeitraum gab. Die Wochenzahl war die Differenz zweier Zeitstempel, auf
+  mindestens eins geklemmt – ein Tagesbericht verglich einen Tag Druckzeit
+  gegen eine ganze Woche Kapazität und meldete ein Siebtel der echten
+  Auslastung; ein Monat war um einen Tag zu kurz. Die Wiederkaufsrate nahm
+  stur die letzten 365 Tage ab *heute* und zeichnete damit zwölfmal denselben
+  Wert als Geschichte; sie blickt jetzt vom Stichtag aus zurück. Und die
+  Kapazität zählte alle heutigen Drucker, auch für Monate, in denen es sie
+  noch nicht gab – ein Kauf von heute senkte rückwirkend die Auslastung des
+  letzten Jahres. Jeder der drei Fehler steht als Test fest, jeder wurde
+  durch absichtliches Wiedereinbauen geprüft.
+- **Bestand ohne verlorene Buchungen** (`ComponentConsumption::subtract()`):
+  Der Verbrauch von Kleinteilen und Verpackung las `stock_qty`, rechnete in
+  PHP und schrieb das Ergebnis zurück. Buchen zwei Vorgänge gleichzeitig,
+  überschreibt der zweite den ersten und eine Buchung verschwindet lautlos.
+  Jetzt rechnet die Datenbank (`SET stock_qty = stock_qty - %f`), wie im
+  Wareneingang schon vorher.
 - **Stoppuhr** (`Stopwatch`, `TimeCategoryGuess`, `TimerState`, `Admin\TimerBar`):
   Start und Stopp in der Adminleiste, für jeden Nutzer ab dem Profil
   Werkstatt. Die laufende Uhr liegt als User-Meta, nicht als Tabellenzeile –

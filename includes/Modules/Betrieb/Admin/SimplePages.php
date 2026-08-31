@@ -731,14 +731,21 @@ class SimplePages {
 			// Rückwärtsrechnung.
 			$orders = max( 1, $demand['orders'] );
 			$stock  = array();
-			foreach ( $demand['purchased'] as $article_id => $row ) {
-				$balances = StockLedger::balances( StockRepository::all( $article_id ) );
-				$sum      = 0.0;
+
+			// Einmal alle Bewegungen, nicht je Artikel eine eigene Abfrage:
+			// Bei zwanzig Zukaufteilen waren das zwanzig Läufe über dieselbe
+			// Tabelle.
+			$balances = StockLedger::balances( StockRepository::all() );
+
+			foreach ( array_keys( $demand['purchased'] ) as $article_id ) {
+				$sum = 0.0;
+
 				if ( isset( $balances[ $article_id ] ) ) {
 					foreach ( $balances[ $article_id ] as $locations ) {
 						$sum += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;
 					}
 				}
+
 				$stock[ $article_id ] = $sum;
 			}
 

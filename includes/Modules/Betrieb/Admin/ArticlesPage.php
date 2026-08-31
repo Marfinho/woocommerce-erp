@@ -1933,8 +1933,11 @@ class ArticlesPage {
 
 		// Ohne eigenen Setpreis mit der Summe der Einzelpreise rechnen.
 		if ( $preis <= 0 ) {
+			// Einmal alle Artikel, nicht je Position eine Abfrage.
+			$artikel = ArticleRepository::all_by_id();
+
 			foreach ( $items as $item ) {
-				$article = ArticleRepository::find( $item['article_id'] );
+				$article = isset( $artikel[ (int) $item['article_id'] ] ) ? $artikel[ (int) $item['article_id'] ] : null;
 				$preis  += $item['qty'] * ( $article && null !== $article['price_gross'] ? (float) $article['price_gross'] : 0.0 );
 			}
 		}

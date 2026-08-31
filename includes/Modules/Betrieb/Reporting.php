@@ -18,6 +18,17 @@ defined( 'ABSPATH' ) || exit;
 class Reporting {
 
 	/**
+	 * Wie viele Bestellungen eine Auswertung höchstens ansieht.
+	 *
+	 * Eine Zahl statt keiner: Ohne Grenze lädt ein gewachsener Betrieb die
+	 * gesamte Bestellhistorie in den Speicher. An einer Stelle, damit die
+	 * Kennzahlen und die Händlerauswertung nicht unterschiedlich weit
+	 * zurückblicken – sonst nennt die eine Tabelle einen Umsatz, den die
+	 * andere nicht kennt.
+	 */
+	const MAX_ORDERS = 5000;
+
+	/**
 	 * Alle Kennzahlen eines Zeitraums.
 	 *
 	 * @param string $von Von (Y-m-d).
@@ -50,18 +61,11 @@ class Reporting {
 		}
 
 		$production = PrintJobRepository::aggregate( $von, $bis );
-		$settings   = CalcSettings::for_date( $bis );
-		$printers   = count(
-			array_filter(
-				PrinterRepository::all(),
-				static function ( $printer ) {
-					return in_array( $printer['status'], MachineRate::PRODUCTIVE_STATUS, true );
-				}
-			)
-		);
+		$settings   = self::settings_at( $bis );
+		$printers   = MachineRate::productive_at( self::printers(), $bis );
 
-		$wochen        = max( 1, ( strtotime( $bis ) - strtotime( $von ) ) / ( 7 * DAY_IN_SECONDS ) );
-		$kapazitaet    = $printers * (float) $settings['net_hours_per_printer'] * $wochen;
+		$wochen     = CapacityPlanner::weeks( $von, $bis );
+		$kapazitaet = CapacityPlanner::capacity_hours( $printers, $settings['net_hours_per_printer'], $wochen );
 		$bedienzeit_h  = CapacityPlanner::operator_hours( $production['plate_changes'], (float) $settings['plate_change_minutes'] );
 		$arbeitsstunden = self::work_hours( $von, $bis );
 
@@ -77,7 +81,7 @@ class Reporting {
 			'auslastung'              => $kapazitaet > 0 ? $production['print_time_h'] / $kapazitaet * 100 : null,
 			'bedienzeit_anteil'       => $arbeitsstunden > 0 ? $bedienzeit_h / $arbeitsstunden * 100 : null,
 			'wochenstunden'           => $wochen > 0 ? $arbeitsstunden / $wochen : null,
-			'wiederkaufsrate'         => self::repeat_rate(),
+			'wiederkaufsrate'         => self::repeat_rate( $bis ),
 		);
 	}
 
@@ -147,7 +151,7 @@ class Reporting {
 	public static function orders_in_period( $von, $bis ) {
 		$result = array();
 
-		foreach ( OrderOpsRepository::all( array( 'limit' => 5000 ) ) as $order ) {
+		foreach ( self::all_orders() as $order ) {
 			if ( 'bestaetigt' !== $order['order_status'] ) {
 				continue;
 			}
@@ -160,6 +164,81 @@ class Reporting {
 		}
 
 		return $result;
+	}
+
+	/* ====================================================================
+	 * Zwischenspeicher
+	 *
+	 * Der Verlaufsgraph ruft metrics() einmal je Eimer auf – bei zwölf
+	 * Monaten dreizehnmal, dazu einmal für die Tabelle. Die Bestellungen,
+	 * die Geräte und die Kalkulationsgrundlagen ändern sich zwischen diesen
+	 * Aufrufen nicht; ohne Speicher liefen dieselben Abfragen vierzehnmal.
+	 *
+	 * Gespeichert wird nur innerhalb eines Seitenaufrufs und nur lesend:
+	 * Reporting schreibt nichts, deshalb kann hier nichts veralten.
+	 * ================================================================== */
+
+	/**
+	 * Alle Bestellungen, einmal je Aufruf.
+	 *
+	 * @var array|null
+	 */
+	protected static $all_orders = null;
+
+	/**
+	 * Geräte, einmal je Aufruf.
+	 *
+	 * @var array|null
+	 */
+	protected static $printers = null;
+
+	/**
+	 * Kalkulationsgrundlagen je Stichtag.
+	 *
+	 * @var array
+	 */
+	protected static $settings = array();
+
+	/**
+	 * Alle Bestellungen.
+	 *
+	 * @return array
+	 */
+	protected static function all_orders() {
+		if ( null === self::$all_orders ) {
+			self::$all_orders = OrderOpsRepository::all( array( 'limit' => self::MAX_ORDERS ) );
+		}
+
+		return self::$all_orders;
+	}
+
+	/**
+	 * Alle Geräte.
+	 *
+	 * @return array
+	 */
+	protected static function printers() {
+		if ( null === self::$printers ) {
+			self::$printers = PrinterRepository::all();
+		}
+
+		return self::$printers;
+	}
+
+	/**
+	 * Kalkulationsgrundlagen zu einem Stichtag.
+	 *
+	 * @param string $bis Stichtag.
+	 * @return array
+	 */
+	protected static function settings_at( $bis ) {
+		$key = (string) $bis;
+
+		if ( ! isset( self::$settings[ $key ] ) ) {
+			self::$settings[ $key ] = CalcSettings::for_date( $bis );
+		}
+
+		return self::$settings[ $key ];
 	}
 
 	/**
@@ -184,54 +263,107 @@ class Reporting {
 	}
 
 	/**
-	 * Wiederkaufsrate der letzten zwölf Monate.
+	 * Wiederkaufsrate zu einem Stichtag.
 	 *
 	 * Ein Kunde, der einmal kauft, ist ein Zufall; einer, der wiederkommt,
 	 * ist ein Kanal.
 	 *
+	 * Gerechnet wird über die letzten zwölf Monate **vor dem Stichtag**,
+	 * nicht vor heute. Im Verlaufsgraphen ergäbe die alte Fassung sonst
+	 * zwölfmal denselben heutigen Wert – eine waagerechte Linie, die wie
+	 * Geschichte aussieht.
+	 *
+	 * @param string $bis Stichtag (Y-m-d), leer für heute.
 	 * @return float|null
 	 */
-	public static function repeat_rate() {
+	public static function repeat_rate( $bis = '' ) {
+		$bis = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $bis ) ? (string) $bis : gmdate( 'Y-m-d' );
+		$von = RepeatRate::window_start( $bis );
+
+		if ( '' === $von ) {
+			return null;
+		}
+
+		$orders = self::customer_orders( $von );
+
+		return null === $orders ? null : RepeatRate::share( $orders, $von, $bis );
+	}
+
+	/**
+	 * Bestellungen mit Kundenkennung und Datum, einmal je Aufruf geladen.
+	 *
+	 * Der Verlaufsgraph fragt die Wiederkaufsrate für jeden Eimer ab. Ohne
+	 * diesen Speicher liefe `wc_get_orders( limit -1 )` je Eimer erneut über
+	 * ein ganzes Jahr Bestellungen – dreizehn Vollabfragen für einen
+	 * Seitenaufruf.
+	 *
+	 * Der Speicher wächst nur nach hinten: Wird ein früheres Fenster
+	 * gebraucht, wird einmal nachgeladen, nie verkleinert.
+	 *
+	 * @param string $von Frühestes benötigtes Datum.
+	 * @return array|null Null, wenn WooCommerce nicht da ist.
+	 */
+	protected static function customer_orders( $von ) {
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return null;
 		}
 
-		$orders = wc_get_orders(
+		if ( null !== self::$orders_from && self::$orders_from <= $von ) {
+			return self::$customer_orders;
+		}
+
+		$geladen = wc_get_orders(
 			array(
 				'limit'        => -1,
 				'status'       => array( 'completed', 'processing' ),
-				'date_created' => '>' . ( time() - 365 * DAY_IN_SECONDS ),
+				'date_created' => '>=' . $von,
 				'return'       => 'objects',
 			)
 		);
 
-		$per_customer = array();
+		$out = array();
 
-		foreach ( (array) $orders as $order ) {
-			$key = $order->get_customer_id() ? 'u' . $order->get_customer_id() : 'e' . strtolower( $order->get_billing_email() );
+		foreach ( (array) $geladen as $order ) {
+			$kunde = $order->get_customer_id()
+				? 'u' . $order->get_customer_id()
+				: 'e' . strtolower( trim( (string) $order->get_billing_email() ) );
 
-			if ( '' === trim( str_replace( array( 'u', 'e' ), '', $key ) ) ) {
+			// Weder Konto noch Adresse: Der Kunde ist nicht wiedererkennbar.
+			if ( 'u' === $kunde || 'e' === $kunde ) {
 				continue;
 			}
 
-			$per_customer[ $key ] = isset( $per_customer[ $key ] ) ? $per_customer[ $key ] + 1 : 1;
+			$datum = $order->get_date_created();
+
+			if ( ! $datum ) {
+				continue;
+			}
+
+			$out[] = array(
+				'customer' => $kunde,
+				'date'     => $datum->date( 'Y-m-d' ),
+			);
 		}
 
-		if ( ! $per_customer ) {
-			return null;
-		}
+		self::$customer_orders = $out;
+		self::$orders_from     = (string) $von;
 
-		$repeat = count(
-			array_filter(
-				$per_customer,
-				static function ( $count ) {
-					return $count >= 2;
-				}
-			)
-		);
-
-		return $repeat / count( $per_customer ) * 100;
+		return $out;
 	}
+
+	/**
+	 * Zwischenspeicher der Kundenbestellungen.
+	 *
+	 * @var array
+	 */
+	protected static $customer_orders = array();
+
+	/**
+	 * Ab welchem Datum der Zwischenspeicher gefüllt ist.
+	 *
+	 * @var string|null
+	 */
+	protected static $orders_from = null;
 
 	/**
 	 * Alarmierende Kennzahlen eines Zeitraums.
@@ -366,16 +498,25 @@ class Reporting {
 	public static function b2b() {
 		$result = array();
 
+		// Einmal alle Bestellungen holen und nach Kontakt sortieren, statt je
+		// Kontakt eine eigene Abfrage zu stellen: Bei fünfzig Händlern waren
+		// das fünfzig Abfragen für eine Tabelle.
+		$je_kontakt = array();
+
+		foreach ( self::all_orders() as $order ) {
+			if ( 'bestaetigt' !== $order['order_status'] ) {
+				continue;
+			}
+
+			$kontakt = isset( $order['contact_id'] ) ? (int) $order['contact_id'] : 0;
+
+			if ( $kontakt ) {
+				$je_kontakt[ $kontakt ][] = $order;
+			}
+		}
+
 		foreach ( ContactRepository::all() as $contact ) {
-			$orders = OrderOpsRepository::all( array( 'contact_id' => (int) $contact['id'], 'limit' => 1000 ) );
-			$orders = array_values(
-				array_filter(
-					$orders,
-					static function ( $order ) {
-						return 'bestaetigt' === $order['order_status'];
-					}
-				)
-			);
+			$orders = isset( $je_kontakt[ (int) $contact['id'] ] ) ? $je_kontakt[ (int) $contact['id'] ] : array();
 
 			if ( ! $orders ) {
 				continue;

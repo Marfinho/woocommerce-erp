@@ -232,6 +232,7 @@ foreach ( array(
 	'DiscountResolver',
 	'CapacityPlanner',
 	'Kpi',
+	'RepeatRate',
 	'Stopwatch',
 	'Period',
 	'KpiGoals',

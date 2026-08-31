@@ -188,11 +188,14 @@ class OrdersPage {
 		$items = array();
 		$brutto_uvp = 0.0;
 
+		// Einmal alle Artikel, nicht je Position eine Abfrage.
+		$artikel = ArticleRepository::all_by_id();
+
 		foreach ( $mengen as $article_id => $qty ) {
 			if ( $qty <= 0 ) {
 				continue;
 			}
-			$article = ArticleRepository::find( (int) $article_id );
+			$article = isset( $artikel[ (int) $article_id ] ) ? $artikel[ (int) $article_id ] : null;
 			if ( ! $article ) {
 				continue;
 			}

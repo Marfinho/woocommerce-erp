@@ -294,18 +294,14 @@ class ComponentConsumption {
 		$count    = 0;
 
 		foreach ( (array) $supplies as $supply ) {
-			$before = $supply;
-			$data   = array(
-				'stock_qty'  => (float) $supply['stock_qty'] - (float) $supply['consumption_per_order'],
-				'updated_at' => current_time( 'mysql', true ),
-			);
+			$menge = (float) $supply['consumption_per_order'];
+			$data  = self::subtract( $table, (int) $supply['id'], $menge );
 
-			$wpdb->update( $table, $data, array( 'id' => (int) $supply['id'] ) );
 			BetriebAudit::record(
 				'update',
 				'supplies',
 				(int) $supply['id'],
-				$before,
+				$supply,
 				$data,
 				sprintf(
 					/* translators: %d: Bestell-ID. */
@@ -363,8 +359,6 @@ class ComponentConsumption {
 	 * @return array
 	 */
 	protected static function book( array $needed, $ref_type, $ref_id ) {
-		global $wpdb;
-
 		$table  = ComponentRepository::table();
 		$booked = array();
 
@@ -374,12 +368,8 @@ class ComponentConsumption {
 				continue;
 			}
 
-			$data = array(
-				'stock_qty'  => (float) $component['stock_qty'] - (float) $qty,
-				'updated_at' => current_time( 'mysql', true ),
-			);
+			$data = self::subtract( $table, (int) $component_id, (float) $qty );
 
-			$wpdb->update( $table, $data, array( 'id' => (int) $component_id ) );
 			BetriebAudit::record(
 				'update',
 				'components',
@@ -399,5 +389,51 @@ class ComponentConsumption {
 		}
 
 		return $booked;
+	}
+
+	/**
+	 * Eine Menge vom Bestand abziehen – in einer einzigen Anweisung.
+	 *
+	 * Der frühere Weg las `stock_qty`, rechnete in PHP und schrieb das
+	 * Ergebnis als absoluten Wert zurück. Buchen zwei Vorgänge gleichzeitig
+	 * – zwei fertiggemeldete Aufträge, zwei Bestellungen im selben
+	 * Augenblick –, lesen beide denselben Ausgangswert und der zweite
+	 * überschreibt den ersten. Eine Buchung verschwindet lautlos, und der
+	 * Bestand ist zu hoch.
+	 *
+	 * `SET stock_qty = stock_qty - %f` lässt die Datenbank rechnen und ist
+	 * damit unteilbar. Denselben Weg geht der Wareneingang in
+	 * PurchaseRepository::add_stock().
+	 *
+	 * @param string $table  Tabelle.
+	 * @param int    $id     Zeile.
+	 * @param float  $qty    Menge (positiv zieht ab).
+	 * @return array Was protokolliert wird.
+	 */
+	protected static function subtract( $table, $id, $qty ) {
+		global $wpdb;
+
+		$jetzt = current_time( 'mysql', true );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} SET stock_qty = stock_qty - %f, updated_at = %s WHERE id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(float) $qty,
+				$jetzt,
+				(int) $id
+			)
+		);
+
+		// Protokolliert wird der Stand nach der Buchung, frisch gelesen –
+		// eine in PHP ausgerechnete Zahl wäre nur eine Vermutung darüber,
+		// was in der Tabelle steht.
+		$nachher = $wpdb->get_var(
+			$wpdb->prepare( "SELECT stock_qty FROM {$table} WHERE id = %d", (int) $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		return array(
+			'stock_qty'  => null === $nachher ? null : (float) $nachher,
+			'updated_at' => $jetzt,
+		);
 	}
 }
