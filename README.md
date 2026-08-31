@@ -36,7 +36,10 @@ includes/Core/               Installer, Plugin, Roles, Settings, Scheduler, Audi
 includes/Admin/              Menu, Dashboard, GlobalSearch, SettingsPage, ResetPage
 includes/Modules/Inventory/  Repository, StockManager, InventoryModule (Altbestand, siehe unten)
 includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
-                             FeeExtractor, GobdChecker, InvoiceGenerator, AccountingModule
+                             FeeExtractor, GobdChecker, InvoiceGenerator, Kontenrahmen,
+                             AccountingModule
+includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
+                             Kampagnenrechnung, KampagnenReport, MarketingModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -44,10 +47,15 @@ includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
 includes/Modules/POS/        POSModule
 includes/Modules/Support/    SupportModule
 includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, BetriebModule, Admin/
+includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, ConfigCodec,
+                             Catalog, ShopLink, ColorHex, WebModel, CartIntegration, Frontend,
+                             ConfiguratorModule, Admin/ConfiguratorPage
 assets/css/                  admin.css, betrieb.css, betrieb-mobile.css, frontend.css
 assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.js,
                              betrieb-staffel.js, loyalty.js, wishlist.js
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
+assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
+assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
 docs/handbuch.html           Bedienungsanleitung
 ```
 
@@ -93,12 +101,22 @@ und die Papierformulare ab.
   Bestand ändert sich ausschliesslich beim Wareneingang, und der ist je
   Bestellung einmalig – ein zweiter Klick wird abgewiesen statt zu
   verdoppeln. `Purchase::clean_url()` lässt nur http/https durch.
-- **Etikettendrucker**: `LabelSheet::rolls()` liefert Formate für die
-  62-mm-Rolle des Brother QL (Rollenbreite, nicht Etikettenlänge –
-  DK-11209 ist 62 × 29). `LabelPdf::build_roll()` erzeugt eine Seite je
-  Etikett mit `new Pdf( $w, $h, 0 )`; die Seitengrösse von `Core\Pdf` ist
-  dafür instanzweise statt konstant. Hohe Etiketten (h ≥ 0,9 · w) werden
+- **Etikettendrucker**: `LabelSheet::rolls()` liefert die Rollenformate des
+  Brother QL. Die erste Zahl ist immer die Rollenbreite, die zweite die
+  Etikettenlänge – so benennt Brother seine Rollen: DK-11209 ist 62 × 29,
+  DK-11201 ist 29 × 90. Das gewählte Format muss zur eingelegten Rolle
+  passen. `LabelPdf::build_roll()` erzeugt eine Seite je Etikett mit
+  `new Pdf( $w, $h, 0 )`; die Seitengrösse von `Core\Pdf` ist dafür
+  instanzweise statt konstant. Hohe Etiketten (h ≥ 0,9 · w) werden
   gestapelt gesetzt, damit der Code die volle Breite bekommt.
+  Das Adressetikett wird der Länge nach beschriftet (`'quer' => true`):
+  Die **Seite bleibt das Etikett**, gedreht wird der Aufdruck – über
+  `Pdf::begin_quarter_turn()`, das eine Transformationsmatrix in den
+  Inhaltsstrom schreibt und Breite und Höhe für die Dauer der Drehung
+  tauscht. Eine Seite, die anders herum steht als die Rolle, würde den
+  Treiber drehen oder skalieren lassen; skaliert ist der QR-Code
+  unlesbar. `roll_page()` liefert deshalb das Seitenmass, `roll_cell()`
+  das Zeichenfeld in Beschriftungsrichtung.
 - **Wartungscheckliste** (`MaintenanceChecklist`) je Intervall, kumulativ
   aufgebaut (monatlich enthält wöchentlich). Bei periodischen Intervallen
   müssen alle Punkte abgehakt sein; geprüft wird serverseitig in
@@ -214,6 +232,71 @@ ihre Kleinteile beim Druckjob, Bestandteile eines Halbzeugs beim Fertigmelden
 des Auftrags, zugekaufte Beigaben beim Packen. Picklisten buchen nie – sie
 liefern nur die Ortsangabe.
 
+### Modul Konfigurator
+
+Der Haster Haken zum Zusammenstellen: ein Basismodul und Module, die daran
+vertikal frei verschiebbar sind. Eingebunden wird er mit dem Shortcode
+`[lw16_konfigurator]`; gepflegt wird er unter **Betrieb → Konfigurator**.
+
+**Grundsätze**
+
+- **Der Konfigurator erfindet keine Artikel.** Basismodule und Module sind
+  Artikel aus dem Stamm mit einem Produkt im Shop. Gepflegt wird hier nur,
+  was der Artikelstamm nicht wissen kann: Rolle, Maße, Schaumodell und die
+  Sperrbereiche des Basismoduls.
+- **Eine Konfiguration wird zu echten Bestellpositionen** – Basismodul plus
+  je Modul eine Zeile, jede zum Preis ihres Produkts. Lager, Picklisten und
+  Bestandsführung brauchen deshalb keine Sonderbehandlung. Eine
+  Gruppenkennung hält die Zeilen zusammen: Wer das Basismodul entfernt,
+  entfernt den ganzen Haken, und die Menge gilt für alle Teile.
+- **Der Preis kommt nie aus dem Browser.** Der Konfigurator schickt Artikel
+  und Positionen, den Rest entscheidet WooCommerce.
+- **Das Formular ist die Wahrheit, die 3D-Ansicht ist Zugabe.** Alles, was im
+  Bild passiert, landet in denselben Feldern, die auch ohne JavaScript
+  ausgefüllt werden können. Ohne WebGL fehlt die Ansicht und sonst nichts.
+- **Die Regeln stehen zweimal.** Verbindlich ist `Layout.php` auf dem Server;
+  die Fassung im Browser sorgt nur dafür, dass sich ein Modul beim Ziehen
+  sofort sperrig anfühlt.
+- **Schaumodelle sind keine Konstruktionsdaten.** Die `.glb`-Dateien liegen
+  öffentlich im Upload-Verzeichnis (`lw16-konfigurator/`) und gehören
+  reduziert exportiert – ohne Innengeometrie, Gewinde und Toleranzen. Die
+  3MF-Dateien der Revisionen bleiben davon unberührt im geschützten
+  Verzeichnis.
+- **Ohne Modell zeigt der Konfigurator einen maßhaltigen Ersatzkörper** aus
+  Höhe, Breite und Tiefe. Bestellen lässt sich damit alles.
+- **Drei Demo-Modelle liegen bei** (`assets/models/demo/`, erzeugt von
+  `erzeugen.py` daneben): Schiene 600 mm mit Schraubaugen bei 40–90 und
+  500–550 mm, Haken 80 mm, Ablage 150 mm. Sie sind je Teil auswählbar, zum
+  Einrichten und Ausprobieren – nicht zum Verkaufen.
+- **Das Skript ist ein ganz gewöhnliches, kein Modul.** three.js wird über
+  `import()` nachgeladen; nackte Namen löst die Zuordnung im Seitenkopf
+  (`importmap`) auch aus einem klassischen Skript auf. Der Tag darf nicht
+  über `script_loader_tag` ersetzt werden – der Filter bekommt ihn samt der
+  Zeile, die den Katalog trägt.
+- **Die Einheit des Modells ist gleichgültig.** Die Ansicht skaliert es auf
+  die gepflegte Bauhöhe; sie ist es, an der die Module hängen. Wichtig sind
+  nur Y nach oben und der Ursprung an der Unterkante.
+
+**Aufbauregeln.** Positionen sind Millimeter von der Unterkante des
+Basismoduls, gemessen an der Unterkante des Moduls. Zwei Module dürfen sich
+nicht überlappen, keines über die Schiene hinausragen und keines auf einem
+Sperrbereich sitzen – dort wird der Haken an die Wand geschraubt.
+
+**Geteilte Links.** Eine Konfiguration lässt sich als Code weitergeben
+(`?haken=v1.<Basis>.<Farbe>.<Artikel>@<Position>,…`). Gelesen wird er streng:
+Was nicht der Form entspricht, wird abgewiesen; was der Katalog nicht mehr
+kennt, fällt beim Öffnen still heraus.
+
+**Farbe.** Der Konfigurator nutzt das Farbsystem des Moduls Betrieb. Ist das
+Shop-Produkt variabel, wird die Variante zur gewählten Farbe gesucht – gibt
+es sie nicht, ist das Teil in dieser Farbe nicht bestellbar und sagt das
+auch. Die Bildschirmfarbe der Vorschau kommt aus `ColorHex` und lässt sich
+über den Filter `lw16_konfigurator_farbwert` je Slug anpassen.
+
+**An der Bestellung** steht die Konfiguration als Text: Gruppenkennung an
+jeder Zeile, die Position je Modul, der vollständige Code an der Zeile des
+Basismoduls.
+
 ## Umsetzungsstand
 
 Das Plugin ist im Einsatz. Die folgende Liste beschreibt, was tatsächlich
@@ -227,10 +310,19 @@ vorhanden ist – nicht, was geplant war.
   authentifizierte Auslieferung), Belege auslesen (PDF-Textschicht exakt,
   Fotos über Tesseract falls vorhanden), GoBD-Festschreibung, Einnahmen
   automatisch aus WooCommerce, **Zahlungsgebühren von WooPayments automatisch
-  als Aufwand**, EÜR nach Kategorie, EÜR-PDF, lückenlose PDF-Rechnungen,
+  als Aufwand**, EÜR nach Kontengruppe (SKR03), EÜR-PDF, lückenlose PDF-Rechnungen,
   E-Rechnung (XRechnung/ZUGFeRD), Betriebsprüfungs-Export, GoBD-Selbstprüfung,
   Verfahrensdokumentation.
+- **Marketing:** Kampagnen als Kostenstellen (Events, Anzeigen, Print),
+  Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
+  Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
+  WooCommerce.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
+- **Konfigurator:** Basismodul und frei verschiebbare Module in einer
+  räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
+  für die Wandbefestigung, Prüfung des Aufbaus auf dem Server, echte
+  Bestellpositionen je Teil, teilbare Konfigurationslinks, vollständig
+  bedienbar ohne WebGL.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
 - **Produktion:** Druck-Queue, Packliste/Versandschein-PDF, DHL-Verlinkung und
@@ -245,6 +337,56 @@ vorhanden ist – nicht, was geplant war.
   VIP-Report, Wochen-Digest.
 - **Absicherung:** wöchentlicher CSV-Export per E-Mail, Audit-Log,
   DSGVO-Auskunft und -Löschung über die WordPress-Bordmittel, Livegang-Reset.
+
+### Zwei Achsen: Kostenart und Kostenstelle
+
+Jede Ausgabe trägt zwei voneinander unabhängige Merkmale.
+
+- Die **Kostenart** ist ein Konto aus SKR03 (`Kontenrahmen`, ein kurierter
+  Auszug, erweiterbar über den Filter `lw16_kontenrahmen`). Sie sagt, *was*
+  gekauft wurde, und bestimmt die EÜR-Zeile. Nur sie interessiert das
+  Finanzamt.
+- Die **Kostenstelle** ist eine Kampagne (`lw16_kampagnen`, Nummer im Format
+  `K-JJJJ-NNN`). Sie sagt, *wofür* – ein Markt, eine Anzeigenschaltung, eine
+  Flyeraktion. Nur sie beantwortet, ob sich etwas gelohnt hat.
+
+Beides in eine Nummer zu falten funktioniert nicht: Ein Marktbesuch erzeugt
+Standgebühr (4600), Fahrtkosten (4672), Verbrauchsmaterial (4980) und
+womöglich Bewirtung (4650) – vier Kostenarten, eine Kostenstelle. Dieselbe
+Trennung macht DATEV mit `Konto` gegen `KOST1`.
+
+Die Zuordnung liegt in `lw16_kampagne_beleg` statt in einer Spalte des Belegs:
+Belege sind nach der Festschreibung unveränderlich, die Zuordnung ist reine
+Auswertung und muss korrigierbar bleiben. Über `anteil_prozent` lässt sich ein
+Beleg auf mehrere Kostenstellen aufteilen (eine Flyerrechnung für zwei
+Märkte); über alle Kostenstellen zusammen sind nie mehr als 100 % möglich.
+
+`eur_kategorie` bleibt als Klartext im Beleg stehen und wird nie überschrieben
+– das Feld steckt in der Hash-Kette (`HashChain::HASH_FIELDS`). Die
+Kontonummer kommt in der eigenen Spalte `konto` daneben; für Altbelege füllt
+`Installer::maybe_backfill_konten()` sie aus der alten Kategorie.
+
+### Was einer Kampagne als Umsatz zugerechnet wird
+
+Nur drei Nachweise, bewusst keine Schätzung darüber hinaus:
+
+1. **Marktkasse** – ein Kassentag mit `kampagne_id` zählt mit seinem
+   Tagesumsatz. Das ist gemessen, nicht attribuiert.
+2. **Gutscheincode** – ein Code, den es nur bei dieser Kampagne gab. Die
+   einzige belastbare Brücke von einem Flyer zu einer späteren Bestellung.
+3. **Kampagnenkennung** – `utm_campaign`, die WooCommerce ab Version 8.5 von
+   sich aus an jede Bestellung schreibt (`_wc_order_attribution_utm_campaign`).
+
+Der Umsatz zählt über das Kampagnenende hinaus (Einstellung
+*Nachlauffenster*, Standard 30 Tage); die Kosten hängen dagegen am Beleg. Was
+sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet.
+
+### Zeitpunkt: EÜR gegen Kampagne
+
+Bei der EÜR gilt das Abflussprinzip – eine im Dezember gezahlte Standgebühr
+für den Januar-Markt ist eine Dezember-Ausgabe. Die Kampagnenauswertung will
+sie beim Januar-Markt sehen. Darum hat die Kampagne ein eigenes
+`event_datum`, und beide Sichten bleiben getrennte Abfragen.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

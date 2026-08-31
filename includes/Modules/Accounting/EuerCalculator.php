@@ -2,6 +2,10 @@
 /**
  * EÜR-Berechnung: Einnahmen aus WooCommerce, Ausgaben aus Belegen.
  *
+ * Gegliedert wird nach dem Kontenrahmen (SKR03), nicht nach Kostenstellen:
+ * Die Kostenstelle sagt, wofür etwas ausgegeben wurde, das Konto, was für
+ * eine Ausgabe es war – und nur Letzteres interessiert das Finanzamt.
+ *
  * @package Lindenweg16
  */
 
@@ -60,15 +64,38 @@ class EuerCalculator {
 	public static function report( $from, $to ) {
 		$einnahmen = self::einnahmen( $from, $to );
 		$ausgaben  = BelegRepository::sum_by_category( $from, $to );
-		$ausg_sum  = array_sum( $ausgaben );
+		$konten    = BelegRepository::sum_by_konto( $from, $to );
+
+		// Maßgeblich für den Gewinn ist der abziehbare Anteil, nicht der
+		// Belegbetrag: Bewirtung zählt nur zu 70 %.
+		$brutto    = 0.0;
+		$abziehbar = 0.0;
+		$gruppen   = array();
+
+		foreach ( $konten as $konto => $summen ) {
+			$brutto    += $summen['brutto'];
+			$abziehbar += $summen['abziehbar'];
+
+			$gruppe = Kontenrahmen::gruppe( $konto );
+			if ( ! isset( $gruppen[ $gruppe ] ) ) {
+				$gruppen[ $gruppe ] = 0.0;
+			}
+			$gruppen[ $gruppe ] += $summen['abziehbar'];
+		}
+
+		$abziehbar = round( $abziehbar, 2 );
 
 		return array(
 			'from'                 => $from,
 			'to'                   => $to,
 			'einnahmen'            => $einnahmen,
 			'ausgaben_kategorien'  => $ausgaben,
-			'ausgaben_summe'       => $ausg_sum,
-			'gewinn'               => $einnahmen - $ausg_sum,
+			'ausgaben_konten'      => $konten,
+			'ausgaben_gruppen'     => $gruppen,
+			'ausgaben_brutto'      => round( $brutto, 2 ),
+			'ausgaben_kuerzung'    => round( $brutto - $abziehbar, 2 ),
+			'ausgaben_summe'       => $abziehbar,
+			'gewinn'               => round( $einnahmen - $abziehbar, 2 ),
 		);
 	}
 

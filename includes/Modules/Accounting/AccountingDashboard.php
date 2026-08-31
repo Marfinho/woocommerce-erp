@@ -62,7 +62,7 @@ class AccountingDashboard {
 			'einnahmen'               => $report['einnahmen'],
 			'ausgaben'                => $report['ausgaben_summe'],
 			'gewinn'                  => $report['gewinn'],
-			'ausgaben_kategorien'     => $report['ausgaben_kategorien'],
+			'ausgaben_kategorien'     => $report['ausgaben_gruppen'],
 			'monate'                  => $monate,
 			'offene_belege'           => $offene_belege,
 			'faellige_dauerbuchungen' => $faellige_dauerbuchungen,

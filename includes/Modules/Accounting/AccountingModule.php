@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Modules\Marketing\KampagnenRepository;
 
 /**
  * Verdrahtet Belegerfassung, EÜR-Ansicht, Dashboard-Rücklage und die
@@ -324,7 +325,7 @@ class AccountingModule {
 			echo '<td>' . esc_html( isset( $b->belegnummer ) ? $b->belegnummer : '#' . $b->id ) . '</td>';
 			echo '<td>' . esc_html( $b->datum ) . '</td>';
 			echo '<td>' . esc_html( (string) $b->haendler ) . '</td>';
-			echo '<td>' . esc_html( (string) $b->eur_kategorie ) . '</td>';
+			echo '<td>' . esc_html( $b->konto ? Kontenrahmen::label( $b->konto ) : (string) $b->eur_kategorie ) . '</td>';
 			echo '<td>' . esc_html( self::euro( $b->betrag ) ) . '</td>';
 			$quelle_label = $b->quelle;
 			if ( 'wareneingang' === $b->quelle ) {
@@ -407,13 +408,38 @@ class AccountingModule {
 				<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="betrag" id="lw16-betrag" class="small-text" required></td></tr>
 				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" id="lw16-datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
 				<tr><th><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></th><td><input type="text" name="haendler" id="lw16-haendler" class="regular-text"></td></tr>
-				<tr><th><?php esc_html_e( 'EÜR-Kategorie', 'lindenweg16' ); ?></th><td>
-					<select name="eur_kategorie">
-						<?php foreach ( self::eur_kategorien() as $k ) : ?>
-							<option value="<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $k ); ?></option>
+				<tr><th><?php esc_html_e( 'Konto (Kostenart)', 'lindenweg16' ); ?></th><td>
+					<select name="konto" id="lw16-konto">
+						<?php foreach ( Kontenrahmen::grouped( 'ausgabe' ) as $gruppe => $konten ) : ?>
+							<optgroup label="<?php echo esc_attr( $gruppe ); ?>">
+								<?php foreach ( $konten as $nr => $k ) : ?>
+									<option value="<?php echo esc_attr( $nr ); ?>" <?php selected( Kontenrahmen::KONTO_SONSTIGES, $nr ); ?>
+										data-hinweis="<?php echo esc_attr( $k['hinweis'] ); ?>"
+										data-abzug="<?php echo esc_attr( (string) $k['abzugsfaehig'] ); ?>">
+										<?php echo esc_html( $nr . ' ' . $k['label'] ); ?>
+									</option>
+								<?php endforeach; ?>
+							</optgroup>
 						<?php endforeach; ?>
 					</select>
+					<p class="description" id="lw16-konto-hinweis"></p>
 				</td></tr>
+				<?php $kampagnen = KampagnenRepository::options(); ?>
+				<?php if ( $kampagnen ) : ?>
+				<tr><th><?php esc_html_e( 'Kostenstelle', 'lindenweg16' ); ?></th><td>
+					<select name="kampagne_id">
+						<option value="0"><?php esc_html_e( '– keine –', 'lindenweg16' ); ?></option>
+						<?php foreach ( $kampagnen as $kid => $label ) : ?>
+							<option value="<?php echo esc_attr( (string) $kid ); ?>"><?php echo esc_html( $label ); ?></option>
+						<?php endforeach; ?>
+					</select>
+					<label style="margin-left:8px">
+						<?php esc_html_e( 'Anteil (%)', 'lindenweg16' ); ?>
+						<input type="number" step="0.1" min="0" max="100" name="kampagne_anteil" class="small-text" value="100">
+					</label>
+					<p class="description"><?php esc_html_e( 'Unabhängig vom Konto: Das Konto sagt, was gekauft wurde, die Kostenstelle, wofür. Ein Marktbesuch verteilt sich über mehrere Konten und bleibt doch eine Kostenstelle.', 'lindenweg16' ); ?></p>
+				</td></tr>
+				<?php endif; ?>
 				<tr><th><?php esc_html_e( 'Notiz', 'lindenweg16' ); ?></th><td><textarea name="notiz" class="large-text" rows="2"></textarea></td></tr>
 			</tbody></table>
 			<?php submit_button( __( 'Beleg speichern', 'lindenweg16' ) ); ?>
@@ -421,6 +447,22 @@ class AccountingModule {
 		<?php // Das Skript laeuft immer: PDFs kommen auch ohne Tesseract durch. ?>
 		<script>
 		(function(){
+			var kontoSelect = document.getElementById('lw16-konto');
+			var kontoHinweis = document.getElementById('lw16-konto-hinweis');
+			function zeigeHinweis(){
+				var opt = kontoSelect.options[kontoSelect.selectedIndex];
+				var text = opt.getAttribute('data-hinweis') || '';
+				var abzug = parseFloat(opt.getAttribute('data-abzug'));
+				if (abzug < 100) {
+					var kuerzung = '<?php echo esc_js( __( 'Achtung: nur ABZUG % dieses Betrags sind abziehbar.', 'lindenweg16' ) ); ?>'
+						.replace('ABZUG', String(abzug));
+					text = text ? kuerzung + ' ' + text : kuerzung;
+				}
+				kontoHinweis.textContent = text;
+			}
+			kontoSelect.addEventListener('change', zeigeHinweis);
+			zeigeHinweis();
+
 			var fileInput = document.getElementById('lw16-beleg-foto');
 			var ocrBtn = document.getElementById('lw16-ocr-btn');
 			var status = document.getElementById('lw16-ocr-status');
@@ -484,11 +526,14 @@ class AccountingModule {
 
 		echo '<table class="widefat striped" style="max-width:640px">';
 		echo '<tr><th>' . esc_html__( 'Einnahmen (WooCommerce, abzgl. Refunds)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
-		echo '<tr><th colspan="2">' . esc_html__( 'Ausgaben nach EÜR-Kategorie', 'lindenweg16' ) . '</th></tr>';
-		foreach ( $rep['ausgaben_kategorien'] as $kat => $summe ) {
-			echo '<tr><td style="padding-left:2em">' . esc_html( $kat ) . '</td><td>' . esc_html( self::euro( $summe ) ) . '</td></tr>';
+		echo '<tr><th colspan="2">' . esc_html__( 'Ausgaben nach Kontengruppe (SKR03)', 'lindenweg16' ) . '</th></tr>';
+		foreach ( $rep['ausgaben_gruppen'] as $gruppe => $summe ) {
+			echo '<tr><td style="padding-left:2em">' . esc_html( $gruppe ) . '</td><td>' . esc_html( self::euro( $summe ) ) . '</td></tr>';
 		}
-		echo '<tr><th>' . esc_html__( 'Ausgaben gesamt', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['ausgaben_summe'] ) ) . '</td></tr>';
+		if ( $rep['ausgaben_kuerzung'] > 0 ) {
+			echo '<tr><td style="padding-left:2em" class="description">' . esc_html__( 'darin nicht abziehbarer Anteil (z. B. 30 % der Bewirtung)', 'lindenweg16' ) . '</td><td class="description">− ' . esc_html( self::euro( $rep['ausgaben_kuerzung'] ) ) . '</td></tr>';
+		}
+		echo '<tr><th>' . esc_html__( 'Ausgaben gesamt (abziehbar)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['ausgaben_summe'] ) ) . '</td></tr>';
 		echo '<tr class="lw16-euer-result"><th>' . esc_html__( 'Gewinn', 'lindenweg16' ) . '</th><td><strong>' . esc_html( self::euro( $rep['gewinn'] ) ) . '</strong></td></tr>';
 		echo '</table>';
 
@@ -517,17 +562,29 @@ class AccountingModule {
 			$datei_pfad = BelegRepository::store_upload( $_FILES['beleg_foto'] );
 		}
 
-		BelegRepository::create(
+		$konto = sanitize_text_field( wp_unslash( $_POST['konto'] ?? '' ) );
+		if ( ! Kontenrahmen::exists( $konto ) ) {
+			$konto = Kontenrahmen::KONTO_SONSTIGES;
+		}
+		$eintrag = Kontenrahmen::get( $konto );
+
+		$beleg_id = BelegRepository::create(
 			array(
 				'datei_pfad'    => $datei_pfad,
 				'betrag'        => (float) ( $_POST['betrag'] ?? 0 ),
 				'datum'         => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
 				'haendler'      => sanitize_text_field( wp_unslash( $_POST['haendler'] ?? '' ) ),
-				'eur_kategorie' => sanitize_text_field( wp_unslash( $_POST['eur_kategorie'] ?? '' ) ),
+				'konto'         => $konto,
+				'eur_kategorie' => $eintrag['label'],
 				'notiz'         => sanitize_textarea_field( wp_unslash( $_POST['notiz'] ?? '' ) ),
 				'quelle'        => 'manuell',
 			)
 		);
+
+		$kampagne_id = (int) ( $_POST['kampagne_id'] ?? 0 );
+		if ( $beleg_id && $kampagne_id ) {
+			KampagnenRepository::zuordnen( $kampagne_id, $beleg_id, (float) ( $_POST['kampagne_anteil'] ?? 100 ) );
+		}
 
 		$this->redirect( __( 'Beleg gespeichert.', 'lindenweg16' ) );
 	}
@@ -1460,22 +1517,17 @@ class AccountingModule {
 	 * ------------------------------------------------------------------ */
 
 	/**
-	 * Amtliche EÜR-Kategorien (vereinfacht).
+	 * Bezeichnungen der Aufwandskonten – für Auswahlfelder, die (noch) mit
+	 * Klartext arbeiten, etwa die Dauerbuchungen.
 	 *
 	 * @return string[]
 	 */
 	public static function eur_kategorien() {
-		return array(
-			'Wareneinkauf',
-			'Büromaterial',
-			'Fahrtkosten',
-			'Telefon/Internet',
-			'Fortbildung',
-			'Porto/Versand',
-			'Hosting/Software',
-			'AfA',
-			'Sonstiges',
-		);
+		$out = array();
+		foreach ( Kontenrahmen::all( 'ausgabe' ) as $k ) {
+			$out[] = $k['label'];
+		}
+		return $out;
 	}
 
 	/**

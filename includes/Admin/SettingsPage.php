@@ -52,6 +52,10 @@ class SettingsPage {
 				'steuersatz_ruecklage'  => array( __( 'Geschätzter Steuersatz für Rücklage (%)', 'lindenweg16' ), 'number' ),
 				'rechnungsnummer_modus' => array( __( 'Rechnungsnummern-Modus (jahr/durchlaufend)', 'lindenweg16' ), 'text' ),
 			),
+			__( 'Marketing', 'lindenweg16' )      => array(
+				'km_pauschale'            => array( __( 'Kilometerpauschale (€ je km)', 'lindenweg16' ), 'number' ),
+				'marketing_nachlauf_tage' => array( __( 'Nachlauffenster für Kampagnenumsatz (Tage)', 'lindenweg16' ), 'number' ),
+			),
 			__( 'Loyalty', 'lindenweg16' )        => array(
 				'referral_cookie_tage'     => array( __( 'Referral-Cookie Laufzeit (Tage)', 'lindenweg16' ), 'number' ),
 				'referral_prozent'         => array( __( 'Referral-Guthaben (%)', 'lindenweg16' ), 'number' ),

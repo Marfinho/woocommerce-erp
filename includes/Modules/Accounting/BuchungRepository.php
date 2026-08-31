@@ -99,11 +99,17 @@ class BuchungRepository {
 	 * @return int Buchungs-ID.
 	 */
 	public static function create_from_beleg( $beleg ) {
+		// Im Journal steht die Kostenart mit Kontonummer, damit sich eine
+		// Buchung ohne Umweg über den Beleg einem Konto zuordnen lässt.
+		$kategorie = ! empty( $beleg->konto )
+			? Kontenrahmen::label( $beleg->konto )
+			: (string) $beleg->eur_kategorie;
+
 		return self::create( array(
 			'buchungsdatum' => $beleg->datum,
 			'typ'           => 'ausgabe',
 			'betrag'        => abs( (float) $beleg->betrag ),
-			'kategorie'     => (string) $beleg->eur_kategorie,
+			'kategorie'     => $kategorie,
 			'beschreibung'  => trim( $beleg->haendler . ' – ' . $beleg->notiz, ' –' ),
 			'referenz_typ'  => 'beleg',
 			'referenz_id'   => (int) $beleg->id,

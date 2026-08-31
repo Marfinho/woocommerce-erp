@@ -195,6 +195,34 @@ class Calc {
 	}
 
 	/**
+	 * Kostenstellennummer im Format K-JJJJ-NNN.
+	 *
+	 * Die Nummer ist bewusst ein reiner Identifikator: Weder Kampagnentyp
+	 * noch Kostenart stecken in ihr. Beides sind eigene Felder, die sich
+	 * ändern dürfen, ohne dass eine bereits vergebene Nummer bricht.
+	 *
+	 * @param int $jahr       Kalenderjahr.
+	 * @param int $laufnummer Laufende Nummer.
+	 * @return string
+	 */
+	public static function kostenstelle( $jahr, $laufnummer ) {
+		return sprintf( 'K-%d-%03d', (int) $jahr, (int) $laufnummer );
+	}
+
+	/**
+	 * Fahrtkosten aus gefahrenen Kilometern und Pauschale.
+	 *
+	 * @param float $km          Gefahrene Kilometer (Hin- und Rückweg).
+	 * @param float $satz_pro_km Pauschale je Kilometer.
+	 * @return float Betrag auf Cent gerundet.
+	 */
+	public static function fahrtkosten( $km, $satz_pro_km = 0.30 ) {
+		$km   = max( 0, (float) $km );
+		$satz = max( 0, (float) $satz_pro_km );
+		return round( $km * $satz, 2 );
+	}
+
+	/**
 	 * Selbstwerbung erkennen (harte Blockregel): gleiche User-ID oder
 	 * gleiche E-Mail-Adresse (case-insensitiv).
 	 *

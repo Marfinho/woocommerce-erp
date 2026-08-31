@@ -90,15 +90,15 @@ class LabelSheet {
 	 * Nur so setzt der Druckertreiber das Bild ohne Skalierung auf die
 	 * Rolle.
 	 *
-	 * **Alle Formate sind 62 mm breit** – das ist die Rollenbreite des
-	 * Geräts, nicht die Etikettenlänge. Brother benennt seine Rollen in
-	 * dieser Reihenfolge: DK-11209 ist 62 mm breit und 29 mm lang, DK-11201
-	 * dagegen nur 29 mm breit. Eine 29er oder 38er Rolle steht hier deshalb
-	 * nicht zur Wahl – sie passt zwar ins Gerät, aber wer 62 mm eingelegt
-	 * hat, will sie nicht.
+	 * **Die erste Zahl ist die Rollenbreite, die zweite die Etikettenlänge** –
+	 * so benennt Brother seine Rollen, und so steht es hier: DK-11209 ist
+	 * 62 mm breit und 29 mm lang, DK-11201 dagegen 29 mm breit und 90 mm
+	 * lang. Beides gibt es zur Wahl, denn beides kann im Gerät liegen; die
+	 * gewählte Breite muss zur eingelegten Rolle passen, sonst druckt der
+	 * Treiber daneben oder skaliert.
 	 *
 	 * Die Länge ist bei einer Endlosrolle frei wählbar; sie bestimmt, wo
-	 * geschnitten wird.
+	 * geschnitten wird. Bei gestanzten Etiketten ist sie vorgegeben.
 	 *
 	 * @return array
 	 */
@@ -109,6 +109,13 @@ class LabelSheet {
 				'hint'  => __( 'Gestanzte Etiketten auf der 62-mm-Rolle. Der Allrounder für Fächer und Artikel.', 'lindenweg16' ),
 				'w'     => 62.0,
 				'h'     => 29.0,
+			),
+			'dk11201'  => array(
+				'label' => __( 'DK-11201 · Adressetiketten 29 × 90 mm, quer beschriftet', 'lindenweg16' ),
+				'hint'  => __( 'Gestanzte Etiketten auf der schmalen 29-mm-Rolle. Beschriftet wird der Länge nach: Code links, Klartext rechts – neun Zentimeter Platz für lange Bezeichnungen.', 'lindenweg16' ),
+				'w'     => 29.0,
+				'h'     => 90.0,
+				'quer'  => true,
 			),
 			'endlos30' => array(
 				'label' => __( 'DK-22205 · endlos, auf 30 mm geschnitten', 'lindenweg16' ),
@@ -132,22 +139,43 @@ class LabelSheet {
 	}
 
 	/**
-	 * Breite der Rolle, für die alle Rollenformate gemacht sind.
+	 * Breiteste Rolle, die das Gerät aufnimmt.
 	 *
-	 * Beim QL-710W ist das die Bauform: mehr als 62 mm nimmt das Gerät
-	 * nicht auf.
+	 * Beim QL-710W ist das die Bauform. Schmalere Rollen laufen ebenfalls –
+	 * der Druckkopf bleibt derselbe, er bedruckt dann nur einen Teil seiner
+	 * Breite.
 	 */
-	const ROLL_WIDTH_MM = 62.0;
+	const MAX_ROLL_WIDTH_MM = 62.0;
 
 	/**
-	 * Tatsächlich bedruckbare Breite in Millimetern.
+	 * Breite des Druckkopfs in Millimetern.
 	 *
-	 * Der Druckkopf hat 720 Punkte bei 300 dpi, das sind 60,96 mm. Rechts
-	 * und links der Rolle bleibt also je ein halber Millimeter weiss. Der
-	 * Inhalt hält deshalb Abstand zum Rand, statt bis an die Kante zu
-	 * laufen und dort abgeschnitten zu werden.
+	 * 720 Punkte bei 300 dpi. Mehr geht in keiner Rolle.
 	 */
-	const PRINTABLE_WIDTH_MM = 60.96;
+	const HEAD_WIDTH_MM = 60.96;
+
+	/**
+	 * Streifen an jedem Rollenrand, auf dem nichts ankommt.
+	 *
+	 * Die Rolle läuft nie auf den Zehntelmillimeter mittig, und der
+	 * Druckkopf erreicht die äusserste Kante nicht. Wer bis an den Rand
+	 * zeichnet, bekommt ein angeschnittenes Etikett – bei einem QR-Code
+	 * heisst das: unlesbar.
+	 */
+	const UNPRINTABLE_EDGE_MM = 1.5;
+
+	/**
+	 * Tatsächlich bedruckbare Breite eines Rollenformats.
+	 *
+	 * @param array $roll Rollenformat.
+	 * @return float Millimeter.
+	 */
+	public static function printable_width( array $roll ) {
+		return min(
+			self::HEAD_WIDTH_MM,
+			max( 0.0, (float) $roll['w'] - 2 * self::UNPRINTABLE_EDGE_MM )
+		);
+	}
 
 	/**
 	 * Gibt es dieses Rollenformat?
@@ -172,17 +200,55 @@ class LabelSheet {
 	}
 
 	/**
-	 * Das eine Feld eines Rollenetiketts: die ganze Seite.
+	 * Wird dieses Etikett der Länge nach beschriftet?
+	 *
+	 * Ein Adressetikett ist 29 mm breit und 90 mm lang, gelesen wird es
+	 * aber quer – wie eine Anschrift. Das Etikett bleibt dabei, was es
+	 * ist; nur der Aufdruck steht gedreht darauf.
+	 *
+	 * @param array $roll Rollenformat.
+	 * @return bool
+	 */
+	public static function is_landscape( array $roll ) {
+		return ! empty( $roll['quer'] );
+	}
+
+	/**
+	 * Das Mass der Seite: immer genau das Etikett.
+	 *
+	 * Auch beim quer beschrifteten Etikett – gedreht wird der Inhalt, nicht
+	 * die Seite. Eine Seite, die anders herum steht als die Rolle, lässt
+	 * den Treiber drehen oder skalieren, und beides verdirbt den QR-Code.
+	 *
+	 * @param array $roll Rollenformat.
+	 * @return array {w, h} in pt.
+	 */
+	public static function roll_page( array $roll ) {
+		return array(
+			'w' => (float) $roll['w'] * self::MM,
+			'h' => (float) $roll['h'] * self::MM,
+		);
+	}
+
+	/**
+	 * Das eine Feld eines Rollenetiketts: die ganze Seite, in der
+	 * Richtung, in der beschriftet wird.
+	 *
+	 * Beim quer beschrifteten Etikett sind Breite und Höhe deshalb
+	 * vertauscht – die Aufteilung rechnet mit der langen Kante als Breite,
+	 * genau wie sie später gelesen wird.
 	 *
 	 * @param array $roll Rollenformat.
 	 * @return array
 	 */
 	public static function roll_cell( array $roll ) {
+		$quer = self::is_landscape( $roll );
+
 		return array(
 			'x' => 0.0,
 			'y' => 0.0,
-			'w' => (float) $roll['w'] * self::MM,
-			'h' => (float) $roll['h'] * self::MM,
+			'w' => (float) ( $quer ? $roll['h'] : $roll['w'] ) * self::MM,
+			'h' => (float) ( $quer ? $roll['w'] : $roll['h'] ) * self::MM,
 		);
 	}
 
@@ -387,6 +453,29 @@ class LabelSheet {
 	}
 
 	/**
+	 * Schriftgrössen und Platzbedarf des Textblocks unter dem Code.
+	 *
+	 * Steht hier und nicht beim Zeichnen, damit die Prüfung mit denselben
+	 * Zahlen rechnet wie das PDF. Sonst misst ein Test eine Aufteilung,
+	 * die so nie gedruckt wird – genau daran ist aufgefallen, dass das
+	 * schmale Etikett gar nicht nebeneinander gesetzt wird.
+	 *
+	 * @param array $cell     Feld.
+	 * @param bool  $has_name Steht unter dem Code noch eine Bezeichnung?
+	 * @return array {gross, klein, box}
+	 */
+	public static function stacked_text( array $cell, $has_name = true ) {
+		$gross = max( 10.0, min( 24.0, $cell['w'] / 7 ) );
+		$klein = max( 7.0, $gross * 0.5 );
+
+		return array(
+			'gross' => $gross,
+			'klein' => $klein,
+			'box'   => $gross + ( $has_name ? $klein + 4 : 0 ) + 6,
+		);
+	}
+
+	/**
 	 * Der Rand, den ein Etikett dieser Höhe bekommt.
 	 *
 	 * Eine Stelle, damit Zeichnung und Prüfung nicht auseinanderlaufen.
@@ -395,7 +484,7 @@ class LabelSheet {
 	 * @return float
 	 */
 	public static function padding( $height ) {
-		return max( 1.5 * self::MM, min( 10.0, (float) $height / 12 ) );
+		return max( self::UNPRINTABLE_EDGE_MM * self::MM, min( 10.0, (float) $height / 12 ) );
 	}
 
 	/**

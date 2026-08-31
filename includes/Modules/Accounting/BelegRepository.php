@@ -81,6 +81,7 @@ class BelegRepository {
 			'datum'           => $datum,
 			'haendler'        => '',
 			'eur_kategorie'   => '',
+			'konto'           => '',
 			'notiz'           => '',
 			'quelle'          => 'manuell',
 			'festgeschrieben' => 0,
@@ -90,7 +91,16 @@ class BelegRepository {
 		);
 		$data = wp_parse_args( $data, $defaults );
 
-		// Hash-Verkettung.
+		// Konto ist die Kostenart-Achse. Wer nur eine Kategorie mitgibt (alte
+		// Aufrufe, Import, Dauerbuchung), bekommt das passende Konto dazu –
+		// sonst fehlte der Beleg in jeder Auswertung nach Kontenrahmen.
+		if ( '' === (string) $data['konto'] ) {
+			$data['konto'] = Kontenrahmen::konto_fuer_kategorie( $data['eur_kategorie'] );
+		}
+
+		// Hash-Verkettung. `konto` steht bewusst nicht in den Hash-Feldern:
+		// Die Kette darf nicht brechen, nur weil eine Kostenart nachgetragen
+		// wird – die Belegdaten selbst bleiben davon unberührt.
 		$hashes                   = HashChain::prepare_insert( 'belege', $data );
 		$data['hash']             = $hashes['hash'];
 		$data['vorheriger_hash']  = $hashes['vorheriger_hash'];
@@ -251,6 +261,60 @@ class BelegRepository {
 	}
 
 	/**
+	 * Summe festgeschriebener Aufwandsbelege je Konto in einem Zeitraum.
+	 *
+	 * Liefert Brutto (was auf dem Beleg steht) und den abziehbaren Anteil
+	 * getrennt – bei Bewirtung fallen die beiden auseinander.
+	 *
+	 * @param string $from Startdatum (Y-m-d).
+	 * @param string $to   Enddatum (Y-m-d).
+	 * @return array Konto => [ brutto, abziehbar ].
+	 */
+	public static function sum_by_konto( $from, $to ) {
+		global $wpdb;
+		$t    = self::table();
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT konto, eur_kategorie, SUM(betrag) AS summe FROM {$t}
+				 WHERE festgeschrieben = 1 AND storniert = 0 AND quelle != 'storno' AND datum >= %s AND datum <= %s
+				 GROUP BY konto, eur_kategorie", // phpcs:ignore
+				$from,
+				$to
+			)
+		);
+
+		$out = array();
+		foreach ( $rows as $r ) {
+			$konto = (string) $r->konto;
+			if ( '' === $konto ) {
+				$konto = Kontenrahmen::konto_fuer_kategorie( $r->eur_kategorie );
+			}
+
+			$eintrag = Kontenrahmen::get( $konto );
+
+			// Erlöskonten gehören nicht in die Ausgabenseite.
+			if ( $eintrag && 'einnahme' === $eintrag['typ'] ) {
+				continue;
+			}
+
+			if ( '' === $konto ) {
+				$konto = Kontenrahmen::KONTO_SONSTIGES;
+			}
+
+			if ( ! isset( $out[ $konto ] ) ) {
+				$out[ $konto ] = array( 'brutto' => 0.0, 'abziehbar' => 0.0 );
+			}
+
+			$brutto                     = (float) $r->summe;
+			$out[ $konto ]['brutto']   += $brutto;
+			$out[ $konto ]['abziehbar'] += Kontenrahmen::abziehbarer_betrag( $konto, $brutto );
+		}
+
+		ksort( $out );
+		return $out;
+	}
+
+	/**
 	 * Beleg stornieren (Gegenbuchung statt DELETE).
 	 *
 	 * @param int    $id    Beleg-ID.
@@ -278,6 +342,7 @@ class BelegRepository {
 			'datum'         => gmdate( 'Y-m-d' ),
 			'haendler'      => $beleg->haendler,
 			'eur_kategorie' => $beleg->eur_kategorie,
+			'konto'         => isset( $beleg->konto ) ? (string) $beleg->konto : '',
 			'notiz'         => sprintf( 'Storno von %s: %s', $beleg->belegnummer ?? ( '#' . $beleg->id ), $grund ),
 			'quelle'        => 'storno',
 			'storno_von_id' => (int) $id,
