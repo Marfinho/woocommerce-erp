@@ -96,6 +96,15 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Formular-Handler unter Aufsicht** (`tests/AdminPostSchutzTest.php`):
+  `admin_post_*` ist eine offene Tür – die Adresse ist erratbar und führt
+  mitten in eine schreibende Funktion. Ein Test liest den Quelltext und
+  verlangt von jedem der 104 Handler Nonce und Rechteprüfung, wobei er der
+  Weiterreichung an `guard()`/`require_cap()` eine Ebene tief folgt. Zwei
+  Kundenformulare (Wartelisten-Anmeldung, Support-Ticket) stehen namentlich
+  als Ausnahme von der Rechteprüfung, mit Begründung; ein weiterer Test
+  hält die Ausnahmeliste aktuell. Beim Schreiben des Tests fand sich keine
+  echte Lücke – der Wert liegt darin, dass die nächste auffällt.
 - **Lagerabgang genau einmal** (`Core\Lock`, `WooIntegration::book_stock()`):
   Die Doppelbuchungssperre fragte „schon gebucht?", buchte dann und setzte
   die Marke erst am Ende. Ein wiederholter Webhook, ein Doppelklick oder
