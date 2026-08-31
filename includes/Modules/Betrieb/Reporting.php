@@ -82,6 +82,62 @@ class Reporting {
 	}
 
 	/**
+	 * Kennzahlen je Eimer eines Verlaufs.
+	 *
+	 * Einmal je Eimer gerechnet und für alle Kennzahlen behalten: Der
+	 * Verlaufsgraph zeigt eine Kennzahl, die Tabelle darunter alle – wer je
+	 * Kennzahl neu rechnete, liefe zwölf Zeiträume zwölfmal ab.
+	 *
+	 * @param array $buckets Eimer aus Period::series().
+	 * @return array Eimerschlüssel => Kennzahlenfeld.
+	 */
+	public static function series( array $buckets ) {
+		$out = array();
+
+		foreach ( $buckets as $bucket ) {
+			$out[ $bucket['key'] ] = self::metrics( $bucket['von'], $bucket['bis'] );
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Ziel und Alarm einer Kennzahl für einen Zeitraum.
+	 *
+	 * Vorrang haben die eingetragenen Quartalsziele. Fehlen sie, gilt der
+	 * Vorgabewert aus der Definition – der ist immer eine Verhältnisgröße
+	 * und damit vom Zeitraum unabhängig. Für Summengrößen gibt es bewusst
+	 * keine Vorgabe: Ein fester Umsatzwert wäre je nach Zeitraum sinnlos.
+	 *
+	 * @param string $metric Kennzahl.
+	 * @param array  $bucket Eimer mit von und bis.
+	 * @param array  $goals  Quartalsziele dieser Kennzahl.
+	 * @return array {target, alarm}
+	 */
+	public static function limits( $metric, array $bucket, array $goals ) {
+		$definitions = Kpi::definitions();
+		$definition  = isset( $definitions[ $metric ] ) ? $definitions[ $metric ] : array( 'target' => null, 'alarm' => null );
+		$kind        = KpiGoals::kind( $metric );
+
+		if ( $goals ) {
+			$abgeleitet = KpiGoals::for_bucket( $goals, $bucket, $kind );
+
+			if ( null !== $abgeleitet['target'] || null !== $abgeleitet['alarm'] ) {
+				return $abgeleitet;
+			}
+		}
+
+		if ( KpiGoals::SUM === $kind ) {
+			return array( 'target' => null, 'alarm' => null );
+		}
+
+		return array(
+			'target' => $definition['target'],
+			'alarm'  => $definition['alarm'],
+		);
+	}
+
+	/**
 	 * Bestellungen eines Zeitraums.
 	 *
 	 * @param string $von Von.

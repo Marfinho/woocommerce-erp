@@ -124,6 +124,7 @@ class VerfahrensDokuBetrieb {
 			'user_rates'        => __( 'Stundenlöhne je Nutzer mit Stichtag; frühere Sätze bleiben stehen, damit vergangene Kosten vergangene Kosten bleiben', 'lindenweg16' ),
 			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
 			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
+			'kpi_goals'         => __( 'Ziele und Alarmgrenzen je Quartal; kürzere und längere Zeiträume werden daraus abgeleitet, Summengrößen nach Tagen verteilt, Verhältnisgrößen unverändert', 'lindenweg16' ),
 		);
 
 		foreach ( $tables as $table => $description ) {

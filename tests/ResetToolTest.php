@@ -66,6 +66,40 @@ class ResetToolTest extends TestCase {
 	}
 
 	/**
+	 * Jede Betriebstabelle ist entweder löschbar oder ausdrücklich geschützt.
+	 *
+	 * Der Test liest das Schema selbst. Ohne ihn fällt eine neue Tabelle
+	 * einfach durch: Sie taucht in keiner Vorschau auf, wird beim
+	 * Zurücksetzen nicht geleert und ist auch nicht als geschützt benannt –
+	 * niemand merkt es, bis alte Daten nach einem Reset wieder auftauchen.
+	 * Genau so sind user_rates, purchases und kpi_goals durchgerutscht.
+	 */
+	public function test_jede_betriebstabelle_ist_eingeordnet() {
+		$schema = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/Schema.php' );
+
+		$this->assertNotFalse( $schema );
+
+		preg_match_all( '/CREATE TABLE \{\$p\}(\w+)/', $schema, $treffer );
+		$this->assertNotEmpty( $treffer[1], 'Das Schema wurde nicht gelesen.' );
+
+		$eingeordnet = ResetTool::protected_tables();
+
+		foreach ( ResetTool::scopes() as $scope ) {
+			if ( isset( $scope['tables'] ) ) {
+				$eingeordnet = array_merge( $eingeordnet, $scope['tables'] );
+			}
+		}
+
+		foreach ( $treffer[1] as $tabelle ) {
+			$this->assertContains(
+				$tabelle,
+				$eingeordnet,
+				'lw16_' . $tabelle . ' ist weder löschbar noch geschützt.'
+			);
+		}
+	}
+
+	/**
 	 * Jeder Bereich hat Beschriftung und Erklärung – eine unbeschriftete
 	 * Löschoption wäre grob fahrlässig.
 	 */

@@ -24,6 +24,15 @@ class Kpi {
 	const LOWER_IS_BETTER  = 'niedrig';
 
 	/**
+	 * Art der Kennzahl.
+	 *
+	 * Sie entscheidet, wie ein Quartalsziel auf kürzere Zeiträume kommt:
+	 * Eine Summe wird geteilt, ein Verhältnis nicht. Siehe KpiGoals.
+	 */
+	const SUM   = 'summe';
+	const RATIO = 'verhaeltnis';
+
+	/**
 	 * Definition aller Kennzahlen.
 	 *
 	 * @return array
@@ -33,6 +42,7 @@ class Kpi {
 			'umsatz'                 => array(
 				'label'     => __( 'Umsatz', 'lindenweg16' ),
 				'unit'      => '€',
+				'kind'      => self::SUM,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => null,
 				'alarm'     => null,
@@ -40,6 +50,7 @@ class Kpi {
 			'bestellungen'           => array(
 				'label'     => __( 'Bestellungen', 'lindenweg16' ),
 				'unit'      => '',
+				'kind'      => self::SUM,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => null,
 				'alarm'     => null,
@@ -47,6 +58,7 @@ class Kpi {
 			'warenkorb'              => array(
 				'label'     => __( 'Ø-Warenkorb', 'lindenweg16' ),
 				'unit'      => '€',
+				'kind'      => self::RATIO,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => 55.0,
 				'alarm'     => 45.0,
@@ -54,6 +66,7 @@ class Kpi {
 			'handlingzeit'           => array(
 				'label'     => __( 'Ø Handlingzeit', 'lindenweg16' ),
 				'unit'      => 'min',
+				'kind'      => self::RATIO,
 				'direction' => self::LOWER_IS_BETTER,
 				'target'    => 9.0,
 				'alarm'     => 12.0,
@@ -61,6 +74,7 @@ class Kpi {
 			'b2b_anteil'             => array(
 				'label'     => __( 'B2B-Anteil', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => 15.0,
 				'alarm'     => null,
@@ -68,6 +82,7 @@ class Kpi {
 			'reklamationsquote'      => array(
 				'label'     => __( 'Reklamationsquote', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::LOWER_IS_BETTER,
 				'target'    => 4.0,
 				'alarm'     => 7.0,
@@ -75,6 +90,7 @@ class Kpi {
 			'ausschussquote'         => array(
 				'label'     => __( 'Ausschussquote', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::LOWER_IS_BETTER,
 				'target'    => 6.0,
 				'alarm'     => 10.0,
@@ -82,6 +98,7 @@ class Kpi {
 			'teile_je_plattenwechsel' => array(
 				'label'     => __( 'Teile je Plattenwechsel', 'lindenweg16' ),
 				'unit'      => '',
+				'kind'      => self::RATIO,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => 4.0,
 				'alarm'     => 3.0,
@@ -89,6 +106,7 @@ class Kpi {
 			'auslastung'             => array(
 				'label'     => __( 'Auslastung Druckfarm', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => 70.0,
 				'alarm'     => 90.0,
@@ -97,6 +115,7 @@ class Kpi {
 			'bedienzeit_anteil'      => array(
 				'label'     => __( 'Bedienzeit am Arbeitsanteil', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::LOWER_IS_BETTER,
 				'target'    => null,
 				'alarm'     => 25.0,
@@ -104,6 +123,7 @@ class Kpi {
 			'wochenstunden'          => array(
 				'label'     => __( 'Arbeitsstunden je Woche', 'lindenweg16' ),
 				'unit'      => 'h',
+				'kind'      => self::RATIO,
 				'direction' => self::LOWER_IS_BETTER,
 				'target'    => 14.0,
 				'alarm'     => 25.0,
@@ -111,6 +131,7 @@ class Kpi {
 			'wiederkaufsrate'        => array(
 				'label'     => __( 'Wiederkaufsrate', 'lindenweg16' ),
 				'unit'      => '%',
+				'kind'      => self::RATIO,
 				'direction' => self::HIGHER_IS_BETTER,
 				'target'    => 15.0,
 				'alarm'     => 8.0,
@@ -142,6 +163,32 @@ class Kpi {
 	public static function evaluate( $key, $value ) {
 		$definitions = self::definitions();
 
+		if ( ! isset( $definitions[ $key ] ) ) {
+			return array(
+				'level'   => 'neutral',
+				'reached' => null,
+			);
+		}
+
+		return self::evaluate_against( $key, $value, $definitions[ $key ]['target'], $definitions[ $key ]['alarm'] );
+	}
+
+	/**
+	 * Eine Kennzahl gegen gesetzte Grenzen bewerten.
+	 *
+	 * Getrennt von evaluate(), weil die Grenzen nicht mehr nur aus der
+	 * Definition kommen: Für einen Zeitraum gelten die aus dem Quartalsziel
+	 * abgeleiteten Werte, und die kennt nur der Aufrufer.
+	 *
+	 * @param string     $key    Kennzahl.
+	 * @param float|null $value  Wert.
+	 * @param float|null $target Zielwert.
+	 * @param float|null $alarm  Alarmgrenze.
+	 * @return array {level, reached}
+	 */
+	public static function evaluate_against( $key, $value, $target, $alarm ) {
+		$definitions = self::definitions();
+
 		if ( ! isset( $definitions[ $key ] ) || null === $value ) {
 			return array(
 				'level'   => 'neutral',
@@ -151,8 +198,6 @@ class Kpi {
 
 		$definition = $definitions[ $key ];
 		$value      = (float) $value;
-		$target     = $definition['target'];
-		$alarm      = $definition['alarm'];
 
 		// Die Auslastung ist der Sonderfall: Sie soll hoch sein, aber der
 		// Alarm greift bei zu hoher Auslastung, nicht bei zu niedriger.

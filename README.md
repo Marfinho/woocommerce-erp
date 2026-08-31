@@ -96,6 +96,22 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Verlauf und Ziele** (`Period`, `KpiGoals`, `TrendChart`): Der Bericht
+  zeigt jede Kennzahl als Verlauf, umschaltbar zwischen Tag, Woche, Monat,
+  Quartal und Jahr. `Period` bildet die Eimer – ISO-Wochen über `IsoWeek`,
+  Monats- und Jahresgrenzen nie durch Tageszählung genähert; ein Test prüft,
+  dass die Eimer lückenlos aneinanderstoßen. Ziele werden nur je Quartal
+  eingetragen (`lw16_kpi_goals`); `KpiGoals::derive()` rechnet sie um und
+  unterscheidet dabei **Summengrößen** (Umsatz, Bestellungen – nach Tagen
+  verteilt) von **Verhältnisgrößen** (Quoten, Durchschnitte – unverändert).
+  Die Art steht als `kind` an jeder Kennzahl in `Kpi::definitions()`, statt
+  im Code geraten zu werden. Fehlt für ein berührtes Quartal das Ziel, gibt
+  es keines – erfunden wird nichts. `TrendChart` trennt wie `KpiMeter`
+  Rechnen und Zeichnen; `path()` unterbricht die Linie an Datenlücken, statt
+  sie zu überbrücken. Geprüft wurde die Ausgabe nicht nur mit Unit-Tests,
+  sondern durch Rendern des SVG im Browser – dabei fielen ein zu schmaler
+  linker Rand (`0.000,00 €` statt `20.000,00 €`) und kollidierende
+  Zeitmarken auf.
 - **Nachbestellungen** (`Purchase`, `PurchaseRepository`): Bestell-Link je
   Komponente, Formular und Lieferantenshop gehen gleichzeitig auf. Der
   Bestand ändert sich ausschliesslich beim Wareneingang, und der ist je

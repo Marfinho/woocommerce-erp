@@ -893,6 +893,19 @@ footer p{max-width:72ch}
 	<h3>9.7 Berichte</h3>
 	<p><span class="path">Betrieb → Berichte</span> — die Kennzahlen mit Zielwert und Ampel: Umsatz, Bestellungen, Ø-Warenkorb, Ø Handlingzeit, B2B-Anteil, Reklamations- und Ausschussquote, Teile je Plattenwechsel, Auslastung der Druckfarm, Arbeitsstunden je Woche, Wiederkaufsrate, Kosten je Neukunde, ROAS, organischer Traffic und der Deckungsbeitrag Ist. Diagramme sind lokal erzeugtes SVG — es geht nichts nach außen.</p>
 
+	<h4>Verlauf</h4>
+	<p>Über der Tabelle steht der <strong>Verlaufsgraph</strong>. Das Zeitraster lässt sich zwischen <em>Tag, Woche, Monat, Quartal</em> und <em>Jahr</em> umschalten, die Kennzahl daneben wählen. Der Graph endet immer am Bis-Datum des Filters — das Raster bestimmt nur, wie fein die Zeit davor geteilt wird.</p>
+	<p>Die durchgezogene Linie ist der Istwert, die grün gestrichelte das Ziel, die rot gestrichelte die Alarmgrenze. <strong>Eine Lücke bleibt eine Lücke:</strong> Ein Zeitraum ohne Daten unterbricht die Linie, statt überbrückt zu werden — eine durchgezogene Linie behauptete sonst einen Verlauf, den niemand gemessen hat. Unter dem Graphen klappt <em>Zahlen zum Verlauf</em> dieselben Werte als Tabelle auf, zum Nachrechnen und Vorlesen.</p>
+
+	<h4>Quartalsziele</h4>
+	<p>Ziele werden <strong>einmal je Quartal</strong> eingetragen, weiter unten auf derselben Seite. Wochen-, Monats- und Jahresziele tippst du nicht noch einmal — das System rechnet sie um, sobald du im Graphen das Raster wechselst. Dabei macht es einen Unterschied, den man von Hand leicht falsch macht:</p>
+	<ul>
+		<li><strong>Summengrößen</strong> — Umsatz und Bestellungen — sammeln sich an und werden <em>nach Tagen</em> verteilt. Aus 30.000&nbsp;€ im dritten Quartal (92 Tage) werden im August (31 Tage) rund 10.109&nbsp;€. Nicht 10.000: Das wäre ein Drittel und gäbe dem August drei Tage zu viel.</li>
+		<li><strong>Verhältnisgrößen</strong> — Quoten, Durchschnitte, Auslastung, Arbeitsstunden je Woche — sammeln sich nicht an und bleiben <em>unverändert</em>. Sechs Prozent Ausschuss im Quartal sind sechs Prozent im August und sechs Prozent an einem Dienstag. Wer hier durch drei teilt, bekommt ein Ziel von zwei Prozent, das niemand gesetzt hat, und einen Alarm, der jeden Monat losgeht.</li>
+	</ul>
+	<p>Eine Woche über der Quartalsgrenze bekommt beide Ziele anteilig. Fehlt für ein berührtes Quartal das Ziel, gibt es für den Zeitraum <em>keines</em> — statt eine Zahl zu erfinden, die aussähe wie eine gesetzte.</p>
+	<p><strong>Jedes Quartal behält seine eigenen Ziele.</strong> Wenn du im vierten Quartal die Latte höher legst, ändert das die Bewertung des dritten nicht. Das ist die Revision: Vergangene Quartale werden gegen das gemessen, was damals galt.</p>
+
 	<h4>Auszug zur Analyse</h4>
 	<p>Unten auf derselben Seite: <em>Auszug herunterladen</em> gibt den Betriebszustand als <strong>eine Textdatei</strong> aus — Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen mit Ziel und Alarmgrenze, Druckjournal je Woche, Ausschussursachen, Arbeitszeit, offene Aufträge, Lagerbewegungen, Verkauf, Geschäftskunden und die Befunde der Systemprüfung. Gedacht ist sie zur Auswertung: du kannst sie einer Beraterin, deinem Steuerberater oder einem Sprachmodell geben, ohne die Zahlen vorher zu erklären.</p>
 	<p>Die Datei erklärt sich selbst. Sie sagt am Anfang, welche Einheiten gelten, dass ein leeres Feld „nicht erfasst" heißt und nicht null, und dass Maschinenstunden und Personenstunden nicht addiert werden dürfen. Am Ende steht, <em>was nicht darin steht</em>: dass die Buchhaltung fehlt, dass Herstellkosten gerechnet und nicht gebucht sind, dass Kommissionsware nicht im Bestand steckt. Wer eine Auswertung ohne diese Hinweise macht, zieht falsche Schlüsse — deshalb stehen sie in der Datei und nicht nur hier.</p>

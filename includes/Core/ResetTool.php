@@ -91,6 +91,7 @@ class ResetTool {
 					'capacity_weeks',
 					'kpi_snapshots',
 					'supplies',
+					'purchases',
 				),
 			),
 			'buchhaltung'  => array(
@@ -195,6 +196,8 @@ class ResetTool {
 			'stock_targets',
 			'calc_settings',
 			'price_tiers',
+			'user_rates',
+			'kpi_goals',
 			'produkte',
 			'stueckliste',
 			'rezeptur',

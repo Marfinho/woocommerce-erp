@@ -390,3 +390,50 @@
 .lw16-dialog::backdrop { background: rgba(0,0,0,.4); }
 .lw16-dialog .form-table th { width: 12em; }
 .lw16-bestellung__titel { font-weight: 600; font-size: 15px; margin: 0 0 4px; }
+
+/* Verlaufsgraph.
+ *
+ * Das SVG bringt seine Verhaeltnisse selbst mit (viewBox), die Box gibt ihm
+ * nur die Breite. Feste Pixelhoehen wuerden den Graphen auf schmalen
+ * Bildschirmen stauchen. */
+.lw16-verlauf {
+	background: #fcfcfb;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 10px 14px 14px;
+	margin: 0 0 18px;
+	max-width: 62em;
+}
+.lw16-verlauf__steuerung {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 10px;
+}
+.lw16-verlauf__raster { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.lw16-verlauf__auswahl { display: inline-flex; gap: 6px; align-items: center; }
+.lw16-verlauf__bild { display: block; width: 100%; height: auto; }
+.lw16-verlauf__leer { color: #646970; font-style: italic; margin: 24px 0; }
+
+.lw16-verlauf__legende { margin: 4px 0 0; color: #50575e; font-size: 12px; }
+.lw16-verlauf__schluessel { margin-right: 14px; white-space: nowrap; }
+.lw16-verlauf__strich {
+	display: inline-block;
+	width: 18px;
+	height: 3px;
+	border-radius: 2px;
+	vertical-align: middle;
+	margin-right: 5px;
+	background: currentColor;
+}
+/* Die Farbe kommt als color aus dem Markup, nicht als background: Sonst
+ * loescht die Kurzschreibweise im style-Attribut den Strichverlauf. */
+.lw16-verlauf__strich--gestrichelt {
+	background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px);
+}
+.lw16-verlauf__zahlen { margin: 12px 0 0; }
+.lw16-verlauf__zahlen summary { cursor: pointer; color: #2271b1; }
+.lw16-verlauf__zahlen table { margin-top: 8px; }
+.lw16-verlauf__quartale { display: flex; flex-wrap: wrap; gap: 4px; }

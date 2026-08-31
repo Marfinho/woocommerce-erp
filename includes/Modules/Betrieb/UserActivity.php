@@ -79,6 +79,7 @@ class UserActivity {
 			'calc_settings'      => __( 'Kalkulationsgrundlage', 'lindenweg16' ),
 			'price_tiers'        => __( 'Preisstaffel', 'lindenweg16' ),
 			'kpi_snapshots'      => __( 'Monatsabschluss', 'lindenweg16' ),
+			'kpi_goals'          => __( 'Quartalsziel', 'lindenweg16' ),
 		);
 	}
 

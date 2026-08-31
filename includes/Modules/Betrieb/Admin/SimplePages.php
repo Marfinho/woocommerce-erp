@@ -26,9 +26,12 @@ use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
+use Lindenweg16\Modules\Betrieb\KpiGoalRepository;
+use Lindenweg16\Modules\Betrieb\KpiGoals;
 use Lindenweg16\Modules\Betrieb\KpiMeter;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
+use Lindenweg16\Modules\Betrieb\Period;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\ReorderPage;
@@ -38,6 +41,7 @@ use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
+use Lindenweg16\Modules\Betrieb\TrendChart;
 use Lindenweg16\Modules\Betrieb\Traceability;
 
 /**
@@ -57,7 +61,7 @@ class SimplePages {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_kontakte', array( $this, 'contacts' ) );
 		add_action( 'lw16_betrieb_render_lw16_betrieb_berichte', array( $this, 'reports' ) );
 
-		foreach ( array( 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission' ) as $what ) {
+		foreach ( array( 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission', 'goals' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_' . $what, array( $this, 'handle_' . $what ) );
 		}
 	}
@@ -1316,6 +1320,20 @@ class SimplePages {
 
 		echo '<form method="get" style="margin:12px 0">';
 		echo '<input type="hidden" name="page" value="lw16-betrieb-berichte" />';
+
+		// Raster, Kennzahl und Quartal stehen in der Adresse. Ohne diese
+		// Felder fiele die Ansicht bei jedem Datumswechsel zurueck.
+		foreach ( array( 'raster', 'kennzahl', 'quartal' ) as $merken ) {
+			// phpcs:ignore WordPress.Security.NonceVerification
+			if ( isset( $_GET[ $merken ] ) ) {
+				printf(
+					'<input type="hidden" name="%s" value="%s" />',
+					esc_attr( $merken ),
+					esc_attr( sanitize_text_field( wp_unslash( $_GET[ $merken ] ) ) ) // phpcs:ignore WordPress.Security.NonceVerification
+				);
+			}
+		}
+
 		printf( '<input type="date" name="von" value="%s" /> ', esc_attr( $von ) );
 		printf( '<input type="date" name="bis" value="%s" /> ', esc_attr( $bis ) );
 		printf( '<button class="button">%s</button> ', esc_html__( 'Auswerten', 'lindenweg16' ) );
@@ -1331,8 +1349,14 @@ class SimplePages {
 		);
 		echo '</form>';
 
+		$this->render_trend( $von, $bis );
+
+		echo '<h2>' . esc_html__( 'Kennzahlen im Zeitraum', 'lindenweg16' ) . '</h2>';
+
 		$metrics     = Reporting::metrics( $von, $bis );
 		$definitions = self::visible_kpis( Kpi::definitions() );
+		$alle_ziele  = KpiGoalRepository::all();
+		$zeitraum    = array( 'von' => $von, 'bis' => $bis );
 
 		$this->thead(
 			array(
@@ -1347,7 +1371,14 @@ class SimplePages {
 
 		foreach ( $definitions as $key => $definition ) {
 			$value      = isset( $metrics[ $key ] ) ? $metrics[ $key ] : null;
-			$evaluation = Kpi::evaluate( $key, $value );
+			$grenzen    = Reporting::limits( $key, $zeitraum, isset( $alle_ziele[ $key ] ) ? $alle_ziele[ $key ] : array() );
+			$evaluation = Kpi::evaluate_against( $key, $value, $grenzen['target'], $grenzen['alarm'] );
+
+			// Ab hier zaehlen die abgeleiteten Grenzen, nicht die aus der
+			// Definition: Ein Quartalsziel von 30.000 Euro ist im August ein
+			// anderes als im ganzen Quartal.
+			$definition['target'] = $grenzen['target'];
+			$definition['alarm']  = $grenzen['alarm'];
 
 			echo '<tr>';
 			printf( '<td>%s</td>', esc_html( $definition['label'] ) );
@@ -1398,6 +1429,8 @@ class SimplePages {
 		if ( Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
 			$this->analyse_export( $von, $bis );
 		}
+
+		$this->render_goals( $bis );
 
 		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
 		$this->freeze_form();
@@ -1473,5 +1506,393 @@ class SimplePages {
 		printf( '<input type="number" name="month" min="1" max="12" value="%s" style="width:70px" /> ', esc_attr( gmdate( 'n' ) ) );
 		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Abschließen', 'lindenweg16' ) );
 		echo '</p></form>';
+	}
+
+	/* ====================================================================
+	 * Verlauf
+	 * ================================================================== */
+
+	/**
+	 * Verlaufsgraph mit umschaltbarem Zeitraster.
+	 *
+	 * Der Graph endet immer am Bis-Datum des Filters. Das Raster bestimmt
+	 * nur, wie fein die Zeit davor geteilt wird – so bleibt „was war letzte
+	 * Woche" und „was war letztes Jahr" dieselbe Frage in zwei Auflösungen.
+	 *
+	 * @param string $von Von.
+	 * @param string $bis Bis.
+	 */
+	protected function render_trend( $von, $bis ) {
+		// phpcs:disable WordPress.Security.NonceVerification
+		$raster  = Period::clean( isset( $_GET['raster'] ) ? sanitize_key( wp_unslash( $_GET['raster'] ) ) : 'monat' );
+		$gewaehlt = isset( $_GET['kennzahl'] ) ? sanitize_key( wp_unslash( $_GET['kennzahl'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification
+
+		$sichtbar = self::visible_kpis( Kpi::definitions() );
+
+		if ( ! $sichtbar ) {
+			return;
+		}
+
+		if ( ! isset( $sichtbar[ $gewaehlt ] ) ) {
+			$schluessel = array_keys( $sichtbar );
+			$gewaehlt   = $schluessel[0];
+		}
+
+		$definition = $sichtbar[ $gewaehlt ];
+		$buckets    = Period::series( $raster, $bis, Period::default_count( $raster ) );
+		$reihen     = Reporting::series( $buckets );
+		$ziele      = KpiGoalRepository::for_metric( $gewaehlt );
+		$kind       = KpiGoals::kind( $gewaehlt );
+
+		$punkte = array();
+
+		foreach ( $buckets as $bucket ) {
+			$wert    = isset( $reihen[ $bucket['key'] ][ $gewaehlt ] ) ? $reihen[ $bucket['key'] ][ $gewaehlt ] : null;
+			$grenzen = Reporting::limits( $gewaehlt, $bucket, $ziele );
+
+			$punkte[] = array(
+				'label'  => $bucket['label'],
+				'value'  => $wert,
+				'target' => $grenzen['target'],
+				'alarm'  => $grenzen['alarm'],
+				'level'  => Kpi::evaluate_against( $gewaehlt, $wert, $grenzen['target'], $grenzen['alarm'] ),
+				'text'   => self::point_text( $gewaehlt, $bucket['label'], $wert, $grenzen ),
+			);
+		}
+
+		echo '<h2>' . esc_html__( 'Verlauf', 'lindenweg16' ) . '</h2>';
+		echo '<div class="lw16-verlauf">';
+
+		$this->trend_controls( $von, $bis, $raster, $gewaehlt, $sichtbar );
+
+		echo TrendChart::svg( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- erzeugte Auszeichnung.
+			array(
+				'points' => $punkte,
+				'metric' => $gewaehlt,
+				'title'  => $definition['label'],
+				'id'     => 'lw16-verlauf-' . $gewaehlt,
+			)
+		);
+
+		echo TrendChart::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
+
+		printf( '<p class="description">%s</p>', esc_html( KpiGoals::explain( $kind ) ) );
+
+		$this->trend_table( $gewaehlt, $definition, $punkte );
+
+		echo '</div>';
+	}
+
+	/**
+	 * Bedienelemente über dem Graphen: Raster und Kennzahl.
+	 *
+	 * @param string $von      Von.
+	 * @param string $bis      Bis.
+	 * @param string $raster   Gewähltes Raster.
+	 * @param string $gewaehlt Gewählte Kennzahl.
+	 * @param array  $sichtbar Sichtbare Kennzahlen.
+	 */
+	protected function trend_controls( $von, $bis, $raster, $gewaehlt, array $sichtbar ) {
+		echo '<div class="lw16-verlauf__steuerung">';
+		echo '<span class="lw16-verlauf__raster">';
+
+		foreach ( Period::labels() as $key => $label ) {
+			$url = add_query_arg(
+				array(
+					'page'     => 'lw16-betrieb-berichte',
+					'von'      => $von,
+					'bis'      => $bis,
+					'raster'   => $key,
+					'kennzahl' => $gewaehlt,
+				),
+				admin_url( 'admin.php' )
+			);
+
+			printf(
+				'<a class="button%1$s" href="%2$s"%3$s>%4$s</a>',
+				$key === $raster ? ' button-primary' : '',
+				esc_url( $url ),
+				$key === $raster ? ' aria-current="true"' : '',
+				esc_html( $label )
+			);
+		}
+
+		echo '</span>';
+
+		echo '<form method="get" class="lw16-verlauf__auswahl">';
+		echo '<input type="hidden" name="page" value="lw16-betrieb-berichte" />';
+		printf( '<input type="hidden" name="von" value="%s" />', esc_attr( $von ) );
+		printf( '<input type="hidden" name="bis" value="%s" />', esc_attr( $bis ) );
+		printf( '<input type="hidden" name="raster" value="%s" />', esc_attr( $raster ) );
+
+		printf( '<label for="lw16-kennzahl" class="screen-reader-text">%s</label>', esc_html__( 'Kennzahl', 'lindenweg16' ) );
+		echo '<select name="kennzahl" id="lw16-kennzahl">';
+
+		foreach ( $sichtbar as $key => $definition ) {
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $key ),
+				selected( $key, $gewaehlt, false ),
+				esc_html( $definition['label'] )
+			);
+		}
+
+		echo '</select> ';
+		printf( '<button class="button">%s</button>', esc_html__( 'Anzeigen', 'lindenweg16' ) );
+		echo '</form>';
+		echo '</div>';
+	}
+
+	/**
+	 * Die Zahlen zum Graphen – zugeklappt, aber vorhanden.
+	 *
+	 * Ein Bild ohne die Zahlen daneben lässt sich weder nachrechnen noch
+	 * vorlesen. Der Graph ist die schnelle Antwort, die Tabelle die genaue.
+	 *
+	 * @param string $metric     Kennzahl.
+	 * @param array  $definition Definition.
+	 * @param array  $punkte     Punkte.
+	 */
+	protected function trend_table( $metric, array $definition, array $punkte ) {
+		echo '<details class="lw16-verlauf__zahlen"><summary>' . esc_html__( 'Zahlen zum Verlauf', 'lindenweg16' ) . '</summary>';
+
+		$this->thead(
+			array(
+				__( 'Zeitraum', 'lindenweg16' ),
+				$definition['label'],
+				__( 'Ziel', 'lindenweg16' ),
+				__( 'Alarm bei', 'lindenweg16' ),
+				__( 'Status', 'lindenweg16' ),
+			)
+		);
+
+		foreach ( $punkte as $punkt ) {
+			echo '<tr>';
+			printf( '<td>%s</td>', esc_html( $punkt['label'] ) );
+			printf( '<td><strong>%s</strong></td>', esc_html( Kpi::format( $metric, $punkt['value'] ) ) );
+			printf( '<td>%s</td>', esc_html( null === $punkt['target'] ? '—' : Kpi::format( $metric, $punkt['target'] ) ) );
+			printf( '<td>%s</td>', esc_html( null === $punkt['alarm'] ? '—' : Kpi::format( $metric, $punkt['alarm'] ) ) );
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span></td>',
+				esc_attr( $punkt['level']['level'] ),
+				esc_html( self::kpi_status_label( $punkt['level']['level'] ) )
+			);
+			echo '</tr>';
+		}
+
+		echo '</tbody></table></details>';
+	}
+
+	/**
+	 * Kurzinfo eines Punktes.
+	 *
+	 * @param string     $metric  Kennzahl.
+	 * @param string     $label   Zeitraum.
+	 * @param float|null $wert    Wert.
+	 * @param array      $grenzen Ziel und Alarm.
+	 * @return string
+	 */
+	protected static function point_text( $metric, $label, $wert, array $grenzen ) {
+		$text = $label . ': ' . Kpi::format( $metric, $wert );
+
+		if ( null !== $grenzen['target'] ) {
+			/* translators: %s: Zielwert. */
+			$text .= ' — ' . sprintf( __( 'Ziel %s', 'lindenweg16' ), Kpi::format( $metric, $grenzen['target'] ) );
+		}
+
+		if ( null !== $grenzen['alarm'] ) {
+			/* translators: %s: Alarmgrenze. */
+			$text .= ', ' . sprintf( __( 'Alarm %s', 'lindenweg16' ), Kpi::format( $metric, $grenzen['alarm'] ) );
+		}
+
+		return $text;
+	}
+
+	/* ====================================================================
+	 * Quartalsziele
+	 * ================================================================== */
+
+	/**
+	 * Formular für die Quartalsziele.
+	 *
+	 * Eingegeben wird immer ein Quartal. Wochen-, Monats- und Jahresziele
+	 * entstehen daraus – sie werden nicht ein zweites Mal getippt, weil sie
+	 * dann auseinanderlaufen.
+	 *
+	 * @param string $bis Bis-Datum des Filters, bestimmt das Vorgabequartal.
+	 */
+	protected function render_goals( $bis ) {
+		// Ziele setzen heisst Konfiguration ändern, nicht Zahlen ansehen.
+		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_settings' ) ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$key     = isset( $_GET['quartal'] ) ? sanitize_text_field( wp_unslash( $_GET['quartal'] ) ) : '';
+		$quartal = Period::quarter_bounds( $key );
+
+		if ( ! $quartal ) {
+			$quartal = Period::bucket( 'quartal', $bis );
+		}
+
+		$gespeichert = KpiGoalRepository::for_quarter( $quartal['key'] );
+
+		// Ziele in Euro bleiben hinter dem Kostenrecht, wie die Kennzahlen
+		// selbst. Wer sie nicht sehen darf, setzt sie auch nicht.
+		$definitions = self::visible_kpis( Kpi::definitions() );
+
+		echo '<h2>' . esc_html__( 'Quartalsziele', 'lindenweg16' ) . '</h2>';
+		printf(
+			'<p>%s</p>',
+			esc_html__( 'Ziele werden je Quartal gesetzt. Beim Wechsel des Zeitrasters rechnet das System sie um: Summengrößen wie Umsatz und Bestellungen werden nach Tagen verteilt, Verhältnisgrößen wie Quoten und Durchschnitte gelten unverändert. Ein früheres Quartal behält seine Ziele, auch wenn du die Latte später höher legst.', 'lindenweg16' )
+		);
+
+		$this->quarter_picker( $quartal );
+
+		$this->form( 'goals' );
+		printf( '<input type="hidden" name="quartal" value="%s" />', esc_attr( $quartal['key'] ) );
+
+		$this->thead(
+			array(
+				__( 'Kennzahl', 'lindenweg16' ),
+				__( 'Art', 'lindenweg16' ),
+				__( 'Ziel', 'lindenweg16' ),
+				__( 'Alarm bei', 'lindenweg16' ),
+			)
+		);
+
+		foreach ( $definitions as $metric => $definition ) {
+			$werte = isset( $gespeichert[ $metric ] ) ? $gespeichert[ $metric ] : array( 'target' => null, 'alarm' => null );
+			$kind  = KpiGoals::kind( $metric );
+
+			echo '<tr>';
+			printf( '<td>%s</td>', esc_html( $definition['label'] ) );
+			printf(
+				'<td>%s</td>',
+				esc_html(
+					KpiGoals::SUM === $kind
+						? __( 'Summe im Quartal', 'lindenweg16' )
+						: __( 'gilt in jedem Zeitraum', 'lindenweg16' )
+				)
+			);
+
+			foreach ( array( 'target', 'alarm' ) as $spalte ) {
+				printf(
+					'<td><input type="text" inputmode="decimal" name="ziel[%1$s][%2$s]" value="%3$s" style="width:110px" placeholder="%4$s" /> %5$s</td>',
+					esc_attr( $metric ),
+					esc_attr( $spalte ),
+					esc_attr( null === $werte[ $spalte ] ? '' : self::goal_input( $werte[ $spalte ] ) ),
+					esc_attr__( 'kein Ziel', 'lindenweg16' ),
+					esc_html( $definition['unit'] )
+				);
+			}
+
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<p>';
+		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Ziele speichern', 'lindenweg16' ) );
+		echo '</p></form>';
+	}
+
+	/**
+	 * Auswahl des Quartals.
+	 *
+	 * @param array $aktuell Aktuelles Quartal.
+	 */
+	protected function quarter_picker( array $aktuell ) {
+		// phpcs:disable WordPress.Security.NonceVerification
+		$behalten = array();
+
+		foreach ( array( 'von', 'bis', 'raster', 'kennzahl' ) as $merken ) {
+			if ( isset( $_GET[ $merken ] ) ) {
+				$behalten[ $merken ] = sanitize_text_field( wp_unslash( $_GET[ $merken ] ) );
+			}
+		}
+		// phpcs:enable WordPress.Security.NonceVerification
+
+		echo '<p class="lw16-verlauf__quartale">';
+
+		// Vier Quartale zurück und eines voraus: Wer plant, trägt das
+		// nächste Quartal ein, bevor es beginnt.
+		$start = Period::bucket( 'quartal', $aktuell['von'] );
+
+		for ( $i = -4; $i <= 1; $i++ ) {
+			$q = $start;
+
+			for ( $j = 0; $j < abs( $i ); $j++ ) {
+				$q = $i < 0
+					? Period::previous( 'quartal', $q )
+					: Period::bucket( 'quartal', gmdate( 'Y-m-d', strtotime( $q['bis'] . ' 12:00:00 UTC' ) + DAY_IN_SECONDS ) );
+			}
+
+			printf(
+				'<a class="button%1$s" href="%2$s">%3$s</a> ',
+				$q['key'] === $aktuell['key'] ? ' button-primary' : '',
+				esc_url(
+					add_query_arg(
+						array_merge( $behalten, array( 'page' => 'lw16-betrieb-berichte', 'quartal' => $q['key'] ) ),
+						admin_url( 'admin.php' )
+					)
+				),
+				esc_html( $q['label'] )
+			);
+		}
+
+		echo '</p>';
+	}
+
+	/**
+	 * Ein Zielwert als Eingabewert.
+	 *
+	 * Ohne Tausenderpunkte: Was im Feld steht, soll unverändert wieder
+	 * eingelesen werden können.
+	 *
+	 * @param float $wert Wert.
+	 * @return string
+	 */
+	protected static function goal_input( $wert ) {
+		return rtrim( rtrim( number_format( (float) $wert, 2, ',', '' ), '0' ), ',' );
+	}
+
+	/**
+	 * Quartalsziele speichern.
+	 */
+	public function handle_goals() {
+		$this->require_cap( 'lw16_manage_settings' );
+		check_admin_referer( self::NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$quartal = isset( $_POST['quartal'] ) ? sanitize_text_field( wp_unslash( $_POST['quartal'] ) ) : '';
+		$roh     = isset( $_POST['ziel'] ) && is_array( $_POST['ziel'] ) ? wp_unslash( $_POST['ziel'] ) : array();
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$eingaben = array();
+
+		foreach ( (array) $roh as $metric => $werte ) {
+			if ( ! is_array( $werte ) ) {
+				continue;
+			}
+
+			$eingaben[ sanitize_key( $metric ) ] = array(
+				'target' => isset( $werte['target'] ) ? sanitize_text_field( $werte['target'] ) : '',
+				'alarm'  => isset( $werte['alarm'] ) ? sanitize_text_field( $werte['alarm'] ) : '',
+			);
+		}
+
+		$result = KpiGoalRepository::save(
+			$quartal,
+			$eingaben,
+			array_keys( self::visible_kpis( Kpi::definitions() ) )
+		);
+
+		$this->redirect(
+			'lw16-betrieb-berichte',
+			$result['message'],
+			$result['success'] ? 'success' : 'error',
+			array( 'quartal' => $quartal )
+		);
 	}
 }

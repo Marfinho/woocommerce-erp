@@ -739,6 +739,25 @@ class Schema {
 			UNIQUE KEY period_metric (period_year, period_month, metric_key)
 		) {$charset_collate};";
 
+		// Ziele je Quartal. Geplant wird im Quartal; Wochen-, Monats- und
+		// Jahresziele leitet KpiGoals daraus ab, statt sie doppelt zu
+		// speichern. Jedes Quartal behält seine eigenen Werte – das ist die
+		// Revision: Ein später angehobenes Ziel verändert die Bewertung
+		// vergangener Quartale nicht.
+		$t[] = "CREATE TABLE {$p}kpi_goals (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			quarter_key VARCHAR(8) NOT NULL,
+			metric_key VARCHAR(64) NOT NULL,
+			target_value DECIMAL(14,6) NULL,
+			alarm_value DECIMAL(14,6) NULL,
+			note VARCHAR(255) NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY quarter_metric (quarter_key, metric_key)
+		) {$charset_collate};";
+
 		return $t;
 	}
 }
