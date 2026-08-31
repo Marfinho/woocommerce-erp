@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '19';
+	const DB_VERSION = '20';
 
 	/**
 	 * Aktivierungsroutine.

@@ -88,6 +88,11 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Nachbestellungen** (`Purchase`, `PurchaseRepository`): Bestell-Link je
+  Komponente, Formular und Lieferantenshop gehen gleichzeitig auf. Der
+  Bestand ändert sich ausschliesslich beim Wareneingang, und der ist je
+  Bestellung einmalig – ein zweiter Klick wird abgewiesen statt zu
+  verdoppeln. `Purchase::clean_url()` lässt nur http/https durch.
 - **Etikettendrucker**: `LabelSheet::rolls()` liefert Formate für die
   62-mm-Rolle des Brother QL (Rollenbreite, nicht Etikettenlänge –
   DK-11209 ist 62 × 29). `LabelPdf::build_roll()` erzeugt eine Seite je

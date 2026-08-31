@@ -94,6 +94,7 @@ class Schema {
 			supplier VARCHAR(255) NULL,
 			pack_qty DECIMAL(10,3) NOT NULL DEFAULT 1,
 			pack_price_net DECIMAL(10,4) NOT NULL DEFAULT 0,
+			order_url VARCHAR(500) NULL,
 			lead_time_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 			min_order_qty DECIMAL(10,3) NOT NULL DEFAULT 1,
 			stock_qty DECIMAL(10,3) NOT NULL DEFAULT 0,
@@ -414,6 +415,7 @@ class Schema {
 			min_order_qty DECIMAL(10,3) NOT NULL DEFAULT 1,
 			lead_time_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 			supplier VARCHAR(255) NULL,
+			order_url VARCHAR(500) NULL,
 			price_per_unit DECIMAL(10,4) NOT NULL DEFAULT 0,
 			consumption_per_order DECIMAL(10,3) NOT NULL DEFAULT 0,
 			safety_days SMALLINT UNSIGNED NOT NULL DEFAULT 7,
@@ -496,6 +498,33 @@ class Schema {
 			KEY iso (iso_year, iso_week),
 			KEY category (category),
 			KEY work_order_id (work_order_id)
+		) {$charset_collate};";
+
+		// Nachbestellungen bei Lieferanten. Bewusst eine eigene Tabelle und
+		// nicht ein Feld am Kleinteil: Eine Bestellung ist ein Vorgang mit
+		// eigenem Verlauf, und es können mehrere gleichzeitig unterwegs sein.
+		$t[] = "CREATE TABLE {$p}purchases (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			item_type VARCHAR(20) NOT NULL DEFAULT 'component',
+			item_id BIGINT UNSIGNED NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'bestellt',
+			qty DECIMAL(10,3) NOT NULL DEFAULT 0,
+			unit_price_net DECIMAL(10,4) NOT NULL DEFAULT 0,
+			shipping_net DECIMAL(10,2) NOT NULL DEFAULT 0,
+			supplier VARCHAR(255) NULL,
+			order_ref VARCHAR(100) NULL,
+			ordered_on DATE NOT NULL,
+			expected_on DATE NULL,
+			received_on DATE NULL,
+			received_qty DECIMAL(10,3) NULL,
+			note TEXT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY item (item_type, item_id),
+			KEY status (status),
+			KEY expected_on (expected_on)
 		) {$charset_collate};";
 
 		// Stundenlöhne: nie überschrieben, immer mit Stichtag.

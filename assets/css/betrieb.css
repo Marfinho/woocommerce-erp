@@ -378,3 +378,15 @@
 .lw16-checkliste__punkte { margin: 6px 0 0; }
 .lw16-checkliste__punkte li { margin: 0 0 6px; }
 .lw16-checkliste__punkte label { display: block; line-height: 1.5; }
+
+/* Bestellformular: geht neben dem Shop-Tab auf, deshalb kompakt. */
+.lw16-dialog {
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	padding: 4px 22px 14px;
+	max-width: 42em;
+	box-shadow: 0 12px 40px rgba(0,0,0,.2);
+}
+.lw16-dialog::backdrop { background: rgba(0,0,0,.4); }
+.lw16-dialog .form-table th { width: 12em; }
+.lw16-bestellung__titel { font-weight: 600; font-size: 15px; margin: 0 0 4px; }

@@ -236,6 +236,7 @@ foreach ( array(
 	'UserActivity',
 	'MaintenanceChecklist',
 	'LabelSheet',
+	'Purchase',
 	'BetriebModule',
 	'Consistency',
 	'ReorderToken',

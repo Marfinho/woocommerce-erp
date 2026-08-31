@@ -99,6 +99,7 @@ class VerfahrensDokuBetrieb {
 			'work_orders'       => __( 'Fertigungsaufträge für Halbzeuge und Baugruppen', 'lindenweg16' ),
 			'maintenance_log'   => __( 'Wartungsprotokoll je Gerät', 'lindenweg16' ),
 			'supplies'          => __( 'Verbrauchsmaterial ohne eigene Stückliste', 'lindenweg16' ),
+			'purchases'         => __( 'Nachbestellungen bei Lieferanten; der Bestand steigt erst mit dem Wareneingang, und der lässt sich je Bestellung nur einmal buchen', 'lindenweg16' ),
 
 			// Lagerort und Kommissionierung.
 			'storage_bins'      => __( 'Lagerplätze; der Platz hängt an der Bewegung, nicht als zweites Bestandsfeld', 'lindenweg16' ),

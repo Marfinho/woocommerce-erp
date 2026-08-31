@@ -20,6 +20,8 @@ use Lindenweg16\Modules\Betrieb\BundleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ModelFile;
+use Lindenweg16\Modules\Betrieb\Purchase;
+use Lindenweg16\Modules\Betrieb\PurchaseRepository;
 use Lindenweg16\Modules\Betrieb\ThreeMf;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
@@ -45,6 +47,8 @@ class ArticlesPage {
 
 		add_action( 'admin_post_lw16_betrieb_article_state', array( $this, 'handle_article_state' ) );
 		add_action( 'admin_post_lw16_betrieb_model_get', array( $this, 'handle_model_get' ) );
+		add_action( 'admin_post_lw16_betrieb_purchase', array( $this, 'handle_purchase' ) );
+		add_action( 'admin_post_lw16_betrieb_purchase_state', array( $this, 'handle_purchase_state' ) );
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
@@ -58,6 +62,14 @@ class ArticlesPage {
 		if ( false === strpos( (string) $hook, 'lw16-betrieb-artikel' ) ) {
 			return;
 		}
+
+		wp_enqueue_script(
+			'lw16-betrieb-bestellen',
+			LW16_PLUGIN_URL . 'assets/js/betrieb-bestellen.js',
+			array(),
+			Assets::version( 'assets/js/betrieb-bestellen.js' ),
+			true
+		);
 
 		wp_enqueue_script(
 			'lw16-betrieb-productpicker',
@@ -400,6 +412,43 @@ class ArticlesPage {
 				? __( 'Die leeren Felder der Revision wurden damit gefüllt.', 'lindenweg16' )
 				: __( 'Die Revision hat bereits eigene Werte – die bleiben stehen.', 'lindenweg16' )
 		);
+	}
+
+	/**
+	 * Eine Nachbestellung erfassen.
+	 */
+	public function handle_purchase() {
+		$input = $this->post_input();
+		$args  = array( 'tab' => 'komponenten' );
+
+		$result = PurchaseRepository::create( $input );
+
+		if ( ! $result['success'] ) {
+			$this->redirect( implode( ' ', $result['errors'] ), 'error', $args );
+		}
+
+		$this->redirect( __( 'Bestellung vermerkt. Sie steht jetzt unter „Unterwegs".', 'lindenweg16' ), 'success', $args );
+	}
+
+	/**
+	 * Wareneingang buchen oder Bestellung stornieren.
+	 */
+	public function handle_purchase_state() {
+		$input = $this->post_input();
+		$args  = array( 'tab' => 'komponenten' );
+		$id    = isset( $input['purchase_id'] ) ? (int) $input['purchase_id'] : 0;
+
+		if ( ! empty( $input['cancel'] ) ) {
+			$result = PurchaseRepository::cancel( $id, isset( $input['reason'] ) ? $input['reason'] : '' );
+		} else {
+			$result = PurchaseRepository::receive(
+				$id,
+				isset( $input['received_qty'] ) ? $input['received_qty'] : 0,
+				isset( $input['received_on'] ) ? $input['received_on'] : ''
+			);
+		}
+
+		$this->redirect( $result['message'], $result['success'] ? 'success' : 'error', $args );
 	}
 
 	/**
@@ -1011,6 +1060,7 @@ class ArticlesPage {
 		$edit    = $edit_id ? ComponentRepository::find( $edit_id ) : null;
 		$rows    = ComponentRepository::all();
 		$labels  = ComponentRepository::category_labels();
+		$offen   = PurchaseRepository::open();
 
 		echo '<h2>' . esc_html__( 'Komponenten', 'lindenweg16' ) . '</h2>';
 		echo '<p>' . esc_html__( 'Kleinteile werden im Gebinde gekauft und im Stück verbraucht. Der Stückpreis wird deshalb gerechnet, nicht gepflegt.', 'lindenweg16' ) . '</p>';
@@ -1027,6 +1077,8 @@ class ArticlesPage {
 				__( 'Stückpreis', 'lindenweg16' ),
 				__( 'Bestand', 'lindenweg16' ),
 				__( 'Lieferzeit', 'lindenweg16' ),
+				__( 'Unterwegs', 'lindenweg16' ),
+				__( 'Nachbestellen', 'lindenweg16' ),
 				'',
 			) as $head ) {
 				echo '<th>' . esc_html( $head ) . '</th>';
@@ -1044,6 +1096,17 @@ class ArticlesPage {
 				printf( '<td><strong>%s</strong></td>', esc_html( $this->money( CostCalculator::unit_price( $row ), 4 ) ) );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $row['stock_qty'], 0 ) ) );
 				printf( '<td>%s</td>', esc_html( sprintf( /* translators: %d: Tage. */ __( '%d Tage', 'lindenweg16' ), (int) $row['lead_time_days'] ) ) );
+
+				$unterwegs = Purchase::incoming( $offen, 'component', (int) $row['id'] );
+				printf(
+					'<td>%s</td>',
+					esc_html( $unterwegs > 0 ? number_format_i18n( $unterwegs, 0 ) : '—' )
+				);
+
+				echo '<td>';
+				$this->order_button( 'component', $row );
+				echo '</td>';
+
 				printf(
 					'<td><a href="%s">%s</a></td>',
 					esc_url( add_query_arg( array( 'page' => self::SLUG, 'tab' => 'komponenten', 'edit' => (int) $row['id'] ), admin_url( 'admin.php' ) ) ),
@@ -1055,6 +1118,9 @@ class ArticlesPage {
 		} else {
 			echo '<p>' . esc_html__( 'Noch keine Komponenten erfasst.', 'lindenweg16' ) . '</p>';
 		}
+
+		$this->render_purchases( $rows );
+		$this->render_purchase_dialog();
 
 		echo '<h2>' . esc_html( $edit ? __( 'Komponente bearbeiten', 'lindenweg16' ) : __( 'Komponente anlegen', 'lindenweg16' ) ) . '</h2>';
 
@@ -1069,6 +1135,7 @@ class ArticlesPage {
 		$this->field( __( 'Lieferant', 'lindenweg16' ), 'supplier', $this->val( $edit, 'supplier' ) );
 		$this->field( __( 'Gebindegröße', 'lindenweg16' ), 'pack_qty', $edit ? $this->val( $edit, 'pack_qty' ) : '100', 'text', __( 'Stück je Packung, z. B. 100 Dübel.', 'lindenweg16' ) );
 		$this->field( __( 'Gebindepreis netto (€)', 'lindenweg16' ), 'pack_price_net', $this->val( $edit, 'pack_price_net' ), 'text', __( 'Der Stückpreis ergibt sich daraus automatisch.', 'lindenweg16' ) );
+		$this->field( __( 'Bestell-Link', 'lindenweg16' ), 'order_url', $this->val( $edit, 'order_url' ), 'url', __( 'Adresse der Artikelseite beim Lieferanten. Der Knopf „Bestellen" öffnet sie in einem neuen Tab und hier gleichzeitig das Formular für die Bestelldaten. Nur http- und https-Adressen.', 'lindenweg16' ) );
 		$this->field( __( 'Mindestbestellmenge', 'lindenweg16' ), 'min_order_qty', $edit ? $this->val( $edit, 'min_order_qty' ) : '1' );
 		$this->field( __( 'Lieferzeit (Tage)', 'lindenweg16' ), 'lead_time_days', $this->val( $edit, 'lead_time_days' ) );
 		$this->field( __( 'Bestand', 'lindenweg16' ), 'stock_qty', $this->val( $edit, 'stock_qty' ) );
@@ -1259,6 +1326,160 @@ class ArticlesPage {
 		echo '<input type="file" name="model" accept=".3mf" style="max-width:12em" /> ';
 		printf( '<button class="button button-small">%s</button>', esc_html__( 'anhängen', 'lindenweg16' ) );
 		echo '</form>';
+	}
+
+	/**
+	 * Der Knopf „Bestellen" einer Zeile.
+	 *
+	 * Ohne hinterlegten Link bleibt er ein einfacher Knopf, der nur das
+	 * Formular öffnet – bestellt wird dann eben per Telefon, erfasst wird
+	 * es trotzdem.
+	 *
+	 * @param string $type component oder supply.
+	 * @param array  $row  Datensatz.
+	 */
+	protected function order_button( $type, array $row ) {
+		$url   = Purchase::clean_url( isset( $row['order_url'] ) ? $row['order_url'] : '' );
+		$preis = 'supply' === $type
+			? (float) $row['price_per_unit']
+			: CostCalculator::unit_price( $row );
+
+		printf(
+			'<a class="button button-small lw16-bestellen" href="%s"%s data-typ="%s" data-id="%d" data-name="%s" data-menge="%s" data-preis="%s" data-lieferant="%s" data-lieferzeit="%d">%s</a>',
+			$url ? esc_url( $url ) : '#',
+			$url ? ' target="_blank" rel="noopener"' : '',
+			esc_attr( $type ),
+			(int) $row['id'],
+			esc_attr( $row['name'] ),
+			esc_attr( number_format( (float) $row['min_order_qty'], 3, '.', '' ) ),
+			esc_attr( number_format( $preis, 4, '.', '' ) ),
+			esc_attr( (string) $row['supplier'] ),
+			(int) $row['lead_time_days'],
+			esc_html__( 'Bestellen', 'lindenweg16' )
+		);
+	}
+
+	/**
+	 * Was gerade unterwegs ist, mit Wareneingang.
+	 *
+	 * @param array $components Komponenten, für die Namensauflösung.
+	 */
+	protected function render_purchases( array $components ) {
+		$offen = PurchaseRepository::open();
+
+		echo '<h2>' . esc_html__( 'Unterwegs', 'lindenweg16' ) . '</h2>';
+
+		if ( ! $offen ) {
+			echo '<p>' . esc_html__( 'Nichts bestellt. Wenn du beim Lieferanten bestellst, halte es hier fest – dann weißt du beim nächsten leeren Fach, ob schon etwas unterwegs ist.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		$namen = array();
+		foreach ( $components as $component ) {
+			$namen[ (int) $component['id'] ] = $component['code'] . ' – ' . $component['name'];
+		}
+
+		$heute  = gmdate( 'Y-m-d' );
+		$labels = Purchase::type_labels();
+
+		echo '<table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Bestellt am', 'lindenweg16' ),
+			__( 'Was', 'lindenweg16' ),
+			__( 'Menge', 'lindenweg16' ),
+			__( 'Wert netto', 'lindenweg16' ),
+			__( 'Lieferant', 'lindenweg16' ),
+			__( 'Bestellnummer', 'lindenweg16' ),
+			__( 'Erwartet', 'lindenweg16' ),
+			__( 'Wareneingang', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $offen as $purchase ) {
+			$id        = (int) $purchase['item_id'];
+			$name      = 'component' === $purchase['item_type'] && isset( $namen[ $id ] )
+				? $namen[ $id ]
+				: $labels[ $purchase['item_type'] ] . ' #' . $id;
+			$verspaetet = Purchase::overdue_days( $purchase, $heute );
+
+			echo '<tr>';
+			printf( '<td>%s</td>', esc_html( mysql2date( 'd.m.Y', $purchase['ordered_on'] ) ) );
+			printf( '<td><strong>%s</strong></td>', esc_html( $name ) );
+			printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $purchase['qty'], 0 ) ) );
+			printf( '<td>%s</td>', esc_html( $this->money( Purchase::total( $purchase ) ) ) );
+			printf( '<td>%s</td>', esc_html( (string) $purchase['supplier'] ) );
+			printf( '<td>%s</td>', esc_html( (string) $purchase['order_ref'] ) );
+
+			// Überfällig wird genannt, nicht nur eingefärbt.
+			printf(
+				'<td>%s%s</td>',
+				esc_html( $purchase['expected_on'] ? mysql2date( 'd.m.Y', $purchase['expected_on'] ) : '—' ),
+				null !== $verspaetet && $verspaetet > 0
+					? sprintf(
+						'<br /><span class="lw16-ampel lw16-ampel--rot">%s</span>',
+						esc_html(
+							sprintf(
+								/* translators: %d: Tage. */
+								_n( '%d Tag überfällig', '%d Tage überfällig', $verspaetet, 'lindenweg16' ),
+								$verspaetet
+							)
+						)
+					)
+					: ''
+			);
+
+			echo '<td>';
+			$this->form_open( 'purchase_state' );
+			printf( '<input type="hidden" name="purchase_id" value="%d" />', (int) $purchase['id'] );
+			printf(
+				'<input type="text" name="received_qty" value="%s" size="5" /> ',
+				esc_attr( number_format( (float) $purchase['qty'], 0, '.', '' ) )
+			);
+			printf( '<button class="button button-small">%s</button> ', esc_html__( 'eingegangen', 'lindenweg16' ) );
+			printf(
+				'<button class="button-link delete" name="cancel" value="1" onclick="return confirm(\'%s\')">%s</button>',
+				esc_attr__( 'Bestellung wirklich stornieren?', 'lindenweg16' ),
+				esc_html__( 'storniert', 'lindenweg16' )
+			);
+			echo '</form></td>';
+			echo '</tr>';
+		}
+
+		echo '</tbody></table>';
+		echo '<p class="description">' . esc_html__( 'Der Wareneingang erhöht den Bestand um die tatsächlich gelieferte Menge – nicht um die bestellte. Er lässt sich je Bestellung nur einmal buchen.', 'lindenweg16' ) . '</p>';
+	}
+
+	/**
+	 * Das Formular, das beim Bestellen aufgeht.
+	 */
+	protected function render_purchase_dialog() {
+		echo '<dialog id="lw16-bestellung" class="lw16-dialog" hidden>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( self::NONCE );
+		echo '<input type="hidden" name="action" value="lw16_betrieb_purchase" />';
+		echo '<input type="hidden" name="item_type" value="component" />';
+		echo '<input type="hidden" name="item_id" value="0" />';
+
+		echo '<h2>' . esc_html__( 'Bestellung vermerken', 'lindenweg16' ) . '</h2>';
+		echo '<p class="lw16-bestellung__titel"></p>';
+		echo '<p class="description">' . esc_html__( 'Der Shop ist in einem neuen Tab offen. Trag hier ein, was du dort tatsächlich bestellst – jetzt, solange du die Zahlen vor dir hast.', 'lindenweg16' ) . '</p>';
+
+		echo '<table class="form-table" role="presentation"><tbody>';
+		$this->field( __( 'Menge', 'lindenweg16' ), 'qty', '' );
+		$this->field( __( 'Stückpreis netto (€)', 'lindenweg16' ), 'unit_price_net', '' );
+		$this->field( __( 'Versand netto (€)', 'lindenweg16' ), 'shipping_net', '0' );
+		$this->field( __( 'Lieferant', 'lindenweg16' ), 'supplier', '' );
+		$this->field( __( 'Bestellnummer', 'lindenweg16' ), 'order_ref', '', 'text', __( 'Die Nummer aus der Bestellbestätigung – damit findest du die Lieferung später wieder.', 'lindenweg16' ) );
+		$this->field( __( 'Bestellt am', 'lindenweg16' ), 'ordered_on', '', 'date' );
+		$this->field( __( 'Voraussichtlich da', 'lindenweg16' ), 'expected_on', '', 'date', __( 'Vorbelegt aus der hinterlegten Lieferzeit. Was der Shop sagt, ist genauer.', 'lindenweg16' ) );
+		$this->field( __( 'Notiz', 'lindenweg16' ), 'note', '' );
+		echo '</tbody></table>';
+
+		printf( '<p><button class="button button-primary">%s</button> ', esc_html__( 'Bestellung vermerken', 'lindenweg16' ) );
+		printf( '<button type="button" class="button" data-schliessen="1">%s</button></p>', esc_html__( 'Abbrechen', 'lindenweg16' ) );
+		echo '</form></dialog>';
 	}
 
 	/**
