@@ -33,8 +33,6 @@ class AuditLog {
 	 * @param array  $details    Zusätzliche Details.
 	 */
 	public static function record( $aktion, $objekt_typ = '', $objekt_id = 0, array $details = array() ) {
-		global $wpdb;
-
 		$data = array(
 			'user_id'     => get_current_user_id(),
 			'aktion'      => $aktion,
@@ -45,11 +43,7 @@ class AuditLog {
 		);
 
 		// Hash-Verkettung (nur wenn die Spalte existiert).
-		$hashes = HashChain::prepare_insert( 'audit_log', $data );
-		$data['hash']            = $hashes['hash'];
-		$data['vorheriger_hash'] = $hashes['vorheriger_hash'];
-
-		$wpdb->insert( self::table(), $data );
+		HashChain::insert( 'audit_log', $data );
 	}
 
 	/**

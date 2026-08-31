@@ -69,6 +69,80 @@ class HashChain {
 	}
 
 	/**
+	 * Einen verketteten Datensatz anlegen.
+	 *
+	 * Lesen des Vorgängerhashs und Einfügen gehören zusammen. Liefen sie
+	 * getrennt, könnten zwei gleichzeitige Schreiber denselben Vorgänger
+	 * lesen und beide auf ihn zeigen: Die Kette gabelt sich, und die
+	 * Prüfung meldet ab dieser Stelle „mögliche Manipulation" – für jeden
+	 * folgenden Satz, weil sie mit dem neu berechneten Hash weiterrechnet.
+	 * Ein selbst verursachter Fehlalarm ist bei einem GoBD-Protokoll teuer:
+	 * Er sieht genauso aus wie der echte Fall.
+	 *
+	 * Deshalb hält ein benannter Sperrschlüssel der Datenbank die beiden
+	 * Schritte zusammen. Bekommen wir ihn nicht, wird trotzdem geschrieben –
+	 * ein fehlender Protokolleintrag wäre schlimmer als ein prüfbarer
+	 * Bruch.
+	 *
+	 * @param string $table_key Kurzname (z. B. 'belege').
+	 * @param array  $data      Datensatz ohne hash/vorheriger_hash.
+	 * @param array  $extra     Weitere Spalten, die nicht in den Hash eingehen.
+	 * @return int Eingefügte ID, 0 bei Fehlschlag.
+	 */
+	public static function insert( $table_key, array $data, array $extra = array() ) {
+		global $wpdb;
+
+		$table_full = $wpdb->prefix . 'lw16_' . $table_key;
+		$gesperrt   = self::lock( $table_key );
+
+		try {
+			$prev = self::get_last_hash( $table_full );
+
+			$data['hash']            = self::compute( $table_key, $data, $prev );
+			$data['vorheriger_hash'] = $prev;
+
+			$ok = false !== $wpdb->insert( $table_full, array_merge( $data, $extra ) );
+
+			return $ok ? (int) $wpdb->insert_id : 0;
+		} finally {
+			if ( $gesperrt ) {
+				self::unlock( $table_key );
+			}
+		}
+	}
+
+	/**
+	 * Sperre für das Anhängen an eine Kette.
+	 *
+	 * @param string $table_key Kurzname.
+	 * @return bool Ob die Sperre gehalten wird.
+	 */
+	protected static function lock( $table_key ) {
+		global $wpdb;
+
+		// Der Name enthält die Datenbank, damit sich zwei Anlagen auf
+		// demselben Server nicht gegenseitig ausbremsen.
+		$name = substr( 'lw16_chain_' . DB_NAME . '_' . $table_key, 0, 64 );
+
+		return '1' === (string) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $name, 5 )
+		);
+	}
+
+	/**
+	 * Sperre wieder freigeben.
+	 *
+	 * @param string $table_key Kurzname.
+	 */
+	protected static function unlock( $table_key ) {
+		global $wpdb;
+
+		$name = substr( 'lw16_chain_' . DB_NAME . '_' . $table_key, 0, 64 );
+
+		$wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $name ) );
+	}
+
+	/**
 	 * Letzten Hash einer Tabelle holen.
 	 *
 	 * @param string $table_full Vollständiger Tabellenname inkl. Präfix.
@@ -113,23 +187,51 @@ class HashChain {
 			return array( array( 'id' => 0, 'error' => 'Unbekannte Tabelle: ' . $key ) );
 		}
 
-		$rows          = $wpdb->get_results( "SELECT * FROM {$table_full} ORDER BY id ASC", ARRAY_A ); // phpcs:ignore
+		$rows = $wpdb->get_results( "SELECT * FROM {$table_full} ORDER BY id ASC", ARRAY_A ); // phpcs:ignore
+
+		return self::check_rows( $key, (array) $rows );
+	}
+
+	/**
+	 * Eine geladene Kette prüfen – reine Rechnung.
+	 *
+	 * Zwei getrennte Aussagen je Datensatz, und das ist der Punkt:
+	 *
+	 * - **Kettenglied**: Zeigt der Satz auf den Hash seines Vorgängers?
+	 *   Bricht das, wurde davor etwas eingefügt oder entfernt.
+	 * - **Inhalt**: Passt der gespeicherte Hash zum Inhalt des Satzes und
+	 *   zu dem Vorgänger, auf den er selbst zeigt? Bricht das, wurde dieser
+	 *   Satz verändert.
+	 *
+	 * Früher lief die Inhaltsprüfung gegen den *neu berechneten* Vorgänger.
+	 * Ein einziger veränderter Satz machte damit jeden folgenden ungültig:
+	 * Die Meldung lautete auf zehntausend Zeilen „mögliche Manipulation",
+	 * und die eine Zeile, um die es ging, ging darin unter. Die
+	 * Beweiskraft bleibt dieselbe – wer einen Satz ändert und seinen Hash
+	 * nachzieht, bricht das Kettenglied des nächsten –, nur der Befund ist
+	 * jetzt lesbar.
+	 *
+	 * @param string $key  Kurzname der Tabelle.
+	 * @param array  $rows Datensätze, nach id aufsteigend.
+	 * @return array Liste aus {id, error}.
+	 */
+	public static function check_rows( $key, array $rows ) {
 		$errors        = array();
 		$previous_hash = '';
 
 		foreach ( $rows as $row ) {
-			$stored_hash = isset( $row['hash'] ) ? $row['hash'] : '';
-			$stored_prev = isset( $row['vorheriger_hash'] ) ? $row['vorheriger_hash'] : '';
+			$row         = (array) $row;
+			$stored_hash = isset( $row['hash'] ) ? (string) $row['hash'] : '';
+			$stored_prev = isset( $row['vorheriger_hash'] ) ? (string) $row['vorheriger_hash'] : '';
 
 			// Datensätze ohne Hash (vor Migration) überspringen.
 			if ( '' === $stored_hash ) {
 				continue;
 			}
 
-			// Vorgänger-Hash prüfen.
 			if ( $stored_prev !== $previous_hash ) {
 				$errors[] = array(
-					'id'    => (int) $row['id'],
+					'id'    => isset( $row['id'] ) ? (int) $row['id'] : 0,
 					'error' => sprintf(
 						'Vorgänger-Hash Bruch (erwartet: %s, gespeichert: %s)',
 						$previous_hash ? substr( $previous_hash, 0, 12 ) . '…' : 'GENESIS',
@@ -138,12 +240,10 @@ class HashChain {
 				);
 			}
 
-			// Hash neu berechnen und vergleichen.
-			$computed = self::compute( $key, $row, $previous_hash );
-			if ( $stored_hash !== $computed ) {
+			if ( $stored_hash !== self::compute( $key, $row, $stored_prev ) ) {
 				$errors[] = array(
-					'id'    => (int) $row['id'],
-					'error' => 'Hash ungültig – mögliche Manipulation',
+					'id'    => isset( $row['id'] ) ? (int) $row['id'] : 0,
+					'error' => 'Hash ungültig – Inhalt verändert',
 				);
 			}
 

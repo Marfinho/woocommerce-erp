@@ -96,6 +96,19 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **GoBD-Kette gegen sich selbst gesichert** (`HashChain::insert()`,
+  `HashChain::check_rows()`): Vorgängerhash lesen und Datensatz schreiben
+  liefen getrennt. Zwei gleichzeitige Schreiber lasen denselben Vorgänger,
+  die Kette gabelte sich, und die Prüfung meldete „mögliche Manipulation" –
+  ein selbst verursachter Fehlalarm, der genauso aussieht wie der echte
+  Fall. Beide Schritte hängen jetzt an einem Sperrschlüssel der Datenbank;
+  bekommt man ihn nicht, wird trotzdem geschrieben, denn ein fehlender
+  Protokolleintrag wäre schlimmer als ein prüfbarer Bruch. Die Prüfung
+  trennt zudem *Kettenglied* von *Inhalt* und rechnet gegen den
+  gespeicherten Vorgänger: Ein veränderter Satz erzeugt eine Meldung an
+  seiner Zeile statt zehntausend Folgemeldungen, in denen er untergeht.
+  Die Beweiskraft bleibt – wer einen Hash nachzieht, bricht das Glied des
+  nächsten Satzes.
 - **Kennzahlen, korrigiert** (`RepeatRate`, `CapacityPlanner::weeks()`,
   `MachineRate::productive_at()`): Beim Bau der Verlaufsgraphen kamen drei
   Rechenfehler heraus, die vorher nicht auffielen, weil es immer nur einen

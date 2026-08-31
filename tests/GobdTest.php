@@ -465,4 +465,134 @@ class GobdTest extends TestCase {
 		// Hash2 depends on hash1 (chain).
 		$this->assertNotSame( $hash2, $hash2_alt );
 	}
+
+	/* ====================================================================
+	 * Prüfung der Kette
+	 * ================================================================== */
+
+	/**
+	 * Eine Kette bauen.
+	 *
+	 * @param array $saetze Liste von Buchungsdaten.
+	 * @return array
+	 */
+	protected function kette( array $saetze ) {
+		$rows = array();
+		$prev = '';
+
+		foreach ( $saetze as $i => $satz ) {
+			$satz['id']              = $i + 1;
+			$satz['vorheriger_hash'] = $prev;
+			$satz['hash']            = HashChain::compute( 'buchungen', $satz, $prev );
+			$prev                    = $satz['hash'];
+			$rows[]                  = $satz;
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Beispieldaten.
+	 *
+	 * @param float $betrag Betrag.
+	 * @return array
+	 */
+	protected function buchung( $betrag ) {
+		return array(
+			'buchungsnummer' => 'B-' . (int) $betrag,
+			'buchungsdatum'  => '2026-08-15',
+			'erfasst_am'     => '2026-08-15 10:00:00',
+			'typ'            => 'einnahme',
+			'betrag'         => $betrag,
+			'kategorie'      => 'umsatz',
+			'beschreibung'   => 'Test',
+			'referenz_typ'   => 'beleg',
+			'referenz_id'    => 1,
+			'erstellt_von'   => 1,
+		);
+	}
+
+	/**
+	 * Eine unversehrte Kette meldet nichts.
+	 */
+	public function test_unversehrte_kette_meldet_nichts() {
+		$rows = $this->kette( array( $this->buchung( 100 ), $this->buchung( 200 ), $this->buchung( 300 ) ) );
+
+		$this->assertSame( array(), HashChain::check_rows( 'buchungen', $rows ) );
+	}
+
+	/**
+	 * Ein veränderter Betrag wird genau an seiner Zeile gemeldet.
+	 *
+	 * Und nur dort. Vorher meldete die Prüfung ab dem Bruch jede folgende
+	 * Zeile als „mögliche Manipulation" – bei zehntausend Buchungen ging
+	 * die eine Zeile, um die es ging, darin unter.
+	 */
+	public function test_eine_veraenderte_zeile_wird_genau_dort_gemeldet() {
+		$rows = $this->kette(
+			array( $this->buchung( 100 ), $this->buchung( 200 ), $this->buchung( 300 ), $this->buchung( 400 ) )
+		);
+
+		// Jemand ändert den Betrag der zweiten Buchung.
+		$rows[1]['betrag'] = 999;
+
+		$errors = HashChain::check_rows( 'buchungen', $rows );
+
+		$this->assertCount( 1, $errors );
+		$this->assertSame( 2, $errors[0]['id'] );
+		$this->assertStringContainsString( 'Inhalt verändert', $errors[0]['error'] );
+	}
+
+	/**
+	 * Wer den Hash mitzieht, bricht das nächste Kettenglied.
+	 *
+	 * Das ist die eigentliche Beweiskraft: Der Inhalt allein lässt sich
+	 * glattziehen, die Verkettung nicht – ohne alles Folgende neu zu
+	 * rechnen.
+	 */
+	public function test_mitgezogener_hash_bricht_das_naechste_glied() {
+		$rows = $this->kette(
+			array( $this->buchung( 100 ), $this->buchung( 200 ), $this->buchung( 300 ) )
+		);
+
+		$rows[1]['betrag'] = 999;
+		$rows[1]['hash']   = HashChain::compute( 'buchungen', $rows[1], $rows[1]['vorheriger_hash'] );
+
+		$errors = HashChain::check_rows( 'buchungen', $rows );
+
+		$this->assertCount( 1, $errors );
+		$this->assertSame( 3, $errors[0]['id'], 'Der Bruch zeigt sich am folgenden Satz.' );
+		$this->assertStringContainsString( 'Vorgänger-Hash Bruch', $errors[0]['error'] );
+	}
+
+	/**
+	 * Eine entfernte Zeile fällt auf.
+	 */
+	public function test_eine_entfernte_zeile_faellt_auf() {
+		$rows = $this->kette(
+			array( $this->buchung( 100 ), $this->buchung( 200 ), $this->buchung( 300 ) )
+		);
+
+		unset( $rows[1] );
+		$rows = array_values( $rows );
+
+		$errors = HashChain::check_rows( 'buchungen', $rows );
+
+		$this->assertCount( 1, $errors );
+		$this->assertSame( 3, $errors[0]['id'] );
+	}
+
+	/**
+	 * Sätze ohne Hash stammen von vor der Migration und werden übersprungen.
+	 */
+	public function test_saetze_ohne_hash_werden_uebersprungen() {
+		$alt         = $this->buchung( 50 );
+		$alt['id']   = 1;
+		$alt['hash'] = '';
+
+		$rows = array_merge( array( $alt ), $this->kette( array( $this->buchung( 100 ) ) ) );
+
+		$this->assertSame( array(), HashChain::check_rows( 'buchungen', $rows ) );
+	}
 }
+
