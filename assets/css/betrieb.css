@@ -462,3 +462,15 @@
 .lw16-stoppuhr-box h2 { margin-top: 10px; }
 .lw16-stoppuhr-box__zeit { font-size: 15px; }
 .lw16-stoppuhr-box__zeit strong { font-variant-numeric: tabular-nums; font-size: 20px; }
+
+/* Ziel und Alarm stehen in derselben Zelle wie ihr abgeleiteter Wert –
+ * eingetragen wird an einer Stelle, nicht in einer zweiten Tabelle. */
+.lw16-ziel__feld { width: 90px; }
+.lw16-ziel__abgeleitet {
+	display: block;
+	font-size: 11px;
+	color: #646970;
+	margin-top: 2px;
+	font-variant-numeric: tabular-nums;
+}
+.lw16-quartal-label { color: #50575e; align-self: center; }

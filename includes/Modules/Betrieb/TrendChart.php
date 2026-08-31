@@ -237,6 +237,39 @@ class TrendChart {
 	}
 
 	/**
+	 * Punkte, die für sich allein stehen.
+	 *
+	 * Ein Wert ohne Nachbarn ergibt keine Linie – `path()` lässt ihn
+	 * weg, und das ist für die Messreihe richtig, weil dort eine Marke
+	 * gezeichnet wird. Ziel- und Alarmlinie haben keine Marken: Wer nur für
+	 * das laufende Quartal ein Ziel eingetragen hat und den Verlauf auf
+	 * Quartale stellt, sah bisher gar nichts. Ein eingetragenes Ziel muss
+	 * aber sichtbar sein, sonst sucht man den Fehler bei der Eingabe.
+	 *
+	 * @param array $werte Werte, null für Lücken.
+	 * @return array Liste der Positionen.
+	 */
+	public static function isolated( array $werte ) {
+		$werte = array_values( $werte );
+		$out   = array();
+
+		foreach ( $werte as $i => $wert ) {
+			if ( null === $wert || ! is_numeric( $wert ) ) {
+				continue;
+			}
+
+			$davor  = isset( $werte[ $i - 1 ] ) && null !== $werte[ $i - 1 ] && is_numeric( $werte[ $i - 1 ] );
+			$danach = isset( $werte[ $i + 1 ] ) && null !== $werte[ $i + 1 ] && is_numeric( $werte[ $i + 1 ] );
+
+			if ( ! $davor && ! $danach ) {
+				$out[] = $i;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Wie viele Beschriftungen die Zeitachse überspringt.
 	 *
 	 * Vierzig Wochen nebeneinander ergeben vierzig Beschriftungen, die
@@ -401,17 +434,39 @@ class TrendChart {
 	 * @return string
 	 */
 	protected static function reference_line( array $werte, array $x, $max, $farbe ) {
-		$pfad = self::path( $werte, $x, $max );
+		$out    = '';
+		$pfad   = self::path( $werte, $x, $max );
+		$breite = count( $x ) > 1 ? ( $x[1] - $x[0] ) : ( self::WIDTH - self::PAD_L - self::PAD_R );
 
-		if ( '' === $pfad ) {
-			return '';
+		if ( '' !== $pfad ) {
+			$out .= sprintf(
+				'<path d="%s" fill="none" stroke="%s" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity="0.85" />',
+				esc_attr( $pfad ),
+				esc_attr( $farbe )
+			);
 		}
 
-		return sprintf(
-			'<path d="%s" fill="none" stroke="%s" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity="0.85" />',
-			esc_attr( $pfad ),
-			esc_attr( $farbe )
-		);
+		// Ein Ziel, das nur für einen Zeitraum gilt, bekommt einen kurzen
+		// Strich über diesem Zeitraum. Ohne ihn bliebe ein eingetragenes
+		// Ziel unsichtbar, und man sucht den Fehler in der Eingabe.
+		foreach ( self::isolated( $werte ) as $i ) {
+			$y = self::y( $werte[ $i ], $max );
+
+			if ( null === $y || ! isset( $x[ $i ] ) ) {
+				continue;
+			}
+
+			$out .= sprintf(
+				'<line x1="%s" y1="%s" x2="%s" y2="%s" stroke="%s" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" opacity="0.85" />',
+				self::num( $x[ $i ] - $breite / 3 ),
+				self::num( $y ),
+				self::num( $x[ $i ] + $breite / 3 ),
+				self::num( $y ),
+				esc_attr( $farbe )
+			);
+		}
+
+		return $out;
 	}
 
 	/**

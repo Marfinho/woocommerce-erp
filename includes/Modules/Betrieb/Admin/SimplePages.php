@@ -1495,16 +1495,43 @@ class SimplePages {
 		$alle_ziele  = KpiGoalRepository::all();
 		$zeitraum    = array( 'von' => $von, 'bis' => $bis );
 
-		$this->thead(
-			array(
-				__( 'Kennzahl', 'lindenweg16' ),
-				__( 'Wert', 'lindenweg16' ),
-				__( 'Ziel', 'lindenweg16' ),
-				__( 'Alarm bei', 'lindenweg16' ),
-				__( 'Lage', 'lindenweg16' ),
-				__( 'Status', 'lindenweg16' ),
-			)
+		// Ziele werden hier eingetragen, nicht in einer zweiten Tabelle
+		// weiter unten. Zwei Stellen fuer dieselbe Zahl heisst frueher oder
+		// spaeter zwei verschiedene Zahlen.
+		$darf_ziele = Roles::current_user_can_betrieb( 'lw16_manage_settings' );
+		$quartal    = $this->goal_quarter( $bis );
+		$gespeichert = $darf_ziele ? KpiGoalRepository::for_quarter( $quartal['key'] ) : array();
+
+		if ( $darf_ziele ) {
+			$this->goal_intro( $quartal );
+			$this->form( 'goals' );
+			printf( '<input type="hidden" name="quartal" value="%s" />', esc_attr( $quartal['key'] ) );
+			printf( '<input type="hidden" name="von" value="%s" />', esc_attr( $von ) );
+			printf( '<input type="hidden" name="bis" value="%s" />', esc_attr( $bis ) );
+
+			// phpcs:disable WordPress.Security.NonceVerification
+			foreach ( array( 'raster', 'kennzahl' ) as $merken ) {
+				if ( isset( $_GET[ $merken ] ) ) {
+					printf(
+						'<input type="hidden" name="%s" value="%s" />',
+						esc_attr( $merken ),
+						esc_attr( sanitize_text_field( wp_unslash( $_GET[ $merken ] ) ) )
+					);
+				}
+			}
+			// phpcs:enable WordPress.Security.NonceVerification
+		}
+
+		$kopf = array(
+			__( 'Kennzahl', 'lindenweg16' ),
+			__( 'Wert', 'lindenweg16' ),
+			__( 'Ziel', 'lindenweg16' ),
+			__( 'Alarm bei', 'lindenweg16' ),
+			__( 'Lage', 'lindenweg16' ),
+			__( 'Status', 'lindenweg16' ),
 		);
+
+		$this->thead( $kopf );
 
 		foreach ( $definitions as $key => $definition ) {
 			$value      = isset( $metrics[ $key ] ) ? $metrics[ $key ] : null;
@@ -1520,8 +1547,14 @@ class SimplePages {
 			echo '<tr>';
 			printf( '<td>%s</td>', esc_html( $definition['label'] ) );
 			printf( '<td><strong>%s</strong></td>', esc_html( Kpi::format( $key, $value ) ) );
-			printf( '<td>%s</td>', esc_html( null === $definition['target'] ? '—' : Kpi::format( $key, $definition['target'] ) ) );
-			printf( '<td>%s</td>', esc_html( null === $definition['alarm'] ? '—' : Kpi::format( $key, $definition['alarm'] ) ) );
+
+			foreach ( array( 'target', 'alarm' ) as $spalte ) {
+				if ( $darf_ziele ) {
+					$this->goal_cell( $key, $spalte, $gespeichert, $definition[ $spalte ] );
+				} else {
+					printf( '<td>%s</td>', esc_html( null === $definition[ $spalte ] ? '—' : Kpi::format( $key, $definition[ $spalte ] ) ) );
+				}
+			}
 
 			// Dieselben Zahlen als Bild: Die Spalten links sagen wie viel,
 			// der Balken sagt wo dazwischen. Zahlen ohne Ziel bekommen
@@ -1561,13 +1594,26 @@ class SimplePages {
 
 		echo '</tbody></table>';
 
+		if ( $darf_ziele ) {
+			echo '<p>';
+			printf(
+				'<button class="button button-primary">%s</button> ',
+				esc_html(
+					sprintf(
+						/* translators: %s: Quartal. */
+						__( 'Ziele für %s speichern', 'lindenweg16' ),
+						$quartal['label']
+					)
+				)
+			);
+			echo '</p></form>';
+		}
+
 		echo KpiMeter::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 
 		if ( Roles::current_user_can_betrieb( 'lw16_view_costs' ) ) {
 			$this->analyse_export( $von, $bis );
 		}
-
-		$this->render_goals( $bis );
 
 		echo '<h2>' . esc_html__( 'Monatsabschluss', 'lindenweg16' ) . '</h2>';
 		$this->freeze_form();
@@ -1714,7 +1760,11 @@ class SimplePages {
 
 		echo TrendChart::legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Auszeichnung.
 
-		printf( '<p class="description">%s</p>', esc_html( KpiGoals::explain( $kind ) ) );
+		printf(
+			'<p class="description">%s %s</p>',
+			esc_html( KpiGoals::explain( $kind ) ),
+			esc_html__( 'Ziel- und Alarmlinie liegen nur über den Zeiträumen, für die ein Quartalsziel eingetragen ist – für die übrigen wird keines erfunden.', 'lindenweg16' )
+		);
 
 		$this->trend_table( $gewaehlt, $definition, $punkte );
 
@@ -1851,87 +1901,83 @@ class SimplePages {
 	 * ================================================================== */
 
 	/**
-	 * Formular für die Quartalsziele.
+	 * Das Quartal, dessen Ziele bearbeitet werden.
 	 *
-	 * Eingegeben wird immer ein Quartal. Wochen-, Monats- und Jahresziele
-	 * entstehen daraus – sie werden nicht ein zweites Mal getippt, weil sie
-	 * dann auseinanderlaufen.
-	 *
-	 * @param string $bis Bis-Datum des Filters, bestimmt das Vorgabequartal.
+	 * @param string $bis Bis-Datum des Filters.
+	 * @return array
 	 */
-	protected function render_goals( $bis ) {
-		// Ziele setzen heisst Konfiguration ändern, nicht Zahlen ansehen.
-		if ( ! Roles::current_user_can_betrieb( 'lw16_manage_settings' ) ) {
-			return;
-		}
-
+	protected function goal_quarter( $bis ) {
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$key     = isset( $_GET['quartal'] ) ? sanitize_text_field( wp_unslash( $_GET['quartal'] ) ) : '';
 		$quartal = Period::quarter_bounds( $key );
 
-		if ( ! $quartal ) {
-			$quartal = Period::bucket( 'quartal', $bis );
-		}
+		return $quartal ? $quartal : Period::bucket( 'quartal', $bis );
+	}
 
-		$gespeichert = KpiGoalRepository::for_quarter( $quartal['key'] );
-
-		// Ziele in Euro bleiben hinter dem Kostenrecht, wie die Kennzahlen
-		// selbst. Wer sie nicht sehen darf, setzt sie auch nicht.
-		$definitions = self::visible_kpis( Kpi::definitions() );
-
-		echo '<h2>' . esc_html__( 'Quartalsziele', 'lindenweg16' ) . '</h2>';
+	/**
+	 * Erklärung und Quartalswahl über der Tabelle.
+	 *
+	 * @param array $quartal Gewähltes Quartal.
+	 */
+	protected function goal_intro( array $quartal ) {
 		printf(
 			'<p>%s</p>',
-			esc_html__( 'Ziele werden je Quartal gesetzt. Beim Wechsel des Zeitrasters rechnet das System sie um: Summengrößen wie Umsatz und Bestellungen werden nach Tagen verteilt, Verhältnisgrößen wie Quoten und Durchschnitte gelten unverändert. Ein früheres Quartal behält seine Ziele, auch wenn du die Latte später höher legst.', 'lindenweg16' )
+			esc_html__( 'Ziel und Alarmgrenze trägst du hier ein, je Quartal – an einer Stelle, nicht zweimal. Beim Wechsel des Zeitrasters rechnet das System sie um: Summengrößen wie Umsatz und Bestellungen werden nach Tagen verteilt, Verhältnisgrößen wie Quoten und Durchschnitte gelten unverändert. Ein früheres Quartal behält seine Ziele, auch wenn du die Latte später höher legst.', 'lindenweg16' )
 		);
 
 		$this->quarter_picker( $quartal );
+	}
 
-		$this->form( 'goals' );
-		printf( '<input type="hidden" name="quartal" value="%s" />', esc_attr( $quartal['key'] ) );
+	/**
+	 * Eine Ziel- oder Alarmzelle: Eingabe für das Quartal, darunter der
+	 * Wert, der daraus für den gezeigten Zeitraum folgt.
+	 *
+	 * Beides in einer Zelle, weil es dieselbe Zahl ist – einmal so, wie sie
+	 * eingetragen wurde, und einmal so, wie sie hier gilt. Zwei getrennte
+	 * Tabellen dafür führten dazu, dass man zweimal dasselbe eintippt.
+	 *
+	 * @param string     $key         Kennzahl.
+	 * @param string     $spalte      target oder alarm.
+	 * @param array      $gespeichert Ziele des Quartals.
+	 * @param float|null $abgeleitet  Wert für den gezeigten Zeitraum.
+	 */
+	protected function goal_cell( $key, $spalte, array $gespeichert, $abgeleitet ) {
+		$wert = isset( $gespeichert[ $key ][ $spalte ] ) ? $gespeichert[ $key ][ $spalte ] : null;
 
-		$this->thead(
-			array(
-				__( 'Kennzahl', 'lindenweg16' ),
-				__( 'Art', 'lindenweg16' ),
-				__( 'Ziel', 'lindenweg16' ),
-				__( 'Alarm bei', 'lindenweg16' ),
-			)
+		$definitions = Kpi::definitions();
+		$vorgabe     = isset( $definitions[ $key ][ $spalte ] ) ? $definitions[ $key ][ $spalte ] : null;
+
+		echo '<td class="lw16-ziel">';
+		printf(
+			'<input type="text" inputmode="decimal" name="ziel[%1$s][%2$s]" value="%3$s" placeholder="%4$s" class="lw16-ziel__feld" /> %5$s',
+			esc_attr( $key ),
+			esc_attr( $spalte ),
+			esc_attr( null === $wert ? '' : self::goal_input( $wert ) ),
+			esc_attr( null === $vorgabe ? __( 'kein Ziel', 'lindenweg16' ) : self::goal_input( $vorgabe ) ),
+			esc_html( isset( $definitions[ $key ]['unit'] ) ? $definitions[ $key ]['unit'] : '' )
 		);
 
-		foreach ( $definitions as $metric => $definition ) {
-			$werte = isset( $gespeichert[ $metric ] ) ? $gespeichert[ $metric ] : array( 'target' => null, 'alarm' => null );
-			$kind  = KpiGoals::kind( $metric );
+		// Der abgeleitete Wert steht nur da, wo er sich von dem unterscheidet,
+		// was im Feld steht – bei einer Verhältnisgröße ist er derselbe, und
+		// die Zeile wiederholte sich sonst nur selbst. Verglichen wird gegen
+		// den wirksamen Wert: den eingetragenen, sonst die Vorgabe, die als
+		// Platzhalter im Feld steht.
+		$wirksam = null === $wert ? $vorgabe : $wert;
 
-			echo '<tr>';
-			printf( '<td>%s</td>', esc_html( $definition['label'] ) );
+		if ( null !== $abgeleitet && ( null === $wirksam || abs( (float) $abgeleitet - (float) $wirksam ) > 0.005 ) ) {
 			printf(
-				'<td>%s</td>',
+				'<span class="lw16-ziel__abgeleitet">%s</span>',
 				esc_html(
-					KpiGoals::SUM === $kind
-						? __( 'Summe im Quartal', 'lindenweg16' )
-						: __( 'gilt in jedem Zeitraum', 'lindenweg16' )
+					sprintf(
+						/* translators: %s: Wert im Zeitraum. */
+						__( 'im Zeitraum: %s', 'lindenweg16' ),
+						Kpi::format( $key, $abgeleitet )
+					)
 				)
 			);
-
-			foreach ( array( 'target', 'alarm' ) as $spalte ) {
-				printf(
-					'<td><input type="text" inputmode="decimal" name="ziel[%1$s][%2$s]" value="%3$s" style="width:110px" placeholder="%4$s" /> %5$s</td>',
-					esc_attr( $metric ),
-					esc_attr( $spalte ),
-					esc_attr( null === $werte[ $spalte ] ? '' : self::goal_input( $werte[ $spalte ] ) ),
-					esc_attr__( 'kein Ziel', 'lindenweg16' ),
-					esc_html( $definition['unit'] )
-				);
-			}
-
-			echo '</tr>';
 		}
 
-		echo '</tbody></table>';
-		echo '<p>';
-		printf( '<button class="button button-primary">%s</button>', esc_html__( 'Ziele speichern', 'lindenweg16' ) );
-		echo '</p></form>';
+		echo '</td>';
 	}
 
 	/**
@@ -1951,6 +1997,7 @@ class SimplePages {
 		// phpcs:enable WordPress.Security.NonceVerification
 
 		echo '<p class="lw16-verlauf__quartale">';
+		printf( '<span class="lw16-quartal-label">%s</span> ', esc_html__( 'Ziele für:', 'lindenweg16' ) );
 
 		// Vier Quartale zurück und eines voraus: Wer plant, trägt das
 		// nächste Quartal ein, bevor es beginnt.
@@ -2025,11 +2072,23 @@ class SimplePages {
 			array_keys( self::visible_kpis( Kpi::definitions() ) )
 		);
 
+		// Zurueck in dieselbe Ansicht: Zeitraum, Raster und Kennzahl kommen
+		// aus dem Formular mit, sonst steht man nach dem Speichern wieder
+		// beim Vorgabemonat und sucht seinen Graphen.
+		$zurueck = array( 'quartal' => $quartal );
+
+		foreach ( array( 'von', 'bis', 'raster', 'kennzahl' ) as $merken ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
+			if ( ! empty( $_POST[ $merken ] ) ) {
+				$zurueck[ $merken ] = sanitize_text_field( wp_unslash( $_POST[ $merken ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			}
+		}
+
 		$this->redirect(
 			'lw16-betrieb-berichte',
 			$result['message'],
 			$result['success'] ? 'success' : 'error',
-			array( 'quartal' => $quartal )
+			$zurueck
 		);
 	}
 }

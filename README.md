@@ -161,6 +161,16 @@ und die Papierformulare ab.
   Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
   Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
   Minuten.
+- **Ziele stehen bei den Kennzahlen**: Ziel und Alarmgrenze sind
+  Eingabefelder in der Kennzahlentabelle selbst, nicht in einer zweiten
+  Tabelle darunter – zwei Stellen für dieselbe Zahl heisst früher oder
+  später zwei verschiedene Zahlen. Unter dem Feld steht, was daraus für den
+  gezeigten Zeitraum folgt, aber nur wo es sich unterscheidet; bei
+  Verhältnisgrößen bleibt die Zeile still, und ein leeres Feld zeigt die
+  Vorgabe als Platzhalter. `TrendChart::isolated()` zeichnet ein Ziel, das
+  nur für einen Zeitraum gilt, als kurzen Strich – eine Linie braucht zwei
+  Punkte, und ein eingetragenes Ziel unsichtbar zu lassen schickt den
+  Nutzer auf Fehlersuche in der Eingabe.
 - **Verlauf und Ziele** (`Period`, `KpiGoals`, `TrendChart`): Der Bericht
   zeigt jede Kennzahl als Verlauf, umschaltbar zwischen Tag, Woche, Monat,
   Quartal und Jahr. `Period` bildet die Eimer – ISO-Wochen über `IsoWeek`,

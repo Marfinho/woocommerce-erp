@@ -249,4 +249,47 @@ class BetriebTrendChartTest extends TestCase {
 			$this->assertStringContainsString( '.' . $klasse, $css, $klasse . ' fehlt in der Stilvorlage.' );
 		}
 	}
+
+	/**
+	 * Ein Ziel, das nur für einen Zeitraum gilt, ist trotzdem zu sehen.
+	 *
+	 * Der gemeldete Fehler: Wer nur für das laufende Quartal ein Ziel
+	 * einträgt und den Verlauf auf Quartale stellt, hat genau einen Eimer
+	 * mit Ziel. Eine Linie braucht zwei Punkte – es wurde also nichts
+	 * gezeichnet, und man sucht den Fehler bei der Eingabe.
+	 */
+	public function test_ein_einzelnes_ziel_bleibt_sichtbar() {
+		$punkte = array();
+
+		foreach ( range( 0, 5 ) as $i ) {
+			$punkte[] = array(
+				'label'  => 'Q' . $i,
+				'value'  => 1000 + $i * 100,
+				'target' => 5 === $i ? 3000.0 : null,
+				'alarm'  => null,
+				'text'   => 'Q' . $i,
+			);
+		}
+
+		$svg = TrendChart::svg( array( 'points' => $punkte, 'metric' => 'umsatz', 'title' => 'Umsatz' ) );
+
+		$this->assertSame(
+			1,
+			substr_count( $svg, 'stroke-dasharray' ),
+			'Das einzelne Ziel wird nicht gezeichnet.'
+		);
+	}
+
+	/**
+	 * Alleinstehende Werte werden erkannt.
+	 */
+	public function test_alleinstehende_werte_werden_erkannt() {
+		$this->assertSame( array( 0, 3 ), TrendChart::isolated( array( 5.0, null, null, 7.0, null ) ) );
+		$this->assertSame( array(), TrendChart::isolated( array( 5.0, 6.0, 7.0 ) ) );
+		$this->assertSame( array(), TrendChart::isolated( array( null, null ) ) );
+
+		// Zwei nebeneinander stehen nicht allein – die zieht path() als Linie.
+		$this->assertSame( array( 4 ), TrendChart::isolated( array( 1.0, 2.0, null, null, 9.0 ) ) );
+	}
 }
+
