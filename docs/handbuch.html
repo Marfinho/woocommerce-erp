@@ -899,6 +899,14 @@ footer p{max-width:72ch}
 	</div>
 	<p>Geprüft wird auf dem Server, nicht nur im Browser: Ohne JavaScript stehen schlicht alle Listen da, und beim Speichern sagt die Meldung, welche Punkte fehlen. Was abgehakt wurde, steht im Protokolleintrag — wenn ein Gerät ausfällt, ist die erste Frage, was beim letzten Mal geprüft wurde.</p>
 
+	<h4>Wenn eine Bestellung in WooCommerce gelöscht wird</h4>
+	<p>Die Betriebsdaten einer Shop-Bestellung — Handlingzeit, Reklamation, Versandart — stehen im Plugin, Wert und Datum holt es sich bei Bedarf aus WooCommerce. Wird die Bestellung dort gelöscht, zeigt die Zeile ins Leere.</p>
+	<p><strong>Papierkorb ändert nichts.</strong> Eine Bestellung im Papierkorb lässt sich zurückholen, also bleibt auch die Betriebszeile unangetastet.</p>
+	<p><strong>Beim endgültigen Löschen</strong> schreibt das Plugin Wert und Datum in die Zeile, bevor die Bestellung verschwindet, und vermerkt den Zeitpunkt. Die Bestellung <em>gab</em> es; die Kennzahlen der Vergangenheit sollen sich nicht dadurch ändern, dass heute jemand aufräumt. Von Hand korrigierte Werte werden dabei nicht überschrieben.</p>
+	<p>Bestellungen, die <em>vor</em> dieser Fassung gelöscht wurden, haben keine Zahlen mehr. Sie stehen unter <span class="path">Betrieb → Bestellungen</span> ganz oben unter <em>Ohne Shop-Bestellung</em>, und die Systemprüfung meldet sie: Ohne Zahlen zählen sie als Bestellung über 0,00&nbsp;€ ohne Datum mit und verfälschen die Zahl der Bestellungen und den Ø-Warenkorb.</p>
+	<p><em>Stornieren</em> nimmt die Lagerbewegungen dieser Bestellung als Gegenbuchungen zurück und nimmt die Zeile aus allen Kennzahlen. Gelöscht wird nichts — die Zeile bleibt mit ihrem Protokoll stehen.</p>
+	<p><strong>Was nicht zurückgeht:</strong> der Verbrauch an Kleinteilen und Verpackung. Der wird als Feld fortgeschrieben und nicht als Bewegung; wie viel damals verbraucht wurde, steht nirgends nachrechenbar, und aus der heutigen Stückliste zurückzurechnen ergäbe eine Zahl, die nur zufällig stimmt. Wer eine Testanlage wirklich leeren will, nimmt <span class="path">Einstellungen → Zurücksetzen</span> und kreuzt <em>Betrieb: Bewegungen</em> an.</p>
+
 	<h3>9.7 Berichte</h3>
 	<p><span class="path">Betrieb → Berichte</span> — die Kennzahlen mit Zielwert und Ampel: Umsatz, Bestellungen, Ø-Warenkorb, Ø Handlingzeit, B2B-Anteil, Reklamations- und Ausschussquote, Teile je Plattenwechsel, Auslastung der Druckfarm, Arbeitsstunden je Woche, Wiederkaufsrate, Kosten je Neukunde, ROAS, organischer Traffic und der Deckungsbeitrag Ist. Diagramme sind lokal erzeugtes SVG — es geht nichts nach außen.</p>
 

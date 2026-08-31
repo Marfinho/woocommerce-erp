@@ -260,6 +260,7 @@ foreach ( array(
 	'MaintenanceChecklist',
 	'LabelSheet',
 	'Purchase',
+	'OrderSource',
 	'BetriebModule',
 	'Consistency',
 	'ReorderToken',

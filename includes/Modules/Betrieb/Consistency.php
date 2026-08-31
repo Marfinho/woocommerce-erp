@@ -162,6 +162,7 @@ class Consistency {
 			'targets'     => StockRepository::targets(),
 			'bins'        => $bins,
 			'open_orders' => WorkOrderRepository::unfinished(),
+			'orphan_orders' => OrderOpsRepository::orphaned(),
 		);
 	}
 
@@ -224,7 +225,8 @@ class Consistency {
 			self::check_targets( $articles, isset( $ctx['targets'] ) ? (array) $ctx['targets'] : array() ),
 			self::check_bins( $articles, isset( $ctx['bins'] ) ? (array) $ctx['bins'] : array() ),
 			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() ),
-			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() )
+			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() ),
+			self::check_orphan_orders( isset( $ctx['orphan_orders'] ) ? (array) $ctx['orphan_orders'] : array() )
 		);
 
 		// Fehler zuerst: Was einen Vorgang blockiert, gehört nach oben.
@@ -238,6 +240,74 @@ class Consistency {
 				return strcmp( $a['area'] . $a['text'], $b['area'] . $b['text'] );
 			}
 		);
+
+		return $findings;
+	}
+
+	/**
+	 * Bestellzeilen, deren Shop-Bestellung gelöscht wurde.
+	 *
+	 * Getrennt gemeldet nach dem, was sie noch wert sind: Eine Zeile mit
+	 * festgehaltenem Wert und Datum rechnet weiter richtig und ist nur ein
+	 * Hinweis. Eine ohne zählte als Bestellung über 0,00 € ohne Datum mit –
+	 * das verfälscht die Zahl der Bestellungen und den Ø-Warenkorb.
+	 *
+	 * @param array $orders Verwaiste Bestellzeilen.
+	 * @return array
+	 */
+	public static function check_orphan_orders( array $orders ) {
+		if ( ! $orders ) {
+			return array();
+		}
+
+		$mit  = 0;
+		$ohne = 0;
+
+		foreach ( $orders as $order ) {
+			if ( OrderSource::has_snapshot( (array) $order ) ) {
+				$mit++;
+			} else {
+				$ohne++;
+			}
+		}
+
+		$findings = array();
+
+		if ( $ohne ) {
+			$findings[] = self::finding(
+				'fehler',
+				__( 'Bestellungen', 'lindenweg16' ),
+				sprintf(
+					/* translators: %d: Anzahl. */
+					_n(
+						'%d Bestellung zeigt auf eine gelöschte WooCommerce-Bestellung und hat keine eigenen Zahlen mehr.',
+						'%d Bestellungen zeigen auf gelöschte WooCommerce-Bestellungen und haben keine eigenen Zahlen mehr.',
+						$ohne,
+						'lindenweg16'
+					),
+					$ohne
+				),
+				__( 'Solche Zeilen zählen als Bestellung über 0,00 € ohne Datum mit und verfälschen die Zahl der Bestellungen und den Ø-Warenkorb. Unter Betrieb → Bestellungen stornieren – die Lagerbewegungen werden dabei zurückgenommen.', 'lindenweg16' )
+			);
+		}
+
+		if ( $mit ) {
+			$findings[] = self::finding(
+				'warnung',
+				__( 'Bestellungen', 'lindenweg16' ),
+				sprintf(
+					/* translators: %d: Anzahl. */
+					_n(
+						'%d Bestellung stammt aus einer inzwischen gelöschten WooCommerce-Bestellung.',
+						'%d Bestellungen stammen aus inzwischen gelöschten WooCommerce-Bestellungen.',
+						$mit,
+						'lindenweg16'
+					),
+					$mit
+				),
+				__( 'Wert und Datum sind hier festgehalten, die Kennzahlen bleiben richtig. Aufräumen ist eine Entscheidung, keine Pflicht – im Testbetrieb sinnvoll, im Echtbetrieb selten.', 'lindenweg16' )
+			);
+		}
 
 		return $findings;
 	}

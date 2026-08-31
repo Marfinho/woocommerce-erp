@@ -156,6 +156,10 @@ class Reporting {
 				continue;
 			}
 
+			if ( ! self::order_counts( $order ) ) {
+				continue;
+			}
+
 			$date = OrderOpsRepository::order_date( $order );
 
 			if ( $date && $date >= $von && $date <= $bis ) {
@@ -164,6 +168,25 @@ class Reporting {
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Zählt diese Bestellung noch mit?
+	 *
+	 * Eine Zeile, deren Shop-Bestellung gelöscht wurde und die keine eigenen
+	 * Zahlen hat, ist eine Bestellung über 0,00 € ohne Datum. In der
+	 * Umsatzsumme fällt sie nicht auf, in der Zahl der Bestellungen und im
+	 * Ø-Warenkorb schon.
+	 *
+	 * @param array $order Bestellzeile.
+	 * @return bool
+	 */
+	protected static function order_counts( array $order ) {
+		if ( ! OrderSource::from_shop( $order ) ) {
+			return true;
+		}
+
+		return OrderSource::counts( $order, (bool) OrderOpsRepository::order_date( $order ) );
 	}
 
 	/* ====================================================================
@@ -504,7 +527,7 @@ class Reporting {
 		$je_kontakt = array();
 
 		foreach ( self::all_orders() as $order ) {
-			if ( 'bestaetigt' !== $order['order_status'] ) {
+			if ( 'bestaetigt' !== $order['order_status'] || ! self::order_counts( $order ) ) {
 				continue;
 			}
 

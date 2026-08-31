@@ -109,6 +109,7 @@ class VerfahrensDokuBetrieb {
 
 			// Verkauf und Konditionen.
 			'order_op_items'    => __( 'Positionen manuell erfasster Bestellungen', 'lindenweg16' ),
+			'order_ops'         => __( 'Betriebsdaten je Bestellung; source_deleted_at hält fest, wann die zugehörige WooCommerce-Bestellung gelöscht wurde, Wert und Datum werden dabei in die Zeile geschrieben', 'lindenweg16' ),
 			'price_tiers'       => __( 'Standard-Rabattstaffel, historisiert über valid_from', 'lindenweg16' ),
 			'bundles'           => __( 'Benannte Bestellarten für den Vergleich der Preisebenen', 'lindenweg16' ),
 			'bundle_items'      => __( 'Positionen einer Bestellart', 'lindenweg16' ),

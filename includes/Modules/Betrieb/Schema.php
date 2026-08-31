@@ -453,6 +453,7 @@ class Schema {
 			invoice_date DATE NULL,
 			paid_date DATE NULL,
 			order_status VARCHAR(20) NOT NULL DEFAULT 'bestaetigt',
+			source_deleted_at DATETIME NULL,
 			note TEXT NULL,
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NULL,

@@ -161,6 +161,21 @@ und die Papierformulare ab.
   Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
   Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
   Minuten.
+- **Gelöschte Shop-Bestellungen** (`OrderSource`, `OrderMirror`,
+  `OrderOpsRepository::orphaned()`): Wird eine Bestellung in WooCommerce
+  endgültig gelöscht, zeigte die Betriebszeile ins Leere – `order_value()`
+  lieferte 0,00 €, `order_date()` einen leeren String, und die Zeile zählte
+  in der Händlerauswertung weiter mit. `OrderMirror` schreibt jetzt an den
+  Löschhooks (HPOS wie klassisch) Wert und Datum in die Zeile, bevor die
+  Quelle verschwindet; vorhandene eigene Angaben bleiben stehen. Der
+  Papierkorb löst nichts aus – eine Bestellung dort lässt sich zurückholen.
+  Für alles, was vorher gelöscht wurde, gleicht `orphaned()` ab; die
+  Systemprüfung meldet es und `Betrieb → Bestellungen` bietet ein Storno an,
+  das die Lagerbewegungen als Gegenbuchungen zurücknimmt. Der Verbrauch an
+  Kleinteilen geht bewusst **nicht** zurück: Er wird als Feld
+  fortgeschrieben, die damalige Menge ist nirgends nachrechenbar, und aus
+  der heutigen Stückliste zurückzurechnen ergäbe eine Zahl, die nur zufällig
+  stimmt. Dafür ist das Rücksetz-Werkzeug da.
 - **Ziele stehen bei den Kennzahlen**: Ziel und Alarmgrenze sind
   Eingabefelder in der Kennzahlentabelle selbst, nicht in einer zweiten
   Tabelle darunter – zwei Stellen für dieselbe Zahl heisst früher oder

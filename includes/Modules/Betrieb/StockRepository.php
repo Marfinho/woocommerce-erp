@@ -183,6 +183,30 @@ class StockRepository {
 	}
 
 	/**
+	 * Bewegungen zu einer Herkunft, Stornos ausgenommen.
+	 *
+	 * Gegenbuchungen tragen dieselbe Herkunft wie das Original – wer sie
+	 * mitnimmt, storniert den Storno.
+	 *
+	 * @param string $ref_type Herkunftsart.
+	 * @param int    $ref_id   Herkunft.
+	 * @return array
+	 */
+	public static function by_ref( $ref_type, $ref_id ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE ref_type = %s AND ref_id = %d AND reverses_id IS NULL ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $ref_type,
+				(int) $ref_id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Alle Bewegungen (für die Bestandsermittlung).
 	 *
 	 * @param int $article_id Optional auf einen Artikel begrenzen.

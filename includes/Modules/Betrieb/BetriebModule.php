@@ -100,6 +100,7 @@ class BetriebModule {
 		( new MobileCapture() )->register();
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
+		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
 
