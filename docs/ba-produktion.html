@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betriebsanleitung Produktion · Lindenweg16 ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="ba.css">
+</head>
+<body>
+<div class="seite">
+
+<header class="kopf">
+	<div class="marke">Lindenweg16 ERP · Betriebsanleitung 1 von 4</div>
+	<h1>Produktion</h1>
+	<p class="unter">Für alle, die drucken, entgraten, montieren und Teile ins Regal legen. Diese Anleitung setzt nichts voraus – außer dass du dich am Computer anmelden kannst.</p>
+	<nav class="wegweiser">
+		<a href="index.html">Übersicht</a>
+		<a class="hier" href="ba-produktion.html">Produktion</a>
+		<a href="ba-versand.html">Versand</a>
+		<a href="ba-personal.html">Personal</a>
+		<a href="ba-admin.html">Administration</a>
+	</nav>
+</header>
+
+<div class="inhalt">
+	<h2>Inhalt</h2>
+	<ol>
+		<li><a href="#anmelden">Anmelden und das Menü finden</a></li>
+		<li><a href="#dashboard">Das Dashboard: der Blick am Morgen</a></li>
+		<li><a href="#bedarf">Bedarf: was heute entstehen muss</a></li>
+		<li><a href="#auftrag">Einen Auftrag anlegen und starten</a></li>
+		<li><a href="#drucken">Drucken und den Druckjob buchen</a></li>
+		<li><a href="#handy">Am Drucker mit dem Handy buchen</a></li>
+		<li><a href="#montage">Montieren und fertigmelden</a></li>
+		<li><a href="#material">Material: Filament und Kleinteile</a></li>
+		<li><a href="#drucker">Drucker und Wartung</a></li>
+		<li><a href="#artikel">Artikel, Revisionen und Stücklisten</a></li>
+		<li><a href="#lager">Lager: Bestand und Korrekturen</a></li>
+		<li><a href="#qualitaet">Qualität: Chargen und Rückverfolgung</a></li>
+		<li><a href="#kapazitaet">Kapazität: schaffe ich das?</a></li>
+		<li><a href="#fehler">Wenn etwas nicht geht</a></li>
+		<li><a href="#spickzettel">Spickzettel für den Tag</a></li>
+	</ol>
+</div>
+
+<h2 id="anmelden"><span class="nr">1.</span> Anmelden und das Menü finden</h2>
+
+<p>Alles, was du für die Produktion brauchst, liegt im Verwaltungsbereich der Website. Den erreichst du über den Browser – Chrome, Firefox, Safari, egal.</p>
+
+<ol class="schritte">
+	<li>Öffne den Browser und tippe oben in die Adresszeile die Adresse der Website, dahinter <code>/wp-admin</code>. Also zum Beispiel <code>lindenweg16.de/wp-admin</code>. Dann Enter.</li>
+	<li>Es erscheint eine Anmeldemaske mit zwei Feldern. Oben trägst du deinen Benutzernamen ein, darunter dein Passwort. Klick auf <strong>Anmelden</strong>.</li>
+	<li>Setz vorher einen Haken bei <strong>Angemeldet bleiben</strong>, wenn du am eigenen Rechner sitzt. Dann musst du das nicht jeden Tag machen. An einem Rechner, an dem mehrere Leute arbeiten, lässt du den Haken weg.</li>
+	<li>Jetzt siehst du links einen schwarzen Streifen mit Menüpunkten. Klick dort auf <strong>Betrieb</strong> – das ist der Eintrag mit dem kleinen Hammer.</li>
+</ol>
+
+<figure class="schmal">
+	<img src="bilder/menue-betrieb.png" alt="Das schwarze Menü am linken Rand, der Eintrag Betrieb ist blau hervorgehoben, darunter stehen seine Unterpunkte">
+	<figcaption>Sobald <strong>Betrieb</strong> angeklickt ist, klappen darunter die Unterpunkte auf. Auf die beziehen sich in dieser Anleitung alle Wegangaben.</figcaption>
+</figure>
+
+<div class="kasten info">
+	<span class="titel">So liest du die Wegangaben</span>
+	<p>Wenn irgendwo steht:</p>
+	<p><span class="weg">Betrieb → Druckjournal</span></p>
+	<p>dann heißt das: Klicke links im schwarzen Menü auf <strong>Betrieb</strong> und danach auf den Unterpunkt <strong>Druckjournal</strong>. Mehr nicht.</p>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Du siehst weniger Menüpunkte als hier abgebildet?</span>
+	<p>Das ist Absicht. Je nach Rechteprofil blendet das Plugin aus, was du nicht brauchst. Mit dem Profil <em>Werkstatt</em> siehst du Dashboard, Druckjournal, Lager, Lagerplätze, Qualität und Zeiterfassung – genau das, was in dieser Anleitung in den Kapiteln 1 bis 7 und 11 steht. Der Rest ist für die Betriebsleitung.</p>
+</div>
+
+<h2 id="dashboard"><span class="nr">2.</span> Das Dashboard: der Blick am Morgen</h2>
+
+<p><span class="weg">Betrieb → Dashboard</span></p>
+
+<p>Diese Seite ist dein Startpunkt. Sie beantwortet drei Fragen: Wie lief der Monat? Was ist gerade offen? Was braucht Aufmerksamkeit?</p>
+
+<figure>
+	<img src="bilder/betrieb-dashboard.png" alt="Das gesamte Betrieb-Dashboard mit Kennzahlen, offenen Aufträgen, Wochenübersicht und den Aufmerksamkeitskästen">
+	<figcaption>Das ganze Dashboard. Von oben nach unten: Kennzahlen, offene Aufträge, laufende Woche, Aufmerksamkeitskästen.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/betrieb-dash-kennzahlen.png" alt="Kachelreihe mit Kennzahlen wie Umsatz, Bestellungen, Ausschussquote, jeweils mit einem Balken für Ziel und Alarmgrenze">
+	<figcaption>Oben die Kennzahlen des laufenden Monats. Der schwarze Strich im Balken ist das Ziel, der rote die Alarmgrenze. Grün heißt erreicht, gelb heißt beobachten, rot heißt handeln.</figcaption>
+</figure>
+
+<p>Darunter stehen die offenen Aufträge und deine Woche:</p>
+
+<figure class="schmal">
+	<img src="bilder/betrieb-dash-woche.png" alt="Abschnitt Diese Woche mit erfasster Arbeitszeit und Wochenbudget">
+	<figcaption>Die laufende Kalenderwoche mit der bisher erfassten Arbeitszeit. Das Wochenbudget stellt die Betriebsleitung ein.</figcaption>
+</figure>
+
+<p>Ganz unten stehen Kästen mit Zahlen. Steht dort überall eine <strong>0</strong>, ist nichts zu tun. Steht irgendwo eine andere Zahl, klick den Kasten an – er führt dich zu der Stelle, an der du das erledigst.</p>
+
+<figure>
+	<img src="bilder/betrieb-dash-aufmerksam.png" alt="Sechs Kästen: Überfällige Wartungen, Beschaffungsalarm, Artikel unter Sollbestand, Zu fertigen, Fällige Wiedervorlagen, Überfällige Posten">
+	<figcaption>„Was Aufmerksamkeit braucht“. Diese sechs Kästen sind deine Morgenrunde – von links oben nach rechts unten.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Kasten</th><th>Was er bedeutet</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>Überfällige Wartungen</td><td>Ein Drucker hat seine Wartung überzogen</td><td>Kapitel 9</td></tr>
+<tr><td>Beschaffungsalarm</td><td>Ein Kleinteil oder Filament reicht nicht mehr lange</td><td>Kapitel 8, der Betriebsleitung sagen</td></tr>
+<tr><td>Artikel unter Sollbestand</td><td>Von einem Artikel liegen weniger Stück im Regal als vereinbart</td><td>Kapitel 3 und 4</td></tr>
+<tr><td>Zu fertigen</td><td>Offene Aufträge, die noch niemand angefasst hat</td><td>Kapitel 4</td></tr>
+<tr><td>Fällige Wiedervorlagen</td><td>Ein Händler wartet auf einen Rückruf</td><td>Betriebsleitung</td></tr>
+<tr><td>Bewegungen ohne Farbzuordnung</td><td>Eine Lagerbuchung ohne erkennbare Farbe</td><td>Kapitel 11</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="bedarf"><span class="nr">3.</span> Bedarf: was heute entstehen muss</h2>
+
+<p><span class="weg">Betrieb → Bedarf</span></p>
+
+<p>Diese Seite rechnet dir aus, was fehlt. Sie schaut sich an, was bestellt ist, welcher Sollbestand vereinbart wurde, was im Regal liegt und was schon in Arbeit ist – und sagt dir dann, was übrig bleibt.</p>
+
+<figure>
+	<img src="bilder/bedarf.png" alt="Die Bedarfsseite mit den Abschnitten Zu tun, Produktionsplan, Kleinteile und Gedeckt">
+	<figcaption>Die ganze Seite auf einen Blick. Vier Abschnitte, von oben nach unten zu lesen.</figcaption>
+</figure>
+
+<h3>Abschnitt „Zu tun“</h3>
+
+<p>Hier steht in einer Zeile alles, was du wissen musst:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Was</strong></td><td>Die Art der Arbeit: <em>drucken</em>, <em>montieren</em> oder <em>bestellen</em></td></tr>
+<tr><td><strong>Artikel</strong></td><td>Artikelnummer und Bezeichnung</td></tr>
+<tr><td><strong>Bedarf</strong></td><td>Wie viele Stück insgesamt gebraucht werden</td></tr>
+<tr><td><strong>Bestand</strong></td><td>Wie viele davon schon im Regal liegen</td></tr>
+<tr><td><strong>In Arbeit</strong></td><td>Wie viele in laufenden Aufträgen stecken</td></tr>
+<tr><td><strong>Fehlt</strong></td><td>Die Zahl, die zählt: so viele musst du machen</td></tr>
+<tr><td><strong>Wofür</strong></td><td>Woher der Bedarf kommt – Bestellnummer oder Sollbestand</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Die wichtigste Regel dieser Seite</span>
+	<p>Arbeite <strong>von oben nach unten</strong> ab. Was am tiefsten in der Stückliste steckt, steht oben. Ein Set kannst du erst montieren, wenn die Haken gedruckt sind – deshalb stehen die Haken über dem Set.</p>
+</div>
+
+<h3>Abschnitt „Produktionsplan“</h3>
+
+<figure>
+	<img src="bilder/bedarf-plan.png" alt="Tabelle Produktionsplan mit Woche, Schritt, Artikel, Menge, Platten, Drucker-Stunden und Hand-Stunden">
+	<figcaption>Dieselben Zeilen, aber auf Wochen verteilt und mit Zeiten. „Drucker (h)“ läuft ohne dich, „Hand (h)“ ist deine Arbeitszeit.</figcaption>
+</figure>
+
+<h3>Abschnitt „Kleinteile für diese Bedarfe“</h3>
+<p>Hier siehst du, ob Schrauben, Dübel, Kartons und Beipackzettel für die geplante Arbeit reichen. Steht in der Spalte <strong>Fehlt</strong> überall eine 0, ist alles da. Steht dort eine Zahl, sag der Betriebsleitung Bescheid, bevor du anfängst – sonst stehst du mittendrin ohne Schrauben.</p>
+
+<h3>Abschnitt „Gedeckt“</h3>
+<figure class="schmal">
+	<img src="bilder/bedarf-gedeckt.png" alt="Liste gedeckter Bedarfe mit Bedarf, Bestand und in Arbeit je Artikel">
+	<figcaption>Diese Bedarfe bestehen zwar, sind aber schon abgedeckt. Sie stehen nur da, damit du siehst, dass sie nicht vergessen wurden. Hier ist nichts zu tun.</figcaption>
+</figure>
+
+<h2 id="auftrag"><span class="nr">4.</span> Einen Auftrag anlegen und starten</h2>
+
+<p><span class="weg">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Reiter „Fertigungsaufträge“</span></p>
+
+<p>Ein Auftrag ist ein Zettel im System: „Von diesem Artikel sollen so viele Stück in dieser Farbe entstehen.“ Es gibt zwei Sorten:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Sorte</th><th>Wofür</th><th>Kürzel</th></tr></thead>
+<tbody>
+<tr><td><strong>Druckauftrag</strong></td><td>Etwas, das aus dem Drucker kommt – ein Haken, eine Schiene</td><td>DA…</td></tr>
+<tr><td><strong>Fertigungsauftrag</strong></td><td>Etwas, das aus vorhandenen Teilen zusammengebaut wird – ein Set</td><td>FA…</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+	<img src="bilder/fertigungsauftraege.png" alt="Der Reiter Fertigungsaufträge mit dem Anlegeformular und einer Tabelle offener Aufträge">
+	<figcaption>Oben legst du an, unten stehen die offenen Aufträge mit ihren Knöpfen.</figcaption>
+</figure>
+
+<h3>So legst du einen Auftrag an</h3>
+
+<ol class="schritte">
+	<li>Wähle im ersten Auswahlfeld <strong>Druckauftrag</strong> oder <strong>Fertigungsauftrag</strong>.</li>
+	<li>Wähle im zweiten Feld den <strong>Artikel</strong>. Es stehen nur Artikel zur Auswahl, die zu der gewählten Sorte passen – ein Set kannst du nicht drucken, einen Rohling nicht montieren.</li>
+	<li>Trag im Feld <strong>Stück</strong> die Menge ein. Nimm die Zahl aus der Spalte <em>Fehlt</em> der Bedarfsseite.</li>
+	<li>Wähle die <strong>Farbe</strong>.</li>
+	<li>Klick auf <strong>Auftrag anlegen</strong>.</li>
+</ol>
+
+<p>Beim Fertigungsauftrag rechnet das System sofort die Materialliste aus und zeigt sie in der Spalte <strong>Material</strong> an: <code>5× SCHIENE-01 · 15× HAKEN-01 · 20× SCHR-M4-40 …</code>. Das ist genau das, was du aus dem Regal holen musst. <strong>Gebucht wird davon noch nichts</strong> – das passiert erst beim Fertigmelden.</p>
+
+<h3>Produktion starten – und warum das wichtig ist</h3>
+
+<p>Klick beim Auftrag auf <strong>Produktion starten</strong>. Damit passiert dreierlei:</p>
+<ul>
+	<li>Der Auftrag wechselt von <em>offen</em> auf <em>läuft</em> – jeder sieht, dass daran gearbeitet wird.</li>
+	<li>Die Uhr am Auftrag läuft mit. Aus ihr entstehen später die Ist-Zeiten und die Lohnkosten je Auftrag.</li>
+	<li>Die Menge zählt auf der Bedarfsseite als <em>in Arbeit</em> und wird nicht doppelt eingeplant.</li>
+</ul>
+
+<div class="kasten tipp">
+	<span class="titel">Pause machen ist erlaubt</span>
+	<p>Musst du zwischendurch etwas anderes tun, klick auf <strong>Pause</strong>. Die Uhr hält an und läuft beim nächsten Start weiter. Die Zeit summiert sich – sie fängt nicht von vorn an.</p>
+</div>
+
+<h2 id="drucken"><span class="nr">5.</span> Drucken und den Druckjob buchen</h2>
+
+<p><span class="weg">Betrieb → Druckjournal</span></p>
+
+<p>Das Druckjournal ist das Herz der Produktion. Jeder Druck, der fertig ist, wird hier eingetragen. Aus diesem einen Formular entstehen automatisch:</p>
+<ul>
+	<li>der Lagerzugang über die guten Teile,</li>
+	<li>eine Charge für die Rückverfolgung,</li>
+	<li>der Filamentverbrauch,</li>
+	<li>der Verbrauch der eingebauten Kleinteile,</li>
+	<li>die Betriebsstunden des Druckers,</li>
+	<li>die Ausschussquote in den Kennzahlen.</li>
+</ul>
+
+<figure>
+	<img src="bilder/druckjournal-formular.png" alt="Das Formular Druckjob erfassen mit den Feldern Datum, Drucker, Artikel, Farbe, Filamentcharge, Teile geplant, Teile in Ordnung, Druckzeit, Plattenwechsel, Fehlerursache und Bemerkung">
+	<figcaption>Das Formular. Datum, Plattenwechsel und Farbe sind schon vorbelegt – meistens musst du nur vier Felder ausfüllen.</figcaption>
+</figure>
+
+<p>Feld für Feld:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Feld</th><th>Was du einträgst</th><th>Warum</th></tr></thead>
+<tbody>
+<tr><td><strong>Datum</strong></td><td>Steht schon auf heute. Nur ändern, wenn du etwas von gestern nachträgst.</td><td>Bestimmt die Kalenderwoche in den Auswertungen</td></tr>
+<tr><td><strong>Drucker</strong></td><td>Das Gerät, auf dem gedruckt wurde</td><td>Zählt die Betriebsstunden und den Maschinenstundensatz</td></tr>
+<tr><td><strong>Artikel</strong></td><td>Was gedruckt wurde. In Klammern steht die aktive Revision, z.&nbsp;B. <code>(v1.1)</code></td><td>Aus der Revision kommen Gewicht und Druckzeit je Teil</td></tr>
+<tr><td><strong>Farbe</strong></td><td>Die Farbe des Filaments</td><td>Bestand wird je Farbe geführt</td></tr>
+<tr><td><strong>Filamentcharge</strong></td><td>Die Rolle, von der du gedruckt hast</td><td>Nur damit ist im Ernstfall nachvollziehbar, aus welchem Material ein Teil ist</td></tr>
+<tr><td><strong>Teile geplant</strong></td><td>Wie viele auf der Platte waren</td><td>Grundlage der Ausschussquote</td></tr>
+<tr><td><strong>Teile in Ordnung</strong></td><td>Wie viele brauchbar sind</td><td>Nur diese gehen in den Bestand</td></tr>
+<tr><td><strong>Druckzeit (h)</strong></td><td>Die Zeit, die der Drucker angezeigt hat, in Stunden mit Komma – <code>6,9</code> für 6 Stunden 54 Minuten</td><td>Maschinenkosten und Auslastung</td></tr>
+<tr><td><strong>Plattenwechsel</strong></td><td>Wie oft du die Platte gewechselt hast. Meist 1.</td><td>Kennzahl „Teile je Plattenwechsel“</td></tr>
+<tr><td><strong>Fehlerursache</strong></td><td>Nur nötig, wenn Teile kaputt sind</td><td>Ohne Ursache lässt sich Ausschuss später nicht auswerten</td></tr>
+<tr><td><strong>Bemerkung</strong></td><td>Freitext, alles was auffiel</td><td>Hilft dem nächsten, der dasselbe Problem hat</td></tr>
+</tbody>
+</table>
+</div>
+
+<ol class="schritte">
+	<li>Fülle die Felder aus – von oben nach unten.</li>
+	<li>Sind alle Teile in Ordnung, trag bei <strong>Teile geplant</strong> und <strong>Teile in Ordnung</strong> dieselbe Zahl ein und lass die Fehlerursache auf <em>keine</em>.</li>
+	<li>Sind Teile kaputt, trag bei <em>in Ordnung</em> die kleinere Zahl ein <strong>und wähle eine Fehlerursache</strong>. Ohne Ursache nimmt das Formular die Eingabe nicht an.</li>
+	<li>Klick auf <strong>Druckjob buchen</strong>.</li>
+</ol>
+
+<figure>
+	<img src="bilder/druckjournal-liste.png" alt="Das Journal als Tabelle mit Datum, Kalenderwoche, Drucker, Artikel, Farbe, geplant, in Ordnung, Ausschuss, Quote, Ursache, Druckzeit">
+	<figcaption>Unter dem Formular steht das Journal. Grün ist eine Quote in Ordnung, rot heißt: da ist etwas schiefgegangen.</figcaption>
+</figure>
+
+<div class="kasten achtung">
+	<span class="titel">Falsch gebucht? Nicht löschen – stornieren</span>
+	<p>Es gibt keinen Löschknopf, und das ist Absicht. Trag rechts in der Zeile bei <strong>Begründung</strong> ein, was falsch war (zum Beispiel „Stückzahl vertippt, waren 12 statt 21“), und klick dann auf <strong>Stornieren</strong>. Die alte Zeile bleibt stehen, eine Gegenbuchung hebt sie auf, und du buchst danach neu. Damit ist die Bestandsrechnung wieder richtig und man sieht trotzdem, was passiert ist.</p>
+</div>
+
+<h2 id="handy"><span class="nr">6.</span> Am Drucker mit dem Handy buchen</h2>
+
+<p>Am Gerät steht selten ein Computer. Deshalb gibt es eine eigene, sehr kurze Seite fürs Handy.</p>
+
+<h3>Wie du sie öffnest</h3>
+<ul>
+	<li><strong>Am schnellsten:</strong> Am Drucker klebt ein Aufkleber mit QR-Code. Handykamera drauf halten, auf den Hinweis tippen – die Seite öffnet sich mit dem richtigen Drucker schon eingestellt.</li>
+	<li><strong>Ohne Aufkleber:</strong> Am Computer auf <span class="weg">Betrieb → Druckjournal</span> gehen und oben auf <strong>Mobile Schnellerfassung öffnen</strong> klicken. Die Adresse einmal als Lesezeichen aufs Handy legen.</li>
+</ul>
+
+<figure class="handy">
+	<img src="bilder/m-druck.png" alt="Handy-Ansicht mit den vier Reitern Druckjob, Lager, Picken, Zeit und einem kurzen Formular">
+	<figcaption>Die Handy-Erfassung. Oben vier Reiter, darunter das Formular mit großen Plus- und Minus-Knöpfen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Der Reiter <strong>Druckjob</strong> ist schon offen.</li>
+	<li><strong>Drucker</strong> und <strong>Artikel</strong> sind vorbelegt – meistens stimmt es schon. Wenn nicht, tipp drauf und ändere es.</li>
+	<li>Stell mit <strong>−</strong> und <strong>+</strong> ein, wie viele <strong>Teile in Ordnung</strong> sind.</li>
+	<li>Nur wenn etwas kaputt ist: <strong>Fehlerursache</strong> auswählen.</li>
+	<li>Tipp auf den großen Knopf <strong>Buchen</strong>. Fertig.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">„Vorbelegung ändern“</span>
+	<p>Unter dem Formular steht dieser Link. Damit stellst du dauerhaft ein, welcher Drucker, welcher Artikel und welche Menge beim Öffnen schon eingetragen sind. Wenn du drei Wochen lang dasselbe druckst, sparst du dir damit jedes Mal vier Tipper.</p>
+</div>
+
+<h2 id="montage"><span class="nr">7.</span> Montieren und fertigmelden</h2>
+
+<p>Ein Set kommt nicht aus dem Drucker – es wird aus Teilen zusammengebaut, die schon im Regal liegen. Der Ablauf:</p>
+
+<ol class="schritte">
+	<li>Auf <span class="weg">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Fertigungsaufträge</span> den Auftrag suchen.</li>
+	<li>In der Spalte <strong>Material</strong> steht, was du brauchst. Hol es aus dem Regal. Die Lagerplätze stehen auf den Etiketten am Fach.</li>
+	<li>Auf <strong>Produktion starten</strong> klicken, damit die Uhr läuft.</li>
+	<li>Zusammenbauen.</li>
+	<li>Im kleinen Zahlenfeld eintragen, wie viele Stück wirklich fertig geworden sind – normalerweise steht dort schon die geplante Menge.</li>
+	<li>Auf <strong>Fertigmelden</strong> klicken.</li>
+</ol>
+
+<p>Mit dem Fertigmelden bucht das System in einem Rutsch: das verbaute Material geht ab, die fertigen Sets kommen zu, die gestoppte Zeit wird dem Auftrag zugeschrieben.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Weniger fertig als geplant?</span>
+	<p>Trag die wirkliche Menge ein, nicht die geplante. Der Auftrag bleibt dann mit dem Rest offen, und der Bedarf zeigt weiterhin an, was fehlt. Wer die Sollmenge einträgt, um „den Haken zu setzen“, erzeugt Bestand, der nicht existiert – und der fällt erst beim Packen auf, wenn der Kunde schon wartet.</p>
+</div>
+
+<h2 id="material"><span class="nr">8.</span> Material: Filament und Kleinteile</h2>
+
+<p><span class="weg">Betrieb → Material</span></p>
+
+<figure>
+	<img src="bilder/material-alarm.png" alt="Abschnitt Beschaffungsalarm mit Meldungen zu knappen Positionen">
+	<figcaption>Ganz oben der Beschaffungsalarm: Was reicht nicht mehr lange genug, um die Lieferzeit zu überbrücken?</figcaption>
+</figure>
+
+<h3>Eine neue Filamentrolle einbuchen</h3>
+
+<p>Jede Rolle, die ins Haus kommt, wird einmal erfasst. Danach kannst du sie beim Druckjob auswählen.</p>
+
+<figure>
+	<img src="bilder/material-charge-erfassen.png" alt="Formular Charge erfassen mit Feldern für Chargencode, Zugangsdatum, Material, Hersteller, Farbe, Kilogramm, Preis je Kilogramm, Trocknungsdatum und Lagerort">
+	<figcaption>Das Formular „Charge erfassen“ am unteren Ende der Materialseite.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Chargencode:</strong> Denk dir eine kurze, eindeutige Kennung aus und schreib sie mit einem Stift auf die Rolle. Bewährt hat sich <code>MATERIAL-FARBE-JAHR NUMMER</code>, also zum Beispiel <code>PETG-ANT-2601</code>. Zweimal derselbe Code geht nicht.</li>
+	<li><strong>Zugang am:</strong> Das Datum, an dem die Rolle angekommen ist.</li>
+	<li><strong>Material, Hersteller, Farbe:</strong> Vom Etikett der Rolle abschreiben.</li>
+	<li><strong>Kilogramm:</strong> Was auf der Rolle drauf war, meist <code>1</code> oder <code>0,75</code>.</li>
+	<li><strong>Preis je kg:</strong> Was sie gekostet hat, netto. Daraus rechnet die Kalkulation die Materialkosten je Teil.</li>
+	<li><strong>Getrocknet am:</strong> Nur ausfüllen, wenn du sie getrocknet hast.</li>
+	<li>Auf <strong>Erfassen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/material-chargen.png" alt="Tabelle der Filamentchargen mit Restmenge, Verbrauch und Trocknungsstatus">
+	<figcaption>Die Chargenliste. Der Verbrauch wird aus den Druckjobs gerechnet – geplante Teile mal Bauteilgewicht. Du musst nichts abziehen.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Warum der Chargencode zählt</span>
+	<p>Wenn ein Kunde reklamiert, ist die erste Frage: aus welchem Material war das Teil? Über die Charge findest du in zwei Klicks alle Teile derselben Rolle und alle Bestellungen, in denen sie steckten (Kapitel 12). Ohne Charge ist diese Frage nicht mehr zu beantworten.</p>
+</div>
+
+<h3>Kleinteile und Verbrauchsmaterial</h3>
+<p>Weiter unten stehen Kartons, Holzwolle, Klebeband und Ähnliches. Diese Positionen werden pauschal je Bestellung abgebucht. Wenn ein Vorrat zur Neige geht, meldet sich der Beschaffungsalarm oben von selbst.</p>
+
+<h2 id="drucker"><span class="nr">9.</span> Drucker und Wartung</h2>
+
+<p><span class="weg">Betrieb → Drucker &amp; Wartung</span></p>
+
+<figure>
+	<img src="bilder/drucker-geraete.png" alt="Geräteliste mit Kürzel, Hersteller, Modell, Betriebsstunden und Maschinenstundensatz">
+	<figcaption>Die Geräte mit ihren Betriebsstunden. Die Stunden kommen aus dem Druckjournal – niemand trägt sie von Hand nach.</figcaption>
+</figure>
+
+<h3>Eine Wartung erfassen</h3>
+
+<figure>
+	<img src="bilder/drucker-wartung.png" alt="Wartungsbereich mit fälligen Wartungen und dem Formular Wartung erfassen samt Checkliste">
+	<figcaption>Oben, was fällig ist. Darunter das Formular mit der Checkliste zum Abhaken.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Wähle das <strong>Gerät</strong>.</li>
+	<li>Wähle das <strong>Intervall</strong>: <em>wöchentlich</em>, <em>monatlich</em>, <em>jährlich</em>, <em>Verschleiß</em> oder <em>Saison</em>.</li>
+	<li>Jetzt erscheint die passende Checkliste. Arbeite sie am Gerät ab und hak jeden Punkt an, den du wirklich gemacht hast.</li>
+	<li>Wenn du ein Teil getauscht hast, trag es bei <strong>Ersatzteil</strong> ein.</li>
+	<li>Beim Düsenwechsel setz zusätzlich den Haken <strong>Düse gewechselt</strong> – damit merkt sich das Gerät seinen Zählerstand.</li>
+	<li>Auf <strong>Wartung erfassen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Bei den festen Intervallen musst du alles abhaken</span>
+	<p>Wöchentlich, monatlich und jährlich nimmt das Formular nur an, wenn jeder Punkt gehakt ist – und es sagt dir namentlich, welche fehlen. Das ist kein Schikane-Formular: Die Liste ist der Nachweis, dass die Wartung wirklich stattgefunden hat. Bist du noch nicht fertig, mach erst die Arbeit und trag danach ein. Für eine Reparatur zwischendurch nimmst du <em>Verschleiß</em> – dort ist keine Liste vorgeschrieben, dafür gehören Ersatzteil und Notiz ausgefüllt.</p>
+</div>
+
+<p>Die längeren Intervalle enthalten die kürzeren: Wer monatlich wartet, saugt vorher aus. Deshalb wird bei „monatlich“ auch die Wochenliste mit abgefragt.</p>
+
+<figure>
+	<img src="bilder/drucker-aufkleber.png" alt="Abschnitt Aufkleber für die Geräte mit QR-Codes je Drucker">
+	<figcaption>Ganz unten die Aufkleber. Ausdrucken, an das jeweilige Gerät kleben – dann ist die Handy-Erfassung einen Scan entfernt.</figcaption>
+</figure>
+
+<h2 id="artikel"><span class="nr">10.</span> Artikel, Revisionen und Stücklisten</h2>
+
+<p><span class="weg">Betrieb → Artikel &amp; Revisionen</span></p>
+
+<div class="kasten info">
+	<span class="titel">Für wen dieses Kapitel ist</span>
+	<p>Dieser Bereich verlangt das Recht <em>Stammdaten ändern</em> (Profil <em>Fertigung</em> oder höher). Mit dem Profil <em>Werkstatt</em> siehst du den Menüpunkt nicht – dann überspring das Kapitel.</p>
+</div>
+
+<p>Die Seite hat oben Reiter. Der Reihe nach:</p>
+
+<h3>Reiter „Artikel“</h3>
+<figure>
+	<img src="bilder/artikel-liste.png" alt="Artikelliste mit Artikelnummer, Bezeichnung, Beschaffungsweg, Status, Preis und Etikett">
+	<figcaption>Alle Artikel. Der <strong>Beschaffungsweg</strong> entscheidet über alles Weitere.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beschaffungsweg</th><th>Bedeutung</th><th>Braucht</th></tr></thead>
+<tbody>
+<tr><td><strong>Druck</strong></td><td>Kommt aus dem Drucker</td><td>eine Revision (Druckprofil)</td></tr>
+<tr><td><strong>Montage</strong></td><td>Wird aus anderen Teilen gebaut</td><td>eine Stückliste</td></tr>
+<tr><td><strong>Zukauf</strong></td><td>Wird fertig eingekauft</td><td>Beschaffungsdaten (Lieferant, Preis)</td></tr>
+<tr><td><strong>Hybrid</strong></td><td>Teils gedruckt, teils zugekauft</td><td>beides</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Reiter „Revisionen“ – das Druckprofil</h3>
+
+<p>Eine Revision ist die Beschreibung, <em>wie</em> ein Teil gedruckt wird: Material, Düse, Schichthöhe, Füllung, Temperaturen, Teile je Platte, Druckzeit je Platte und Bauteilgewicht. Aus ihr rechnet das System Materialkosten und Druckzeit je Stück.</p>
+
+<figure>
+	<img src="bilder/artikel-revisionen.png" alt="Revisionsliste eines Artikels mit Version, Material, Parametern und Aktiv-Kennzeichen">
+	<figcaption>Wähle oben den Artikel aus, dann erscheinen seine Revisionen. Genau eine ist <strong>aktiv</strong> – mit der wird gedruckt und gerechnet.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben den <strong>Artikel</strong> auswählen und auf <strong>Anzeigen</strong> klicken.</li>
+	<li>Runterscrollen zu <strong>Revision anlegen</strong>.</li>
+	<li>Eine <strong>Version</strong> vergeben, zum Beispiel <code>v1.2</code>. Zweimal dieselbe Version je Artikel geht nicht.</li>
+	<li>Die Druckeinstellungen eintragen, so wie sie im Slicer stehen.</li>
+	<li><strong>Teile je Platte</strong>, <strong>Druckzeit je Platte</strong> und <strong>Bauteilgewicht</strong> sind Pflicht – ohne sie kann nichts gerechnet werden.</li>
+	<li>Speichern. Die neue Revision ist zunächst <strong>inaktiv</strong>.</li>
+	<li>Erst wenn ein Probedruck in Ordnung war, klick bei ihr auf <strong>Aktiv setzen</strong>. Damit löst sie die bisherige ab.</li>
+</ol>
+
+<figure>
+	<img src="bilder/artikel-revision-neu.png" alt="Formular Revision anlegen mit allen Druckparametern und dem Feld für die 3MF-Datei">
+	<figcaption>Häng nach dem Speichern die <strong>3MF-Datei</strong> an – am besten die Projektdatei mit Modell und Einstellungen. Dann muss niemand raten, aus welcher Datei diese Version entstand.</figcaption>
+</figure>
+
+<h3>Reiter „Stückliste“</h3>
+
+<figure>
+	<img src="bilder/artikel-stueckliste.png" alt="Stückliste eines Sets mit Positionen aus Unterartikeln und Komponenten">
+	<figcaption>Die Stückliste eines Sets. Positionen können andere Artikel sein (Schiene, Haken) oder Kleinteile (Schrauben, Karton).</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben den Artikel wählen, zu dem die Stückliste gehört.</li>
+	<li>Unter <strong>Position hinzufügen</strong> auswählen, ob es ein <em>Artikel</em> oder eine <em>Komponente</em> ist.</li>
+	<li>Die Position und die <strong>Menge je Stück</strong> eintragen – also wie viele davon in <em>ein</em> fertiges Stück gehen.</li>
+	<li>Auf <strong>Hinzufügen</strong> klicken.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Ein Artikel darf sich nicht selbst enthalten</span>
+	<p>Wenn du versuchst, das Set in die Stückliste des Sets zu legen, weist das System das ab. Das ist kein Fehler, sondern verhindert eine Rechnung, die nie zu Ende käme.</p>
+</div>
+
+<h2 id="lager"><span class="nr">11.</span> Lager: Bestand und Korrekturen</h2>
+
+<p><span class="weg">Betrieb → Lager</span></p>
+
+<figure>
+	<img src="bilder/lager-bestand.png" alt="Bestandstabelle je Artikel und Farbe mit Soll- und Ist-Werten">
+	<figcaption>Der Bestand je Artikel und Farbe. Rot heißt: unter dem vereinbarten Sollbestand.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Der Bestand ist eine Summe, kein Feld</span>
+	<p>Jede Zahl hier ist die Summe aller Bewegungen zu diesem Artikel. Es gibt nichts, was man „verstellen“ könnte. Stimmt eine Zahl nicht, fehlt eine Buchung oder ist eine zu viel da – such nach der Bewegung, nicht nach einem Bestandsfeld.</p>
+</div>
+
+<h3>Wenn die Zahl nicht stimmt: Korrekturbuchung</h3>
+
+<figure class="schmal">
+	<img src="bilder/lager-korrektur.png" alt="Formularzeile Korrekturbuchung mit Artikel, Farbe, Lagerplatz, Menge und Begründung">
+	<figcaption>Die Korrekturbuchung – eine Zeile, fünf Felder.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Artikel und Farbe auswählen.</li>
+	<li>Den Lagerplatz auswählen, wenn du ihn kennst.</li>
+	<li>Bei <strong>Menge ±</strong> die <em>Differenz</em> eintragen, nicht den neuen Bestand. Liegen 18 Stück im Fach, das System sagt 20, dann trägst du <code>-2</code> ein.</li>
+	<li>Eine <strong>Begründung</strong> eintragen. Die ist Pflicht. „Inventur Fach A-01-01“ oder „zwei Stück beim Entgraten gebrochen“ genügt völlig.</li>
+	<li>Auf <strong>Buchen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/lager-bewegungen.png" alt="Liste der letzten Lagerbewegungen mit Datum, Artikel, Menge, Art, Platz und Begründung">
+	<figcaption>Die letzten Bewegungen. Jede Zeile hat einen Storno-Knopf – auch hier wird nicht gelöscht, sondern gegengebucht.</figcaption>
+</figure>
+
+<h3>Lagerbuchung am Handy</h3>
+
+<p>Wareneingang, Umlagerung oder eine Korrektur direkt am Regal gehen auch am Handy: <code>/betrieb-erfassen/</code> öffnen und oben auf den Reiter <strong>Lager</strong> tippen.</p>
+
+<figure class="handy">
+	<img src="bilder/m-lager.png" alt="Handy-Ansicht Reiter Lager mit Artikelauswahl, Farbe, Lagerplatz, Menge und Buchungsart">
+	<figcaption>Der Reiter <strong>Lager</strong>. Lagerplatz und Artikel kannst du auch scannen, statt sie zu suchen.</figcaption>
+</figure>
+
+<h3>„Bewegungen ohne Farbzuordnung“</h3>
+<p>Steht diese Meldung auf der Seite, hat der Shop bei einer Bestellung keine Farbe mitgeliefert. Die Buchung ist trotzdem gemacht worden – sie hängt nur an keiner Farbe. Sag der Betriebsleitung Bescheid, damit das Farbattribut am Produkt ergänzt wird; anschließend lässt sich die Bewegung per Korrektur auf die richtige Farbe umbuchen.</p>
+
+<h2 id="qualitaet"><span class="nr">12.</span> Qualität: Chargen und Rückverfolgung</h2>
+
+<p><span class="weg">Betrieb → Qualität</span></p>
+
+<h3>Chargenbuch</h3>
+
+<figure>
+	<img src="bilder/qualitaet-chargen.png" alt="Chargenbuch mit Chargencode, Datum, Artikel, Menge und Prüfstatus">
+	<figcaption>Jeder Druckjob mit guten Teilen erzeugt automatisch eine Charge. Du legst sie nicht an – sie entsteht beim Buchen.</figcaption>
+</figure>
+
+<p>Klick auf eine Charge, um ihre Akte zu öffnen. Dort steht alles beisammen: Artikel, Revision, Filamentcharge, Drucker, Menge, Prüfung. Von dort kannst du den <strong>GPSR-Nachweis als PDF</strong> erzeugen – das Dokument, das du beiliegen lässt oder auf Nachfrage vorzeigst.</p>
+
+<figure>
+	<img src="bilder/qualitaet-akte.png" alt="Detailansicht einer Charge mit allen Herkunftsdaten und dem Knopf für den GPSR-Nachweis">
+	<figcaption>Die Chargenakte. Den Chargencode prägst du ins Bauteil und übernimmst ihn in den Slicer.</figcaption>
+</figure>
+
+<h3>Rückverfolgung</h3>
+
+<figure>
+	<img src="bilder/qualitaet-rueckverfolgung.png" alt="Rückverfolgungsansicht: von einer Filamentcharge zu betroffenen Chargen und Bestellungen">
+	<figcaption>Wähle eine Filamentcharge und klick auf <strong>Verfolgen</strong>. Du bekommst alle Teile aus dieser Rolle und alle Bestellungen, in denen sie stecken.</figcaption>
+</figure>
+
+<p>Das ist der Weg, wenn eine Rolle Material sich als schlecht herausstellt: Du siehst in einem Schritt, welche Kunden betroffen sind – und musst nicht raten.</p>
+
+<h2 id="kapazitaet"><span class="nr">13.</span> Kapazität: schaffe ich das?</h2>
+
+<p><span class="weg">Betrieb → Kapazität</span></p>
+
+<figure>
+	<img src="bilder/kapazitaet.png" alt="Kapazitätsseite mit Eingabefeldern je Artikel und dem Ergebnis der Woche">
+	<figcaption>Trag ein, wie viele Bestellungen du je Artikel und Woche erwartest, und klick auf <strong>Rechnen</strong>.</figcaption>
+</figure>
+
+<p>Das System löst die Stücklisten auf und sagt dir, wie viele Druckerstunden und wie viele Handstunden das kostet – und ob das in eine Woche passt. Nutz das vor Weihnachten oder vor einem Markt, bevor du zusagst.</p>
+
+<h2 id="fehler"><span class="nr">14.</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Meldung oder Beobachtung</th><th>Was wirklich los ist</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>„Bei Ausschuss ist eine Fehlerursache Pflicht“</td><td>Du hast weniger gute als geplante Teile eingetragen, aber keine Ursache gewählt</td><td>Fehlerursache auswählen, nochmal buchen</td></tr>
+<tr><td>„Für diesen Artikel ist keine Revision hinterlegt“</td><td>Der Artikel hat kein freigegebenes Druckprofil</td><td>Kapitel 10 – oder die Betriebsleitung fragen</td></tr>
+<tr><td>„Dieser Artikel wird nicht gedruckt“</td><td>Du hast im Druckjournal ein Set oder einen Zukaufartikel gewählt</td><td>Sets über einen Fertigungsauftrag (Kapitel 7)</td></tr>
+<tr><td>„Die Wartung ist noch nicht vollständig“</td><td>In der Checkliste fehlen Haken</td><td>Die genannten Punkte machen und abhaken</td></tr>
+<tr><td>„Es können nicht mehr Teile gut sein als geplant waren“</td><td>Zahlendreher in einem der beiden Felder</td><td>Beide Zahlen prüfen</td></tr>
+<tr><td>„Der Chargencode ist bereits vergeben“</td><td>Diesen Code gibt es schon</td><td>Laufende Nummer erhöhen</td></tr>
+<tr><td>Ein Menüpunkt fehlt</td><td>Dein Rechteprofil deckt ihn nicht ab</td><td>Person mit Vollzugriff fragen</td></tr>
+<tr><td>Der Bestand stimmt nicht mit dem Regal überein</td><td>Eine Buchung fehlt oder ist doppelt</td><td>Kapitel 11, Korrekturbuchung mit Begründung</td></tr>
+<tr><td>Der QR-Aufkleber führt auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update noch nicht neu registriert</td><td>Auf der Druckerseite auf <strong>Adressen neu registrieren</strong> klicken</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="spickzettel"><span class="nr">15.</span> Spickzettel für den Tag</h2>
+
+<div class="kasten tipp">
+	<span class="titel">Morgens</span>
+	<ol>
+		<li><span class="weg">Betrieb → Dashboard</span> öffnen, die sechs Kästen unten anschauen.</li>
+		<li><span class="weg">Betrieb → Bedarf</span> öffnen, „Zu tun“ von oben nach unten lesen.</li>
+		<li>Aufträge anlegen für das, was fehlt. Ersten Auftrag starten.</li>
+		<li>Uhr in der schwarzen Leiste oben starten (<strong>Zeit starten</strong>).</li>
+	</ol>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Während des Tages</span>
+	<ol>
+		<li>Jeder fertige Druck wird sofort gebucht – am Handy am Drucker, das dauert zwanzig Sekunden.</li>
+		<li>Jedes montierte Los wird fertiggemeldet, bevor du zum nächsten gehst.</li>
+		<li>Kaputte Teile buchst du als Ausschuss mit Ursache. Nicht heimlich in den Müll.</li>
+	</ol>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Abends</span>
+	<ol>
+		<li>Laufende Uhr stoppen und die Zeit erfassen (siehe Anleitung <a href="ba-personal.html">Personal</a>).</li>
+		<li>Offene Aufträge auf Pause stellen, wenn du morgen weiterarbeitest.</li>
+		<li>Wochenwartung nicht vergessen – das Dashboard erinnert dich.</li>
+	</ol>
+</div>
+
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Produktion · Stand: Plugin-Version 0.10.0 ·
+<a href="index.html">Übersicht</a> ·
+<a href="ba-versand.html">Versand</a> ·
+<a href="ba-personal.html">Personal</a> ·
+<a href="ba-admin.html">Administration</a></p>
+
+</div>
+</body>
+</html>

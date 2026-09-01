@@ -5,6 +5,21 @@ Buchhaltung, Lagerverwaltung, Loyalty, Produktions-/Bestellplanung,
 Preiskalkulation, Kundenbindung sowie Support & Reporting kombiniert – direkt in
 WooCommerce, ohne externen Sync.
 
+## Betriebsanleitungen
+
+Vier bebilderte Anleitungen, je eine pro Aufgabe. Einstieg: **`docs/index.html`**
+(im Browser öffnen).
+
+| Anleitung | Für wen | Datei |
+| --- | --- | --- |
+| Produktion | Werkstatt: drucken, montieren, buchen | `docs/ba-produktion.html` |
+| Versand | Packtisch: picken, packen, versenden | `docs/ba-versand.html` |
+| Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/ba-personal.html` |
+| Administration | Einrichtung, Kalkulation, Buchhaltung, Livegang | `docs/ba-admin.html` |
+
+Die Bildschirmfotos in `docs/bilder/` stammen aus einer laufenden Installation
+dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
+
 ## Installation
 
 1. Ordner als Plugin in `wp-content/plugins/` ablegen (WooCommerce muss aktiv sein).
@@ -56,7 +71,13 @@ assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
-docs/handbuch.html           Bedienungsanleitung
+docs/index.html              Wegweiser zu den vier Betriebsanleitungen
+docs/ba-produktion.html      Betriebsanleitung Produktion (Werkstatt)
+docs/ba-versand.html         Betriebsanleitung Versand (Packtisch)
+docs/ba-personal.html        Betriebsanleitung Personal (Zeit, Löhne, Rechte)
+docs/ba-admin.html           Betriebsanleitung Administration (Einrichtung, Zahlen)
+docs/ba.css                  gemeinsames Aussehen der Anleitungen
+docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```
 
 ### Modul Betrieb
