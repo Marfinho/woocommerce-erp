@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betriebsanleitung Administration · Lindenweg16 ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="ba.css">
+</head>
+<body>
+<div class="seite">
+
+<header class="kopf">
+	<div class="marke">Lindenweg16 ERP · Betriebsanleitung 4 von 4</div>
+	<h1>Administration</h1>
+	<p class="unter">Für die Person, die das Plugin einrichtet, die Zahlen dahinter pflegt und dafür geradesteht. Von der Installation über die Kalkulationsgrundlagen bis zum Livegang und der Buchhaltung.</p>
+	<nav class="wegweiser">
+		<a href="index.html">Übersicht</a>
+		<a href="ba-produktion.html">Produktion</a>
+		<a href="ba-versand.html">Versand</a>
+		<a href="ba-personal.html">Personal</a>
+		<a class="hier" href="ba-admin.html">Administration</a>
+	</nav>
+</header>
+
+<div class="inhalt">
+	<h2>Inhalt</h2>
+	<ol>
+		<li><a href="#aufbau">Wie das Plugin aufgebaut ist</a></li>
+		<li><a href="#installation">Installation und Update</a></li>
+		<li><a href="#reihenfolge">Einrichten – in dieser Reihenfolge</a></li>
+		<li><a href="#firmendaten">Firmendaten und E-Mail-Vorlagen</a></li>
+		<li><a href="#annahmen">Kalkulationsannahmen</a></li>
+		<li><a href="#farben">Farben und Lagerhoheit</a></li>
+		<li><a href="#staffel">Rabattstaffel für Händler</a></li>
+		<li><a href="#stammdaten">Stammdaten anlegen</a></li>
+		<li><a href="#preise">Preiskalkulation und Preispflege</a></li>
+		<li><a href="#buchhaltung">Buchhaltung</a></li>
+		<li><a href="#kasse">Kasse, Marketing, Events, Loyalty, Support</a></li>
+		<li><a href="#berichte">Berichte, Ziele und Monatsabschluss</a></li>
+		<li><a href="#pruefung">Systemprüfung und Protokollkette</a></li>
+		<li><a href="#import">Import und Verfahrensdokumentation</a></li>
+		<li><a href="#automatisch">Was von allein läuft</a></li>
+		<li><a href="#livegang">Livegang: sauber starten</a></li>
+		<li><a href="#sicherung">Datensicherung und Notfall</a></li>
+		<li><a href="#fehler">Wenn etwas nicht geht</a></li>
+	</ol>
+</div>
+
+<h2 id="aufbau"><span class="nr">1.</span> Wie das Plugin aufgebaut ist</h2>
+
+<p>Lindenweg16 ERP ist ein einziges WordPress-Plugin, das direkt in WooCommerce lebt. Es gibt keinen externen Dienst, keine Zwischenschicht und keinen nächtlichen Abgleich – die Bestellung im Shop und die Buchung im Lager sind dieselbe Datenbank.</p>
+
+<p>Im Verwaltungsbereich erscheint es als <strong>zwei</strong> Menüs:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Menü</th><th>Inhalt</th></tr></thead>
+<tbody>
+<tr><td><strong>Betrieb</strong> (Hammer)</td><td>Dashboard, Bedarf, Druckjournal, Artikel &amp; Revisionen, Drucker &amp; Wartung, Konfigurator, Kapazität, Material, Lager, Lagerplätze/Fertigung/Picklisten, Bestellungen, Qualität, Kontakte/B2B, Zeiterfassung, Berichte, Import &amp; Doku, Benutzer &amp; Rechte, Einstellungen</td></tr>
+<tr><td><strong>Lindenweg16</strong> (Laden)</td><td>Dashboard, Buchhaltung, Loyalty, Produktion, Preiskalkulation, Kasse, Marketing, Support, Reporting, Einstellungen, Livegang</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="schmal">
+	<img src="bilder/menue-lindenweg16.png" alt="Das schwarze Menü mit dem aufgeklappten Eintrag Lindenweg16 und seinen Unterpunkten">
+	<figcaption>Das kaufmännische Menü <strong>Lindenweg16</strong>.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/lw16-dashboard.png" alt="Das Lindenweg16-Dashboard mit Umsatz, offenen Bestellungen, Lagerwarnungen, offenen Tickets, Steuer-Rücklage und den letzten Bestellungen">
+	<figcaption><span class="weg">Lindenweg16 → Dashboard</span> – der kaufmännische Überblick. Die Steuer-Rücklage ist ein Richtwert und ersetzt keine steuerliche Beratung.</figcaption>
+</figure>
+
+<h3>Vier Grundsätze, die das Verhalten erklären</h3>
+<ol class="schritte">
+	<li><strong>Nichts Berechnetes wird gespeichert.</strong> Stückpreise, Herstellkosten, Maschinenstundensätze, Bestände und Kennzahlen entstehen bei jedem Aufruf neu aus den Rohdaten. Es gibt deshalb keine Zahl, die „veraltet“ sein kann.</li>
+	<li><strong>Kein hartes Löschen bei Bewegungsdaten.</strong> Druckjobs, Lagerbewegungen und Chargen werden storniert, nicht gelöscht. Stammdaten lassen sich stilllegen und – solange keine Buchung daran hängt – löschen.</li>
+	<li><strong>Annahmen gelten ab einem Stichtag.</strong> Eine Änderung überschreibt nie den alten Wert, sondern erzeugt eine neue Zeile. Alte Kalkulationen bleiben nachrechenbar.</li>
+	<li><strong>Rechte sind fein geschnitten.</strong> Sehen und Ändern sind getrennt, und Geld ist ein eigenes Recht. Ein Aushilfsvertrag ist kein Grund, jemandem den Zugang zu verwehren – aber auch keiner, ihm die Kalkulation zu zeigen.</li>
+</ol>
+
+<h2 id="installation"><span class="nr">2.</span> Installation und Update</h2>
+
+<div class="kasten achtung">
+	<span class="titel">Voraussetzung</span>
+	<p><strong>WooCommerce muss installiert und aktiv sein.</strong> Ohne WooCommerce bricht die Aktivierung mit einer Meldung ab und das Plugin deaktiviert sich selbst wieder. Außerdem: WordPress 6.2 oder neuer, PHP 7.4 oder neuer.</p>
+</div>
+
+<ol class="schritte">
+	<li>Den Plugin-Ordner nach <code>wp-content/plugins/</code> kopieren – per FTP, SFTP oder über die Dateiverwaltung des Hosters.</li>
+	<li>Im Verwaltungsbereich auf <strong>Plugins</strong> gehen und bei <em>Lindenweg16 ERP</em> auf <strong>Aktivieren</strong> klicken.</li>
+	<li>Beim Aktivieren passiert automatisch: alle Datenbanktabellen werden angelegt, die Rollen <code>lw16_manager</code> und <code>lw16_betrieb</code> werden registriert, und das geschützte Belegverzeichnis wird erstellt.</li>
+	<li>Den Personen, die mit dem Plugin arbeiten sollen, die passende Rolle beziehungsweise das passende Rechteprofil geben (siehe Anleitung <a href="ba-personal.html">Personal</a>, Kapitel 10). Administratoren haben ohnehin vollen Zugriff.</li>
+</ol>
+
+<h3>Update</h3>
+<p>Ein Update ist ein Austausch des Ordners. Beim ersten Aufruf danach läuft der Schema-Abgleich mit und ergänzt fehlende Tabellen und Spalten. Es geht dabei nichts verloren.</p>
+
+<div class="kasten merke">
+	<span class="titel">Vor jedem Update: Datenbanksicherung</span>
+	<p>Das ist kein Ritual, sondern die einzige Rückfahrkarte. Das Plugin hat keinen Papierkorb.</p>
+</div>
+
+<h2 id="reihenfolge"><span class="nr">3.</span> Einrichten – in dieser Reihenfolge</h2>
+
+<p>Die Reihenfolge ist nicht beliebig: Jeder Schritt braucht, was der vorige angelegt hat.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>#</th><th>Was</th><th>Wo</th><th>Warum zuerst</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Firmendaten, Logo, Kleinunternehmer-Kennzeichen</td><td>Lindenweg16 → Einstellungen</td><td>Steht auf Rechnungen und Lieferscheinen</td></tr>
+<tr><td>2</td><td>Kalkulationsannahmen</td><td>Betrieb → Einstellungen → Kalkulationsannahmen</td><td>Ohne sie rechnet jede Kalkulation gegen Standardwerte</td></tr>
+<tr><td>3</td><td>Farbattribut und Standardfarbe</td><td>Betrieb → Einstellungen → Farben &amp; Lagerhoheit</td><td>Jede Lagerbuchung braucht eine Farbe</td></tr>
+<tr><td>4</td><td>Lagerplätze</td><td>Betrieb → Lagerplätze …</td><td>Artikel bekommen einen Standardplatz</td></tr>
+<tr><td>5</td><td>Drucker</td><td>Betrieb → Drucker &amp; Wartung</td><td>Aus Gerätedaten kommt der Maschinenstundensatz</td></tr>
+<tr><td>6</td><td>Komponenten (Kleinteile)</td><td>Betrieb → Artikel &amp; Revisionen → Komponenten</td><td>Werden in Stücklisten gebraucht</td></tr>
+<tr><td>7</td><td>Artikel</td><td>Betrieb → Artikel &amp; Revisionen → Artikel</td><td>Grundlage von allem Weiteren</td></tr>
+<tr><td>8</td><td>Revisionen und Stücklisten</td><td>gleiche Seite, andere Reiter</td><td>Ohne sie keine Herstellkosten</td></tr>
+<tr><td>9</td><td>Rabattstaffel</td><td>Betrieb → Einstellungen → Rabattstaffel B2B</td><td>Wird bei jeder Händlerbestellung aufgelöst</td></tr>
+<tr><td>10</td><td>Benutzer und Rechteprofile</td><td>Betrieb → Benutzer &amp; Rechte</td><td>Damit alle arbeiten können</td></tr>
+<tr><td>11</td><td>Livegang (Probedaten löschen)</td><td>Lindenweg16 → Livegang</td><td>Ganz zum Schluss, siehe Kapitel 16</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="firmendaten"><span class="nr">4.</span> Firmendaten und E-Mail-Vorlagen</h2>
+
+<p><span class="weg">Lindenweg16 → Einstellungen</span></p>
+
+<figure>
+	<img src="bilder/lw16-einstellungen.png" alt="Die Einstellungsseite mit den Abschnitten Firmendaten, Corporate Identity, Buchhaltung, Marketing, Loyalty, Kundenbindung, E-Mail sowie Reporting und DHL">
+	<figcaption>Eine lange Seite mit vielen Abschnitten – ganz unten steht <strong>Einstellungen speichern</strong>. Der Knopf speichert alles auf einmal.</figcaption>
+</figure>
+
+<h3>Firmendaten</h3>
+<p>Firmenname, Straße, PLZ/Ort, Steuernummer, E-Mail, Telefon, IBAN und BIC. Diese Angaben erscheinen auf Rechnungen, Lieferscheinen und in den automatischen E-Mails. Trag sie vollständig ein – ein Lieferschein ohne Absender sieht unseriös aus.</p>
+
+<h3>Corporate Identity</h3>
+<ul>
+	<li><strong>Logo:</strong> Auf <em>Logo auswählen</em> klicken und aus der Mediathek wählen. JPEG ist empfohlen, weil es sich sauber in PDFs einbetten lässt.</li>
+	<li><strong>Markenfarbe:</strong> Hintergrundfarbe der Kopfzeile in E-Mails.</li>
+</ul>
+
+<h3>Buchhaltung</h3>
+<div class="tabelle">
+<table>
+<thead><tr><th>Einstellung</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Kleinunternehmer §19 UStG</strong></td><td>Ist der Haken gesetzt, wird keine Umsatzsteuer ausgewiesen und alle Beträge sind brutto. Prüf das mit deiner Steuerberatung, bevor du es änderst.</td></tr>
+<tr><td><strong>Zahlungsgebühren aus Bestellhinweisen übernehmen</strong></td><td>Zieht die Gebühren von PayPal &amp; Co. automatisch aus der Bestellung.</td></tr>
+<tr><td><strong>Geschätzter Steuersatz für Rücklage</strong></td><td>Nur für die Rücklagenanzeige auf dem Dashboard. Ein Richtwert, keine Steuerberatung.</td></tr>
+<tr><td><strong>Rechnungsnummern-Modus</strong></td><td><code>jahr</code> = je Jahr neu durchlaufend.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>E-Mail-Vorlagen</h3>
+<figure>
+	<img src="bilder/lw16-einst-mail.png" alt="Der Abschnitt E-Mail-Vorlagen mit aufklappbaren Einträgen für die einzelnen automatischen Mails">
+	<figcaption>Jede automatische E-Mail lässt sich anpassen. Ein leeres Feld bedeutet: Standardtext verwenden.</figcaption>
+</figure>
+
+<p>Klick auf das kleine Dreieck vor einer Vorlage, um sie aufzuklappen. Unter jedem Feld stehen die verfügbaren Platzhalter – <code>{firmenname}</code> gibt es in jeder Vorlage. Schreib die Platzhalter genau so ab, mit geschweiften Klammern.</p>
+
+<h2 id="annahmen"><span class="nr">5.</span> Kalkulationsannahmen</h2>
+
+<p><span class="weg">Betrieb → Einstellungen → Reiter „Kalkulationsannahmen“</span></p>
+
+<p>Das ist die wichtigste Seite des ganzen Plugins. Hier stehen die Zahlen, aus denen jeder Preis entsteht.</p>
+
+<figure>
+	<img src="bilder/einst-annahmen.png" alt="Tabelle der Kalkulationsannahmen mit Wert am Stichtag, Eingabefeld für einen neuen Wert, Datum, Begründung, Festschreiben-Knopf und Verlauf">
+	<figcaption>Jede Annahme mit ihrem aktuellen Wert, ihrem technischen Namen und ihrem Verlauf.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Annahme</th><th>Was sie bedeutet</th></tr></thead>
+<tbody>
+<tr><td><strong>Filamentpreis (€/kg)</strong></td><td>Rückfallwert, wenn an einem Druckjob keine Charge hängt</td></tr>
+<tr><td><strong>Kalkulatorischer Stundensatz (€/h)</strong></td><td>Der Satz, mit dem Handarbeit in den Preis eingeht – nicht der bezahlte Lohn</td></tr>
+<tr><td><strong>Lebensdauer je Gerät (Betriebsstunden)</strong></td><td>Grundlage der Abschreibung im Maschinenstundensatz</td></tr>
+<tr><td><strong>Ersatzteile und Verschleiß (€ je Gerät und Jahr)</strong></td><td>Wird über die Betriebsstunden umgelegt</td></tr>
+<tr><td><strong>Geplante Betriebsstunden je Gerät und Jahr</strong></td><td>Der Nenner dieser Umlage – darf nie 0 sein</td></tr>
+<tr><td><strong>Leistungsaufnahme (kW) und Strompreis (€/kWh)</strong></td><td>Ergeben die Energiekosten je Druckstunde</td></tr>
+<tr><td><strong>Zahlungsgebühr variabel / fix</strong></td><td>Anteil und Festbetrag je Transaktion</td></tr>
+<tr><td><strong>Verpackung + Beileger (€ je Bestellung)</strong></td><td>Fällt genau einmal je Bestellung an – deshalb trägt sich ein Set besser als Einzelteile</td></tr>
+<tr><td><strong>Ausschusszuschlag (Anteil)</strong></td><td>Kalkulatorischer Aufschlag für Ausschuss</td></tr>
+<tr><td><strong>Umsatzsteuersatz (Anteil)</strong></td><td>Bei Kleinunternehmerregelung 0</td></tr>
+<tr><td><strong>Nettodruckstunden je Gerät und Woche</strong></td><td>Kapazitätsplanung</td></tr>
+<tr><td><strong>Minuten je Plattenwechsel</strong></td><td>Bedienzeit, die auf die Teile umgelegt wird</td></tr>
+<tr><td><strong>Eigene Arbeitsstunden je Woche</strong></td><td>Das Wochenbudget in der Zeiterfassung</td></tr>
+<tr><td><strong>Kundengewinnungskosten Direktverkauf (€)</strong></td><td>Fließt in den Deckungsbeitrag II ein</td></tr>
+<tr><td><strong>Warnschwelle DB II je Position (€)</strong></td><td>Ab wann eine Position als unwirtschaftlich markiert wird</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Einen Wert ändern</h3>
+<ol class="schritte">
+	<li>In der Zeile der Annahme den <strong>neuen Wert</strong> eintragen. Punkt oder Komma sind beide erlaubt.</li>
+	<li>Das <strong>Datum</strong> setzen, ab dem er gelten soll.</li>
+	<li>Eine <strong>Begründung</strong> schreiben: „Stromvertrag ab 01.10. teurer“. Sie steht später im Verlauf und erspart dir in zwei Jahren das Rätselraten.</li>
+	<li>Auf <strong>Festschreiben</strong> klicken.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Festschreiben überschreibt nichts</span>
+	<p>Der alte Wert wird zum Vortag abgeschlossen und bleibt stehen. Rechts im <strong>Verlauf</strong> siehst du die ganze Geschichte. Mit dem Feld <strong>Gültig zum Stichtag</strong> oben kannst du dir ansehen, welche Werte an einem beliebigen Tag galten – und damit jede alte Kalkulation nachrechnen.</p>
+</div>
+
+<h2 id="farben"><span class="nr">6.</span> Farben und Lagerhoheit</h2>
+
+<p><span class="weg">Betrieb → Einstellungen → Reiter „Farben &amp; Lagerhoheit“</span></p>
+
+<h3>Farbsystem</h3>
+
+<figure>
+	<img src="bilder/einst-farbsystem.png" alt="Abschnitt Farbsystem mit dem Farbattribut, der Liste bekannter Farben und der Standardfarbe">
+	<figcaption>Die Farben kommen aus einem globalen WooCommerce-Produktattribut, üblicherweise <code>pa_farbe</code>.</figcaption>
+</figure>
+
+<p>Es gibt bewusst keine zweite, plugin-eigene Farbliste. Die Farbe muss ohnehin im Shop sichtbar sein, und zwei Listen driften genau dann auseinander, wenn eine Farbe dazukommt. Gespeichert wird immer der <strong>Slug</strong> (<code>anthrazit</code>), nie der Anzeigename – so verlieren alte Buchungen ihre Zuordnung nicht, wenn der Anzeigename sich ändert.</p>
+
+<ol class="schritte">
+	<li>Existiert das Attribut noch nicht, sagt die Seite das. Leg es an unter <strong>Produkte → Attribute</strong> in WooCommerce.</li>
+	<li>Dort für jede Farbe einen Begriff anlegen.</li>
+	<li>Hier die <strong>Standardfarbe</strong> setzen. Sie greift für jede Position, die keine eigene Farbe trägt – bei nur einer produzierten Farbe ist das der Normalfall.</li>
+</ol>
+
+<h3>Lagerhoheit</h3>
+
+<figure>
+	<img src="bilder/einst-lagerhoheit.png" alt="Abschnitt Lagerhoheit mit dem Schalter für die Übernahme der Lagerabgänge durch das Modul Betrieb">
+	<figcaption>Ein Schalter mit großer Wirkung – erst umlegen, wenn der Artikelstamm vollständig ist.</figcaption>
+</figure>
+
+<p>Das Plugin kennt zwei Lagermodelle: den fortgeschriebenen Bestand des alten Lager-Moduls und das Bewegungskonto von <em>Betrieb</em>. Beide gleichzeitig buchen zu lassen, würde jeden Abgang doppelt zählen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Stellung</th><th>Wirkung</th></tr></thead>
+<tbody>
+<tr><td><strong>Übernahme aktiv</strong></td><td><em>Betrieb</em> bucht die Abgänge genau der Produkte, die auf einen Artikel im Artikelstamm zeigen. Das Lager-Modul lässt diese in Ruhe.</td></tr>
+<tr><td><strong>Abgeschaltet</strong></td><td>Das Lager-Modul bucht alle Abgänge. Das Bewegungskonto bleibt für Verkäufe leer.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Reihenfolge beachten</span>
+	<p>Schalte die Übernahme erst ein, wenn die Artikel angelegt <em>und</em> mit ihren Shop-Produkten verknüpft sind. Sonst laufen Verkäufe von Produkten ohne Artikelzuordnung ins Leere.</p>
+</div>
+
+<h3>Nachbestellseite und Wochenmail</h3>
+<p>Auf derselben Seite stehen zwei weitere Schalter: ob die Nachbestellseite für Händler in das Website-Design eingebettet oder als schlichte eigene Seite mit Logo erscheint, und ob die <strong>Wochenmail</strong> verschickt wird – eine Zusammenfassung von Kennzahlen, Alarmen, Beschaffung, Wartung und Wiedervorlagen der vergangenen Woche.</p>
+
+<h2 id="staffel"><span class="nr">7.</span> Rabattstaffel für Händler</h2>
+
+<p><span class="weg">Betrieb → Einstellungen → Reiter „Rabattstaffel B2B“</span></p>
+
+<figure>
+	<img src="bilder/einst-staffel.png" alt="Die Rabattstaffel mit Stufen, Gültigkeitsdatum und Verlauf">
+	<figcaption>Die Standardstaffel gilt für alle Händler ohne Sondervereinbarung.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Die Stufen eintragen: ab welcher Menge welcher Rabatt gilt.</li>
+	<li>Ein Datum bei <strong>Neue Staffel gültig ab</strong> setzen.</li>
+	<li>Auf <strong>Festschreiben</strong> klicken.</li>
+</ol>
+
+<p>Auch hier wird nichts überschrieben: Die bisherigen Stufen werden zum Vortag abgeschlossen und bleiben stehen. Eine Auswertung alter Bestellungen rechnet weiterhin mit der damals gültigen Staffel.</p>
+
+<h3>Händler pflegen: Kontakte / B2B</h3>
+
+<p><span class="weg">Betrieb → Kontakte / B2B</span></p>
+
+<figure>
+	<img src="bilder/kontakte.png" alt="Kontaktliste mit fälligen Wiedervorlagen, allen Kontakten und dem Formular zum Anlegen">
+	<figcaption>Oben die fälligen Wiedervorlagen, darunter alle Kontakte, ganz unten das Anlegeformular.</figcaption>
+</figure>
+
+<p>Sonderkonditionen für einzelne Händler stehen nicht in der Standardstaffel, sondern in der Kontaktakte. Klick in der Liste auf <strong>Akte öffnen</strong>.</p>
+
+<figure>
+	<img src="bilder/kontakt-akte.png" alt="Kontaktakte mit Stammdaten, Konditionen, Kommissionsbestand, Aktivitäten und Nachbestell-Link">
+	<figcaption>Die Kontaktakte bündelt alles zu einem Händler: Konditionen, Kommissionsbestand, Aktivitäten, Umsatz und den Nachbestell-Link.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/kontakt-aktivitaeten.png" alt="Abschnitt Aktivitäten mit Telefonaten, Mustersendungen und Angeboten samt Wiedervorlage">
+	<figcaption>Jede Aktivität braucht eine Wiedervorlage – ohne nächsten Termin versandet ein Gespräch. Ohne sie nimmt das Formular den Eintrag nicht an.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/kontakt-konditionen.png" alt="Abschnitt Konditionen in einer Kontaktakte">
+	<figcaption>Sonderkonditionen je Händler – ebenfalls mit Stichtag festgeschrieben.</figcaption>
+</figure>
+
+<h2 id="stammdaten"><span class="nr">8.</span> Stammdaten anlegen</h2>
+
+<p>Der ausführliche Weg steht in der Anleitung <a href="ba-produktion.html">Produktion</a>, Kapitel 10. Hier nur, was aus Verwaltungssicht wichtig ist.</p>
+
+<figure>
+	<img src="bilder/artikel-liste.png" alt="Artikelliste mit Nummer, Bezeichnung, Beschaffungsweg, Status und Preis">
+	<figcaption><span class="weg">Betrieb → Artikel &amp; Revisionen</span> – die Reiter arbeiten alle auf demselben Artikel, den du oben auswählst.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Drei Felder, die man am Anfang gern vergisst</span>
+	<p><strong>Beschaffungsweg</strong> – er entscheidet, ob der Artikel eine Revision, eine Stückliste oder Beschaffungsdaten braucht. Falsch gesetzt, verlangt das System später Dinge, die es gar nicht geben kann.<br>
+	<strong>Verknüpfung zum Shop-Produkt</strong> – ohne sie erkennt das Plugin bei einer Bestellung nicht, welcher Artikel gemeint ist, und bucht keinen Bestand ab.<br>
+	<strong>Standard-Lagerplatz</strong> – ohne ihn steht auf jeder Pickliste ein Strich statt eines Fachs.</p>
+</div>
+
+<figure>
+	<img src="bilder/artikel-komponenten.png" alt="Komponentenliste mit Gebindegröße, Gebindepreis, errechnetem Stückpreis, Lieferant und Bestand">
+	<figcaption>Kleinteile werden im Gebinde gekauft und im Stück verbraucht. Deshalb trägst du <strong>Gebindegröße</strong> und <strong>Gebindepreis</strong> ein – der Stückpreis wird gerechnet, nicht gepflegt.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/artikel-beschaffung.png" alt="Reiter Beschaffung mit Lieferant, Konditionen und Historie">
+	<figcaption>Zukauf- und Hybridartikel brauchen Beschaffungsdaten. Ein Preiswechsel des Lieferanten erzeugt eine neue Zeile – alte Kalkulationen rechnen mit dem damaligen Preis weiter.</figcaption>
+</figure>
+
+<h3>Konfigurator</h3>
+
+<p><span class="weg">Betrieb → Konfigurator</span></p>
+
+<figure>
+	<img src="bilder/konfigurator.png" alt="Die Konfiguratorseite mit Bausteinen, Teilen und Layout-Einstellungen">
+	<figcaption>Der Konfigurator lässt Kunden im Shop ihre Kombination zusammenstellen. Gepflegt werden hier die Bausteine, die Teile dahinter und das Layout.</figcaption>
+</figure>
+
+<p>Was ein Kunde konfiguriert, landet als codierte Konfiguration im Warenkorb und wird beim Bestellen wieder in echte Artikel aufgelöst – Lagerabgang und Kalkulation funktionieren also genauso wie bei einem normalen Artikel.</p>
+
+<h2 id="preise"><span class="nr">9.</span> Preiskalkulation und Preispflege</h2>
+
+<h3>Die Kalkulation eines Artikels ansehen</h3>
+
+<p><span class="weg">Betrieb → Artikel &amp; Revisionen → Reiter „Kalkulation“</span></p>
+
+<figure>
+	<img src="bilder/artikel-kalkulation.png" alt="Kalkulationsansicht mit Kostenanteilen je Position, Herstellkosten und Preisebenen im Vergleich">
+	<figcaption>Die Kalkulation eines Artikels, aufgeschlüsselt nach Kostenanteilen. Über <strong>Stichtag</strong> rechnest du sie mit den Annahmen eines beliebigen Tages nach.</figcaption>
+</figure>
+
+<p>Ist etwas unvollständig – fehlende Revision, fehlende Stückliste, fehlender Gerätesatz –, sagt die Seite das ausdrücklich, statt still mit null zu rechnen.</p>
+
+<h3>Der Bestellart-Rechner</h3>
+
+<figure>
+	<img src="bilder/artikel-bestellarten.png" alt="Bestellart-Rechner mit Mengen je Artikel und dem Vergleich gegenüber Einzelbestellungen">
+	<figcaption>Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an – deshalb trägt sich ein Set besser als dieselben Positionen einzeln. Hier rechnest du aus, wie viel.</figcaption>
+</figure>
+
+<h3>Preise in den Shop übernehmen</h3>
+
+<p><span class="weg">Lindenweg16 → Preiskalkulation</span></p>
+
+<figure>
+	<img src="bilder/lw16-preiskalkulation.png" alt="Preiskalkulationsseite mit Zielmarge, Artikelliste, empfohlenen Preisen und Übernehmen-Knöpfen">
+	<figcaption>Die Zielmarge oben eintragen, auf <strong>Neu rechnen</strong> klicken – dann steht je Artikel der Preis, der die Marge erreicht.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös).</li>
+	<li>Auf <strong>Neu rechnen</strong> klicken.</li>
+	<li>Die Liste durchsehen. Steht bei einem Artikel <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
+	<li>Einzeln mit <strong>Übernehmen</strong> oder gesammelt mit <strong>Alle Preise übernehmen</strong> in den Shop schreiben.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">„Alle Preise übernehmen“ überschreibt Normalpreise</span>
+	<p>Der Knopf setzt den Normalpreis jedes verknüpften Produkts neu. Ein Angebotspreis in WooCommerce bleibt unberührt. Schau die Liste vorher durch – danach gibt es kein Rückgängig.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Die Annahmen werden hier nicht mehr gepflegt</span>
+	<p>Sie liegen historisiert unter <span class="weg">Betrieb → Einstellungen → Kalkulationsannahmen</span>. Diese Seite rechnet nur mit ihnen.</p>
+</div>
+
+<h2 id="buchhaltung"><span class="nr">10.</span> Buchhaltung</h2>
+
+<p><span class="weg">Lindenweg16 → Buchhaltung</span></p>
+
+<p>Die Seite hat Reiter: <em>Belege</em>, <em>Dashboard</em>, <em>Beleg erfassen</em>, <em>Rechnungen</em>, <em>Journal</em>, <em>Kassenbuch</em>, <em>EÜR</em>, <em>Dauerbuchungen</em>, <em>Anlagen</em>, <em>E-Rechnung</em>, <em>Betriebsprüfung</em>, <em>GoBD-Prüfung</em>.</p>
+
+<figure>
+	<img src="bilder/lw16-buchhaltung.png" alt="Buchhaltungsseite mit Reitern und der Belegliste">
+	<figcaption>Der Einstieg: die Belegliste mit Händler, Kategorie, Betrag und Status.</figcaption>
+</figure>
+
+<h3>Einen Beleg erfassen</h3>
+
+<figure>
+	<img src="bilder/lw16-buchhaltung-beleg.png" alt="Formular Beleg erfassen mit Datum, Händler, Betrag, Kategorie, Konto und Datei-Upload">
+	<figcaption>Beleg hochladen, Felder prüfen, speichern. Das Plugin liest PDF-Belege aus und schlägt Datum, Händler und Betrag vor – die Vorschläge <em>müssen</em> geprüft werden.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Reiter <strong>Beleg erfassen</strong> öffnen.</li>
+	<li>Die Belegdatei hochladen (PDF oder Foto).</li>
+	<li>Die vorgeschlagenen Werte prüfen und korrigieren: Datum, Händler, Betrag.</li>
+	<li>Die <strong>Kategorie</strong> beziehungsweise das SKR03-Konto zuordnen.</li>
+	<li>Speichern.</li>
+</ol>
+
+<h3>Festschreiben und Stornieren</h3>
+<p>Ein festgeschriebener Beleg lässt sich nicht mehr ändern – das verlangt die GoBD. Ist etwas falsch, wird der Beleg <strong>storniert</strong> und neu erfasst; beides bleibt sichtbar.</p>
+
+<h3>EÜR</h3>
+<figure>
+	<img src="bilder/lw16-buchhaltung-euer.png" alt="EÜR-Ansicht mit Einnahmen, Ausgaben nach Kontengruppen und Ergebnis">
+	<figcaption>Einnahmen kommen aus WooCommerce abzüglich Erstattungen, Ausgaben aus den Belegen nach SKR03-Kontengruppen. Über <strong>EÜR als PDF exportieren</strong> bekommst du das Dokument inklusive Belegen.</figcaption>
+</figure>
+
+<h3>GoBD-Prüfung</h3>
+<figure>
+	<img src="bilder/lw16-buchhaltung-gobd.png" alt="GoBD-Prüfseite mit Prüfpunkten und Ergebnissen">
+	<figcaption>Die Prüfung sucht nach Lücken in der Nummernfolge, fehlenden Belegen und unterbrochenen Hashketten.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Diese Anleitung ersetzt keine Steuerberatung</span>
+	<p>Das Plugin rechnet, was du ihm gibst. Ob eine Ausgabe abziehbar ist, ob die Kleinunternehmerregelung noch passt und was in die EÜR gehört, entscheidet nicht die Software.</p>
+</div>
+
+<h2 id="kasse"><span class="nr">11.</span> Kasse, Marketing, Events, Loyalty, Support</h2>
+
+<h3>Marktkasse</h3>
+<p><span class="weg">Lindenweg16 → Kasse</span></p>
+
+<figure>
+	<img src="bilder/lw16-kasse.png" alt="Kassenseite mit dem Formular für einen neuen Kassatag und der Liste abgeschlossener Tage">
+	<figcaption>Vor dem Markt einen Kassatag starten, am Abend abschließen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Markt / Anlass</strong> eintragen.</li>
+	<li>Eine <strong>Kostenstelle</strong> wählen, wenn zu diesem Anlass eine Marketing-Kampagne läuft – dann zählt der Tagesumsatz dort gegen die Kosten.</li>
+	<li><strong>Kassenbestand Anfang</strong> eintragen: das Wechselgeld.</li>
+	<li>Auf <strong>Neuen Kassatag starten</strong> klicken. Verkauft wird danach über die <strong>Mobile Kasse</strong> auf dem Handy.</li>
+	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz.</li>
+</ol>
+
+<h3>Marketing</h3>
+<p><span class="weg">Lindenweg16 → Marketing</span></p>
+
+<figure>
+	<img src="bilder/lw16-marketing.png" alt="Marketingseite mit Kampagnenliste und Kennzahlen">
+	<figcaption>Jeder Marktbesuch, jede Anzeige, jede Flyeraktion ist eine Kampagne mit eigener Kostenstelle.</figcaption>
+</figure>
+
+<p>Kosten kommen aus zugeordneten Belegen und aus der Kilometerpauschale (in den Einstellungen änderbar, wird als Eigenbeleg gebucht). Gegenübergestellt werden Marktkassenumsatz und nachgewiesener Shop-Umsatz. Daraus entstehen Umsatz je Euro Werbekosten und Kosten je Bestellung.</p>
+
+<h3>Events</h3>
+<p><span class="weg">Events</span> – ein eigener Menüpunkt neben Lindenweg16.</p>
+
+<p>Ein Event ist eine ganz normale Seite mit Titel, Text und Beitragsbild. Darunter stehen Eckdaten, Zusatzfelder und die Anmeldung. Drei Typen sind angelegt – <strong>Social Ride</strong>, <strong>Markt</strong> und <strong>Rennen</strong> –, weitere legst du unter <span class="weg">Events → Eventtypen</span> selbst an.</p>
+
+<ol class="schritte">
+	<li><strong>Typ wählen</strong> in der rechten Spalte. Er entscheidet, welche Feldvorlage vorgeschlagen wird.</li>
+	<li><strong>Eckdaten</strong>: Beginn, Ende, Ort, Treffpunkt.</li>
+	<li><strong>Anmeldung</strong>: der Haken <em>Anmeldung auf der Eventseite anbieten</em>. Ohne ihn erscheint gar kein Formular.</li>
+	<li><strong>Maximale Teilnehmerzahl</strong>, optional. <strong>0 oder leer heißt unbegrenzt</strong>, nicht „niemand".</li>
+	<li><strong>Kostenstelle</strong> wählen, wenn zum Event eine Kampagne läuft – dann stehen Standgebühr, Fahrtkosten und Material im Marketing zusammen.</li>
+	<li><strong>Veröffentlichen</strong>. Danach erscheint rechts der QR-Code auf die Eventseite, als SVG herunterladbar und damit beliebig groß druckbar.</li>
+</ol>
+
+<h3>Zusatzfelder und die Komoot-Karte</h3>
+
+<p>Jedes Event trägt seine eigenen Felder – beim Social Ride die Tour und die Distanz, beim Markt die Standnummer, beim Rennen die Startzeit. Beim ersten Öffnen schlägt das Plugin die Vorlage zum gewählten Typ vor; jede Zeile lässt sich ändern, löschen und ergänzen, <strong>Feld hinzufügen</strong> hängt eine neue an.</p>
+
+<p>Für eine <strong>Komoot-Tour</strong> ein Feld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren – die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte mit Höhenprofil. Ist die Adresse nicht lesbar, steht dort ein schlichter Link statt der Karte; verschluckt wird nichts.</p>
+
+<div class="kasten merke">
+	<span class="titel">Kein Feld für fertigen Einbettungscode</span>
+	<p>Aus der eingefügten Adresse werden nur Tour-Nummer und Freigabe-Token gelesen, die Einbettung baut das Plugin selbst. Ein Feld, in das man beliebiges Markup kippen kann, läuft auf der eigenen Seite mit – das wäre eine offene Tür, auch wenn heute nur du hineinschreibst.</p>
+</div>
+
+<h3>Wie die Anmeldung abläuft</h3>
+
+<p>Auch ohne Benutzerkonto: Name, E-Mail, Häkchen zur Einwilligung. <strong>Begleitpersonen</strong> trägt man darunter ein – je Klick auf <em>+ weitere Person</em> kommt eine Namenszeile dazu, bis zu zehn. Jede Begleitperson braucht einen Namen und belegt einen eigenen Platz; leere Zeilen werden beim Absenden verworfen.</p>
+
+<p>Die Belegung zählt deshalb <strong>Plätze, nicht Anmeldungen</strong>: Bei 20 Plätzen und einer Anmeldung zu dritt stehen 3 von 20.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Der Platz zählt erst mit dem Klick auf den Bestätigungslink</span>
+	<p>Nach dem Absenden geht eine E-Mail mit Bestätigungslink raus. Eine abgesendete, aber nie bestätigte Anmeldung belegt keinen Platz – sonst könnte jeder mit erfundenen Adressen ein Event blockieren. In der Liste steht sie so lange als <em>unbestätigt</em> und verfällt nach sieben Tagen von allein.</p>
+</div>
+
+<p>Über denselben Link sagt der Teilnehmer später wieder ab. Wird dadurch ein Platz frei, rückt der Erste von der Warteliste automatisch nach und bekommt sofort eine E-Mail – von Hand ist dafür nichts zu tun. Dasselbe passiert, wenn du die maximale Teilnehmerzahl nachträglich erhöhst.</p>
+
+<p>Eine Gruppe rückt nur <strong>geschlossen</strong> nach, und aufgefüllt wird streng der Reihe nach. Wird ein Platz frei, während vorne eine Dreiergruppe wartet, rückt niemand nach – auch kein Einzelner weiter hinten. Das ist Absicht: Sonst käme die Gruppe nie an die Reihe, weil sie jedes Mal überholt würde. Willst du es im Einzelfall anders, setzt du den Status in der Anmeldeliste von Hand.</p>
+
+<p>In der Anmeldeliste am Event änderst du jeden Status per Klick und lädst die <strong>Teilnehmerliste als CSV</strong> – eine Zeile je Person, mit dem Vermerk, wer sie angemeldet hat. Als Startliste direkt brauchbar. Die Texte der vier Event-Mails stehen unter <span class="weg">Lindenweg16 → Einstellungen</span> bei den E-Mail-Vorlagen.</p>
+
+<h3>Loyalty</h3>
+<figure>
+	<img src="bilder/lw16-loyalty.png" alt="Loyalty-Seite mit der Prüf-Warteschlange">
+	<figcaption>Empfehlungen und Bewertungen laufen in eine Prüf-Warteschlange, die du freigibst oder ablehnst – automatisch ausgeschüttet wird nichts.</figcaption>
+</figure>
+
+<h3>Support</h3>
+<figure>
+	<img src="bilder/lw16-support.png" alt="Supportseite mit Ticketliste und Audit-Log">
+	<figcaption>Kundenanfragen aus dem Formular auf der Website. Jede Statusänderung wird protokolliert.</figcaption>
+</figure>
+
+<h2 id="berichte"><span class="nr">12.</span> Berichte, Ziele und Monatsabschluss</h2>
+
+<p><span class="weg">Betrieb → Berichte</span></p>
+
+<figure>
+	<img src="bilder/berichte-kennzahlen.png" alt="Kennzahlentabelle mit Wert, Ziel, Alarmgrenze, Lage-Balken und Status je Quartal">
+	<figcaption>Ziele und Alarmgrenzen trägst du hier ein – je Quartal, an einer Stelle.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben das <strong>Quartal</strong> wählen.</li>
+	<li>Je Kennzahl <strong>Ziel</strong> und <strong>Alarm bei</strong> eintragen. Leer lassen heißt: kein Ziel, und dann wird auch keines erfunden.</li>
+	<li>Auf <strong>Ziele für … speichern</strong> klicken.</li>
+</ol>
+
+<p>Beim Wechsel des Zeitrasters rechnet das System die Ziele um: Summengrößen wie Umsatz werden nach Tagen verteilt, Verhältnisgrößen wie Quoten bleiben unverändert. Ein früheres Quartal behält seine Ziele, auch wenn du die Latte später höher legst.</p>
+
+<figure>
+	<img src="bilder/berichte-verlauf.png" alt="Verlaufsdiagramm einer Kennzahl mit Ziel- und Alarmlinie">
+	<figcaption>Der Verlauf einer Kennzahl. Ziel- und Alarmlinie liegen nur über den Zeiträumen, für die ein Ziel eingetragen ist.</figcaption>
+</figure>
+
+<h3>Monatsabschluss</h3>
+
+<figure>
+	<img src="bilder/berichte-abschluss.png" alt="Abschnitt Monatsabschluss mit Monatsauswahl und Abschließen-Knopf">
+	<figcaption><strong>Abschließen</strong> friert die automatischen Kennzahlen des gewählten Monats ein.</figcaption>
+</figure>
+
+<p>Eingefrorene Werte ändern sich danach nicht mehr, auch wenn jemand später etwas nachträgt. Das ist der Sinn: Ein Monatsbericht, der sich im Nachhinein noch verändert, ist keiner.</p>
+
+<h3>Auszug zur Analyse</h3>
+<p>Der Export lädt den Betriebszustand als Textdatei herunter: Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen, Druckjournal, Arbeitszeit. Namen von Geschäftskunden bleiben draußen, solange du sie nicht ausdrücklich mitgibst – die Kunden sind dann durchnummeriert.</p>
+
+<h2 id="pruefung"><span class="nr">13.</span> Systemprüfung und Protokollkette</h2>
+
+<p><span class="weg">Betrieb → Einstellungen → Reiter „Systemprüfung“</span></p>
+
+<figure>
+	<img src="bilder/einst-systempruefung.png" alt="Systemprüfung mit Prüfergebnis und Kettenprüfung">
+	<figcaption>Zwei Prüfungen auf einer Seite: fachliche Widersprüche und die Unversehrtheit der Protokollkette.</figcaption>
+</figure>
+
+<p><strong>Systemprüfung:</strong> Jedes Formular prüft seine eigene Eingabe. Diese Prüfung sucht Widersprüche, die erst später entstehen – ein Artikel, dessen Revision zurückgezogen wurde; eine Stückliste, deren Position stillgelegt ist; ein Gerät ohne Kalkulationsdaten. Lauf sie nach jeder größeren Änderung einmal durch.</p>
+
+<p><strong>Kettenprüfung:</strong> Jeder Protokolleintrag enthält den Hash seines Vorgängers. Wird ein Datensatz nachträglich in der Datenbank geändert, bricht die Kette und die Prüfung sagt, an welcher Stelle.</p>
+
+<figure>
+	<img src="bilder/einst-protokoll.png" alt="Protokollansicht mit den letzten Vorgängen">
+	<figcaption>Der Reiter <strong>Protokoll &amp; Kettenprüfung</strong> zeigt die letzten 50 Vorgänge.</figcaption>
+</figure>
+
+<h2 id="import"><span class="nr">14.</span> Import und Verfahrensdokumentation</h2>
+
+<p><span class="weg">Betrieb → Import &amp; Doku</span></p>
+
+<h3>Daten aus einer Tabelle übernehmen</h3>
+
+<figure>
+	<img src="bilder/import-schritt1.png" alt="Schritt 1 des Imports: Datei hochladen">
+	<figcaption>Der Import läuft in drei Schritten: hochladen, Spalten zuordnen, Vorschau prüfen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Jedes Blatt der Tabellenmappe einzeln als CSV exportieren (Semikolon oder Komma).</li>
+	<li>Reihenfolge einhalten: <strong>Artikel, dann Druckjournal, dann der Rest</strong> – ein Druckjob ohne Artikel hätte nichts, worauf er zeigen könnte.</li>
+	<li>Datei hochladen, auf <strong>Datei lesen</strong> klicken.</li>
+	<li>In Schritt 2 jede Spalte der Datei einem Feld zuordnen. Was nicht gebraucht wird, bleibt auf <em>– nicht importieren –</em>.</li>
+	<li>Die Datei erneut auswählen (sie wird aus Sicherheitsgründen nicht zwischengespeichert) und auf <strong>Vorschau erstellen</strong> klicken.</li>
+	<li>Die Vorschau <em>lesen</em>. Erst dann auf <strong>Import jetzt durchführen</strong> klicken.</li>
+</ol>
+
+<h3>Verfahrensdokumentation</h3>
+
+<figure>
+	<img src="bilder/import-verfahrensdoku.png" alt="Abschnitt Verfahrensdokumentation mit den Knöpfen Als PDF erzeugen und Vorschau">
+	<figcaption>Die Verfahrensdokumentation beschreibt Konfiguration, Datenmodell, Berechnungsformeln und Prozesse.</figcaption>
+</figure>
+
+<p>Das Dokument liest die Werte beim Erzeugen frisch aus dem System – es ist also immer aktuell und kein Schnappschuss von damals. Erzeug es einmal jährlich und nach jeder größeren Änderung als PDF und leg es zu den Steuerunterlagen.</p>
+
+<h2 id="automatisch"><span class="nr">15.</span> Was von allein läuft</h2>
+
+<p>Diese Dinge passieren ohne Zutun über den Action Scheduler, den WooCommerce mitbringt:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Vorgang</th><th>Wann</th><th>Wo einstellbar</th></tr></thead>
+<tbody>
+<tr><td>Lagerabgang bei Bestellung</td><td>Beim Statuswechsel der Bestellung</td><td>Lagerhoheit (Kapitel 6)</td></tr>
+<tr><td>Wochenmail an die Manager</td><td>Wöchentlich</td><td>Betrieb → Einstellungen → Farben &amp; Lagerhoheit</td></tr>
+<tr><td>Warenkorb-Erinnerungen</td><td>Nach 3 und 48 Stunden</td><td>Lindenweg16 → Einstellungen</td></tr>
+<tr><td>Dankeschön- und Bewertungsmails</td><td>Nach 2 bzw. 12 Tagen</td><td>Lindenweg16 → Einstellungen</td></tr>
+<tr><td>„Wieder verfügbar“ an die Warteliste</td><td>Beim Übergang von leer auf vorhanden</td><td>—</td></tr>
+<tr><td>Täglicher Bestandsreport</td><td>Täglich</td><td>Lindenweg16 → Einstellungen</td></tr>
+<tr><td>Wöchentlicher Datenexport per Mail</td><td>Wöchentlich</td><td>Lindenweg16 → Reporting</td></tr>
+<tr><td>Beschaffungsalarm</td><td>Laufend berechnet</td><td>Vorlaufzeiten je Komponente</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Wenn nichts läuft</span>
+	<p>Der Action Scheduler braucht Besucher oder einen echten Cron-Job, um seine Warteschlange abzuarbeiten. Auf einer Seite ohne Verkehr bleiben Aufgaben liegen. Unter <strong>WooCommerce → Status → Geplante Aktionen</strong> siehst du, was hängt.</p>
+</div>
+
+<h2 id="livegang"><span class="nr">16.</span> Livegang: sauber starten</h2>
+
+<p><span class="weg">Lindenweg16 → Livegang</span></p>
+
+<p>Beim Einrichten entstehen Probedaten: Testbestellungen, Probebuchungen, Druckjobs zum Ausprobieren. Vor dem echten Start werden die weggeräumt – sonst stehen sie für immer in jeder Auswertung.</p>
+
+<figure>
+	<img src="bilder/lw16-livegang.png" alt="Die Livegang-Seite mit Warnhinweis, den Listen Was bleibt und Was gelöscht wird und dem Bestätigungsknopf">
+	<figcaption>Die Livegang-Seite. Sie sieht nur, wer die Website verwaltet – nicht jeder mit Plugin-Rechten.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/livegang-was-bleibt.png" alt="Liste Was bleibt: Stammdaten wie Artikel, Revisionen, Stücklisten, Drucker, Lagerplätze, Kontakte, Einstellungen">
+	<figcaption><strong>Was bleibt:</strong> Stammdaten. Sie sind Arbeit, die niemand zweimal machen will.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/livegang-was-geloescht.png" alt="Liste Was gelöscht wird: Bewegungsdaten wie Druckjobs, Lagerbewegungen, Chargen, Zeiten, Belege">
+	<figcaption><strong>Was gelöscht wird:</strong> Bewegungsdaten. Unwiderruflich.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Datenbanksicherung anlegen.</strong> Es gibt keinen Papierkorb und keine Wiederherstellung im Plugin.</li>
+	<li>Beide Listen lesen – <em>Was bleibt</em> und <em>Was gelöscht wird</em>.</li>
+	<li>Auf <strong>Bestätigen</strong> klicken. Die Bestätigung gilt zehn Minuten; danach muss die Seite neu geladen werden. Das verhindert, dass ein offener Tab von gestern etwas löscht.</li>
+	<li>Auf <strong>Jetzt endgültig löschen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Genau einmal, am Tag vor dem Start</span>
+	<p>Danach ist dieses Werkzeug nicht mehr zu benutzen – jeder Schnitt wird protokolliert und dieses Protokoll wird selbst nicht gelöscht. Eine Hashkette, die bei null beginnt, ist erklärbar; eine, die mitten in der Geschichte springt, nicht.</p>
+</div>
+
+<h2 id="sicherung"><span class="nr">17.</span> Datensicherung und Notfall</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Wann</th><th>Was sichern</th></tr></thead>
+<tbody>
+<tr><td>Vor jedem Plugin-Update</td><td>Datenbank</td></tr>
+<tr><td>Vor dem Livegang</td><td>Datenbank</td></tr>
+<tr><td>Vor „Alle Preise übernehmen“</td><td>Datenbank</td></tr>
+<tr><td>Laufend</td><td>Datenbank <em>und</em> das Belegverzeichnis in <code>wp-content/uploads</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Unter <span class="weg">Lindenweg16 → Reporting</span> gibt es zusätzlich einen Datenexport, den du dir per E-Mail schicken lassen kannst – wöchentlich automatisch oder auf Knopfdruck. Der ersetzt keine Sicherung des Servers, ist aber eine Kopie der Zahlen außer Haus.</p>
+
+<figure>
+	<img src="bilder/lw16-reporting.png" alt="Reporting-Seite mit VIP-Kunden, Bestellstatistiken und dem Datenexport">
+	<figcaption><span class="weg">Lindenweg16 → Reporting</span> – Auswertungen und der Datenexport.</figcaption>
+</figure>
+
+<h2 id="fehler"><span class="nr">18.</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
+<tbody>
+<tr><td>„Lindenweg16 ERP benötigt ein aktives WooCommerce“</td><td>WooCommerce fehlt oder ist deaktiviert</td><td>WooCommerce aktivieren, dann das Plugin erneut</td></tr>
+<tr><td>Das Plugin ist aktiv, aber die Menüs fehlen</td><td>WooCommerce wurde nachträglich deaktiviert</td><td>WooCommerce wieder aktivieren</td></tr>
+<tr><td>„Das Attribut pa_farbe existiert noch nicht“</td><td>Das globale Farbattribut fehlt</td><td>In WooCommerce unter <strong>Produkte → Attribute</strong> anlegen (Kapitel 6)</td></tr>
+<tr><td>Verkäufe erzeugen keine Lagerbewegung</td><td>Lagerhoheit abgeschaltet oder Produkt nicht mit einem Artikel verknüpft</td><td>Kapitel 6 und Kapitel 8</td></tr>
+<tr><td>Bestand doppelt abgezogen</td><td>Beide Lagermodelle buchen</td><td>Lagerhoheit eindeutig einstellen</td></tr>
+<tr><td>Kalkulation zeigt „unvollständig“</td><td>Revision, Stückliste oder Gerätedaten fehlen</td><td>Die genannte Lücke schließen</td></tr>
+<tr><td>„Betriebsstunden je Jahr dürfen nicht 0 sein“</td><td>Ohne Nenner lässt sich der Ersatzteilanteil nicht umlegen</td><td>Realistischen Wert eintragen</td></tr>
+<tr><td>Die Kettenprüfung meldet einen Bruch</td><td>Ein Datensatz wurde außerhalb des Plugins geändert</td><td>Ursache klären; die Stelle steht in der Meldung</td></tr>
+<tr><td>QR-Links führen auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update nicht neu registriert</td><td>Auf der Druckerseite <strong>Adressen neu registrieren</strong>, oder Permalinks einmal speichern</td></tr>
+<tr><td>Automatische Mails kommen nicht an</td><td>Der Action Scheduler arbeitet nicht, oder der Mailversand des Hosters</td><td>WooCommerce → Status → Geplante Aktionen prüfen</td></tr>
+<tr><td>Ein Beleg lässt sich nicht ändern</td><td>Er ist festgeschrieben</td><td>Stornieren und neu erfassen (Kapitel 10)</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Der Reflex, der am meisten hilft</span>
+	<p>Lies die Meldung zu Ende. Dieses Plugin schreibt keine Fehlercodes, sondern ganze Sätze – und im Satz steht fast immer schon, was zu tun ist.</p>
+</div>
+
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Administration · Stand: Plugin-Version 0.10.0 ·
+<a href="index.html">Übersicht</a> ·
+<a href="ba-produktion.html">Produktion</a> ·
+<a href="ba-versand.html">Versand</a> ·
+<a href="ba-personal.html">Personal</a></p>
+
+</div>
+</body>
+</html>

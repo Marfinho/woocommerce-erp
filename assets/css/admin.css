@@ -70,3 +70,20 @@
 
 /* Picklisten */
 .lw16-wrap .widefat .lw16-ampel { vertical-align: middle; margin-right: 4px; }
+
+/* Anleitungen: eingebettete Betriebsanleitungen aus docs/ */
+.lw16-handbuch-kopf {
+	color: #646970;
+	margin: 0 0 10px;
+}
+.lw16-handbuch-rahmen {
+	display: block;
+	width: 100%;
+	/* Der Rahmen soll bis zum unteren Fensterrand reichen: 220px sind
+	   Adminleiste, Seitentitel, Reiter und der Fussbereich von wp-admin. */
+	height: calc(100vh - 220px);
+	min-height: 480px;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	background: #fff;
+}

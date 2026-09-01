@@ -5,6 +5,21 @@ Buchhaltung, Lagerverwaltung, Loyalty, Produktions-/Bestellplanung,
 Preiskalkulation, Kundenbindung sowie Support & Reporting kombiniert – direkt in
 WooCommerce, ohne externen Sync.
 
+## Betriebsanleitungen
+
+Vier bebilderte Anleitungen, je eine pro Aufgabe. Einstieg: **`docs/index.html`**
+(im Browser öffnen).
+
+| Anleitung | Für wen | Datei |
+| --- | --- | --- |
+| Produktion | Werkstatt: drucken, montieren, buchen | `docs/ba-produktion.html` |
+| Versand | Packtisch: picken, packen, versenden | `docs/ba-versand.html` |
+| Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/ba-personal.html` |
+| Administration | Einrichtung, Kalkulation, Buchhaltung, Livegang | `docs/ba-admin.html` |
+
+Die Bildschirmfotos in `docs/bilder/` stammen aus einer laufenden Installation
+dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
+
 ## Installation
 
 1. Ordner als Plugin in `wp-content/plugins/` ablegen (WooCommerce muss aktiv sein).
@@ -40,6 +55,8 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
                              AccountingModule
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
+includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
+                             RsvpRepository, EventAdmin, EventFrontend, EventsModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -56,7 +73,13 @@ assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
-docs/handbuch.html           Bedienungsanleitung
+docs/index.html              Wegweiser zu den vier Betriebsanleitungen
+docs/ba-produktion.html      Betriebsanleitung Produktion (Werkstatt)
+docs/ba-versand.html         Betriebsanleitung Versand (Packtisch)
+docs/ba-personal.html        Betriebsanleitung Personal (Zeit, Löhne, Rechte)
+docs/ba-admin.html           Betriebsanleitung Administration (Einrichtung, Zahlen)
+docs/ba.css                  gemeinsames Aussehen der Anleitungen
+docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```
 
 ### Modul Betrieb
@@ -435,6 +458,11 @@ vorhanden ist – nicht, was geplant war.
   Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
   Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
   WooCommerce.
+- **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
+  definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
+  Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit
+  Namen, optionale Teilnehmerbegrenzung mit automatisch nachrückender
+  Warteliste, QR-Code auf die Eventseite.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
@@ -497,7 +525,40 @@ Nur drei Nachweise, bewusst keine Schätzung darüber hinaus:
 
 Der Umsatz zählt über das Kampagnenende hinaus (Einstellung
 *Nachlauffenster*, Standard 30 Tage); die Kosten hängen dagegen am Beleg. Was
-sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet.
+sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet. Eine
+vollständig erstattete Bestellung zählt gar nicht; eine Bestellung mit
+Gesamtsumme 0 (100 % Rabatt) dagegen schon – sie hat die Kampagne etwas
+gekostet.
+
+### Rabatt ist Einsatz, aber keine Ausgabe
+
+Ein gewährter Nachlass (Startgutschein, Aktionscode) ist **Erlösschmälerung**,
+keine Betriebsausgabe: Es gibt keinen Beleg, es fließt nichts ab, der
+Bestellwert ist bereits gemindert. Die EÜR ist damit von sich aus richtig –
+`EuerCalculator::einnahmen()` rechnet mit `$order->get_total()`, also nach
+Abzug. Wer den Rabatt zusätzlich als Aufwand buchte, hätte ihn doppelt drin.
+
+Für die Kampagnenauswertung zählt er trotzdem, sonst stünde eine reine
+Gutscheinaktion mit null Kosten und grüner Ampel da. Die Kostenstelle weist
+deshalb drei Zahlen aus:
+
+| Größe | Quelle | in der EÜR |
+|---|---|---|
+| Kosten (gebucht) | zugeordnete Belege | ja |
+| Rabatt (nicht gebucht) | `get_discount_total()` der zugeordneten Bestellungen | nein |
+| Einsatz gesamt | Summe beider | – |
+
+Ergebnis, ROAS und Einsatz je Bestellung rechnen gegen den Einsatz gesamt.
+Das **Budget misst sich weiter nur an den gebuchten Kosten** – ein Budget
+zahlt man aus, einen Rabatt gewährt man. Die Kampagnenübersicht zeigt aus
+Kostengründen nur die gebuchten Kosten; den vollen Einsatz zeigt die
+Einzelansicht.
+
+Nicht erfasst ist die Einlösung von Punkten und Guthaben: Die läuft im
+Loyalty-Modul als negative Gebühr (`LoyaltyFrontend::apply_redeem_fee()`),
+nicht als Coupon, und taucht in `get_discount_total()` darum nicht auf. Ob
+sie überhaupt einer Marketingkampagne zuzurechnen wäre, ist eine eigene
+Frage.
 
 ### Zeitpunkt: EÜR gegen Kampagne
 
@@ -505,6 +566,62 @@ Bei der EÜR gilt das Abflussprinzip – eine im Dezember gezahlte Standgebühr
 für den Januar-Markt ist eine Dezember-Ausgabe. Die Kampagnenauswertung will
 sie beim Januar-Markt sehen. Darum hat die Kampagne ein eigenes
 `event_datum`, und beide Sichten bleiben getrennte Abfragen.
+
+### Events: Post Type statt eigener Tabelle
+
+Ein Event ist öffentlicher Inhalt mit Titel, Text, Bild und Adresse – genau
+das, wofür WordPress einen Custom Post Type hat. `lw16_event` bringt Editor,
+Beitragsbild, Vorschau, Permalinks, Revisionen und die Sichtbarkeit für
+Suchmaschinen mit; alles davon wäre in einer eigenen Tabelle noch einmal zu
+bauen gewesen. Die Eventtypen (Social Ride, Markt, Rennen) sind eine
+Taxonomie und damit im Backend erweiterbar, ohne Code anzufassen.
+
+Die **Anmeldungen** sind Bewegungsdaten und liegen deshalb in
+`lw16_event_rsvp` – mit Unique-Index auf (Event, E-Mail), damit dieselbe
+Adresse nicht zweimal auf der Liste steht.
+
+**Zusatzfelder** liegen als Post-Meta am Event, nicht in einer globalen
+Definition: Jedes Event trägt seine eigenen Felder. Für die drei Eventtypen
+gibt es Vorlagen als Startpunkt (`EventFields::vorlagen()`), die beim ersten
+Bearbeiten vorgeschlagen und danach frei geändert werden. Es gibt bewusst
+**kein Freitext-HTML- oder iframe-Feld**: Eingebettet wird nur, was einen
+eigenen Feldtyp hat. Bei der Komoot-Tour wird aus der eingefügten Adresse
+nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
+Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
+so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
+
+### Anmeldung: bestätigen, warten, nachrücken
+
+Die Anmeldung läuft über einen Bestätigungslink per E-Mail. Der Platz wird
+**erst bei der Bestätigung** vergeben, nicht beim Absenden – sonst blockierte
+eine nie bestätigte Anmeldung einen Platz. Unbestätigte Anmeldungen verfallen
+nach sieben Tagen und werden täglich aufgeräumt
+(`Scheduler::HOOK_DAILY_EVENTS`).
+
+Eine Anmeldung kann **Begleitpersonen** mitbringen; jede braucht einen Namen
+(bei einer Ausfahrt oder einem Rennen muss auf der Startliste stehen, wer
+mitfährt) und belegt einen eigenen Platz. Höchstens zehn je Anmeldung – das
+Formular ist öffentlich. Gezählt werden deshalb durchgehend **Plätze, nicht
+Anmeldungen**: `RsvpRepository::plaetze()` summiert, `count()` zählt Zeilen,
+und die Kapazität hängt an der ersten der beiden. Der CSV-Export schreibt
+eine Zeile je Person, nicht je Anmeldung – so liest sich eine Startliste.
+
+Ist die Teilnehmerzahl erreicht, landen weitere Anmeldungen auf der
+Warteliste. Bei einer Absage rückt in der Reihenfolge der Bestätigung nach,
+wer als Erster zugesagt hatte, und bekommt sofort eine E-Mail. Eine Gruppe
+rückt nur geschlossen nach, und es wird **streng der Reihe nach** aufgefüllt:
+Passt der Nächste nicht mehr hinein, ist Schluss – auch wenn hinter ihm ein
+Einzelner läge, der noch passte. Sonst überholte eine Einzelperson eine
+wartende Familie, und zwar jedes Mal wieder. Im Einzelfall lässt sich der
+Status im Backend von Hand setzen. Dasselbe
+passiert, wenn die Maximalzahl im Backend angehoben oder auf 0 (unbegrenzt)
+gesetzt wird. Eine Teilnehmerzahl von 0 bedeutet durchgehend „unbegrenzt",
+nie „niemand" – die Unterscheidung steckt in `RsvpRechnung::ist_begrenzt()`.
+
+Das öffentliche Formular hat einen Honigtopf und eine Bremse von zehn
+Versuchen je IP und Stunde. Die Einwilligung zur Speicherung ist Pflichtfeld,
+und `lw16_event_rsvp` ist für DSGVO-Auskunft und -Löschung angemeldet
+(`Privacy::sources()`).
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

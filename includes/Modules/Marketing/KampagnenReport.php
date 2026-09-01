@@ -12,7 +12,8 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Settings;
 
 /**
- * Stellt die drei belastbaren Umsatzquellen einer Kampagne zusammen.
+ * Stellt die drei belastbaren Umsatzquellen einer Kampagne zusammen und
+ * daneben den Einsatz, der sie erzeugt hat.
  *
  * Bewusst keine darüber hinausgehende Schätzung: Was sich nicht über die
  * Marktkasse, einen Gutscheincode oder die Kampagnenkennung einer Bestellung
@@ -104,13 +105,13 @@ class KampagnenReport {
 	 * Kampagne gab. Eine Bestellung, auf die beides zutrifft, zählt einmal.
 	 *
 	 * @param object $kampagne Kostenstelle.
-	 * @return array {summe, anzahl, per_utm, per_gutschein}
+	 * @return array {summe, rabatt, anzahl, per_utm, per_gutschein}
 	 */
 	public static function shop_umsatz( $kampagne ) {
 		$utm      = strtolower( trim( (string) $kampagne->utm_campaign ) );
 		$gutschein = strtolower( trim( (string) $kampagne->gutschein_code ) );
 
-		$leer = array( 'summe' => 0.0, 'anzahl' => 0, 'per_utm' => 0, 'per_gutschein' => 0 );
+		$leer = array( 'summe' => 0.0, 'rabatt' => 0.0, 'anzahl' => 0, 'per_utm' => 0, 'per_gutschein' => 0 );
 
 		if ( '' === $utm && '' === $gutschein ) {
 			return $leer;
@@ -131,6 +132,7 @@ class KampagnenReport {
 		);
 
 		$summe         = 0.0;
+		$rabatt        = 0.0;
 		$anzahl        = 0;
 		$per_utm       = 0;
 		$per_gutschein = 0;
@@ -157,7 +159,23 @@ class KampagnenReport {
 				continue;
 			}
 
-			$summe += (float) $order->get_total() - (float) $order->get_total_refunded();
+			$erstattet = (float) $order->get_total_refunded();
+			$netto     = (float) $order->get_total() - $erstattet;
+
+			// Vollständig erstattete Bestellung: Sie hat der Kampagne weder
+			// Umsatz gebracht noch einen Rabatt gekostet. Eine Bestellung mit
+			// Gesamtsumme 0 (100 % Rabatt) ist etwas anderes – die zählt.
+			if ( $erstattet > 0 && $netto <= 0 ) {
+				continue;
+			}
+
+			$summe += $netto;
+
+			// Der gewährte Rabatt ist der eigentliche Einsatz einer
+			// Gutscheinaktion. Brutto gerechnet, damit er zur Umsatzzahl
+			// passt; bei Kleinunternehmern ist der Steueranteil ohnehin 0.
+			$rabatt += (float) $order->get_discount_total() + (float) $order->get_discount_tax();
+
 			$anzahl++;
 			if ( $treffer_utm ) {
 				$per_utm++;
@@ -169,6 +187,7 @@ class KampagnenReport {
 
 		return array(
 			'summe'         => round( $summe, 2 ),
+			'rabatt'        => round( $rabatt, 2 ),
 			'anzahl'        => $anzahl,
 			'per_utm'       => $per_utm,
 			'per_gutschein' => $per_gutschein,
@@ -186,20 +205,26 @@ class KampagnenReport {
 		$markt  = self::markt_umsatz( (int) $kampagne->id );
 		$shop   = self::shop_umsatz( $kampagne );
 
-		$umsatz = round( $markt['summe'] + $shop['summe'], 2 );
+		$umsatz  = round( $markt['summe'] + $shop['summe'], 2 );
+		$rabatt  = (float) $shop['rabatt'];
+		$einsatz = Kampagnenrechnung::einsatz( $kosten['summe'], $rabatt );
 
 		return array(
 			'kampagne'      => $kampagne,
 			'zeitraum'      => self::zeitraum( $kampagne ),
 			'kosten'        => $kosten['summe'],
 			'kosten_konten' => $kosten['nach_konto'],
+			'rabatt'        => $rabatt,
+			'einsatz'       => $einsatz,
 			'markt'         => $markt,
 			'shop'          => $shop,
 			'umsatz'        => $umsatz,
+			// Das Budget misst sich weiter nur an den gebuchten Kosten: Ein
+			// Budget zahlt man aus, einen Rabatt gewährt man.
 			'budget'        => Kampagnenrechnung::budget_status( $kampagne->budget_geplant, $kosten['summe'] ),
-			'roas'          => Kampagnenrechnung::roas( $umsatz, $kosten['summe'] ),
-			'cpo'           => Kampagnenrechnung::kosten_pro_bestellung( $kosten['summe'], $shop['anzahl'] ),
-			'ergebnis'      => Kampagnenrechnung::ergebnis( $umsatz, $kosten['summe'] ),
+			'roas'          => Kampagnenrechnung::roas( $umsatz, $einsatz ),
+			'cpo'           => Kampagnenrechnung::kosten_pro_bestellung( $einsatz, $shop['anzahl'] ),
+			'ergebnis'      => Kampagnenrechnung::ergebnis( $umsatz, $einsatz ),
 		);
 	}
 }
