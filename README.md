@@ -40,6 +40,8 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
                              AccountingModule
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
+includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
+                             RsvpRepository, EventAdmin, EventFrontend, EventsModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -312,6 +314,11 @@ vorhanden ist – nicht, was geplant war.
   Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
   Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
   WooCommerce.
+- **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
+  definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
+  Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, optionale
+  Teilnehmerbegrenzung mit automatisch nachrückender Warteliste, QR-Code auf
+  die Eventseite.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
@@ -415,6 +422,49 @@ Bei der EÜR gilt das Abflussprinzip – eine im Dezember gezahlte Standgebühr
 für den Januar-Markt ist eine Dezember-Ausgabe. Die Kampagnenauswertung will
 sie beim Januar-Markt sehen. Darum hat die Kampagne ein eigenes
 `event_datum`, und beide Sichten bleiben getrennte Abfragen.
+
+### Events: Post Type statt eigener Tabelle
+
+Ein Event ist öffentlicher Inhalt mit Titel, Text, Bild und Adresse – genau
+das, wofür WordPress einen Custom Post Type hat. `lw16_event` bringt Editor,
+Beitragsbild, Vorschau, Permalinks, Revisionen und die Sichtbarkeit für
+Suchmaschinen mit; alles davon wäre in einer eigenen Tabelle noch einmal zu
+bauen gewesen. Die Eventtypen (Social Ride, Markt, Rennen) sind eine
+Taxonomie und damit im Backend erweiterbar, ohne Code anzufassen.
+
+Die **Anmeldungen** sind Bewegungsdaten und liegen deshalb in
+`lw16_event_rsvp` – mit Unique-Index auf (Event, E-Mail), damit dieselbe
+Adresse nicht zweimal auf der Liste steht.
+
+**Zusatzfelder** liegen als Post-Meta am Event, nicht in einer globalen
+Definition: Jedes Event trägt seine eigenen Felder. Für die drei Eventtypen
+gibt es Vorlagen als Startpunkt (`EventFields::vorlagen()`), die beim ersten
+Bearbeiten vorgeschlagen und danach frei geändert werden. Es gibt bewusst
+**kein Freitext-HTML- oder iframe-Feld**: Eingebettet wird nur, was einen
+eigenen Feldtyp hat. Bei der Komoot-Tour wird aus der eingefügten Adresse
+nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
+Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
+so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
+
+### Anmeldung: bestätigen, warten, nachrücken
+
+Die Anmeldung läuft über einen Bestätigungslink per E-Mail. Der Platz wird
+**erst bei der Bestätigung** vergeben, nicht beim Absenden – sonst blockierte
+eine nie bestätigte Anmeldung einen Platz. Unbestätigte Anmeldungen verfallen
+nach sieben Tagen und werden täglich aufgeräumt
+(`Scheduler::HOOK_DAILY_EVENTS`).
+
+Ist die Teilnehmerzahl erreicht, landen weitere Anmeldungen auf der
+Warteliste. Bei einer Absage rückt in der Reihenfolge der Bestätigung nach,
+wer als Erster zugesagt hatte, und bekommt sofort eine E-Mail. Dasselbe
+passiert, wenn die Maximalzahl im Backend angehoben oder auf 0 (unbegrenzt)
+gesetzt wird. Eine Teilnehmerzahl von 0 bedeutet durchgehend „unbegrenzt",
+nie „niemand" – die Unterscheidung steckt in `RsvpRechnung::ist_begrenzt()`.
+
+Das öffentliche Formular hat einen Honigtopf und eine Bremse von zehn
+Versuchen je IP und Stunde. Die Einwilligung zur Speicherung ist Pflichtfeld,
+und `lw16_event_rsvp` ist für DSGVO-Auskunft und -Löschung angemeldet
+(`Privacy::sources()`).
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

@@ -23,6 +23,7 @@ use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
 use Lindenweg16\Modules\POS\POSModule;
 use Lindenweg16\Modules\Marketing\MarketingModule;
+use Lindenweg16\Modules\Events\EventsModule;
 use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Configurator\ConfiguratorModule;
 
@@ -95,6 +96,7 @@ class Plugin {
 			'support'    => new SupportModule(),
 			'pos'        => new POSModule(),
 			'marketing'  => new MarketingModule(),
+			'events'     => new EventsModule(),
 			'betrieb'    => new BetriebModule(),
 			'konfigurator' => new ConfiguratorModule(),
 		);

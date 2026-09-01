@@ -1009,6 +1009,30 @@ footer p{max-width:72ch}
 		<p>Ein <em>verkaufter</em> Gutschein über 50 € ist kein Marketing, sondern zunächst eine Verbindlichkeit: Umsatz entsteht erst bei der Einlösung. Er gehört nicht in eine Kampagne. Gemeint ist hier immer der Rabattcode, nicht der bezahlte Wertgutschein.</p>
 	</div>
 
+	<h3>Events</h3>
+	<p><span class="path">Events</span> — ein eigener Menüpunkt neben Lindenweg16. Ein Event ist eine ganz normale Seite mit Titel, Text und Beitragsbild; darunter stehen Eckdaten, Zusatzfelder und die Anmeldung.</p>
+	<ol class="steps">
+		<li><strong>Typ wählen</strong> — Social Ride, Markt oder Rennen. Die Liste ist unter <span class="path">Events → Eventtypen</span> erweiterbar; ein neuer Typ braucht keinen Programmierer.</li>
+		<li><strong>Eckdaten</strong> — Beginn, Ende, Ort, Treffpunkt. Und der Haken <em>Anmeldung auf der Eventseite anbieten</em>: ohne ihn erscheint gar kein Formular.</li>
+		<li><strong>Maximale Teilnehmerzahl</strong> — optional. <strong>0 oder leer heißt unbegrenzt</strong>, nicht „niemand". Ist die Zahl erreicht, wird aus dem Anmeldeknopf ein Wartelistenknopf.</li>
+		<li><strong>Zusatzfelder</strong> — beliebig viele, je Event eigene. Beim ersten Öffnen schlägt das Plugin die passende Vorlage zum Eventtyp vor; alles daran lässt sich ändern, löschen und ergänzen.</li>
+		<li><strong>Veröffentlichen</strong> — danach erscheint rechts der QR-Code auf die Eventseite, als SVG herunterladbar und damit beliebig groß druckbar.</li>
+	</ol>
+
+	<h3>Die Komoot-Karte beim Social Ride</h3>
+	<p>Ein Zusatzfeld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren — die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte mit Höhenprofil.</p>
+	<p>Aus der eingefügten Adresse werden nur die Tour-Nummer und das Freigabe-Token gelesen; die Einbettung baut das Plugin selbst. Deshalb gibt es auch kein Feld, in das man fertigen Einbettungscode kippen kann: Was dort landet, läuft auf der eigenen Seite mit, und ein solches Feld wäre eine offene Tür. Ist die Adresse nicht lesbar, erscheint statt der Karte ein schlichter Link — nichts verschwindet stillschweigend.</p>
+
+	<h3>Wie die Anmeldung abläuft</h3>
+	<p>Auch ohne Benutzerkonto: Name, E-Mail, Häkchen zur Einwilligung, fertig. Danach kommt eine E-Mail mit Bestätigungslink.</p>
+	<div class="warn">
+		<span class="lbl">Der Platz zählt erst mit dem Klick</span>
+		<p>Eine abgesendete, aber nie bestätigte Anmeldung belegt keinen Platz — sonst könnte jeder mit erfundenen Adressen ein Event blockieren. Unbestätigte Anmeldungen verfallen nach sieben Tagen von allein. In der Teilnehmerliste stehen sie so lange als <em>unbestätigt</em>.</p>
+	</div>
+	<p>Über denselben Link kann der Teilnehmer später wieder absagen. Wird dadurch ein Platz frei, rückt automatisch der Erste von der Warteliste nach und bekommt sofort eine E-Mail — dafür ist nichts von Hand zu tun. Dasselbe passiert, wenn Du die maximale Teilnehmerzahl nachträglich erhöhst.</p>
+	<p>In der Anmeldeliste am Event kannst Du jeden Status von Hand setzen und die Teilnehmerliste als CSV herunterladen — für die Startliste am Renntag oder die Tourenleitung beim Social Ride. Die Texte der vier Event-Mails stehen unter <span class="path">Lindenweg16 → Einstellungen</span> bei den E-Mail-Vorlagen.</p>
+	<p>Hat das Event eine <strong>Kostenstelle</strong>, stehen seine Kosten im Marketing-Modul und lassen sich dort gegen den Umsatz stellen — bei einem Markt gegen den Tagesumsatz der Kasse.</p>
+
 	<h3>Loyalty</h3>
 	<p><span class="path">Lindenweg16 → Loyalty</span> — Punkte, Empfehlungen, Prüf-Warteschlange für Referrals mit Freigabe oder Ablehnung per Klick.</p>
 

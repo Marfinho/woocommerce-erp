@@ -36,6 +36,9 @@ class Scheduler {
 	// Modul Betrieb.
 	const HOOK_BETRIEB_WEEKLY = 'lw16_betrieb_weekly_mail';
 
+	// Events: unbestätigte Anmeldungen mit abgelaufenem Link verfallen lassen.
+	const HOOK_DAILY_EVENTS = 'lw16_daily_events_cleanup';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -59,6 +62,7 @@ class Scheduler {
 			self::HOOK_GENERATE_INVOICE,
 			self::HOOK_GENERATE_PACKING,
 			self::HOOK_BETRIEB_WEEKLY,
+			self::HOOK_DAILY_EVENTS,
 		);
 	}
 
@@ -84,6 +88,7 @@ class Scheduler {
 			self::HOOK_DAILY_FEES        => DAY_IN_SECONDS,
 			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
 			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
+			self::HOOK_DAILY_EVENTS       => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

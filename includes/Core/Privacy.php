@@ -111,6 +111,19 @@ class Privacy {
 					'created_at'  => __( 'Gebucht am', 'lindenweg16' ),
 				),
 			),
+			'event_rsvp'    => array(
+				'label'  => __( 'Event-Anmeldungen', 'lindenweg16' ),
+				'table'  => 'lw16_event_rsvp',
+				'by'     => 'email',
+				'fields' => array(
+					'name'          => __( 'Name', 'lindenweg16' ),
+					'email'         => __( 'E-Mail', 'lindenweg16' ),
+					'status'        => __( 'Status', 'lindenweg16' ),
+					'notiz'         => __( 'Anmerkung', 'lindenweg16' ),
+					'bestaetigt_am' => __( 'Bestätigt am', 'lindenweg16' ),
+					'erstellt_am'   => __( 'Angemeldet am', 'lindenweg16' ),
+				),
+			),
 			'referrals'     => array(
 				'label'  => __( 'Empfehlungen', 'lindenweg16' ),
 				'table'  => 'lw16_referrals',
