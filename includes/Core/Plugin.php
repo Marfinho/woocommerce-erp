@@ -14,6 +14,7 @@ use Lindenweg16\Admin\SettingsPage;
 use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
+use Lindenweg16\Admin\HandbuchPage;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
@@ -82,6 +83,7 @@ class Plugin {
 			( new ResetPage() )->register();
 			( new Dashboard() )->register();
 			( new GlobalSearch() )->register();
+			( new HandbuchPage() )->register();
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.

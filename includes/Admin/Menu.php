@@ -49,6 +49,7 @@ class Menu {
 			'lw16-support'             => __( 'Support', 'lindenweg16' ),
 			'lw16-reporting'           => __( 'Reporting', 'lindenweg16' ),
 			'lw16-einstellungen'       => __( 'Einstellungen', 'lindenweg16' ),
+			'lw16-anleitungen'         => __( 'Anleitungen', 'lindenweg16' ),
 		);
 
 		foreach ( $pages as $slug => $title ) {
