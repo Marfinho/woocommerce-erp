@@ -161,6 +161,18 @@ und die Papierformulare ab.
   Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
   Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
   Minuten.
+- **Ein Etikettenformat für alles** (`LabelSheet::DEFAULT_ROLL`): Eine Anlage
+  hat einen Etikettendrucker, und darin liegt eine Rolle. Der plugin-weite
+  Standard ist **DK-11201** (29 × 90 mm, längs beschriftet) und steht als
+  eine Konstante da – wer die Rolle wechselt, ändert eine Zeile. Ein Test
+  liest die Aufrufer und schlägt an, sobald eine Stelle ein Format wieder
+  beim Namen nennt; ein zweiter prüft, dass die Konstante ein Format meint,
+  das es gibt. Neu dazu: `LabelPdf::printer_labels()` – die Geräteaufkleber
+  gab es bisher nur als HTML-Kacheln zum Ausdrucken auf Papier. Ihr QR-Code
+  trägt eine ganze Adresse statt eines kurzen Codes und ist damit dichter;
+  gegengeprüft wurde er nicht durch Rechnen allein, sondern durch Rendern des
+  PDFs und Dekodieren mit OpenCV, plus einem Test auf die Modulgröße im
+  ungünstigsten Fall (lange Domain, langes Gerätekürzel: 0,59 mm je Modul).
 - **Gelöschte Shop-Bestellungen** (`OrderSource`, `OrderMirror`,
   `OrderOpsRepository::orphaned()`): Wird eine Bestellung in WooCommerce
   endgültig gelöscht, zeigte die Betriebszeile ins Leere – `order_value()`

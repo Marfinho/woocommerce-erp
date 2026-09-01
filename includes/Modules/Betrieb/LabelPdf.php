@@ -68,6 +68,39 @@ class LabelPdf {
 	}
 
 	/**
+	 * Etiketten der Drucker.
+	 *
+	 * Anders als Lagerplatz und Artikel trägt ein Druckeretikett keinen
+	 * Scan-Code, sondern die Erfassungsadresse: Wer ihn scannt, landet mit
+	 * dem Handy direkt im Formular für diesen Drucker. Der QR-Code ist damit
+	 * länger als bei den anderen Sorten – deshalb ist er es wert, das
+	 * Ergebnis einmal wirklich anzusehen, statt es zu vermuten.
+	 *
+	 * @param bool $only_active Nur Geräte, die produzieren.
+	 * @return array
+	 */
+	public static function printer_labels( $only_active = true ) {
+		$out = array();
+
+		foreach ( PrinterRepository::all() as $printer ) {
+			if ( $only_active && ! in_array( (string) $printer['status'], MachineRate::PRODUCTIVE_STATUS, true ) ) {
+				continue;
+			}
+
+			$geraet = trim( (string) $printer['manufacturer'] . ' ' . (string) $printer['model'] );
+
+			$out[] = array(
+				'code'    => (string) $printer['code'],
+				'name'    => '' !== $geraet ? $geraet : (string) $printer['code'],
+				'payload' => DeviceLabel::url( (string) $printer['code'] ),
+				'kind'    => __( 'Drucker', 'lindenweg16' ),
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Den Bogen erzeugen.
 	 *
 	 * @param array  $labels Etiketten mit code, name, payload, kind.
@@ -111,7 +144,7 @@ class LabelPdf {
 	 * @param string $roll   Kennung des Rollenformats.
 	 * @return Pdf|null
 	 */
-	public static function build_roll( array $labels, $roll = 'dk11209' ) {
+	public static function build_roll( array $labels, $roll = LabelSheet::DEFAULT_ROLL ) {
 		if ( ! $labels ) {
 			return null;
 		}

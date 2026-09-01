@@ -72,7 +72,7 @@ class Exporter {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- oben geprüft.
 		$was    = isset( $_GET['was'] ) ? (array) wp_unslash( $_GET['was'] ) : array();
-		$format = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : 'bogen';
+		$format = isset( $_GET['format'] ) ? sanitize_key( wp_unslash( $_GET['format'] ) ) : LabelSheet::DEFAULT_ROLL;
 		$alle   = ! empty( $_GET['alle'] );
 		$code   = isset( $_GET['code'] ) ? sanitize_text_field( wp_unslash( $_GET['code'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
@@ -86,6 +86,10 @@ class Exporter {
 
 		if ( in_array( 'articles', $was, true ) ) {
 			$labels = array_merge( $labels, LabelPdf::article_labels( ! $alle ) );
+		}
+
+		if ( in_array( 'printers', $was, true ) ) {
+			$labels = array_merge( $labels, LabelPdf::printer_labels( ! $alle ) );
 		}
 
 		// Ein einzelnes Etikett nachdrucken: dieselbe Liste, nur gefiltert.

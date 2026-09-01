@@ -521,6 +521,7 @@ footer p{max-width:72ch}
 
 	<h3>5.2 Am Gerät, vom Handy</h3>
 	<p>Adresse: <span class="path">deine-domain.de/betrieb-erfassen/</span> — den Aufkleber dafür druckst du unter <span class="path">Betrieb → Drucker &amp; Wartung → Aufkleber für die Geräte</span> und klebst ihn auf den Drucker. Er trägt einen QR-Code, der die Erfassung mit vorausgewähltem Gerät öffnet; die Adresse steht zusätzlich im Klartext darunter, falls der Aufkleber verschmutzt. Über den Aufklebern steht der Knopf <em>Adressen neu registrieren</em>; ihn brauchst du, wenn der Link nach einem Update ins Leere läuft.</p>
+	<p>Daneben steht <em>Aufkleber als PDF für den Etikettendrucker</em>. Der erzeugt dieselben Aufkleber im Rollenformat <strong>DK-11201</strong> — dasselbe, das auch Lagerplätze und Artikel benutzen, damit im Brother nur eine Rolle liegen muss. Der QR-Code eines Druckeretiketts enthält eine ganze Adresse und ist damit dichter als der eines Lagerplatzes; auf der 29-mm-Rolle bleibt er trotzdem deutlich über der Grenze, ab der eine Handykamera aussteigt.</p>
 	<p>Vier Reiter: <em>Druckjob</em>, <em>Lager</em>, <em>Picken</em> und <em>Zeit</em>. Große Plus-/Minus-Knöpfe statt Tastatur, Details eingeklappt. Anmeldung mit dem WordPress-Konto; die Rolle <em>Betrieb</em> reicht.</p>
 	<div class="note">
 		<span class="lbl">Funkloch in der Werkstatt</span>
@@ -615,7 +616,7 @@ footer p{max-width:72ch}
 
 	<h4>Der Standardplatz</h4>
 	<h4>Alle Etiketten auf einmal drucken</h4>
-	<p>Unter der Lagerplatzliste: <em>Etiketten als PDF</em>. Häkchen bei <strong>Lagerplätze</strong>, <strong>Artikel</strong> oder beidem, Aufteilung wählen, Knopf drücken — du bekommst <strong>einen</strong> Bogen mit allen QR-Codes statt vierzig einzelner Seiten. Gedacht für den Tag, an dem das Lager eingerichtet wird.</p>
+	<p>Unter der Lagerplatzliste: <em>Etiketten als PDF</em>. Häkchen bei <strong>Lagerplätze</strong>, <strong>Artikel</strong>, <strong>Drucker</strong> oder mehreren davon, Format wählen, Knopf drücken — du bekommst <strong>eine</strong> Ausgabe mit allen QR-Codes statt vierzig einzelner Seiten. Gedacht für den Tag, an dem das Lager eingerichtet wird.</p>
 	<div class="scroller">
 		<table>
 			<thead><tr><th>Aufteilung</th><th>Wofür</th></tr></thead>
@@ -634,14 +635,15 @@ footer p{max-width:72ch}
 		<table>
 			<thead><tr><th>Format</th><th>Wofür</th></tr></thead>
 			<tbody>
-				<tr><td><strong>DK-11209</strong><br>62 × 29 mm</td><td>Gestanzte Einzeletiketten. Der Allrounder für Fächer und Artikel.</td></tr>
+				<tr><td><strong>DK-11201</strong><br>29 × 90 mm<br><em>Standard</em></td><td>Gestanzte Adressetiketten auf der schmalen 29-mm-Rolle, der Länge nach beschriftet: Code links, Klartext rechts. Neun Zentimeter Platz für lange Bezeichnungen. <strong>Das ist das voreingestellte Format</strong> — für Lagerplätze, Artikel und Drucker gleichermassen, damit im Gerät nur eine Rolle liegen muss.</td></tr>
+				<tr><td><strong>DK-11209</strong><br>62 × 29 mm</td><td>Gestanzte Einzeletiketten auf der breiten Rolle. Der Allrounder, wenn du lieber quer klebst.</td></tr>
 				<tr><td><strong>DK-22205, 30 mm</strong></td><td>Endlosrolle, kurz geschnitten — spart Material.</td></tr>
 				<tr><td><strong>DK-22205, 40 mm</strong></td><td>Mehr Luft für lange Bezeichnungen, grösserer Code.</td></tr>
 				<tr><td><strong>DK-22205, 62 mm</strong><br>quadratisch</td><td>Code oben über die volle Breite (rund 37 mm), Text darunter. Für Regalböden, die man aus zwei Metern scannt.</td></tr>
 			</tbody>
 		</table>
 	</div>
-	<p><strong>Die 62 mm sind die Rollenbreite, nicht die Etikettenlänge.</strong> Brother benennt seine Rollen in dieser Reihenfolge: DK-11209 ist 62 mm breit und 29 mm lang. Eine DK-11201 wäre nur 29 mm breit und passt zwar ins Gerät, aber nicht zu einer eingelegten 62-mm-Rolle — solche Formate stehen hier deshalb nicht zur Wahl. Der Druckkopf ist mit 720 Punkten bei 300 dpi knapp 61 mm breit; der Inhalt hält darum mindestens 1,5 mm Abstand zum Rand.</p>
+	<p><strong>Die erste Zahl ist die Rollenbreite, nicht die Etikettenlänge.</strong> Brother benennt seine Rollen in dieser Reihenfolge: DK-11209 ist 62 mm breit und 29 mm lang, DK-11201 ist 29 mm breit und 90 mm lang. <strong>Das gewählte Format muss zu der Rolle passen, die gerade im Gerät liegt</strong> — 62 × 29 gehört auf die breite, 29 × 90 auf die schmale. Beim Adressetikett wird der Länge nach beschriftet; gedreht ist dabei der <em>Aufdruck</em>, nicht die Seite. Im Druckdialog also nichts auf Querformat stellen. Der Druckkopf ist mit 720 Punkten bei 300 dpi knapp 61 mm breit; der Inhalt hält darum mindestens 1,5 mm Abstand zum Rand.</p>
 	<p><strong>So druckst du:</strong> Knopf drücken, das PDF öffnet sich im Browser, Strg+P, als Drucker den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus. In den Listen der Lagerplätze und der Artikel steht ausserdem je Zeile ein Knopf <em>drucken</em> beziehungsweise <em>Etikett</em> — damit druckst du ein einzelnes Etikett nach, ohne den ganzen Bestand zu erzeugen.</p>
 	<p><strong>Was nicht geht:</strong> ohne Druckdialog direkt aus dem Plugin auf das Gerät drucken. Der Drucker steht in deinem Netz, die Webseite beim Hoster — die beiden sehen einander nicht. Dafür bräuchte es ein kleines Hilfsprogramm auf einem Rechner in der Werkstatt; sag Bescheid, wenn dir der Druckdialog auf Dauer zu umständlich ist.</p>
 	<p><strong>Wichtig beim Drucken:</strong> ohne Skalierung ausgeben — im Druckdialog <em>Tatsächliche Grösse</em> und nicht <em>An Seite anpassen</em>. Sonst schrumpft der Bogen um ein paar Prozent und die Etiketten liegen neben der Stanzung. Das Häkchen <em>auch stillgelegte</em> nimmt Plätze und Artikel mit, die nicht mehr in Gebrauch sind; normalerweise willst du das nicht.</p>

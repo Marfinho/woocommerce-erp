@@ -660,7 +660,7 @@ class BinsPage {
 	 */
 	protected function render_label_sheet() {
 		echo '<h2>' . esc_html__( 'Etiketten als PDF', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Alle QR-Codes auf einem Bogen – Lagerplätze, Artikel oder beides. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Alle QR-Codes in einem Rutsch – Lagerplätze, Artikel, Drucker oder alles zusammen. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske, ein Drucker auf die Erfassung mit vorausgewähltem Gerät.', 'lindenweg16' ) . '</p>';
 
 		echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="lw16_betrieb_labels" />';
@@ -676,6 +676,10 @@ class BinsPage {
 			esc_html__( 'Artikel', 'lindenweg16' )
 		);
 		printf(
+			'<label style="margin-right:16px"><input type="checkbox" name="was[]" value="printers" /> %s</label>',
+			esc_html__( 'Drucker', 'lindenweg16' )
+		);
+		printf(
 			'<label><input type="checkbox" name="alle" value="1" /> %s</label>',
 			esc_html__( 'auch stillgelegte', 'lindenweg16' )
 		);
@@ -689,7 +693,12 @@ class BinsPage {
 		echo '</optgroup>';
 		printf( '<optgroup label="%s">', esc_attr__( 'Etikettendrucker Brother QL · eine Seite = ein Etikett', 'lindenweg16' ) );
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
-			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $roll['label'] ) );
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $key ),
+				selected( $key, LabelSheet::DEFAULT_ROLL, false ),
+				esc_html( $roll['label'] )
+			);
 		}
 		echo '</optgroup></select> ';
 		printf( '<button class="button button-primary">%s</button></p>', esc_html__( 'Etikettenbogen erzeugen', 'lindenweg16' ) );
@@ -719,7 +728,7 @@ class BinsPage {
 				array(
 					'action' => 'lw16_betrieb_labels',
 					'was[]'  => $was,
-					'format' => 'dk11209',
+					'format' => LabelSheet::DEFAULT_ROLL,
 					'alle'   => 1,
 					'code'   => rawurlencode( $code ),
 				),

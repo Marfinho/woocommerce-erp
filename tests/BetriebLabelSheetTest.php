@@ -5,6 +5,7 @@
  * @package Lindenweg16
  */
 
+use Lindenweg16\Modules\Betrieb\QrCode;
 use Lindenweg16\Modules\Betrieb\LabelSheet;
 use PHPUnit\Framework\TestCase;
 
@@ -344,11 +345,55 @@ class BetriebLabelSheetTest extends TestCase {
 	}
 
 	/**
-	 * Unbekanntes Rollenformat fällt auf das gängigste zurück.
+	 * Unbekanntes Rollenformat fällt auf das eingelegte zurück.
 	 */
 	public function test_unbekannte_rolle_faellt_zurueck() {
 		$this->assertFalse( LabelSheet::has_roll( 'ausgedacht' ) );
-		$this->assertSame( LabelSheet::roll( 'dk11209' ), LabelSheet::roll( 'ausgedacht' ) );
+		$this->assertSame( LabelSheet::roll( LabelSheet::DEFAULT_ROLL ), LabelSheet::roll( 'ausgedacht' ) );
+	}
+
+	/**
+	 * Das Standardformat gibt es auch wirklich.
+	 *
+	 * Ein Tippfehler in der Konstante liefe ohne diesen Test still auf den
+	 * Rückfall – und der Rückfall ist die Konstante selbst, also auf eine
+	 * Endlosschleife im Kopf des Lesers und ein zufälliges Format im Druck.
+	 */
+	public function test_das_standardformat_gibt_es() {
+		$this->assertTrue(
+			LabelSheet::has_roll( LabelSheet::DEFAULT_ROLL ),
+			'LabelSheet::DEFAULT_ROLL nennt ein Format, das rolls() nicht kennt.'
+		);
+	}
+
+	/**
+	 * Jede Stelle, die Etiketten erzeugt, geht von derselben Rolle aus.
+	 *
+	 * In einem Betrieb liegt eine Rolle im Gerät. Käme aus dem einen Knopf
+	 * ein Bogen für die schmale und aus dem anderen einer für die breite,
+	 * merkte man es erst am schiefen Ergebnis.
+	 */
+	public function test_alle_stellen_nehmen_dasselbe_standardformat() {
+		$dateien = array(
+			'/includes/Modules/Betrieb/LabelPdf.php',
+			'/includes/Modules/Betrieb/Exporter.php',
+			'/includes/Modules/Betrieb/Admin/BinsPage.php',
+			'/includes/Modules/Betrieb/Admin/PrintersPage.php',
+		);
+
+		foreach ( $dateien as $datei ) {
+			$quelltext = file_get_contents( dirname( __DIR__ ) . $datei );
+
+			$this->assertNotFalse( $quelltext, $datei );
+
+			foreach ( array_keys( LabelSheet::rolls() ) as $format ) {
+				$this->assertStringNotContainsString(
+					"'" . $format . "'",
+					$quelltext,
+					$datei . ' nennt das Rollenformat ' . $format . ' beim Namen statt LabelSheet::DEFAULT_ROLL zu nehmen.'
+				);
+			}
+		}
 	}
 
 	/**
@@ -382,4 +427,36 @@ class BetriebLabelSheetTest extends TestCase {
 			LabelSheet::layout( 'ausgedacht' )
 		);
 	}
+
+	/**
+	 * Auch ein Druckeretikett bleibt lesbar.
+	 *
+	 * Lagerplatz und Artikel tragen einen kurzen Code wie „LW16B:A-01".
+	 * Ein Druckeretikett trägt die Erfassungsadresse, also eine ganze URL –
+	 * viermal so viel Inhalt, und damit deutlich mehr Module auf derselben
+	 * Fläche. Geprüft wird gegen dieselbe Grenze wie überall: Unter einem
+	 * halben Millimeter je Modul liest keine Handykamera mehr zuverlässig.
+	 */
+	public function test_auch_ein_druckeretikett_bleibt_lesbar() {
+		$roll = LabelSheet::roll( LabelSheet::DEFAULT_ROLL );
+		$cell = LabelSheet::roll_cell( $roll );
+		$pad  = LabelSheet::padding( $cell['h'] );
+
+		// Eine lange Adresse mit langem Gerätekürzel – der ungünstigste Fall,
+		// der im Betrieb vorkommt.
+		$lang = 'https://sehr-lange-domain-des-betriebs.de/erfassung/?p=DRUCKER-12';
+
+		foreach ( array( 'https://lindenweg16.de/erfassung/?p=P1', $lang ) as $payload ) {
+			$module = count( QrCode::matrix( $payload, 'Q' ) );
+			$box    = LabelSheet::qr_box( $cell, $module, $pad );
+			$je     = ( $box['size'] / LabelSheet::MM ) / $module;
+
+			$this->assertGreaterThanOrEqual(
+				0.5,
+				$je,
+				'Bei ' . $module . ' Modulen bleiben nur ' . round( $je, 3 ) . ' mm je Modul.'
+			);
+		}
+	}
 }
+
