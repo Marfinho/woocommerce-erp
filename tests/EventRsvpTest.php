@@ -45,6 +45,68 @@ class EventRsvpTest extends TestCase {
 		$this->assertSame( RsvpRechnung::ZUGESAGT, RsvpRechnung::status_nach_bestaetigung( 10, 9 ) );
 	}
 
+	/* ----------------------------------------------------------------
+	 * Begleitpersonen
+	 * -------------------------------------------------------------- */
+
+	public function test_eine_anmeldung_ohne_begleitung_belegt_einen_platz() {
+		$this->assertSame( 1, RsvpRechnung::plaetze_fuer( 0 ) );
+	}
+
+	public function test_begleitpersonen_belegen_eigene_plaetze() {
+		$this->assertSame( 3, RsvpRechnung::plaetze_fuer( 2 ) );
+	}
+
+	public function test_begleitung_ist_gedeckelt() {
+		$this->assertSame(
+			RsvpRechnung::MAX_BEGLEITER + 1,
+			RsvpRechnung::plaetze_fuer( 500 )
+		);
+	}
+
+	public function test_leere_namenszeilen_fallen_heraus() {
+		// Das Formular fuegt Zeilen auf Klick hinzu; eine ungenutzte bleibt
+		// oft stehen und darf keinen Platz belegen.
+		$this->assertSame(
+			array( 'Anna', 'Bo' ),
+			RsvpRechnung::begleiter_liste( array( 'Anna', '', '   ', 'Bo' ) )
+		);
+	}
+
+	public function test_namen_werden_normalisiert() {
+		$this->assertSame(
+			array( 'Anna Beispiel' ),
+			RsvpRechnung::begleiter_liste( array( "  Anna	
+  Beispiel " ) )
+		);
+	}
+
+	public function test_zu_viele_namen_werden_abgeschnitten() {
+		$viele = array_fill( 0, 50, 'Person' );
+		$this->assertCount( RsvpRechnung::MAX_BEGLEITER, RsvpRechnung::begleiter_liste( $viele ) );
+	}
+
+	public function test_gruppe_passt_nur_vollstaendig_hinein() {
+		// Drei freie Plaetze, eine Gruppe zu viert: Die passt nicht.
+		$this->assertTrue( RsvpRechnung::passt( 10, 7, 3 ) );
+		$this->assertFalse( RsvpRechnung::passt( 10, 7, 4 ) );
+	}
+
+	public function test_gruppe_die_nicht_passt_kommt_auf_die_warteliste() {
+		$this->assertSame(
+			RsvpRechnung::WARTELISTE,
+			RsvpRechnung::status_nach_bestaetigung( 10, 8, 3 )
+		);
+		$this->assertSame(
+			RsvpRechnung::ZUGESAGT,
+			RsvpRechnung::status_nach_bestaetigung( 10, 8, 2 )
+		);
+	}
+
+	public function test_ohne_grenze_passt_jede_gruppe() {
+		$this->assertTrue( RsvpRechnung::passt( 0, 999, 8 ) );
+	}
+
 	public function test_erste_anmeldung_nach_dem_letzten_platz_wartet() {
 		$this->assertSame( RsvpRechnung::WARTELISTE, RsvpRechnung::status_nach_bestaetigung( 10, 10 ) );
 	}
@@ -84,21 +146,38 @@ class EventRsvpTest extends TestCase {
 	 * -------------------------------------------------------------- */
 
 	public function test_eine_absage_laesst_genau_einen_nachruecken() {
-		$this->assertSame( 1, RsvpRechnung::nachruecker_anzahl( 10, 9, 4 ) );
+		$this->assertSame( 1, RsvpRechnung::nachruecker_anzahl( array( 1, 1, 1, 1 ), 10, 9 ) );
 	}
 
 	public function test_bei_vollem_event_rueckt_niemand_nach() {
-		$this->assertSame( 0, RsvpRechnung::nachruecker_anzahl( 10, 10, 4 ) );
+		$this->assertSame( 0, RsvpRechnung::nachruecker_anzahl( array( 1, 1 ), 10, 10 ) );
 	}
 
 	public function test_es_ruecken_nie_mehr_nach_als_warten() {
-		$this->assertSame( 2, RsvpRechnung::nachruecker_anzahl( 10, 3, 2 ) );
+		$this->assertSame( 2, RsvpRechnung::nachruecker_anzahl( array( 1, 1 ), 10, 3 ) );
 	}
 
 	public function test_aufgehobene_grenze_holt_die_ganze_warteliste_herein() {
 		// Setzt man die Maximalzahl auf 0, ist niemand mehr zu Recht auf
 		// der Warteliste.
-		$this->assertSame( 7, RsvpRechnung::nachruecker_anzahl( 0, 10, 7 ) );
+		$this->assertSame( 7, RsvpRechnung::nachruecker_anzahl( array_fill( 0, 7, 2 ), 0, 10 ) );
+	}
+
+	public function test_eine_gruppe_rueckt_nur_geschlossen_nach() {
+		// Zwei Plaetze frei, vorne wartet eine Dreiergruppe: Die wird nicht
+		// auseinandergerissen, also rueckt niemand nach.
+		$this->assertSame( 0, RsvpRechnung::nachruecker_anzahl( array( 3, 1 ), 10, 8 ) );
+	}
+
+	public function test_niemand_ueberholt_eine_wartende_gruppe() {
+		// Der Einzelne hinter der Dreiergruppe passt zwar - darf aber nicht
+		// vorbei, sonst kaeme die Gruppe nie an die Reihe.
+		$this->assertSame( 0, RsvpRechnung::nachruecker_anzahl( array( 3, 1, 1 ), 10, 9 ) );
+	}
+
+	public function test_mehrere_gruppen_ruecken_nach_solange_der_platz_reicht() {
+		// Fuenf Plaetze frei: 2 + 2 passen, die naechste Dreiergruppe nicht.
+		$this->assertSame( 2, RsvpRechnung::nachruecker_anzahl( array( 2, 2, 3 ), 10, 5 ) );
 	}
 
 	/* ----------------------------------------------------------------
@@ -109,9 +188,9 @@ class EventRsvpTest extends TestCase {
 		$this->assertSame( '7 von 20 Plätzen belegt', RsvpRechnung::belegung_text( 20, 7 ) );
 	}
 
-	public function test_belegungstext_ohne_grenze_zaehlt_nur_anmeldungen() {
-		$this->assertSame( '1 Anmeldung', RsvpRechnung::belegung_text( 0, 1 ) );
-		$this->assertSame( '12 Anmeldungen', RsvpRechnung::belegung_text( 0, 12 ) );
+	public function test_belegungstext_ohne_grenze_zaehlt_teilnehmer() {
+		$this->assertSame( '1 Teilnehmer', RsvpRechnung::belegung_text( 0, 1 ) );
+		$this->assertSame( '12 Teilnehmer', RsvpRechnung::belegung_text( 0, 12 ) );
 	}
 
 	/* ----------------------------------------------------------------

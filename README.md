@@ -316,9 +316,9 @@ vorhanden ist – nicht, was geplant war.
   WooCommerce.
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
-  Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, optionale
-  Teilnehmerbegrenzung mit automatisch nachrückender Warteliste, QR-Code auf
-  die Eventseite.
+  Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit
+  Namen, optionale Teilnehmerbegrenzung mit automatisch nachrückender
+  Warteliste, QR-Code auf die Eventseite.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
@@ -454,9 +454,22 @@ eine nie bestätigte Anmeldung einen Platz. Unbestätigte Anmeldungen verfallen
 nach sieben Tagen und werden täglich aufgeräumt
 (`Scheduler::HOOK_DAILY_EVENTS`).
 
+Eine Anmeldung kann **Begleitpersonen** mitbringen; jede braucht einen Namen
+(bei einer Ausfahrt oder einem Rennen muss auf der Startliste stehen, wer
+mitfährt) und belegt einen eigenen Platz. Höchstens zehn je Anmeldung – das
+Formular ist öffentlich. Gezählt werden deshalb durchgehend **Plätze, nicht
+Anmeldungen**: `RsvpRepository::plaetze()` summiert, `count()` zählt Zeilen,
+und die Kapazität hängt an der ersten der beiden. Der CSV-Export schreibt
+eine Zeile je Person, nicht je Anmeldung – so liest sich eine Startliste.
+
 Ist die Teilnehmerzahl erreicht, landen weitere Anmeldungen auf der
 Warteliste. Bei einer Absage rückt in der Reihenfolge der Bestätigung nach,
-wer als Erster zugesagt hatte, und bekommt sofort eine E-Mail. Dasselbe
+wer als Erster zugesagt hatte, und bekommt sofort eine E-Mail. Eine Gruppe
+rückt nur geschlossen nach, und es wird **streng der Reihe nach** aufgefüllt:
+Passt der Nächste nicht mehr hinein, ist Schluss – auch wenn hinter ihm ein
+Einzelner läge, der noch passte. Sonst überholte eine Einzelperson eine
+wartende Familie, und zwar jedes Mal wieder. Im Einzelfall lässt sich der
+Status im Backend von Hand setzen. Dasselbe
 passiert, wenn die Maximalzahl im Backend angehoben oder auf 0 (unbegrenzt)
 gesetzt wird. Eine Teilnehmerzahl von 0 bedeutet durchgehend „unbegrenzt",
 nie „niemand" – die Unterscheidung steckt in `RsvpRechnung::ist_begrenzt()`.

@@ -100,6 +100,42 @@
 	font-weight: 400;
 }
 
+.lw16-begleiter {
+	margin: 0 0 1rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	border-radius: 6px;
+}
+
+.lw16-begleiter legend {
+	font-weight: 600;
+	padding: 0 0.35rem;
+}
+
+.lw16-begleiter-zeile {
+	margin: 0 0 0.5rem;
+}
+
+/* Ab der zweiten Zeile reicht das Feld - die Beschriftung stünde sonst
+   zehnmal untereinander. Für Screenreader bleibt sie erhalten. */
+.lw16-begleiter-zeile + .lw16-begleiter-zeile label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}
+
+.lw16-begleiter-zeile + .lw16-begleiter-zeile input {
+	margin-top: 0;
+}
+
+.lw16-begleiter-plus[disabled] {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 .lw16-event-hinweis {
 	font-size: 0.9em;
 	opacity: 0.75;

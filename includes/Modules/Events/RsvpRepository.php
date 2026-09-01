@@ -49,13 +49,14 @@ class RsvpRepository {
 	 * stünde er zweimal auf der Liste. Eine bereits bestätigte Anmeldung
 	 * bleibt unangetastet.
 	 *
-	 * @param int    $event_id Event.
-	 * @param string $name     Name.
-	 * @param string $email    E-Mail.
-	 * @param string $notiz    Freitext.
+	 * @param int    $event_id  Event.
+	 * @param string $name      Name.
+	 * @param string $email     E-Mail.
+	 * @param string $notiz     Freitext.
+	 * @param array  $begleiter Namen der Begleitpersonen.
 	 * @return array {id, token, bereits_bestaetigt, status}
 	 */
-	public static function anmelden( $event_id, $name, $email, $notiz = '' ) {
+	public static function anmelden( $event_id, $name, $email, $notiz = '', array $begleiter = array() ) {
 		global $wpdb;
 
 		$event_id = (int) $event_id;
@@ -73,11 +74,15 @@ class RsvpRepository {
 			);
 		}
 
+		$begleiter = RsvpRechnung::begleiter_liste( array_map( 'sanitize_text_field', $begleiter ) );
+
 		$daten = array(
 			'event_id'      => $event_id,
 			'user_id'       => get_current_user_id() ?: null,
 			'name'          => sanitize_text_field( $name ),
 			'email'         => $email,
+			'begleiter'     => $begleiter ? wp_json_encode( $begleiter ) : null,
+			'plaetze'       => RsvpRechnung::plaetze_fuer( count( $begleiter ) ),
 			'notiz'         => sanitize_textarea_field( $notiz ),
 			'status'        => RsvpRechnung::OFFEN,
 			'token_hash'    => self::hash( $token ),
@@ -137,6 +142,8 @@ class RsvpRepository {
 	/**
 	 * Anzahl der Anmeldungen eines Events je Status.
 	 *
+	 * Zeilen, nicht Plätze – für „drei Gruppen auf der Warteliste".
+	 *
 	 * @param int    $event_id Event.
 	 * @param string $status   Status.
 	 * @return int
@@ -149,6 +156,40 @@ class RsvpRepository {
 			(int) $event_id,
 			$status
 		) );
+	}
+
+	/**
+	 * Belegte Plätze eines Events je Status.
+	 *
+	 * Das ist die Zahl, an der die Kapazität hängt: Eine Anmeldung mit zwei
+	 * Begleitpersonen belegt drei Plätze.
+	 *
+	 * @param int    $event_id Event.
+	 * @param string $status   Status.
+	 * @return int
+	 */
+	public static function plaetze( $event_id, $status ) {
+		global $wpdb;
+		$t = self::table();
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT COALESCE(SUM(plaetze), 0) FROM {$t} WHERE event_id = %d AND status = %s", // phpcs:ignore
+			(int) $event_id,
+			$status
+		) );
+	}
+
+	/**
+	 * Begleitnamen eines Datensatzes.
+	 *
+	 * @param object $rsvp Anmeldung.
+	 * @return array
+	 */
+	public static function begleiter( $rsvp ) {
+		if ( empty( $rsvp->begleiter ) ) {
+			return array();
+		}
+		$namen = json_decode( (string) $rsvp->begleiter, true );
+		return is_array( $namen ) ? $namen : array();
 	}
 
 	/**
@@ -194,8 +235,9 @@ class RsvpRepository {
 			return (string) $rsvp->status;
 		}
 
-		$zugesagt = self::count( (int) $rsvp->event_id, RsvpRechnung::ZUGESAGT );
-		$status   = RsvpRechnung::status_nach_bestaetigung( $max_teilnehmer, $zugesagt );
+		$belegt = self::plaetze( (int) $rsvp->event_id, RsvpRechnung::ZUGESAGT );
+		$bedarf = max( 1, (int) $rsvp->plaetze );
+		$status = RsvpRechnung::status_nach_bestaetigung( $max_teilnehmer, $belegt, $bedarf );
 
 		$wpdb->update(
 			self::table(),
@@ -210,6 +252,7 @@ class RsvpRepository {
 		AuditLog::record( 'event_rsvp_bestaetigt', 'event', (int) $rsvp->event_id, array(
 			'rsvp_id' => (int) $rsvp->id,
 			'status'  => $status,
+			'plaetze' => $bedarf,
 		) );
 
 		return $status;
@@ -271,14 +314,19 @@ class RsvpRepository {
 	public static function nachruecken( $event_id, $max_teilnehmer ) {
 		global $wpdb;
 
-		$event_id  = (int) $event_id;
+		$event_id   = (int) $event_id;
 		$warteliste = self::all( $event_id, RsvpRechnung::WARTELISTE );
 		if ( ! $warteliste ) {
 			return array();
 		}
 
-		$zugesagt = self::count( $event_id, RsvpRechnung::ZUGESAGT );
-		$anzahl   = RsvpRechnung::nachruecker_anzahl( $max_teilnehmer, $zugesagt, count( $warteliste ) );
+		$bedarfe = array();
+		foreach ( $warteliste as $rsvp ) {
+			$bedarfe[] = max( 1, (int) $rsvp->plaetze );
+		}
+
+		$belegt = self::plaetze( $event_id, RsvpRechnung::ZUGESAGT );
+		$anzahl = RsvpRechnung::nachruecker_anzahl( $bedarfe, $max_teilnehmer, $belegt );
 
 		if ( $anzahl <= 0 ) {
 			return array();

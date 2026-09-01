@@ -118,6 +118,8 @@ class Privacy {
 				'fields' => array(
 					'name'          => __( 'Name', 'lindenweg16' ),
 					'email'         => __( 'E-Mail', 'lindenweg16' ),
+					'begleiter'     => __( 'Angemeldete Begleitpersonen', 'lindenweg16' ),
+					'plaetze'       => __( 'Belegte Plätze', 'lindenweg16' ),
 					'status'        => __( 'Status', 'lindenweg16' ),
 					'notiz'         => __( 'Anmerkung', 'lindenweg16' ),
 					'bestaetigt_am' => __( 'Bestätigt am', 'lindenweg16' ),

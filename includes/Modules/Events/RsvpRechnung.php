@@ -14,6 +14,10 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Rechnet Plätze und Wartelistenplätze aus.
+ *
+ * Gezählt werden durchgehend **Plätze**, nicht Anmeldungen: Eine Anmeldung
+ * mit zwei Begleitpersonen belegt drei. Wer hier Zeilen zählte, hätte ein
+ * überbuchtes Event.
  */
 class RsvpRechnung {
 
@@ -74,6 +78,71 @@ class RsvpRechnung {
 	}
 
 	/**
+	 * Höchstzahl an Begleitpersonen je Anmeldung.
+	 *
+	 * Eine Obergrenze braucht es, weil das Formular öffentlich ist – ohne sie
+	 * trüge eine einzige Anmeldung beliebig viele Namen ein.
+	 */
+	const MAX_BEGLEITER = 10;
+
+	/**
+	 * Plätze, die eine Anmeldung belegt: sie selbst plus Begleitpersonen.
+	 *
+	 * @param int $begleiter Anzahl der Begleitpersonen.
+	 * @return int
+	 */
+	public static function plaetze_fuer( $begleiter ) {
+		return 1 + min( self::MAX_BEGLEITER, max( 0, (int) $begleiter ) );
+	}
+
+	/**
+	 * Namensliste der Begleitpersonen säubern.
+	 *
+	 * Leere Zeilen fallen heraus – das Formular fügt sie auf Klick hinzu, und
+	 * eine ungenutzte bleibt oft stehen. Ein Platz ohne Namen wird dagegen
+	 * nicht vergeben: Bei einem Rennen oder einer Ausfahrt muss auf der
+	 * Startliste stehen, wer mitfährt.
+	 *
+	 * @param array $roh Eingegebene Namen.
+	 * @return array Bereinigte Namen, höchstens MAX_BEGLEITER.
+	 */
+	public static function begleiter_liste( array $roh ) {
+		$namen = array();
+
+		foreach ( $roh as $name ) {
+			if ( ! is_scalar( $name ) ) {
+				continue;
+			}
+			$name = trim( preg_replace( '/\s+/u', ' ', (string) $name ) );
+			if ( '' === $name ) {
+				continue;
+			}
+			$namen[] = $name;
+			if ( count( $namen ) >= self::MAX_BEGLEITER ) {
+				break;
+			}
+		}
+
+		return $namen;
+	}
+
+	/**
+	 * Passt eine Anmeldung dieser Größe noch hinein?
+	 *
+	 * @param int $max    Maximale Teilnehmerzahl, 0 = unbegrenzt.
+	 * @param int $belegt Belegte Plätze.
+	 * @param int $bedarf Benötigte Plätze.
+	 * @return bool
+	 */
+	public static function passt( $max, $belegt, $bedarf = 1 ) {
+		$frei = self::freie_plaetze( $max, $belegt );
+		if ( null === $frei ) {
+			return true;
+		}
+		return $frei >= max( 1, (int) $bedarf );
+	}
+
+	/**
 	 * Status, den eine neue Anmeldung nach ihrer Bestätigung bekommt.
 	 *
 	 * Entschieden wird erst bei der Bestätigung, nicht beim Absenden: Sonst
@@ -81,10 +150,11 @@ class RsvpRechnung {
 	 *
 	 * @param int $max      Maximale Teilnehmerzahl.
 	 * @param int $zugesagt Vergebene Plätze.
+	 * @param int $bedarf   Benötigte Plätze (mit Begleitung).
 	 * @return string ZUGESAGT oder WARTELISTE.
 	 */
-	public static function status_nach_bestaetigung( $max, $zugesagt ) {
-		return self::ist_ausgebucht( $max, $zugesagt ) ? self::WARTELISTE : self::ZUGESAGT;
+	public static function status_nach_bestaetigung( $max, $zugesagt, $bedarf = 1 ) {
+		return self::passt( $max, $zugesagt, $bedarf ) ? self::ZUGESAGT : self::WARTELISTE;
 	}
 
 	/**
@@ -110,22 +180,38 @@ class RsvpRechnung {
 	}
 
 	/**
-	 * Wie viele von der Warteliste dürfen nachrücken?
+	 * Wie viele Wartende vom Anfang der Liste rücken nach?
 	 *
-	 * @param int $max      Maximale Teilnehmerzahl.
-	 * @param int $zugesagt Vergebene Plätze.
-	 * @param int $wartend  Länge der Warteliste.
-	 * @return int
+	 * Streng der Reihe nach: Passt der Nächste nicht mehr hinein, ist
+	 * Schluss – auch wenn hinter ihm ein Einzelner läge, der noch passte.
+	 * Sonst überholte eine Einzelperson eine wartende Familie, und zwar
+	 * jedes Mal wieder. Wer das im Einzelfall anders will, setzt den Status
+	 * im Backend von Hand.
+	 *
+	 * @param array $bedarfe Benötigte Plätze der Wartenden, in ihrer Reihenfolge.
+	 * @param int   $max     Maximale Teilnehmerzahl, 0 = unbegrenzt.
+	 * @param int   $belegt  Belegte Plätze.
+	 * @return int Anzahl der Wartenden vom Anfang der Liste.
 	 */
-	public static function nachruecker_anzahl( $max, $zugesagt, $wartend ) {
-		$wartend = max( 0, (int) $wartend );
-
+	public static function nachruecker_anzahl( array $bedarfe, $max, $belegt ) {
 		if ( ! self::ist_begrenzt( $max ) ) {
 			// Ohne Grenze gehört niemand auf die Warteliste; alle rücken nach.
-			return $wartend;
+			return count( $bedarfe );
 		}
 
-		return min( $wartend, (int) self::freie_plaetze( $max, $zugesagt ) );
+		$frei   = (int) self::freie_plaetze( $max, $belegt );
+		$anzahl = 0;
+
+		foreach ( $bedarfe as $bedarf ) {
+			$bedarf = max( 1, (int) $bedarf );
+			if ( $bedarf > $frei ) {
+				break;
+			}
+			$frei -= $bedarf;
+			$anzahl++;
+		}
+
+		return $anzahl;
 	}
 
 	/**
@@ -139,8 +225,8 @@ class RsvpRechnung {
 		$zugesagt = max( 0, (int) $zugesagt );
 
 		if ( ! self::ist_begrenzt( $max ) ) {
-			/* translators: %d: Anzahl der Zusagen. */
-			return sprintf( _n( '%d Anmeldung', '%d Anmeldungen', $zugesagt, 'lindenweg16' ), $zugesagt );
+			/* translators: %d: Anzahl der Teilnehmenden. */
+			return sprintf( _n( '%d Teilnehmer', '%d Teilnehmer', $zugesagt, 'lindenweg16' ), $zugesagt );
 		}
 
 		return sprintf(

@@ -203,7 +203,7 @@ class EventAdmin {
 	public function box_rsvp( $post ) {
 		$d        = EventPostType::daten( $post->ID );
 		$alle     = RsvpRepository::all( $post->ID );
-		$zugesagt = RsvpRepository::count( $post->ID, RsvpRechnung::ZUGESAGT );
+		$zugesagt = RsvpRepository::plaetze( $post->ID, RsvpRechnung::ZUGESAGT );
 
 		echo '<p><strong>' . esc_html( RsvpRechnung::belegung_text( $d['max_teilnehmer'], $zugesagt ) ) . '</strong>';
 		$frei = RsvpRechnung::freie_plaetze( $d['max_teilnehmer'], $zugesagt );
@@ -224,6 +224,8 @@ class EventAdmin {
 		echo '<table class="widefat striped"><thead><tr>';
 		echo '<th>' . esc_html__( 'Name', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'E-Mail', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Begleitung', 'lindenweg16' ) . '</th>';
+		echo '<th>' . esc_html__( 'Plätze', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Status', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Bestätigt', 'lindenweg16' ) . '</th>';
 		echo '<th>' . esc_html__( 'Anmerkung', 'lindenweg16' ) . '</th>';
@@ -232,8 +234,12 @@ class EventAdmin {
 
 		foreach ( $alle as $r ) {
 			echo '<tr>';
+			$begleiter = RsvpRepository::begleiter( $r );
+
 			echo '<td>' . esc_html( $r->name ) . '</td>';
 			echo '<td>' . esc_html( $r->email ) . '</td>';
+			echo '<td>' . esc_html( $begleiter ? implode( ', ', $begleiter ) : '–' ) . '</td>';
+			echo '<td>' . esc_html( (string) max( 1, (int) $r->plaetze ) ) . '</td>';
 			echo '<td>' . esc_html( self::status_label( $r->status ) ) . '</td>';
 			echo '<td>' . esc_html( $r->bestaetigt_am ? $r->bestaetigt_am : '–' ) . '</td>';
 			echo '<td>' . esc_html( $r->notiz ) . '</td>';
@@ -377,17 +383,45 @@ class EventAdmin {
 
 		$zeilen = RsvpRepository::all( $event_id );
 
+		// Eine Zeile je Person, nicht je Anmeldung: Am Start steht die
+		// Begleitperson genauso da wie die, die sie angemeldet hat.
 		// BOM, damit Tabellenprogramme die Umlaute richtig lesen.
-		$csv = "\xEF\xBB\xBF" . "Name;E-Mail;Status;Bestaetigt am;Anmerkung\r\n";
+		$csv  = "\xEF\xBB\xBF";
+		$csv .= "Name;Angemeldet von;E-Mail;Status;Bestaetigt am;Anmerkung\r\n";
+
+		// Die Namen kommen aus einem oeffentlichen Formular. Ein Wert, der mit
+		// = + - @ beginnt, ist in Excel und Calc eine Formel - deshalb bekommt
+		// er ein Hochkomma vorangestellt und bleibt Text.
+		$feld = static function ( $wert ) {
+			$wert = (string) $wert;
+			if ( '' !== $wert && false !== strpos( '=+-@', $wert[0] ) ) {
+				$wert = "'" . $wert;
+			}
+			return '"' . str_replace( '"', '""', $wert ) . '"';
+		};
+
 		foreach ( $zeilen as $r ) {
-			$csv .= sprintf(
-				"\"%s\";\"%s\";\"%s\";\"%s\";\"%s\"\r\n",
-				str_replace( '"', '""', $r->name ),
-				str_replace( '"', '""', $r->email ),
-				self::status_label( $r->status ),
-				(string) $r->bestaetigt_am,
-				str_replace( '"', '""', (string) $r->notiz )
-			);
+			$status = self::status_label( $r->status );
+
+			$csv .= implode( ';', array(
+				$feld( $r->name ),
+				$feld( '' ),
+				$feld( $r->email ),
+				$feld( $status ),
+				$feld( (string) $r->bestaetigt_am ),
+				$feld( (string) $r->notiz ),
+			) ) . "\r\n";
+
+			foreach ( RsvpRepository::begleiter( $r ) as $begleiter ) {
+				$csv .= implode( ';', array(
+					$feld( $begleiter ),
+					$feld( $r->name ),
+					$feld( $r->email ),
+					$feld( $status ),
+					$feld( (string) $r->bestaetigt_am ),
+					$feld( '' ),
+				) ) . "\r\n";
+			}
 		}
 
 		nocache_headers();
@@ -472,12 +506,12 @@ class EventAdmin {
 				echo '<span class="description">' . esc_html__( 'aus', 'lindenweg16' ) . '</span>';
 				return;
 			}
-			$zugesagt = RsvpRepository::count( $post_id, RsvpRechnung::ZUGESAGT );
-			$wartend  = RsvpRepository::count( $post_id, RsvpRechnung::WARTELISTE );
+			$zugesagt = RsvpRepository::plaetze( $post_id, RsvpRechnung::ZUGESAGT );
+			$wartend  = RsvpRepository::plaetze( $post_id, RsvpRechnung::WARTELISTE );
 			echo esc_html( RsvpRechnung::belegung_text( $d['max_teilnehmer'], $zugesagt ) );
 			if ( $wartend ) {
 				echo '<br><span class="description">' . esc_html( sprintf(
-					/* translators: %d: Wartende. */
+					/* translators: %d: Wartende Personen. */
 					_n( '%d auf der Warteliste', '%d auf der Warteliste', $wartend, 'lindenweg16' ),
 					$wartend
 				) ) . '</span>';

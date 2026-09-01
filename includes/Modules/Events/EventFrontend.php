@@ -31,7 +31,9 @@ class EventFrontend {
 	 */
 	public function register() {
 		add_action( 'template_redirect', array( $this, 'handle_request' ) );
-		add_filter( 'the_content', array( $this, 'append_event' ) );
+		// Nach wpautop: Der Beitragstext soll dessen Absatzformatierung
+		// bekommen, unser eigenes Markup aber nicht durch sie hindurch.
+		add_filter( 'the_content', array( $this, 'append_event' ), 20 );
 	}
 
 	/* --------------------------------------------------------------------
@@ -124,7 +126,7 @@ class EventFrontend {
 			$daten['rsvp_aktiv'],
 			$this->ist_vorbei( $daten ),
 			$daten['max_teilnehmer'],
-			RsvpRepository::count( $post_id, RsvpRechnung::ZUGESAGT )
+			RsvpRepository::plaetze( $post_id, RsvpRechnung::ZUGESAGT )
 		);
 
 		if ( 'aus' === $status || 'vorbei' === $status ) {
@@ -143,7 +145,14 @@ class EventFrontend {
 			$this->redirect_mit_meldung( $post_id, 'einwilligung' );
 		}
 
-		$ergebnis = RsvpRepository::anmelden( $post_id, $name, $email, $notiz );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$roh_begleiter = isset( $_POST['lw16_begleiter'] ) && is_array( $_POST['lw16_begleiter'] )
+			? array_map( 'sanitize_text_field', wp_unslash( $_POST['lw16_begleiter'] ) )
+			: array();
+
+		$begleiter = RsvpRechnung::begleiter_liste( $roh_begleiter );
+
+		$ergebnis = RsvpRepository::anmelden( $post_id, $name, $email, $notiz, $begleiter );
 
 		if ( $ergebnis['bereits_bestaetigt'] ) {
 			$this->redirect_mit_meldung( $post_id, 'schon_angemeldet' );
@@ -236,7 +245,7 @@ class EventFrontend {
 	 * @return string
 	 */
 	protected function rsvp_html( $post_id, array $daten ) {
-		$zugesagt = RsvpRepository::count( $post_id, RsvpRechnung::ZUGESAGT );
+		$zugesagt = RsvpRepository::plaetze( $post_id, RsvpRechnung::ZUGESAGT );
 		$status   = RsvpRechnung::formular_status(
 			$daten['rsvp_aktiv'],
 			$this->ist_vorbei( $daten ),
@@ -275,6 +284,8 @@ class EventFrontend {
 			. '<input type="text" name="lw16_name" required value="' . esc_attr( $name ) . '"></label></p>';
 		$out .= '<p><label>' . esc_html__( 'E-Mail', 'lindenweg16' )
 			. '<input type="email" name="lw16_email" required value="' . esc_attr( $email ) . '"></label></p>';
+		$out .= $this->begleiter_html();
+
 		$out .= '<p><label>' . esc_html__( 'Anmerkung (optional)', 'lindenweg16' )
 			. '<textarea name="lw16_notiz" rows="2"></textarea></label></p>';
 
@@ -284,12 +295,61 @@ class EventFrontend {
 			. '<input type="text" name="lw16_website" tabindex="-1" autocomplete="off"></label></p>';
 
 		$out .= '<p><label><input type="checkbox" name="lw16_einwilligung" value="1" required> '
-			. esc_html__( 'Meine Angaben dürfen zur Organisation dieses Events gespeichert werden.', 'lindenweg16' )
+			. esc_html__( 'Meine Angaben und die Namen der genannten Begleitpersonen dürfen zur Organisation dieses Events gespeichert werden. Ich habe die genannten Personen darüber informiert.', 'lindenweg16' )
 			. '</label></p>';
 
 		$out .= '<p><button type="submit">' . esc_html( $knopf ) . '</button></p>';
 		$out .= '<p class="lw16-event-hinweis">' . esc_html__( 'Du bekommst eine E-Mail mit einem Bestätigungslink. Erst danach ist die Anmeldung gültig – über denselben Link kannst Du später auch wieder absagen.', 'lindenweg16' ) . '</p>';
 		$out .= '</form></div>';
+
+		return $out;
+	}
+
+	/**
+	 * Eingabe der Begleitpersonen: je Klick eine weitere Namenszeile.
+	 *
+	 * Ohne JavaScript bleibt eine Zeile stehen und lässt sich ausfüllen –
+	 * dann kommt eben eine Begleitperson mit statt fünf. Ein Formular, das
+	 * ohne Skript gar nichts kann, wäre hier der schlechtere Tausch.
+	 *
+	 * @return string
+	 */
+	protected function begleiter_html() {
+		$out  = '<fieldset class="lw16-begleiter">';
+		$out .= '<legend>' . esc_html__( 'Begleitpersonen', 'lindenweg16' ) . '</legend>';
+		$out .= '<p class="lw16-event-hinweis">' . esc_html(
+			sprintf(
+				/* translators: %d: Höchstzahl an Begleitpersonen. */
+				__( 'Jede Begleitperson braucht einen Namen – sie belegt einen eigenen Platz. Höchstens %d.', 'lindenweg16' ),
+				RsvpRechnung::MAX_BEGLEITER
+			)
+		) . '</p>';
+
+		$out .= '<div class="lw16-begleiter-zeilen">';
+		$out .= '<p class="lw16-begleiter-zeile"><label>' . esc_html__( 'Name der Begleitperson', 'lindenweg16' )
+			. '<input type="text" name="lw16_begleiter[]" autocomplete="off"></label></p>';
+		$out .= '</div>';
+
+		$out .= '<p><button type="button" class="lw16-begleiter-plus">'
+			. esc_html__( '+ weitere Person', 'lindenweg16' ) . '</button></p>';
+		$out .= '</fieldset>';
+
+		$out .= "<script>\n(function(){\n"
+			. "var wrap=document.currentScript.previousElementSibling;\n"
+			. "if(!wrap||!wrap.classList.contains('lw16-begleiter'))return;\n"
+			. "var zeilen=wrap.querySelector('.lw16-begleiter-zeilen');\n"
+			. "var plus=wrap.querySelector('.lw16-begleiter-plus');\n"
+			. 'var max=' . (int) RsvpRechnung::MAX_BEGLEITER . ";\n"
+			. "plus.addEventListener('click',function(){\n"
+			. "if(zeilen.children.length>=max)return;\n"
+			. "var neu=zeilen.firstElementChild.cloneNode(true);\n"
+			. "var feld=neu.querySelector('input');\n"
+			. "feld.value='';\n"
+			. "zeilen.appendChild(neu);\n"
+			. "feld.focus();\n"
+			. "if(zeilen.children.length>=max)plus.disabled=true;\n"
+			. "});\n"
+			. "})();\n</script>";
 
 		return $out;
 	}
@@ -346,6 +406,7 @@ class EventFrontend {
 	protected function mail_bestaetigung( $post_id, $name, $email, $token ) {
 		MailTemplate::send( $email, 'event_bestaetigung', array(
 			'{name}'        => $name,
+			'{personen}'    => self::personen_text( $post_id, $email ),
 			'{event}'       => get_the_title( $post_id ),
 			'{termin}'      => self::termin_text(
 				(string) get_post_meta( $post_id, EventPostType::META['beginn'], true )
@@ -365,7 +426,8 @@ class EventFrontend {
 		$key = RsvpRechnung::WARTELISTE === $status ? 'event_warteliste' : 'event_zugesagt';
 
 		MailTemplate::send( $rsvp->email, $key, array(
-			'{name}'    => $rsvp->name,
+			'{name}'      => $rsvp->name,
+			'{personen}'  => self::begleiter_text( $rsvp ),
 			'{event}'   => get_the_title( $post_id ),
 			'{termin}'  => self::termin_text( (string) get_post_meta( $post_id, EventPostType::META['beginn'], true ) ),
 			'{ort}'     => (string) get_post_meta( $post_id, EventPostType::META['ort'], true ),
@@ -381,7 +443,8 @@ class EventFrontend {
 	 */
 	protected function mail_nachgerueckt( $post_id, $rsvp ) {
 		MailTemplate::send( $rsvp->email, 'event_nachgerueckt', array(
-			'{name}'    => $rsvp->name,
+			'{name}'      => $rsvp->name,
+			'{personen}'  => self::begleiter_text( $rsvp ),
 			'{event}'   => get_the_title( $post_id ),
 			'{termin}'  => self::termin_text( (string) get_post_meta( $post_id, EventPostType::META['beginn'], true ) ),
 			'{absagen}' => self::absage_hinweis( $post_id, $rsvp ),
@@ -411,6 +474,38 @@ class EventFrontend {
 	/* --------------------------------------------------------------------
 	 * Helfer
 	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Wer alles angemeldet ist, als Satz für die E-Mail.
+	 *
+	 * @param object $rsvp Anmeldung.
+	 * @return string
+	 */
+	protected static function begleiter_text( $rsvp ) {
+		$namen = RsvpRepository::begleiter( $rsvp );
+		if ( ! $namen ) {
+			return '';
+		}
+
+		return sprintf(
+			/* translators: 1: Anzahl Personen insgesamt, 2: Namen der Begleitpersonen. */
+			__( 'Angemeldet für %1$d Personen – mit dabei: %2$s.', 'lindenweg16' ),
+			count( $namen ) + 1,
+			implode( ', ', $namen )
+		);
+	}
+
+	/**
+	 * Dasselbe, aber für die frisch angelegte Anmeldung.
+	 *
+	 * @param int    $post_id Event.
+	 * @param string $email   Adresse.
+	 * @return string
+	 */
+	protected static function personen_text( $post_id, $email ) {
+		$rsvp = RsvpRepository::find_by_email( $post_id, $email );
+		return $rsvp ? self::begleiter_text( $rsvp ) : '';
+	}
 
 	/**
 	 * Adresse eines Bestätigungs- oder Abmeldelinks.
