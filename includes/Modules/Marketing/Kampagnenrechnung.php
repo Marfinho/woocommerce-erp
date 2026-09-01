@@ -95,6 +95,22 @@ class Kampagnenrechnung {
 	}
 
 	/**
+	 * Gesamteinsatz einer Kostenstelle: gebuchte Kosten plus Rabattaufwand.
+	 *
+	 * Ein gewährter Rabatt ist Erlösschmälerung, keine Betriebsausgabe – es
+	 * gibt keinen Beleg, und der Bestellwert ist bereits gemindert. Für die
+	 * Frage, was eine Kampagne gekostet hat, zählt er trotzdem: Ohne ihn
+	 * stünde eine reine Gutscheinaktion mit null Kosten und bester Ampel da.
+	 *
+	 * @param float $kosten Gebuchte Kosten aus Belegen.
+	 * @param float $rabatt Gewährte Rabatte der zugeordneten Bestellungen.
+	 * @return float
+	 */
+	public static function einsatz( $kosten, $rabatt ) {
+		return round( max( 0, (float) $kosten ) + max( 0, (float) $rabatt ), 2 );
+	}
+
+	/**
 	 * Umsatz je eingesetztem Euro (ROAS).
 	 *
 	 * @param float $umsatz Zugeordneter Umsatz.

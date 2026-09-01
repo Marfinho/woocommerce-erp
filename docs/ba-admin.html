@@ -38,7 +38,7 @@
 		<li><a href="#stammdaten">Stammdaten anlegen</a></li>
 		<li><a href="#preise">Preiskalkulation und Preispflege</a></li>
 		<li><a href="#buchhaltung">Buchhaltung</a></li>
-		<li><a href="#kasse">Kasse, Marketing, Loyalty, Support</a></li>
+		<li><a href="#kasse">Kasse, Marketing, Events, Loyalty, Support</a></li>
 		<li><a href="#berichte">Berichte, Ziele und Monatsabschluss</a></li>
 		<li><a href="#pruefung">Systemprüfung und Protokollkette</a></li>
 		<li><a href="#import">Import und Verfahrensdokumentation</a></li>
@@ -432,7 +432,7 @@
 	<p>Das Plugin rechnet, was du ihm gibst. Ob eine Ausgabe abziehbar ist, ob die Kleinunternehmerregelung noch passt und was in die EÜR gehört, entscheidet nicht die Software.</p>
 </div>
 
-<h2 id="kasse"><span class="nr">11.</span> Kasse, Marketing, Loyalty, Support</h2>
+<h2 id="kasse"><span class="nr">11.</span> Kasse, Marketing, Events, Loyalty, Support</h2>
 
 <h3>Marktkasse</h3>
 <p><span class="weg">Lindenweg16 → Kasse</span></p>
@@ -459,6 +459,48 @@
 </figure>
 
 <p>Kosten kommen aus zugeordneten Belegen und aus der Kilometerpauschale (in den Einstellungen änderbar, wird als Eigenbeleg gebucht). Gegenübergestellt werden Marktkassenumsatz und nachgewiesener Shop-Umsatz. Daraus entstehen Umsatz je Euro Werbekosten und Kosten je Bestellung.</p>
+
+<h3>Events</h3>
+<p><span class="weg">Events</span> – ein eigener Menüpunkt neben Lindenweg16.</p>
+
+<p>Ein Event ist eine ganz normale Seite mit Titel, Text und Beitragsbild. Darunter stehen Eckdaten, Zusatzfelder und die Anmeldung. Drei Typen sind angelegt – <strong>Social Ride</strong>, <strong>Markt</strong> und <strong>Rennen</strong> –, weitere legst du unter <span class="weg">Events → Eventtypen</span> selbst an.</p>
+
+<ol class="schritte">
+	<li><strong>Typ wählen</strong> in der rechten Spalte. Er entscheidet, welche Feldvorlage vorgeschlagen wird.</li>
+	<li><strong>Eckdaten</strong>: Beginn, Ende, Ort, Treffpunkt.</li>
+	<li><strong>Anmeldung</strong>: der Haken <em>Anmeldung auf der Eventseite anbieten</em>. Ohne ihn erscheint gar kein Formular.</li>
+	<li><strong>Maximale Teilnehmerzahl</strong>, optional. <strong>0 oder leer heißt unbegrenzt</strong>, nicht „niemand".</li>
+	<li><strong>Kostenstelle</strong> wählen, wenn zum Event eine Kampagne läuft – dann stehen Standgebühr, Fahrtkosten und Material im Marketing zusammen.</li>
+	<li><strong>Veröffentlichen</strong>. Danach erscheint rechts der QR-Code auf die Eventseite, als SVG herunterladbar und damit beliebig groß druckbar.</li>
+</ol>
+
+<h3>Zusatzfelder und die Komoot-Karte</h3>
+
+<p>Jedes Event trägt seine eigenen Felder – beim Social Ride die Tour und die Distanz, beim Markt die Standnummer, beim Rennen die Startzeit. Beim ersten Öffnen schlägt das Plugin die Vorlage zum gewählten Typ vor; jede Zeile lässt sich ändern, löschen und ergänzen, <strong>Feld hinzufügen</strong> hängt eine neue an.</p>
+
+<p>Für eine <strong>Komoot-Tour</strong> ein Feld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren – die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte mit Höhenprofil. Ist die Adresse nicht lesbar, steht dort ein schlichter Link statt der Karte; verschluckt wird nichts.</p>
+
+<div class="kasten merke">
+	<span class="titel">Kein Feld für fertigen Einbettungscode</span>
+	<p>Aus der eingefügten Adresse werden nur Tour-Nummer und Freigabe-Token gelesen, die Einbettung baut das Plugin selbst. Ein Feld, in das man beliebiges Markup kippen kann, läuft auf der eigenen Seite mit – das wäre eine offene Tür, auch wenn heute nur du hineinschreibst.</p>
+</div>
+
+<h3>Wie die Anmeldung abläuft</h3>
+
+<p>Auch ohne Benutzerkonto: Name, E-Mail, Häkchen zur Einwilligung. <strong>Begleitpersonen</strong> trägt man darunter ein – je Klick auf <em>+ weitere Person</em> kommt eine Namenszeile dazu, bis zu zehn. Jede Begleitperson braucht einen Namen und belegt einen eigenen Platz; leere Zeilen werden beim Absenden verworfen.</p>
+
+<p>Die Belegung zählt deshalb <strong>Plätze, nicht Anmeldungen</strong>: Bei 20 Plätzen und einer Anmeldung zu dritt stehen 3 von 20.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Der Platz zählt erst mit dem Klick auf den Bestätigungslink</span>
+	<p>Nach dem Absenden geht eine E-Mail mit Bestätigungslink raus. Eine abgesendete, aber nie bestätigte Anmeldung belegt keinen Platz – sonst könnte jeder mit erfundenen Adressen ein Event blockieren. In der Liste steht sie so lange als <em>unbestätigt</em> und verfällt nach sieben Tagen von allein.</p>
+</div>
+
+<p>Über denselben Link sagt der Teilnehmer später wieder ab. Wird dadurch ein Platz frei, rückt der Erste von der Warteliste automatisch nach und bekommt sofort eine E-Mail – von Hand ist dafür nichts zu tun. Dasselbe passiert, wenn du die maximale Teilnehmerzahl nachträglich erhöhst.</p>
+
+<p>Eine Gruppe rückt nur <strong>geschlossen</strong> nach, und aufgefüllt wird streng der Reihe nach. Wird ein Platz frei, während vorne eine Dreiergruppe wartet, rückt niemand nach – auch kein Einzelner weiter hinten. Das ist Absicht: Sonst käme die Gruppe nie an die Reihe, weil sie jedes Mal überholt würde. Willst du es im Einzelfall anders, setzt du den Status in der Anmeldeliste von Hand.</p>
+
+<p>In der Anmeldeliste am Event änderst du jeden Status per Klick und lädst die <strong>Teilnehmerliste als CSV</strong> – eine Zeile je Person, mit dem Vermerk, wer sie angemeldet hat. Als Startliste direkt brauchbar. Die Texte der vier Event-Mails stehen unter <span class="weg">Lindenweg16 → Einstellungen</span> bei den E-Mail-Vorlagen.</p>
 
 <h3>Loyalty</h3>
 <figure>

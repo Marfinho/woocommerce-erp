@@ -89,6 +89,39 @@ class KampagnenrechnungTest extends TestCase {
 	 * Kennzahlen
 	 * -------------------------------------------------------------- */
 
+	/* ----------------------------------------------------------------
+	 * Einsatz: gebuchte Kosten plus Rabatt
+	 * -------------------------------------------------------------- */
+
+	public function test_einsatz_addiert_rabatt_zu_den_kosten() {
+		$this->assertSame( 320.0, Kampagnenrechnung::einsatz( 200, 120 ) );
+	}
+
+	public function test_reine_gutscheinaktion_hat_einsatz_ohne_gebuchte_kosten() {
+		// Der Fall, der ohne diese Rechnung mit null Kosten dastuende: Ein
+		// Startgutschein kostet keinen Beleg, aber sehr wohl Umsatz.
+		$this->assertSame( 450.0, Kampagnenrechnung::einsatz( 0, 450 ) );
+	}
+
+	public function test_einsatz_ohne_rabatt_bleibt_bei_den_kosten() {
+		$this->assertSame( 200.0, Kampagnenrechnung::einsatz( 200, 0 ) );
+	}
+
+	public function test_negative_werte_erhoehen_den_einsatz_nicht() {
+		$this->assertSame( 200.0, Kampagnenrechnung::einsatz( 200, -50 ) );
+		$this->assertSame( 50.0, Kampagnenrechnung::einsatz( -200, 50 ) );
+	}
+
+	public function test_gutscheinaktion_bekommt_eine_ehrliche_kennzahl() {
+		// 450 EUR Rabatt auf 3000 EUR Umsatz: Ohne den Rabatt im Nenner
+		// waere der ROAS nicht definiert und die Aktion saehe gratis aus.
+		$einsatz = Kampagnenrechnung::einsatz( 0, 450 );
+
+		$this->assertNotNull( Kampagnenrechnung::roas( 3000, $einsatz ) );
+		$this->assertSame( 6.67, Kampagnenrechnung::roas( 3000, $einsatz ) );
+		$this->assertSame( 2550.0, Kampagnenrechnung::ergebnis( 3000, $einsatz ) );
+	}
+
 	public function test_roas() {
 		$this->assertSame( 3.5, Kampagnenrechnung::roas( 700, 200 ) );
 	}
