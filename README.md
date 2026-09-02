@@ -590,13 +590,35 @@ nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
 Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
 so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
 
-Das Komoot-Feld hat eine **Darstellung**: *Karte mit Höhenprofil* oder *Nur
-Karte*. Mehr gibt Komoots Einbettung nicht her – sie kennt genau einen
-Parameter (`profile=0|1`). Die Grundkarte (Karte, Satellit, Gelände) lässt
-sich von außen **nicht** vorgeben; sie wird im eingebetteten Kartenfenster
-selbst umgeschaltet. Die Auswahl steht deshalb bewusst nur auf den beiden
-Werten, die auch wirken: `EventFields::komoot_darstellungen()` ist die
-Positivliste, alles andere fällt auf den Standard zurück.
+Das Komoot-Feld hat einen **Stil** – dieselben fünf, die Komoots eigener
+Einbettungsdialog anbietet (`EventFields::komoot_stile()`):
+
+| Stil | `layout` | Höhe |
+|---|---|---|
+| Klassisch – Karte, Statistiken, Höhenprofil | `classic` + `profile=1` | 700 |
+| Nur Karte – interaktive Karte, minimale Oberfläche | `map` | 540 |
+| Kompakte Karte – Titelbild und Eckdaten | `compact` | 260 |
+| Fotostreifen – Galerie zuerst | `gallery` + `gallery=1` | 640 |
+| Highlights – scrollbare Reihe | `highlights` | 430 |
+
+Die Höhen stammen aus Komoots Dialog und gehören zum Stil: ein einheitlicher
+Wert ergäbe bei *Kompakte Karte* einen leeren Streifen und bei *Klassisch*
+einen Rollbalken. Ein Test vergleicht die erzeugte Adresse Zeichen für
+Zeichen mit dem Code, den Komoot selbst ausgibt.
+
+`komoot_stil()` ist die Positivliste; ein unbekannter Wert fällt auf
+*Klassisch* zurück, statt als Parameter in der Adresse zu landen. Sie
+übersetzt außerdem die Werte der ersten Fassung (`profil`, `karte`).
+
+Die **Grundkarte** (Karte, Satellit, Gelände) ist davon unberührt – die
+schaltet der Besucher im Kartenfenster selbst um, dafür gibt es keinen
+Parameter.
+
+Im Backend zeigt eine **Vorschau** die Einbettung im gewählten Stil, bevor das
+Event gespeichert ist. Die Adresse dafür baut PHP über denselben Weg wie beim
+Ausliefern (`EventAdmin::ajax_komoot_vorschau()`); sie im Browser
+zusammenzusetzen hieße, die Regeln ein zweites Mal zu schreiben, und die
+zweite Fassung wäre die, die irgendwann abweicht.
 
 ### Anmeldung: bestätigen, warten, nachrücken
 

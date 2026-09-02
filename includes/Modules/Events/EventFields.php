@@ -42,34 +42,98 @@ class EventFields {
 	}
 
 	/**
-	 * Darstellungen, die Komoots Einbettung tatsächlich kennt.
+	 * Die fünf Einbettungsstile, die Komoot anbietet.
 	 *
-	 * Komoot steuert seine Einbettung über genau einen Parameter: `profile`.
-	 * Die Grundkarte (Karte, Satellit, Gelände) lässt sich von außen nicht
-	 * vorgeben – sie wird im eingebetteten Kartenfenster selbst umgeschaltet.
-	 * Hier stehen deshalb nur die beiden Darstellungen, die auch wirken; ein
-	 * Auswahlfeld mit Werten, die nichts tun, wäre schlimmer als keines.
+	 * Gesteuert über den Parameter `layout`; Klassisch und Fotostreifen
+	 * bringen je einen zusätzlichen Schalter mit. Die Höhen sind die, die
+	 * Komoots eigener Einbettungsdialog vorgibt – sie passen zum jeweiligen
+	 * Aufbau, ein einheitlicher Wert ergäbe bei „Kompakte Karte" einen
+	 * leeren Streifen und bei „Klassisch" einen Rollbalken.
 	 *
-	 * @return array Schlüssel => Bezeichnung.
+	 * @return array Schlüssel => {label, beschreibung, hoehe, args}.
 	 */
-	public static function komoot_darstellungen() {
+	public static function komoot_stile() {
 		return array(
-			'profil' => __( 'Karte mit Höhenprofil', 'lindenweg16' ),
-			'karte'  => __( 'Nur Karte, ohne Höhenprofil', 'lindenweg16' ),
+			'classic'    => array(
+				'label'        => __( 'Klassisch', 'lindenweg16' ),
+				'beschreibung' => __( 'Karte, Statistiken und Höhenprofil.', 'lindenweg16' ),
+				'hoehe'        => 700,
+				'args'         => array( 'layout' => 'classic', 'profile' => '1' ),
+			),
+			'map'        => array(
+				'label'        => __( 'Nur Karte', 'lindenweg16' ),
+				'beschreibung' => __( 'Nur die interaktive Karte, mit minimaler Benutzeroberfläche.', 'lindenweg16' ),
+				'hoehe'        => 540,
+				'args'         => array( 'layout' => 'map' ),
+			),
+			'compact'    => array(
+				'label'        => __( 'Kompakte Karte', 'lindenweg16' ),
+				'beschreibung' => __( 'Titelbild und wichtigste Statistiken.', 'lindenweg16' ),
+				'hoehe'        => 260,
+				'args'         => array( 'layout' => 'compact' ),
+			),
+			'gallery'    => array(
+				'label'        => __( 'Fotostreifen', 'lindenweg16' ),
+				'beschreibung' => __( 'Galerie-zuerst-Layout mit Titel und Statistiken.', 'lindenweg16' ),
+				'hoehe'        => 640,
+				'args'         => array( 'layout' => 'gallery', 'gallery' => '1' ),
+			),
+			'highlights' => array(
+				'label'        => __( 'Highlights', 'lindenweg16' ),
+				'beschreibung' => __( 'Horizontal scrollbare Reihe mit Highlight-Karten.', 'lindenweg16' ),
+				'hoehe'        => 430,
+				'args'         => array( 'layout' => 'highlights' ),
+			),
 		);
 	}
 
 	/**
-	 * Höhe der Einbettung je Darstellung.
+	 * Stile als Schlüssel => Beschriftung, für Auswahlfelder.
 	 *
-	 * Ohne Höhenprofil braucht der Rahmen weniger Platz – sonst stünde unter
-	 * der Karte ein leerer Streifen.
+	 * @return array
+	 */
+	public static function komoot_stil_optionen() {
+		$out = array();
+		foreach ( self::komoot_stile() as $key => $stil ) {
+			$out[ $key ] = $stil['label'];
+		}
+		return $out;
+	}
+
+	/**
+	 * Höhe der Einbettung für einen Stil.
 	 *
-	 * @param string $darstellung Schlüssel.
+	 * @param string $stil Schlüssel.
 	 * @return int Höhe in Pixeln.
 	 */
-	public static function komoot_hoehe( $darstellung ) {
-		return 'karte' === $darstellung ? 340 : 420;
+	public static function komoot_hoehe( $stil ) {
+		$stile = self::komoot_stile();
+		$stil  = self::komoot_stil( $stil );
+		return (int) $stile[ $stil ]['hoehe'];
+	}
+
+	/**
+	 * Stilschlüssel prüfen und alte Werte übersetzen.
+	 *
+	 * Die erste Fassung dieses Feldes kannte nur „profil" und „karte". Wer
+	 * ein Event damit angelegt hat, soll nach dem Update nicht auf einem
+	 * unbekannten Wert sitzen.
+	 *
+	 * @param string $roh Rohwert.
+	 * @return string Gültiger Schlüssel.
+	 */
+	public static function komoot_stil( $roh ) {
+		$roh = is_scalar( $roh ) ? (string) $roh : '';
+
+		$alt = array(
+			'profil' => 'classic',
+			'karte'  => 'map',
+		);
+		if ( isset( $alt[ $roh ] ) ) {
+			return $alt[ $roh ];
+		}
+
+		return isset( self::komoot_stile()[ $roh ] ) ? $roh : 'classic';
 	}
 
 	/**
@@ -80,7 +144,7 @@ class EventFields {
 	public static function vorlagen() {
 		return array(
 			'social-ride' => array(
-				array( 'label' => __( 'Komoot-Tour', 'lindenweg16' ), 'typ' => 'komoot' ),
+				array( 'label' => __( 'Komoot-Tour', 'lindenweg16' ), 'typ' => 'komoot', 'option' => 'classic' ),
 				array( 'label' => __( 'Distanz (km)', 'lindenweg16' ), 'typ' => 'zahl' ),
 				array( 'label' => __( 'Höhenmeter', 'lindenweg16' ), 'typ' => 'zahl' ),
 				array( 'label' => __( 'Tempo', 'lindenweg16' ), 'typ' => 'text' ),
@@ -93,7 +157,7 @@ class EventFields {
 			),
 			'rennen'      => array(
 				array( 'label' => __( 'Startzeit', 'lindenweg16' ), 'typ' => 'zeit' ),
-				array( 'label' => __( 'Strecke', 'lindenweg16' ), 'typ' => 'komoot' ),
+				array( 'label' => __( 'Strecke', 'lindenweg16' ), 'typ' => 'komoot', 'option' => 'map' ),
 				array( 'label' => __( 'Distanz (km)', 'lindenweg16' ), 'typ' => 'zahl' ),
 				array( 'label' => __( 'Startgebühr', 'lindenweg16' ), 'typ' => 'text' ),
 				array( 'label' => __( 'Ausschreibung', 'lindenweg16' ), 'typ' => 'url' ),
@@ -206,8 +270,7 @@ class EventFields {
 			return '';
 		}
 
-		$roh = is_scalar( $roh ) ? (string) $roh : '';
-		return isset( self::komoot_darstellungen()[ $roh ] ) ? $roh : 'profil';
+		return self::komoot_stil( $roh );
 	}
 
 	/**
@@ -246,11 +309,12 @@ class EventFields {
 	 * und ein etwaiges Freigabe-Token gelesen, alles andere verworfen. Damit
 	 * kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
 	 *
-	 * @param string $roh         Eingegebene Komoot-URL.
-	 * @param string $darstellung 'profil' (mit Höhenprofil) oder 'karte'.
+	 * @param string $roh     Eingegebene Komoot-URL.
+	 * @param string $stil    Einbettungsstil aus komoot_stile().
+	 * @param string $sprache Sprachkürzel; leer = aus der Website-Sprache.
 	 * @return string Einbettungsadresse oder leerer String.
 	 */
-	public static function komoot_embed_url( $roh, $darstellung = 'profil' ) {
+	public static function komoot_embed_url( $roh, $stil = 'classic', $sprache = '' ) {
 		$roh = trim( (string) $roh );
 		if ( '' === $roh ) {
 			return '';
@@ -281,12 +345,37 @@ class EventFields {
 			}
 		}
 
-		$args = array( 'profile' => 'karte' === $darstellung ? '0' : '1' );
+		$stile = self::komoot_stile();
+		$stil  = self::komoot_stil( $stil );
+
+		// Reihenfolge wie in Komoots eigenem Einbettungscode: Freigabe-Token,
+		// Sprache, dann der Stil.
+		$args = array();
 		if ( $token ) {
 			$args['share_token'] = $token;
 		}
+		$args['hl'] = self::sprachkuerzel( $sprache );
 
-		return add_query_arg( $args, 'https://www.komoot.de/tour/' . $tour_id . '/embed' );
+		$args = array_merge( $args, $stile[ $stil ]['args'] );
+
+		// www.komoot.com ist der Host, den Komoot selbst ausgibt.
+		return add_query_arg( $args, 'https://www.komoot.com/tour/' . $tour_id . '/embed' );
+	}
+
+	/**
+	 * Sprachkürzel für die Einbettung.
+	 *
+	 * @param string $sprache Vorgabe; leer = aus der Website-Sprache.
+	 * @return string Zwei Kleinbuchstaben.
+	 */
+	public static function sprachkuerzel( $sprache = '' ) {
+		if ( '' === $sprache && function_exists( 'get_locale' ) ) {
+			$sprache = (string) get_locale();
+		}
+
+		$sprache = strtolower( substr( (string) $sprache, 0, 2 ) );
+
+		return preg_match( '/^[a-z]{2}$/', $sprache ) ? $sprache : 'de';
 	}
 
 	/**
@@ -311,15 +400,16 @@ class EventFields {
 			}
 
 			if ( 'komoot' === $feld['typ'] ) {
-				$darstellung = isset( $feld['option'] ) ? (string) $feld['option'] : 'profil';
-				$embed       = self::komoot_embed_url( $wert, $darstellung );
+				$stil  = self::komoot_stil( isset( $feld['option'] ) ? $feld['option'] : '' );
+				$embed = self::komoot_embed_url( $wert, $stil );
 				if ( $embed ) {
 					$anhaenge .= sprintf(
 						'<figure class="lw16-event-karte"><figcaption>%s</figcaption>'
-						. '<iframe src="%s" width="100%%" height="%d" frameborder="0" scrolling="no" loading="lazy" title="%s"></iframe></figure>',
+						. '<iframe src="%s" width="100%%" height="%d" frameborder="0" scrolling="no" loading="lazy"'
+						. ' allow="fullscreen" allowfullscreen title="%s"></iframe></figure>',
 						esc_html( $feld['label'] ),
 						esc_url( $embed ),
-						self::komoot_hoehe( $darstellung ),
+						self::komoot_hoehe( $stil ),
 						esc_attr( $feld['label'] )
 					);
 				} else {
