@@ -472,3 +472,26 @@
 		transition: none;
 	}
 }
+
+/* ------------------------------------------------------------------
+ * Nur im Seiten-Editor
+ * ------------------------------------------------------------------ */
+
+.lw16-events-block-editor__schirm {
+	position: relative;
+}
+
+/* Ein Klick soll den Block auswaehlen, nicht einem Eventlink folgen. */
+.lw16-events-block-editor__schirm::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+
+.lw16-events-widget__leer {
+	padding: 1rem 1.25rem;
+	border: 1px dashed rgba(0, 0, 0, 0.25);
+	border-radius: 6px;
+	font-size: 0.95rem;
+	opacity: 0.85;
+}

@@ -212,6 +212,7 @@ require $lw16_root . '/includes/Modules/Marketing/Kampagnenrechnung.php';
 require $lw16_root . '/includes/Modules/Events/RsvpRechnung.php';
 require $lw16_root . '/includes/Modules/Events/EventFields.php';
 require $lw16_root . '/includes/Modules/Events/EventsWidget.php';
+require $lw16_root . '/includes/Modules/Events/EventsBlock.php';
 require $lw16_root . '/includes/Modules/Production/DhlTracking.php';
 require $lw16_root . '/includes/Modules/POS/POSModule.php';
 

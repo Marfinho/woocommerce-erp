@@ -23,6 +23,7 @@ class EventsModule {
 
 		( new EventFrontend() )->register();
 		( new EventsWidget() )->register();
+		( new EventsBlock() )->register();
 
 		if ( is_admin() ) {
 			( new EventAdmin() )->register();
@@ -82,7 +83,15 @@ class EventsModule {
 		}
 
 		$post = get_post();
-		if ( $post && has_shortcode( (string) $post->post_content, EventsWidget::SHORTCODE ) ) {
+		if ( ! $post ) {
+			return false;
+		}
+
+		if ( has_shortcode( (string) $post->post_content, EventsWidget::SHORTCODE ) ) {
+			return true;
+		}
+
+		if ( function_exists( 'has_block' ) && has_block( EventsBlock::NAME, $post ) ) {
 			return true;
 		}
 
