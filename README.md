@@ -590,6 +590,14 @@ nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
 Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
 so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
 
+Das Komoot-Feld hat eine **Darstellung**: *Karte mit Höhenprofil* oder *Nur
+Karte*. Mehr gibt Komoots Einbettung nicht her – sie kennt genau einen
+Parameter (`profile=0|1`). Die Grundkarte (Karte, Satellit, Gelände) lässt
+sich von außen **nicht** vorgeben; sie wird im eingebetteten Kartenfenster
+selbst umgeschaltet. Die Auswahl steht deshalb bewusst nur auf den beiden
+Werten, die auch wirken: `EventFields::komoot_darstellungen()` ist die
+Positivliste, alles andere fällt auf den Standard zurück.
+
 ### Anmeldung: bestätigen, warten, nachrücken
 
 Die Anmeldung läuft über einen Bestätigungslink per E-Mail. Der Platz wird

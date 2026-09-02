@@ -233,6 +233,45 @@ class EventRsvpTest extends TestCase {
 		$this->assertSame( '', EventFields::komoot_embed_url( 'kein-link' ) );
 	}
 
+	public function test_darstellung_mit_hoehenprofil_ist_der_standard() {
+		$this->assertStringContainsString(
+			'profile=1',
+			EventFields::komoot_embed_url( 'https://www.komoot.de/tour/123456' )
+		);
+	}
+
+	public function test_darstellung_nur_karte_schaltet_das_hoehenprofil_ab() {
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.de/tour/123456', 'karte' );
+		$this->assertStringContainsString( 'profile=0', $url );
+		$this->assertStringNotContainsString( 'profile=1', $url );
+	}
+
+	public function test_unbekannte_darstellung_faellt_auf_den_standard_zurueck() {
+		// Komoot kennt nur diesen einen Schalter. Ein erfundener Wert darf
+		// nicht als Parameter in der Adresse landen.
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.de/tour/123456', 'satellit' );
+		$this->assertStringContainsString( 'profile=1', $url );
+		$this->assertStringNotContainsString( 'satellit', $url );
+	}
+
+	public function test_darstellung_wird_gegen_eine_positivliste_geprueft() {
+		$this->assertSame( 'karte', EventFields::sanitize_option( 'komoot', 'karte' ) );
+		$this->assertSame( 'profil', EventFields::sanitize_option( 'komoot', 'profil' ) );
+		$this->assertSame( 'profil', EventFields::sanitize_option( 'komoot', 'gelaende' ) );
+		$this->assertSame( 'profil', EventFields::sanitize_option( 'komoot', array( 'unfug' ) ) );
+	}
+
+	public function test_andere_feldtypen_haben_keine_darstellung() {
+		$this->assertSame( '', EventFields::sanitize_option( 'text', 'karte' ) );
+		$this->assertSame( '', EventFields::sanitize_option( 'url', 'profil' ) );
+	}
+
+	public function test_ohne_hoehenprofil_wird_der_rahmen_niedriger() {
+		// Sonst stuende unter der Karte ein leerer Streifen.
+		$this->assertSame( 420, EventFields::komoot_hoehe( 'profil' ) );
+		$this->assertSame( 340, EventFields::komoot_hoehe( 'karte' ) );
+	}
+
 	public function test_unbrauchbares_freigabe_token_wird_weggelassen() {
 		// Statt das Token zu uebernehmen und damit fremde Parameter in die
 		// Adresse zu lassen, faellt es einfach weg - die Tour bleibt.
