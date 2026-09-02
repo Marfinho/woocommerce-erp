@@ -42,6 +42,37 @@ class EventFields {
 	}
 
 	/**
+	 * Darstellungen, die Komoots Einbettung tatsächlich kennt.
+	 *
+	 * Komoot steuert seine Einbettung über genau einen Parameter: `profile`.
+	 * Die Grundkarte (Karte, Satellit, Gelände) lässt sich von außen nicht
+	 * vorgeben – sie wird im eingebetteten Kartenfenster selbst umgeschaltet.
+	 * Hier stehen deshalb nur die beiden Darstellungen, die auch wirken; ein
+	 * Auswahlfeld mit Werten, die nichts tun, wäre schlimmer als keines.
+	 *
+	 * @return array Schlüssel => Bezeichnung.
+	 */
+	public static function komoot_darstellungen() {
+		return array(
+			'profil' => __( 'Karte mit Höhenprofil', 'lindenweg16' ),
+			'karte'  => __( 'Nur Karte, ohne Höhenprofil', 'lindenweg16' ),
+		);
+	}
+
+	/**
+	 * Höhe der Einbettung je Darstellung.
+	 *
+	 * Ohne Höhenprofil braucht der Rahmen weniger Platz – sonst stünde unter
+	 * der Karte ein leerer Streifen.
+	 *
+	 * @param string $darstellung Schlüssel.
+	 * @return int Höhe in Pixeln.
+	 */
+	public static function komoot_hoehe( $darstellung ) {
+		return 'karte' === $darstellung ? 340 : 420;
+	}
+
+	/**
 	 * Feldvorlagen je Eventtyp – der Startpunkt beim Anlegen.
 	 *
 	 * @return array Typ-Slug => Liste von Feldern.
@@ -129,6 +160,7 @@ class EventFields {
 				'label'      => $label,
 				'typ'        => $typ,
 				'wert'       => self::sanitize_wert( $typ, isset( $feld['wert'] ) ? $feld['wert'] : '' ),
+				'option'     => self::sanitize_option( $typ, isset( $feld['option'] ) ? $feld['option'] : '' ),
 			);
 		}
 
@@ -156,6 +188,26 @@ class EventFields {
 		}
 
 		return $kandidat;
+	}
+
+	/**
+	 * Zusatzeinstellung eines Feldes prüfen.
+	 *
+	 * Bisher hat nur der Komoot-Typ eine. Die Prüfung läuft gegen eine
+	 * Positivliste – was nicht darin steht, wird zum Standard, nicht
+	 * durchgereicht.
+	 *
+	 * @param string $typ  Feldtyp.
+	 * @param mixed  $roh  Rohwert.
+	 * @return string
+	 */
+	public static function sanitize_option( $typ, $roh ) {
+		if ( 'komoot' !== $typ ) {
+			return '';
+		}
+
+		$roh = is_scalar( $roh ) ? (string) $roh : '';
+		return isset( self::komoot_darstellungen()[ $roh ] ) ? $roh : 'profil';
 	}
 
 	/**
@@ -194,10 +246,11 @@ class EventFields {
 	 * und ein etwaiges Freigabe-Token gelesen, alles andere verworfen. Damit
 	 * kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
 	 *
-	 * @param string $roh Eingegebene Komoot-URL.
+	 * @param string $roh         Eingegebene Komoot-URL.
+	 * @param string $darstellung 'profil' (mit Höhenprofil) oder 'karte'.
 	 * @return string Einbettungsadresse oder leerer String.
 	 */
-	public static function komoot_embed_url( $roh ) {
+	public static function komoot_embed_url( $roh, $darstellung = 'profil' ) {
 		$roh = trim( (string) $roh );
 		if ( '' === $roh ) {
 			return '';
@@ -228,7 +281,7 @@ class EventFields {
 			}
 		}
 
-		$args = array( 'profile' => '1' );
+		$args = array( 'profile' => 'karte' === $darstellung ? '0' : '1' );
 		if ( $token ) {
 			$args['share_token'] = $token;
 		}
@@ -258,13 +311,15 @@ class EventFields {
 			}
 
 			if ( 'komoot' === $feld['typ'] ) {
-				$embed = self::komoot_embed_url( $wert );
+				$darstellung = isset( $feld['option'] ) ? (string) $feld['option'] : 'profil';
+				$embed       = self::komoot_embed_url( $wert, $darstellung );
 				if ( $embed ) {
 					$anhaenge .= sprintf(
 						'<figure class="lw16-event-karte"><figcaption>%s</figcaption>'
-						. '<iframe src="%s" width="100%%" height="420" frameborder="0" scrolling="no" loading="lazy" title="%s"></iframe></figure>',
+						. '<iframe src="%s" width="100%%" height="%d" frameborder="0" scrolling="no" loading="lazy" title="%s"></iframe></figure>',
 						esc_html( $feld['label'] ),
 						esc_url( $embed ),
+						self::komoot_hoehe( $darstellung ),
 						esc_attr( $feld['label'] )
 					);
 				} else {

@@ -120,9 +120,10 @@ class EventAdmin {
 
 		<table class="widefat" id="lw16-felder-tabelle">
 			<thead><tr>
-				<th style="width:22%"><?php esc_html_e( 'Beschriftung', 'lindenweg16' ); ?></th>
-				<th style="width:22%"><?php esc_html_e( 'Feldtyp', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Beschriftung', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Feldtyp', 'lindenweg16' ); ?></th>
 				<th><?php esc_html_e( 'Inhalt', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Darstellung', 'lindenweg16' ); ?></th>
 				<th style="width:5%"></th>
 			</tr></thead>
 			<tbody>
@@ -159,6 +160,17 @@ class EventAdmin {
 				var zeile = e.target.closest('tr');
 				if (zeile) zeile.remove();
 			});
+
+			// Die Darstellung gehoert nur zum Komoot-Typ. Das Feld bleibt im
+			// Formular stehen und wird nur versteckt - sonst waere die
+			// Einstellung nach einem versehentlichen Typwechsel weg.
+			tbody.addEventListener('change', function(e){
+				if (e.target.name && e.target.name.indexOf('[typ]') === -1) return;
+				var zeile = e.target.closest('tr');
+				if (!zeile) return;
+				var auswahl = zeile.querySelector('.lw16-feld-option');
+				if (auswahl) auswahl.hidden = (e.target.value !== 'komoot');
+			});
 		})();
 		</script>
 		<?php
@@ -190,6 +202,22 @@ class EventAdmin {
 			</td>
 			<td><input type="text" class="widefat" name="lw16_feld[<?php echo esc_attr( $idx ); ?>][wert]"
 				value="<?php echo esc_attr( $wert ); ?>"></td>
+			<td>
+				<?php
+				// Steht im Markup immer, wird aber nur beim Komoot-Typ
+				// eingeblendet: Ein Feld, das beim Speichern fehlt, verlöre
+				// beim Umschalten des Typs seinen Wert.
+				$option = isset( $feld['option'] ) ? (string) $feld['option'] : 'profil';
+				?>
+				<select class="widefat lw16-feld-option" name="lw16_feld[<?php echo esc_attr( $idx ); ?>][option]"
+					<?php echo 'komoot' === $typ ? '' : 'hidden'; ?>>
+					<?php foreach ( EventFields::komoot_darstellungen() as $key => $label ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $option, $key ); ?>>
+							<?php echo esc_html( $label ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</td>
 			<td><button type="button" class="button-link lw16-feld-weg" title="<?php esc_attr_e( 'Feld entfernen', 'lindenweg16' ); ?>">&times;</button></td>
 		</tr>
 		<?php
