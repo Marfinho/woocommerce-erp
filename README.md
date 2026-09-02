@@ -56,7 +56,8 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
 includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
-                             RsvpRepository, EventAdmin, EventFrontend, EventsModule
+                             RsvpRepository, EventAdmin, EventFrontend,
+                             EventsWidget, EventsSidebarWidget, EventsModule
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -652,6 +653,41 @@ Das öffentliche Formular hat einen Honigtopf und eine Bremse von zehn
 Versuchen je IP und Stunde. Die Einwilligung zur Speicherung ist Pflichtfeld,
 und `lw16_event_rsvp` ist für DSGVO-Auskunft und -Löschung angemeldet
 (`Privacy::sources()`).
+
+### Die Eventreihe auf der Startseite
+
+Die nächsten Termine als seitlich blätterbare Reihe, ein Event je Ansicht,
+mit Datum, kleinem Titelbild, Auszug und einem Balken der freien Plätze.
+Dieselbe Ausgabe steht über drei Wege bereit – der Aufbau selbst aber nur
+einmal, in `EventsWidget::render()`:
+
+- Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0"]`
+- klassisches Widget für Widget-Bereiche (`EventsSidebarWidget`)
+- direkt in der Theme-Vorlage, so eingebunden in `theme/front-page.php`
+
+Das **Blättern macht CSS allein**: `scroll-snap-type: x mandatory` rastet
+jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Die
+Pfeile sind Zugabe, stehen im Markup auf `hidden` und blenden sich erst mit
+JavaScript ein – ohne Skript bleibt die Reihe wischbar und mit den
+Pfeiltasten bedienbar. Auf schmalen Bildschirmen sind sie ausgeblendet:
+dort wird gewischt.
+
+Der **Balken** zeigt die Auslastung, nicht die freien Plätze – ein fast
+voller Balken liest sich schneller als eine kleine Zahl. Bei überschrittener
+Grenze (von Hand nachgetragene Zusagen) bleibt er bei 100 %, statt über den
+Rand zu laufen. Ohne Teilnehmerbegrenzung gibt es keinen Balken, sondern nur
+den Hinweis, dass die Anmeldung offen ist; ist die Anmeldung ausgeschaltet,
+fehlt der Bereich ganz.
+
+Ein Event **ohne Beginn taucht nicht auf** – ohne Datum lässt sich weder
+sortieren noch sagen, ob es noch bevorsteht. Gezählt wird ab Mitternacht,
+damit ein Event am eigenen Tag nicht mittags von der Startseite verschwindet.
+Steht nichts an, gibt `render()` einen leeren String zurück und der ganze
+Abschnitt entfällt – eine Überschrift ohne Inhalt sähe nach Fehler aus.
+
+Stil und Skript lädt `EventsModule::braucht_assets()` nur, wo Events
+vorkommen: auf Eventseiten, auf der Startseite, wo das Widget aktiv ist oder
+der Shortcode im Inhalt steht.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

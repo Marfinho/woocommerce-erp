@@ -181,6 +181,39 @@ class EventRsvpTest extends TestCase {
 	}
 
 	/* ----------------------------------------------------------------
+	 * Balken und Kurztext der Reihe auf der Startseite
+	 * -------------------------------------------------------------- */
+
+	public function test_auslastung_in_prozent() {
+		$this->assertSame( 50.0, RsvpRechnung::auslastung_prozent( 20, 10 ) );
+		$this->assertSame( 0.0, RsvpRechnung::auslastung_prozent( 20, 0 ) );
+		$this->assertSame( 100.0, RsvpRechnung::auslastung_prozent( 20, 20 ) );
+	}
+
+	public function test_balken_laeuft_nicht_ueber_den_rand() {
+		// Von Hand nachgetragene Zusagen koennen die Grenze ueberschreiten.
+		$this->assertSame( 100.0, RsvpRechnung::auslastung_prozent( 10, 14 ) );
+	}
+
+	public function test_ohne_grenze_gibt_es_keinen_balken() {
+		$this->assertNull( RsvpRechnung::auslastung_prozent( 0, 30 ) );
+	}
+
+	public function test_kurztext_nennt_die_freien_plaetze() {
+		$this->assertSame( 'noch 8 Plätze frei', RsvpRechnung::freie_plaetze_text( 20, 12 ) );
+		$this->assertSame( 'noch 1 Platz frei', RsvpRechnung::freie_plaetze_text( 20, 19 ) );
+	}
+
+	public function test_kurztext_bei_ausgebucht_weist_auf_die_warteliste_hin() {
+		$this->assertSame( 'Ausgebucht – Warteliste möglich', RsvpRechnung::freie_plaetze_text( 20, 20 ) );
+		$this->assertSame( 'Ausgebucht – Warteliste möglich', RsvpRechnung::freie_plaetze_text( 20, 25 ) );
+	}
+
+	public function test_kurztext_ohne_grenze() {
+		$this->assertSame( 'Anmeldung offen', RsvpRechnung::freie_plaetze_text( 0, 42 ) );
+	}
+
+	/* ----------------------------------------------------------------
 	 * Belegungstext
 	 * -------------------------------------------------------------- */
 
