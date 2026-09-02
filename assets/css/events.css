@@ -375,8 +375,100 @@
 	}
 }
 
+/* --- Punkte und Pause --- */
+
+.lw16-events-widget__steuerung {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+
+.lw16-events-widget__punkte {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.lw16-events-widget__punkt {
+	padding: 0.35rem;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	line-height: 0;
+}
+
+.lw16-events-widget__punkt span {
+	display: block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.28;
+	transition: opacity 0.2s, transform 0.2s;
+}
+
+.lw16-events-widget__punkt[aria-selected="true"] span {
+	opacity: 1;
+	transform: scale(1.35);
+}
+
+.lw16-events-widget__punkt:hover span {
+	opacity: 0.6;
+}
+
+.lw16-events-widget__punkt:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 1px;
+	border-radius: 50%;
+}
+
+.lw16-events-widget__pause {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 50%;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+/* Zwei Balken für „läuft" (Pause anbieten), ein Dreieck für „pausiert"
+   (Weiterlaufen anbieten). Reines CSS, damit keine Symbolschrift nötig ist. */
+.lw16-events-widget__pause-zeichen {
+	display: block;
+	width: 8px;
+	height: 9px;
+	border-left: 3px solid currentColor;
+	border-right: 3px solid currentColor;
+}
+
+.lw16-events-widget.is-pausiert .lw16-events-widget__pause-zeichen {
+	width: 0;
+	height: 0;
+	border-left: 8px solid currentColor;
+	border-right: 0;
+	border-top: 5px solid transparent;
+	border-bottom: 5px solid transparent;
+	margin-left: 2px;
+}
+
+.lw16-events-widget__pause:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.lw16-events-widget__spur {
 		scroll-behavior: auto;
+	}
+
+	.lw16-events-widget__punkt span {
+		transition: none;
 	}
 }

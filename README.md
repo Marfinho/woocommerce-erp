@@ -661,16 +661,35 @@ mit Datum, kleinem Titelbild, Auszug und einem Balken der freien Plätze.
 Dieselbe Ausgabe steht über drei Wege bereit – der Aufbau selbst aber nur
 einmal, in `EventsWidget::render()`:
 
-- Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0"]`
+- Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0" autoplay="1" intervall="7"]`
 - klassisches Widget für Widget-Bereiche (`EventsSidebarWidget`)
 - direkt in der Theme-Vorlage, so eingebunden in `theme/front-page.php`
 
 Das **Blättern macht CSS allein**: `scroll-snap-type: x mandatory` rastet
-jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Die
-Pfeile sind Zugabe, stehen im Markup auf `hidden` und blenden sich erst mit
-JavaScript ein – ohne Skript bleibt die Reihe wischbar und mit den
-Pfeiltasten bedienbar. Auf schmalen Bildschirmen sind sie ausgeblendet:
-dort wird gewischt.
+jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Pfeile,
+Punkte und Pausenknopf sind Zugabe, stehen im Markup auf `hidden` und blenden
+sich erst mit JavaScript ein – ohne Skript bleibt die Reihe wischbar und mit
+den Pfeiltasten bedienbar. Auf schmalen Bildschirmen sind die Pfeile
+ausgeblendet: dort wird gewischt.
+
+Die Reihe **blättert von allein weiter** (Standard 7 s, einstellbar zwischen
+`INTERVALL_MIN` und `INTERVALL_MAX`; `intervall_ms()` begrenzt den Wert – zu
+kurz ist Flackern statt Blättern). Sie hält an, sobald jemand hinsieht oder
+sie bedient:
+
+- **Pausenknopf** – die bewusste Entscheidung. Sie überlebt Mausbewegungen;
+  wer von Hand pausiert hat, läuft nicht weiter, nur weil der Zeiger die
+  Karte verlässt.
+- **Zeiger darüber oder Tastaturfokus darin** – solange jemand liest oder
+  sich durchtabbt, bewegt sich nichts.
+- **Tab im Hintergrund** (`visibilitychange`) und **Wischen** auf dem Handy.
+- **`prefers-reduced-motion: reduce`** schaltet den Selbstlauf ganz ab – und
+  dann auch den Pausenknopf, der sonst ohne Wirkung dastünde. Bewegung, die
+  von allein losgeht, ist für manche Menschen ein Problem und nicht nur
+  Geschmackssache.
+
+Die **Punkte** (`role="tablist"`) zeigen die Position und springen auf Klick
+zur Karte; die aktive folgt beim Scrollen über `aria-selected`.
 
 Der **Balken** zeigt die Auslastung, nicht die freien Plätze – ein fast
 voller Balken liest sich schneller als eine kleine Zahl. Bei überschrittener

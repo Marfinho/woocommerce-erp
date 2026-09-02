@@ -40,6 +40,8 @@ class EventsSidebarWidget extends \WP_Widget {
 			'typ'       => isset( $instance['typ'] ) ? sanitize_key( $instance['typ'] ) : '',
 			'titel'     => isset( $instance['titel'] ) ? $instance['titel'] : '',
 			'alle_link' => ! empty( $instance['alle_link'] ),
+			'autoplay'  => ! empty( $instance['autoplay'] ),
+			'intervall' => isset( $instance['intervall'] ) ? (int) $instance['intervall'] : EventsWidget::INTERVALL_STANDARD,
 		) );
 
 		// Steht nichts an, erscheint auch der Rahmen des Bereichs nicht.
@@ -62,6 +64,8 @@ class EventsSidebarWidget extends \WP_Widget {
 		$anzahl    = isset( $instance['anzahl'] ) ? (int) $instance['anzahl'] : 6;
 		$typ       = isset( $instance['typ'] ) ? $instance['typ'] : '';
 		$alle_link = ! empty( $instance['alle_link'] );
+		$autoplay  = ! empty( $instance['autoplay'] );
+		$intervall = isset( $instance['intervall'] ) ? (int) $instance['intervall'] : EventsWidget::INTERVALL_STANDARD;
 		?>
 		<p>
 			<label for="<?php echo esc_attr( $this->get_field_id( 'titel' ) ); ?>"><?php esc_html_e( 'Überschrift', 'lindenweg16' ); ?></label>
@@ -101,6 +105,23 @@ class EventsSidebarWidget extends \WP_Widget {
 				<?php esc_html_e( 'Link auf alle Termine zeigen', 'lindenweg16' ); ?>
 			</label>
 		</p>
+		<p>
+			<label>
+				<input type="checkbox" <?php checked( $autoplay ); ?>
+					name="<?php echo esc_attr( $this->get_field_name( 'autoplay' ) ); ?>" value="1">
+				<?php esc_html_e( 'Von allein weiterblättern', 'lindenweg16' ); ?>
+			</label>
+		</p>
+		<p>
+			<label for="<?php echo esc_attr( $this->get_field_id( 'intervall' ) ); ?>"><?php esc_html_e( 'Wartezeit je Event (Sekunden)', 'lindenweg16' ); ?></label>
+			<input class="tiny-text" type="number"
+				min="<?php echo esc_attr( (string) EventsWidget::INTERVALL_MIN ); ?>"
+				max="<?php echo esc_attr( (string) EventsWidget::INTERVALL_MAX ); ?>" step="1"
+				id="<?php echo esc_attr( $this->get_field_id( 'intervall' ) ); ?>"
+				name="<?php echo esc_attr( $this->get_field_name( 'intervall' ) ); ?>"
+				value="<?php echo esc_attr( (string) $intervall ); ?>">
+			<span class="description"><?php esc_html_e( 'Besucher können jederzeit pausieren.', 'lindenweg16' ); ?></span>
+		</p>
 		<?php
 	}
 
@@ -117,6 +138,8 @@ class EventsSidebarWidget extends \WP_Widget {
 			'anzahl'    => min( 20, max( 1, (int) ( $new['anzahl'] ?? 6 ) ) ),
 			'typ'       => sanitize_key( $new['typ'] ?? '' ),
 			'alle_link' => empty( $new['alle_link'] ) ? 0 : 1,
+			'autoplay'  => empty( $new['autoplay'] ) ? 0 : 1,
+			'intervall' => (int) ( $new['intervall'] ?? EventsWidget::INTERVALL_STANDARD ),
 		);
 	}
 }

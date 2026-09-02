@@ -44,6 +44,42 @@ class EventsWidget {
 	}
 
 	/**
+	 * Voreingestellte Wartezeit des Selbstlaufs in Sekunden.
+	 */
+	const INTERVALL_STANDARD = 7;
+
+	/**
+	 * Kürzeste zulässige Wartezeit in Sekunden.
+	 *
+	 * Alles darunter ist keine Bedienhilfe mehr, sondern Flackern: Wer den
+	 * Auszug lesen will, kommt nicht mit.
+	 */
+	const INTERVALL_MIN = 4;
+
+	/**
+	 * Längste zulässige Wartezeit in Sekunden.
+	 */
+	const INTERVALL_MAX = 60;
+
+	/**
+	 * Wartezeit in Millisekunden, auf den zulässigen Bereich begrenzt.
+	 *
+	 * @param mixed $sekunden Eingestellte Sekunden.
+	 * @return int Millisekunden.
+	 */
+	public static function intervall_ms( $sekunden ) {
+		$sekunden = (int) $sekunden;
+
+		if ( $sekunden <= 0 ) {
+			$sekunden = self::INTERVALL_STANDARD;
+		}
+
+		$sekunden = max( self::INTERVALL_MIN, min( self::INTERVALL_MAX, $sekunden ) );
+
+		return $sekunden * 1000;
+	}
+
+	/**
 	 * Shortcode-Rückruf.
 	 *
 	 * @param array $atts Attribute.
@@ -56,6 +92,8 @@ class EventsWidget {
 				'typ'       => '',
 				'titel'     => '',
 				'alle_link' => '1',
+				'autoplay'  => '1',
+				'intervall' => self::INTERVALL_STANDARD,
 			),
 			is_array( $atts ) ? $atts : array(),
 			self::SHORTCODE
@@ -66,6 +104,8 @@ class EventsWidget {
 			'typ'       => sanitize_key( $atts['typ'] ),
 			'titel'     => sanitize_text_field( $atts['titel'] ),
 			'alle_link' => '0' !== (string) $atts['alle_link'],
+			'autoplay'  => '0' !== (string) $atts['autoplay'],
+			'intervall' => (int) $atts['intervall'],
 		) );
 	}
 
@@ -127,6 +167,8 @@ class EventsWidget {
 			'typ'       => '',
 			'titel'     => __( 'Nächste Termine', 'lindenweg16' ),
 			'alle_link' => true,
+			'autoplay'  => true,
+			'intervall' => self::INTERVALL_STANDARD,
 		) );
 
 		$events = self::kommende( $args['anzahl'], $args['typ'] );
@@ -143,7 +185,14 @@ class EventsWidget {
 
 		$mehrere = count( $events ) > 1;
 
-		$out  = '<section class="lw16-events-widget">';
+		// Selbstlauf nur, wenn es überhaupt etwas zu blättern gibt.
+		$autoplay = $mehrere && ! empty( $args['autoplay'] );
+
+		$out = sprintf(
+			'<section class="lw16-events-widget" data-autoplay="%d" data-intervall="%d">',
+			$autoplay ? 1 : 0,
+			self::intervall_ms( $args['intervall'] )
+		);
 
 		if ( $args['titel'] || $args['alle_link'] ) {
 			$out .= '<div class="lw16-events-widget__kopf">';
@@ -179,7 +228,59 @@ class EventsWidget {
 				. 'aria-label="' . esc_attr__( 'Nächstes Event', 'lindenweg16' ) . '" hidden>&#8250;</button>';
 		}
 
-		$out .= '</div></section>';
+		$out .= '</div>';
+
+		if ( $mehrere ) {
+			$out .= self::steuerung_html( count( $events ), $autoplay );
+		}
+
+		$out .= '</section>';
+
+		return $out;
+	}
+
+	/**
+	 * Punkte und Pausenknopf.
+	 *
+	 * Beides steht auf `hidden` und wird erst mit JavaScript eingeblendet:
+	 * Ein Punkt, der nichts tut, und ein Pausenknopf für einen Selbstlauf,
+	 * der ohne Skript gar nicht läuft, wären nur Zierrat.
+	 *
+	 * @param int  $anzahl   Anzahl der Events.
+	 * @param bool $autoplay Läuft die Reihe von selbst weiter?
+	 * @return string
+	 */
+	protected static function steuerung_html( $anzahl, $autoplay ) {
+		$out = '<div class="lw16-events-widget__steuerung" hidden>';
+
+		if ( $autoplay ) {
+			// Der Knopf startet im Zustand „läuft" – gedrückt bedeutet Pause.
+			$out .= '<button type="button" class="lw16-events-widget__pause" aria-pressed="false"'
+				. ' data-pausiert="' . esc_attr__( 'Weiter abspielen', 'lindenweg16' ) . '"'
+				. ' data-laeuft="' . esc_attr__( 'Automatisches Weiterblättern pausieren', 'lindenweg16' ) . '"'
+				. ' aria-label="' . esc_attr__( 'Automatisches Weiterblättern pausieren', 'lindenweg16' ) . '">'
+				. '<span class="lw16-events-widget__pause-zeichen" aria-hidden="true"></span></button>';
+		}
+
+		$out .= '<div class="lw16-events-widget__punkte" role="tablist"'
+			. ' aria-label="' . esc_attr__( 'Events durchblättern', 'lindenweg16' ) . '">';
+
+		for ( $i = 0; $i < (int) $anzahl; $i++ ) {
+			$out .= sprintf(
+				'<button type="button" class="lw16-events-widget__punkt" role="tab" data-index="%1$d"'
+				. ' aria-selected="%2$s" aria-label="%3$s"><span aria-hidden="true"></span></button>',
+				$i,
+				0 === $i ? 'true' : 'false',
+				esc_attr( sprintf(
+					/* translators: 1: laufende Nummer, 2: Gesamtzahl. */
+					__( 'Event %1$d von %2$d', 'lindenweg16' ),
+					$i + 1,
+					(int) $anzahl
+				) )
+			);
+		}
+
+		$out .= '</div></div>';
 
 		return $out;
 	}

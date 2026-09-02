@@ -12,6 +12,7 @@
 use PHPUnit\Framework\TestCase;
 use Lindenweg16\Modules\Events\RsvpRechnung;
 use Lindenweg16\Modules\Events\EventFields;
+use Lindenweg16\Modules\Events\EventsWidget;
 
 /**
  * @covers \Lindenweg16\Modules\Events\RsvpRechnung
@@ -211,6 +212,33 @@ class EventRsvpTest extends TestCase {
 
 	public function test_kurztext_ohne_grenze() {
 		$this->assertSame( 'Anmeldung offen', RsvpRechnung::freie_plaetze_text( 0, 42 ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Selbstlauf der Reihe
+	 * -------------------------------------------------------------- */
+
+	public function test_wartezeit_wird_in_millisekunden_gerechnet() {
+		$this->assertSame( 7000, EventsWidget::intervall_ms( 7 ) );
+	}
+
+	public function test_leere_wartezeit_nimmt_den_standard() {
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( 0 ) );
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( '' ) );
+	}
+
+	public function test_zu_kurze_wartezeit_wird_angehoben() {
+		// Alles darunter waere Flackern statt Blaettern - wer den Auszug
+		// lesen will, kaeme nicht mit.
+		$this->assertSame( EventsWidget::INTERVALL_MIN * 1000, EventsWidget::intervall_ms( 1 ) );
+	}
+
+	public function test_zu_lange_wartezeit_wird_gedeckelt() {
+		$this->assertSame( EventsWidget::INTERVALL_MAX * 1000, EventsWidget::intervall_ms( 9999 ) );
+	}
+
+	public function test_negative_wartezeit_faellt_auf_den_standard() {
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( -5 ) );
 	}
 
 	/* ----------------------------------------------------------------
