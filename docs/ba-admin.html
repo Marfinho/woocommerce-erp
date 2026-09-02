@@ -526,13 +526,20 @@
 
 <h3>Die Terminreihe auf der Startseite</h3>
 
-<p>Die nächsten Termine erscheinen auf der Startseite als seitlich blätterbare Reihe – ein Event je Ansicht, mit Datum, kleinem Titelbild, Auszug und einem Balken, wie viele Plätze noch frei sind. Auf dem Handy wischt man, am Rechner klickt man die Pfeile links und rechts.</p>
+<p>Die nächsten Termine erscheinen auf der Startseite als seitlich blätterbare Reihe – ein Event je Ansicht, mit Datum, kleinem Titelbild, Auszug und einem Balken, wie viele Plätze noch frei sind. Auf dem Handy wischt man, am Rechner klickt man die Pfeile links und rechts oder die Punkte darunter.</p>
+
+<p>Die Reihe blättert alle sieben Sekunden von allein weiter. Sie hält an, sobald jemand mit der Maus darüberfährt, sich mit der Tastatur hineintabbt, wischt oder den Tab wechselt – und über den <strong>Pausenknopf</strong> links neben den Punkten dauerhaft. Wer dort pausiert hat, bleibt pausiert; das kurze Verlassen mit der Maus startet die Reihe nicht wieder.</p>
+
+<div class="kasten merke">
+	<span class="titel">Wer Bewegung abbestellt hat, bekommt keine</span>
+	<p>Hat jemand im Betriebssystem eingestellt, dass Animationen reduziert werden sollen, blättert die Reihe bei ihm gar nicht von allein – und der Pausenknopf erscheint erst gar nicht, weil es nichts zu pausieren gibt. Das ist für manche Menschen kein Geschmack, sondern eine Frage der Verträglichkeit.</p>
+</div>
 
 <p>Dort ist sie schon eingebaut, du musst nichts tun. Wer sie zusätzlich woanders haben will, hat zwei Wege:</p>
 
 <ul>
-	<li><strong>Auf einer Seite oder in einem Beitrag:</strong> den Kurzbefehl <code>[lw16_events]</code> einfügen. Mit Zusätzen: <code>[lw16_events anzahl="4" typ="social-ride"]</code> zeigt nur die nächsten vier Social Rides.</li>
-	<li><strong>In einem Widget-Bereich:</strong> unter <span class="weg">Design → Widgets</span> das Widget <em>Lindenweg16: Nächste Events</em> einsetzen. Dort lassen sich Überschrift, Anzahl und Eventtyp einstellen.</li>
+	<li><strong>Auf einer Seite oder in einem Beitrag:</strong> den Kurzbefehl <code>[lw16_events]</code> einfügen. Mit Zusätzen: <code>[lw16_events anzahl="4" typ="social-ride"]</code> zeigt nur die nächsten vier Social Rides, <code>[lw16_events autoplay="0"]</code> eine Reihe ohne automatisches Weiterblättern, <code>[lw16_events intervall="12"]</code> eine mit längerer Wartezeit.</li>
+	<li><strong>In einem Widget-Bereich:</strong> unter <span class="weg">Design → Widgets</span> das Widget <em>Lindenweg16: Nächste Events</em> einsetzen. Dort lassen sich Überschrift, Anzahl, Eventtyp, das automatische Weiterblättern und die Wartezeit einstellen.</li>
 </ul>
 
 <div class="kasten merke">

@@ -90,6 +90,8 @@ $about_url     = $about_page ? get_permalink( $about_page ) : '#';
 				'anzahl'    => 6,
 				'titel'     => '',
 				'alle_link' => false,
+				'autoplay'  => true,
+				'intervall' => 7,
 			)
 		);
 	}
