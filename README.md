@@ -57,7 +57,9 @@ includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
 includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
                              RsvpRepository, EventAdmin, EventFrontend,
-                             EventsWidget, EventsSidebarWidget, EventsModule
+                             EventsWidget, EventsSidebarWidget, EventsBlock,
+                             EventsModule
+assets/blocks/events/        block.json des Blocks „Nächste Events"
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
@@ -661,9 +663,25 @@ mit Datum, kleinem Titelbild, Auszug und einem Balken der freien Plätze.
 Dieselbe Ausgabe steht über drei Wege bereit – der Aufbau selbst aber nur
 einmal, in `EventsWidget::render()`:
 
+- Block **Nächste Events** für den Seiten-Editor (`EventsBlock`)
 - Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0" autoplay="1" intervall="7"]`
 - klassisches Widget für Widget-Bereiche (`EventsSidebarWidget`)
 - direkt in der Theme-Vorlage, so eingebunden in `theme/front-page.php`
+
+Der **Block ist dynamisch**: Gespeichert werden nur die Einstellungen, die
+Ausgabe kommt bei jedem Seitenaufruf frisch vom Server (`save()` gibt `null`
+zurück). Gespeichertes HTML trüge die Teilnehmerzahlen von gestern im Beitrag
+mit sich herum. Die Vorschau im Editor rendert über `ServerSideRender`
+denselben Weg wie die fertige Seite, statt ihn nachzubauen.
+
+Das Editor-Skript ist **ohne JSX und ohne Build-Schritt** geschrieben
+(`wp.element.createElement`), weil das Plugin ohne Build-Werkzeug auskommt –
+ein einzelner Block wäre kein guter Grund, damit anzufangen. Die
+Abhängigkeitsliste steht deshalb von Hand in `EventsBlock::register_block()`,
+und `block.json` verweist mit `editorScript` auf dieses Handle statt auf eine
+Datei. `EventsBlockTest` hält beide Seiten zusammen: Jede Einstellung aus
+`block.json` muss im Editor bedienbar *und* im Render-Rückruf ausgewertet
+sein – sonst fehlt sie später still auf der Seite.
 
 Das **Blättern macht CSS allein**: `scroll-snap-type: x mandatory` rastet
 jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Pfeile,
