@@ -12,6 +12,7 @@
 
 use PHPUnit\Framework\TestCase;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlAuth;
+use Lindenweg16\Modules\Betrieb\Dhl\DhlClient;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlResponse;
 
 /**
@@ -172,11 +173,17 @@ class DhlAuthTest extends TestCase {
 	/**
 	 * Der Zugang gilt erst als eingerichtet, wenn auch das Secret da ist.
 	 * Ein API-Key allein wird von der DHL abgelehnt – das war der Fehler.
+	 *
+	 * Sandbox und Live haben seit der Trennung der Zugangsdaten getrennte
+	 * Einstellungsschlüssel (dhl_versand_sandbox_api_secret /
+	 * _live_api_secret), zusammengesetzt über credential_key(). Der Test
+	 * prüft deshalb, dass 'api_secret' dort als Feld verlangt wird, statt
+	 * einen der beiden festen Schlüssel wörtlich zu suchen.
 	 */
 	public function test_das_secret_gehoert_zu_den_zugangsdaten() {
 		$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/Dhl/DhlClient.php' );
 
-		$this->assertStringContainsString( 'dhl_versand_api_secret', $quelle );
+		$this->assertStringContainsString( "credential_key( 'api_secret' )", $quelle );
 	}
 
 	/**
@@ -189,5 +196,39 @@ class DhlAuthTest extends TestCase {
 
 		$this->assertStringContainsString( "'_sandbox'", $quelle );
 		$this->assertStringContainsString( "'_live'", $quelle );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Getrennte Zugangsdaten für Sandbox und Live
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Ohne Angabe (Vorgabe: Sandbox-Modus) liefert credential_key() die
+	 * Sandbox-Einstellungsschlüssel – nie dieselben wie im Live-Betrieb.
+	 * Das ist der eigentliche Fehler gewesen: ein Live-Login gegen die
+	 * Sandbox-Umgebung endet mit „invalid_grant".
+	 */
+	public function test_credential_key_unterscheidet_sandbox_und_live() {
+		$this->assertSame( 'dhl_versand_sandbox_api_key', DhlClient::credential_key( 'api_key' ) );
+		$this->assertSame( 'dhl_versand_sandbox_api_secret', DhlClient::credential_key( 'api_secret' ) );
+		$this->assertSame( 'dhl_versand_sandbox_user', DhlClient::credential_key( 'user' ) );
+		$this->assertSame( 'dhl_versand_sandbox_password', DhlClient::credential_key( 'password' ) );
+	}
+
+	/**
+	 * Mit deaktiviertem Sandbox-Haken liefert credential_key() die
+	 * Live-Schlüssel – nie die Sandbox-Werte, auch nicht versehentlich.
+	 */
+	public function test_credential_key_im_livebetrieb() {
+		$GLOBALS['lw16_test_options']['lw16_settings'] = array( 'dhl_versand_sandbox' => 0 );
+
+		try {
+			$this->assertSame( 'dhl_versand_live_api_key', DhlClient::credential_key( 'api_key' ) );
+			$this->assertSame( 'dhl_versand_live_api_secret', DhlClient::credential_key( 'api_secret' ) );
+			$this->assertSame( 'dhl_versand_live_user', DhlClient::credential_key( 'user' ) );
+			$this->assertSame( 'dhl_versand_live_password', DhlClient::credential_key( 'password' ) );
+		} finally {
+			unset( $GLOBALS['lw16_test_options']['lw16_settings'] );
+		}
 	}
 }
