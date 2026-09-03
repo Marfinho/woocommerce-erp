@@ -18,13 +18,15 @@ defined( 'ABSPATH' ) || exit;
  * festen Demo-Zugang, den alle benutzen – samt einer Testkundennummer,
  * auf die die Sandbox bucht.
  *
- * Eigene Zugangsdaten funktionieren dort nicht: Wer seine echten
- * einträgt und den Sandbox-Haken stehen lässt, bekommt eine Ablehnung,
- * die wie ein Tippfehler im Passwort aussieht. Deshalb setzt das Plugin
- * in der Sandbox von sich aus die Demo-Angaben ein.
+ * Benutzer und Passwort dieses Zugangs stehen als Vorgabe in den
+ * Einstellungen und lassen sich dort ansehen. Was dort nicht steht und
+ * auch nicht hingehört, ist die Kundennummer: Die Sandbox bucht auf eine
+ * Testkundennummer der DHL. Schickte man die echte mit, entstünde eine
+ * Abrechnungsnummer, die es in der Testumgebung nicht gibt – und die
+ * Ablehnung sähe nach einem Fehler in der Adresse aus.
  *
- * Nicht ersetzt werden API-Key und API-Secret: Die gehören der eigenen
- * Anwendung und gelten laut DHL üblicherweise für beide Umgebungen.
+ * Nicht ersetzt werden API-Key und API-Secret. Die gehören der eigenen
+ * Anwendung und werden je Umgebung getrennt gepflegt.
  */
 class DhlSandbox {
 
@@ -54,20 +56,18 @@ class DhlSandbox {
 	const PROFIL = 'STANDARD_GRUPPENPROFIL';
 
 	/**
-	 * Zugangsdaten der Umgebung – reine Logik.
+	 * Auf wen gebucht wird – reine Logik.
 	 *
 	 * @param bool  $sandbox Läuft es gegen die Testumgebung?
-	 * @param array $eigene  Eigene Angaben {user, password, ekp, teilnahme, profil}.
+	 * @param array $eigene  Eigene Angaben {ekp, teilnahme, profil}.
 	 * @return array Dieselben Schlüssel, in der Sandbox überschrieben.
 	 */
-	public static function credentials( $sandbox, array $eigene ) {
+	public static function billing( $sandbox, array $eigene ) {
 		if ( ! $sandbox ) {
 			return $eigene;
 		}
 
 		return array(
-			'user'      => self::USER,
-			'password'  => self::PASSWORD,
 			'ekp'       => self::EKP,
 			'teilnahme' => self::TEILNAHME,
 			'profil'    => self::PROFIL,
@@ -75,25 +75,15 @@ class DhlSandbox {
 	}
 
 	/**
-	 * Welche Angaben muss der Betreiber selbst beisteuern?
+	 * Muss der Betreiber die Kundennummer selbst eintragen?
 	 *
-	 * In der Sandbox nur die der eigenen Anwendung. Nach Benutzer,
-	 * Kundennummer und Teilnahme dort zu fragen, hiesse nach etwas zu
-	 * fragen, das es nicht zu holen gibt.
+	 * In der Sandbox nicht – dort gehört sie der DHL. Danach zu fragen
+	 * hiesse, nach etwas zu fragen, das es nicht zu holen gibt.
 	 *
 	 * @param bool $sandbox Läuft es gegen die Testumgebung?
-	 * @return array Einstellungsschlüssel.
+	 * @return bool
 	 */
-	public static function required_settings( $sandbox ) {
-		$anwendung = array( 'dhl_versand_api_key', 'dhl_versand_api_secret' );
-
-		if ( $sandbox ) {
-			return $anwendung;
-		}
-
-		return array_merge(
-			$anwendung,
-			array( 'dhl_versand_user', 'dhl_versand_password', 'dhl_versand_ekp' )
-		);
+	public static function needs_own_ekp( $sandbox ) {
+		return ! $sandbox;
 	}
 }

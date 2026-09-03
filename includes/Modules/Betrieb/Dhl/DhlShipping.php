@@ -193,7 +193,7 @@ class DhlShipping {
 		// Die echte EKP dort mitzuschicken ergäbe eine Abrechnungsnummer,
 		// die es in der Testumgebung nicht gibt – die Ablehnung sähe dann
 		// nach einem Adressfehler aus.
-		$zugang = DhlSandbox::credentials(
+		$zugang = DhlSandbox::billing(
 			DhlClient::sandbox(),
 			array(
 				'ekp'       => (string) Settings::get( 'dhl_versand_ekp', '' ),

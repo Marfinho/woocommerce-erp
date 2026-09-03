@@ -486,10 +486,13 @@ vorhanden ist – nicht, was geplant war.
   API-Secret der Anwendung plus Benutzer und Passwort des
   Geschäftskundenportals werden gegen ein Bearer-Token getauscht, das je
   Umgebung getrennt zwischengespeichert und vor Ablauf erneuert wird; ohne
-  API-Secret bleibt es beim bisherigen Basic-Auth-Weg. Für die Sandbox legt
-  man keinen Benutzer an – die DHL stellt einen festen Demo-Zugang samt
-  Testkundennummer, den `DhlSandbox` einsetzt, solange der Haken sitzt; dort
-  genügen API-Key und API-Secret. Produkt und Gewicht werden aus Zielland und
+  API-Secret bleibt es beim bisherigen Basic-Auth-Weg. Sandbox und Live haben
+  eigene Einstellungsfelder für alle vier Zugangsdaten – ein Login der einen
+  Umgebung wird von der anderen mit `invalid_grant` abgewiesen; für die
+  Sandbox legt man keinen Benutzer an, dort steht der feste Testzugang der
+  DHL vorbelegt. Auf welche Kundennummer gebucht wird, entscheidet
+  `DhlSandbox`: in der Testumgebung auf die der DHL, sonst auf die eigene.
+  Produkt und Gewicht werden aus Zielland und
   Artikelstamm vorgeschlagen, das PDF landet im geschützten
   Dokumentenverzeichnis, die Sendungsnummer geht direkt in die
   Sendungsverfolgung. Stornieren nimmt die Frankierung zurück; der Vorgang

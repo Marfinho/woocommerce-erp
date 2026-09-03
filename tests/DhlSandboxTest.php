@@ -1,12 +1,14 @@
 <?php
 /**
- * Die Testumgebung der DHL.
+ * Auf wen die Testumgebung der DHL bucht.
  *
- * Für die Sandbox legt man keinen Benutzer an – es gibt im
- * Geschäftskundenportal keinen zum Anlegen. Die DHL stellt einen festen
- * Demo-Zugang. Wer das nicht weiß, trägt seine echten Daten ein, lässt
- * den Sandbox-Haken stehen und bekommt eine Ablehnung, die wie ein
- * Tippfehler im Passwort aussieht.
+ * Benutzer und Passwort der Sandbox stehen als Vorgabe in den
+ * Einstellungen – für die Sandbox legt man keinen Benutzer an, die DHL
+ * stellt einen festen Demo-Zugang. Die Kundennummer aber steht dort
+ * nicht und gehört auch nicht hin: Die Sandbox bucht auf eine
+ * Testkundennummer der DHL. Schickte man die echte mit, entstünde eine
+ * Abrechnungsnummer, die es in der Testumgebung nicht gibt – und die
+ * Ablehnung sähe nach einem Fehler in der Adresse aus.
  *
  * @package Lindenweg16
  */
@@ -16,7 +18,7 @@ use Lindenweg16\Modules\Betrieb\Dhl\DhlSandbox;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlProduct;
 
 /**
- * Prüft die Weiche zwischen Demo-Zugang und eigenem Zugang.
+ * Prüft die Weiche zwischen Testkundennummer und eigener Kundennummer.
  */
 class DhlSandboxTest extends TestCase {
 
@@ -27,8 +29,6 @@ class DhlSandboxTest extends TestCase {
 	 */
 	protected function eigene() {
 		return array(
-			'user'      => 'meine-kennung',
-			'password'  => 'mein-passwort',
 			'ekp'       => '1234567890',
 			'teilnahme' => '01',
 			'profil'    => 'MEIN_PROFIL',
@@ -39,40 +39,30 @@ class DhlSandboxTest extends TestCase {
 	 * Im Echtbetrieb gilt, was der Betreiber eingetragen hat – da darf
 	 * nichts überschrieben werden.
 	 */
-	public function test_echtbetrieb_nimmt_die_eigenen_angaben() {
-		$this->assertSame( $this->eigene(), DhlSandbox::credentials( false, $this->eigene() ) );
+	public function test_echtbetrieb_bucht_auf_die_eigene_kundennummer() {
+		$this->assertSame( $this->eigene(), DhlSandbox::billing( false, $this->eigene() ) );
 	}
 
 	/**
-	 * In der Sandbox gilt der Demo-Zugang – auch dann, wenn eigene
-	 * Angaben dastehen. Genau die funktionieren dort nämlich nicht.
-	 */
-	public function test_sandbox_nimmt_den_demo_zugang() {
-		$zugang = DhlSandbox::credentials( true, $this->eigene() );
-
-		$this->assertSame( DhlSandbox::USER, $zugang['user'] );
-		$this->assertSame( DhlSandbox::PASSWORD, $zugang['password'] );
-		$this->assertNotSame( 'meine-kennung', $zugang['user'] );
-	}
-
-	/**
-	 * Auch gebucht wird in der Sandbox auf die Testkundennummer. Die
-	 * echte EKP ergäbe dort eine Abrechnungsnummer, die es nicht gibt.
+	 * In der Sandbox gilt die Testkundennummer – auch dann, wenn eine
+	 * eigene dasteht. Genau die gibt es dort nämlich nicht.
 	 */
 	public function test_sandbox_bucht_auf_die_testkundennummer() {
-		$zugang = DhlSandbox::credentials( true, $this->eigene() );
+		$zugang = DhlSandbox::billing( true, $this->eigene() );
 
 		$this->assertSame( DhlSandbox::EKP, $zugang['ekp'] );
 		$this->assertSame( DhlSandbox::TEILNAHME, $zugang['teilnahme'] );
+		$this->assertSame( DhlSandbox::PROFIL, $zugang['profil'] );
+		$this->assertNotSame( '1234567890', $zugang['ekp'] );
 	}
 
 	/**
-	 * Aus dem Demo-Zugang entsteht die Abrechnungsnummer, die die DHL in
-	 * ihren eigenen Beispielen nennt. Weicht sie ab, stimmt eine der
-	 * Konstanten nicht.
+	 * Aus den Demo-Angaben entsteht genau die Abrechnungsnummer, die die
+	 * DHL in ihren eigenen Beispielen nennt. Weicht sie ab, stimmt eine
+	 * der Konstanten nicht.
 	 */
 	public function test_demo_abrechnungsnummer_stimmt_mit_dem_beispiel_der_dhl() {
-		$zugang = DhlSandbox::credentials( true, array() );
+		$zugang = DhlSandbox::billing( true, array() );
 
 		$this->assertSame(
 			'33333333330102',
@@ -81,46 +71,49 @@ class DhlSandboxTest extends TestCase {
 	}
 
 	/**
-	 * In der Sandbox wird nur nach den Daten der eigenen Anwendung
-	 * gefragt. Nach einem Benutzer zu fragen, den es nirgends zu holen
-	 * gibt, schickt den Betreiber auf die Suche.
+	 * Nach der Kundennummer wird nur im Echtbetrieb gefragt.
 	 */
-	public function test_sandbox_verlangt_nur_die_anwendungsdaten() {
-		$noetig = DhlSandbox::required_settings( true );
-
-		$this->assertContains( 'dhl_versand_api_key', $noetig );
-		$this->assertContains( 'dhl_versand_api_secret', $noetig );
-		$this->assertNotContains( 'dhl_versand_user', $noetig );
-		$this->assertNotContains( 'dhl_versand_password', $noetig );
-		$this->assertNotContains( 'dhl_versand_ekp', $noetig );
+	public function test_nach_der_kundennummer_wird_nur_im_echtbetrieb_gefragt() {
+		$this->assertFalse( DhlSandbox::needs_own_ekp( true ) );
+		$this->assertTrue( DhlSandbox::needs_own_ekp( false ) );
 	}
 
 	/**
-	 * Im Echtbetrieb gehört alles dazu.
+	 * Der Demo-Zugang der DHL steht als Vorgabe in den Einstellungen –
+	 * sonst suchte man einen Benutzer, den es nirgends zu holen gibt.
 	 */
-	public function test_echtbetrieb_verlangt_alles() {
-		$noetig = DhlSandbox::required_settings( false );
+	public function test_der_demo_zugang_ist_vorbelegt() {
+		$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Core/Settings.php' );
 
-		foreach ( array( 'dhl_versand_api_key', 'dhl_versand_api_secret', 'dhl_versand_user', 'dhl_versand_password', 'dhl_versand_ekp' ) as $key ) {
-			$this->assertContains( $key, $noetig );
-		}
+		$this->assertStringContainsString( DhlSandbox::USER, $quelle );
+		$this->assertStringContainsString( DhlSandbox::PASSWORD, $quelle );
 	}
 
 	/**
-	 * Anmeldung, Kopfzeilen und Sendungsauftrag gehen alle drei über
-	 * dieselbe Weiche. Bliebe eine davon aussen vor, meldete sich das
-	 * Plugin als Demo an und buchte auf die echte Kundennummer – oder
-	 * umgekehrt.
+	 * Beide Stellen, die über die Umgebung entscheiden, benutzen die
+	 * Weiche: die Vollständigkeitsprüfung und der Sendungsauftrag. Bliebe
+	 * eine aussen vor, verlangte das Plugin in der Sandbox eine
+	 * Kundennummer, die es nicht gibt – oder buchte mit ihr.
 	 */
-	public function test_alle_drei_stellen_benutzen_die_weiche() {
+	public function test_beide_stellen_benutzen_die_weiche() {
 		$basis = dirname( __DIR__ ) . '/includes/Modules/Betrieb/Dhl/';
 
-		foreach ( array( 'DhlAuth.php', 'DhlClient.php', 'DhlShipping.php' ) as $datei ) {
+		foreach ( array( 'DhlClient.php', 'DhlShipping.php' ) as $datei ) {
 			$this->assertStringContainsString(
 				'DhlSandbox::',
 				file_get_contents( $basis . $datei ),
 				$datei . ' entscheidet nicht über die Weiche.'
 			);
 		}
+	}
+
+	/**
+	 * Zugangsdaten wählt der Client je Umgebung getrennt – Sandbox und
+	 * Echtbetrieb haben eigene Anwendungen bei der DHL.
+	 */
+	public function test_zugangsdaten_haengen_an_der_umgebung() {
+		$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/Dhl/DhlClient.php' );
+
+		$this->assertStringContainsString( 'credential_key', $quelle );
 	}
 }

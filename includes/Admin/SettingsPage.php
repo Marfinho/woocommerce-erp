@@ -84,12 +84,16 @@ class SettingsPage {
 				'dhl_tracking_sandbox' => array( __( 'DHL Sandbox-Modus', 'lindenweg16' ), 'checkbox' ),
 			),
 			__( 'DHL Geschäftskundenversand (Labels)', 'lindenweg16' ) => array(
-				'dhl_versand_api_key'      => array( __( 'API-Key der Anwendung (developer.dhl.com)', 'lindenweg16' ), 'text' ),
-				'dhl_versand_api_secret'   => array( __( 'API-Secret der Anwendung (developer.dhl.com)', 'lindenweg16' ), 'password' ),
-				'dhl_versand_user'         => array( __( 'Benutzer des Geschäftskundenportals (nur Echtbetrieb)', 'lindenweg16' ), 'text' ),
-				'dhl_versand_password'     => array( __( 'Passwort des Geschäftskundenportals (nur Echtbetrieb)', 'lindenweg16' ), 'password' ),
-				'dhl_versand_ekp'          => array( __( 'Kundennummer EKP, 10 Stellen (nur Echtbetrieb)', 'lindenweg16' ), 'text' ),
-				'dhl_versand_teilnahme'    => array( __( 'Teilnahme (2 Stellen, gilt für alle Produkte)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_sandbox_api_key'    => array( __( 'Sandbox: API-Key der Anwendung (developer.dhl.com, Sandbox-App)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_sandbox_api_secret' => array( __( 'Sandbox: API-Secret der Anwendung (developer.dhl.com, Sandbox-App)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_sandbox_user'       => array( __( 'Sandbox: Benutzer (von DHL fest vorgegebener Testzugang, i. d. R. unverändert lassen)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_sandbox_password'   => array( __( 'Sandbox: Passwort (von DHL fest vorgegebener Testzugang, i. d. R. unverändert lassen)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_live_api_key'       => array( __( 'Live: API-Key der Anwendung (developer.dhl.com, nach Go-Live-Freigabe)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_live_api_secret'    => array( __( 'Live: API-Secret der Anwendung (developer.dhl.com, nach Go-Live-Freigabe)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_live_user'          => array( __( 'Live: Benutzer des Geschäftskundenportals', 'lindenweg16' ), 'text' ),
+				'dhl_versand_live_password'      => array( __( 'Live: Passwort des Geschäftskundenportals', 'lindenweg16' ), 'password' ),
+				'dhl_versand_ekp'          => array( __( 'Live: Kundennummer EKP (10 Stellen)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme'    => array( __( 'Live: Teilnahme (2 Stellen, gilt für alle Produkte)', 'lindenweg16' ), 'text' ),
 				'dhl_versand_teilnahme_01' => array( __( 'Teilnahme abweichend: DHL Paket', 'lindenweg16' ), 'text' ),
 				'dhl_versand_teilnahme_62' => array( __( 'Teilnahme abweichend: Warenpost', 'lindenweg16' ), 'text' ),
 				'dhl_versand_teilnahme_54' => array( __( 'Teilnahme abweichend: Europaket', 'lindenweg16' ), 'text' ),
@@ -100,7 +104,7 @@ class SettingsPage {
 				'dhl_versand_verpackung_g' => array( __( 'Verpackungszuschlag je Sendung (g)', 'lindenweg16' ), 'number' ),
 				'dhl_versand_warenpost'    => array( __( 'Warenpost/Kleinpaket ist gebucht', 'lindenweg16' ), 'checkbox' ),
 				'dhl_versand_vorabmeldung' => array( __( 'Kunden per E-Mail vorab benachrichtigen', 'lindenweg16' ), 'checkbox' ),
-				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus: mit dem Demo-Zugang der DHL testen, keine echten Labels', 'lindenweg16' ), 'checkbox' ),
+				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus (erzeugt keine echten Labels)', 'lindenweg16' ), 'checkbox' ),
 			),
 			__( 'DHL Druck-Warteschlange (Raspberry Pi)', 'lindenweg16' ) => array(
 				'dhl_print_automatisch'       => array( __( 'Nach erfolgreicher Label-Erzeugung automatisch einen Druckjob anlegen', 'lindenweg16' ), 'checkbox' ),
@@ -182,9 +186,7 @@ class SettingsPage {
 	/**
 	 * Erklärender Vorspann zu einer Gruppe.
 	 *
-	 * Nur dort, wo die Feldnamen allein in die Irre führen. Beim
-	 * DHL-Versand ist das der Fall: Nach einem Sandbox-Benutzer sucht man
-	 * sonst an einer Stelle, an der es keinen zu holen gibt.
+	 * Nur dort, wo die Feldnamen allein in die Irre führen.
 	 *
 	 * @param string $group Überschrift der Gruppe.
 	 */
@@ -196,9 +198,15 @@ class SettingsPage {
 		echo '<div class="notice notice-info inline" style="margin:0 0 12px"><p><strong>';
 		esc_html_e( 'Für die Sandbox legt man keinen Benutzer an.', 'lindenweg16' );
 		echo '</strong> ';
-		esc_html_e( 'Die DHL stellt dafür einen festen Demo-Zugang samt Testkundennummer bereit; das Plugin setzt ihn ein, solange der Sandbox-Haken sitzt. Nötig sind dann nur API-Key und API-Secret deiner App von developer.dhl.com – die gelten laut DHL für beide Umgebungen.', 'lindenweg16' );
+		esc_html_e( 'Benutzer und Passwort der Sandbox sind der feste Testzugang der DHL und stehen schon da – selbst eintragen musst du dort nur API-Key und API-Secret deiner Sandbox-App.', 'lindenweg16' );
 		echo '</p><p>';
-		esc_html_e( 'Benutzer, Passwort, Kundennummer und Teilnahme stammen aus dem Geschäftskundenportal und greifen erst im Echtbetrieb, also nachdem der Haken entfernt ist. In der Sandbox werden sie bewusst übergangen: Echte Zugangsdaten funktionieren dort nicht, und die Ablehnung sähe aus wie ein Tippfehler im Passwort.', 'lindenweg16' );
+		esc_html_e( 'Kundennummer, Teilnahme und Abrechnungsprofil gelten nur im Echtbetrieb: In der Sandbox bucht die DHL auf ihre eigene Testkundennummer, und das Plugin setzt sie ein, solange der Sandbox-Haken sitzt. Deine Angaben bleiben dabei unberührt.', 'lindenweg16' );
+		echo '</p><p>';
+		printf(
+			/* translators: %s: Link zur Versandseite. */
+			esc_html__( 'Ob der Zugang sitzt, sagt der Knopf „DHL-Zugang prüfen" auf der Seite %s. Er kostet kein Label.', 'lindenweg16' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=lw16-betrieb-versand' ) ) . '">' . esc_html__( 'Betrieb → Versand', 'lindenweg16' ) . '</a>'
+		);
 		echo '</p></div>';
 	}
 

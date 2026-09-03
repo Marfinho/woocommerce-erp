@@ -50,11 +50,12 @@ class DhlAuth {
 	 *
 	 * Ohne API-Secret bleibt es beim alten Verfahren – ein Zugang, der
 	 * bisher lief, soll nicht dadurch aufhören, dass es einen neuen gibt.
+	 * Geprüft wird das Secret des gerade aktiven Modus (Sandbox/Live).
 	 *
 	 * @return bool
 	 */
 	public static function available() {
-		return '' !== trim( (string) Settings::get( 'dhl_versand_api_secret', '' ) );
+		return '' !== trim( (string) Settings::get( DhlClient::credential_key( 'api_secret' ), '' ) );
 	}
 
 	/**
@@ -108,16 +109,6 @@ class DhlAuth {
 	 * @return array {token, messages}
 	 */
 	protected static function fetch() {
-		// In der Sandbox der Demo-Zugang der DHL – dort gibt es keinen
-		// eigenen Benutzer, den man anlegen könnte.
-		$zugang = DhlSandbox::credentials(
-			DhlClient::sandbox(),
-			array(
-				'user'     => (string) Settings::get( 'dhl_versand_user', '' ),
-				'password' => (string) Settings::get( 'dhl_versand_password', '' ),
-			)
-		);
-
 		$antwort = wp_remote_post(
 			DhlClient::base_host() . self::PATH,
 			array(
@@ -128,10 +119,10 @@ class DhlAuth {
 				),
 				'body'    => array(
 					'grant_type'    => 'password',
-					'username'      => $zugang['user'],
-					'password'      => $zugang['password'],
-					'client_id'     => (string) Settings::get( 'dhl_versand_api_key', '' ),
-					'client_secret' => (string) Settings::get( 'dhl_versand_api_secret', '' ),
+					'username'      => (string) Settings::get( DhlClient::credential_key( 'user' ), '' ),
+					'password'      => (string) Settings::get( DhlClient::credential_key( 'password' ), '' ),
+					'client_id'     => (string) Settings::get( DhlClient::credential_key( 'api_key' ), '' ),
+					'client_secret' => (string) Settings::get( DhlClient::credential_key( 'api_secret' ), '' ),
 				),
 			)
 		);
