@@ -204,7 +204,7 @@ class DhlResponse {
 		}
 
 		if ( 401 === $code || 403 === $code ) {
-			return __( 'Die DHL hat den Zugang abgewiesen (401/403). Prüfe API-Key, API-Secret sowie Benutzer und Passwort des Geschäftskundenportals – und ob der Zugang für die gewählte Umgebung gilt: Sandbox-Daten funktionieren im Echtbetrieb nicht und umgekehrt.', 'lindenweg16' );
+			return __( 'Die DHL hat den Zugang abgewiesen (401/403). Prüfe zuerst API-Key und API-Secret der Anwendung – beide stehen bei deiner App auf developer.dhl.com. Im Echtbetrieb kommen Benutzer und Passwort des Geschäftskundenportals dazu; in der Sandbox nicht, dort meldet sich das Plugin mit dem Demo-Zugang der DHL an. Prüfe außerdem, ob der Sandbox-Haken zur gemeinten Umgebung passt.', 'lindenweg16' );
 		}
 
 		if ( 400 === $code || 422 === $code ) {

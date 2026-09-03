@@ -42,7 +42,7 @@ class DhlClient {
 	public static function missing_credentials() {
 		$fehlt = array();
 
-		$pflicht = array(
+		$klartext = array(
 			'dhl_versand_api_key'    => __( 'API-Key der Anwendung', 'lindenweg16' ),
 			'dhl_versand_api_secret' => __( 'API-Secret der Anwendung', 'lindenweg16' ),
 			'dhl_versand_user'       => __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ),
@@ -50,9 +50,12 @@ class DhlClient {
 			'dhl_versand_ekp'        => __( 'Kundennummer (EKP)', 'lindenweg16' ),
 		);
 
-		foreach ( $pflicht as $key => $klartext ) {
+		// In der Sandbox kommen Benutzer, Kundennummer und Teilnahme von
+		// der DHL selbst. Danach zu fragen hiesse, nach etwas zu fragen,
+		// das es nirgends zu holen gibt.
+		foreach ( DhlSandbox::required_settings( self::sandbox() ) as $key ) {
 			if ( '' === trim( (string) Settings::get( $key, '' ) ) ) {
-				$fehlt[] = $klartext;
+				$fehlt[] = $klartext[ $key ];
 			}
 		}
 
@@ -115,10 +118,16 @@ class DhlClient {
 		// Der alte Weg für Zugänge ohne API-Secret. Die DHL ersetzt ihn
 		// nach und nach durch das Token; solange er noch angenommen wird,
 		// soll ein eingerichteter Zugang nicht aufhören zu laufen.
-		$headers['dhl-api-key']   = (string) Settings::get( 'dhl_versand_api_key', '' );
-		$headers['Authorization'] = 'Basic ' . base64_encode(
-			Settings::get( 'dhl_versand_user', '' ) . ':' . Settings::get( 'dhl_versand_password', '' )
+		$zugang = DhlSandbox::credentials(
+			self::sandbox(),
+			array(
+				'user'     => (string) Settings::get( 'dhl_versand_user', '' ),
+				'password' => (string) Settings::get( 'dhl_versand_password', '' ),
+			)
 		);
+
+		$headers['dhl-api-key']   = (string) Settings::get( 'dhl_versand_api_key', '' );
+		$headers['Authorization'] = 'Basic ' . base64_encode( $zugang['user'] . ':' . $zugang['password'] );
 
 		return $headers;
 	}
@@ -339,7 +348,7 @@ class DhlClient {
 		if ( ! DhlAuth::available() ) {
 			return array(
 				'ok'      => false,
-				'message' => __( 'Ohne API-Secret kann die Anmeldung nicht geprüft werden. Die DHL verlangt beides: API-Key und API-Secret der Anwendung, dazu Benutzer und Passwort des Geschäftskundenportals.', 'lindenweg16' ),
+				'message' => __( 'Ohne API-Secret kann die Anmeldung nicht geprüft werden. Die DHL verlangt beides: API-Key und API-Secret der Anwendung – beide stehen bei deiner App auf developer.dhl.com.', 'lindenweg16' ),
 			);
 		}
 
@@ -356,7 +365,7 @@ class DhlClient {
 		return array(
 			'ok'      => true,
 			'message' => self::sandbox()
-				? __( 'Die Anmeldung an der DHL-Sandbox hat geklappt. Für den Echtbetrieb den Sandbox-Haken entfernen – dort gelten eigene Zugangsdaten.', 'lindenweg16' )
+				? __( 'Die Anmeldung an der DHL-Sandbox hat geklappt – mit dem Demo-Zugang der DHL und ihrer Testkundennummer. Für den Echtbetrieb den Sandbox-Haken entfernen und die eigenen Angaben aus dem Geschäftskundenportal eintragen.', 'lindenweg16' )
 				: __( 'Die Anmeldung an der DHL hat geklappt. Labels können erzeugt werden.', 'lindenweg16' ),
 		);
 	}

@@ -174,8 +174,15 @@
 </div>
 
 <div class="kasten achtung">
-	<span class="titel">Vier Angaben, nicht zwei</span>
-	<p>Fürs Frankieren prüft die DHL auf <strong>zwei Ebenen</strong>: Wer ist die Anwendung (API-Key + API-Secret von developer.dhl.com), und wer ist der Geschäftskunde (Benutzer + Passwort aus dem Geschäftskundenportal). Fehlt eine der beiden Ebenen, lehnt sie ab – ein API-Key allein genügt nicht.</p>
+	<span class="titel">Für die Sandbox legt man keinen Benutzer an</span>
+	<p>Man sucht ihn vergeblich: Im Geschäftskundenportal gibt es keinen Testzugang zum Anlegen, im Entwicklerportal auch nicht. Die DHL stellt stattdessen einen <strong>festen Demo-Zugang</strong> samt Testkundennummer bereit, und das Plugin setzt ihn ein, solange der Sandbox-Haken sitzt.</p>
+	<p>In der Sandbox brauchst du deshalb <strong>nur zwei</strong> Angaben: API-Key und API-Secret deiner App von developer.dhl.com. Die gelten laut DHL üblicherweise für beide Umgebungen. Benutzer, Passwort, Kundennummer und Teilnahme lässt du leer oder stehen – sie greifen erst, wenn der Haken weg ist.</p>
+	<p>Das ist auch der Grund, warum eigene Zugangsdaten mit gesetztem Haken nicht funktionieren: Sie gelten in der Testumgebung nicht, und die Ablehnung sieht aus wie ein Tippfehler im Passwort.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Im Echtbetrieb: vier Angaben, nicht zwei</span>
+	<p>Ohne Sandbox-Haken prüft die DHL auf <strong>zwei Ebenen</strong>: Wer ist die Anwendung (API-Key + API-Secret von developer.dhl.com), und wer ist der Geschäftskunde (Benutzer + Passwort aus dem Geschäftskundenportal). Fehlt eine der beiden Ebenen, lehnt sie ab – ein API-Key allein genügt nicht.</p>
 	<p>Beide Passwortfelder zeigen einen gespeicherten Wert nie an. Ein leeres Feld heißt „unverändert“; nur was du hineinschreibst, wird überschrieben.</p>
 </div>
 
@@ -184,7 +191,7 @@
 <ul>
 	<li><strong>Labelformat:</strong> <code>910-300-700</code> für Rollenetiketten (105 × 205 mm), <code>A4</code> für Papier. Was dein Konto kann, steht im Geschäftskundenportal.</li>
 	<li><strong>Verpackungszuschlag:</strong> Wird auf jedes gerechnete Sendungsgewicht addiert – Karton und Polster wiegen mit.</li>
-	<li><strong>Sandbox-Modus:</strong> Ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung. Für Sandbox und Echtbetrieb gelten <em>verschiedene</em> Zugangsdaten.</li>
+	<li><strong>Sandbox-Modus:</strong> Ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung. Angemeldet wird mit dem Demo-Zugang der DHL, gebucht auf ihre Testkundennummer — die eigenen Angaben bleiben dabei unberührt und greifen, sobald der Haken weg ist.</li>
 </ul>
 
 <div class="kasten tipp">

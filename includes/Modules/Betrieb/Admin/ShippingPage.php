@@ -285,7 +285,7 @@ class ShippingPage {
 			if ( DhlClient::sandbox() ) {
 				printf(
 					'<div class="notice notice-warning inline"><p>%s</p>%s</div>',
-					esc_html__( 'DHL-Sandbox aktiv: Die Labels sehen echt aus, sind aber keine gültige Frankierung. Zum Scharfschalten den Haken unter Lindenweg16 → Einstellungen entfernen.', 'lindenweg16' ),
+					esc_html__( 'DHL-Sandbox aktiv: Angemeldet wird mit dem Demo-Zugang der DHL, gebucht auf ihre Testkundennummer. Die Labels sehen echt aus, sind aber keine gültige Frankierung. Zum Scharfschalten den Haken unter Lindenweg16 → Einstellungen entfernen – dann greifen die eigenen Angaben aus dem Geschäftskundenportal.', 'lindenweg16' ),
 					$this->test_form() // phpcs:ignore WordPress.Security.EscapeOutput -- in test_form() escaped.
 				);
 

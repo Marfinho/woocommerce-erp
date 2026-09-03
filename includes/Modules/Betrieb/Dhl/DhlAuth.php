@@ -108,6 +108,16 @@ class DhlAuth {
 	 * @return array {token, messages}
 	 */
 	protected static function fetch() {
+		// In der Sandbox der Demo-Zugang der DHL – dort gibt es keinen
+		// eigenen Benutzer, den man anlegen könnte.
+		$zugang = DhlSandbox::credentials(
+			DhlClient::sandbox(),
+			array(
+				'user'     => (string) Settings::get( 'dhl_versand_user', '' ),
+				'password' => (string) Settings::get( 'dhl_versand_password', '' ),
+			)
+		);
+
 		$antwort = wp_remote_post(
 			DhlClient::base_host() . self::PATH,
 			array(
@@ -118,8 +128,8 @@ class DhlAuth {
 				),
 				'body'    => array(
 					'grant_type'    => 'password',
-					'username'      => (string) Settings::get( 'dhl_versand_user', '' ),
-					'password'      => (string) Settings::get( 'dhl_versand_password', '' ),
+					'username'      => $zugang['user'],
+					'password'      => $zugang['password'],
 					'client_id'     => (string) Settings::get( 'dhl_versand_api_key', '' ),
 					'client_secret' => (string) Settings::get( 'dhl_versand_api_secret', '' ),
 				),

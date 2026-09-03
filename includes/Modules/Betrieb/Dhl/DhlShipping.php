@@ -189,14 +189,27 @@ class DhlShipping {
 			? (string) $wunsch['product']
 			: DhlProduct::for_destination( $land, $gewicht, 1 === (int) Settings::get( 'dhl_versand_warenpost', 0 ) );
 
+		// In der Sandbox bucht die DHL auf ihre eigene Testkundennummer.
+		// Die echte EKP dort mitzuschicken ergäbe eine Abrechnungsnummer,
+		// die es in der Testumgebung nicht gibt – die Ablehnung sähe dann
+		// nach einem Adressfehler aus.
+		$zugang = DhlSandbox::credentials(
+			DhlClient::sandbox(),
+			array(
+				'ekp'       => (string) Settings::get( 'dhl_versand_ekp', '' ),
+				'teilnahme' => self::participation( $product ),
+				'profil'    => (string) Settings::get( 'dhl_versand_profil', 'STANDARD_GRUPPENPROFIL' ),
+			)
+		);
+
 		return DhlRequest::build(
 			array(
-				'profile'       => (string) Settings::get( 'dhl_versand_profil', 'STANDARD_GRUPPENPROFIL' ),
+				'profile'       => $zugang['profil'],
 				'product'       => $product,
 				'billingNumber' => DhlProduct::billing_number(
-					Settings::get( 'dhl_versand_ekp', '' ),
+					$zugang['ekp'],
 					$product,
-					self::participation( $product )
+					$zugang['teilnahme']
 				),
 				'refNo'         => (string) $order->get_order_number(),
 				'shipper'       => self::shipper(),
