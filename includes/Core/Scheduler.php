@@ -39,6 +39,10 @@ class Scheduler {
 	// Events: unbestätigte Anmeldungen mit abgelaufenem Link verfallen lassen.
 	const HOOK_DAILY_EVENTS = 'lw16_daily_events_cleanup';
 
+	// DHL Druck-Warteschlange: liegengebliebene Claims freigeben (Pi-Absturz)
+	// und alte Job-Einträge nach Aufbewahrungsfrist aufräumen.
+	const HOOK_DHL_PRINT_MAINTENANCE = 'lw16_dhl_print_maintenance';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -63,6 +67,7 @@ class Scheduler {
 			self::HOOK_GENERATE_PACKING,
 			self::HOOK_BETRIEB_WEEKLY,
 			self::HOOK_DAILY_EVENTS,
+			self::HOOK_DHL_PRINT_MAINTENANCE,
 		);
 	}
 
@@ -89,6 +94,7 @@ class Scheduler {
 			self::HOOK_RECURRING_BOOKINGS => DAY_IN_SECONDS,
 			self::HOOK_BETRIEB_WEEKLY     => WEEK_IN_SECONDS,
 			self::HOOK_DAILY_EVENTS       => DAY_IN_SECONDS,
+			self::HOOK_DHL_PRINT_MAINTENANCE => 5 * MINUTE_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

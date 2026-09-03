@@ -136,6 +136,11 @@ class ResetTool {
 					// weg: Sie sind keine Frankierung, sähen in der Liste
 					// aber genauso aus wie eine.
 					'shipping_labels',
+					// Druckjobs der DHL-Warteschlange sind Warteschlangen-
+					// Buchhaltung, kein Beleg – die referenzierten Labels
+					// selbst liegen in shipping_labels und bleiben davon
+					// unberührt, solange dieser Bereich nicht mit angekreuzt ist.
+					'dhl_print_jobs',
 				),
 			),
 			'altes_lager'  => array(
@@ -213,6 +218,10 @@ class ResetTool {
 			'lagerorte',
 			'anlagen',
 			'dauerbuchungen',
+			// Registrierte Raspberry-Pi-Drucker samt Token sind Konfiguration,
+			// keine Testdaten – ein Reset darf einen bereits eingerichteten
+			// Pi nicht aussperren.
+			'dhl_print_printers',
 		);
 	}
 
