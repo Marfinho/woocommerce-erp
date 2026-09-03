@@ -282,6 +282,12 @@ foreach ( array( 'DhlProduct', 'DhlAddress', 'DhlRequest', 'DhlResponse', 'DhlLa
 	require $lw16_root . '/includes/Modules/Betrieb/Dhl/' . $lw16_class . '.php';
 }
 
+// DHL-Druck-Warteschlange: Claim-/Lock-Logik, Token-Hashing und das
+// Testlabel-PDF sind ebenfalls ohne Datenbank prüfbar.
+foreach ( array( 'DhlPrintJobRepository', 'DhlPrinterRepository', 'DhlTestLabelPdf' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Betrieb/Dhl/Print/' . $lw16_class . '.php';
+}
+
 // Seiteneffektfreie Klassen des Moduls Konfigurator.
 foreach ( array(
 	'Layout',

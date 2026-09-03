@@ -13,6 +13,7 @@ namespace Lindenweg16\Modules\Betrieb;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Assets;
+use Lindenweg16\Core\Scheduler;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Admin\ArticlesPage;
@@ -26,10 +27,14 @@ use Lindenweg16\Modules\Betrieb\Admin\BinsPage;
 use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
+use Lindenweg16\Modules\Betrieb\Admin\DhlPrintersPage;
+use Lindenweg16\Modules\Betrieb\Admin\DhlPrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
 use Lindenweg16\Modules\Betrieb\Admin\TimerBar;
 use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
+use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintQueue;
+use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintRestApi;
 
 /**
  * Registriert Menü, Seiten und Formular-Handler des Moduls.
@@ -57,6 +62,8 @@ class BetriebModule {
 			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze, Fertigung & Picklisten', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-bestellungen' => array( __( 'Bestellungen', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-versand'      => array( __( 'Versand', 'lindenweg16' ), 'lw16_capture' ),
+			'lw16-betrieb-dhl-drucker'  => array( __( 'DHL Drucker', 'lindenweg16' ), 'lw16_capture' ),
+			'lw16-betrieb-dhl-druckjobs' => array( __( 'Druckjobs', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-qualitaet'    => array( __( 'Qualität', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-kontakte'     => array( __( 'Kontakte / B2B', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-zeit'         => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_capture' ),
@@ -106,6 +113,9 @@ class BetriebModule {
 		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
+		( new DhlPrintRestApi() )->register();
+
+		add_action( Scheduler::HOOK_DHL_PRINT_MAINTENANCE, array( DhlPrintQueue::class, 'run_maintenance' ) );
 
 		// Die Adminleiste steht auch im Frontend, wenn jemand angemeldet
 		// ist – die Uhr soll dort genauso laufen.
@@ -124,6 +134,8 @@ class BetriebModule {
 			( new MaterialPage() )->register();
 			( new OrdersPage() )->register();
 			( new ShippingPage() )->register();
+			( new DhlPrintersPage() )->register();
+			( new DhlPrintJobsPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();
 			( new UsersPage() )->register();

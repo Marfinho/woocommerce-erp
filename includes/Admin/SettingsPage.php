@@ -95,11 +95,16 @@ class SettingsPage {
 				'dhl_versand_teilnahme_53' => array( __( 'Teilnahme abweichend: Paket International', 'lindenweg16' ), 'text' ),
 				'dhl_versand_teilnahme_66' => array( __( 'Teilnahme abweichend: Warenpost International', 'lindenweg16' ), 'text' ),
 				'dhl_versand_profil'       => array( __( 'Abrechnungsprofil', 'lindenweg16' ), 'text' ),
-				'dhl_versand_printformat'  => array( __( 'Labelformat (z. B. 910-300-700 für Rollenetiketten, A4 für Papier)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_printformat'  => array( __( 'Labelformat (910-300-610 für das 103×199-mm-Rollenetikett, A4 für Papier)', 'lindenweg16' ), 'text' ),
 				'dhl_versand_verpackung_g' => array( __( 'Verpackungszuschlag je Sendung (g)', 'lindenweg16' ), 'number' ),
 				'dhl_versand_warenpost'    => array( __( 'Warenpost/Kleinpaket ist gebucht', 'lindenweg16' ), 'checkbox' ),
 				'dhl_versand_vorabmeldung' => array( __( 'Kunden per E-Mail vorab benachrichtigen', 'lindenweg16' ), 'checkbox' ),
 				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus (erzeugt keine echten Labels)', 'lindenweg16' ), 'checkbox' ),
+			),
+			__( 'DHL Druck-Warteschlange (Raspberry Pi)', 'lindenweg16' ) => array(
+				'dhl_print_automatisch'       => array( __( 'Nach erfolgreicher Label-Erzeugung automatisch einen Druckjob anlegen', 'lindenweg16' ), 'checkbox' ),
+				'dhl_print_standarddrucker'   => array( __( 'Standard-Drucker-ID (z. B. eg_dhl)', 'lindenweg16' ), 'text' ),
+				'dhl_print_aufbewahrung_tage' => array( __( 'Aufbewahrung der Druckjob-Einträge (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
 			),
 		);
 	}

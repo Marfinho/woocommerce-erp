@@ -1,0 +1,22 @@
+[Unit]
+Description=Haster/Lindenweg16 DHL-Druck-Client
+After=network-online.target cups.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/haster-print
+ExecStart=/opt/haster-print/venv/bin/python3 /opt/haster-print/haster_print_client.py
+Restart=always
+RestartSec=5
+
+# Nach einem Stromausfall/Neustart des Pi startet der Dienst selbstständig
+# wieder (systemd "enable" + der Server hält offene Jobs ohnehin vor).
+StartLimitIntervalSec=0
+
+# Kein eingehender Port, keine Netzwerkfreigabe nötig – der Dienst baut
+# selbst nur ausgehende Verbindungen auf.
+
+[Install]
+WantedBy=multi-user.target

@@ -87,12 +87,16 @@ class Settings {
 			'dhl_versand_teilnahme_54'  => '',
 			'dhl_versand_teilnahme_66'  => '',
 			'dhl_versand_profil'        => 'STANDARD_GRUPPENPROFIL',
-			'dhl_versand_printformat'   => '910-300-700',
+			'dhl_versand_printformat'   => '910-300-610',
 			'dhl_versand_sandbox'       => 1,
 			'dhl_versand_warenpost'     => 0,
 			'dhl_versand_vorabmeldung'  => 1,
 			'dhl_versand_verpackung_g'  => 150,
 			'dhl_versand_land'          => 'DE',
+			// DHL Druck-Warteschlange (Raspberry-Pi-Client).
+			'dhl_print_automatisch'     => 0,
+			'dhl_print_standarddrucker' => 'eg_dhl',
+			'dhl_print_aufbewahrung_tage' => 30,
 		);
 	}
 
