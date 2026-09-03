@@ -36,7 +36,7 @@
 		<li><a href="#farben">Farben und Lagerhoheit</a></li>
 		<li><a href="#staffel">Rabattstaffel für Händler</a></li>
 		<li><a href="#stammdaten">Stammdaten anlegen</a></li>
-		<li><a href="#preise">Preiskalkulation und Preispflege</a></li>
+		<li><a href="#preise">Kalkulation und Preise</a></li>
 		<li><a href="#buchhaltung">Buchhaltung</a></li>
 		<li><a href="#kasse">Kasse, Marketing, Events, Loyalty, Support</a></li>
 		<li><a href="#berichte">Berichte, Ziele und Monatsabschluss</a></li>
@@ -60,7 +60,7 @@
 <thead><tr><th>Menü</th><th>Inhalt</th></tr></thead>
 <tbody>
 <tr><td><strong>Betrieb</strong> (Hammer)</td><td>Dashboard, Bedarf, Druckjournal, Artikel &amp; Revisionen, Drucker &amp; Wartung, Konfigurator, Kapazität, Material, Lager, Lagerplätze/Fertigung/Picklisten, Bestellungen, Qualität, Kontakte/B2B, Zeiterfassung, Berichte, Import &amp; Doku, Benutzer &amp; Rechte, Einstellungen</td></tr>
-<tr><td><strong>Lindenweg16</strong> (Laden)</td><td>Dashboard, Buchhaltung, Loyalty, Produktion, Preiskalkulation, Kasse, Marketing, Support, Reporting, Einstellungen, Livegang</td></tr>
+<tr><td><strong>Lindenweg16</strong> (Laden)</td><td>Dashboard, Buchhaltung, Loyalty, Produktion, Kasse, Marketing, Support, Reporting, Einstellungen, Anleitungen, Livegang</td></tr>
 </tbody>
 </table>
 </div>
@@ -340,7 +340,7 @@
 
 <p>Was ein Kunde konfiguriert, landet als codierte Konfiguration im Warenkorb und wird beim Bestellen wieder in echte Artikel aufgelöst – Lagerabgang und Kalkulation funktionieren also genauso wie bei einem normalen Artikel.</p>
 
-<h2 id="preise"><span class="nr">9.</span> Preiskalkulation und Preispflege</h2>
+<h2 id="preise"><span class="nr">9.</span> Kalkulation und Preise</h2>
 
 <h3>Die Kalkulation eines Artikels ansehen</h3>
 
@@ -360,29 +360,31 @@
 	<figcaption>Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an – deshalb trägt sich ein Set besser als dieselben Positionen einzeln. Hier rechnest du aus, wie viel.</figcaption>
 </figure>
 
-<h3>Preise in den Shop übernehmen</h3>
+<h3>Den Preis festlegen</h3>
 
-<p><span class="weg">Lindenweg16 → Preiskalkulation</span></p>
+<p><span class="weg">Betrieb → Artikel &amp; Revisionen → Reiter „Kalkulation“</span>, ganz unten</p>
 
-<figure>
-	<img src="bilder/lw16-preiskalkulation.png" alt="Preiskalkulationsseite mit Zielmarge, Artikelliste, empfohlenen Preisen und Übernehmen-Knöpfen">
-	<figcaption>Die Zielmarge oben eintragen, auf <strong>Neu rechnen</strong> klicken – dann steht je Artikel der Preis, der die Marge erreicht.</figcaption>
-</figure>
+<p>Unter der Kostenaufstellung steht der Abschnitt <strong>Preis festlegen</strong> – direkt unter der Rechnung, um die es geht.</p>
 
 <ol class="schritte">
-	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös).</li>
-	<li>Auf <strong>Neu rechnen</strong> klicken.</li>
-	<li>Die Liste durchsehen. Steht bei einem Artikel <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
-	<li>Einzeln mit <strong>Übernehmen</strong> oder gesammelt mit <strong>Alle Preise übernehmen</strong> in den Shop schreiben.</li>
+	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös) und auf <strong>Neu rechnen</strong> klicken.</li>
+	<li>Darunter stehen drei Zeilen nebeneinander: der <em>Vorschlag bei dieser Marge</em>, der <em>Preis am Artikel</em> und der <em>Stand im Shop</em>. Steht beim Vorschlag <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
+	<li>Der Knopf <strong>… als Artikelpreis übernehmen</strong> schreibt den Vorschlag in den Artikel. Wer den Preis lieber selbst setzt, tippt ihn im Reiter <em>Artikel</em> ins Feld <em>VK brutto</em>.</li>
 </ol>
 
-<div class="kasten achtung">
-	<span class="titel">„Alle Preise übernehmen“ überschreibt Normalpreise</span>
-	<p>Der Knopf setzt den Normalpreis jedes verknüpften Produkts neu. Ein Angebotspreis in WooCommerce bleibt unberührt. Schau die Liste vorher durch – danach gibt es kein Rückgängig.</p>
+<div class="kasten info">
+	<span class="titel">Der Shop zieht von selbst nach</span>
+	<p>Es gibt nur eine Stelle, an der ein Preis entsteht: den Artikel. Sobald du ihn speicherst, bekommt das verknüpfte Shop-Produkt ihn als <strong>Normalpreis</strong> – ohne zweiten Handgriff. Ein laufendes Angebot in WooCommerce bleibt unberührt, sonst wäre eine Preisaktion mit einem Klick weg.</p>
+	<p>Der frühere Menüpunkt <em>Lindenweg16 → Preiskalkulation</em> ist deshalb verschwunden. Er rechnete dasselbe zwei Menüs entfernt, und der Preis stand danach an zwei Stellen: Wer den zweiten Schritt vergaß, verkaufte weiter zum alten.</p>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Wenn sich nicht ein Preis geändert hat, sondern eine Annahme</span>
+	<p>Dann stimmen auf einen Schlag viele nicht mehr. Dafür gibt es im selben Abschnitt <strong>Alle Preise in den Shop übertragen</strong>. Im Alltag brauchst du den Knopf nicht – nur, wenn jemand einen Shop-Preis von Hand verstellt hat.</p>
 </div>
 
 <div class="kasten info">
-	<span class="titel">Die Annahmen werden hier nicht mehr gepflegt</span>
+	<span class="titel">Die Annahmen werden hier nicht gepflegt</span>
 	<p>Sie liegen historisiert unter <span class="weg">Betrieb → Einstellungen → Kalkulationsannahmen</span>. Diese Seite rechnet nur mit ihnen.</p>
 </div>
 
@@ -449,6 +451,17 @@
 	<li>Auf <strong>Neuen Kassatag starten</strong> klicken. Verkauft wird danach über die <strong>Mobile Kasse</strong> auf dem Handy.</li>
 	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz.</li>
 </ol>
+
+<h4>Verkaufen am Stand</h4>
+
+<p>Die Ware steht als <strong>Kachelliste</strong> da – Produktbild, Bezeichnung, Preis. Ein Klick auf die Kachel füllt Name und Preis, beides bleibt überschreibbar; ein zweiter Klick auf dieselbe Kachel hebt die Auswahl wieder auf. Darüber filtert ein Suchfeld die Kacheln. Das Bild kommt aus dem verknüpften Shop-Produkt; ohne Verknüpfung zeigt die Kachel die Anfangsbuchstaben.</p>
+
+<p>Darunter steht <strong>Freier Betrag</strong>: Bezeichnung und Betrag eintippen, buchen. Für alles, was es als Artikel nicht gibt – Restposten, Reparatur, Spende. Der Betrag zählt in Tagesumsatz, Beleg und Kassenbuch, bucht aber <em>kein</em> Lager ab.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Komma ist erlaubt</span>
+	<p>Preise und Kassenbestände dürfen mit Komma getippt werden – „12,50“ wird als 12,50 € verstanden, nicht als zwölf Euro. Punkt geht genauso.</p>
+</div>
 
 <h3>Marketing</h3>
 <p><span class="weg">Lindenweg16 → Marketing</span></p>

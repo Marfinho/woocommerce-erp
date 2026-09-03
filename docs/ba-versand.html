@@ -34,7 +34,7 @@
 		<li><a href="#picken">Schritt 2: Picken mit dem Handy</a></li>
 		<li><a href="#packen">Schritt 3: Packen</a></li>
 		<li><a href="#lieferschein">Schritt 4: Lieferschein drucken</a></li>
-		<li><a href="#label">Schritt 5: Packliste und DHL-Label</a></li>
+		<li><a href="#label">Schritt 5: Versandlabel</a></li>
 		<li><a href="#bestellungen">Bestellungen: die Übersicht</a></li>
 		<li><a href="#manuell">Verkauf ohne Shop: manuell erfassen</a></li>
 		<li><a href="#nachbestellung">Nachbestellungen von Händlern bestätigen</a></li>
@@ -56,8 +56,8 @@
 <tr><td>1</td><td>Pickliste erzeugen</td><td>Computer, Reiter <em>Picklisten</em></td><td>Eine Liste, sortiert nach Lagerplatz</td></tr>
 <tr><td>2</td><td>Picken</td><td>Handy, Reiter <em>Picken</em></td><td>Ware auf dem Packtisch, Bestand gebucht</td></tr>
 <tr><td>3</td><td>Packen</td><td>Packtisch</td><td>Karton mit Ware und Beipackzettel</td></tr>
-<tr><td>4</td><td>Lieferschein drucken</td><td>Computer, Seite <em>Bestellungen</em></td><td>PDF, kommt ins Paket</td></tr>
-<tr><td>5</td><td>Packliste und Versandlabel</td><td>Computer, <em>Lindenweg16 → Produktion</em></td><td>Paket ist adressiert und frankiert</td></tr>
+<tr><td>4</td><td>Lieferschein drucken</td><td>Computer, Seite <em>Versand</em> (Shop) oder <em>Bestellungen</em></td><td>PDF, kommt ins Paket</td></tr>
+<tr><td>5</td><td>Versandlabel</td><td>Computer, <em>Betrieb → Versand</em></td><td>Paket ist adressiert und frankiert</td></tr>
 </tbody>
 </table>
 </div>
@@ -190,6 +190,16 @@
 
 <p>Auf dem Lieferschein stehen keine Preise – die Rechnung bekommt der Kunde getrennt. Das ist Absicht und richtig so, besonders wenn ein Paket als Geschenk geht.</p>
 
+<div class="kasten tipp">
+	<span class="titel">Shop-Bestellungen: schneller über den Versand</span>
+	<p>Kommt die Bestellung aus dem Shop, hol dir den Lieferschein gleich unter <span class="weg">Betrieb → Versand</span> (Abschnitt 7). Dort steht er in derselben Zeile wie das Label – ein Weg statt zwei. Diese Liste hier ist für Bestellungen, die im Betrieb entstanden sind: Händler, Telefon, Markt.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Pickliste, Lieferschein, Label – drei Zettel</span>
+	<p>Die <strong>Pickliste</strong> ist der Zettel fürs Lager: Artikel, Menge, Lagerplatz, keine Anschrift. Der <strong>Lieferschein</strong> liegt in der Kiste: Anschrift und Inhalt, keine Preise. Das <strong>Label</strong> klebt außen drauf – nur das kostet Geld.</p>
+</div>
+
 <h3>Die Spalten der Bestellübersicht</h3>
 <div class="tabelle">
 <table>
@@ -210,27 +220,46 @@
 	<p>Die Minuten, die du hier einträgst, landen in der Kennzahl „Ø Handlingzeit“ auf dem Dashboard. Aus ihr wird sichtbar, welche Bestellart wirklich Arbeit macht – und daran hängt später der Preis. Eine grobe Schätzung ist besser als ein leeres Feld.</p>
 </div>
 
-<h2 id="label"><span class="nr">7.</span> Schritt 5: Packliste und DHL-Label</h2>
+<h2 id="label"><span class="nr">7.</span> Schritt 5: Versandlabel</h2>
 
-<p><span class="weg">Lindenweg16 → Produktion</span></p>
+<p><span class="weg">Betrieb → Versand</span></p>
 
-<p>Achtung: Das ist das <strong>andere</strong> Menü – <em>Lindenweg16</em> mit dem Laden-Symbol, nicht <em>Betrieb</em>.</p>
+<p>Eine Zeile je Shop-Bestellung, älteste zuerst – die, die am längsten wartet, steht oben. Oben drei Ansichten: <strong>Zu versenden</strong>, <strong>Versendet</strong>, <strong>Alle</strong>.</p>
 
-<figure>
-	<img src="bilder/lw16-produktion-versand.png" alt="Abschnitt Versand-Aktionen je Bestellung mit den Knöpfen Packliste und DHL-Label erstellen">
-	<figcaption>Je Bestellung zwei Knöpfe: <strong>Packliste</strong> und <strong>DHL-Label erstellen</strong>.</figcaption>
-</figure>
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Was du damit machst</th></tr></thead>
+<tbody>
+<tr><td><strong>Bestellung</strong></td><td>Nummer, Datum, Status. Der Klick führt zur Bestellung in WooCommerce.</td></tr>
+<tr><td><strong>Empfänger</strong></td><td>Name und Zielort – zum Abgleich mit dem Paket vor dir.</td></tr>
+<tr><td><strong>Inhalt</strong></td><td>Die Positionen in Kurzfassung.</td></tr>
+<tr><td><strong>Lieferschein</strong></td><td><strong>Drucken</strong> erzeugt das PDF frisch. Ins Paket legen.</td></tr>
+<tr><td><strong>Sendungsnummer</strong></td><td>Steht nach dem Label von selbst da. Von Hand eintragen geht auch – du bleibst danach in der Liste.</td></tr>
+<tr><td><strong>Label</strong></td><td>Produkt und Gewicht prüfen, <strong>Label erzeugen</strong>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Das DHL-Label erzeugen</h3>
 
 <ol class="schritte">
-	<li>Zur Bestellung scrollen.</li>
-	<li><strong>Packliste</strong> erzeugt ein PDF zum Abhaken beim Packen – nützlich bei großen Bestellungen mit vielen Positionen.</li>
-	<li><strong>DHL-Label erstellen</strong> bringt dich zur Bestellung in WooCommerce. Dort erzeugt das DHL-Plugin das Versandlabel mit einem Klick.</li>
-	<li>Label ausdrucken, aufkleben, Paket in die Abholkiste.</li>
+	<li><strong>Produkt</strong> steht schon da: Inland Paket, EU Europaket, Rest der Welt Weltpaket – Leichtes als Warenpost, falls gebucht. Ändern kannst du es trotzdem.</li>
+	<li><strong>Gewicht</strong> steht in Gramm daneben, gerechnet aus den Artikelgewichten plus Verpackungszuschlag. <em>Wieg im Zweifel nach und trag das echte Gewicht ein</em> – ein zu leicht frankiertes Paket wird nachberechnet.</li>
+	<li>Passt das Paket nicht aufs Band, den Haken bei <strong>Sperrgut</strong> setzen.</li>
+	<li><strong>Label erzeugen</strong> klicken. Das PDF öffnet sich über <strong>Label öffnen</strong> – ausdrucken, aufkleben, Paket in die Abholkiste.</li>
 </ol>
 
+<p>Die Sendungsnummer geht im selben Moment in die Sendungsverfolgung: Der Kunde sieht sie in seinem Konto, ohne dass jemand sie abtippt.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Ein Label ist Geld</span>
+	<p>Mit dem Klick ist die Sendung frankiert. Falsches Produkt, falsche Adresse, doppelt geklickt? Dann in derselben Zeile auf <strong>stornieren</strong> – solange die Sendung nicht abgeholt ist, wird sie nicht berechnet. Danach nicht mehr. Der Vorgang bleibt als storniert stehen, damit die Abrechnung der DHL nachvollziehbar bleibt.</p>
+</div>
+
 <div class="kasten info">
-	<span class="titel">Warum das Label nicht direkt hier entsteht</span>
-	<p>Das Versandlabel kommt von DHL selbst, über das DHL-Plugin an der Bestellung. Dieses Plugin gibt dir nur die Abkürzung dorthin, statt eine zweite, halb funktionierende Label-Maschine zu bauen.</p>
+	<span class="titel">Steht oben ein gelber Kasten?</span>
+	<p><em>„DHL-Sandbox aktiv“</em> heißt: Das Label sieht echt aus, ist aber <strong>keine gültige Frankierung</strong>. Nicht aufkleben und wegschicken – Bescheid sagen, wer die Einstellungen pflegt.</p>
+	<p><em>„Noch kein DHL-Zugang hinterlegt“</em> heißt: Das Label muss woanders herkommen. Dann steht in der Spalte entweder ein Knopf zur Bestellung, wo ein Versandplugin frankiert, oder gar keiner – dann trägst du die Sendungsnummer von Hand ein, sobald du sie hast.</p>
 </div>
 
 <h2 id="bestellungen"><span class="nr">8.</span> Bestellungen: die Übersicht</h2>
@@ -394,8 +423,8 @@
 		<li><span class="weg">Betrieb → Lagerplätze … → Picklisten</span> → <strong>Pickliste erzeugen</strong>.</li>
 		<li>Handy: <code>/betrieb-erfassen/</code> → Reiter <strong>Picken</strong> → Zeile für Zeile abhaken, bis „0 offen“.</li>
 		<li>Am Packtisch nach Bestellnummer sortieren und packen.</li>
-		<li><span class="weg">Betrieb → Bestellungen</span> → je Bestellung <strong>Lieferschein</strong> drucken, ins Paket.</li>
-		<li><span class="weg">Lindenweg16 → Produktion</span> → <strong>DHL-Label erstellen</strong> → drucken, aufkleben.</li>
+		<li><span class="weg">Betrieb → Versand</span> → je Bestellung <strong>Lieferschein</strong> drucken, ins Paket. (Bestellungen ohne Shop: <span class="weg">Betrieb → Bestellungen</span>.)</li>
+		<li>Gleiche Zeile: Gewicht prüfen → <strong>Label erzeugen</strong> → <strong>Label öffnen</strong> → drucken, aufkleben.</li>
 		<li>Handlingzeit je Bestellung eintragen.</li>
 	</ol>
 </div>
@@ -404,7 +433,8 @@
 	<span class="titel">Drei Sätze, die Ärger ersparen</span>
 	<p>Immer die <strong>Farbe</strong> auf der Liste prüfen – Anthrazit und Schwarz verwechselt man schneller, als man denkt.<br>
 	Fehlbestand <strong>sofort</strong> korrigieren, nicht „nachher“.<br>
-	Nichts abhaken, was nicht wirklich im Karton liegt.</p>
+	Nichts abhaken, was nicht wirklich im Karton liegt.<br>
+	Vor <strong>Label erzeugen</strong> das Gewicht anschauen – ab da ist das Paket frankiert.</p>
 </div>
 
 <p class="fuss">Lindenweg16 ERP · Betriebsanleitung Versand · Stand: Plugin-Version 0.10.0 ·

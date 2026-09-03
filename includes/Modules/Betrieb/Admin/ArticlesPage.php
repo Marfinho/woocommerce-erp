@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\PriceSync;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\BomResolver;
@@ -46,6 +47,8 @@ class ArticlesPage {
 		}
 
 		add_action( 'admin_post_lw16_betrieb_article_state', array( $this, 'handle_article_state' ) );
+		add_action( 'admin_post_lw16_betrieb_price_adopt', array( $this, 'handle_price_adopt' ) );
+		add_action( 'admin_post_lw16_betrieb_price_push_all', array( $this, 'handle_price_push_all' ) );
 		add_action( 'admin_post_lw16_betrieb_model_get', array( $this, 'handle_model_get' ) );
 		add_action( 'admin_post_lw16_betrieb_purchase', array( $this, 'handle_purchase' ) );
 		add_action( 'admin_post_lw16_betrieb_purchase_state', array( $this, 'handle_purchase_state' ) );
@@ -249,6 +252,84 @@ class ArticlesPage {
 	 * ================================================================== */
 
 	/**
+	 * Meldung um das Ergebnis der Preisübergabe ergänzen.
+	 *
+	 * Die Übergabe läuft still am Speichern mit. Ohne diesen Satz wüsste
+	 * niemand, ob der Shop den neuen Preis hat – und man ginge doch wieder
+	 * nachsehen.
+	 *
+	 * @param string $msg Grundmeldung.
+	 * @return string
+	 */
+	protected function with_price_note( $msg ) {
+		$ergebnis = PriceSync::take_last();
+
+		if ( ! $ergebnis || 'gleich' === $ergebnis['status'] || 'ohne_shop' === $ergebnis['status'] ) {
+			return $msg;
+		}
+
+		return $msg . ' ' . $ergebnis['message'];
+	}
+
+	/**
+	 * Kalkulierten Vorschlagspreis als Artikelpreis übernehmen.
+	 *
+	 * Danach greift dieselbe Übergabe wie bei jedem anderen Preis – es
+	 * gibt nur eine Stelle, an der ein Preis entsteht.
+	 */
+	public function handle_price_adopt() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		$id     = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
+		$preis  = isset( $_POST['vorschlag'] ) ? round( (float) wp_unslash( $_POST['vorschlag'] ), 2 ) : 0.0;
+		$artikel = $id ? ArticleRepository::find( $id ) : null;
+
+		if ( ! $artikel || $preis <= 0 ) {
+			$this->redirect( __( 'Kein übernehmbarer Preis.', 'lindenweg16' ), 'error', array( 'tab' => 'kalkulation', 'article' => $id ) );
+		}
+
+		ArticleRepository::update( $id, array( 'price_gross' => $preis ), __( 'Preis aus der Kalkulation übernommen.', 'lindenweg16' ) );
+
+		$this->redirect(
+			$this->with_price_note(
+				sprintf(
+					/* translators: %s: Preis. */
+					__( 'Neuer Preis: %s €.', 'lindenweg16' ),
+					number_format_i18n( $preis, 2 )
+				)
+			),
+			'success',
+			array( 'tab' => 'kalkulation', 'article' => $id )
+		);
+	}
+
+	/**
+	 * Alle verkäuflichen Artikel in den Shop schieben.
+	 *
+	 * Für den Fall, dass sich nicht ein Preis geändert hat, sondern eine
+	 * Annahme darunter.
+	 */
+	public function handle_price_push_all() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		$zaehler = PriceSync::push_all();
+
+		$this->redirect(
+			sprintf(
+				/* translators: 1: übertragen, 2: unverändert, 3: ohne Shop-Produkt. */
+				__( '%1$d Preise übertragen, %2$d waren schon gleich, %3$d Artikel haben kein Shop-Produkt.', 'lindenweg16' ),
+				isset( $zaehler['uebertragen'] ) ? $zaehler['uebertragen'] : 0,
+				isset( $zaehler['gleich'] ) ? $zaehler['gleich'] : 0,
+				isset( $zaehler['ohne_shop'] ) ? $zaehler['ohne_shop'] : 0
+			),
+			'success',
+			array( 'tab' => 'kalkulation' )
+		);
+	}
+
+	/**
 	 * Artikel speichern.
 	 */
 	public function handle_article() {
@@ -263,12 +344,12 @@ class ArticlesPage {
 
 		if ( $id ) {
 			ArticleRepository::update( $id, $result['data'], $reason );
-			$this->redirect( __( 'Artikel gespeichert.', 'lindenweg16' ), 'success', array( 'tab' => 'artikel' ) );
+			$this->redirect( $this->with_price_note( __( 'Artikel gespeichert.', 'lindenweg16' ) ), 'success', array( 'tab' => 'artikel' ) );
 		}
 
 		$new = ArticleRepository::insert( $result['data'] );
 		$this->redirect(
-			$new ? __( 'Artikel angelegt.', 'lindenweg16' ) : __( 'Artikel konnte nicht angelegt werden.', 'lindenweg16' ),
+			$new ? $this->with_price_note( __( 'Artikel angelegt.', 'lindenweg16' ) ) : __( 'Artikel konnte nicht angelegt werden.', 'lindenweg16' ),
 			$new ? 'success' : 'error',
 			array( 'tab' => 'artikel' )
 		);
@@ -1032,7 +1113,13 @@ class ArticlesPage {
 		$this->select( __( 'Status', 'lindenweg16' ), 'status', $status, $edit ? $edit['status'] : 'entwicklung' );
 		$this->checkbox( __( 'Im Shop verkäuflich', 'lindenweg16' ), 'sellable', $edit ? $edit['sellable'] : 1, __( 'Abstandshalter und Wandanker sind eigene Artikel, aber nicht verkäuflich.', 'lindenweg16' ) );
 		$this->checkbox( __( 'Rabattfähig', 'lindenweg16' ), 'discountable', $edit ? $edit['discountable'] : 1, __( 'Personalisierte Artikel sind von der Händlerstaffel ausgenommen.', 'lindenweg16' ) );
-		$this->field( __( 'VK brutto (€)', 'lindenweg16' ), 'price_gross', $this->val( $edit, 'price_gross' ) );
+		$this->field(
+			__( 'VK brutto (€)', 'lindenweg16' ),
+			'price_gross',
+			$this->val( $edit, 'price_gross' ),
+			'text',
+			__( 'Der Preis dieses Artikels – hier und nirgends sonst. Ist ein Shop-Produkt verknüpft, bekommt es den Normalpreis beim Speichern automatisch; ein laufendes Angebot in WooCommerce bleibt unberührt.', 'lindenweg16' )
+		);
 		$this->field( __( 'Händlerpreis (€)', 'lindenweg16' ), 'dealer_price', $this->val( $edit, 'dealer_price' ) );
 		$this->field( __( 'Nachbearbeitung (min)', 'lindenweg16' ), 'postprocessing_min', $this->val( $edit, 'postprocessing_min' ), 'text', __( 'Entgraten, Gewindeeinsätze setzen, Beipack.', 'lindenweg16' ) );
 		$this->field( __( 'Traglast (kg)', 'lindenweg16' ), 'load_rating_kg', $this->val( $edit, 'load_rating_kg' ), 'text', __( 'Angegebene Traglast. Erscheint in der Chargenakte.', 'lindenweg16' ) );
@@ -1835,6 +1922,132 @@ class ArticlesPage {
 				)
 			)
 		);
+
+		$this->render_price_box( $article, $result['settings'], $stichtag );
+	}
+
+	/**
+	 * Zielmarge, Vorschlagspreis, Übernahme und Stand im Shop.
+	 *
+	 * Das stand einmal auf einer eigenen Seite unter Lindenweg16 →
+	 * Preiskalkulation. Dort war es dieselbe Rechnung mit denselben
+	 * Zahlen, nur zwei Menüs entfernt von dem Artikel, um den es geht –
+	 * und der Preis musste zweimal angefasst werden: einmal am Artikel,
+	 * einmal für den Shop.
+	 *
+	 * @param array  $article  Artikel.
+	 * @param array  $settings Kalkulationsannahmen.
+	 * @param string $stichtag Stichtag der Kalkulation.
+	 */
+	protected function render_price_box( array $article, array $settings, $stichtag ) {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$marge = isset( $_GET['marge'] ) ? (float) $_GET['marge'] : 45.0;
+		$marge = max( 0.0, min( 95.0, $marge ) );
+
+		// Dieselben Herstellkosten wie die Tabelle darüber – der Vorschlag
+		// rechnet gegen die vollständige Kostenaufstellung, nicht gegen die
+		// gerundete Anzeige.
+		$cost      = CostCalculator::manufacturing_cost( (int) $article['id'], CalculationContext::build( $stichtag ), $settings );
+		$vorschlag = CostCalculator::price_for_margin( $cost, $settings, $marge / 100 );
+		$aktuell   = null === $article['price_gross'] ? null : (float) $article['price_gross'];
+
+		echo '<h3>' . esc_html__( 'Preis festlegen', 'lindenweg16' ) . '</h3>';
+
+		echo '<form method="get" style="margin:12px 0">';
+		printf( '<input type="hidden" name="page" value="%s" />', esc_attr( self::SLUG ) );
+		echo '<input type="hidden" name="tab" value="kalkulation" />';
+		printf( '<input type="hidden" name="article" value="%d" />', (int) $article['id'] );
+		printf( '<input type="hidden" name="stichtag" value="%s" />', esc_attr( (string) $stichtag ) );
+		printf(
+			'<label>%s <input type="number" step="1" min="0" max="95" name="marge" value="%s" class="small-text" /> %%</label> <button class="button">%s</button>',
+			esc_html__( 'Zielmarge (DB II vom Nettoerlös)', 'lindenweg16' ),
+			esc_attr( (string) round( $marge ) ),
+			esc_html__( 'Neu rechnen', 'lindenweg16' )
+		);
+		echo '</form>';
+
+		echo '<table class="widefat striped lw16-table--zahlen" style="max-width:640px"><tbody>';
+		printf(
+			'<tr><th>%s</th><td>%s</td></tr>',
+			esc_html__( 'Vorschlag bei dieser Marge', 'lindenweg16' ),
+			null === $vorschlag
+				? esc_html__( 'mit den aktuellen Annahmen nicht erreichbar', 'lindenweg16' )
+				: '<strong>' . esc_html( $this->money( $vorschlag ) ) . '</strong>'
+		);
+		printf(
+			'<tr><th>%s</th><td>%s</td></tr>',
+			esc_html__( 'Preis am Artikel', 'lindenweg16' ),
+			null === $aktuell ? '—' : esc_html( $this->money( $aktuell ) )
+		);
+		printf(
+			'<tr><th>%s</th><td>%s</td></tr>',
+			esc_html__( 'Stand im Shop', 'lindenweg16' ),
+			esc_html( $this->shop_price_note( $article ) )
+		);
+		echo '</tbody></table>';
+
+		if ( null !== $vorschlag ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:12px">';
+			wp_nonce_field( self::NONCE );
+			echo '<input type="hidden" name="action" value="lw16_betrieb_price_adopt" />';
+			printf( '<input type="hidden" name="article_id" value="%d" />', (int) $article['id'] );
+			printf( '<input type="hidden" name="vorschlag" value="%s" />', esc_attr( (string) round( (float) $vorschlag, 2 ) ) );
+			printf(
+				'<button class="button button-primary">%s</button>',
+				esc_html(
+					sprintf(
+						/* translators: %s: Preis. */
+						__( '%s als Artikelpreis übernehmen', 'lindenweg16' ),
+						$this->money( $vorschlag )
+					)
+				)
+			);
+			echo '</form>';
+		}
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Der Artikelpreis ist der eine Preis: Beim Speichern bekommt das verknüpfte Shop-Produkt ihn als Normalpreis, ein laufendes Angebot in WooCommerce bleibt unberührt. Den Preis von Hand setzen geht weiter im Reiter Artikel.', 'lindenweg16' )
+		);
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:12px">';
+		wp_nonce_field( self::NONCE );
+		echo '<input type="hidden" name="action" value="lw16_betrieb_price_push_all" />';
+		printf(
+			'<button class="button" onclick="return confirm(\'%s\')">%s</button> <span class="description">%s</span>',
+			esc_attr__( 'Alle verkäuflichen Artikel in den Shop übertragen?', 'lindenweg16' ),
+			esc_html__( 'Alle Preise in den Shop übertragen', 'lindenweg16' ),
+			esc_html__( 'Nur nötig, wenn ein Shop-Preis von Hand verstellt wurde – sonst zieht der Shop bei jedem Speichern von selbst nach.', 'lindenweg16' )
+		);
+		echo '</form>';
+	}
+
+	/**
+	 * Was steht gerade im Shop?
+	 *
+	 * @param array $article Artikel.
+	 * @return string
+	 */
+	protected function shop_price_note( array $article ) {
+		$wc_id = isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
+
+		if ( ! $wc_id ) {
+			return __( 'kein Shop-Produkt verknüpft', 'lindenweg16' );
+		}
+
+		$product = function_exists( 'wc_get_product' ) ? wc_get_product( $wc_id ) : null;
+
+		if ( ! $product ) {
+			return __( 'verknüpftes Shop-Produkt gibt es nicht mehr', 'lindenweg16' );
+		}
+
+		$preis = $product->get_regular_price();
+
+		if ( '' === $preis || null === $preis ) {
+			return __( 'noch kein Normalpreis im Shop', 'lindenweg16' );
+		}
+
+		return $this->money( (float) $preis );
 	}
 
 	/**

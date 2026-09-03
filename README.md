@@ -2,7 +2,7 @@
 
 Ein einziges, in sich geschlossenes WooCommerce-Plugin für lindenweg16.de, das
 Buchhaltung, Lagerverwaltung, Loyalty, Produktions-/Bestellplanung,
-Preiskalkulation, Kundenbindung sowie Support & Reporting kombiniert – direkt in
+Preiskalkulation, Versand, Kundenbindung sowie Support & Reporting kombiniert – direkt in
 WooCommerce, ohne externen Sync.
 
 ## Betriebsanleitungen
@@ -61,12 +61,14 @@ includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
                              EventsModule
 assets/blocks/events/        block.json des Blocks „Nächste Events"
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
-includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
 includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
 includes/Modules/POS/        POSModule
 includes/Modules/Support/    SupportModule
-includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, BetriebModule, Admin/
+includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, PriceSync, ShippingLabel,
+                             BetriebModule, Admin/
+includes/Modules/Betrieb/Dhl/ DhlProduct, DhlAddress, DhlRequest, DhlResponse,
+                             DhlClient, DhlLabelRepository, DhlShipping
 includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, ConfigCodec,
                              Catalog, ShopLink, ColorHex, WebModel, CartIntegration, Frontend,
                              ConfiguratorModule, Admin/ConfiguratorPage
@@ -474,12 +476,24 @@ vorhanden ist – nicht, was geplant war.
   bedienbar ohne WebGL.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
-- **Produktion:** Druck-Queue, Packliste/Versandschein-PDF, DHL-Verlinkung und
+- **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und
   **Sendungsverfolgung im Kundenkonto** (Zeitleiste in den Bestelldetails und
-  Spalte in der Bestellübersicht), Ist-Zeit-Erfassung, Mengenvorschläge.
-- **Preiskalkulation:** rechnet auf den Artikeln des Moduls Betrieb.
-  „Preis übernehmen" schreibt nur `_regular_price`, damit ein laufender
-  Aktionspreis überlebt, dazu `_lw16_margin_percent`.
+  Spalte in der Bestellübersicht), Ist-Zeit-Erfassung. Die Versandliste selbst
+  steht unter Betrieb → Versand, die Fertigungsvorschläge unter Betrieb → Bedarf.
+- **Versand (Betrieb → Versand):** Bestellliste mit Lieferschein,
+  Sendungsnummer und **DHL-Label über den Geschäftskundenversand**
+  (Parcel DE Shipping v2). Produkt und Gewicht werden aus Zielland und
+  Artikelstamm vorgeschlagen, das PDF landet im geschützten
+  Dokumentenverzeichnis, die Sendungsnummer geht direkt in die
+  Sendungsverfolgung. Stornieren nimmt die Frankierung zurück; der Vorgang
+  bleibt als storniert stehen. Produktwahl, Abrechnungsnummer,
+  Adressaufbereitung, Auftrag und Antwortauswertung liegen netzfrei in
+  `Modules/Betrieb/Dhl/` und sind vollständig getestet.
+- **Preise:** entstehen am Betriebsartikel und gehen von dort automatisch ins
+  verknüpfte Shop-Produkt (`PriceSync`). Geschrieben wird nur
+  `_regular_price`, damit ein laufender Aktionspreis überlebt, dazu
+  `_lw16_margin_percent` fürs Empfehlungsprogramm. Zielmarge und
+  Preisvorschlag stehen im Reiter Kalkulation des Artikels.
 - **Kundenbindung:** Warenkorbabbrecher-Mails, Wunschliste, Post-Purchase-
   Sequenz, „Wieder verfügbar"-Warteliste.
 - **Support & Reporting:** Reklamations-Tickets, Gutschrift aufs Guthabenkonto,

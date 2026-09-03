@@ -436,6 +436,10 @@ class ArticleRepository {
 		}
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'articles', $id, null, $data );
+
+		/** This action is documented in includes/Modules/Betrieb/ArticleRepository.php */
+		do_action( 'lw16_betrieb_article_saved', $id, $data, null );
+
 		return $id;
 	}
 
@@ -461,6 +465,17 @@ class ArticleRepository {
 			return false;
 		}
 		BetriebAudit::record( 'update', 'articles', (int) $id, $before, $data, $reason );
+
+		/**
+		 * Ein gespeicherter Artikel. Der Preis hängt daran nicht allein –
+		 * das Shop-Produkt soll ihn ohne zweiten Handgriff bekommen.
+		 *
+		 * @param int        $id     Artikel.
+		 * @param array      $data   Gespeicherte Felder.
+		 * @param array|null $before Stand davor.
+		 */
+		do_action( 'lw16_betrieb_article_saved', (int) $id, $data, $before );
+
 		return true;
 	}
 }

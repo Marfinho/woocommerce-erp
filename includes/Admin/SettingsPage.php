@@ -78,10 +78,28 @@ class SettingsPage {
 				'email_absender_name' => array( __( 'Absendername', 'lindenweg16' ), 'text' ),
 				'email_footer'        => array( __( 'E-Mail-Footer-Text (erscheint in jeder Mail)', 'lindenweg16' ), 'textarea' ),
 			),
-			__( 'Reporting & DHL', 'lindenweg16' ) => array(
+			__( 'Reporting & DHL-Sendungsverfolgung', 'lindenweg16' ) => array(
 				'export_email'         => array( __( 'E-Mail für Datenexport', 'lindenweg16' ), 'text' ),
 				'dhl_tracking_api_key' => array( __( 'DHL Sendungsverfolgung API-Key', 'lindenweg16' ), 'text' ),
 				'dhl_tracking_sandbox' => array( __( 'DHL Sandbox-Modus', 'lindenweg16' ), 'checkbox' ),
+			),
+			__( 'DHL Geschäftskundenversand (Labels)', 'lindenweg16' ) => array(
+				'dhl_versand_api_key'      => array( __( 'API-Key der Anwendung (developer.dhl.com)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_user'         => array( __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ), 'text' ),
+				'dhl_versand_password'     => array( __( 'Passwort des Geschäftskundenportals', 'lindenweg16' ), 'password' ),
+				'dhl_versand_ekp'          => array( __( 'Kundennummer EKP (10 Stellen)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme'    => array( __( 'Teilnahme (2 Stellen, gilt für alle Produkte)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_01' => array( __( 'Teilnahme abweichend: DHL Paket', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_62' => array( __( 'Teilnahme abweichend: Warenpost', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_54' => array( __( 'Teilnahme abweichend: Europaket', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_53' => array( __( 'Teilnahme abweichend: Paket International', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_66' => array( __( 'Teilnahme abweichend: Warenpost International', 'lindenweg16' ), 'text' ),
+				'dhl_versand_profil'       => array( __( 'Abrechnungsprofil', 'lindenweg16' ), 'text' ),
+				'dhl_versand_printformat'  => array( __( 'Labelformat (z. B. 910-300-700 für Rollenetiketten, A4 für Papier)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_verpackung_g' => array( __( 'Verpackungszuschlag je Sendung (g)', 'lindenweg16' ), 'number' ),
+				'dhl_versand_warenpost'    => array( __( 'Warenpost/Kleinpaket ist gebucht', 'lindenweg16' ), 'checkbox' ),
+				'dhl_versand_vorabmeldung' => array( __( 'Kunden per E-Mail vorab benachrichtigen', 'lindenweg16' ), 'checkbox' ),
+				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus (erzeugt keine echten Labels)', 'lindenweg16' ), 'checkbox' ),
 			),
 		);
 	}
@@ -131,6 +149,11 @@ class SettingsPage {
 					}
 					echo '<p class="description">' . esc_html__( 'JPEG-Format empfohlen für PDF-Einbettung.', 'lindenweg16' ) . '</p>';
 					$this->enqueue_media_js( $key );
+				} elseif ( 'password' === $type ) {
+					// Ein gespeichertes Passwort wird nicht zurückgezeigt.
+					// Wer über die Schulter schaut, sieht sonst den Zugang
+					// zum Frankierkonto.
+					echo '<input type="password" class="regular-text" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="" autocomplete="new-password" placeholder="' . esc_attr( '' !== (string) $val ? __( '— gespeichert, zum Ändern neu eingeben —', 'lindenweg16' ) : '' ) . '">';
 				} elseif ( 'textarea' === $type ) {
 					echo '<textarea class="large-text" rows="3" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '">' . esc_textarea( $val ) . '</textarea>';
 				} else {
@@ -266,6 +289,16 @@ class SettingsPage {
 					$clean[ $key ] = MailTemplate::sanitize_color( $raw );
 				} elseif ( 'media' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? (int) $_POST[ $key ] : 0;
+				} elseif ( 'password' === $type ) {
+					// Das Formular zeigt ein gespeichertes Passwort nicht
+					// an. Ein leeres Feld heißt deshalb „unverändert" –
+					// sonst löschte jedes Speichern der Seite den Zugang
+					// zum Frankierkonto.
+					$eingabe = isset( $_POST[ $key ] ) ? (string) wp_unslash( $_POST[ $key ] ) : '';
+
+					if ( '' !== $eingabe ) {
+						$clean[ $key ] = sanitize_text_field( $eingabe );
+					}
 				} elseif ( 'textarea' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $key ] ) ) : '';
 				} else {

@@ -269,8 +269,17 @@ foreach ( array(
 	'Consistency',
 	'ReorderToken',
 	'ReorderPage',
+	'ShippingLabel',
+	'PriceSync',
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/' . $lw16_class . '.php';
+}
+
+require $lw16_root . '/includes/Modules/Betrieb/Admin/ShippingPage.php';
+
+// DHL-Versand: Produktwahl, Adressen, Auftrag und Antwort sind reine Logik.
+foreach ( array( 'DhlProduct', 'DhlAddress', 'DhlRequest', 'DhlResponse', 'DhlLabelRepository' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Betrieb/Dhl/' . $lw16_class . '.php';
 }
 
 // Seiteneffektfreie Klassen des Moduls Konfigurator.

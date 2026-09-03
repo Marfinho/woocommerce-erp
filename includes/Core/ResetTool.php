@@ -123,7 +123,7 @@ class ResetTool {
 			),
 			'kunden'       => array(
 				'label'  => __( 'Kundenbindung und Support', 'lindenweg16' ),
-				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung und Tickets.', 'lindenweg16' ),
+				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung, Tickets und alles zu Sendungen: verfolgte Nummern und erzeugte Versandlabels.', 'lindenweg16' ),
 				'tables' => array(
 					'points_ledger',
 					'referrals',
@@ -132,6 +132,10 @@ class ResetTool {
 					'cart_tracking',
 					'tickets',
 					'tracking_cache',
+					// Probelabels aus der Sandbox müssen vor dem Livegang
+					// weg: Sie sind keine Frankierung, sähen in der Liste
+					// aber genauso aus wie eine.
+					'shipping_labels',
 				),
 			),
 			'altes_lager'  => array(

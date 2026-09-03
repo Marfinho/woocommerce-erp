@@ -27,6 +27,7 @@ use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
+use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
 use Lindenweg16\Modules\Betrieb\Admin\TimerBar;
 use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
 
@@ -55,6 +56,7 @@ class BetriebModule {
 			'lw16-betrieb-lager'        => array( __( 'Lager', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-lagerplaetze' => array( __( 'Lagerplätze, Fertigung & Picklisten', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-bestellungen' => array( __( 'Bestellungen', 'lindenweg16' ), 'lw16_manage_production' ),
+			'lw16-betrieb-versand'      => array( __( 'Versand', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-qualitaet'    => array( __( 'Qualität', 'lindenweg16' ), 'lw16_capture' ),
 			'lw16-betrieb-kontakte'     => array( __( 'Kontakte / B2B', 'lindenweg16' ), 'lw16_manage_production' ),
 			'lw16-betrieb-zeit'         => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_capture' ),
@@ -100,6 +102,7 @@ class BetriebModule {
 		( new MobileCapture() )->register();
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
+		( new PriceSync() )->register();
 		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
@@ -120,6 +123,7 @@ class BetriebModule {
 			( new DemandPage() )->register();
 			( new MaterialPage() )->register();
 			( new OrdersPage() )->register();
+			( new ShippingPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();
 			( new UsersPage() )->register();
