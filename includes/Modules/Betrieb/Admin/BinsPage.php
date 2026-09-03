@@ -181,7 +181,10 @@ class BinsPage {
 	 * Seite ausgeben.
 	 */
 	public function render() {
-		$this->require_cap();
+		// Picklisten und Fertigungsauftraege sind Erfassung – dafuer ist die
+		// Seite im Menue freigegeben. Der Reiter mit den Lagerplaetzen selbst
+		// ist Stammdatenpflege und bleibt weiter unten zu.
+		$this->require_cap( 'lw16_capture' );
 
 		// phpcs:disable WordPress.Security.NonceVerification
 		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'plaetze';
@@ -192,13 +195,28 @@ class BinsPage {
 		$this->notice();
 
 		$base = admin_url( 'admin.php?page=lw16-betrieb-lagerplaetze' );
-		echo '<nav class="lw16-tabs">';
-		foreach ( array(
-			'plaetze'    => __( 'Lagerplätze', 'lindenweg16' ),
-			'etiketten'  => __( 'Etiketten', 'lindenweg16' ),
+		$stammdaten = Roles::current_user_can_betrieb( 'lw16_manage_production' );
+
+		// Ein Reiter, der beim Klick abweist, ist schlimmer als keiner.
+		$tabs = array(
 			'fertigung'  => __( 'Fertigungsaufträge', 'lindenweg16' ),
 			'picklisten' => __( 'Picklisten', 'lindenweg16' ),
-		) as $key => $label ) {
+		);
+
+		if ( $stammdaten ) {
+			$tabs = array_merge(
+				array(
+					'plaetze'   => __( 'Lagerplätze', 'lindenweg16' ),
+					'etiketten' => __( 'Etiketten', 'lindenweg16' ),
+				),
+				$tabs
+			);
+		} else {
+			$view = in_array( $view, array_keys( $tabs ), true ) ? $view : 'picklisten';
+		}
+
+		echo '<nav class="lw16-tabs">';
+		foreach ( $tabs as $key => $label ) {
 			printf(
 				'<a href="%s" class="%s">%s</a> ',
 				esc_url( add_query_arg( 'view', $key, $base ) ),
@@ -208,13 +226,13 @@ class BinsPage {
 		}
 		echo '</nav>';
 
-		if ( 'etiketten' === $view ) {
+		if ( 'etiketten' === $view && $stammdaten ) {
 			$this->render_labels();
 		} elseif ( 'fertigung' === $view ) {
 			$this->render_work_orders();
 		} elseif ( 'picklisten' === $view ) {
 			$this->render_picklists();
-		} else {
+		} elseif ( $stammdaten ) {
 			$this->render_bins( $edit );
 		}
 
@@ -642,7 +660,7 @@ class BinsPage {
 	 */
 	protected function render_label_sheet() {
 		echo '<h2>' . esc_html__( 'Etiketten als PDF', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Alle QR-Codes auf einem Bogen – Lagerplätze, Artikel oder beides. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske.', 'lindenweg16' ) . '</p>';
+		echo '<p>' . esc_html__( 'Alle QR-Codes in einem Rutsch – Lagerplätze, Artikel, Drucker oder alles zusammen. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske, ein Drucker auf die Erfassung mit vorausgewähltem Gerät.', 'lindenweg16' ) . '</p>';
 
 		echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="lw16_betrieb_labels" />';
@@ -658,6 +676,10 @@ class BinsPage {
 			esc_html__( 'Artikel', 'lindenweg16' )
 		);
 		printf(
+			'<label style="margin-right:16px"><input type="checkbox" name="was[]" value="printers" /> %s</label>',
+			esc_html__( 'Drucker', 'lindenweg16' )
+		);
+		printf(
 			'<label><input type="checkbox" name="alle" value="1" /> %s</label>',
 			esc_html__( 'auch stillgelegte', 'lindenweg16' )
 		);
@@ -671,7 +693,12 @@ class BinsPage {
 		echo '</optgroup>';
 		printf( '<optgroup label="%s">', esc_attr__( 'Etikettendrucker Brother QL · eine Seite = ein Etikett', 'lindenweg16' ) );
 		foreach ( LabelSheet::rolls() as $key => $roll ) {
-			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $roll['label'] ) );
+			printf(
+				'<option value="%s"%s>%s</option>',
+				esc_attr( $key ),
+				selected( $key, LabelSheet::DEFAULT_ROLL, false ),
+				esc_html( $roll['label'] )
+			);
 		}
 		echo '</optgroup></select> ';
 		printf( '<button class="button button-primary">%s</button></p>', esc_html__( 'Etikettenbogen erzeugen', 'lindenweg16' ) );
@@ -701,7 +728,7 @@ class BinsPage {
 				array(
 					'action' => 'lw16_betrieb_labels',
 					'was[]'  => $was,
-					'format' => 'dk11209',
+					'format' => LabelSheet::DEFAULT_ROLL,
 					'alle'   => 1,
 					'code'   => rawurlencode( $code ),
 				),

@@ -59,15 +59,11 @@ class InvoiceGenerator {
 		);
 
 		// Hash-Verkettung.
-		$hashes                   = HashChain::prepare_insert( 'rechnungen', $data );
-		$data['hash']             = $hashes['hash'];
-		$data['vorheriger_hash']  = $hashes['vorheriger_hash'];
+		$rechnung_id = HashChain::insert( 'rechnungen', $data );
 
-		$ok = $wpdb->insert( self::table(), $data );
-		if ( ! $ok ) {
+		if ( ! $rechnung_id ) {
 			return false;
 		}
-		$rechnung_id = (int) $wpdb->insert_id;
 
 		// PDF erzeugen und speichern.
 		$path = trailingslashit( Installer::docs_dir() ) . $filename;

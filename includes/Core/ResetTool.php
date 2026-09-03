@@ -91,6 +91,7 @@ class ResetTool {
 					'capacity_weeks',
 					'kpi_snapshots',
 					'supplies',
+					'purchases',
 				),
 			),
 			'buchhaltung'  => array(
@@ -115,9 +116,14 @@ class ResetTool {
 				'hint'   => __( 'Kampagnen samt Kostenstellennummern und ihren Belegzuordnungen.', 'lindenweg16' ),
 				'tables' => array( 'kampagne_beleg', 'kampagnen' ),
 			),
+			'events'       => array(
+				'label'  => __( 'Event-Anmeldungen', 'lindenweg16' ),
+				'hint'   => __( 'Alle Anmeldungen zu Events samt Warteliste. Die Events selbst sind Beiträge und bleiben – sie werden wie jede Seite über den Papierkorb gelöscht.', 'lindenweg16' ),
+				'tables' => array( 'event_rsvp' ),
+			),
 			'kunden'       => array(
 				'label'  => __( 'Kundenbindung und Support', 'lindenweg16' ),
-				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung und Tickets.', 'lindenweg16' ),
+				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung, Tickets und alles zu Sendungen: verfolgte Nummern und erzeugte Versandlabels.', 'lindenweg16' ),
 				'tables' => array(
 					'points_ledger',
 					'referrals',
@@ -126,6 +132,10 @@ class ResetTool {
 					'cart_tracking',
 					'tickets',
 					'tracking_cache',
+					// Probelabels aus der Sandbox müssen vor dem Livegang
+					// weg: Sie sind keine Frankierung, sähen in der Liste
+					// aber genauso aus wie eine.
+					'shipping_labels',
 				),
 			),
 			'altes_lager'  => array(
@@ -169,7 +179,7 @@ class ResetTool {
 	 * @return array
 	 */
 	public static function default_scopes() {
-		return array( 'woocommerce', 'betrieb', 'buchhaltung', 'kasse', 'marketing', 'kunden', 'protokoll' );
+		return array( 'woocommerce', 'betrieb', 'buchhaltung', 'kasse', 'marketing', 'events', 'kunden', 'protokoll' );
 	}
 
 	/**
@@ -195,6 +205,8 @@ class ResetTool {
 			'stock_targets',
 			'calc_settings',
 			'price_tiers',
+			'user_rates',
+			'kpi_goals',
 			'produkte',
 			'stueckliste',
 			'rezeptur',

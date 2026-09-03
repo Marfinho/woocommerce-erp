@@ -5,6 +5,21 @@ Buchhaltung, Lagerverwaltung, Loyalty, Produktions-/Bestellplanung,
 Preiskalkulation, Versand, Kundenbindung sowie Support & Reporting kombiniert – direkt in
 WooCommerce, ohne externen Sync.
 
+## Betriebsanleitungen
+
+Vier bebilderte Anleitungen, je eine pro Aufgabe. Einstieg: **`docs/index.html`**
+(im Browser öffnen).
+
+| Anleitung | Für wen | Datei |
+| --- | --- | --- |
+| Produktion | Werkstatt: drucken, montieren, buchen | `docs/ba-produktion.html` |
+| Versand | Packtisch: picken, packen, versenden | `docs/ba-versand.html` |
+| Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/ba-personal.html` |
+| Administration | Einrichtung, Kalkulation, Buchhaltung, Livegang | `docs/ba-admin.html` |
+
+Die Bildschirmfotos in `docs/bilder/` stammen aus einer laufenden Installation
+dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
+
 ## Installation
 
 1. Ordner als Plugin in `wp-content/plugins/` ablegen (WooCommerce muss aktiv sein).
@@ -40,6 +55,11 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
                              AccountingModule
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
+includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
+                             RsvpRepository, EventAdmin, EventFrontend,
+                             EventsWidget, EventsSidebarWidget, EventsBlock,
+                             EventsModule
+assets/blocks/events/        block.json des Blocks „Nächste Events"
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
 includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
@@ -58,7 +78,13 @@ assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
-docs/handbuch.html           Bedienungsanleitung
+docs/index.html              Wegweiser zu den vier Betriebsanleitungen
+docs/ba-produktion.html      Betriebsanleitung Produktion (Werkstatt)
+docs/ba-versand.html         Betriebsanleitung Versand (Packtisch)
+docs/ba-personal.html        Betriebsanleitung Personal (Zeit, Löhne, Rechte)
+docs/ba-admin.html           Betriebsanleitung Administration (Einrichtung, Zahlen)
+docs/ba.css                  gemeinsames Aussehen der Anleitungen
+docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```
 
 ### Modul Betrieb
@@ -98,6 +124,129 @@ und die Papierformulare ab.
   `Pdf::rect()`/`Pdf::line()` zeichnen sie. Geprüft wurde die Ausgabe nicht
   nur mit Unit-Tests, sondern durch Rendern des PDFs und modulweisen
   Vergleich gegen `QrCode::matrix()`.
+- **Formular-Handler unter Aufsicht** (`tests/AdminPostSchutzTest.php`):
+  `admin_post_*` ist eine offene Tür – die Adresse ist erratbar und führt
+  mitten in eine schreibende Funktion. Ein Test liest den Quelltext und
+  verlangt von jedem der 104 Handler Nonce und Rechteprüfung, wobei er der
+  Weiterreichung an `guard()`/`require_cap()` eine Ebene tief folgt. Zwei
+  Kundenformulare (Wartelisten-Anmeldung, Support-Ticket) stehen namentlich
+  als Ausnahme von der Rechteprüfung, mit Begründung; ein weiterer Test
+  hält die Ausnahmeliste aktuell. Beim Schreiben des Tests fand sich keine
+  echte Lücke – der Wert liegt darin, dass die nächste auffällt.
+- **Lagerabgang genau einmal** (`Core\Lock`, `WooIntegration::book_stock()`):
+  Die Doppelbuchungssperre fragte „schon gebucht?", buchte dann und setzte
+  die Marke erst am Ende. Ein wiederholter Webhook, ein Doppelklick oder
+  eine Sammelaktion neben einem Webhook laufen gleichzeitig: Beide sahen die
+  Bestellung als ungebucht, beide zogen den Bestand ab. Prüfung und Buchung
+  liegen jetzt hinter einer Sperre je Bestellung, und die Bestellung wird
+  darin frisch geladen. Wer die Sperre nicht bekommt, bucht nicht – ein
+  anderer Lauf tut es gerade. `Core\Lock` kapselt `GET_LOCK` und wird auch
+  von der Hashkette benutzt; Transients taugen dafür nicht, weil sie selbst
+  „prüfen, dann setzen" sind.
+- **GoBD-Kette gegen sich selbst gesichert** (`HashChain::insert()`,
+  `HashChain::check_rows()`): Vorgängerhash lesen und Datensatz schreiben
+  liefen getrennt. Zwei gleichzeitige Schreiber lasen denselben Vorgänger,
+  die Kette gabelte sich, und die Prüfung meldete „mögliche Manipulation" –
+  ein selbst verursachter Fehlalarm, der genauso aussieht wie der echte
+  Fall. Beide Schritte hängen jetzt an einem Sperrschlüssel der Datenbank;
+  bekommt man ihn nicht, wird trotzdem geschrieben, denn ein fehlender
+  Protokolleintrag wäre schlimmer als ein prüfbarer Bruch. Die Prüfung
+  trennt zudem *Kettenglied* von *Inhalt* und rechnet gegen den
+  gespeicherten Vorgänger: Ein veränderter Satz erzeugt eine Meldung an
+  seiner Zeile statt zehntausend Folgemeldungen, in denen er untergeht.
+  Die Beweiskraft bleibt – wer einen Hash nachzieht, bricht das Glied des
+  nächsten Satzes.
+- **Kennzahlen, korrigiert** (`RepeatRate`, `CapacityPlanner::weeks()`,
+  `MachineRate::productive_at()`): Beim Bau der Verlaufsgraphen kamen drei
+  Rechenfehler heraus, die vorher nicht auffielen, weil es immer nur einen
+  Zeitraum gab. Die Wochenzahl war die Differenz zweier Zeitstempel, auf
+  mindestens eins geklemmt – ein Tagesbericht verglich einen Tag Druckzeit
+  gegen eine ganze Woche Kapazität und meldete ein Siebtel der echten
+  Auslastung; ein Monat war um einen Tag zu kurz. Die Wiederkaufsrate nahm
+  stur die letzten 365 Tage ab *heute* und zeichnete damit zwölfmal denselben
+  Wert als Geschichte; sie blickt jetzt vom Stichtag aus zurück. Und die
+  Kapazität zählte alle heutigen Drucker, auch für Monate, in denen es sie
+  noch nicht gab – ein Kauf von heute senkte rückwirkend die Auslastung des
+  letzten Jahres. Jeder der drei Fehler steht als Test fest, jeder wurde
+  durch absichtliches Wiedereinbauen geprüft.
+- **Bestand ohne verlorene Buchungen** (`ComponentConsumption::subtract()`):
+  Der Verbrauch von Kleinteilen und Verpackung las `stock_qty`, rechnete in
+  PHP und schrieb das Ergebnis zurück. Buchen zwei Vorgänge gleichzeitig,
+  überschreibt der zweite den ersten und eine Buchung verschwindet lautlos.
+  Jetzt rechnet die Datenbank (`SET stock_qty = stock_qty - %f`), wie im
+  Wareneingang schon vorher.
+- **Stoppuhr** (`Stopwatch`, `TimeCategoryGuess`, `TimerState`, `Admin\TimerBar`):
+  Start und Stopp in der Adminleiste, für jeden Nutzer ab dem Profil
+  Werkstatt. Die laufende Uhr liegt als User-Meta, nicht als Tabellenzeile –
+  sie ist ein Zustand, kein Vorgang; gebucht wird erst beim bestätigten
+  Stoppen, und `handle_time()` weist einen zweiten Versand ab, wenn die Uhr
+  schon weg ist. `Stopwatch` kappt nichts heimlich: Eine Uhr über zehn
+  Stunden gilt als vergessen und wird im Formular hinterfragt, statt still
+  auf acht gekürzt zu werden. Gebucht wird auf den **Start**tag – wer um
+  23:40 anfängt, hat am Vortag gearbeitet. `TimeCategoryGuess` leitet aus
+  den während der Laufzeit besuchten Seiten einen **Vorschlag** ab, keine
+  Festlegung: Er kommt nur bei mindestens zwei Dritteln Anteil, nie bei
+  Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
+  Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
+  Minuten.
+- **Ein Etikettenformat für alles** (`LabelSheet::DEFAULT_ROLL`): Eine Anlage
+  hat einen Etikettendrucker, und darin liegt eine Rolle. Der plugin-weite
+  Standard ist **DK-11201** (29 × 90 mm, längs beschriftet) und steht als
+  eine Konstante da – wer die Rolle wechselt, ändert eine Zeile. Ein Test
+  liest die Aufrufer und schlägt an, sobald eine Stelle ein Format wieder
+  beim Namen nennt; ein zweiter prüft, dass die Konstante ein Format meint,
+  das es gibt. Neu dazu: `LabelPdf::printer_labels()` – die Geräteaufkleber
+  gab es bisher nur als HTML-Kacheln zum Ausdrucken auf Papier. Ihr QR-Code
+  trägt eine ganze Adresse statt eines kurzen Codes und ist damit dichter;
+  gegengeprüft wurde er nicht durch Rechnen allein, sondern durch Rendern des
+  PDFs und Dekodieren mit OpenCV, plus einem Test auf die Modulgröße im
+  ungünstigsten Fall (lange Domain, langes Gerätekürzel: 0,59 mm je Modul).
+- **Gelöschte Shop-Bestellungen** (`OrderSource`, `OrderMirror`,
+  `OrderOpsRepository::orphaned()`): Wird eine Bestellung in WooCommerce
+  endgültig gelöscht, zeigte die Betriebszeile ins Leere – `order_value()`
+  lieferte 0,00 €, `order_date()` einen leeren String, und die Zeile zählte
+  in der Händlerauswertung weiter mit. `OrderMirror` schreibt jetzt an den
+  Löschhooks (HPOS wie klassisch) Wert und Datum in die Zeile, bevor die
+  Quelle verschwindet; vorhandene eigene Angaben bleiben stehen. Der
+  Papierkorb löst nichts aus – eine Bestellung dort lässt sich zurückholen.
+  Für alles, was vorher gelöscht wurde, gleicht `orphaned()` ab; die
+  Systemprüfung meldet es und `Betrieb → Bestellungen` bietet ein Storno an,
+  das die Lagerbewegungen als Gegenbuchungen zurücknimmt. Der Verbrauch an
+  Kleinteilen geht bewusst **nicht** zurück: Er wird als Feld
+  fortgeschrieben, die damalige Menge ist nirgends nachrechenbar, und aus
+  der heutigen Stückliste zurückzurechnen ergäbe eine Zahl, die nur zufällig
+  stimmt. Dafür ist das Rücksetz-Werkzeug da.
+- **Ziele stehen bei den Kennzahlen**: Ziel und Alarmgrenze sind
+  Eingabefelder in der Kennzahlentabelle selbst, nicht in einer zweiten
+  Tabelle darunter – zwei Stellen für dieselbe Zahl heisst früher oder
+  später zwei verschiedene Zahlen. Unter dem Feld steht, was daraus für den
+  gezeigten Zeitraum folgt, aber nur wo es sich unterscheidet; bei
+  Verhältnisgrößen bleibt die Zeile still, und ein leeres Feld zeigt die
+  Vorgabe als Platzhalter. `TrendChart::isolated()` zeichnet ein Ziel, das
+  nur für einen Zeitraum gilt, als kurzen Strich – eine Linie braucht zwei
+  Punkte, und ein eingetragenes Ziel unsichtbar zu lassen schickt den
+  Nutzer auf Fehlersuche in der Eingabe.
+- **Verlauf und Ziele** (`Period`, `KpiGoals`, `TrendChart`): Der Bericht
+  zeigt jede Kennzahl als Verlauf, umschaltbar zwischen Tag, Woche, Monat,
+  Quartal und Jahr. `Period` bildet die Eimer – ISO-Wochen über `IsoWeek`,
+  Monats- und Jahresgrenzen nie durch Tageszählung genähert; ein Test prüft,
+  dass die Eimer lückenlos aneinanderstoßen. Ziele werden nur je Quartal
+  eingetragen (`lw16_kpi_goals`); `KpiGoals::derive()` rechnet sie um und
+  unterscheidet dabei **Summengrößen** (Umsatz, Bestellungen – nach Tagen
+  verteilt) von **Verhältnisgrößen** (Quoten, Durchschnitte – unverändert).
+  Die Art steht als `kind` an jeder Kennzahl in `Kpi::definitions()`, statt
+  im Code geraten zu werden. Fehlt für ein berührtes Quartal das Ziel, gibt
+  es keines – erfunden wird nichts. `TrendChart` trennt wie `KpiMeter`
+  Rechnen und Zeichnen; `path()` unterbricht die Linie an Datenlücken, statt
+  sie zu überbrücken. Geprüft wurde die Ausgabe nicht nur mit Unit-Tests,
+  sondern durch Rendern des SVG im Browser – dabei fielen ein zu schmaler
+  linker Rand (`0.000,00 €` statt `20.000,00 €`) und kollidierende
+  Zeitmarken auf.
+- **Nachbestellungen** (`Purchase`, `PurchaseRepository`): Bestell-Link je
+  Komponente, Formular und Lieferantenshop gehen gleichzeitig auf. Der
+  Bestand ändert sich ausschliesslich beim Wareneingang, und der ist je
+  Bestellung einmalig – ein zweiter Klick wird abgewiesen statt zu
+  verdoppeln. `Purchase::clean_url()` lässt nur http/https durch.
 - **Etikettendrucker**: `LabelSheet::rolls()` liefert die Rollenformate des
   Brother QL. Die erste Zahl ist immer die Rollenbreite, die zweite die
   Etikettenlänge – so benennt Brother seine Rollen: DK-11209 ist 62 × 29,
@@ -314,6 +463,11 @@ vorhanden ist – nicht, was geplant war.
   Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
   Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
   WooCommerce.
+- **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
+  definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
+  Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit
+  Namen, optionale Teilnehmerbegrenzung mit automatisch nachrückender
+  Warteliste, QR-Code auf die Eventseite.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
@@ -388,7 +542,40 @@ Nur drei Nachweise, bewusst keine Schätzung darüber hinaus:
 
 Der Umsatz zählt über das Kampagnenende hinaus (Einstellung
 *Nachlauffenster*, Standard 30 Tage); die Kosten hängen dagegen am Beleg. Was
-sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet.
+sich über keinen der drei Wege nachweisen lässt, bleibt unzugeordnet. Eine
+vollständig erstattete Bestellung zählt gar nicht; eine Bestellung mit
+Gesamtsumme 0 (100 % Rabatt) dagegen schon – sie hat die Kampagne etwas
+gekostet.
+
+### Rabatt ist Einsatz, aber keine Ausgabe
+
+Ein gewährter Nachlass (Startgutschein, Aktionscode) ist **Erlösschmälerung**,
+keine Betriebsausgabe: Es gibt keinen Beleg, es fließt nichts ab, der
+Bestellwert ist bereits gemindert. Die EÜR ist damit von sich aus richtig –
+`EuerCalculator::einnahmen()` rechnet mit `$order->get_total()`, also nach
+Abzug. Wer den Rabatt zusätzlich als Aufwand buchte, hätte ihn doppelt drin.
+
+Für die Kampagnenauswertung zählt er trotzdem, sonst stünde eine reine
+Gutscheinaktion mit null Kosten und grüner Ampel da. Die Kostenstelle weist
+deshalb drei Zahlen aus:
+
+| Größe | Quelle | in der EÜR |
+|---|---|---|
+| Kosten (gebucht) | zugeordnete Belege | ja |
+| Rabatt (nicht gebucht) | `get_discount_total()` der zugeordneten Bestellungen | nein |
+| Einsatz gesamt | Summe beider | – |
+
+Ergebnis, ROAS und Einsatz je Bestellung rechnen gegen den Einsatz gesamt.
+Das **Budget misst sich weiter nur an den gebuchten Kosten** – ein Budget
+zahlt man aus, einen Rabatt gewährt man. Die Kampagnenübersicht zeigt aus
+Kostengründen nur die gebuchten Kosten; den vollen Einsatz zeigt die
+Einzelansicht.
+
+Nicht erfasst ist die Einlösung von Punkten und Guthaben: Die läuft im
+Loyalty-Modul als negative Gebühr (`LoyaltyFrontend::apply_redeem_fee()`),
+nicht als Coupon, und taucht in `get_discount_total()` darum nicht auf. Ob
+sie überhaupt einer Marketingkampagne zuzurechnen wäre, ist eine eigene
+Frage.
 
 ### Zeitpunkt: EÜR gegen Kampagne
 
@@ -396,6 +583,162 @@ Bei der EÜR gilt das Abflussprinzip – eine im Dezember gezahlte Standgebühr
 für den Januar-Markt ist eine Dezember-Ausgabe. Die Kampagnenauswertung will
 sie beim Januar-Markt sehen. Darum hat die Kampagne ein eigenes
 `event_datum`, und beide Sichten bleiben getrennte Abfragen.
+
+### Events: Post Type statt eigener Tabelle
+
+Ein Event ist öffentlicher Inhalt mit Titel, Text, Bild und Adresse – genau
+das, wofür WordPress einen Custom Post Type hat. `lw16_event` bringt Editor,
+Beitragsbild, Vorschau, Permalinks, Revisionen und die Sichtbarkeit für
+Suchmaschinen mit; alles davon wäre in einer eigenen Tabelle noch einmal zu
+bauen gewesen. Die Eventtypen (Social Ride, Markt, Rennen) sind eine
+Taxonomie und damit im Backend erweiterbar, ohne Code anzufassen.
+
+Die **Anmeldungen** sind Bewegungsdaten und liegen deshalb in
+`lw16_event_rsvp` – mit Unique-Index auf (Event, E-Mail), damit dieselbe
+Adresse nicht zweimal auf der Liste steht.
+
+**Zusatzfelder** liegen als Post-Meta am Event, nicht in einer globalen
+Definition: Jedes Event trägt seine eigenen Felder. Für die drei Eventtypen
+gibt es Vorlagen als Startpunkt (`EventFields::vorlagen()`), die beim ersten
+Bearbeiten vorgeschlagen und danach frei geändert werden. Es gibt bewusst
+**kein Freitext-HTML- oder iframe-Feld**: Eingebettet wird nur, was einen
+eigenen Feldtyp hat. Bei der Komoot-Tour wird aus der eingefügten Adresse
+nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
+Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
+so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
+
+Das Komoot-Feld hat einen **Stil** – dieselben fünf, die Komoots eigener
+Einbettungsdialog anbietet (`EventFields::komoot_stile()`):
+
+| Stil | `layout` | Höhe |
+|---|---|---|
+| Klassisch – Karte, Statistiken, Höhenprofil | `classic` + `profile=1` | 700 |
+| Nur Karte – interaktive Karte, minimale Oberfläche | `map` | 540 |
+| Kompakte Karte – Titelbild und Eckdaten | `compact` | 260 |
+| Fotostreifen – Galerie zuerst | `gallery` + `gallery=1` | 640 |
+| Highlights – scrollbare Reihe | `highlights` | 430 |
+
+Die Höhen stammen aus Komoots Dialog und gehören zum Stil: ein einheitlicher
+Wert ergäbe bei *Kompakte Karte* einen leeren Streifen und bei *Klassisch*
+einen Rollbalken. Ein Test vergleicht die erzeugte Adresse Zeichen für
+Zeichen mit dem Code, den Komoot selbst ausgibt.
+
+`komoot_stil()` ist die Positivliste; ein unbekannter Wert fällt auf
+*Klassisch* zurück, statt als Parameter in der Adresse zu landen. Sie
+übersetzt außerdem die Werte der ersten Fassung (`profil`, `karte`).
+
+Die **Grundkarte** (Karte, Satellit, Gelände) ist davon unberührt – die
+schaltet der Besucher im Kartenfenster selbst um, dafür gibt es keinen
+Parameter.
+
+Im Backend zeigt eine **Vorschau** die Einbettung im gewählten Stil, bevor das
+Event gespeichert ist. Die Adresse dafür baut PHP über denselben Weg wie beim
+Ausliefern (`EventAdmin::ajax_komoot_vorschau()`); sie im Browser
+zusammenzusetzen hieße, die Regeln ein zweites Mal zu schreiben, und die
+zweite Fassung wäre die, die irgendwann abweicht.
+
+### Anmeldung: bestätigen, warten, nachrücken
+
+Die Anmeldung läuft über einen Bestätigungslink per E-Mail. Der Platz wird
+**erst bei der Bestätigung** vergeben, nicht beim Absenden – sonst blockierte
+eine nie bestätigte Anmeldung einen Platz. Unbestätigte Anmeldungen verfallen
+nach sieben Tagen und werden täglich aufgeräumt
+(`Scheduler::HOOK_DAILY_EVENTS`).
+
+Eine Anmeldung kann **Begleitpersonen** mitbringen; jede braucht einen Namen
+(bei einer Ausfahrt oder einem Rennen muss auf der Startliste stehen, wer
+mitfährt) und belegt einen eigenen Platz. Höchstens zehn je Anmeldung – das
+Formular ist öffentlich. Gezählt werden deshalb durchgehend **Plätze, nicht
+Anmeldungen**: `RsvpRepository::plaetze()` summiert, `count()` zählt Zeilen,
+und die Kapazität hängt an der ersten der beiden. Der CSV-Export schreibt
+eine Zeile je Person, nicht je Anmeldung – so liest sich eine Startliste.
+
+Ist die Teilnehmerzahl erreicht, landen weitere Anmeldungen auf der
+Warteliste. Bei einer Absage rückt in der Reihenfolge der Bestätigung nach,
+wer als Erster zugesagt hatte, und bekommt sofort eine E-Mail. Eine Gruppe
+rückt nur geschlossen nach, und es wird **streng der Reihe nach** aufgefüllt:
+Passt der Nächste nicht mehr hinein, ist Schluss – auch wenn hinter ihm ein
+Einzelner läge, der noch passte. Sonst überholte eine Einzelperson eine
+wartende Familie, und zwar jedes Mal wieder. Im Einzelfall lässt sich der
+Status im Backend von Hand setzen. Dasselbe
+passiert, wenn die Maximalzahl im Backend angehoben oder auf 0 (unbegrenzt)
+gesetzt wird. Eine Teilnehmerzahl von 0 bedeutet durchgehend „unbegrenzt",
+nie „niemand" – die Unterscheidung steckt in `RsvpRechnung::ist_begrenzt()`.
+
+Das öffentliche Formular hat einen Honigtopf und eine Bremse von zehn
+Versuchen je IP und Stunde. Die Einwilligung zur Speicherung ist Pflichtfeld,
+und `lw16_event_rsvp` ist für DSGVO-Auskunft und -Löschung angemeldet
+(`Privacy::sources()`).
+
+### Die Eventreihe auf der Startseite
+
+Die nächsten Termine als seitlich blätterbare Reihe, ein Event je Ansicht,
+mit Datum, kleinem Titelbild, Auszug und einem Balken der freien Plätze.
+Dieselbe Ausgabe steht über drei Wege bereit – der Aufbau selbst aber nur
+einmal, in `EventsWidget::render()`:
+
+- Block **Nächste Events** für den Seiten-Editor (`EventsBlock`)
+- Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0" autoplay="1" intervall="7"]`
+- klassisches Widget für Widget-Bereiche (`EventsSidebarWidget`)
+- direkt in der Theme-Vorlage, so eingebunden in `theme/front-page.php`
+
+Der **Block ist dynamisch**: Gespeichert werden nur die Einstellungen, die
+Ausgabe kommt bei jedem Seitenaufruf frisch vom Server (`save()` gibt `null`
+zurück). Gespeichertes HTML trüge die Teilnehmerzahlen von gestern im Beitrag
+mit sich herum. Die Vorschau im Editor rendert über `ServerSideRender`
+denselben Weg wie die fertige Seite, statt ihn nachzubauen.
+
+Das Editor-Skript ist **ohne JSX und ohne Build-Schritt** geschrieben
+(`wp.element.createElement`), weil das Plugin ohne Build-Werkzeug auskommt –
+ein einzelner Block wäre kein guter Grund, damit anzufangen. Die
+Abhängigkeitsliste steht deshalb von Hand in `EventsBlock::register_block()`,
+und `block.json` verweist mit `editorScript` auf dieses Handle statt auf eine
+Datei. `EventsBlockTest` hält beide Seiten zusammen: Jede Einstellung aus
+`block.json` muss im Editor bedienbar *und* im Render-Rückruf ausgewertet
+sein – sonst fehlt sie später still auf der Seite.
+
+Das **Blättern macht CSS allein**: `scroll-snap-type: x mandatory` rastet
+jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Pfeile,
+Punkte und Pausenknopf sind Zugabe, stehen im Markup auf `hidden` und blenden
+sich erst mit JavaScript ein – ohne Skript bleibt die Reihe wischbar und mit
+den Pfeiltasten bedienbar. Auf schmalen Bildschirmen sind die Pfeile
+ausgeblendet: dort wird gewischt.
+
+Die Reihe **blättert von allein weiter** (Standard 7 s, einstellbar zwischen
+`INTERVALL_MIN` und `INTERVALL_MAX`; `intervall_ms()` begrenzt den Wert – zu
+kurz ist Flackern statt Blättern). Sie hält an, sobald jemand hinsieht oder
+sie bedient:
+
+- **Pausenknopf** – die bewusste Entscheidung. Sie überlebt Mausbewegungen;
+  wer von Hand pausiert hat, läuft nicht weiter, nur weil der Zeiger die
+  Karte verlässt.
+- **Zeiger darüber oder Tastaturfokus darin** – solange jemand liest oder
+  sich durchtabbt, bewegt sich nichts.
+- **Tab im Hintergrund** (`visibilitychange`) und **Wischen** auf dem Handy.
+- **`prefers-reduced-motion: reduce`** schaltet den Selbstlauf ganz ab – und
+  dann auch den Pausenknopf, der sonst ohne Wirkung dastünde. Bewegung, die
+  von allein losgeht, ist für manche Menschen ein Problem und nicht nur
+  Geschmackssache.
+
+Die **Punkte** (`role="tablist"`) zeigen die Position und springen auf Klick
+zur Karte; die aktive folgt beim Scrollen über `aria-selected`.
+
+Der **Balken** zeigt die Auslastung, nicht die freien Plätze – ein fast
+voller Balken liest sich schneller als eine kleine Zahl. Bei überschrittener
+Grenze (von Hand nachgetragene Zusagen) bleibt er bei 100 %, statt über den
+Rand zu laufen. Ohne Teilnehmerbegrenzung gibt es keinen Balken, sondern nur
+den Hinweis, dass die Anmeldung offen ist; ist die Anmeldung ausgeschaltet,
+fehlt der Bereich ganz.
+
+Ein Event **ohne Beginn taucht nicht auf** – ohne Datum lässt sich weder
+sortieren noch sagen, ob es noch bevorsteht. Gezählt wird ab Mitternacht,
+damit ein Event am eigenen Tag nicht mittags von der Startseite verschwindet.
+Steht nichts an, gibt `render()` einen leeren String zurück und der ganze
+Abschnitt entfällt – eine Überschrift ohne Inhalt sähe nach Fehler aus.
+
+Stil und Skript lädt `EventsModule::braucht_assets()` nur, wo Events
+vorkommen: auf Eventseiten, auf der Startseite, wo das Widget aktiv ist oder
+der Shortcode im Inhalt steht.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

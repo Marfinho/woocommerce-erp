@@ -165,6 +165,7 @@ class ComponentRepository {
 			'supplier'       => self::text( $input, 'supplier' ),
 			'pack_qty'       => $pack_qty,
 			'pack_price_net' => self::decimal_or( $input, 'pack_price_net', 0 ),
+			'order_url'      => Purchase::clean_url( isset( $input['order_url'] ) ? $input['order_url'] : '' ),
 			'lead_time_days' => self::int_or( $input, 'lead_time_days', 0 ),
 			'min_order_qty'  => self::decimal_or( $input, 'min_order_qty', 1 ),
 			'stock_qty'      => self::decimal_or( $input, 'stock_qty', 0 ),

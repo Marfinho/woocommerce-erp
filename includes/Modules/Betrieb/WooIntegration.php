@@ -14,6 +14,7 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Lock;
 use Lindenweg16\Core\Roles;
 
 
@@ -63,7 +64,37 @@ class WooIntegration {
 			return;
 		}
 
-		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+		if ( ! function_exists( 'wc_get_order' ) ) {
+			return;
+		}
+
+		// Erst die Sperre, dann die Prüfung. „Gebucht?" zu fragen und danach
+		// zu buchen genügt nicht: Ein wiederholter Webhook, ein Doppelklick
+		// oder eine Sammelaktion neben einem Webhook laufen gleichzeitig,
+		// beide sehen die Bestellung als ungebucht und beide ziehen den
+		// Bestand ab. Bekommen wir die Sperre nicht, bucht gerade ein
+		// anderer Lauf – dann ist Nichtstun genau richtig.
+		if ( ! Lock::acquire( 'wc_stock_' . (int) $order_id, 10 ) ) {
+			return;
+		}
+
+		try {
+			$this->book_stock_locked( (int) $order_id );
+		} finally {
+			Lock::release( 'wc_stock_' . (int) $order_id );
+		}
+	}
+
+	/**
+	 * Der eigentliche Lagerabgang, unter Sperre.
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	protected function book_stock_locked( $order_id ) {
+		// Frisch laden: Die Prüfung muss den Stand nach der Sperre sehen,
+		// nicht den davor zwischengespeicherten.
+		$order = wc_get_order( $order_id );
+
 		if ( ! $order ) {
 			return;
 		}
@@ -86,11 +117,12 @@ class WooIntegration {
 		// Wurde die Bestellung gepickt, ist bekannt, aus welchem Fach die Ware
 		// kam. Ohne diese Zuordnung bliebe der Abgang platzlos und der
 		// Fachbestand stünde dauerhaft zu hoch.
-		$bins = PicklistRepository::bins_for_order( (int) $order_id );
+		$bins      = PicklistRepository::bins_for_order( (int) $order_id );
+		$zuordnung = StockOwnership::article_map();
 
 		foreach ( $order->get_items() as $item ) {
-			$product_id = $item->get_product_id();
-			$article_id = StockOwnership::article_for_product( $product_id );
+			$product_id = (int) $item->get_product_id();
+			$article_id = isset( $zuordnung[ $product_id ] ) ? $zuordnung[ $product_id ] : 0;
 
 			if ( ! $article_id ) {
 				// Kein Betrieb-Artikel: Das Lager-Modul ist zuständig.
@@ -170,13 +202,19 @@ class WooIntegration {
 
 		$lines = array();
 
+		// Einmal die Zuordnung Produkt zu Artikel, statt je Position eine
+		// Abfrage: Bei zweihundert offenen Bestellungen waren das schnell
+		// mehrere hundert Abfragen für eine einzige Pickliste.
+		$zuordnung = StockOwnership::article_map();
+
 		foreach ( (array) $orders as $order ) {
 			if ( $order->get_meta( self::META_BOOKED ) ) {
 				continue;
 			}
 
 			foreach ( $order->get_items() as $item ) {
-				$article_id = StockOwnership::article_for_product( $item->get_product_id() );
+				$product_id = (int) $item->get_product_id();
+				$article_id = isset( $zuordnung[ $product_id ] ) ? $zuordnung[ $product_id ] : 0;
 
 				if ( ! $article_id ) {
 					continue;

@@ -72,12 +72,14 @@ class UserActivity {
 			'contact_profiles'   => __( 'Kontaktprofil', 'lindenweg16' ),
 			'contact_terms'      => __( 'Konditionen', 'lindenweg16' ),
 			'order_ops'          => __( 'Bestellung', 'lindenweg16' ),
+			'purchases'          => __( 'Nachbestellung', 'lindenweg16' ),
 			'config_parts'       => __( 'Konfigurator-Teil', 'lindenweg16' ),
 			'config_blocks'      => __( 'Sperrbereich', 'lindenweg16' ),
 			'reorder_tokens'     => __( 'Nachbestell-Link', 'lindenweg16' ),
 			'calc_settings'      => __( 'Kalkulationsgrundlage', 'lindenweg16' ),
 			'price_tiers'        => __( 'Preisstaffel', 'lindenweg16' ),
 			'kpi_snapshots'      => __( 'Monatsabschluss', 'lindenweg16' ),
+			'kpi_goals'          => __( 'Quartalsziel', 'lindenweg16' ),
 		);
 	}
 

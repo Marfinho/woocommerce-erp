@@ -103,12 +103,7 @@ class KassenbuchRepository {
 		$data['saldo'] = round( $saldo, 2 );
 
 		// Hash-Verkettung.
-		$hashes                    = HashChain::prepare_insert( 'kassenbuch', $data );
-		$data['hash']              = $hashes['hash'];
-		$data['vorheriger_hash']   = $hashes['vorheriger_hash'];
-
-		$wpdb->insert( self::table(), $data );
-		return (int) $wpdb->insert_id;
+		return HashChain::insert( 'kassenbuch', $data );
 	}
 
 	/**

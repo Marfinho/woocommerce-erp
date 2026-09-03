@@ -101,12 +101,7 @@ class BelegRepository {
 		// Hash-Verkettung. `konto` steht bewusst nicht in den Hash-Feldern:
 		// Die Kette darf nicht brechen, nur weil eine Kostenart nachgetragen
 		// wird – die Belegdaten selbst bleiben davon unberührt.
-		$hashes                   = HashChain::prepare_insert( 'belege', $data );
-		$data['hash']             = $hashes['hash'];
-		$data['vorheriger_hash']  = $hashes['vorheriger_hash'];
-
-		$wpdb->insert( self::table(), $data );
-		return (int) $wpdb->insert_id;
+		return HashChain::insert( 'belege', $data );
 	}
 
 	/**

@@ -28,6 +28,7 @@ use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
+use Lindenweg16\Modules\Betrieb\Admin\TimerBar;
 use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
 
 /**
@@ -102,8 +103,13 @@ class BetriebModule {
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
 		( new PriceSync() )->register();
+		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
+
+		// Die Adminleiste steht auch im Frontend, wenn jemand angemeldet
+		// ist – die Uhr soll dort genauso laufen.
+		( new TimerBar() )->register();
 
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );

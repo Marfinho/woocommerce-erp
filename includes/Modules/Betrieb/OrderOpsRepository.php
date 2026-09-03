@@ -411,6 +411,120 @@ class OrderOpsRepository {
 	}
 
 	/**
+	 * Bestellzeilen, deren WooCommerce-Bestellung es nicht mehr gibt.
+	 *
+	 * Wird eine Bestellung im Shop endgültig gelöscht, hält OrderMirror Wert
+	 * und Datum fest. Für alles, was vor dieser Fassung gelöscht wurde – und
+	 * für Löschungen an den Hooks vorbei –, bleibt nur der Abgleich: Zeile
+	 * zeigt auf eine Bestellnummer, die sich nicht mehr laden lässt.
+	 *
+	 * Papierkorb zählt nicht: Eine Bestellung im Papierkorb lädt weiterhin
+	 * und kann zurückgeholt werden.
+	 *
+	 * @return array
+	 */
+	public static function orphaned() {
+		// Ohne WooCommerce laesst sich keine Bestellung laden – dann waere
+		// jede Zeile verwaist, und das Aufraeumen loeschte den ganzen
+		// Bestand. Lieber gar nichts melden.
+		if ( ! function_exists( 'wc_get_order' ) ) {
+			return array();
+		}
+
+		$out = array();
+
+		foreach ( self::all( array( 'limit' => 5000 ) ) as $row ) {
+			if ( ! OrderSource::from_shop( $row ) ) {
+				continue;
+			}
+
+			if ( self::wc_order( (int) $row['wc_order_id'] ) ) {
+				continue;
+			}
+
+			$out[] = $row;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Eine verwaiste Bestellzeile stornieren.
+	 *
+	 * Storniert, nicht gelöscht: Die Zeile bleibt mit ihrem Protokoll
+	 * stehen und zählt in keiner Kennzahl mehr – `Reporting` sieht nur
+	 * bestätigte Bestellungen an.
+	 *
+	 * Zurückgenommen werden die Lagerbewegungen, und zwar als
+	 * Gegenbuchungen; gelöscht wird keine. Was **nicht** zurückgeht, ist der
+	 * Verbrauch an Kleinteilen und Verpackung: Der wird als Feld
+	 * fortgeschrieben, nicht als Bewegung, und wie viel damals verbraucht
+	 * wurde, steht nirgends nachrechenbar. Aus der heutigen Stückliste
+	 * zurückzurechnen ergäbe eine Zahl, die nur zufällig stimmt. Wer eine
+	 * Testanlage wirklich leeren will, nimmt das Rücksetz-Werkzeug.
+	 *
+	 * @param int    $id     Bestellzeile.
+	 * @param string $reason Begründung.
+	 * @return array {success, message, reversed}
+	 */
+	public static function cancel_orphaned( $id, $reason = '' ) {
+		global $wpdb;
+
+		$row = self::find( $id );
+
+		if ( ! $row ) {
+			return array( 'success' => false, 'message' => __( 'Diese Bestellung gibt es nicht.', 'lindenweg16' ), 'reversed' => 0 );
+		}
+
+		if ( 'storniert' === $row['order_status'] ) {
+			return array( 'success' => false, 'message' => __( 'Diese Bestellung ist bereits storniert.', 'lindenweg16' ), 'reversed' => 0 );
+		}
+
+		$reason = trim( (string) $reason );
+
+		if ( '' === $reason ) {
+			$reason = __( 'Zugehörige WooCommerce-Bestellung wurde gelöscht.', 'lindenweg16' );
+		}
+
+		$zurueck = 0;
+
+		foreach ( StockRepository::by_ref( 'wc_order', (int) $row['wc_order_id'] ) as $movement ) {
+			$ergebnis = StockRepository::void( (int) $movement['id'], $reason );
+
+			if ( $ergebnis['success'] ) {
+				$zurueck++;
+			}
+		}
+
+		$daten = array(
+			'order_status' => 'storniert',
+			'updated_at'   => current_time( 'mysql', true ),
+		);
+
+		if ( empty( $row['source_deleted_at'] ) ) {
+			$daten['source_deleted_at'] = current_time( 'mysql', true );
+		}
+
+		$wpdb->update( self::table(), $daten, array( 'id' => (int) $row['id'] ) );
+		BetriebAudit::record( 'update', 'order_ops', (int) $row['id'], $row, $daten, $reason );
+
+		return array(
+			'success'  => true,
+			'reversed' => $zurueck,
+			'message'  => sprintf(
+				/* translators: %d: Anzahl zurückgenommener Bewegungen. */
+				_n(
+					'Bestellung storniert, %d Lagerbewegung zurückgenommen.',
+					'Bestellung storniert, %d Lagerbewegungen zurückgenommen.',
+					$zurueck,
+					'lindenweg16'
+				),
+				$zurueck
+			),
+		);
+	}
+
+	/**
 	 * Bestellwert – aus WooCommerce oder aus dem manuellen Feld.
 	 *
 	 * @param array $order Bestellung.

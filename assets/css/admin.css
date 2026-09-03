@@ -124,3 +124,20 @@
 .lw16-pos-kachel-name { font-weight: 600; line-height: 1.25; }
 .lw16-pos-kachel-sku { font-size: 11px; color: #646970; }
 .lw16-pos-kachel-preis { font-weight: 700; color: #2271b1; }
+
+/* Anleitungen: eingebettete Betriebsanleitungen aus docs/ */
+.lw16-handbuch-kopf {
+	color: #646970;
+	margin: 0 0 10px;
+}
+.lw16-handbuch-rahmen {
+	display: block;
+	width: 100%;
+	/* Der Rahmen soll bis zum unteren Fensterrand reichen: 220px sind
+	   Adminleiste, Seitentitel, Reiter und der Fussbereich von wp-admin. */
+	height: calc(100vh - 220px);
+	min-height: 480px;
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+	background: #fff;
+}

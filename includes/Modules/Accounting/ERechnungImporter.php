@@ -112,12 +112,7 @@ class ERechnungImporter {
 		);
 
 		// Hash-Verkettung (über zentrale HashChain wie alle anderen Tabellen).
-		$hashes                   = HashChain::prepare_insert( 'erechnung_eingang', $row );
-		$row['hash']              = $hashes['hash'];
-		$row['vorheriger_hash']   = $hashes['vorheriger_hash'];
-
-		$wpdb->insert( self::table(), $row );
-		$id = (int) $wpdb->insert_id;
+		$id = HashChain::insert( 'erechnung_eingang', $row );
 
 		AuditLog::record( 'erechnung_empfangen', 'erechnung', $id, array(
 			'format'  => $row['format'],

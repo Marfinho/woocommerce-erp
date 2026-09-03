@@ -14,6 +14,7 @@ use Lindenweg16\Admin\SettingsPage;
 use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
+use Lindenweg16\Admin\HandbuchPage;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
@@ -22,6 +23,7 @@ use Lindenweg16\Modules\Retention\RetentionModule;
 use Lindenweg16\Modules\Support\SupportModule;
 use Lindenweg16\Modules\POS\POSModule;
 use Lindenweg16\Modules\Marketing\MarketingModule;
+use Lindenweg16\Modules\Events\EventsModule;
 use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Configurator\ConfiguratorModule;
 
@@ -81,6 +83,7 @@ class Plugin {
 			( new ResetPage() )->register();
 			( new Dashboard() )->register();
 			( new GlobalSearch() )->register();
+			( new HandbuchPage() )->register();
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.
@@ -93,6 +96,7 @@ class Plugin {
 			'support'    => new SupportModule(),
 			'pos'        => new POSModule(),
 			'marketing'  => new MarketingModule(),
+			'events'     => new EventsModule(),
 			'betrieb'    => new BetriebModule(),
 			'konfigurator' => new ConfiguratorModule(),
 		);

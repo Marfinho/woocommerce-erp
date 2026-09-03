@@ -207,6 +207,36 @@ class CapacityPlanner {
 	 * @param float $minutes_each  Minuten je Wechsel.
 	 * @return float Stunden.
 	 */
+	/**
+	 * Wochen in einem Zeitraum, als Bruch.
+	 *
+	 * Ein Tag ist ein Siebtel einer Woche, nicht eine ganze. Die frühere
+	 * Rechnung im Reporting nahm die Differenz zweier Zeitstempel und klemmte
+	 * sie auf mindestens eins: Ein Tagesbericht verglich damit einen Tag
+	 * Druckzeit gegen eine ganze Woche Kapazität und meldete ein Siebtel der
+	 * echten Auslastung. Ein Monat war um einen Tag zu kurz, weil der letzte
+	 * Tag nicht mitzählte.
+	 *
+	 * @param string $von Von (Y-m-d).
+	 * @param string $bis Bis (Y-m-d).
+	 * @return float
+	 */
+	public static function weeks( $von, $bis ) {
+		return Period::days( $von, $bis ) / 7;
+	}
+
+	/**
+	 * Verfügbare Druckstunden eines Zeitraums.
+	 *
+	 * @param int   $printers  Produktive Geräte.
+	 * @param float $net_hours Nettostunden je Gerät und Woche.
+	 * @param float $weeks     Wochen.
+	 * @return float
+	 */
+	public static function capacity_hours( $printers, $net_hours, $weeks ) {
+		return max( 0, (int) $printers ) * max( 0.0, (float) $net_hours ) * max( 0.0, (float) $weeks );
+	}
+
 	public static function operator_hours( $plate_changes, $minutes_each ) {
 		return (float) $plate_changes * (float) $minutes_each / 60;
 	}

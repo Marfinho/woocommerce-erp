@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '21';
+	const DB_VERSION = '25';
 
 	/**
 	 * Aktivierungsroutine.
@@ -701,6 +701,40 @@ class Installer {
 			PRIMARY KEY  (id),
 			UNIQUE KEY kampagne_beleg (kampagne_id, beleg_id),
 			KEY beleg_id (beleg_id)
+		) {$charset_collate};";
+
+		// --- Modul 12: Events ---------------------------------------------
+		// Die Events selbst sind ein Custom Post Type - oeffentlicher Inhalt
+		// mit Titel, Text und Bild. Die Anmeldungen sind Bewegungsdaten und
+		// liegen deshalb hier.
+		//
+		// email ist wie in den uebrigen Tabellen auf 191 Zeichen begrenzt:
+		// Laenger passt die Spalte unter utf8mb4 nicht mehr in einen Index.
+		//
+		// begleiter haelt die Namen der Begleitpersonen als JSON, plaetze die
+		// Summe daraus einschliesslich der anmeldenden Person. Die Spalte ist
+		// abgeleitet, steht aber trotzdem in der Tabelle: Die Belegung eines
+		// Events ist damit eine Summe statt einer Zeilenzahl - und das ist die
+		// Zahl, an der die Kapazitaet haengt.
+		$tables[] = "CREATE TABLE {$p}event_rsvp (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			event_id BIGINT UNSIGNED NOT NULL,
+			user_id BIGINT UNSIGNED NULL,
+			name VARCHAR(255) NOT NULL,
+			email VARCHAR(191) NOT NULL,
+			begleiter TEXT NULL,
+			plaetze SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+			notiz TEXT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'offen',
+			token_hash CHAR(64) NULL,
+			token_ablauf DATETIME NULL,
+			bestaetigt_am DATETIME NULL,
+			abgesagt_am DATETIME NULL,
+			erstellt_am DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY event_email (event_id, email),
+			KEY event_status (event_id, status),
+			KEY token_hash (token_hash)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}gobd_pruefung (

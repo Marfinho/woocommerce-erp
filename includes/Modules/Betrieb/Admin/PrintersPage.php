@@ -13,6 +13,7 @@ use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\MaintenanceChecklist;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
@@ -392,11 +393,55 @@ class PrintersPage {
 
 		$this->render_route_hint();
 
+		$this->render_label_pdf_link();
+
 		echo '<div class="lw16-labels">';
 		foreach ( $printers as $printer ) {
 			echo DeviceLabel::render( $printer ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escapt in render().
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Dieselben Aufkleber für den Etikettendrucker.
+	 *
+	 * Die Kacheln darunter sind zum Ausdrucken auf Papier und Ankleben. Wer
+	 * einen Brother QL stehen hat, will sie auf der Rolle – und zwar im
+	 * selben Format wie Lagerplätze und Artikel, damit nicht für jede Sorte
+	 * eine andere Rolle eingelegt werden muss.
+	 */
+	protected function render_label_pdf_link() {
+		$roll = LabelSheet::roll( LabelSheet::DEFAULT_ROLL );
+
+		echo '<p>';
+		printf(
+			'<a class="button button-primary" href="%s">%s</a> ',
+			esc_url(
+				wp_nonce_url(
+					add_query_arg(
+						array(
+							'action' => 'lw16_betrieb_labels',
+							'was[]'  => 'printers',
+							'format' => LabelSheet::DEFAULT_ROLL,
+						),
+						admin_url( 'admin-post.php' )
+					),
+					'lw16_betrieb_export'
+				)
+			),
+			esc_html__( 'Aufkleber als PDF für den Etikettendrucker', 'lindenweg16' )
+		);
+		printf(
+			'<span class="description">%s</span>',
+			esc_html(
+				sprintf(
+					/* translators: %s: Rollenformat. */
+					__( 'Format %s – dasselbe wie bei Lagerplätzen und Artikeln. Eine Seite ist ein Etikett; im Druckdialog den Brother wählen und die Skalierung ausschalten.', 'lindenweg16' ),
+					$roll['label']
+				)
+			)
+		);
+		echo '</p>';
 	}
 
 	/**

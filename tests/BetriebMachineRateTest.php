@@ -222,4 +222,69 @@ class BetriebMachineRateTest extends TestCase {
 		$this->assertSame( 0, $result['printer_count'] );
 		$this->assertEqualsWithDelta( 0.0725, $result['rate'], 0.00001 );
 	}
+
+	/**
+	 * Ein Drucker zählt erst ab seiner Anschaffung.
+	 *
+	 * Ohne diese Prüfung sinkt im Verlaufsgraphen rückwirkend die Auslastung
+	 * jedes vergangenen Monats, sobald ein Gerät dazukommt: Die Kapazität von
+	 * damals stiege durch einen Kauf von heute. Die Geschichte änderte sich,
+	 * ohne dass jemand etwas an ihr getan hätte.
+	 */
+	public function test_ein_drucker_zaehlt_erst_ab_seiner_anschaffung() {
+		$drucker = array(
+			array( 'status' => 'betrieb', 'acquired_on' => '2024-03-01' ),
+			array( 'status' => 'betrieb', 'acquired_on' => '2026-07-15' ),
+		);
+
+		$this->assertSame( 1, MachineRate::productive_at( $drucker, '2026-01-31' ) );
+		$this->assertSame( 2, MachineRate::productive_at( $drucker, '2026-08-31' ) );
+
+		// Genau am Anschaffungstag zählt er mit.
+		$this->assertSame( 2, MachineRate::productive_at( $drucker, '2026-07-15' ) );
+	}
+
+	/**
+	 * Nur produktive Geräte zählen – wie im Flottensatz.
+	 */
+	public function test_nur_produktive_geraete_zaehlen() {
+		$drucker = array(
+			array( 'status' => 'betrieb', 'acquired_on' => '2024-01-01' ),
+			array( 'status' => 'wartung', 'acquired_on' => '2024-01-01' ),
+			array( 'status' => 'defekt', 'acquired_on' => '2024-01-01' ),
+			array( 'status' => 'reserve', 'acquired_on' => '2024-01-01' ),
+		);
+
+		$this->assertSame( 2, MachineRate::productive_at( $drucker, '2026-08-31' ) );
+	}
+
+	/**
+	 * Ein fehlendes Anschaffungsdatum schliesst nicht aus.
+	 *
+	 * Dass die Angabe fehlt, heisst nicht, dass es das Gerät nicht gab. Wer
+	 * hier ausschlösse, setzte die Kapazität älterer Anlagen auf null und
+	 * bekäme eine Auslastung ohne Wert statt einer ungenauen.
+	 */
+	public function test_fehlendes_anschaffungsdatum_schliesst_nicht_aus() {
+		$drucker = array(
+			array( 'status' => 'betrieb', 'acquired_on' => null ),
+			array( 'status' => 'betrieb' ),
+			array( 'status' => 'betrieb', 'acquired_on' => '' ),
+		);
+
+		$this->assertSame( 3, MachineRate::productive_at( $drucker, '2020-01-01' ) );
+	}
+
+	/**
+	 * Ohne Stichtag zählt jedes produktive Gerät.
+	 */
+	public function test_ohne_stichtag_zaehlt_jedes_geraet() {
+		$drucker = array(
+			array( 'status' => 'betrieb', 'acquired_on' => '2099-01-01' ),
+			array( 'status' => 'betrieb', 'acquired_on' => '2020-01-01' ),
+		);
+
+		$this->assertSame( 2, MachineRate::productive_at( $drucker, '' ) );
+	}
 }
+

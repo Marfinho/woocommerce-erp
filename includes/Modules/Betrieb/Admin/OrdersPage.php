@@ -19,6 +19,7 @@ use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\DeliveryNote;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
+use Lindenweg16\Modules\Betrieb\OrderSource;
 
 /**
  * Rendert die Bestellseite.
@@ -37,6 +38,7 @@ class OrdersPage {
 		add_action( 'admin_post_lw16_betrieb_manual_order', array( $this, 'handle_manual' ) );
 		add_action( 'admin_post_lw16_betrieb_confirm_order', array( $this, 'handle_confirm' ) );
 		add_action( 'admin_post_lw16_betrieb_delivery_note', array( $this, 'handle_delivery_note' ) );
+		add_action( 'admin_post_lw16_betrieb_orphan_order', array( $this, 'handle_orphan' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
@@ -188,11 +190,14 @@ class OrdersPage {
 		$items = array();
 		$brutto_uvp = 0.0;
 
+		// Einmal alle Artikel, nicht je Position eine Abfrage.
+		$artikel = ArticleRepository::all_by_id();
+
 		foreach ( $mengen as $article_id => $qty ) {
 			if ( $qty <= 0 ) {
 				continue;
 			}
-			$article = ArticleRepository::find( (int) $article_id );
+			$article = isset( $artikel[ (int) $article_id ] ) ? $artikel[ (int) $article_id ] : null;
 			if ( ! $article ) {
 				continue;
 			}
@@ -301,10 +306,101 @@ class OrdersPage {
 		// phpcs:enable WordPress.Security.NonceVerification
 
 		$this->render_drafts();
+		$this->render_orphans();
 		$this->render_list();
 		$this->render_manual_form();
 
 		echo '</div>';
+	}
+
+	/**
+	 * Bestellungen, deren Shop-Bestellung gelöscht wurde.
+	 *
+	 * Sie stehen ganz oben, weil sie eine Entscheidung brauchen und weil man
+	 * sie sonst nur an einer leeren Datumsspalte weiter unten erkennt.
+	 */
+	protected function render_orphans() {
+		$orphans = OrderOpsRepository::orphaned();
+
+		if ( ! $orphans ) {
+			return;
+		}
+
+		echo '<h2>' . esc_html__( 'Ohne Shop-Bestellung', 'lindenweg16' ) . '</h2>';
+		printf(
+			'<p>%s</p>',
+			esc_html__( 'Zu diesen Zeilen gibt es in WooCommerce keine Bestellung mehr. Wurde sie hier gelöscht, während das Plugin lief, sind Wert und Datum festgehalten und die Kennzahlen bleiben richtig. Wurde sie vorher gelöscht, fehlen die Zahlen – dann zählt die Zeile als Bestellung über 0,00 € ohne Datum mit.', 'lindenweg16' )
+		);
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Stornieren nimmt die Lagerbewegungen dieser Bestellung als Gegenbuchungen zurück und nimmt die Zeile aus allen Kennzahlen. Gelöscht wird nichts. Der Verbrauch an Kleinteilen und Verpackung geht nicht zurück – er wird als Feld fortgeschrieben, und wie viel damals verbraucht wurde, steht nirgends nachrechenbar. Wer eine Testanlage wirklich leeren will, nimmt Einstellungen → Zurücksetzen.', 'lindenweg16' )
+		);
+
+		echo '<table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			__( 'Shop-Nr.', 'lindenweg16' ),
+			__( 'Datum', 'lindenweg16' ),
+			__( 'Wert', 'lindenweg16' ),
+			__( 'Zustand', 'lindenweg16' ),
+			'',
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $orphans as $order ) {
+			$hat = OrderSource::has_snapshot( $order );
+
+			echo '<tr>';
+			printf( '<td>#%d</td>', (int) $order['wc_order_id'] );
+			printf( '<td>%s</td>', esc_html( $order['manual_order_date'] ? mysql2date( 'd.m.Y', $order['manual_order_date'] ) : '—' ) );
+			printf(
+				'<td>%s</td>',
+				esc_html( null === $order['manual_order_value'] ? '—' : number_format_i18n( (float) $order['manual_order_value'], 2 ) . ' €' )
+			);
+			printf(
+				'<td><span class="lw16-ampel lw16-ampel--%s">%s</span> %s</td>',
+				esc_attr( $hat ? 'gelb' : 'rot' ),
+				esc_html( $hat ? __( 'Zahlen erhalten', 'lindenweg16' ) : __( 'ohne Zahlen', 'lindenweg16' ) ),
+				esc_html( OrderSource::explain( $order ) )
+			);
+
+			echo '<td>';
+
+			if ( 'storniert' === $order['order_status'] ) {
+				echo esc_html__( 'storniert', 'lindenweg16' );
+			} else {
+				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+				wp_nonce_field( self::NONCE );
+				echo '<input type="hidden" name="action" value="lw16_betrieb_orphan_order" />';
+				printf( '<input type="hidden" name="order_op_id" value="%d" />', (int) $order['id'] );
+				printf(
+					'<button class="button" onclick="return confirm(%s)">%s</button>',
+					esc_attr( wp_json_encode( __( 'Bestellung stornieren und die Lagerbewegungen zurücknehmen?', 'lindenweg16' ) ) ),
+					esc_html__( 'Stornieren', 'lindenweg16' )
+				);
+				echo '</form>';
+			}
+
+			echo '</td></tr>';
+		}
+
+		echo '</tbody></table>';
+	}
+
+	/**
+	 * Eine verwaiste Bestellung stornieren.
+	 */
+	public function handle_orphan() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$id = isset( $_POST['order_op_id'] ) ? (int) $_POST['order_op_id'] : 0;
+
+		$result = OrderOpsRepository::cancel_orphaned( $id );
+
+		$this->redirect( $result['message'], $result['success'] ? 'success' : 'error' );
 	}
 
 	/**

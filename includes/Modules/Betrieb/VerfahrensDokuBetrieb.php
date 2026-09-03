@@ -99,6 +99,7 @@ class VerfahrensDokuBetrieb {
 			'work_orders'       => __( 'Fertigungsaufträge für Halbzeuge und Baugruppen', 'lindenweg16' ),
 			'maintenance_log'   => __( 'Wartungsprotokoll je Gerät', 'lindenweg16' ),
 			'supplies'          => __( 'Verbrauchsmaterial ohne eigene Stückliste', 'lindenweg16' ),
+			'purchases'         => __( 'Nachbestellungen bei Lieferanten; der Bestand steigt erst mit dem Wareneingang, und der lässt sich je Bestellung nur einmal buchen', 'lindenweg16' ),
 
 			// Lagerort und Kommissionierung.
 			'storage_bins'      => __( 'Lagerplätze; der Platz hängt an der Bewegung, nicht als zweites Bestandsfeld', 'lindenweg16' ),
@@ -108,6 +109,7 @@ class VerfahrensDokuBetrieb {
 
 			// Verkauf und Konditionen.
 			'order_op_items'    => __( 'Positionen manuell erfasster Bestellungen', 'lindenweg16' ),
+			'order_ops'         => __( 'Betriebsdaten je Bestellung; source_deleted_at hält fest, wann die zugehörige WooCommerce-Bestellung gelöscht wurde, Wert und Datum werden dabei in die Zeile geschrieben', 'lindenweg16' ),
 			'price_tiers'       => __( 'Standard-Rabattstaffel, historisiert über valid_from', 'lindenweg16' ),
 			'bundles'           => __( 'Benannte Bestellarten für den Vergleich der Preisebenen', 'lindenweg16' ),
 			'bundle_items'      => __( 'Positionen einer Bestellart', 'lindenweg16' ),
@@ -123,6 +125,7 @@ class VerfahrensDokuBetrieb {
 			'user_rates'        => __( 'Stundenlöhne je Nutzer mit Stichtag; frühere Sätze bleiben stehen, damit vergangene Kosten vergangene Kosten bleiben', 'lindenweg16' ),
 			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
 			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
+			'kpi_goals'         => __( 'Ziele und Alarmgrenzen je Quartal; kürzere und längere Zeiträume werden daraus abgeleitet, Summengrößen nach Tagen verteilt, Verhältnisgrößen unverändert', 'lindenweg16' ),
 		);
 
 		foreach ( $tables as $table => $description ) {

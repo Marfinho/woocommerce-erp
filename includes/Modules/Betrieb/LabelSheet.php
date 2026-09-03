@@ -102,6 +102,20 @@ class LabelSheet {
 	 *
 	 * @return array
 	 */
+	/**
+	 * Das Format, das im Betrieb liegt.
+	 *
+	 * Eine Anlage hat einen Etikettendrucker, und in dem liegt eine Rolle.
+	 * Jede Stelle, die Etiketten erzeugt, geht deshalb von derselben aus –
+	 * sonst kommt aus dem einen Knopf ein Bogen für die schmale und aus dem
+	 * anderen einer für die breite Rolle, und beim Drucken merkt man es erst
+	 * am schiefen Ergebnis.
+	 *
+	 * Steht hier, nicht in den Aufrufern: Wer die Rolle wechselt, ändert
+	 * eine Zeile.
+	 */
+	const DEFAULT_ROLL = 'dk11201';
+
 	public static function rolls() {
 		return array(
 			'dk11209'  => array(
@@ -196,7 +210,7 @@ class LabelSheet {
 	public static function roll( $key ) {
 		$rolls = self::rolls();
 
-		return isset( $rolls[ $key ] ) ? $rolls[ $key ] : $rolls['dk11209'];
+		return isset( $rolls[ $key ] ) ? $rolls[ $key ] : $rolls[ self::DEFAULT_ROLL ];
 	}
 
 	/**

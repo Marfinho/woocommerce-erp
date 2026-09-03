@@ -199,6 +199,7 @@ if ( ! defined( 'LW16_VERSION' ) ) {
 // Kernbausteine.
 require $lw16_root . '/includes/Core/Assets.php';
 require $lw16_root . '/includes/Core/Calc.php';
+require $lw16_root . '/includes/Core/Lock.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';
 require $lw16_root . '/includes/Core/ResetTool.php';
@@ -208,6 +209,10 @@ require $lw16_root . '/includes/Modules/Accounting/BelegOcr.php';
 require $lw16_root . '/includes/Modules/Accounting/FeeExtractor.php';
 require $lw16_root . '/includes/Modules/Accounting/Kontenrahmen.php';
 require $lw16_root . '/includes/Modules/Marketing/Kampagnenrechnung.php';
+require $lw16_root . '/includes/Modules/Events/RsvpRechnung.php';
+require $lw16_root . '/includes/Modules/Events/EventFields.php';
+require $lw16_root . '/includes/Modules/Events/EventsWidget.php';
+require $lw16_root . '/includes/Modules/Events/EventsBlock.php';
 require $lw16_root . '/includes/Modules/Production/DhlTracking.php';
 require $lw16_root . '/includes/Modules/POS/POSModule.php';
 
@@ -232,6 +237,11 @@ foreach ( array(
 	'DiscountResolver',
 	'CapacityPlanner',
 	'Kpi',
+	'RepeatRate',
+	'Stopwatch',
+	'Period',
+	'KpiGoals',
+	'TrendChart',
 	'DeviceLabel',
 	'QrCode',
 	'ScanResolver',
@@ -244,6 +254,8 @@ foreach ( array(
 	'DeliveryNote',
 	'ThreeMf',
 	'AnalyseExport',
+	'TimeRepository',
+	'TimeCategoryGuess',
 	'ModelFile',
 	'KpiMeter',
 	'AccessProfiles',
@@ -251,6 +263,8 @@ foreach ( array(
 	'UserActivity',
 	'MaintenanceChecklist',
 	'LabelSheet',
+	'Purchase',
+	'OrderSource',
 	'BetriebModule',
 	'Consistency',
 	'ReorderToken',

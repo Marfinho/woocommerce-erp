@@ -41,6 +41,50 @@ class MachineRate {
 	const PRODUCTIVE_STATUS = array( 'betrieb', 'wartung' );
 
 	/**
+	 * Wie viele Geräte an einem Stichtag produziert haben.
+	 *
+	 * Ein Drucker, der erst nächstes Jahr gekauft wird, hat die Kapazität
+	 * des letzten Sommers nicht erhöht. Ohne diese Prüfung sinkt im
+	 * Verlaufsgraphen rückwirkend die Auslastung jedes vergangenen Monats,
+	 * sobald ein Gerät dazukommt – die Geschichte änderte sich durch einen
+	 * Kauf von heute.
+	 *
+	 * Ein Gerät ohne Anschaffungsdatum zählt mit: Dass die Angabe fehlt,
+	 * heisst nicht, dass es das Gerät nicht gab.
+	 *
+	 * Den Status kann diese Rechnung nicht rückdatieren – er wird nicht
+	 * historisiert. Ein heute defektes Gerät fehlt deshalb auch in der
+	 * Vergangenheit.
+	 *
+	 * @param array  $printers Geräte.
+	 * @param string $stichtag Stichtag (Y-m-d), leer für alle.
+	 * @return int
+	 */
+	public static function productive_at( array $printers, $stichtag = '' ) {
+		$anzahl  = 0;
+		$pruefen = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $stichtag );
+
+		foreach ( $printers as $printer ) {
+			$printer = (array) $printer;
+			$status  = isset( $printer['status'] ) ? (string) $printer['status'] : 'betrieb';
+
+			if ( ! in_array( $status, self::PRODUCTIVE_STATUS, true ) ) {
+				continue;
+			}
+
+			$gekauft = isset( $printer['acquired_on'] ) ? (string) $printer['acquired_on'] : '';
+
+			if ( $pruefen && preg_match( '/^\d{4}-\d{2}-\d{2}$/', $gekauft ) && $gekauft > (string) $stichtag ) {
+				continue;
+			}
+
+			$anzahl++;
+		}
+
+		return $anzahl;
+	}
+
+	/**
 	 * Satz eines einzelnen Geräts.
 	 *
 	 * Gerätefelder (lifetime_h, power_kw, spare_parts_per_h) überschreiben die

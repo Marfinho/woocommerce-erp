@@ -139,13 +139,20 @@ class StockLedger {
 	public static function pick( array $balances, $article, $color ) {
 		$row = isset( $balances[ (int) $article ][ (string) $color ] ) ? $balances[ (int) $article ][ (string) $color ] : array();
 
-		$result = array(
-			'lager'      => isset( $row['lager'] ) ? (float) $row['lager'] : 0.0,
-			'kommission' => isset( $row['kommission'] ) ? (float) $row['kommission'] : 0.0,
-			'unterwegs'  => isset( $row['unterwegs'] ) ? (float) $row['unterwegs'] : 0.0,
-		);
+		// Über die bekannten Lagerorte laufen, nicht über drei fest
+		// geschriebene Namen: Käme ein vierter dazu, fehlte er in der Summe,
+		// ohne dass irgendwo etwas rot wird – der Gesamtbestand wäre zu
+		// niedrig und jede Spalte für sich richtig.
+		$result = array();
+		$gesamt = 0.0;
 
-		$result['gesamt'] = $result['lager'] + $result['kommission'] + $result['unterwegs'];
+		foreach ( array_keys( self::location_labels() ) as $location ) {
+			$menge               = isset( $row[ $location ] ) ? (float) $row[ $location ] : 0.0;
+			$result[ $location ] = $menge;
+			$gesamt             += $menge;
+		}
+
+		$result['gesamt'] = $gesamt;
 
 		return $result;
 	}

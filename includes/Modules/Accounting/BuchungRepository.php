@@ -84,12 +84,7 @@ class BuchungRepository {
 		$data = wp_parse_args( $data, $defaults );
 
 		// Hash-Verkettung.
-		$hashes             = HashChain::prepare_insert( 'buchungen', $data );
-		$data['hash']             = $hashes['hash'];
-		$data['vorheriger_hash']  = $hashes['vorheriger_hash'];
-
-		$wpdb->insert( self::table(), $data );
-		return (int) $wpdb->insert_id;
+		return HashChain::insert( 'buchungen', $data );
 	}
 
 	/**

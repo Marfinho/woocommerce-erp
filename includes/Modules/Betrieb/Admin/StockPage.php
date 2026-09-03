@@ -152,7 +152,9 @@ class StockPage {
 	 * Seite ausgeben.
 	 */
 	public function render() {
-		$this->require_cap();
+		// Wie im Menue: Buchen ist Erfassen, und wer bucht, muss den
+		// Bestand sehen, gegen den er bucht.
+		$this->require_cap( 'lw16_capture' );
 
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Lager', 'lindenweg16' ) . '</h1>';
 		echo '<p>' . esc_html__( 'Der Bestand ist die Summe aller Bewegungen. Es gibt kein Bestandsfeld, das driften könnte – Korrekturen sind eigene Buchungen mit Begründung.', 'lindenweg16' ) . '</p>';

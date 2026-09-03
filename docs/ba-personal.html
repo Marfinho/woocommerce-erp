@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betriebsanleitung Personal · Lindenweg16 ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="ba.css">
+</head>
+<body>
+<div class="seite">
+
+<header class="kopf">
+	<div class="marke">Lindenweg16 ERP · Betriebsanleitung 3 von 4</div>
+	<h1>Personal</h1>
+	<p class="unter">Zwei Anleitungen in einer. Die Kapitel 2 bis 5 sind für alle, die ihre Arbeitszeit aufschreiben. Ab Kapitel 6 geht es um Löhne, Rechte und Auswertungen – das braucht nur, wer Personal führt.</p>
+	<nav class="wegweiser">
+		<a href="index.html">Übersicht</a>
+		<a href="ba-produktion.html">Produktion</a>
+		<a href="ba-versand.html">Versand</a>
+		<a class="hier" href="ba-personal.html">Personal</a>
+		<a href="ba-admin.html">Administration</a>
+	</nav>
+</header>
+
+<div class="inhalt">
+	<h2>Inhalt</h2>
+	<ol>
+		<li><a href="#warum">Warum überhaupt Zeit erfassen?</a></li>
+		<li><a href="#anmelden">Anmelden und den Weg finden</a></li>
+		<li><a href="#uhr">Die Stoppuhr: mitlaufen lassen</a></li>
+		<li><a href="#stoppen">Die Uhr stoppen und buchen</a></li>
+		<li><a href="#nachtragen">Zeit von Hand nachtragen</a></li>
+		<li><a href="#kategorien">Die Kategorien richtig wählen</a></li>
+		<li><a href="#handy">Zeit am Handy erfassen</a></li>
+		<li><a href="#auftragszeit">Zeit an einem Auftrag</a></li>
+		<li><a href="#benutzer">Benutzer &amp; Rechte: die Übersicht</a></li>
+		<li><a href="#profile">Rechteprofile vergeben</a></li>
+		<li><a href="#lohn">Stundenlöhne pflegen</a></li>
+		<li><a href="#protokoll">Das Protokoll eines Nutzers</a></li>
+		<li><a href="#stundensatz">Gerechnet gegen bezahlt</a></li>
+		<li><a href="#neuer">Einen neuen Mitarbeiter anlegen</a></li>
+		<li><a href="#datenschutz">Datenschutz: was hier steht und was nicht</a></li>
+		<li><a href="#fehler">Wenn etwas nicht geht</a></li>
+	</ol>
+</div>
+
+<h2 id="warum"><span class="nr">1.</span> Warum überhaupt Zeit erfassen?</h2>
+
+<p>Nicht zur Kontrolle. Die erfasste Zeit hat drei ganz praktische Zwecke:</p>
+
+<ul>
+	<li><strong>Der Preis stimmt.</strong> In jedem Artikelpreis steckt Handarbeit. Wenn niemand aufschreibt, wie lange das Entgraten dauert, rechnet die Kalkulation mit einer Schätzung – und die ist meistens zu niedrig.</li>
+	<li><strong>Die Woche bleibt machbar.</strong> Es gibt ein Wochenbudget an Stunden. Nur wer erfasst, sieht rechtzeitig, dass es nicht reicht.</li>
+	<li><strong>Der Lohn ist nachvollziehbar.</strong> Aus Stunden mal Stundenlohn entstehen die Lohnkosten – ohne Excel-Zettel dazwischen.</li>
+</ul>
+
+<div class="kasten merke">
+	<span class="titel">Fünf Minuten am Tag</span>
+	<p>Zeiterfassung kostet nur dann Nerven, wenn man sie am Monatsende rekonstruiert. Läuft die Uhr mit, sind es zwei Klicks – morgens starten, abends stoppen.</p>
+</div>
+
+<h2 id="anmelden"><span class="nr">2.</span> Anmelden und den Weg finden</h2>
+
+<ol class="schritte">
+	<li>Browser öffnen, Adresse der Website plus <code>/wp-admin</code> eintippen, Enter.</li>
+	<li>Benutzername und Passwort eintragen, auf <strong>Anmelden</strong> klicken.</li>
+	<li>Links im schwarzen Menü auf <strong>Betrieb</strong>, dann auf <strong>Zeiterfassung</strong> klicken.</li>
+</ol>
+
+<p><span class="weg">Betrieb → Zeiterfassung</span></p>
+
+<figure>
+	<img src="bilder/zeit-seite.png" alt="Die Seite Zeiterfassung mit Eintragsformular, Wochenübersicht und der Liste der letzten Einträge">
+	<figcaption>Die ganze Seite: oben das Formular, in der Mitte die Wochenübersicht, unten deine letzten Einträge.</figcaption>
+</figure>
+
+<h2 id="uhr"><span class="nr">3.</span> Die Stoppuhr: mitlaufen lassen</h2>
+
+<p>Ganz oben im Bildschirm läuft eine schwarze Leiste quer über die Seite. Dort steht ein Uhrensymbol mit der Beschriftung <strong>Zeit starten</strong>.</p>
+
+<figure class="schmal">
+	<img src="bilder/adminleiste-uhr.png" alt="Die schwarze Leiste am oberen Bildschirmrand mit dem Uhrensymbol und der Beschriftung Zeit starten">
+	<figcaption>Die Uhr in der oberen Leiste. Sie ist auf jeder Seite da – auch auf der Website selbst, nicht nur im Verwaltungsbereich.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Wenn du anfängst zu arbeiten: einmal auf <strong>Zeit starten</strong> klicken.</li>
+	<li>Die Beschriftung wechselt und zeigt von da an die laufende Zeit.</li>
+	<li>Jetzt arbeitest du ganz normal weiter. Die Uhr merkt sich nebenbei, auf welchen Seiten du warst.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">Die Uhr läuft auch weiter, wenn du den Browser schließt</span>
+	<p>Sie hängt an deinem Benutzerkonto, nicht am Browserfenster. Ein versehentlich geschlossener Tab kostet dich also nichts. Umgekehrt heißt das aber auch: Sie läuft nachts weiter, wenn du sie nicht stoppst – siehe nächstes Kapitel.</p>
+</div>
+
+<h2 id="stoppen"><span class="nr">4.</span> Die Uhr stoppen und buchen</h2>
+
+<p>Wenn du fertig bist, geh auf <span class="weg">Betrieb → Zeiterfassung</span>. Ganz oben steht dann der Abschnitt <strong>Laufende Zeit</strong>.</p>
+
+<figure>
+	<img src="bilder/zeit-stoppuhr.png" alt="Abschnitt Laufende Zeit mit der verstrichenen Zeit, einer Aufstellung der besuchten Bereiche, Feldern für Datum, Kategorie, Stunden und Tätigkeit sowie den Knöpfen Stoppen und erfassen und Verwerfen">
+	<figcaption>Die laufende Uhr. Unter der Zeit steht, wo du während dieser Zeit gearbeitet hast – als Erinnerungshilfe, nicht als Vorgabe.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Lies die Zeile <em>„Währenddessen warst du hier: …“</em>. Sie hilft dir, dich zu erinnern, was du gemacht hast.</li>
+	<li>Wähle im Auswahlfeld die <strong>Kategorie</strong>, die am besten passt (Kapitel 6 erklärt sie).</li>
+	<li>Prüfe die vorgeschlagene <strong>Stundenzahl</strong>. Sie ist die volle Laufzeit. Hattest du zwischendurch Pause, trag die wirklich gearbeitete Zeit ein – <code>1,26</code> heißt eine Stunde und knapp 16 Minuten.</li>
+	<li>Schreib bei <strong>Tätigkeit</strong> in ein paar Worten auf, was du getan hast: „Nachbearbeitung Haken, Grate entfernt“.</li>
+	<li>Klick auf <strong>Stoppen und erfassen</strong>.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Vergessene Uhr</span>
+	<p>Steht dort eine sehr große Zahl, weist das System darauf hin, dass das nach einer vergessenen Uhr aussieht. <strong>Trag dann die tatsächlich gearbeitete Zeit ein</strong>, bevor du erfasst – überschreib die Vorgabe einfach. Läuft die Uhr weniger als eine Minute, war es vermutlich ein Fehlklick: Dann klick auf <strong>Verwerfen, ohne zu buchen</strong>.</p>
+</div>
+
+<h2 id="nachtragen"><span class="nr">5.</span> Zeit von Hand nachtragen</h2>
+
+<p>Uhr vergessen? Kein Drama. Ganz oben auf der Zeitseite steht das Formular <strong>Eintrag</strong> – eine Zeile, fünf Felder.</p>
+
+<figure class="schmal">
+	<img src="bilder/zeit-erfassen.png" alt="Das Eintragsformular mit Datum, Kategorie, Stunden, Tätigkeit, Block und dem Knopf Erfassen">
+	<figcaption>Das Formular für den Nachtrag.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Datum:</strong> Steht auf heute. Für gestern klickst du auf das kleine Kalendersymbol und wählst den Tag.</li>
+	<li><strong>Kategorie:</strong> Aus der Liste wählen.</li>
+	<li><strong>Stunden:</strong> Als Dezimalzahl mit Komma. Eine Dreiviertelstunde ist <code>0,75</code>, zweieinhalb Stunden sind <code>2,5</code>. Nicht <code>2:30</code>.</li>
+	<li><strong>Tätigkeit:</strong> Kurz beschreiben, was war.</li>
+	<li><strong>Block:</strong> Kann leer bleiben. Wer in festen Arbeitsblöcken plant, trägt hier die Blockbezeichnung ein.</li>
+	<li>Auf <strong>Erfassen</strong> klicken.</li>
+</ol>
+
+<div class="kasten info">
+	<span class="titel">Umrechnung Minuten in Dezimalstunden</span>
+	<p>15 Min = 0,25 · 20 Min = 0,33 · 30 Min = 0,5 · 45 Min = 0,75 · 50 Min = 0,83 · 1 Std 10 Min = 1,17</p>
+</div>
+
+<figure>
+	<img src="bilder/zeit-letzte.png" alt="Tabelle der letzten Zeiteinträge mit Datum, Kategorie, Tätigkeit und Stunden">
+	<figcaption>Ganz unten auf der Seite stehen deine letzten Einträge – gut, um am Abend zu prüfen, ob nichts doppelt drin ist.</figcaption>
+</figure>
+
+<h3>Die Wochenübersicht lesen</h3>
+
+<figure>
+	<img src="bilder/zeit-woche.png" alt="Wochenübersicht mit Kalenderwoche, Stunden, Budget und Differenz">
+	<figcaption>Je Kalenderwoche: erfasste Stunden, Budget und die Differenz. Rot heißt über Budget, grau darunter.</figcaption>
+</figure>
+
+<p>Das Budget ist keine Obergrenze, sondern eine Planungsgröße. Es zeigt, ob die Woche so gelaufen ist wie gedacht. Steht dort dauerhaft ein dickes Plus, stimmt entweder die Planung nicht – oder es ist wirklich zu viel Arbeit.</p>
+
+<h2 id="kategorien"><span class="nr">6.</span> Die Kategorien richtig wählen</h2>
+
+<p>Es gibt acht Kategorien. Sie entscheiden, in welcher Auswertung deine Stunden landen. Nimm die, die den größten Teil der Zeit ausmacht – es muss nicht auf die Minute stimmen, aber es sollte nicht dauernd „Sonstiges“ sein.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Kategorie</th><th>Beispiele</th></tr></thead>
+<tbody>
+<tr><td><strong>Produktion</strong></td><td>Drucker bestücken, entgraten, montieren, Teile prüfen</td></tr>
+<tr><td><strong>Versand</strong></td><td>Picken, packen, frankieren, zur Post fahren</td></tr>
+<tr><td><strong>Konstruktion</strong></td><td>Modelle zeichnen, Revisionen anpassen, slicen, Probedrucke bewerten</td></tr>
+<tr><td><strong>Marketing</strong></td><td>Produktfotos, Texte, Social Media, Messevorbereitung</td></tr>
+<tr><td><strong>Vertrieb</strong></td><td>Händlergespräche, Angebote schreiben, Kundenanfragen</td></tr>
+<tr><td><strong>Verwaltung</strong></td><td>Belege sortieren, Buchhaltung, Bestellungen beim Lieferanten</td></tr>
+<tr><td><strong>Wartung</strong></td><td>Drucker reinigen, Düse wechseln, Reparaturen</td></tr>
+<tr><td><strong>Sonstiges</strong></td><td>Alles, was in keine der obigen passt</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="handy"><span class="nr">7.</span> Zeit am Handy erfassen</h2>
+
+<p>Wer in der Werkstatt keinen Computer hat, erfasst am Handy. Öffne <code>/betrieb-erfassen/</code> und tipp oben auf den Reiter <strong>Zeit</strong>.</p>
+
+<figure class="handy">
+	<img src="bilder/m-zeit.png" alt="Handy-Ansicht Reiter Zeit mit Kategorie, Stunden und Tätigkeit">
+	<figcaption>Die Zeiterfassung am Handy – dieselben Felder, nur größer.</figcaption>
+</figure>
+
+<h2 id="auftragszeit"><span class="nr">8.</span> Zeit an einem Auftrag</h2>
+
+<p>Wenn du auf <span class="weg">Betrieb → Lagerplätze, Fertigung &amp; Picklisten → Fertigungsaufträge</span> bei einem Auftrag auf <strong>Produktion starten</strong> klickst, läuft die Uhr <em>an diesem Auftrag</em>.</p>
+
+<figure>
+	<img src="bilder/fertigungsauftraege.png" alt="Auftragsliste mit den Spalten Zeit und Lohnkosten und den Knöpfen Produktion starten und Fertigmelden">
+	<figcaption>In den Spalten <strong>Zeit</strong> und <strong>Lohnkosten</strong> steht, was der Auftrag bisher gekostet hat.</figcaption>
+</figure>
+
+<p>Der Vorteil: Die Zeit hängt dann nicht nur am Tag, sondern am konkreten Auftrag. Daraus entstehen die Ist-Lohnkosten je Auftrag – und damit die Antwort auf die Frage, ob ein Set beim aktuellen Preis überhaupt lohnt. Pausierst du den Auftrag, hält auch die Uhr an.</p>
+
+<div class="kasten info">
+	<span class="titel">Ab hier geht es um Personalführung</span>
+	<p>Die folgenden Kapitel setzen das Recht <strong>Rechte und Löhne vergeben</strong> voraus (Profil <em>Vollzugriff</em>). Ohne dieses Recht siehst du den Menüpunkt <em>Benutzer &amp; Rechte</em> nicht – dann ist diese Anleitung für dich hier zu Ende.</p>
+</div>
+
+<h2 id="benutzer"><span class="nr">9.</span> Benutzer &amp; Rechte: die Übersicht</h2>
+
+<p><span class="weg">Betrieb → Benutzer &amp; Rechte</span></p>
+
+<figure>
+	<img src="bilder/benutzer-liste.png" alt="Nutzertabelle mit Profil, Stundenlohn, Stunden im Zeitraum, Lohnkosten, Vorgängen und letzter Aktivität">
+	<figcaption>Alle Nutzer mit Zugriff auf das Modul Betrieb. Oben stellst du den Zeitraum ein und klickst auf <strong>Zeitraum anzeigen</strong>.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Profil</strong></td><td>Das Rechteprofil – siehe Kapitel 10</td></tr>
+<tr><td><strong>Stundenlohn</strong></td><td>Der aktuell gültige Satz; „—“ heißt: keiner hinterlegt</td></tr>
+<tr><td><strong>Stunden im Zeitraum</strong></td><td>Summe der erfassten Zeit im eingestellten Zeitraum</td></tr>
+<tr><td><strong>Lohnkosten</strong></td><td>Stunden mal Lohn. Steht dort „(2,00 h ohne Lohn)“, sind unbewertete Stunden dabei.</td></tr>
+<tr><td><strong>Vorgänge</strong></td><td>Wie viele protokollierte Aktionen im Zeitraum</td></tr>
+<tr><td><strong>Zuletzt</strong></td><td>Wann diese Person zuletzt etwas im System getan hat</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="profile"><span class="nr">10.</span> Rechteprofile vergeben</h2>
+
+<p>Es gibt fünf Profile. Sie sind nicht nach Datenbanktabellen geschnitten, sondern danach, was jemand im Betrieb tut.</p>
+
+<figure>
+	<img src="bilder/benutzer-profile.png" alt="Tabelle Was die Profile dürfen mit den Profilen Kein Zugriff, Werkstatt, Fertigung, Betriebsleitung und Vollzugriff und Häkchen je Recht">
+	<figcaption>Die Rechtematrix. Ein Häkchen heißt: darf. Ein Strich heißt: darf nicht.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Profil</th><th>Für wen</th><th>Sieht Preise und Löhne?</th></tr></thead>
+<tbody>
+<tr><td><strong>Kein Zugriff</strong></td><td>Sieht das Modul Betrieb gar nicht</td><td>nein</td></tr>
+<tr><td><strong>Werkstatt</strong></td><td>Aushilfe, Minijob – erfasst und protokolliert</td><td>nein</td></tr>
+<tr><td><strong>Fertigung</strong></td><td>Wie Werkstatt, darf zusätzlich Stammdaten pflegen und Auswertungen sehen</td><td>nein</td></tr>
+<tr><td><strong>Betriebsleitung</strong></td><td>Alles Fachliche samt Kalkulation und Kosten</td><td>ja</td></tr>
+<tr><td><strong>Vollzugriff</strong></td><td>Zusätzlich Grundeinstellungen, Rechte und Löhne</td><td>ja</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+	<img src="bilder/benutzer-rechte-liste.png" alt="Erläuterung der sechs Einzelrechte in Textform">
+	<figcaption>Was die sechs Einzelrechte praktisch bedeuten – damit niemand nach dem Namen raten muss.</figcaption>
+</figure>
+
+<h3>So weist du ein Profil zu</h3>
+
+<ol class="schritte">
+	<li>In der Nutzerliste rechts in der Zeile auf <strong>Ansehen</strong> klicken.</li>
+	<li>Auf der Detailseite zum Abschnitt <strong>Rechte</strong> scrollen.</li>
+	<li>Im Auswahlfeld das passende Profil wählen.</li>
+	<li>Auf <strong>Profil zuweisen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/benutzer-rechte.png" alt="Abschnitt Rechte auf der Nutzerdetailseite mit Profilauswahl und Knopf Profil zuweisen">
+	<figcaption>Die Profilzuweisung auf der Detailseite eines Nutzers.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Zwei Sicherungen, die absichtlich eingebaut sind</span>
+	<p><strong>Du kannst dich nicht selbst aussperren.</strong> Bei deinem eigenen Konto steht statt des Auswahlfelds ein Hinweis – ändern kann deine Rechte nur eine andere Person mit Vollzugriff.<br>
+	<strong>Administratoren behalten ohnehin vollen Zugriff.</strong> Wer die Website verwaltet, kommt über das WordPress-Recht an alles heran. Ein Profil hier ändert daran nichts, und das System sagt das auch offen.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Rechte hängen am Menschen, nicht an der WordPress-Rolle</span>
+	<p>Jemand kann gleichzeitig Redakteur des Shops und Aushilfe in der Werkstatt sein. Deshalb liegen die Betriebsrechte am Benutzerkonto und nicht an der Rolle – so überschreibt keins das andere.</p>
+</div>
+
+<h2 id="lohn"><span class="nr">11.</span> Stundenlöhne pflegen</h2>
+
+<figure>
+	<img src="bilder/benutzer-lohn.png" alt="Abschnitt Stundenlohn mit Verlaufstabelle und Formular für einen neuen Satz mit Stichtag">
+	<figcaption>Der Stundenlohn auf der Nutzerdetailseite, mit seinem Verlauf.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Nutzer öffnen (<strong>Ansehen</strong> in der Liste).</li>
+	<li>Zum Abschnitt <strong>Stundenlohn</strong> scrollen.</li>
+	<li><strong>Satz</strong> eintragen, zum Beispiel <code>14,50</code>.</li>
+	<li><strong>Gültig ab</strong> setzen – das Datum, ab dem der Satz gilt.</li>
+	<li>Eine kurze <strong>Notiz</strong> ist hilfreich: „Erhöhung laut Vertrag vom 12.03.“</li>
+	<li>Auf <strong>Lohn festlegen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Ein Lohn wird nie überschrieben</span>
+	<p>Jede Erhöhung ist eine <strong>neue Zeile</strong> mit einem Stichtag, keine Korrektur der alten. Das ist wichtig: Stunden aus dem letzten Jahr bleiben mit dem damaligen Satz bewertet. Wer den alten Satz einfach ändern könnte, würde rückwirkend alle Auswertungen verbiegen.</p>
+</div>
+
+<p>Hat jemand keinen Lohn hinterlegt, erscheinen seine Stunden in den Auswertungen als <em>unbewertet</em>. Sie sind nicht verloren – sie zählen nur nicht in die Lohnkosten. Das System weist ausdrücklich darauf hin, damit nicht zu wenig herauskommt.</p>
+
+<figure>
+	<img src="bilder/benutzer-zeit.png" alt="Abschnitt Erfasste Zeit im Zeitraum mit Datum, Kategorie, Tätigkeit, Stunden und Summe">
+	<figcaption>Auf derselben Seite steht die erfasste Zeit dieser Person im gewählten Zeitraum, mit Summe.</figcaption>
+</figure>
+
+<h2 id="protokoll"><span class="nr">12.</span> Das Protokoll eines Nutzers</h2>
+
+<figure>
+	<img src="bilder/benutzer-protokoll.png" alt="Protokolltabelle mit den letzten Vorgängen eines Nutzers">
+	<figcaption>Die letzten Vorgänge aus dem hashverketteten Protokoll.</figcaption>
+</figure>
+
+<p>Das Protokoll hält fest, wer wann was geändert hat. Jeder Eintrag enthält die Prüfsumme seines Vorgängers – wird ein Datensatz nachträglich verändert, bricht die Kette und das fällt bei der Prüfung auf.</p>
+
+<div class="kasten merke">
+	<span class="titel">Was das Protokoll ist – und was nicht</span>
+	<p>Es sagt, <strong>was geschah</strong>. Es sagt nicht, ob es richtig war. Nimm es als Werkzeug, um einen Fehler zurückzuverfolgen („wann ist der Bestand gekippt?“), nicht als Leistungsmessung. Für Letzteres taugt es nicht, und dafür ist es nicht gebaut.</p>
+</div>
+
+<h2 id="stundensatz"><span class="nr">13.</span> Gerechnet gegen bezahlt</h2>
+
+<figure>
+	<img src="bilder/benutzer-stundensatz.png" alt="Abschnitt Stundensatz gerechnet gegen bezahlt mit dem tatsächlich bezahlten Satz, dem kalkulatorischen Satz und der Abweichung">
+	<figcaption>Der Vergleich: Was zahlst du wirklich – und mit welchem Satz rechnest du in den Preisen?</figcaption>
+</figure>
+
+<p>Zwei Zahlen stehen sich gegenüber:</p>
+<ul>
+	<li><strong>Tatsächlich bezahlt</strong> – Lohnkosten geteilt durch bewertete Stunden im Zeitraum.</li>
+	<li><strong>Gerechnet</strong> – der kalkulatorische Stundensatz, der in jeder Preiskalkulation steckt.</li>
+</ul>
+
+<p>Weichen sie deutlich ab, erscheint ein roter Hinweis. Das ist kein Fehler, sondern eine Frage an dich: Ist der kalkulatorische Satz noch richtig?</p>
+
+<div class="kasten info">
+	<span class="titel">Warum das System das nicht selbst anpasst</span>
+	<p>Der kalkulatorische Satz steckt in jedem Preis. Ein Preis, der sich jeden Monat von selbst verschiebt, ist keiner. Ändern kannst du ihn bewusst unter <span class="weg">Betrieb → Einstellungen → Kalkulationsannahmen</span> – mit einem Stichtag, sodass alte Kalkulationen bleiben, wie sie waren.</p>
+</div>
+
+<h2 id="neuer"><span class="nr">14.</span> Einen neuen Mitarbeiter anlegen</h2>
+
+<p>Das läuft in zwei Schritten, weil zwei Systeme beteiligt sind: WordPress kennt das Benutzerkonto, das Plugin vergibt die Betriebsrechte.</p>
+
+<ol class="schritte">
+	<li><strong>Konto anlegen:</strong> Links im schwarzen Menü auf <strong>Benutzer → Neu hinzufügen</strong>. Benutzername, Vor- und Nachname und E-Mail-Adresse eintragen. Als Rolle genügt <em>Abonnent</em> – die Betriebsrechte kommen im nächsten Schritt.</li>
+	<li>Den Haken bei <strong>Benutzer benachrichtigen</strong> setzen, damit die Person eine Mail mit ihrem Zugang bekommt. Auf <strong>Neuen Benutzer hinzufügen</strong> klicken.</li>
+	<li><strong>Profil vergeben:</strong> Auf <span class="weg">Betrieb → Benutzer &amp; Rechte</span> gehen, die Person in der Liste suchen, auf <strong>Ansehen</strong> klicken und im Abschnitt <em>Rechte</em> das Profil zuweisen (Kapitel 10).</li>
+	<li><strong>Stundenlohn eintragen</strong>, falls die Person bezahlt wird (Kapitel 11).</li>
+	<li>Der Person zeigen, wo die Uhr ist, und ihr diese Anleitung geben – Kapitel 2 bis 6 reichen für den Anfang.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">Beim Ausscheiden</span>
+	<p>Setz das Profil auf <strong>Kein Zugriff</strong> statt das Konto zu löschen. Erfasste Zeiten, Buchungen und Protokolleinträge bleiben so zuordenbar. Ein gelöschtes Konto hinterlässt Buchungen ohne Namen – und die Frage, wer das war, lässt sich dann nicht mehr beantworten.</p>
+</div>
+
+<h2 id="datenschutz"><span class="nr">15.</span> Datenschutz: was hier steht und was nicht</h2>
+
+<ul>
+	<li>Erfasst werden Datum, Kategorie, Stundenzahl, eine kurze Tätigkeitsbeschreibung und – wenn die Uhr lief – die Bereiche, in denen gearbeitet wurde.</li>
+	<li>Es gibt <strong>keine</strong> Tastenaufzeichnung, keine Bildschirmfotos, keine Standortdaten und keine Klickstrecken.</li>
+	<li>Wer die Löhne und das Protokoll sehen darf, ist auf das Recht <em>Rechte und Löhne vergeben</em> beschränkt. Werkstatt und Fertigung sehen weder fremde Löhne noch fremde Protokolle.</li>
+	<li>Für die Auswertung nach außen (Steuerberatung, Analyse) gibt es einen eigenen Export, der Namen von Geschäftskunden weglässt, solange man sie nicht ausdrücklich mitgibt.</li>
+</ul>
+
+<h2 id="fehler"><span class="nr">16.</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Was los ist</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>„Bitte eine Stundenzahl größer als 0 eintragen“</td><td>Das Feld ist leer oder enthält eine 0</td><td>Stunden als Dezimalzahl eintragen, z.&nbsp;B. <code>1,5</code></td></tr>
+<tr><td>„Mehr als 24 Stunden an einem Tag sind ein Tippfehler“</td><td>Wahrscheinlich <code>7:30</code> statt <code>7,5</code> eingegeben</td><td>Als Dezimalzahl schreiben</td></tr>
+<tr><td>Die Uhr lief über Nacht</td><td>Stoppen vergessen</td><td>Beim Stoppen die tatsächliche Zeit eintragen, nicht die Vorgabe</td></tr>
+<tr><td>Ich sehe die Uhr nicht mehr</td><td>Die obere schwarze Leiste ist ausgeblendet</td><td>Im eigenen Profil unter <em>Benutzer → Profil</em> die Werkzeugleiste wieder einschalten</td></tr>
+<tr><td>Lohnkosten stehen auf 0 €</td><td>Kein Stundenlohn hinterlegt</td><td>Kapitel 11</td></tr>
+<tr><td>„… Stunden ohne hinterlegten Lohn“</td><td>Ein Teil der Stunden fällt in eine Zeit vor dem ersten Lohnstichtag</td><td>Lohn mit früherem Stichtag nachtragen</td></tr>
+<tr><td>Ein Nutzer taucht in der Liste nicht auf</td><td>Er hat kein Betriebsrecht</td><td>Profil zuweisen (Kapitel 10)</td></tr>
+<tr><td>Bei mir selbst fehlt die Profilauswahl</td><td>Absicht – niemand ändert seine eigenen Rechte</td><td>Andere Person mit Vollzugriff bitten</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Personal · Stand: Plugin-Version 0.10.0 ·
+<a href="index.html">Übersicht</a> ·
+<a href="ba-produktion.html">Produktion</a> ·
+<a href="ba-versand.html">Versand</a> ·
+<a href="ba-admin.html">Administration</a></p>
+
+</div>
+</body>
+</html>

@@ -54,8 +54,6 @@ class BetriebAudit {
 	 * @return bool
 	 */
 	public static function record( $action, $table, $record_id, $before = null, $after = null, $reason = '' ) {
-		global $wpdb;
-
 		$action = in_array( $action, self::ACTIONS, true ) ? $action : 'update';
 		$table  = sanitize_key( $table );
 		$reason = $reason ? sanitize_text_field( $reason ) : '';
@@ -78,16 +76,17 @@ class BetriebAudit {
 			'erstellt_am' => current_time( 'mysql', true ),
 		);
 
-		$hashes                  = HashChain::prepare_insert( 'audit_log', $data );
-		$data['hash']            = $hashes['hash'];
-		$data['vorheriger_hash'] = $hashes['vorheriger_hash'];
-
-		// Abfragbare Kopie – nicht Teil der Hash-Berechnung.
-		$data['payload_before_json'] = $before_json;
-		$data['payload_after_json']  = $after_json;
-		$data['grund']               = $reason ? $reason : null;
-
-		return false !== $wpdb->insert( self::table(), $data );
+		// Die abfragbare Kopie geht als Beiwerk mit – sie ist nicht Teil der
+		// Hash-Berechnung und darf sie deshalb auch nicht berühren.
+		return 0 !== HashChain::insert(
+			'audit_log',
+			$data,
+			array(
+				'payload_before_json' => $before_json,
+				'payload_after_json'  => $after_json,
+				'grund'               => $reason ? $reason : null,
+			)
+		);
 	}
 
 	/**
