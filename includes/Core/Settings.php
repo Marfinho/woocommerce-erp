@@ -90,6 +90,17 @@ class Settings {
 			'dhl_versand_live_api_secret'    => '',
 			'dhl_versand_live_user'          => '',
 			'dhl_versand_live_password'      => '',
+			// Auch Kundennummer (EKP) und Teilnahme gelten nur je Umgebung:
+			// Eine echte Abrechnungsnummer weist die Sandbox mit „Bad
+			// Request – Abrechnungsnummer steht nicht zur Verfügung" ab.
+			// 3333333333/01 ist die von DHL öffentlich für die Sandbox
+			// dokumentierte Testkombination für DHL Paket (V01PAK); für
+			// andere Produkte ggf. laut Sandbox-Tabelle auf
+			// developer.dhl.com anpassen.
+			'dhl_versand_sandbox_ekp'        => '3333333333',
+			'dhl_versand_sandbox_teilnahme'  => '01',
+			'dhl_versand_live_ekp'           => '',
+			'dhl_versand_live_teilnahme'     => '01',
 			'dhl_versand_ekp'           => '',
 			'dhl_versand_teilnahme'     => '01',
 			'dhl_versand_teilnahme_01'  => '',

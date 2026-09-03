@@ -52,7 +52,7 @@ class DhlClient {
 			self::credential_key( 'api_secret' ) => __( 'API-Secret der Anwendung', 'lindenweg16' ),
 			self::credential_key( 'user' )       => __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ),
 			self::credential_key( 'password' )   => __( 'Passwort des Geschäftskundenportals', 'lindenweg16' ),
-			'dhl_versand_ekp'                    => __( 'Kundennummer (EKP)', 'lindenweg16' ),
+			self::credential_key( 'ekp' )        => __( 'Kundennummer (EKP)', 'lindenweg16' ),
 		);
 
 		foreach ( $pflicht as $key => $klartext ) {
@@ -93,13 +93,15 @@ class DhlClient {
 	}
 
 	/**
-	 * Einstellungsschlüssel für ein Zugangsdatenfeld im gerade aktiven
-	 * Modus. Sandbox und Live haben getrennte Zugangsdaten – die
-	 * DHL-Sandbox weist ein echtes Geschäftskundenportal-Login mit
-	 * „invalid_grant" zurück, und umgekehrt lehnt der Live-Betrieb die
-	 * Sandbox-Testdaten ab.
+	 * Einstellungsschlüssel für ein umgebungsabhängiges DHL-Feld im
+	 * gerade aktiven Modus. Sandbox und Live haben getrennte Zugangsdaten
+	 * UND getrennte Kundennummer/Teilnahme – die DHL-Sandbox weist ein
+	 * echtes Geschäftskundenportal-Login mit „invalid_grant" zurück, und
+	 * eine echte Abrechnungsnummer mit „Die ausgewählte Abrechnungsnummer
+	 * steht nicht zur Verfügung" (Bad Request); umgekehrt lehnt der
+	 * Live-Betrieb die Sandbox-Testdaten ab.
 	 *
-	 * @param string $feld api_key, api_secret, user oder password.
+	 * @param string $feld api_key, api_secret, user, password, ekp oder teilnahme.
 	 * @return string
 	 */
 	public static function credential_key( $feld ) {

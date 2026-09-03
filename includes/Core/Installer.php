@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '27';
+	const DB_VERSION = '28';
 
 	/**
 	 * Aktivierungsroutine.
@@ -780,30 +780,36 @@ class Installer {
 
 	/**
 	 * Die früher einzigen DHL-Zugangsdaten (dhl_versand_api_key/api_secret/
-	 * user/password) galten für Sandbox und Live gleichermaßen – das war
-	 * der Grund für das Problem, das zu dieser Trennung geführt hat: Ein
-	 * Live-Login an der Sandbox (oder umgekehrt) scheitert mit
-	 * „invalid_grant". Wer schon Werte eingetragen hatte, hat damit fast
-	 * immer den Live-Zugang gemeint – die Sandbox hat einen von DHL
-	 * öffentlich dokumentierten festen Testzugang für Benutzer/Passwort,
-	 * den niemand von Hand eintippt. Die alten Werte bleiben zusätzlich
+	 * user/password) und die frühere einzige Kundennummer/Teilnahme
+	 * (dhl_versand_ekp/teilnahme) galten für Sandbox und Live
+	 * gleichermaßen – das war der Grund für die beiden Probleme, die zu
+	 * dieser Trennung geführt haben: Ein Live-Login an der Sandbox (oder
+	 * umgekehrt) scheitert mit „invalid_grant", eine echte Abrechnungsnummer
+	 * in der Sandbox mit „Bad Request – Abrechnungsnummer steht nicht zur
+	 * Verfügung". Wer schon Werte eingetragen hatte, hat damit fast immer
+	 * den Live-Betrieb gemeint – Sandbox-Benutzer/-Passwort sowie
+	 * EKP/Teilnahme sind von DHL öffentlich dokumentierte feste Testwerte,
+	 * die niemand von Hand einträgt. Die alten Werte bleiben zusätzlich
 	 * unangetastet stehen, falls doch etwas anderes gemeint war.
 	 */
 	protected static function maybe_migrate_dhl_credentials() {
 		$alt = get_option( Settings::OPTION, array() );
 
-		if ( ! is_array( $alt ) || empty( $alt['dhl_versand_api_key'] ) ) {
+		if ( ! is_array( $alt ) ) {
 			return;
 		}
 
-		if ( ! empty( $alt['dhl_versand_live_api_key'] ) ) {
-			return; // Schon migriert oder schon eigens gepflegt.
+		if ( ! empty( $alt['dhl_versand_api_key'] ) && empty( $alt['dhl_versand_live_api_key'] ) ) {
+			$alt['dhl_versand_live_api_key']    = $alt['dhl_versand_api_key'];
+			$alt['dhl_versand_live_api_secret'] = isset( $alt['dhl_versand_api_secret'] ) ? $alt['dhl_versand_api_secret'] : '';
+			$alt['dhl_versand_live_user']       = isset( $alt['dhl_versand_user'] ) ? $alt['dhl_versand_user'] : '';
+			$alt['dhl_versand_live_password']   = isset( $alt['dhl_versand_password'] ) ? $alt['dhl_versand_password'] : '';
 		}
 
-		$alt['dhl_versand_live_api_key']    = $alt['dhl_versand_api_key'];
-		$alt['dhl_versand_live_api_secret'] = isset( $alt['dhl_versand_api_secret'] ) ? $alt['dhl_versand_api_secret'] : '';
-		$alt['dhl_versand_live_user']       = isset( $alt['dhl_versand_user'] ) ? $alt['dhl_versand_user'] : '';
-		$alt['dhl_versand_live_password']   = isset( $alt['dhl_versand_password'] ) ? $alt['dhl_versand_password'] : '';
+		if ( ! empty( $alt['dhl_versand_ekp'] ) && empty( $alt['dhl_versand_live_ekp'] ) ) {
+			$alt['dhl_versand_live_ekp']       = $alt['dhl_versand_ekp'];
+			$alt['dhl_versand_live_teilnahme'] = isset( $alt['dhl_versand_teilnahme'] ) ? $alt['dhl_versand_teilnahme'] : '01';
+		}
 
 		update_option( Settings::OPTION, $alt );
 	}

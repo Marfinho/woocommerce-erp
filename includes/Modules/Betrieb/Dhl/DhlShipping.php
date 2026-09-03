@@ -194,7 +194,7 @@ class DhlShipping {
 				'profile'       => (string) Settings::get( 'dhl_versand_profil', 'STANDARD_GRUPPENPROFIL' ),
 				'product'       => $product,
 				'billingNumber' => DhlProduct::billing_number(
-					Settings::get( 'dhl_versand_ekp', '' ),
+					Settings::get( DhlClient::credential_key( 'ekp' ), '' ),
 					$product,
 					self::participation( $product )
 				),
@@ -214,7 +214,11 @@ class DhlShipping {
 	 *
 	 * Die DHL vergibt sie je Verfahren. Für die meisten Kunden ist es
 	 * überall dieselbe – deshalb dient die allgemeine Teilnahme als
-	 * Rückfall, wenn für dieses Produkt keine eigene gepflegt ist.
+	 * Rückfall, wenn für dieses Produkt keine eigene gepflegt ist. Die
+	 * abweichenden Teilnahmen je Produkt gelten bewusst für Sandbox und
+	 * Live gemeinsam (kaum jemand pflegt sie überhaupt); die allgemeine
+	 * Teilnahme dagegen ist wie EKP und Zugangsdaten je Umgebung getrennt –
+	 * die DHL-Sandbox akzeptiert keine echte Teilnahme und umgekehrt.
 	 *
 	 * @param string $product Produktschlüssel.
 	 * @return string
@@ -222,7 +226,7 @@ class DhlShipping {
 	public static function participation( $product ) {
 		$eigene = trim( (string) Settings::get( 'dhl_versand_teilnahme_' . strtolower( DhlProduct::procedure( $product ) ), '' ) );
 
-		return '' !== $eigene ? $eigene : trim( (string) Settings::get( 'dhl_versand_teilnahme', '' ) );
+		return '' !== $eigene ? $eigene : trim( (string) Settings::get( DhlClient::credential_key( 'teilnahme' ), '' ) );
 	}
 
 	/**

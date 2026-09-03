@@ -231,4 +231,24 @@ class DhlAuthTest extends TestCase {
 			unset( $GLOBALS['lw16_test_options']['lw16_settings'] );
 		}
 	}
+
+	/**
+	 * Auch Kundennummer (EKP) und Teilnahme gelten nur je Umgebung – eine
+	 * echte Abrechnungsnummer weist die Sandbox mit „Bad Request:
+	 * billingNumber – Die ausgewählte Abrechnungsnummer steht nicht zur
+	 * Verfügung" ab.
+	 */
+	public function test_credential_key_umfasst_ekp_und_teilnahme() {
+		$this->assertSame( 'dhl_versand_sandbox_ekp', DhlClient::credential_key( 'ekp' ) );
+		$this->assertSame( 'dhl_versand_sandbox_teilnahme', DhlClient::credential_key( 'teilnahme' ) );
+
+		$GLOBALS['lw16_test_options']['lw16_settings'] = array( 'dhl_versand_sandbox' => 0 );
+
+		try {
+			$this->assertSame( 'dhl_versand_live_ekp', DhlClient::credential_key( 'ekp' ) );
+			$this->assertSame( 'dhl_versand_live_teilnahme', DhlClient::credential_key( 'teilnahme' ) );
+		} finally {
+			unset( $GLOBALS['lw16_test_options']['lw16_settings'] );
+		}
+	}
 }
