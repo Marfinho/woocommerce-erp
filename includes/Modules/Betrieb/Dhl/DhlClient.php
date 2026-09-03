@@ -37,22 +37,28 @@ class DhlClient {
 	/**
 	 * Welche Zugangsdaten fehlen? Klartext für die Einstellungsseite.
 	 *
+	 * Geprüft wird immer nur der gerade aktive Modus (Sandbox oder Live) –
+	 * beide haben eigene Zugangsdaten, die DHL-Sandbox akzeptiert kein
+	 * echtes Geschäftskundenportal-Login und umgekehrt.
+	 *
 	 * @return array
 	 */
 	public static function missing_credentials() {
-		$fehlt = array();
+		$fehlt  = array();
+		$modus  = self::sandbox() ? __( 'Sandbox', 'lindenweg16' ) : __( 'Live', 'lindenweg16' );
 
 		$pflicht = array(
-			'dhl_versand_api_key'    => __( 'API-Key der Anwendung', 'lindenweg16' ),
-			'dhl_versand_api_secret' => __( 'API-Secret der Anwendung', 'lindenweg16' ),
-			'dhl_versand_user'       => __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ),
-			'dhl_versand_password'   => __( 'Passwort des Geschäftskundenportals', 'lindenweg16' ),
-			'dhl_versand_ekp'        => __( 'Kundennummer (EKP)', 'lindenweg16' ),
+			self::credential_key( 'api_key' )    => __( 'API-Key der Anwendung', 'lindenweg16' ),
+			self::credential_key( 'api_secret' ) => __( 'API-Secret der Anwendung', 'lindenweg16' ),
+			self::credential_key( 'user' )       => __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ),
+			self::credential_key( 'password' )   => __( 'Passwort des Geschäftskundenportals', 'lindenweg16' ),
+			'dhl_versand_ekp'                    => __( 'Kundennummer (EKP)', 'lindenweg16' ),
 		);
 
 		foreach ( $pflicht as $key => $klartext ) {
 			if ( '' === trim( (string) Settings::get( $key, '' ) ) ) {
-				$fehlt[] = $klartext;
+				/* translators: 1: Feldname, 2: Sandbox oder Live. */
+				$fehlt[] = sprintf( __( '%1$s (%2$s)', 'lindenweg16' ), $klartext, $modus );
 			}
 		}
 
@@ -87,11 +93,26 @@ class DhlClient {
 	}
 
 	/**
+	 * Einstellungsschlüssel für ein Zugangsdatenfeld im gerade aktiven
+	 * Modus. Sandbox und Live haben getrennte Zugangsdaten – die
+	 * DHL-Sandbox weist ein echtes Geschäftskundenportal-Login mit
+	 * „invalid_grant" zurück, und umgekehrt lehnt der Live-Betrieb die
+	 * Sandbox-Testdaten ab.
+	 *
+	 * @param string $feld api_key, api_secret, user oder password.
+	 * @return string
+	 */
+	public static function credential_key( $feld ) {
+		return 'dhl_versand_' . ( self::sandbox() ? 'sandbox_' : 'live_' ) . $feld;
+	}
+
+	/**
 	 * Kopfzeilen samt Anmeldung.
 	 *
 	 * Die DHL will beides: den API-Key der Anwendung und die Anmeldung
 	 * des Geschäftskunden. Der Key allein sagt nur, wer fragt – nicht,
-	 * auf wessen Vertrag gebucht wird.
+	 * auf wessen Vertrag gebucht wird. Beides kommt aus den Zugangsdaten
+	 * des gerade aktiven Modus (Sandbox oder Live).
 	 *
 	 * @return array
 	 */
@@ -114,10 +135,11 @@ class DhlClient {
 
 		// Der alte Weg für Zugänge ohne API-Secret. Die DHL ersetzt ihn
 		// nach und nach durch das Token; solange er noch angenommen wird,
-		// soll ein eingerichteter Zugang nicht aufhören zu laufen.
-		$headers['dhl-api-key']   = (string) Settings::get( 'dhl_versand_api_key', '' );
+		// soll ein eingerichteter Zugang nicht aufhören zu laufen. Auch er
+		// nutzt die Zugangsdaten des gerade aktiven Modus (Sandbox/Live).
+		$headers['dhl-api-key']   = (string) Settings::get( self::credential_key( 'api_key' ), '' );
 		$headers['Authorization'] = 'Basic ' . base64_encode(
-			Settings::get( 'dhl_versand_user', '' ) . ':' . Settings::get( 'dhl_versand_password', '' )
+			Settings::get( self::credential_key( 'user' ), '' ) . ':' . Settings::get( self::credential_key( 'password' ), '' )
 		);
 
 		return $headers;

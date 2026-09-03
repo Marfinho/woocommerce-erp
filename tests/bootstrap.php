@@ -278,7 +278,7 @@ foreach ( array(
 require $lw16_root . '/includes/Modules/Betrieb/Admin/ShippingPage.php';
 
 // DHL-Versand: Produktwahl, Adressen, Auftrag und Antwort sind reine Logik.
-foreach ( array( 'DhlProduct', 'DhlAddress', 'DhlRequest', 'DhlResponse', 'DhlAuth', 'DhlLabelRepository' ) as $lw16_class ) {
+foreach ( array( 'DhlProduct', 'DhlAddress', 'DhlRequest', 'DhlResponse', 'DhlAuth', 'DhlClient', 'DhlLabelRepository' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/Dhl/' . $lw16_class . '.php';
 }
 
