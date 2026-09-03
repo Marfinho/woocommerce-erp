@@ -159,6 +159,39 @@
 </table>
 </div>
 
+<h3>DHL: Sendungsverfolgung und Versandlabel</h3>
+
+<p>Zwei getrennte Abschnitte mit zwei getrennten Zugängen – die DHL vergibt sie einzeln, und der eine funktioniert nicht für den anderen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Abschnitt</th><th>Wofür</th><th>Was hinein gehört</th></tr></thead>
+<tbody>
+<tr><td><strong>Reporting &amp; DHL-Sendungsverfolgung</strong></td><td>Den Stand einer Sendung abfragen</td><td>Ein API-Key für die Tracking-Schnittstelle</td></tr>
+<tr><td><strong>DHL Geschäftskundenversand</strong></td><td>Labels erzeugen und stornieren</td><td>API-Key <em>und</em> API-Secret der Anwendung, dazu Benutzer und Passwort des Geschäftskundenportals</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Vier Angaben, nicht zwei</span>
+	<p>Fürs Frankieren prüft die DHL auf <strong>zwei Ebenen</strong>: Wer ist die Anwendung (API-Key + API-Secret von developer.dhl.com), und wer ist der Geschäftskunde (Benutzer + Passwort aus dem Geschäftskundenportal). Fehlt eine der beiden Ebenen, lehnt sie ab – ein API-Key allein genügt nicht.</p>
+	<p>Beide Passwortfelder zeigen einen gespeicherten Wert nie an. Ein leeres Feld heißt „unverändert“; nur was du hineinschreibst, wird überschrieben.</p>
+</div>
+
+<p>Dazu gehören die zehnstellige <strong>Kundennummer (EKP)</strong> und die zweistellige <strong>Teilnahme</strong> aus dem Geschäftskundenportal. Aus beidem und dem Verfahren des gewählten Produkts baut das Plugin die vierzehnstellige Abrechnungsnummer selbst – sie entscheidet, welcher Vertrag greift und welches Konto belastet wird. Weicht die Teilnahme je Produkt ab, gibt es dafür eigene Felder; sonst gilt überall dieselbe.</p>
+
+<ul>
+	<li><strong>Labelformat:</strong> <code>910-300-700</code> für Rollenetiketten (105 × 205 mm), <code>A4</code> für Papier. Was dein Konto kann, steht im Geschäftskundenportal.</li>
+	<li><strong>Verpackungszuschlag:</strong> Wird auf jedes gerechnete Sendungsgewicht addiert – Karton und Polster wiegen mit.</li>
+	<li><strong>Sandbox-Modus:</strong> Ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung. Für Sandbox und Echtbetrieb gelten <em>verschiedene</em> Zugangsdaten.</li>
+</ul>
+
+<div class="kasten tipp">
+	<span class="titel">Erst prüfen, dann frankieren</span>
+	<p>Nach dem Speichern auf <span class="weg">Betrieb → Versand</span> gehen und oben auf <strong>DHL-Zugang prüfen</strong> klicken. Der Knopf meldet sich einmal an, ohne ein Label zu erzeugen, und sagt im Klartext, was fehlt. Ohne ihn merkt man einen falschen Zugang erst beim ersten Paket – und liest dort eine Fehlermeldung, die nach einem Adressproblem aussieht.</p>
+</div>
+
 <h3>E-Mail-Vorlagen</h3>
 <figure>
 	<img src="bilder/lw16-einst-mail.png" alt="Der Abschnitt E-Mail-Vorlagen mit aufklappbaren Einträgen für die einzelnen automatischen Mails">

@@ -49,6 +49,7 @@ class ShippingPage {
 		add_action( 'admin_post_lw16_betrieb_dhl_label', array( $this, 'handle_label' ) );
 		add_action( 'admin_post_lw16_betrieb_dhl_void', array( $this, 'handle_void' ) );
 		add_action( 'admin_post_lw16_betrieb_dhl_pdf', array( $this, 'handle_pdf' ) );
+		add_action( 'admin_post_lw16_betrieb_dhl_test', array( $this, 'handle_test' ) );
 	}
 
 	/**
@@ -68,6 +69,18 @@ class ShippingPage {
 				'bulky'    => ! empty( $_POST['bulky'] ),
 			)
 		);
+
+		$this->back( $ergebnis['message'], $ergebnis['ok'] ? 'success' : 'error' );
+	}
+
+	/**
+	 * Nur die Anmeldung prüfen.
+	 */
+	public function handle_test() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		$ergebnis = DhlClient::test();
 
 		$this->back( $ergebnis['message'], $ergebnis['ok'] ? 'success' : 'error' );
 	}
@@ -271,10 +284,18 @@ class ShippingPage {
 		if ( DhlClient::configured() ) {
 			if ( DhlClient::sandbox() ) {
 				printf(
-					'<div class="notice notice-warning inline"><p>%s</p></div>',
-					esc_html__( 'DHL-Sandbox aktiv: Die Labels sehen echt aus, sind aber keine gültige Frankierung. Zum Scharfschalten den Haken unter Lindenweg16 → Einstellungen entfernen.', 'lindenweg16' )
+					'<div class="notice notice-warning inline"><p>%s</p>%s</div>',
+					esc_html__( 'DHL-Sandbox aktiv: Die Labels sehen echt aus, sind aber keine gültige Frankierung. Zum Scharfschalten den Haken unter Lindenweg16 → Einstellungen entfernen.', 'lindenweg16' ),
+					$this->test_form() // phpcs:ignore WordPress.Security.EscapeOutput -- in test_form() escaped.
 				);
+
+				return;
 			}
+
+			printf(
+				'<p>%s</p>',
+				$this->test_form() // phpcs:ignore WordPress.Security.EscapeOutput -- in test_form() escaped.
+			);
 
 			return;
 		}
@@ -319,6 +340,22 @@ class ShippingPage {
 			'<div class="notice notice-warning inline"><p>%s</p></div>',
 			esc_html__( 'Noch kein DHL-Zugang hinterlegt und kein Versandplugin erkannt. Trage die Zugangsdaten aus dem Geschäftskundenportal unter Lindenweg16 → Einstellungen ein, dann entsteht das Label hier in der Liste. So lange trägst du die Sendungsnummer von Hand ein; die Verfolgung läuft damit genauso.', 'lindenweg16' )
 		);
+	}
+
+	/**
+	 * Knopf „Zugang prüfen".
+	 *
+	 * Kostet kein Label. Wenn eins nicht entsteht, ist das die erste
+	 * Frage: Liegt es am Zugang oder an der Sendung?
+	 *
+	 * @return string HTML.
+	 */
+	protected function test_form() {
+		return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form">'
+			. '<input type="hidden" name="action" value="lw16_betrieb_dhl_test">'
+			. wp_nonce_field( self::NONCE, '_wpnonce', true, false )
+			. '<button type="submit" class="button button-small">' . esc_html__( 'DHL-Zugang prüfen', 'lindenweg16' ) . '</button>'
+			. '</form>';
 	}
 
 	/**

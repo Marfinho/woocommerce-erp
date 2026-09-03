@@ -77,6 +77,7 @@ class Settings {
 			'dhl_tracking_sandbox'      => 1,
 			// DHL Versand (Geschäftskundenversand, Labels).
 			'dhl_versand_api_key'       => '',
+			'dhl_versand_api_secret'    => '',
 			'dhl_versand_user'          => '',
 			'dhl_versand_password'      => '',
 			'dhl_versand_ekp'           => '',

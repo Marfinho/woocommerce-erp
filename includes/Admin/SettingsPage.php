@@ -85,6 +85,7 @@ class SettingsPage {
 			),
 			__( 'DHL Geschäftskundenversand (Labels)', 'lindenweg16' ) => array(
 				'dhl_versand_api_key'      => array( __( 'API-Key der Anwendung (developer.dhl.com)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_api_secret'   => array( __( 'API-Secret der Anwendung (developer.dhl.com)', 'lindenweg16' ), 'password' ),
 				'dhl_versand_user'         => array( __( 'Benutzer des Geschäftskundenportals', 'lindenweg16' ), 'text' ),
 				'dhl_versand_password'     => array( __( 'Passwort des Geschäftskundenportals', 'lindenweg16' ), 'password' ),
 				'dhl_versand_ekp'          => array( __( 'Kundennummer EKP (10 Stellen)', 'lindenweg16' ), 'text' ),
