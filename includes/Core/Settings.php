@@ -75,6 +75,24 @@ class Settings {
 			// DHL Tracking.
 			'dhl_tracking_api_key'      => '',
 			'dhl_tracking_sandbox'      => 1,
+			// DHL Versand (Geschäftskundenversand, Labels).
+			'dhl_versand_api_key'       => '',
+			'dhl_versand_user'          => '',
+			'dhl_versand_password'      => '',
+			'dhl_versand_ekp'           => '',
+			'dhl_versand_teilnahme'     => '01',
+			'dhl_versand_teilnahme_01'  => '',
+			'dhl_versand_teilnahme_62'  => '',
+			'dhl_versand_teilnahme_53'  => '',
+			'dhl_versand_teilnahme_54'  => '',
+			'dhl_versand_teilnahme_66'  => '',
+			'dhl_versand_profil'        => 'STANDARD_GRUPPENPROFIL',
+			'dhl_versand_printformat'   => '910-300-700',
+			'dhl_versand_sandbox'       => 1,
+			'dhl_versand_warenpost'     => 0,
+			'dhl_versand_vorabmeldung'  => 1,
+			'dhl_versand_verpackung_g'  => 150,
+			'dhl_versand_land'          => 'DE',
 		);
 	}
 

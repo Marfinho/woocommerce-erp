@@ -15,7 +15,7 @@ use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Inventory\StockManager;
 
 /**
- * Druck-Queue, Packliste, DHL-Verlinkung/-Tracking, Ist-Zeit-Erfassung
+ * Lieferschein (intern noch „Packliste"), DHL-Tracking, Ist-Zeit-Erfassung
  * und vorausschauende Mengenvorschläge.
  */
 class ProductionModule {
@@ -26,7 +26,8 @@ class ProductionModule {
 	public function register() {
 		add_action( 'lw16_render_page_lw16_produktion', array( $this, 'render_admin' ) );
 
-		// Packliste automatisch bei Status processing (asynchron).
+		// Lieferschein automatisch bei Status processing (asynchron). Der
+		// Hook heißt aus Rücksicht auf eingereihte Jobs weiter „packing".
 		add_action( 'woocommerce_order_status_processing', array( $this, 'enqueue_packing_slip' ), 20, 1 );
 		add_action( Scheduler::HOOK_GENERATE_PACKING, array( $this, 'generate_packing_slip' ), 10, 1 );
 		add_action( 'admin_post_lw16_packliste', array( $this, 'serve_or_generate_packing_slip' ) );
@@ -79,7 +80,7 @@ class ProductionModule {
 		// Immer frisch generieren (deckt Adressänderungen ab).
 		$filename = PackingSlipGenerator::generate( $order_id, $notiz );
 		if ( ! $filename ) {
-			wp_die( esc_html__( 'Packliste konnte nicht erzeugt werden.', 'lindenweg16' ) );
+			wp_die( esc_html__( 'Lieferschein konnte nicht erzeugt werden.', 'lindenweg16' ) );
 		}
 
 		$path = trailingslashit( Installer::docs_dir() ) . $filename;

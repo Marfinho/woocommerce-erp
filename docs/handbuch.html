@@ -762,9 +762,31 @@ footer p{max-width:72ch}
 	<p><span class="path">Betrieb → Versand</span> — eine Zeile je Shop-Bestellung, älteste zuerst: die, die am längsten wartet, steht oben. Drei Ansichten: <em>Zu versenden</em> (bezahlt und in Wartestellung), <em>Versendet</em>, <em>Alle</em>.</p>
 	<p>Je Zeile Empfänger mit Zielort, der Inhalt in Kurzfassung, der Lieferschein (wird bei jedem Klick frisch erzeugt, damit eine späte Adressänderung nicht auf einem alten PDF steht) und die Sendungsnummer. Die Nummer lässt sich direkt in der Liste eintragen; danach bleibst du in der Liste, statt in der Bestellung zu landen.</p>
 	<div class="note">
-		<span class="lbl">Wer das Label erzeugt</span>
-		<p>Dieses Plugin <strong>frankiert nicht</strong>. Es verfolgt Sendungen: Es liest die Sendungsnummer — aus dem Versandplugin, aus Germanized oder von Hand eingetragen — und fragt damit die Sendungsverfolgung der DHL ab. Ein eigenes Label bräuchte den Geschäftskundenzugang der DHL mit Kunden- und Teilnahmenummern und einen revisionssicheren Ablageort für die PDFs.</p>
-		<p>Die Seite sagt oben, was sie vorfindet: Ist ein Versandplugin aktiv, führt der Knopf <em>Label erstellen</em> zur Bestellung, wo dieses Plugin sein Frankierfenster einblendet — die Sendungsnummer holt sich die Verfolgung von dort automatisch ab. Ist keins aktiv, sagt sie auch das, statt einen Knopf anzubieten, hinter dem nichts liegt.</p>
+		<span class="lbl">Drei Zettel, drei Zwecke</span>
+		<p>Die <strong>Pickliste</strong> (<span class="path">Betrieb → Lagerplätze, Fertigung &amp; Picklisten</span>) ist der Zettel fürs Lager: Artikel, Menge, Lagerplatz, keine Anschrift. Damit geht man einmal durch die Regale.</p>
+		<p>Der <strong>Lieferschein</strong> liegt in der Kiste: Empfängeranschrift und Inhalt, keine Preise. Für Shop-Bestellungen holst du ihn hier in der Versandliste, für Bestellungen aus dem Betrieb unter <span class="path">Betrieb → Bestellungen</span> (7.6). Im Code heißt er stellenweise noch „Packliste" — gemeint ist derselbe Zettel.</p>
+		<p>Das <strong>Versandlabel</strong> klebt außen drauf. Das ist die Frankierung, und nur die kostet Geld.</p>
+	</div>
+	<h4>Das DHL-Label</h4>
+	<p>Steht der Geschäftskundenzugang in den Einstellungen, entsteht das Label <strong>hier in der Zeile</strong> — ohne Fremdplugin und ohne die Bestellung zu öffnen. Vorbelegt sind Produkt und Gewicht; beides lässt sich vor dem Klick ändern.</p>
+	<ul>
+		<li><strong>Produkt</strong> wird aus Zielland und Gewicht vorgeschlagen: Inland Paket, EU Europaket, Rest der Welt Weltpaket. Ist Warenpost gebucht (Haken in den Einstellungen), geht Leichtes bis 1000 g als Warenpost.</li>
+		<li><strong>Gewicht</strong> kommt aus dem Artikelstamm — dem gewogenen Bauteilgewicht der Revision —, ersatzweise aus dem Shop-Produkt, plus dem Verpackungszuschlag aus den Einstellungen. Karton und Polster wiegen mit; ein zu leicht frankiertes Paket wird nachberechnet.</li>
+		<li><strong>Sperrgut</strong> als Haken für das, was nicht aufs Band passt.</li>
+	</ul>
+	<p>Nach dem Klick liegt das PDF im geschützten Dokumentenverzeichnis und öffnet sich über <em>Label öffnen</em>. Die Sendungsnummer geht im selben Zug in die Sendungsverfolgung — niemand tippt sie ab, und der Kunde sieht sie im Konto. <em>Stornieren</em> nimmt die Frankierung zurück, solange die Sendung nicht abgeholt ist; der Vorgang bleibt als storniert stehen, damit sich die Abrechnung der DHL nachvollziehen lässt.</p>
+
+	<div class="note">
+		<span class="lbl">Was einzurichten ist</span>
+		<p>Unter <span class="path">Lindenweg16 → Einstellungen → DHL Geschäftskundenversand</span>: der API-Key der Anwendung von developer.dhl.com, Benutzer und Passwort des Geschäftskundenportals, die zehnstellige Kundennummer (EKP) und die zweistellige Teilnahme. Weicht die Teilnahme je Produkt ab, gibt es dafür eigene Felder; sonst gilt überall dieselbe.</p>
+		<p>Die <strong>Abrechnungsnummer</strong> setzt das Plugin selbst zusammen: Kundennummer + Verfahren (steckt im Produktschlüssel, etwa 01 in V01PAK) + Teilnahme. Sie entscheidet, welcher Vertrag greift und welches Konto belastet wird — deshalb wird sie nie halb gebildet: Fehlt eine Stelle, sagt die Seite das, statt zu senden.</p>
+		<p><strong>Erst in der Sandbox.</strong> Der Haken ist ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung — genau richtig, um Adressen, Gewichte und das Labelformat einmal durchzuspielen. Zum Scharfschalten den Haken entfernen.</p>
+		<p><strong>Labelformat:</strong> <code>910-300-700</code> für Rollenetiketten (105 × 205 mm), <code>A4</code> für Papier. Was das eigene Konto kann, steht im Geschäftskundenportal.</p>
+	</div>
+
+	<div class="note">
+		<span class="lbl">Ohne eigenen Zugang</span>
+		<p>Ist kein DHL-Zugang hinterlegt, sagt die Seite das. Findet sie ein Versandplugin (DHL für WooCommerce, Germanized), führt der Knopf <em>Label erstellen</em> dorthin — zur Bestellung, wo dieses Plugin sein Frankierfenster einblendet; die Sendungsnummer holt sich die Verfolgung von dort ab. Findet sie keins, bietet sie keinen Knopf an, hinter dem nichts liegt: Dann trägst du die Sendungsnummer von Hand ein, und die Verfolgung läuft genauso.</p>
 	</div>
 </section>
 

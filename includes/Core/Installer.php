@@ -112,6 +112,18 @@ class Installer {
 	}
 
 	/**
+	 * Dokumentenverzeichnis anlegen, falls es fehlt.
+	 *
+	 * Angelegt wird es beim Aktivieren. Ein Verzeichnis kann aber auch
+	 * später verschwinden – bei einem Umzug, beim Aufräumen des
+	 * Upload-Ordners. Wer eine Datei ablegt, die es sonst nirgends mehr
+	 * gibt – ein Versandlabel etwa –, prüft das vorher.
+	 */
+	public static function ensure_docs_dir() {
+		self::protect_belege_directory();
+	}
+
+	/**
 	 * Beleg-Verzeichnis außerhalb des öffentlichen Zugriffs absichern.
 	 */
 	protected static function protect_belege_directory() {
@@ -390,6 +402,23 @@ class Installer {
 			UNIQUE KEY order_id (order_id),
 			KEY tracking_nummer (tracking_nummer),
 			KEY aktueller_status (aktueller_status)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}shipping_labels (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			order_id BIGINT UNSIGNED NOT NULL,
+			shipment_no VARCHAR(50) NOT NULL,
+			product VARCHAR(20) NOT NULL,
+			billing_number VARCHAR(20) NOT NULL,
+			filename VARCHAR(191) NOT NULL,
+			weight_g INT UNSIGNED NOT NULL DEFAULT 0,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			erstellt_am DATETIME NOT NULL,
+			storniert_am DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY order_id (order_id),
+			KEY shipment_no (shipment_no),
+			KEY storniert (storniert)
 		) {$charset_collate};";
 
 		// --- Modul 6: Kundenbindung ---------------------------------------
