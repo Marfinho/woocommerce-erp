@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '27';
+	const DB_VERSION = '28';
 
 	/**
 	 * Aktivierungsroutine.
@@ -757,6 +757,11 @@ class Installer {
 		// --- Modul Konfigurator -------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Configurator\Schema::tables( $p, $charset_collate ) );
 
+		// Migration: Die Druck-Warteschlange hiess zunächst DHL-spezifisch.
+		// Muss vor dbDelta laufen – sonst legt dbDelta die neuen, leeren
+		// Tabellen an und die alten mit den Daten blieben ungenutzt liegen.
+		self::maybe_rename_print_queue_tables();
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
@@ -806,6 +811,36 @@ class Installer {
 		$alt['dhl_versand_live_password']   = isset( $alt['dhl_versand_password'] ) ? $alt['dhl_versand_password'] : '';
 
 		update_option( Settings::OPTION, $alt );
+	}
+
+	/**
+	 * Die Druck-Warteschlange hiess zunächst dhl_print_printers/
+	 * dhl_print_jobs – sie war nur für DHL-Versandlabels gedacht. Seitdem
+	 * trägt sie auch Artikel- und Lagerplatz-Etiketten, deshalb die
+	 * generischen Namen print_queue_printers/print_queue_jobs.
+	 *
+	 * Ein RENAME TABLE statt eines neuen dbDelta-Anlegens, damit
+	 * registrierte Drucker (samt Token) und bereits wartende Jobs eines
+	 * bestehenden Systems erhalten bleiben – niemand soll seinen
+	 * Raspberry Pi neu einrichten müssen, nur weil die Tabelle umbenannt
+	 * wurde.
+	 */
+	protected static function maybe_rename_print_queue_tables() {
+		global $wpdb;
+
+		$umbenennen = array(
+			$wpdb->prefix . 'lw16_dhl_print_printers' => $wpdb->prefix . 'lw16_print_queue_printers',
+			$wpdb->prefix . 'lw16_dhl_print_jobs'     => $wpdb->prefix . 'lw16_print_queue_jobs',
+		);
+
+		foreach ( $umbenennen as $alt => $neu ) {
+			$alt_da = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $alt ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$neu_da = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $neu ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+			if ( $alt_da && ! $neu_da ) {
+				$wpdb->query( "RENAME TABLE {$alt} TO {$neu}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+			}
+		}
 	}
 
 	/**

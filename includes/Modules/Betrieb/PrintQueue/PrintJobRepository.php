@@ -1,11 +1,11 @@
 <?php
 /**
- * Druckjobs der DHL-Druck-Warteschlange.
+ * Druckjobs der Druck-Warteschlange (Raspberry-Pi-Clients).
  *
  * @package Lindenweg16
  */
 
-namespace Lindenweg16\Modules\Betrieb\Dhl\Print;
+namespace Lindenweg16\Modules\Betrieb\PrintQueue;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -21,7 +21,7 @@ use Lindenweg16\Core\Installer;
  * sieht entweder die schon geänderte Zeile (0 betroffene Zeilen) oder
  * wartet kurz und scheitert danach ebenfalls – nie gewinnen beide.
  */
-class DhlPrintJobRepository {
+class PrintJobRepository {
 
 	/**
 	 * Gültige Status, in der Reihenfolge des Normalablaufs.
@@ -40,7 +40,7 @@ class DhlPrintJobRepository {
 	 */
 	public static function table() {
 		global $wpdb;
-		return $wpdb->prefix . 'lw16_dhl_print_jobs';
+		return $wpdb->prefix . 'lw16_print_queue_jobs';
 	}
 
 	/* -----------------------------------------------------------------
@@ -143,7 +143,7 @@ class DhlPrintJobRepository {
 	/**
 	 * Job anlegen (status = queued).
 	 *
-	 * @param array $data {order_id, label_id, label_path, label_filename, label_format, width_mm, height_mm, printer_id, is_test}
+	 * @param array $data {order_id, label_id, source, label_path, label_filename, label_format, width_mm, height_mm, printer_id, is_test}
 	 * @return int Neue ID.
 	 */
 	public static function create( array $data ) {
@@ -154,6 +154,7 @@ class DhlPrintJobRepository {
 			array(
 				'order_id'       => isset( $data['order_id'] ) && $data['order_id'] ? (int) $data['order_id'] : null,
 				'label_id'       => isset( $data['label_id'] ) && $data['label_id'] ? (int) $data['label_id'] : null,
+				'source'         => isset( $data['source'] ) ? sanitize_key( (string) $data['source'] ) : 'dhl_label',
 				'label_path'     => (string) $data['label_path'],
 				'label_filename' => (string) $data['label_filename'],
 				'label_format'   => isset( $data['label_format'] ) ? (string) $data['label_format'] : '910-300-610',
@@ -165,7 +166,7 @@ class DhlPrintJobRepository {
 				'attempts'       => 0,
 				'created_at'     => current_time( 'mysql', true ),
 			),
-			array( '%d', '%d', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%d', '%s' )
+			array( '%d', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%d', '%s' )
 		);
 
 		return (int) $wpdb->insert_id;

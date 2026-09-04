@@ -140,7 +140,7 @@ class ResetTool {
 					// Buchhaltung, kein Beleg – die referenzierten Labels
 					// selbst liegen in shipping_labels und bleiben davon
 					// unberührt, solange dieser Bereich nicht mit angekreuzt ist.
-					'dhl_print_jobs',
+					'print_queue_jobs',
 				),
 			),
 			'altes_lager'  => array(
@@ -221,7 +221,7 @@ class ResetTool {
 			// Registrierte Raspberry-Pi-Drucker samt Token sind Konfiguration,
 			// keine Testdaten – ein Reset darf einen bereits eingerichteten
 			// Pi nicht aussperren.
-			'dhl_print_printers',
+			'print_queue_printers',
 		);
 	}
 

@@ -760,7 +760,12 @@ class Schema {
 		) {$charset_collate};";
 
 		/* ---------------------------------------------------------------
-		 * DHL Druck-Warteschlange: Drucker (Raspberry-Pi-Clients) und Jobs
+		 * Druck-Warteschlange: Drucker (Raspberry-Pi-Clients) und Jobs
+		 *
+		 * Ursprünglich nur für DHL-Versandlabels gebaut, seitdem allgemein:
+		 * Ein Job trägt irgendeine PDF-Datei (DHL-Label, Artikel- oder
+		 * Lagerplatz-Etikett, Testlabel) und einen Zieldrucker – was darauf
+		 * steht, ist für die Warteschlange selbst ohne Bedeutung.
 		 * ------------------------------------------------------------- */
 
 		// Ein Drucker ist ein Raspberry-Pi-Client mit eigenem Bearer-Token.
@@ -770,7 +775,7 @@ class Schema {
 		// seiner Konfiguration trägt (z. B. eg_dhl); er ändert sich auch
 		// bei einem Token-Reset nicht, damit der Client nicht neu
 		// eingerichtet werden muss.
-		$t[] = "CREATE TABLE {$p}dhl_print_printers (
+		$t[] = "CREATE TABLE {$p}print_queue_printers (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			printer_id VARCHAR(50) NOT NULL,
 			name VARCHAR(255) NOT NULL,
@@ -785,15 +790,19 @@ class Schema {
 			UNIQUE KEY printer_id (printer_id)
 		) {$charset_collate};";
 
-		// Ein Druckjob referenziert die bereits abgelegte Labeldatei (kein
+		// Ein Druckjob referenziert die bereits abgelegte Datei (kein
 		// zusätzlicher Kopiervorgang, keine zusätzliche personenbezogene
 		// Kopie) – außer bei Testlabels, die eine eigene, unbedenkliche
 		// Datei erzeugen. locked_at trägt den Claim/Lease-Zeitstempel, über
 		// den ein abgestürzter Pi den Job nach Ablauf wieder freigibt.
-		$t[] = "CREATE TABLE {$p}dhl_print_jobs (
+		// source hält fest, wo der Job herkommt (dhl_label, article_label,
+		// bin_label, test, …) – reine Auskunft für die Admin-Übersicht,
+		// ohne Einfluss auf Claim, Druck oder Auslieferung.
+		$t[] = "CREATE TABLE {$p}print_queue_jobs (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			order_id BIGINT UNSIGNED NULL,
 			label_id BIGINT UNSIGNED NULL,
+			source VARCHAR(30) NOT NULL DEFAULT 'dhl_label',
 			label_path VARCHAR(255) NOT NULL,
 			label_filename VARCHAR(191) NOT NULL,
 			label_format VARCHAR(20) NOT NULL DEFAULT '910-300-610',

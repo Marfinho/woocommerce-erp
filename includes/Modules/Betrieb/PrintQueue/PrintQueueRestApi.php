@@ -1,6 +1,6 @@
 <?php
 /**
- * REST-Schnittstelle der DHL-Druck-Warteschlange für Raspberry-Pi-Clients.
+ * REST-Schnittstelle der Druck-Warteschlange für Raspberry-Pi-Clients.
  *
  * Eigener Namespace, eigene Authentifizierung: Anders als lw16/v1 (Cookie
  * + Nonce, für angemeldete Redakteure) authentifiziert sich hier ein
@@ -9,7 +9,7 @@
  * @package Lindenweg16
  */
 
-namespace Lindenweg16\Modules\Betrieb\Dhl\Print;
+namespace Lindenweg16\Modules\Betrieb\PrintQueue;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -19,11 +19,11 @@ use WP_REST_Request;
 use WP_REST_Response;
 
 /**
- * Registriert und beantwortet die Endpunkte unter lw16-dhl-print/v1.
+ * Registriert und beantwortet die Endpunkte unter lw16-print-queue/v1.
  */
-class DhlPrintRestApi {
+class PrintQueueRestApi {
 
-	const NAMESPACE_V1 = 'lw16-dhl-print/v1';
+	const NAMESPACE_V1 = 'lw16-print-queue/v1';
 
 	/**
 	 * Untergrenze/Obergrenze für den Long-Poll-Parameter wait (Sekunden).
@@ -113,20 +113,20 @@ class DhlPrintRestApi {
 		$ip = $this->client_ip();
 
 		if ( $this->rate_limited( $ip ) ) {
-			return new WP_Error( 'lw16_dhl_print_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
+			return new WP_Error( 'lw16_print_queue_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
 		}
 
 		if ( '' === $token ) {
 			$this->register_auth_failure( $ip );
-			return new WP_Error( 'lw16_dhl_print_unauthorized', __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' ), array( 'status' => 401 ) );
+			return new WP_Error( 'lw16_print_queue_unauthorized', __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' ), array( 'status' => 401 ) );
 		}
 
-		$printer = DhlPrinterRepository::find_by_token( $token );
+		$printer = PrinterRepository::find_by_token( $token );
 
 		if ( ! $printer ) {
 			$this->register_auth_failure( $ip );
 			// Niemals das Token selbst loggen – nur, dass ein Versuch scheiterte.
-			return new WP_Error( 'lw16_dhl_print_unauthorized', __( 'Ungültiges Token.', 'lindenweg16' ), array( 'status' => 401 ) );
+			return new WP_Error( 'lw16_print_queue_unauthorized', __( 'Ungültiges Token.', 'lindenweg16' ), array( 'status' => 401 ) );
 		}
 
 		$requested_printer_id = (string) $request->get_param( 'printer_id' );
@@ -135,10 +135,10 @@ class DhlPrintRestApi {
 			// Ein Drucker darf ausschließlich seine eigenen Jobs sehen – das
 			// Token entscheidet die Identität, printer_id ist nur eine
 			// Bestätigung, kein zweiter Zugangsweg.
-			return new WP_Error( 'lw16_dhl_print_forbidden', __( 'Dieses Token gehört zu einem anderen Drucker.', 'lindenweg16' ), array( 'status' => 403 ) );
+			return new WP_Error( 'lw16_print_queue_forbidden', __( 'Dieses Token gehört zu einem anderen Drucker.', 'lindenweg16' ), array( 'status' => 403 ) );
 		}
 
-		DhlPrinterRepository::touch( (int) $printer->id, $ip );
+		PrinterRepository::touch( (int) $printer->id, $ip );
 
 		$request->set_param( '_dhl_printer', $printer );
 
@@ -166,7 +166,7 @@ class DhlPrintRestApi {
 		if ( '' === $ip ) {
 			return false;
 		}
-		$key = 'lw16_dhl_print_authfail_' . md5( $ip );
+		$key = 'lw16_print_queue_authfail_' . md5( $ip );
 		return (int) get_transient( $key ) >= 30;
 	}
 
@@ -179,7 +179,7 @@ class DhlPrintRestApi {
 		if ( '' === $ip ) {
 			return;
 		}
-		$key   = 'lw16_dhl_print_authfail_' . md5( $ip );
+		$key   = 'lw16_print_queue_authfail_' . md5( $ip );
 		$count = (int) get_transient( $key );
 		set_transient( $key, $count + 1, MINUTE_IN_SECONDS );
 	}
@@ -212,18 +212,18 @@ class DhlPrintRestApi {
 	 */
 	public function get_jobs( $request ) {
 		$printer = $this->printer_of( $request );
-		$wait    = DhlPrintJobRepository::clamp_wait( $request->get_param( 'wait' ), self::WAIT_MIN, self::WAIT_MAX );
+		$wait    = PrintJobRepository::clamp_wait( $request->get_param( 'wait' ), self::WAIT_MIN, self::WAIT_MAX );
 
 		if ( function_exists( 'set_time_limit' ) ) {
 			@set_time_limit( $wait + 15 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.PHP.DiscouragedPHPFunctions
 		}
 
-		DhlPrintJobRepository::release_stale_locks();
+		PrintJobRepository::release_stale_locks();
 
 		$deadline = microtime( true ) + $wait;
 
 		while ( true ) {
-			$jobs = DhlPrintJobRepository::queued_for_printer( $printer->printer_id, 20 );
+			$jobs = PrintJobRepository::queued_for_printer( $printer->printer_id, 20 );
 
 			if ( $jobs ) {
 				return new WP_REST_Response( array( 'jobs' => array_map( array( $this, 'job_to_array' ), $jobs ) ), 200 );
@@ -297,14 +297,14 @@ class DhlPrintRestApi {
 	 */
 	public function get_job_file( $request ) {
 		$printer = $this->printer_of( $request );
-		$job     = DhlPrintJobRepository::find_for_printer( (int) $request->get_param( 'id' ), $printer->printer_id );
+		$job     = PrintJobRepository::find_for_printer( (int) $request->get_param( 'id' ), $printer->printer_id );
 
 		if ( ! $job ) {
-			return new WP_Error( 'lw16_dhl_print_not_found', __( 'Job nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
+			return new WP_Error( 'lw16_print_queue_not_found', __( 'Job nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
 		}
 
 		if ( ! in_array( $job->status, array( 'claimed', 'printing' ), true ) ) {
-			return new WP_Error( 'lw16_dhl_print_not_claimed', __( 'Der Job muss zuerst geclaimt werden.', 'lindenweg16' ), array( 'status' => 409 ) );
+			return new WP_Error( 'lw16_print_queue_not_claimed', __( 'Der Job muss zuerst geclaimt werden.', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
 		$pfad = $job->label_path;
@@ -312,7 +312,7 @@ class DhlPrintRestApi {
 		// Nur PDF, nur eine tatsächlich vorhandene, von diesem Plugin
 		// erzeugte Datei – keine beliebige Datei des Systems.
 		if ( ! is_file( $pfad ) || 'pdf' !== strtolower( pathinfo( $pfad, PATHINFO_EXTENSION ) ) ) {
-			return new WP_Error( 'lw16_dhl_print_missing_file', __( 'Labeldatei nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
+			return new WP_Error( 'lw16_print_queue_missing_file', __( 'Labeldatei nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
 		}
 
 		$groesse = filesize( $pfad );
@@ -321,7 +321,7 @@ class DhlPrintRestApi {
 		// größerer Wert deutet auf eine falsche Datei hin, nicht auf ein
 		// echtes Label.
 		if ( false === $groesse || $groesse > 15 * MB_IN_BYTES ) {
-			return new WP_Error( 'lw16_dhl_print_file_too_large', __( 'Datei ist unerwartet groß.', 'lindenweg16' ), array( 'status' => 500 ) );
+			return new WP_Error( 'lw16_print_queue_file_too_large', __( 'Datei ist unerwartet groß.', 'lindenweg16' ), array( 'status' => 500 ) );
 		}
 
 		nocache_headers();
@@ -346,13 +346,13 @@ class DhlPrintRestApi {
 		$printer = $this->printer_of( $request );
 		$id      = (int) $request->get_param( 'id' );
 
-		if ( ! DhlPrintJobRepository::claim( $id, $printer->printer_id ) ) {
-			return new WP_Error( 'lw16_dhl_print_claim_failed', __( 'Job ist nicht mehr verfügbar (schon geclaimt oder nicht vorhanden).', 'lindenweg16' ), array( 'status' => 409 ) );
+		if ( ! PrintJobRepository::claim( $id, $printer->printer_id ) ) {
+			return new WP_Error( 'lw16_print_queue_claim_failed', __( 'Job ist nicht mehr verfügbar (schon geclaimt oder nicht vorhanden).', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
 		AuditLog::record( 'dhl_druckjob_geclaimt', 'dhl_print_job', $id, array( 'drucker' => $printer->printer_id ) );
 
-		$job = DhlPrintJobRepository::find_for_printer( $id, $printer->printer_id );
+		$job = PrintJobRepository::find_for_printer( $id, $printer->printer_id );
 
 		return new WP_REST_Response( array( 'ok' => true, 'job' => $this->job_to_array( $job ) ), 200 );
 	}
@@ -367,8 +367,8 @@ class DhlPrintRestApi {
 		$printer = $this->printer_of( $request );
 		$id      = (int) $request->get_param( 'id' );
 
-		if ( ! DhlPrintJobRepository::mark_printing( $id, $printer->printer_id ) ) {
-			return new WP_Error( 'lw16_dhl_print_invalid_state', __( 'Ungültiger Statuswechsel.', 'lindenweg16' ), array( 'status' => 409 ) );
+		if ( ! PrintJobRepository::mark_printing( $id, $printer->printer_id ) ) {
+			return new WP_Error( 'lw16_print_queue_invalid_state', __( 'Ungültiger Statuswechsel.', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
 		AuditLog::record( 'dhl_druck_gestartet', 'dhl_print_job', $id, array( 'drucker' => $printer->printer_id ) );
@@ -387,10 +387,10 @@ class DhlPrintRestApi {
 	public function action_complete( $request ) {
 		$printer = $this->printer_of( $request );
 		$id      = (int) $request->get_param( 'id' );
-		$result  = DhlPrintJobRepository::complete( $id, $printer->printer_id );
+		$result  = PrintJobRepository::complete( $id, $printer->printer_id );
 
 		if ( ! $result['ok'] ) {
-			return new WP_Error( 'lw16_dhl_print_invalid_state', __( 'Ungültiger Statuswechsel.', 'lindenweg16' ), array( 'status' => 409 ) );
+			return new WP_Error( 'lw16_print_queue_invalid_state', __( 'Ungültiger Statuswechsel.', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
 		if ( ! $result['already'] ) {
@@ -411,8 +411,8 @@ class DhlPrintRestApi {
 		$id      = (int) $request->get_param( 'id' );
 		$message = (string) $request->get_param( 'message' );
 
-		if ( ! DhlPrintJobRepository::fail( $id, $printer->printer_id, $message ) ) {
-			return new WP_Error( 'lw16_dhl_print_invalid_state', __( 'Ungültiger Statuswechsel (Job evtl. bereits gedruckt).', 'lindenweg16' ), array( 'status' => 409 ) );
+		if ( ! PrintJobRepository::fail( $id, $printer->printer_id, $message ) ) {
+			return new WP_Error( 'lw16_print_queue_invalid_state', __( 'Ungültiger Statuswechsel (Job evtl. bereits gedruckt).', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
 		AuditLog::record( 'dhl_druck_fehlgeschlagen', 'dhl_print_job', $id, array( 'drucker' => $printer->printer_id, 'meldung' => $message ) );
@@ -436,9 +436,9 @@ class DhlPrintRestApi {
 		return new WP_REST_Response(
 			array(
 				'printer_id'  => (string) $printer->printer_id,
-				'online'      => DhlPrinterRepository::is_online( $printer ),
+				'online'      => PrinterRepository::is_online( $printer ),
 				'last_poll'   => self::to_rfc3339( $printer->last_seen_at ),
-				'queued_jobs' => DhlPrintJobRepository::count_queued( $printer->printer_id ),
+				'queued_jobs' => PrintJobRepository::count_queued( $printer->printer_id ),
 			),
 			200
 		);

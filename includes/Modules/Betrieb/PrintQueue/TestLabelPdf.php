@@ -1,11 +1,11 @@
 <?php
 /**
- * Testlabel für die DHL-Druck-Warteschlange.
+ * Testlabel für die Druck-Warteschlange.
  *
  * @package Lindenweg16
  */
 
-namespace Lindenweg16\Modules\Betrieb\Dhl\Print;
+namespace Lindenweg16\Modules\Betrieb\PrintQueue;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -17,7 +17,7 @@ defined( 'ABSPATH' ) || exit;
  * Bewusst ohne PDF-Bibliothek: Für drei Zeilen Text reicht die rohe
  * PDF-Syntax, und das Plugin bekommt dadurch keine neue Abhängigkeit.
  */
-class DhlTestLabelPdf {
+class TestLabelPdf {
 
 	/**
 	 * Seitengröße in PDF-Punkten (1 mm = 2.834645 pt) – exakt das

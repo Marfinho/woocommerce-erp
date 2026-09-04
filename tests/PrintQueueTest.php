@@ -1,6 +1,6 @@
 <?php
 /**
- * DHL-Druck-Warteschlange: Claim-/Lock-Logik, Long-Poll-Grenzen,
+ * Druck-Warteschlange: Claim-/Lock-Logik, Long-Poll-Grenzen,
  * Token-Hashing, Testlabel-PDF.
  *
  * Alles hier ist reine Logik ohne Datenbank – die eigentliche
@@ -14,14 +14,14 @@
  */
 
 use PHPUnit\Framework\TestCase;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintJobRepository;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrinterRepository;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlTestLabelPdf;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository;
+use Lindenweg16\Modules\Betrieb\PrintQueue\TestLabelPdf;
 
 /**
  * Prüft die netzfreie Hälfte der Druck-Warteschlange.
  */
-class DhlPrintQueueTest extends TestCase {
+class PrintQueueTest extends TestCase {
 
 	/* ----------------------------------------------------------------
 	 * Lock / Lease
@@ -32,8 +32,8 @@ class DhlPrintQueueTest extends TestCase {
 	 * fehlerhafter Datensatz nicht dauerhaft die Freigabe.
 	 */
 	public function test_lock_ohne_zeitstempel_ist_abgelaufen() {
-		$this->assertTrue( DhlPrintJobRepository::is_lock_expired( null, time() ) );
-		$this->assertTrue( DhlPrintJobRepository::is_lock_expired( '', time() ) );
+		$this->assertTrue( PrintJobRepository::is_lock_expired( null, time() ) );
+		$this->assertTrue( PrintJobRepository::is_lock_expired( '', time() ) );
 	}
 
 	/**
@@ -43,7 +43,7 @@ class DhlPrintQueueTest extends TestCase {
 		$now       = time();
 		$locked_at = gmdate( 'Y-m-d H:i:s', $now - 5 * 60 );
 
-		$this->assertFalse( DhlPrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
+		$this->assertFalse( PrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
 	}
 
 	/**
@@ -54,11 +54,11 @@ class DhlPrintQueueTest extends TestCase {
 		$now       = time();
 		$locked_at = gmdate( 'Y-m-d H:i:s', $now - 11 * 60 );
 
-		$this->assertTrue( DhlPrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
+		$this->assertTrue( PrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
 
 		// Exakt an der Grenze (9:59) noch gültig, an der Grenze +1s abgelaufen.
-		$this->assertFalse( DhlPrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 599 ), $now, 10 ) );
-		$this->assertTrue( DhlPrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 601 ), $now, 10 ) );
+		$this->assertFalse( PrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 599 ), $now, 10 ) );
+		$this->assertTrue( PrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 601 ), $now, 10 ) );
 	}
 
 	/* ----------------------------------------------------------------
@@ -69,19 +69,19 @@ class DhlPrintQueueTest extends TestCase {
 	 * Ohne Angabe gilt ein sinnvoller Standardwert.
 	 */
 	public function test_wait_ohne_angabe_ist_der_standardwert() {
-		$this->assertSame( 25, DhlPrintJobRepository::clamp_wait( '', 5, 30, 25 ) );
-		$this->assertSame( 25, DhlPrintJobRepository::clamp_wait( null, 5, 30, 25 ) );
-		$this->assertSame( 25, DhlPrintJobRepository::clamp_wait( 0, 5, 30, 25 ) );
-		$this->assertSame( 25, DhlPrintJobRepository::clamp_wait( -5, 5, 30, 25 ) );
+		$this->assertSame( 25, PrintJobRepository::clamp_wait( '', 5, 30, 25 ) );
+		$this->assertSame( 25, PrintJobRepository::clamp_wait( null, 5, 30, 25 ) );
+		$this->assertSame( 25, PrintJobRepository::clamp_wait( 0, 5, 30, 25 ) );
+		$this->assertSame( 25, PrintJobRepository::clamp_wait( -5, 5, 30, 25 ) );
 	}
 
 	/**
 	 * Der Client darf keine beliebig lange Verbindung erzwingen.
 	 */
 	public function test_wait_wird_auf_min_und_max_begrenzt() {
-		$this->assertSame( 5, DhlPrintJobRepository::clamp_wait( 1, 5, 30 ) );
-		$this->assertSame( 30, DhlPrintJobRepository::clamp_wait( 999, 5, 30 ) );
-		$this->assertSame( 20, DhlPrintJobRepository::clamp_wait( 20, 5, 30 ) );
+		$this->assertSame( 5, PrintJobRepository::clamp_wait( 1, 5, 30 ) );
+		$this->assertSame( 30, PrintJobRepository::clamp_wait( 999, 5, 30 ) );
+		$this->assertSame( 20, PrintJobRepository::clamp_wait( 20, 5, 30 ) );
 	}
 
 	/* ----------------------------------------------------------------
@@ -92,9 +92,9 @@ class DhlPrintQueueTest extends TestCase {
 	 * Nur ein wartender Job darf geclaimt werden.
 	 */
 	public function test_nur_queued_darf_geclaimt_werden() {
-		$this->assertTrue( DhlPrintJobRepository::can_claim( 'queued' ) );
+		$this->assertTrue( PrintJobRepository::can_claim( 'queued' ) );
 		foreach ( array( 'claimed', 'printing', 'printed', 'failed', 'cancelled' ) as $status ) {
-			$this->assertFalse( DhlPrintJobRepository::can_claim( $status ), $status );
+			$this->assertFalse( PrintJobRepository::can_claim( $status ), $status );
 		}
 	}
 
@@ -103,11 +103,11 @@ class DhlPrintQueueTest extends TestCase {
 	 * ausdrücklich erlaubt (ein wiederholter Aufruf darf nicht scheitern).
 	 */
 	public function test_complete_ist_idempotent_erlaubt() {
-		$this->assertTrue( DhlPrintJobRepository::can_complete( 'claimed' ) );
-		$this->assertTrue( DhlPrintJobRepository::can_complete( 'printing' ) );
-		$this->assertTrue( DhlPrintJobRepository::can_complete( 'printed' ) );
-		$this->assertFalse( DhlPrintJobRepository::can_complete( 'queued' ) );
-		$this->assertFalse( DhlPrintJobRepository::can_complete( 'failed' ) );
+		$this->assertTrue( PrintJobRepository::can_complete( 'claimed' ) );
+		$this->assertTrue( PrintJobRepository::can_complete( 'printing' ) );
+		$this->assertTrue( PrintJobRepository::can_complete( 'printed' ) );
+		$this->assertFalse( PrintJobRepository::can_complete( 'queued' ) );
+		$this->assertFalse( PrintJobRepository::can_complete( 'failed' ) );
 	}
 
 	/**
@@ -116,11 +116,11 @@ class DhlPrintQueueTest extends TestCase {
 	 * verlassen.
 	 */
 	public function test_ein_gedruckter_job_kann_nicht_mehr_fehlschlagen() {
-		$this->assertTrue( DhlPrintJobRepository::can_fail( 'claimed' ) );
-		$this->assertTrue( DhlPrintJobRepository::can_fail( 'printing' ) );
-		$this->assertTrue( DhlPrintJobRepository::can_fail( 'failed' ), 'failed->failed ist idempotent erlaubt.' );
-		$this->assertFalse( DhlPrintJobRepository::can_fail( 'printed' ) );
-		$this->assertFalse( DhlPrintJobRepository::can_fail( 'queued' ) );
+		$this->assertTrue( PrintJobRepository::can_fail( 'claimed' ) );
+		$this->assertTrue( PrintJobRepository::can_fail( 'printing' ) );
+		$this->assertTrue( PrintJobRepository::can_fail( 'failed' ), 'failed->failed ist idempotent erlaubt.' );
+		$this->assertFalse( PrintJobRepository::can_fail( 'printed' ) );
+		$this->assertFalse( PrintJobRepository::can_fail( 'queued' ) );
 	}
 
 	/* ----------------------------------------------------------------
@@ -131,25 +131,25 @@ class DhlPrintQueueTest extends TestCase {
 	 * Ein Token ist lang genug, um praktisch nicht erratbar zu sein.
 	 */
 	public function test_token_hat_ausreichend_entropie() {
-		$token = DhlPrinterRepository::generate_token();
+		$token = PrinterRepository::generate_token();
 
 		$this->assertSame( 64, strlen( $token ), '256 Bit als Hex sind 64 Zeichen.' );
 		$this->assertMatchesRegularExpression( '/^[0-9a-f]{64}$/', $token );
 
-		$this->assertNotSame( $token, DhlPrinterRepository::generate_token(), 'Zwei Token dürfen nicht gleich sein.' );
+		$this->assertNotSame( $token, PrinterRepository::generate_token(), 'Zwei Token dürfen nicht gleich sein.' );
 	}
 
 	/**
 	 * Nur das richtige Token passt zu seinem Hash.
 	 */
 	public function test_token_vergleich() {
-		$token = DhlPrinterRepository::generate_token();
-		$hash  = DhlPrinterRepository::hash_token( $token );
+		$token = PrinterRepository::generate_token();
+		$hash  = PrinterRepository::hash_token( $token );
 
-		$this->assertTrue( DhlPrinterRepository::token_matches( $token, $hash ) );
-		$this->assertFalse( DhlPrinterRepository::token_matches( 'falsches-token', $hash ) );
-		$this->assertFalse( DhlPrinterRepository::token_matches( '', $hash ) );
-		$this->assertFalse( DhlPrinterRepository::token_matches( $token, '' ) );
+		$this->assertTrue( PrinterRepository::token_matches( $token, $hash ) );
+		$this->assertFalse( PrinterRepository::token_matches( 'falsches-token', $hash ) );
+		$this->assertFalse( PrinterRepository::token_matches( '', $hash ) );
+		$this->assertFalse( PrinterRepository::token_matches( $token, '' ) );
 	}
 
 	/**
@@ -157,10 +157,10 @@ class DhlPrintQueueTest extends TestCase {
 	 * sich vom Token selbst.
 	 */
 	public function test_gespeichert_wird_nur_der_hash() {
-		$token = DhlPrinterRepository::generate_token();
+		$token = PrinterRepository::generate_token();
 
-		$this->assertNotSame( $token, DhlPrinterRepository::hash_token( $token ) );
-		$this->assertSame( 64, strlen( DhlPrinterRepository::hash_token( $token ) ), 'sha256 als Hex.' );
+		$this->assertNotSame( $token, PrinterRepository::hash_token( $token ) );
+		$this->assertSame( 64, strlen( PrinterRepository::hash_token( $token ) ), 'sha256 als Hex.' );
 	}
 
 	/* ----------------------------------------------------------------
@@ -171,8 +171,8 @@ class DhlPrintQueueTest extends TestCase {
 	 * Ohne jemals gesehenen Heartbeat gilt ein Drucker als offline.
 	 */
 	public function test_ohne_heartbeat_offline() {
-		$this->assertFalse( DhlPrinterRepository::is_online( null ) );
-		$this->assertFalse( DhlPrinterRepository::is_online( (object) array( 'last_seen_at' => null ) ) );
+		$this->assertFalse( PrinterRepository::is_online( null ) );
+		$this->assertFalse( PrinterRepository::is_online( (object) array( 'last_seen_at' => null ) ) );
 	}
 
 	/**
@@ -182,8 +182,8 @@ class DhlPrintQueueTest extends TestCase {
 		$frisch = (object) array( 'last_seen_at' => gmdate( 'Y-m-d H:i:s', time() - 10 ) );
 		$alt    = (object) array( 'last_seen_at' => gmdate( 'Y-m-d H:i:s', time() - 200 ) );
 
-		$this->assertTrue( DhlPrinterRepository::is_online( $frisch, 90 ) );
-		$this->assertFalse( DhlPrinterRepository::is_online( $alt, 90 ) );
+		$this->assertTrue( PrinterRepository::is_online( $frisch, 90 ) );
+		$this->assertFalse( PrinterRepository::is_online( $alt, 90 ) );
 	}
 
 	/* ----------------------------------------------------------------
@@ -194,7 +194,7 @@ class DhlPrintQueueTest extends TestCase {
 	 * Die Seitengröße entspricht dem Thermolabel – keine A4-Anpassung.
 	 */
 	public function test_testlabel_hat_die_labelgroesse() {
-		list( $w, $h ) = DhlTestLabelPdf::page_points( 103, 199 );
+		list( $w, $h ) = TestLabelPdf::page_points( 103, 199 );
 
 		// 103 mm bzw. 199 mm in PDF-Punkten (1 mm = 72/25.4 pt).
 		$this->assertEqualsWithDelta( 291.97, $w, 0.5 );
@@ -207,7 +207,7 @@ class DhlPrintQueueTest extends TestCase {
 	 * echte Sendung suggeriert wird.
 	 */
 	public function test_testlabel_pdf_enthaelt_die_hinweistexte() {
-		$pdf = DhlTestLabelPdf::build( array( 'HASTER HAKEN', 'TESTLABEL', 'KEINE VERSENDUNG' ) );
+		$pdf = TestLabelPdf::build( array( 'HASTER HAKEN', 'TESTLABEL', 'KEINE VERSENDUNG' ) );
 
 		$this->assertStringStartsWith( '%PDF-1.4', $pdf );
 		$this->assertStringContainsString( '(HASTER HAKEN)', $pdf );
@@ -221,7 +221,7 @@ class DhlPrintQueueTest extends TestCase {
 	 * werden.
 	 */
 	public function test_testlabel_pdf_maskiert_sonderzeichen() {
-		$pdf = DhlTestLabelPdf::build( array( 'Test (mit) Klammern' ) );
+		$pdf = TestLabelPdf::build( array( 'Test (mit) Klammern' ) );
 
 		$this->assertStringContainsString( '\\(mit\\)', $pdf );
 	}
