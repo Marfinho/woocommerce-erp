@@ -20,6 +20,7 @@ use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\LaborCost;
 use Lindenweg16\Modules\Betrieb\LabelSheet;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\WageRepository;
@@ -663,7 +664,6 @@ class BinsPage {
 		echo '<p>' . esc_html__( 'Alle QR-Codes in einem Rutsch – Lagerplätze, Artikel, Drucker oder alles zusammen. Die Codes sind dieselben wie einzeln im Backend: Ein Lagerplatz führt beim Scannen auf sein Fach, ein Artikel auf seine Buchungsmaske, ein Drucker auf die Erfassung mit vorausgewähltem Gerät.', 'lindenweg16' ) . '</p>';
 
 		echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		echo '<input type="hidden" name="action" value="lw16_betrieb_labels" />';
 		wp_nonce_field( 'lw16_betrieb_export', '_wpnonce', false );
 
 		echo '<p>';
@@ -701,7 +701,12 @@ class BinsPage {
 			);
 		}
 		echo '</optgroup></select> ';
-		printf( '<button class="button button-primary">%s</button></p>', esc_html__( 'Etikettenbogen erzeugen', 'lindenweg16' ) );
+		printf(
+			'<button type="submit" name="action" value="lw16_betrieb_labels" class="button button-primary">%s</button></p>',
+			esc_html__( 'Etikettenbogen erzeugen (Download)', 'lindenweg16' )
+		);
+
+		$this->render_label_queue_form();
 
 		echo '<ul class="ul-disc" style="max-width:52em">';
 		foreach ( array_merge( LabelSheet::layouts(), LabelSheet::rolls() ) as $format ) {
@@ -711,8 +716,49 @@ class BinsPage {
 
 		echo '<p class="description">' . esc_html__( 'In jedem Fall ohne Skalierung drucken: im Druckdialog „Tatsächliche Grösse" und nicht „An Seite anpassen". Sonst schrumpft der Bogen um ein paar Prozent – auf dem Klebebogen liegen die Etiketten dann neben der Stanzung, auf der Rolle wird der QR-Code so klein, dass ihn keine Kamera mehr liest.', 'lindenweg16' ) . '</p>';
 		echo '<p class="description">' . esc_html__( 'Bei den Formaten für den Etikettendrucker ist die erste Zahl die Rollenbreite, die zweite die Etikettenlänge – so benennt Brother seine Rollen. Das gewählte Format muss zu der Rolle passen, die gerade im Gerät liegt: 62 × 29 gehört auf die breite Rolle, 29 × 90 auf die schmale. Das Adressetikett 29 × 90 wird der Länge nach beschriftet; gedreht ist dabei der Aufdruck, nicht die Seite – im Druckdialog also nichts auf Querformat stellen. Jede Seite des PDFs ist genau ein Etikett. Im Druckdialog den Brother wählen, als Papierformat die eingelegte Rolle, Skalierung aus.', 'lindenweg16' ) . '</p>';
-		echo '<p class="description">' . esc_html__( 'Direkt aus dem Plugin heraus drucken kann der Server nicht: Der Drucker steht in deinem Netz, die Webseite beim Hoster – die beiden sehen einander nicht. Was hier geht, ist der kurze Weg: Knopf drücken, das PDF öffnet sich im Browser, Strg+P, fertig.', 'lindenweg16' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Herunterladen und selbst drucken kann der Server nicht ersetzen: Der Drucker steht in deinem Netz, die Webseite beim Hoster – die beiden sehen einander nicht. Wer einen Raspberry Pi als Druck-Client eingerichtet hat (Rollenformat, siehe Knopf oben rechts), kann Etiketten stattdessen direkt in dessen Warteschlange legen, statt sie herunterzuladen und selbst zu drucken.', 'lindenweg16' ) . '</p>';
 		echo '</form>';
+	}
+
+	/**
+	 * Zweiter Knopf desselben Formulars: Etiketten direkt in die
+	 * Druck-Warteschlange eines registrierten Raspberry-Pi-Druckers legen,
+	 * statt sie herunterzuladen. Nur Rollenformate eignen sich dafür –
+	 * ein A4-Bogen mit vielen Etiketten je Seite passt auf keinen
+	 * Rollendrucker.
+	 */
+	protected function render_label_queue_form() {
+		$printers = PrinterRepository::all();
+
+		if ( ! $printers ) {
+			echo '<p class="description">';
+			printf(
+				/* translators: %s: Link zur Drucker-Verwaltung. */
+				esc_html__( 'Noch kein Drucker für die Warteschlange eingerichtet – unter %s einen anlegen, dann erscheint hier zusätzlich die Möglichkeit, Etiketten direkt dorthin zu legen.', 'lindenweg16' ),
+				'<a href="' . esc_url( admin_url( 'admin.php?page=lw16-betrieb-druckwarteschlange-drucker' ) ) . '">' . esc_html__( 'Betrieb → Druck-Warteschlange: Drucker', 'lindenweg16' ) . '</a>'
+			);
+			echo '</p>';
+			return;
+		}
+
+		echo '<p>';
+		echo '<select name="printer_id">';
+		printf( '<option value="">%s</option>', esc_html__( '– Drucker der Warteschlange wählen –', 'lindenweg16' ) );
+		foreach ( $printers as $printer ) {
+			printf(
+				'<option value="%s">%s (%s)</option>',
+				esc_attr( $printer->printer_id ),
+				esc_html( $printer->name ),
+				esc_html( $printer->printer_id )
+			);
+		}
+		echo '</select> ';
+		printf(
+			'<button type="submit" name="action" value="lw16_betrieb_labels_queue" class="button">%s</button>',
+			esc_html__( 'In Druck-Warteschlange legen', 'lindenweg16' )
+		);
+		echo ' <span class="description">' . esc_html__( '(nur Rollenformat, kein A4-Bogen)', 'lindenweg16' ) . '</span>';
+		echo '</p>';
 	}
 
 	/**

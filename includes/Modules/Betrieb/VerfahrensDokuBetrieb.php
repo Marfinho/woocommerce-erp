@@ -126,8 +126,8 @@ class VerfahrensDokuBetrieb {
 			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
 			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
 			'kpi_goals'         => __( 'Ziele und Alarmgrenzen je Quartal; kürzere und längere Zeiträume werden daraus abgeleitet, Summengrößen nach Tagen verteilt, Verhältnisgrößen unverändert', 'lindenweg16' ),
-			'dhl_print_printers' => __( 'Registrierte Raspberry-Pi-Druckclients der DHL-Druck-Warteschlange; gespeichert wird nur der Hash des Bearer-Tokens, nie das Token selbst', 'lindenweg16' ),
-			'dhl_print_jobs'    => __( 'Druckjobs der DHL-Druck-Warteschlange; entsteht erst, nachdem ein DHL-Label erfolgreich erzeugt und abgelegt wurde, referenziert die vorhandene Labeldatei statt sie zu kopieren', 'lindenweg16' ),
+			'print_queue_printers' => __( 'Registrierte Raspberry-Pi-Druckclients der Druck-Warteschlange; gespeichert wird nur der Hash des Bearer-Tokens, nie das Token selbst', 'lindenweg16' ),
+			'print_queue_jobs'    => __( 'Druckjobs der Druck-Warteschlange (DHL-Versandlabels, Artikel-/Lagerplatz-Etiketten, Testlabel); referenziert wo möglich die vorhandene Datei statt sie zu kopieren', 'lindenweg16' ),
 		);
 
 		foreach ( $tables as $table => $description ) {

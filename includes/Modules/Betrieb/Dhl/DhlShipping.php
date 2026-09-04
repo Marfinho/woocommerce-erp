@@ -13,7 +13,7 @@ use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintQueue;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Production\DhlTracking;
 
@@ -304,7 +304,7 @@ class DhlShipping {
 
 		// Druck-Warteschlange: erst jetzt, wo das Label wirklich erzeugt
 		// UND abgelegt ist – nie bei einem DHL- oder Ablagefehler.
-		DhlPrintQueue::maybe_enqueue_for_label( (int) $order_id, $label_id, $datei );
+		PrintQueueService::maybe_enqueue_for_label( (int) $order_id, $label_id, $datei );
 
 		AuditLog::record(
 			'dhl_label_erzeugt',

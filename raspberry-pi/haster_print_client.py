@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Haster/Lindenweg16 DHL-Druck-Client für den Raspberry Pi.
+Haster/Lindenweg16 Druck-Client für den Raspberry Pi.
 
 Holt Druckjobs über Long Polling von der WordPress-/WooCommerce-Instanz
-ab, lädt das DHL-Thermolabel-PDF herunter und übergibt es unverändert
-(kein Skalieren, kein "fit to page") an CUPS.
+ab (DHL-Versandlabels ebenso wie Artikel-/Lagerplatz-Etiketten und
+andere Etiketten aus der Druck-Warteschlange), lädt das jeweilige PDF
+herunter und übergibt es unverändert (kein Skalieren, kein "fit to
+page") an CUPS. Ein Client bedient genau einen Drucker (PRINTER_ID) –
+was er druckt, entscheidet allein die Warteschlange auf der
+WordPress-Seite, nicht der Client.
 
 Netzwerk: Der Pi baut ausschließlich ausgehende HTTPS-Verbindungen zum
 WordPress-Server auf (Pull-Client). Es wird kein eingehender Port
@@ -78,7 +82,7 @@ class Config:
     DOWNLOAD_DIRECTORY = Path(os.environ.get("DOWNLOAD_DIRECTORY", "/var/lib/haster-print"))
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
-    API_NAMESPACE = "lw16-dhl-print/v1"
+    API_NAMESPACE = "lw16-print-queue/v1"
 
     @classmethod
     def validate(cls) -> None:

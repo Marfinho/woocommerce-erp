@@ -1,8 +1,13 @@
-# Haster/Lindenweg16 DHL-Druck-Client (Raspberry Pi)
+# Haster/Lindenweg16 Druck-Client (Raspberry Pi)
 
-Holt DHL-Versandlabels aus der Druck-Warteschlange von WordPress/WooCommerce
-ab und druckt sie über CUPS auf einem lokal per USB angeschlossenen
-Thermo-Etikettendrucker.
+Holt Druckjobs aus der Druck-Warteschlange von WordPress/WooCommerce ab und
+druckt sie über CUPS auf einem lokal per USB angeschlossenen
+Etikettendrucker – DHL-Versandlabels ebenso wie Artikel- und
+Lagerplatz-Etiketten oder andere Etiketten aus dem Plugin. Ein Client
+bedient genau einen Drucker; mehrere Drucker (z. B. einen für DHL-Labels
+am Packtisch, einen fürs Lager) bedeuten mehrere registrierte Drucker im
+Backend und entsprechend mehrere laufende Client-Instanzen – auf einem
+oder auf mehreren Raspberry Pis, siehe unten.
 
 **Wichtig zum Netzwerk:** Der Pi baut ausschließlich eine ausgehende
 HTTPS-Verbindung zum WordPress-Server auf ("Pull"-Client). Es wird **keine
@@ -77,7 +82,7 @@ venv/bin/pip install -r requirements.txt
 
 ### 7./8. `.env` konfigurieren und Token eintragen
 
-Im WordPress-Backend unter **Lindenweg16 → Betrieb → DHL Drucker** einen
+Im WordPress-Backend unter **Lindenweg16 → Betrieb → Druck-Warteschlange: Drucker** einen
 Drucker anlegen (z. B. Drucker-ID `eg_dhl`, Name „EG DHL"). Das dabei
 angezeigte Token wird **nur einmalig** angezeigt – sofort übernehmen.
 
@@ -116,7 +121,7 @@ Der Dienst startet nach jedem Neustart des Pi automatisch wieder
 
 ### 11. Testlabel aus WordPress drucken
 
-Im WordPress-Backend unter **Lindenweg16 → Betrieb → DHL Drucker** bei dem
+Im WordPress-Backend unter **Lindenweg16 → Betrieb → Druck-Warteschlange: Drucker** bei dem
 angelegten Drucker auf **„Testlabel drucken"** klicken. Der Pi holt den
 Job beim nächsten Kontakt ab (in der Regel deutlich unter 5 Sekunden) und
 druckt ein Label mit dem Text „HASTER HAKEN / TESTLABEL / KEINE
@@ -167,6 +172,33 @@ nicht als Konfigurationswert – ein Umzug in ein anderes Netzwerk (Haus A
 → Haus B → Büro → Lager) erfordert keine Änderung auf der
 WordPress-Seite, solange der Pi Internetzugang hat.
 
+### Mehrere Drucker
+
+Jeder Drucker bekommt eine eigene Drucker-ID und ein eigenes Token im
+Backend, und jeder Client-Prozess bedient genau eine Drucker-ID – er
+druckt, was in der Warteschlange für diese ID liegt, egal ob DHL-Label,
+Artikel- oder Lagerplatz-Etikett. Zwei gängige Aufbauten:
+
+**Ein Pi, zwei Drucker** – empfohlen, wenn beide Drucker nah beieinander
+stehen (z. B. Packtisch und Lager im selben Raum oder Gebäude): Beide
+Drucker per USB an denselben Pi, in CUPS als zwei separate Drucker
+einrichten (Schritt 4, zweimal mit unterschiedlichem `-p NAME`), dann
+zwei Kopien von `/opt/haster-print` mit je eigener `.env`
+(`PRINTER_ID`/`PRINTER_NAME` unterschiedlich) und zwei systemd-Units
+(z. B. `haster-print-dhl.service` und `haster-print-lager.service`,
+kopiert aus `haster-print.service` mit angepasstem `WorkingDirectory`
+und `ExecStart`). Günstiger und weniger zu warten als ein zweiter Pi.
+
+**Zwei separate Pis** – sinnvoll, wenn die Drucker weit auseinander
+stehen (unterschiedliche Räume, Stockwerke oder Standorte): ein
+eigenständiger Pi direkt am jeweiligen Drucker, jeder mit eigener
+Installation nach dieser Anleitung und eigener `.env`. Kein
+USB-Kabel quer durchs Gebäude nötig, und fällt ein Pi aus, druckt der
+andere trotzdem weiter.
+
+In beiden Fällen ändert sich am WordPress-Backend nichts weiter: Jeder
+Drucker wird dort einmal angelegt, unabhängig davon, wie viele Pis dahinterstehen.
+
 ### Token neu erzeugen
 
 Falls ein Token in falsche Hände geraten ist: im Admin bei „Token neu
@@ -184,7 +216,7 @@ WooCommerce-Testbestellung anlegen
         ↓
 DHL-Label erzeugen (Einstellung "Automatisch drucken" muss aktiv sein)
         ↓
-Lindenweg16 → Betrieb → Druckjobs: neuer Eintrag "Wartend"
+Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: neuer Eintrag "Wartend"
         ↓
 Pi erkennt den Job (journalctl -u haster-print -f zeigt "Job … verfügbar")
         ↓
@@ -192,5 +224,5 @@ Pi lädt das PDF herunter und übergibt es an CUPS
         ↓
 Etikett kommt am Drucker heraus
         ↓
-Lindenweg16 → Betrieb → Druckjobs: Eintrag wechselt auf "Gedruckt"
+Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: Eintrag wechselt auf "Gedruckt"
 ```

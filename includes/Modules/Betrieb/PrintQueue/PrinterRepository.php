@@ -1,11 +1,11 @@
 <?php
 /**
- * Drucker (Raspberry-Pi-Clients) der DHL-Druck-Warteschlange.
+ * Drucker (Raspberry-Pi-Clients) der Druck-Warteschlange.
  *
  * @package Lindenweg16
  */
 
-namespace Lindenweg16\Modules\Betrieb\Dhl\Print;
+namespace Lindenweg16\Modules\Betrieb\PrintQueue;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -16,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
  * Klartext ist ausschließlich das Ergebnis von create() bzw.
  * regenerate_token() und wird sonst nirgends abgelegt oder geloggt.
  */
-class DhlPrinterRepository {
+class PrinterRepository {
 
 	/**
 	 * Tabellenname.
@@ -25,7 +25,7 @@ class DhlPrinterRepository {
 	 */
 	public static function table() {
 		global $wpdb;
-		return $wpdb->prefix . 'lw16_dhl_print_printers';
+		return $wpdb->prefix . 'lw16_print_queue_printers';
 	}
 
 	/**

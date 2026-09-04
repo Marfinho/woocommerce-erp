@@ -106,10 +106,10 @@ class SettingsPage {
 				'dhl_versand_vorabmeldung' => array( __( 'Kunden per E-Mail vorab benachrichtigen', 'lindenweg16' ), 'checkbox' ),
 				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus (erzeugt keine echten Labels)', 'lindenweg16' ), 'checkbox' ),
 			),
-			__( 'DHL Druck-Warteschlange (Raspberry Pi)', 'lindenweg16' ) => array(
+			__( 'Automatischer DHL-Druck (Raspberry Pi)', 'lindenweg16' ) => array(
 				'dhl_print_automatisch'       => array( __( 'Nach erfolgreicher Label-Erzeugung automatisch einen Druckjob anlegen', 'lindenweg16' ), 'checkbox' ),
 				'dhl_print_standarddrucker'   => array( __( 'Standard-Drucker-ID (z. B. eg_dhl)', 'lindenweg16' ), 'text' ),
-				'dhl_print_aufbewahrung_tage' => array( __( 'Aufbewahrung der Druckjob-Einträge (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
+				'dhl_print_aufbewahrung_tage' => array( __( 'Aufbewahrung der Druckjob-Einträge der ganzen Warteschlange (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
 			),
 		);
 	}

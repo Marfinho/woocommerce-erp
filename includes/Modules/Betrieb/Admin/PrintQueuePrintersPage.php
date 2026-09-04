@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin-Übersicht der DHL-Druck-Warteschlange: Drucker.
+ * Admin-Übersicht der Druck-Warteschlange: Drucker.
  *
  * @package Lindenweg16
  */
@@ -10,27 +10,27 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrinterRepository;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintJobRepository;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintQueue;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 
 /**
- * „DHL Drucker": Registrierte Raspberry-Pi-Clients, ihr Online-Status und
+ * „Drucker": Registrierte Raspberry-Pi-Clients, ihr Online-Status und
  * die Token-Verwaltung.
  */
-class DhlPrintersPage {
+class PrintQueuePrintersPage {
 
-	const SLUG  = 'lw16-betrieb-dhl-drucker';
-	const NONCE = 'lw16_dhl_printers';
+	const SLUG  = 'lw16-betrieb-druckwarteschlange-drucker';
+	const NONCE = 'lw16_print_queue_printers';
 
 	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_action( 'lw16_betrieb_render_lw16_betrieb_dhl_drucker', array( $this, 'render' ) );
-		add_action( 'admin_post_lw16_dhl_print_add_printer', array( $this, 'handle_add' ) );
-		add_action( 'admin_post_lw16_dhl_print_regen_token', array( $this, 'handle_regen' ) );
-		add_action( 'admin_post_lw16_dhl_print_test_label', array( $this, 'handle_test_label' ) );
+		add_action( 'lw16_betrieb_render_lw16_betrieb_druckwarteschlange_drucker', array( $this, 'render' ) );
+		add_action( 'admin_post_lw16_print_queue_add_printer', array( $this, 'handle_add' ) );
+		add_action( 'admin_post_lw16_print_queue_regen_token', array( $this, 'handle_regen' ) );
+		add_action( 'admin_post_lw16_print_queue_test_label', array( $this, 'handle_test_label' ) );
 	}
 
 	/**
@@ -56,11 +56,11 @@ class DhlPrintersPage {
 			$this->back( __( 'Drucker-ID und Name sind Pflicht.', 'lindenweg16' ), 0 );
 		}
 
-		if ( DhlPrinterRepository::find_by_printer_id( $printer_id ) ) {
+		if ( PrinterRepository::find_by_printer_id( $printer_id ) ) {
 			$this->back( __( 'Diese Drucker-ID gibt es schon.', 'lindenweg16' ), 0 );
 		}
 
-		$result = DhlPrinterRepository::create( $printer_id, $name );
+		$result = PrinterRepository::create( $printer_id, $name );
 
 		$this->back( __( 'Drucker angelegt.', 'lindenweg16' ), $result['id'], $result['token'] );
 	}
@@ -73,7 +73,7 @@ class DhlPrintersPage {
 		check_admin_referer( self::NONCE );
 
 		$id    = isset( $_POST['printer_pk'] ) ? (int) $_POST['printer_pk'] : 0;
-		$token = DhlPrinterRepository::regenerate_token( $id );
+		$token = PrinterRepository::regenerate_token( $id );
 
 		if ( '' === $token ) {
 			$this->back( __( 'Drucker nicht gefunden.', 'lindenweg16' ), 0 );
@@ -90,7 +90,7 @@ class DhlPrintersPage {
 		check_admin_referer( self::NONCE );
 
 		$printer_id = isset( $_POST['printer_id'] ) ? sanitize_key( wp_unslash( $_POST['printer_id'] ) ) : '';
-		$job_id     = DhlPrintQueue::create_test_job( $printer_id );
+		$job_id     = PrintQueueService::create_test_job( $printer_id );
 
 		$this->back(
 			$job_id
@@ -130,7 +130,7 @@ class DhlPrintersPage {
 	public function render() {
 		$this->require_cap();
 
-		echo '<h1>' . esc_html__( 'DHL Drucker', 'lindenweg16' ) . '</h1>';
+		echo '<h1>' . esc_html__( 'Drucker', 'lindenweg16' ) . '</h1>';
 
 		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( isset( $_GET['lw16_msg'] ) ) {
@@ -154,7 +154,7 @@ class DhlPrintersPage {
 
 		echo '<h2>' . esc_html__( 'Registrierte Drucker', 'lindenweg16' ) . '</h2>';
 
-		$printers = DhlPrinterRepository::all();
+		$printers = PrinterRepository::all();
 
 		if ( ! $printers ) {
 			echo '<p>' . esc_html__( 'Noch kein Drucker angelegt.', 'lindenweg16' ) . '</p>';
@@ -172,7 +172,7 @@ class DhlPrintersPage {
 	protected function render_add_form() {
 		echo '<h2>' . esc_html__( 'Neuen Drucker anlegen', 'lindenweg16' ) . '</h2>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		echo '<input type="hidden" name="action" value="lw16_dhl_print_add_printer">';
+		echo '<input type="hidden" name="action" value="lw16_print_queue_add_printer">';
 		wp_nonce_field( self::NONCE );
 		echo '<table class="form-table"><tbody>';
 		echo '<tr><th scope="row">' . esc_html__( 'Drucker-ID', 'lindenweg16' ) . '</th><td>';
@@ -180,7 +180,7 @@ class DhlPrintersPage {
 		echo '<p class="description">' . esc_html__( 'Technischer Schlüssel, z. B. eg_dhl, office_dhl, warehouse_dhl. Trägt der Raspberry Pi in PRINTER_ID ein.', 'lindenweg16' ) . '</p>';
 		echo '</td></tr>';
 		echo '<tr><th scope="row">' . esc_html__( 'Name', 'lindenweg16' ) . '</th><td>';
-		echo '<input type="text" name="name" class="regular-text" placeholder="EG DHL" required>';
+		echo '<input type="text" name="name" class="regular-text" placeholder="EG Etikettendrucker" required>';
 		echo '</td></tr>';
 		echo '</tbody></table>';
 		submit_button( __( 'Drucker anlegen', 'lindenweg16' ) );
@@ -193,8 +193,8 @@ class DhlPrintersPage {
 	 * @param object $printer Datensatz.
 	 */
 	protected function render_card( $printer ) {
-		$online = DhlPrinterRepository::is_online( $printer );
-		$queue  = DhlPrintJobRepository::count_queued( $printer->printer_id );
+		$online = PrinterRepository::is_online( $printer );
+		$queue  = PrintJobRepository::count_queued( $printer->printer_id );
 
 		echo '<div class="lw16-card" style="border:1px solid #dcdcde;border-radius:4px;padding:16px;margin-bottom:12px;max-width:480px">';
 		printf( '<h3 style="margin-top:0">%s <code>%s</code></h3>', esc_html( $printer->name ), esc_html( $printer->printer_id ) );
@@ -220,14 +220,14 @@ class DhlPrintersPage {
 		printf( '<p><strong>%s:</strong> %d</p>', esc_html__( 'Warteschlange', 'lindenweg16' ), (int) $queue );
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-right:8px">';
-		echo '<input type="hidden" name="action" value="lw16_dhl_print_test_label">';
+		echo '<input type="hidden" name="action" value="lw16_print_queue_test_label">';
 		printf( '<input type="hidden" name="printer_id" value="%s">', esc_attr( $printer->printer_id ) );
 		wp_nonce_field( self::NONCE, '_wpnonce', true, false );
 		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Testlabel drucken', 'lindenweg16' ) );
 		echo '</form>';
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block" onsubmit="return confirm(\'' . esc_js( __( 'Neues Token erzeugen? Das alte wird sofort ungültig – der Raspberry Pi muss neu konfiguriert werden.', 'lindenweg16' ) ) . '\')">';
-		echo '<input type="hidden" name="action" value="lw16_dhl_print_regen_token">';
+		echo '<input type="hidden" name="action" value="lw16_print_queue_regen_token">';
 		printf( '<input type="hidden" name="printer_pk" value="%d">', (int) $printer->id );
 		wp_nonce_field( self::NONCE, '_wpnonce', true, false );
 		printf( '<button type="submit" class="button button-secondary">%s</button>', esc_html__( 'Token neu erzeugen', 'lindenweg16' ) );

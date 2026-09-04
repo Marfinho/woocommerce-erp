@@ -1,6 +1,6 @@
 <?php
 /**
- * Admin-Übersicht der DHL-Druck-Warteschlange: Druckjobs.
+ * Admin-Übersicht der Druck-Warteschlange: Druckjobs.
  *
  * @package Lindenweg16
  */
@@ -10,14 +10,14 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
-use Lindenweg16\Modules\Betrieb\Dhl\Print\DhlPrintJobRepository;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
 
 /**
  * „Druckjobs": Liste aller Jobs mit Statusfilter.
  */
-class DhlPrintJobsPage {
+class PrintQueueJobsPage {
 
-	const SLUG = 'lw16-betrieb-dhl-druckjobs';
+	const SLUG = 'lw16-betrieb-druckwarteschlange-jobs';
 
 	/**
 	 * Anzeige-Bezeichnungen je Status.
@@ -39,7 +39,7 @@ class DhlPrintJobsPage {
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_action( 'lw16_betrieb_render_lw16_betrieb_dhl_druckjobs', array( $this, 'render' ) );
+		add_action( 'lw16_betrieb_render_lw16_betrieb_druckwarteschlange_jobs', array( $this, 'render' ) );
 	}
 
 	/**
@@ -65,7 +65,7 @@ class DhlPrintJobsPage {
 
 		$this->render_filter( $filter, $base );
 
-		$jobs = DhlPrintJobRepository::list_for_admin( $filter, 200 );
+		$jobs = PrintJobRepository::list_for_admin( $filter, 200 );
 
 		if ( ! $jobs ) {
 			echo '<p>' . esc_html__( 'Keine Druckjobs in dieser Ansicht.', 'lindenweg16' ) . '</p>';
