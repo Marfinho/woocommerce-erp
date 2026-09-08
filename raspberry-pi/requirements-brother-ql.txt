@@ -4,7 +4,7 @@
 #
 #   venv/bin/pip install -r requirements.txt -r requirements-brother-ql.txt
 
-brother_ql>=1.2,<2
+brother_ql>=0.9,<1
 pyusb>=1.2,<2
 PyMuPDF>=1.23,<2
 Pillow>=10,<11
