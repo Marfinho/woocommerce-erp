@@ -222,14 +222,14 @@ class PrintQueuePrintersPage {
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-right:8px">';
 		echo '<input type="hidden" name="action" value="lw16_print_queue_test_label">';
 		printf( '<input type="hidden" name="printer_id" value="%s">', esc_attr( $printer->printer_id ) );
-		wp_nonce_field( self::NONCE, '_wpnonce', true, false );
+		wp_nonce_field( self::NONCE );
 		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Testlabel drucken', 'lindenweg16' ) );
 		echo '</form>';
 
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block" onsubmit="return confirm(\'' . esc_js( __( 'Neues Token erzeugen? Das alte wird sofort ungültig – der Raspberry Pi muss neu konfiguriert werden.', 'lindenweg16' ) ) . '\')">';
 		echo '<input type="hidden" name="action" value="lw16_print_queue_regen_token">';
 		printf( '<input type="hidden" name="printer_pk" value="%d">', (int) $printer->id );
-		wp_nonce_field( self::NONCE, '_wpnonce', true, false );
+		wp_nonce_field( self::NONCE );
 		printf( '<button type="submit" class="button button-secondary">%s</button>', esc_html__( 'Token neu erzeugen', 'lindenweg16' ) );
 		echo '</form>';
 
