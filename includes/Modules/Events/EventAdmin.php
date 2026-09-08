@@ -34,6 +34,8 @@ class EventAdmin {
 		add_action( 'admin_post_lw16_event_rsvp_export', array( $this, 'export_rsvp' ) );
 		add_action( 'admin_post_lw16_event_rsvp_status', array( $this, 'set_rsvp_status' ) );
 
+		add_action( 'wp_ajax_lw16_komoot_vorschau', array( $this, 'ajax_komoot_vorschau' ) );
+
 		add_filter( 'manage_' . EventPostType::POST_TYPE . '_posts_columns', array( $this, 'columns' ) );
 		add_action( 'manage_' . EventPostType::POST_TYPE . '_posts_custom_column', array( $this, 'column' ), 10, 2 );
 	}
@@ -120,9 +122,10 @@ class EventAdmin {
 
 		<table class="widefat" id="lw16-felder-tabelle">
 			<thead><tr>
-				<th style="width:22%"><?php esc_html_e( 'Beschriftung', 'lindenweg16' ); ?></th>
-				<th style="width:22%"><?php esc_html_e( 'Feldtyp', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Beschriftung', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Feldtyp', 'lindenweg16' ); ?></th>
 				<th><?php esc_html_e( 'Inhalt', 'lindenweg16' ); ?></th>
+				<th style="width:20%"><?php esc_html_e( 'Darstellung', 'lindenweg16' ); ?></th>
 				<th style="width:5%"></th>
 			</tr></thead>
 			<tbody>
@@ -135,6 +138,19 @@ class EventAdmin {
 			</tbody>
 		</table>
 		<p><button type="button" class="button" id="lw16-feld-hinzu"><?php esc_html_e( 'Feld hinzufügen', 'lindenweg16' ); ?></button></p>
+
+		<div id="lw16-komoot-vorschau" hidden>
+			<p>
+				<strong><?php esc_html_e( 'Vorschau', 'lindenweg16' ); ?></strong>
+				<span id="lw16-komoot-vorschau-titel" class="description"></span>
+				<button type="button" class="button-link" id="lw16-komoot-vorschau-zu"><?php esc_html_e( 'schließen', 'lindenweg16' ); ?></button>
+			</p>
+			<p id="lw16-komoot-vorschau-fehler" class="description" hidden></p>
+			<iframe id="lw16-komoot-vorschau-rahmen" src="about:blank" width="100%" height="420"
+				frameborder="0" scrolling="no" allow="fullscreen" allowfullscreen
+				title="<?php esc_attr_e( 'Vorschau der Komoot-Einbettung', 'lindenweg16' ); ?>"></iframe>
+			<p class="description"><?php esc_html_e( 'So erscheint die Tour später auf der Eventseite. Der Stil lässt sich jederzeit umstellen; gespeichert wird er erst mit dem Event.', 'lindenweg16' ); ?></p>
+		</div>
 
 		<script type="text/html" id="lw16-feld-vorlage">
 			<?php $this->feld_zeile( -1, array( 'label' => '', 'typ' => 'text', 'wert' => '' ), $typen ); ?>
@@ -158,6 +174,89 @@ class EventAdmin {
 				if (!e.target.classList.contains('lw16-feld-weg')) return;
 				var zeile = e.target.closest('tr');
 				if (zeile) zeile.remove();
+			});
+
+			// Die Darstellung gehoert nur zum Komoot-Typ. Das Feld bleibt im
+			// Formular stehen und wird nur versteckt - sonst waere die
+			// Einstellung nach einem versehentlichen Typwechsel weg.
+			tbody.addEventListener('change', function(e){
+				if (!e.target.name) return;
+
+				if (e.target.name.indexOf('[typ]') !== -1) {
+					var zeile = e.target.closest('tr');
+					if (!zeile) return;
+					var istKomoot = (e.target.value === 'komoot');
+					var auswahl = zeile.querySelector('.lw16-feld-option');
+					var knopf = zeile.querySelector('.lw16-feld-vorschau');
+					if (auswahl) auswahl.hidden = !istKomoot;
+					if (knopf) knopf.hidden = !istKomoot;
+					return;
+				}
+
+				// Stil gewechselt, waehrend die Vorschau dieser Zeile offen
+				// ist: dann gleich neu laden statt den alten Stand zu zeigen.
+				if (e.target.name.indexOf('[option]') !== -1 && e.target.closest('tr') === offeneZeile) {
+					vorschau(offeneZeile);
+				}
+			});
+
+			// --- Vorschau -------------------------------------------------
+			var kasten = document.getElementById('lw16-komoot-vorschau');
+			var rahmen = document.getElementById('lw16-komoot-vorschau-rahmen');
+			var titel = document.getElementById('lw16-komoot-vorschau-titel');
+			var fehler = document.getElementById('lw16-komoot-vorschau-fehler');
+			var offeneZeile = null;
+
+			function zeigeFehler(text){
+				fehler.textContent = text;
+				fehler.hidden = false;
+				rahmen.hidden = true;
+			}
+
+			function vorschau(zeile){
+				var url = zeile.querySelector('input[name*="[wert]"]');
+				var stil = zeile.querySelector('.lw16-feld-option');
+				if (!url || !stil) return;
+
+				offeneZeile = zeile;
+				kasten.hidden = false;
+				fehler.hidden = true;
+				rahmen.hidden = false;
+
+				var beschriftung = zeile.querySelector('input[name*="[label]"]');
+				titel.textContent = beschriftung && beschriftung.value ? '– ' + beschriftung.value : '';
+
+				var daten = new FormData();
+				daten.append('action', 'lw16_komoot_vorschau');
+				daten.append('_wpnonce', '<?php echo esc_js( wp_create_nonce( 'lw16_komoot_vorschau' ) ); ?>');
+				daten.append('url', url.value);
+				daten.append('stil', stil.value);
+
+				fetch(ajaxurl, {method: 'POST', body: daten, credentials: 'same-origin'})
+					.then(function(r){ return r.json(); })
+					.then(function(d){
+						if (!d.success || !d.data || !d.data.url) {
+							zeigeFehler(d && d.data && d.data.fehler ? d.data.fehler : '<?php echo esc_js( __( 'Vorschau nicht möglich.', 'lindenweg16' ) ); ?>');
+							return;
+						}
+						rahmen.src = d.data.url;
+						rahmen.height = d.data.hoehe;
+					})
+					.catch(function(){
+						zeigeFehler('<?php echo esc_js( __( 'Vorschau konnte nicht geladen werden.', 'lindenweg16' ) ); ?>');
+					});
+			}
+
+			tbody.addEventListener('click', function(e){
+				if (!e.target.classList.contains('lw16-feld-vorschau')) return;
+				var zeile = e.target.closest('tr');
+				if (zeile) vorschau(zeile);
+			});
+
+			document.getElementById('lw16-komoot-vorschau-zu').addEventListener('click', function(){
+				kasten.hidden = true;
+				rahmen.src = 'about:blank';
+				offeneZeile = null;
 			});
 		})();
 		</script>
@@ -190,6 +289,26 @@ class EventAdmin {
 			</td>
 			<td><input type="text" class="widefat" name="lw16_feld[<?php echo esc_attr( $idx ); ?>][wert]"
 				value="<?php echo esc_attr( $wert ); ?>"></td>
+			<td>
+				<?php
+				// Steht im Markup immer, wird aber nur beim Komoot-Typ
+				// eingeblendet: Ein Feld, das beim Speichern fehlt, verlöre
+				// beim Umschalten des Typs seinen Wert.
+				$option = isset( $feld['option'] ) ? (string) $feld['option'] : 'profil';
+				?>
+				<select class="widefat lw16-feld-option" name="lw16_feld[<?php echo esc_attr( $idx ); ?>][option]"
+					<?php echo 'komoot' === $typ ? '' : 'hidden'; ?>>
+					<?php foreach ( EventFields::komoot_stile() as $key => $stil ) : ?>
+						<option value="<?php echo esc_attr( $key ); ?>" <?php selected( EventFields::komoot_stil( $option ), $key ); ?>
+							title="<?php echo esc_attr( $stil['beschreibung'] ); ?>">
+							<?php echo esc_html( $stil['label'] ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+				<button type="button" class="button-link lw16-feld-vorschau" <?php echo 'komoot' === $typ ? '' : 'hidden'; ?>>
+					<?php esc_html_e( 'Vorschau', 'lindenweg16' ); ?>
+				</button>
+			</td>
 			<td><button type="button" class="button-link lw16-feld-weg" title="<?php esc_attr_e( 'Feld entfernen', 'lindenweg16' ); ?>">&times;</button></td>
 		</tr>
 		<?php
@@ -522,6 +641,42 @@ class EventAdmin {
 	/* --------------------------------------------------------------------
 	 * Helfer
 	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Einbettungsadresse für die Vorschau im Backend liefern.
+	 *
+	 * Die Adresse baut ausschließlich PHP – dieselbe Prüfung wie beim
+	 * Speichern und beim Ausliefern. Sie im Browser zusammenzusetzen hieße,
+	 * die Regeln ein zweites Mal zu schreiben, und die zweite Fassung wäre
+	 * die, die irgendwann abweicht.
+	 */
+	public function ajax_komoot_vorschau() {
+		check_ajax_referer( 'lw16_komoot_vorschau' );
+
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_send_json_error( array( 'fehler' => __( 'Keine Berechtigung.', 'lindenweg16' ) ), 403 );
+		}
+
+		$roh  = isset( $_POST['url'] ) ? sanitize_text_field( wp_unslash( $_POST['url'] ) ) : '';
+		$stil = isset( $_POST['stil'] ) ? sanitize_key( wp_unslash( $_POST['stil'] ) ) : 'classic';
+
+		if ( '' === trim( $roh ) ) {
+			wp_send_json_error( array( 'fehler' => __( 'Erst die Adresse der Komoot-Tour eintragen.', 'lindenweg16' ) ) );
+		}
+
+		$url = EventFields::komoot_embed_url( $roh, $stil );
+
+		if ( '' === $url ) {
+			wp_send_json_error( array(
+				'fehler' => __( 'Das ist keine lesbare Komoot-Tour-Adresse. Erwartet wird die Adresse aus der Adresszeile, etwa https://www.komoot.com/tour/123456789', 'lindenweg16' ),
+			) );
+		}
+
+		wp_send_json_success( array(
+			'url'   => $url,
+			'hoehe' => EventFields::komoot_hoehe( $stil ),
+		) );
+	}
 
 	/**
 	 * QR-Code auf ein Event, mit Kurzlink als Rückfallebene.

@@ -122,7 +122,7 @@ class POSModule {
 				echo '</select><p class="description">' . esc_html__( 'Der Tagesumsatz zählt dann in der Marketing-Auswertung gegen die Kosten dieses Events.', 'lindenweg16' ) . '</p></td></tr>';
 			}
 			echo '<tr><th>' . esc_html__( 'Datum', 'lindenweg16' ) . '</th><td><input type="date" name="datum" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '" required></td></tr>';
-			echo '<tr><th>' . esc_html__( 'Kassenbestand Anfang (€)', 'lindenweg16' ) . '</th><td><input type="number" step="0.01" name="kassenbestand_anfang" class="small-text" value="0.00" required></td></tr>';
+			echo '<tr><th>' . esc_html__( 'Kassenbestand Anfang (€)', 'lindenweg16' ) . '</th><td><input type="text" inputmode="decimal" name="kassenbestand_anfang" class="small-text" value="0,00" required></td></tr>';
 			echo '</tbody></table>';
 			submit_button( __( 'Kassatag starten', 'lindenweg16' ) );
 			echo '</form>';
@@ -201,35 +201,41 @@ class POSModule {
 					<input type="hidden" name="action" value="lw16_pos_verkauf">
 					<input type="hidden" name="tag_id" value="<?php echo (int) $tag->id; ?>">
 					<?php wp_nonce_field( 'lw16_pos_verkauf' ); ?>
+					<?php $this->render_product_picker( $produkte, 'lw16-pos' ); ?>
 					<table class="form-table"><tbody>
-						<tr><th><?php esc_html_e( 'ERP-Produkt', 'lindenweg16' ); ?></th><td>
-							<select name="produkt_id" id="lw16-pos-produkt">
-								<option value=""><?php esc_html_e( '— Manuell eingeben —', 'lindenweg16' ); ?></option>
-								<?php foreach ( $produkte as $p ) : ?>
-									<option value="<?php echo esc_attr( $p['value'] ); ?>" data-name="<?php echo esc_attr( $p['name'] ); ?>" data-preis="<?php echo esc_attr( $p['preis'] ); ?>"><?php echo esc_html( $p['label'] ); ?></option>
-								<?php endforeach; ?>
-							</select>
-						</td></tr>
 						<tr><th><?php esc_html_e( 'Artikelname', 'lindenweg16' ); ?></th><td>
 							<input type="text" name="artikel_name" id="lw16-pos-name" class="regular-text" placeholder="<?php esc_attr_e( 'z. B. Sonderteil XY', 'lindenweg16' ); ?>">
-							<p class="description"><?php esc_html_e( 'Wird automatisch gefüllt, wenn ein ERP-Produkt gewählt wird.', 'lindenweg16' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Wird aus der gewählten Kachel gefüllt und lässt sich überschreiben.', 'lindenweg16' ); ?></p>
 						</td></tr>
 						<tr><th><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></th><td><input type="number" step="1" min="1" name="menge" value="1" class="small-text" required></td></tr>
-						<tr><th><?php esc_html_e( 'Einzelpreis (€)', 'lindenweg16' ); ?></th><td><input type="number" step="0.01" name="einzelpreis" class="small-text" required></td></tr>
+						<tr><th><?php esc_html_e( 'Einzelpreis (€)', 'lindenweg16' ); ?></th><td>
+							<input type="text" inputmode="decimal" name="einzelpreis" id="lw16-pos-preis" class="small-text" required>
+							<p class="description"><?php esc_html_e( 'Komma oder Punkt – beides wird verstanden.', 'lindenweg16' ); ?></p>
+						</td></tr>
 					</tbody></table>
 					<?php submit_button( __( 'Verkauf buchen', 'lindenweg16' ), 'primary' ); ?>
 				</form>
-				<script>
-				document.getElementById('lw16-pos-produkt').addEventListener('change',function(){
-					var sel=this.options[this.selectedIndex];
-					if(!sel.value){return;}
-					document.getElementById('lw16-pos-name').value=sel.dataset.name||sel.textContent.trim();
-					// Preis nur vorschlagen, wenn das Feld noch leer ist -
-					// am Marktstand wird oft ein Sonderpreis eingetippt.
-					var preis=document.querySelector('[name="einzelpreis"]');
-					if(preis&&sel.dataset.preis&&!parseFloat(preis.value)){preis.value=sel.dataset.preis;}
-				});
-				</script>
+				<?php $this->picker_script( 'lw16-pos' ); ?>
+
+				<hr style="margin:24px 0">
+				<h2><?php esc_html_e( 'Freier Betrag', 'lindenweg16' ); ?></h2>
+				<p class="description"><?php esc_html_e( 'Für alles ohne Artikel im Stamm – Restposten, Spende, Reparatur. Der Betrag geht in Umsatz und Kassenbuch, es wird kein Lagerbestand abgebucht.', 'lindenweg16' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="lw16_pos_verkauf">
+					<input type="hidden" name="tag_id" value="<?php echo (int) $tag->id; ?>">
+					<input type="hidden" name="produkt_id" value="">
+					<input type="hidden" name="menge" value="1">
+					<?php wp_nonce_field( 'lw16_pos_verkauf' ); ?>
+					<table class="form-table"><tbody>
+						<tr><th><?php esc_html_e( 'Bezeichnung', 'lindenweg16' ); ?></th><td>
+							<input type="text" name="artikel_name" class="regular-text" placeholder="<?php esc_attr_e( 'z. B. Sonderverkauf', 'lindenweg16' ); ?>">
+						</td></tr>
+						<tr><th><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></th><td>
+							<input type="text" inputmode="decimal" name="einzelpreis" class="small-text" placeholder="0,00" required>
+						</td></tr>
+					</tbody></table>
+					<?php submit_button( __( 'Betrag buchen', 'lindenweg16' ), 'secondary' ); ?>
+				</form>
 
 				<hr style="margin:24px 0">
 				<h2><?php esc_html_e( 'Tagesabschluss', 'lindenweg16' ); ?></h2>
@@ -239,7 +245,7 @@ class POSModule {
 					<?php wp_nonce_field( 'lw16_pos_tag_abschluss' ); ?>
 					<table class="form-table"><tbody>
 						<tr><th><?php esc_html_e( 'Kassenbestand Ende (€)', 'lindenweg16' ); ?></th><td>
-							<input type="number" step="0.01" name="kassenbestand_ende" class="small-text" required>
+							<input type="text" inputmode="decimal" name="kassenbestand_ende" class="small-text" placeholder="0,00" required>
 							<p class="description"><?php esc_html_e( 'Zähle das Bargeld in der Kasse und trage den Betrag ein.', 'lindenweg16' ); ?></p>
 						</td></tr>
 						<tr><th><?php esc_html_e( 'Notiz', 'lindenweg16' ); ?></th><td>
@@ -284,6 +290,128 @@ class POSModule {
 				<?php endif; ?>
 			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Produktauswahl als Kachelliste.
+	 *
+	 * Die Auswahl war früher ein Klappfeld. Am Marktstand ist das die
+	 * falsche Bedienung: Man sucht dort nicht nach einem Namen, den man
+	 * schon kennt, sondern greift nach dem Teil, das der Kunde in der Hand
+	 * hält – und erkennt es am Bild. Die Kacheln zeigen deshalb Foto,
+	 * Bezeichnung und Preis; getippt wird nur noch, was nicht im Stamm
+	 * steht.
+	 *
+	 * @param array  $produkte Einträge aus sale_options().
+	 * @param string $prefix   Kennung für die IDs (Desktop/Mobil).
+	 */
+	protected function render_product_picker( array $produkte, $prefix ) {
+		printf( '<div class="lw16-pos-picker" id="%s-picker">', esc_attr( $prefix ) );
+		printf(
+			'<input type="hidden" name="produkt_id" id="%s-choice" value="">',
+			esc_attr( $prefix )
+		);
+
+		if ( ! $produkte ) {
+			printf( '<p>%s</p></div>', esc_html__( 'Noch kein verkäuflicher Artikel angelegt – buche unten einen freien Betrag.', 'lindenweg16' ) );
+			return;
+		}
+
+		printf(
+			'<input type="search" class="lw16-pos-suche" id="%s-suche" placeholder="%s" autocomplete="off">',
+			esc_attr( $prefix ),
+			esc_attr__( 'Artikel filtern…', 'lindenweg16' )
+		);
+
+		echo '<div class="lw16-pos-grid">';
+
+		foreach ( $produkte as $p ) {
+			printf(
+				'<button type="button" class="lw16-pos-kachel" data-value="%s" data-name="%s" data-preis="%s" data-suche="%s">',
+				esc_attr( $p['value'] ),
+				esc_attr( $p['name'] ),
+				esc_attr( $p['preis'] ),
+				esc_attr( self::search_key( $p['label'] ) )
+			);
+
+			if ( ! empty( $p['bild'] ) ) {
+				printf(
+					'<span class="lw16-pos-kachel-bild"><img src="%s" alt="" loading="lazy"></span>',
+					esc_url( $p['bild'] )
+				);
+			} else {
+				printf(
+					'<span class="lw16-pos-kachel-bild lw16-pos-kachel-bild--leer">%s</span>',
+					esc_html( self::initials( $p['name'] ) )
+				);
+			}
+
+			printf( '<span class="lw16-pos-kachel-name">%s</span>', esc_html( $p['name'] ) );
+
+			if ( ! empty( $p['sku'] ) ) {
+				printf( '<span class="lw16-pos-kachel-sku">%s</span>', esc_html( $p['sku'] ) );
+			}
+
+			printf(
+				'<span class="lw16-pos-kachel-preis">%s</span>',
+				'' === $p['preis']
+					? esc_html__( 'Preis offen', 'lindenweg16' )
+					: esc_html( number_format( (float) $p['preis'], 2, ',', '.' ) . ' €' )
+			);
+
+			echo '</button>';
+		}
+
+		echo '</div></div>';
+	}
+
+	/**
+	 * Script für Kachelauswahl und Filter.
+	 *
+	 * @param string $prefix Kennung für die IDs.
+	 */
+	protected function picker_script( $prefix ) {
+		$prefix = wp_json_encode( (string) $prefix );
+		?>
+		<script>
+		(function(){
+			var p = <?php echo $prefix; // phpcs:ignore WordPress.Security.EscapeOutput ?>;
+			var wurzel = document.getElementById(p + '-picker');
+			if (!wurzel) { return; }
+			var wahl   = document.getElementById(p + '-choice');
+			var name   = document.getElementById(p + '-name');
+			var preis  = document.getElementById(p + '-preis');
+			var suche  = document.getElementById(p + '-suche');
+			var kacheln = wurzel.querySelectorAll('.lw16-pos-kachel');
+
+			Array.prototype.forEach.call(kacheln, function(kachel){
+				kachel.addEventListener('click', function(){
+					// Ein zweiter Klick auf dieselbe Kachel hebt die Auswahl
+					// wieder auf - sonst haengt am naechsten freien Betrag
+					// noch das vorige Produkt und die Ware wird doppelt
+					// ausgebucht.
+					var war_aktiv = kachel.classList.contains('is-aktiv');
+					Array.prototype.forEach.call(kacheln, function(k){ k.classList.remove('is-aktiv'); });
+					if (war_aktiv) { wahl.value = ''; return; }
+					kachel.classList.add('is-aktiv');
+					wahl.value = kachel.dataset.value;
+					if (name) { name.value = kachel.dataset.name || ''; }
+					if (preis && kachel.dataset.preis) { preis.value = kachel.dataset.preis.replace('.', ','); }
+					if (preis && !kachel.dataset.preis) { preis.focus(); }
+				});
+			});
+
+			if (suche) {
+				suche.addEventListener('input', function(){
+					var q = suche.value.toLowerCase().replace(/\s+/g, ' ').trim();
+					Array.prototype.forEach.call(kacheln, function(k){
+						k.hidden = q !== '' && k.dataset.suche.indexOf(q) === -1;
+					});
+				});
+			}
+		})();
+		</script>
 		<?php
 	}
 
@@ -413,6 +541,19 @@ class POSModule {
 			.pos-close-section{background:#1d2327;border-radius:10px;padding:16px}
 			.pos-close-section h2{color:#fff;font-size:16px;margin-bottom:12px}
 			.pos-close-section label{color:#fff}
+			.pos-hinweis{font-size:13px;color:#646970;margin-bottom:10px}
+			/* Kachelauswahl: greifen statt suchen. */
+			.lw16-pos-suche{width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;margin-bottom:10px;-webkit-appearance:none}
+			.lw16-pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;max-height:340px;overflow-y:auto;padding:2px;margin-bottom:12px}
+			.lw16-pos-kachel{display:flex;flex-direction:column;align-items:center;gap:3px;background:#fff;border:2px solid #ddd;border-radius:10px;padding:8px 6px;font:inherit;text-align:center;cursor:pointer}
+			.lw16-pos-kachel.is-aktiv{border-color:#2271b1;background:#f0f6fc}
+			.lw16-pos-kachel-bild{display:flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:6px;overflow:hidden;background:#f0f0f1}
+			.lw16-pos-kachel-bild img{width:100%;height:100%;object-fit:cover}
+			.lw16-pos-kachel-bild--leer{font-size:22px;font-weight:700;color:#8c8f94}
+			.lw16-pos-kachel-name{font-size:13px;font-weight:600;line-height:1.2}
+			.lw16-pos-kachel-sku{font-size:10px;color:#646970}
+			.lw16-pos-kachel-preis{font-size:13px;font-weight:700;color:#2271b1}
+			[hidden]{display:none !important}
 		</style>
 		</head>
 		<body>
@@ -432,15 +573,8 @@ class POSModule {
 				<input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ); ?>">
 				<?php wp_nonce_field( 'lw16_pos_verkauf' ); ?>
 
-				<div class="pos-field">
-					<label><?php esc_html_e( 'Produkt', 'lindenweg16' ); ?></label>
-					<select name="produkt_id" id="m-pos-produkt">
-						<option value=""><?php esc_html_e( '— Manuell —', 'lindenweg16' ); ?></option>
-						<?php foreach ( $produkte as $p ) : ?>
-							<option value="<?php echo esc_attr( $p['value'] ); ?>" data-name="<?php echo esc_attr( $p['name'] ); ?>" data-preis="<?php echo esc_attr( $p['preis'] ); ?>"><?php echo esc_html( $p['label'] ); ?></option>
-						<?php endforeach; ?>
-					</select>
-				</div>
+				<?php $this->render_product_picker( $produkte, 'm-pos' ); ?>
+
 				<div class="pos-field">
 					<label><?php esc_html_e( 'Artikelname', 'lindenweg16' ); ?></label>
 					<input type="text" name="artikel_name" id="m-pos-name" placeholder="<?php esc_attr_e( 'Artikelbezeichnung', 'lindenweg16' ); ?>">
@@ -452,22 +586,36 @@ class POSModule {
 					</div>
 					<div class="pos-field">
 						<label><?php esc_html_e( 'Preis (€)', 'lindenweg16' ); ?></label>
-						<input type="number" name="einzelpreis" step="0.01" min="0" required inputmode="decimal">
+						<input type="text" name="einzelpreis" id="m-pos-preis" required inputmode="decimal" placeholder="0,00">
 					</div>
 				</div>
 				<button type="submit" class="pos-btn pos-btn-primary"><?php esc_html_e( 'Kassieren', 'lindenweg16' ); ?></button>
 			</form>
 		</div>
 
-		<script>
-		document.getElementById('m-pos-produkt').addEventListener('change',function(){
-			var o=this.options[this.selectedIndex];
-			if(!o.value){return;}
-			document.getElementById('m-pos-name').value=o.dataset.name||'';
-			var preis=document.querySelector('[name="einzelpreis"]');
-			if(preis&&o.dataset.preis&&!parseFloat(preis.value)){preis.value=o.dataset.preis;}
-		});
-		</script>
+		<?php $this->picker_script( 'm-pos' ); ?>
+
+		<div class="pos-section">
+			<h2><?php esc_html_e( 'Freier Betrag', 'lindenweg16' ); ?></h2>
+			<p class="pos-hinweis"><?php esc_html_e( 'Ohne Produkt – zählt in Umsatz und Kassenbuch, bucht kein Lager ab.', 'lindenweg16' ); ?></p>
+			<form method="post" action="<?php echo esc_url( $sell_url ); ?>">
+				<input type="hidden" name="action" value="lw16_pos_verkauf">
+				<input type="hidden" name="tag_id" value="<?php echo (int) $tag->id; ?>">
+				<input type="hidden" name="produkt_id" value="">
+				<input type="hidden" name="menge" value="1">
+				<input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ); ?>">
+				<?php wp_nonce_field( 'lw16_pos_verkauf' ); ?>
+				<div class="pos-field">
+					<label><?php esc_html_e( 'Bezeichnung', 'lindenweg16' ); ?></label>
+					<input type="text" name="artikel_name" placeholder="<?php esc_attr_e( 'z. B. Sonderverkauf', 'lindenweg16' ); ?>">
+				</div>
+				<div class="pos-field">
+					<label><?php esc_html_e( 'Betrag (€)', 'lindenweg16' ); ?></label>
+					<input type="text" name="einzelpreis" required inputmode="decimal" placeholder="0,00">
+				</div>
+				<button type="submit" class="pos-btn pos-btn-secondary"><?php esc_html_e( 'Betrag buchen', 'lindenweg16' ); ?></button>
+			</form>
+		</div>
 
 		<div class="pos-section">
 			<h2><?php esc_html_e( 'Verkäufe heute', 'lindenweg16' ); ?> (<?php echo count( $positionen ); ?>)</h2>
@@ -498,7 +646,7 @@ class POSModule {
 				<?php wp_nonce_field( 'lw16_pos_tag_abschluss' ); ?>
 				<div class="pos-field">
 					<label><?php esc_html_e( 'Kassenbestand Ende (€)', 'lindenweg16' ); ?></label>
-					<input type="number" name="kassenbestand_ende" step="0.01" required inputmode="decimal" style="background:#fff;color:#1d2327">
+					<input type="text" name="kassenbestand_ende" required inputmode="decimal" placeholder="0,00" style="background:#fff;color:#1d2327">
 				</div>
 				<div class="pos-field">
 					<label><?php esc_html_e( 'Notiz', 'lindenweg16' ); ?></label>
@@ -530,7 +678,7 @@ class POSModule {
 			'markt_name'           => sanitize_text_field( wp_unslash( $_POST['markt_name'] ?? '' ) ),
 			'kampagne_id'          => (int) ( $_POST['kampagne_id'] ?? 0 ),
 			'datum'                => sanitize_text_field( wp_unslash( $_POST['datum'] ?? gmdate( 'Y-m-d' ) ) ),
-			'kassenbestand_anfang' => (float) ( $_POST['kassenbestand_anfang'] ?? 0 ),
+			'kassenbestand_anfang' => self::parse_amount( wp_unslash( $_POST['kassenbestand_anfang'] ?? '' ) ),
 		) );
 
 		AuditLog::record( 'pos_tag_gestartet', 'pos_tag', $id );
@@ -552,11 +700,16 @@ class POSModule {
 		$legacy  = array();
 
 		foreach ( ArticleRepository::selectable( true ) as $article ) {
+			$wc_id = isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
+			$preis = null === $article['price_gross'] ? '' : number_format( (float) $article['price_gross'], 2, '.', '' );
+
 			$options[] = array(
 				'value' => 'a:' . (int) $article['id'],
 				'label' => $article['sku'] . ' – ' . $article['name'],
 				'name'  => (string) $article['name'],
-				'preis' => null === $article['price_gross'] ? '' : number_format( (float) $article['price_gross'], 2, '.', '' ),
+				'sku'   => (string) $article['sku'],
+				'preis' => '' === $preis ? self::product_price( $wc_id ) : $preis,
+				'bild'  => self::product_image_url( $wc_id ),
 			);
 
 			if ( ! empty( $article['legacy_produkt_id'] ) ) {
@@ -573,11 +726,175 @@ class POSModule {
 				'value' => 'p:' . (int) $product->id,
 				'label' => $product->name . ' (' . $product->typ . ')',
 				'name'  => (string) $product->name,
-				'preis' => '',
+				'sku'   => (string) $product->typ,
+				'preis' => self::product_price( isset( $product->woo_product_id ) ? (int) $product->woo_product_id : 0 ),
+				'bild'  => self::product_image_url( isset( $product->woo_product_id ) ? (int) $product->woo_product_id : 0 ),
 			);
 		}
 
 		return $options;
+	}
+
+	/**
+	 * Bild eines Shop-Produkts für die Kachel.
+	 *
+	 * Der Artikelstamm führt selbst kein Bild – das Produktfoto liegt im
+	 * Shop. Fehlt die Verknüpfung oder das Beitragsbild, gibt es eben
+	 * keins; die Kachel zeigt dann die Initialen.
+	 *
+	 * @param int $wc_product_id WooCommerce-Produkt.
+	 * @return string Bild-URL oder leer.
+	 */
+	protected static function product_image_url( $wc_product_id ) {
+		$wc_product_id = (int) $wc_product_id;
+
+		if ( ! $wc_product_id || ! function_exists( 'get_post_thumbnail_id' ) ) {
+			return '';
+		}
+
+		$thumb_id = (int) get_post_thumbnail_id( $wc_product_id );
+
+		if ( ! $thumb_id ) {
+			return '';
+		}
+
+		return (string) wp_get_attachment_image_url( $thumb_id, 'thumbnail' );
+	}
+
+	/**
+	 * Verkaufspreis eines Shop-Produkts.
+	 *
+	 * @param int $wc_product_id WooCommerce-Produkt.
+	 * @return string Preis mit Punkt als Dezimaltrenner oder leer.
+	 */
+	protected static function product_price( $wc_product_id ) {
+		$wc_product_id = (int) $wc_product_id;
+
+		if ( ! $wc_product_id || ! function_exists( 'wc_get_product' ) ) {
+			return '';
+		}
+
+		$product = wc_get_product( $wc_product_id );
+
+		if ( ! $product ) {
+			return '';
+		}
+
+		$preis = $product->get_price();
+
+		return '' === $preis || null === $preis ? '' : number_format( (float) $preis, 2, '.', '' );
+	}
+
+	/**
+	 * Kürzel für eine Kachel ohne Produktbild.
+	 *
+	 * Reine Zeichenkettenlogik: die Anfangsbuchstaben der ersten beiden
+	 * Wörter. Ohne sie wäre eine bildlose Kachel eine leere Fläche und am
+	 * Marktstand nicht vom Nachbarn zu unterscheiden.
+	 *
+	 * @param string $name Artikelbezeichnung.
+	 * @return string Ein bis zwei Großbuchstaben.
+	 */
+	public static function initials( $name ) {
+		$name = trim( preg_replace( '/\s+/u', ' ', (string) $name ) );
+
+		if ( '' === $name ) {
+			return '?';
+		}
+
+		$woerter  = explode( ' ', $name );
+		$kuerzel  = '';
+
+		foreach ( $woerter as $wort ) {
+			if ( '' === $wort ) {
+				continue;
+			}
+
+			$kuerzel .= function_exists( 'mb_substr' ) ? mb_substr( $wort, 0, 1 ) : substr( $wort, 0, 1 );
+
+			if ( strlen( $kuerzel ) >= 2 ) {
+				break;
+			}
+		}
+
+		return function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $kuerzel ) : strtoupper( $kuerzel );
+	}
+
+	/**
+	 * Suchtext einer Kachel – reine Zeichenkettenlogik.
+	 *
+	 * Der Filter im Browser vergleicht denselben normalisierten Text.
+	 * Weicht die Aufbereitung hier davon ab, findet die Suche Kacheln
+	 * nicht, die sichtbar passen.
+	 *
+	 * @param string $text Bezeichnung und Artikelnummer.
+	 * @return string
+	 */
+	public static function search_key( $text ) {
+		$text = trim( preg_replace( '/\s+/u', ' ', (string) $text ) );
+
+		return function_exists( 'mb_strtolower' ) ? mb_strtolower( $text ) : strtolower( $text );
+	}
+
+	/**
+	 * Handgetippten Geldbetrag in eine Zahl verwandeln.
+	 *
+	 * Reine Zeichenkettenlogik. Am Marktstand wird „12,50" getippt, nicht
+	 * „12.50"; ein nacktes (float) daraus wäre 12,00 € – der Fehler fällt
+	 * erst beim Kassensturz auf. Erkannt werden deshalb beide
+	 * Dezimaltrenner samt Tausenderpunkt, Währungszeichen und Leerraum.
+	 *
+	 * @param mixed $raw Eingabe.
+	 * @return float Betrag; nie negativ.
+	 */
+	public static function parse_amount( $raw ) {
+		if ( is_float( $raw ) || is_int( $raw ) ) {
+			return max( 0.0, (float) $raw );
+		}
+
+		// Ein Array käme nur aus einem manipulierten Formular; (string)
+		// darauf wäre in PHP 8 ein Fehler statt einer Buchung.
+		if ( ! is_string( $raw ) ) {
+			return 0.0;
+		}
+
+		$text = trim( (string) $raw );
+
+		if ( '' === $text ) {
+			return 0.0;
+		}
+
+		// Alles, was kein Zifferntrenner ist, fliegt raus – Euro-Zeichen,
+		// Leerzeichen, Buchstaben.
+		$text = preg_replace( '/[^0-9,.\-]/', '', $text );
+
+		if ( '' === $text || '-' === $text ) {
+			return 0.0;
+		}
+
+		$letztes_komma = strrpos( $text, ',' );
+		$letzter_punkt = strrpos( $text, '.' );
+		$trenner       = max( false === $letztes_komma ? -1 : $letztes_komma, false === $letzter_punkt ? -1 : $letzter_punkt );
+
+		if ( $trenner < 0 ) {
+			return max( 0.0, (float) $text );
+		}
+
+		// Was hinter dem letzten Trenner steht, sind die Nachkommastellen –
+		// aber nur, wenn es höchstens zwei Ziffern sind. „1.250" ist ein
+		// Tausenderpunkt, kein Viertelcent.
+		$nachkomma = substr( $text, $trenner + 1 );
+		$vorkomma  = substr( $text, 0, $trenner );
+
+		if ( strlen( $nachkomma ) > 2 || '' === $nachkomma ) {
+			$zahl = preg_replace( '/[,.]/', '', $text );
+
+			return max( 0.0, (float) $zahl );
+		}
+
+		$vorkomma = preg_replace( '/[,.]/', '', $vorkomma );
+
+		return max( 0.0, (float) ( $vorkomma . '.' . $nachkomma ) );
 	}
 
 	/**
@@ -626,7 +943,7 @@ class POSModule {
 		$article_id  = $auswahl['article_id'];
 		$artikel     = sanitize_text_field( wp_unslash( $_POST['artikel_name'] ?? '' ) );
 		$menge       = max( 1, (int) ( $_POST['menge'] ?? 1 ) );
-		$einzelpreis = (float) ( $_POST['einzelpreis'] ?? 0 );
+		$einzelpreis = self::parse_amount( wp_unslash( $_POST['einzelpreis'] ?? '' ) );
 
 		if ( ! $artikel && $article_id ) {
 			$a       = ArticleRepository::find( $article_id );
@@ -637,7 +954,7 @@ class POSModule {
 			$artikel = $p ? $p->name : __( 'Unbekannt', 'lindenweg16' );
 		}
 		if ( ! $artikel ) {
-			$artikel = __( 'Manueller Artikel', 'lindenweg16' );
+			$artikel = __( 'Freier Betrag', 'lindenweg16' );
 		}
 
 		$betrag = $menge * $einzelpreis;
@@ -729,7 +1046,7 @@ class POSModule {
 			$this->redirect( __( 'Kein offener Kassatag.', 'lindenweg16' ) );
 		}
 
-		$kassenbestand_ende = (float) ( $_POST['kassenbestand_ende'] ?? 0 );
+		$kassenbestand_ende = self::parse_amount( wp_unslash( $_POST['kassenbestand_ende'] ?? '' ) );
 		$notiz              = sanitize_textarea_field( wp_unslash( $_POST['notiz'] ?? '' ) );
 
 		// Umsatz berechnen.

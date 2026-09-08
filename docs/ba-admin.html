@@ -36,7 +36,7 @@
 		<li><a href="#farben">Farben und Lagerhoheit</a></li>
 		<li><a href="#staffel">Rabattstaffel für Händler</a></li>
 		<li><a href="#stammdaten">Stammdaten anlegen</a></li>
-		<li><a href="#preise">Preiskalkulation und Preispflege</a></li>
+		<li><a href="#preise">Kalkulation und Preise</a></li>
 		<li><a href="#buchhaltung">Buchhaltung</a></li>
 		<li><a href="#kasse">Kasse, Marketing, Events, Loyalty, Support</a></li>
 		<li><a href="#berichte">Berichte, Ziele und Monatsabschluss</a></li>
@@ -60,7 +60,7 @@
 <thead><tr><th>Menü</th><th>Inhalt</th></tr></thead>
 <tbody>
 <tr><td><strong>Betrieb</strong> (Hammer)</td><td>Dashboard, Bedarf, Druckjournal, Artikel &amp; Revisionen, Drucker &amp; Wartung, Konfigurator, Kapazität, Material, Lager, Lagerplätze/Fertigung/Picklisten, Bestellungen, Qualität, Kontakte/B2B, Zeiterfassung, Berichte, Import &amp; Doku, Benutzer &amp; Rechte, Einstellungen</td></tr>
-<tr><td><strong>Lindenweg16</strong> (Laden)</td><td>Dashboard, Buchhaltung, Loyalty, Produktion, Preiskalkulation, Kasse, Marketing, Support, Reporting, Einstellungen, Livegang</td></tr>
+<tr><td><strong>Lindenweg16</strong> (Laden)</td><td>Dashboard, Buchhaltung, Loyalty, Produktion, Kasse, Marketing, Support, Reporting, Einstellungen, Anleitungen, Livegang</td></tr>
 </tbody>
 </table>
 </div>
@@ -157,6 +157,45 @@
 <tr><td><strong>Rechnungsnummern-Modus</strong></td><td><code>jahr</code> = je Jahr neu durchlaufend.</td></tr>
 </tbody>
 </table>
+</div>
+
+<h3>DHL: Sendungsverfolgung und Versandlabel</h3>
+
+<p>Zwei getrennte Abschnitte mit zwei getrennten Zugängen – die DHL vergibt sie einzeln, und der eine funktioniert nicht für den anderen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Abschnitt</th><th>Wofür</th><th>Was hinein gehört</th></tr></thead>
+<tbody>
+<tr><td><strong>Reporting &amp; DHL-Sendungsverfolgung</strong></td><td>Den Stand einer Sendung abfragen</td><td>Ein API-Key für die Tracking-Schnittstelle</td></tr>
+<tr><td><strong>DHL Geschäftskundenversand</strong></td><td>Labels erzeugen und stornieren</td><td>API-Key <em>und</em> API-Secret der Anwendung, dazu Benutzer und Passwort des Geschäftskundenportals</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Vier Angaben, nicht zwei – und zweimal, nicht einmal</span>
+	<p>Fürs Frankieren prüft die DHL auf <strong>zwei Ebenen</strong>: Wer ist die Anwendung (API-Key + API-Secret von developer.dhl.com), und wer ist der Geschäftskunde (Benutzer + Passwort aus dem Geschäftskundenportal). Fehlt eine der beiden Ebenen, lehnt sie ab – ein API-Key allein genügt nicht.</p>
+	<p>Diese vier Angaben gibt es <strong>getrennt für Sandbox und Live</strong> – zwei eigene Zeilenblöcke in den Einstellungen. Ein Login, das im Echtbetrieb gilt, weist die Sandbox mit <code>invalid_grant</code> zurück, und umgekehrt. Benutzer und Passwort der Sandbox sind ein von DHL öffentlich dokumentierter fester Testzugang und stehen deshalb schon vorbelegt da – nur den Sandbox-API-Key (und ggf. das -Secret) trägst du selbst aus deiner Sandbox-App auf developer.dhl.com ein.</p>
+	<p>Beide Passwortfelder zeigen einen gespeicherten Wert nie an. Ein leeres Feld heißt „unverändert“; nur was du hineinschreibst, wird überschrieben.</p>
+</div>
+
+<p>Dazu gehören die zehnstellige <strong>Kundennummer (EKP)</strong> und die zweistellige <strong>Teilnahme</strong> aus dem Geschäftskundenportal. Aus beidem und dem Verfahren des gewählten Produkts baut das Plugin die vierzehnstellige Abrechnungsnummer selbst – sie entscheidet, welcher Vertrag greift und welches Konto belastet wird. Weicht die Teilnahme je Produkt ab, gibt es dafür eigene Felder; sonst gilt überall dieselbe. Beide Felder gelten nur im <strong>Echtbetrieb</strong>: In der Sandbox bucht die DHL auf ihre eigene Testkundennummer, und das Plugin setzt sie ein, solange der Haken sitzt – deine Angaben bleiben dabei unberührt. Die eigene EKP dorthin mitzuschicken ergäbe eine Abrechnungsnummer, die es in der Testumgebung nicht gibt, und die Ablehnung sähe nach einem Fehler in der Adresse aus.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Erst prüfen, dann frankieren</span>
+	<p>Nach dem Speichern auf <span class="weg">Betrieb → Versand</span> gehen und oben auf <strong>DHL-Zugang prüfen</strong> klicken. Der Knopf meldet sich einmal an, ohne ein Label zu erzeugen, und sagt im Klartext, was fehlt. Ohne ihn merkt man einen falschen Zugang erst beim ersten Paket – und liest dort eine Meldung, die nach einem Adressproblem aussieht.</p>
+</div>
+
+<ul>
+	<li><strong>Labelformat:</strong> <code>910-300-610</code> für das Thermo-Rollenetikett (103 × 199 mm), <code>A4</code> für Papier. Was dein Konto kann, steht im Geschäftskundenportal.</li>
+	<li><strong>Verpackungszuschlag:</strong> Wird auf jedes gerechnete Sendungsgewicht addiert – Karton und Polster wiegen mit.</li>
+	<li><strong>Sandbox-Modus:</strong> Ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung. Für Sandbox und Echtbetrieb gelten <em>eigene</em> Zugangsdatenfelder (siehe oben).</li>
+</ul>
+
+<div class="kasten tipp">
+	<span class="titel">Erst prüfen, dann frankieren</span>
+	<p>Nach dem Speichern auf <span class="weg">Betrieb → Versand</span> gehen und oben auf <strong>DHL-Zugang prüfen</strong> klicken. Der Knopf meldet sich einmal an, ohne ein Label zu erzeugen, und sagt im Klartext, was fehlt. Ohne ihn merkt man einen falschen Zugang erst beim ersten Paket – und liest dort eine Fehlermeldung, die nach einem Adressproblem aussieht.</p>
 </div>
 
 <h3>E-Mail-Vorlagen</h3>
@@ -362,7 +401,7 @@
 
 <p>Was ein Kunde konfiguriert, landet als codierte Konfiguration im Warenkorb und wird beim Bestellen wieder in echte Artikel aufgelöst – Lagerabgang und Kalkulation funktionieren also genauso wie bei einem normalen Artikel.</p>
 
-<h2 id="preise"><span class="nr">9.</span> Preiskalkulation und Preispflege</h2>
+<h2 id="preise"><span class="nr">9.</span> Kalkulation und Preise</h2>
 
 <h3>Die Kalkulation eines Artikels ansehen</h3>
 
@@ -382,29 +421,31 @@
 	<figcaption>Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an – deshalb trägt sich ein Set besser als dieselben Positionen einzeln. Hier rechnest du aus, wie viel.</figcaption>
 </figure>
 
-<h3>Preise in den Shop übernehmen</h3>
+<h3>Den Preis festlegen</h3>
 
-<p><span class="weg">Lindenweg16 → Preiskalkulation</span></p>
+<p><span class="weg">Betrieb → Artikel &amp; Revisionen → Reiter „Kalkulation“</span>, ganz unten</p>
 
-<figure>
-	<img src="bilder/lw16-preiskalkulation.png" alt="Preiskalkulationsseite mit Zielmarge, Artikelliste, empfohlenen Preisen und Übernehmen-Knöpfen">
-	<figcaption>Die Zielmarge oben eintragen, auf <strong>Neu rechnen</strong> klicken – dann steht je Artikel der Preis, der die Marge erreicht.</figcaption>
-</figure>
+<p>Unter der Kostenaufstellung steht der Abschnitt <strong>Preis festlegen</strong> – direkt unter der Rechnung, um die es geht.</p>
 
 <ol class="schritte">
-	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös).</li>
-	<li>Auf <strong>Neu rechnen</strong> klicken.</li>
-	<li>Die Liste durchsehen. Steht bei einem Artikel <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
-	<li>Einzeln mit <strong>Übernehmen</strong> oder gesammelt mit <strong>Alle Preise übernehmen</strong> in den Shop schreiben.</li>
+	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös) und auf <strong>Neu rechnen</strong> klicken.</li>
+	<li>Darunter stehen drei Zeilen nebeneinander: der <em>Vorschlag bei dieser Marge</em>, der <em>Preis am Artikel</em> und der <em>Stand im Shop</em>. Steht beim Vorschlag <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
+	<li>Der Knopf <strong>… als Artikelpreis übernehmen</strong> schreibt den Vorschlag in den Artikel. Wer den Preis lieber selbst setzt, tippt ihn im Reiter <em>Artikel</em> ins Feld <em>VK brutto</em>.</li>
 </ol>
 
-<div class="kasten achtung">
-	<span class="titel">„Alle Preise übernehmen“ überschreibt Normalpreise</span>
-	<p>Der Knopf setzt den Normalpreis jedes verknüpften Produkts neu. Ein Angebotspreis in WooCommerce bleibt unberührt. Schau die Liste vorher durch – danach gibt es kein Rückgängig.</p>
+<div class="kasten info">
+	<span class="titel">Der Shop zieht von selbst nach</span>
+	<p>Es gibt nur eine Stelle, an der ein Preis entsteht: den Artikel. Sobald du ihn speicherst, bekommt das verknüpfte Shop-Produkt ihn als <strong>Normalpreis</strong> – ohne zweiten Handgriff. Ein laufendes Angebot in WooCommerce bleibt unberührt, sonst wäre eine Preisaktion mit einem Klick weg.</p>
+	<p>Der frühere Menüpunkt <em>Lindenweg16 → Preiskalkulation</em> ist deshalb verschwunden. Er rechnete dasselbe zwei Menüs entfernt, und der Preis stand danach an zwei Stellen: Wer den zweiten Schritt vergaß, verkaufte weiter zum alten.</p>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Wenn sich nicht ein Preis geändert hat, sondern eine Annahme</span>
+	<p>Dann stimmen auf einen Schlag viele nicht mehr. Dafür gibt es im selben Abschnitt <strong>Alle Preise in den Shop übertragen</strong>. Im Alltag brauchst du den Knopf nicht – nur, wenn jemand einen Shop-Preis von Hand verstellt hat.</p>
 </div>
 
 <div class="kasten info">
-	<span class="titel">Die Annahmen werden hier nicht mehr gepflegt</span>
+	<span class="titel">Die Annahmen werden hier nicht gepflegt</span>
 	<p>Sie liegen historisiert unter <span class="weg">Betrieb → Einstellungen → Kalkulationsannahmen</span>. Diese Seite rechnet nur mit ihnen.</p>
 </div>
 
@@ -472,6 +513,17 @@
 	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz.</li>
 </ol>
 
+<h4>Verkaufen am Stand</h4>
+
+<p>Die Ware steht als <strong>Kachelliste</strong> da – Produktbild, Bezeichnung, Preis. Ein Klick auf die Kachel füllt Name und Preis, beides bleibt überschreibbar; ein zweiter Klick auf dieselbe Kachel hebt die Auswahl wieder auf. Darüber filtert ein Suchfeld die Kacheln. Das Bild kommt aus dem verknüpften Shop-Produkt; ohne Verknüpfung zeigt die Kachel die Anfangsbuchstaben.</p>
+
+<p>Darunter steht <strong>Freier Betrag</strong>: Bezeichnung und Betrag eintippen, buchen. Für alles, was es als Artikel nicht gibt – Restposten, Reparatur, Spende. Der Betrag zählt in Tagesumsatz, Beleg und Kassenbuch, bucht aber <em>kein</em> Lager ab.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Komma ist erlaubt</span>
+	<p>Preise und Kassenbestände dürfen mit Komma getippt werden – „12,50“ wird als 12,50 € verstanden, nicht als zwölf Euro. Punkt geht genauso.</p>
+</div>
+
 <h3>Marketing</h3>
 <p><span class="weg">Lindenweg16 → Marketing</span></p>
 
@@ -500,7 +552,29 @@
 
 <p>Jedes Event trägt seine eigenen Felder – beim Social Ride die Tour und die Distanz, beim Markt die Standnummer, beim Rennen die Startzeit. Beim ersten Öffnen schlägt das Plugin die Vorlage zum gewählten Typ vor; jede Zeile lässt sich ändern, löschen und ergänzen, <strong>Feld hinzufügen</strong> hängt eine neue an.</p>
 
-<p>Für eine <strong>Komoot-Tour</strong> ein Feld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren – die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte mit Höhenprofil. Ist die Adresse nicht lesbar, steht dort ein schlichter Link statt der Karte; verschluckt wird nichts.</p>
+<p>Für eine <strong>Komoot-Tour</strong> ein Feld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren – die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte. Ist die Adresse nicht lesbar, steht dort ein schlichter Link statt der Karte; verschluckt wird nichts.</p>
+
+<p>In der Spalte <strong>Darstellung</strong> wählst du einen der fünf Stile – dieselben, die Komoots eigener Einbettungsdialog anbietet. Die Auswahl erscheint nur bei diesem Feldtyp.</p>
+
+<table class="tabelle">
+	<thead><tr><th>Stil</th><th>Was man sieht</th><th>Höhe</th></tr></thead>
+	<tbody>
+		<tr><td>Klassisch</td><td>Karte, Statistiken und Höhenprofil</td><td>700 px</td></tr>
+		<tr><td>Nur Karte</td><td>Nur die interaktive Karte, minimale Bedienelemente</td><td>540 px</td></tr>
+		<tr><td>Kompakte Karte</td><td>Titelbild und die wichtigsten Statistiken</td><td>260 px</td></tr>
+		<tr><td>Fotostreifen</td><td>Galerie zuerst, darunter Titel und Statistiken</td><td>640 px</td></tr>
+		<tr><td>Highlights</td><td>Horizontal scrollbare Reihe mit Highlight-Karten</td><td>430 px</td></tr>
+	</tbody>
+</table>
+
+<p>Die Höhe gehört zum Stil und wird mitgesetzt – bei <em>Kompakte Karte</em> stünde sonst ein leerer Streifen darunter, bei <em>Klassisch</em> ein Rollbalken.</p>
+
+<p>Neben der Auswahl steht <strong>Vorschau</strong>. Ein Klick zeigt die Tour im gewählten Stil direkt hier im Bearbeitungsfenster, noch bevor du das Event speicherst. Stellst du den Stil um, während die Vorschau offen ist, lädt sie sich neu. Gespeichert wird der Stil erst mit dem Event.</p>
+
+<div class="kasten merke">
+	<span class="titel">Satellit und Gelände sind eine andere Sache</span>
+	<p>Welche Grundkarte zu sehen ist – Karte, Satellit, Gelände –, entscheidet der Besucher im Kartenfenster selbst. Dafür gibt es keinen Schalter in der Einbettung, weder hier noch bei Komoot.</p>
+</div>
 
 <div class="kasten merke">
 	<span class="titel">Kein Feld für fertigen Einbettungscode</span>
@@ -523,6 +597,32 @@
 <p>Eine Gruppe rückt nur <strong>geschlossen</strong> nach, und aufgefüllt wird streng der Reihe nach. Wird ein Platz frei, während vorne eine Dreiergruppe wartet, rückt niemand nach – auch kein Einzelner weiter hinten. Das ist Absicht: Sonst käme die Gruppe nie an die Reihe, weil sie jedes Mal überholt würde. Willst du es im Einzelfall anders, setzt du den Status in der Anmeldeliste von Hand.</p>
 
 <p>In der Anmeldeliste am Event änderst du jeden Status per Klick und lädst die <strong>Teilnehmerliste als CSV</strong> – eine Zeile je Person, mit dem Vermerk, wer sie angemeldet hat. Als Startliste direkt brauchbar. Die Texte der vier Event-Mails stehen unter <span class="weg">Lindenweg16 → Einstellungen</span> bei den E-Mail-Vorlagen.</p>
+
+<h3>Die Terminreihe auf der Startseite</h3>
+
+<p>Die nächsten Termine erscheinen auf der Startseite als seitlich blätterbare Reihe – ein Event je Ansicht, mit Datum, kleinem Titelbild, Auszug und einem Balken, wie viele Plätze noch frei sind. Auf dem Handy wischt man, am Rechner klickt man die Pfeile links und rechts oder die Punkte darunter.</p>
+
+<p>Die Reihe blättert alle sieben Sekunden von allein weiter. Sie hält an, sobald jemand mit der Maus darüberfährt, sich mit der Tastatur hineintabbt, wischt oder den Tab wechselt – und über den <strong>Pausenknopf</strong> links neben den Punkten dauerhaft. Wer dort pausiert hat, bleibt pausiert; das kurze Verlassen mit der Maus startet die Reihe nicht wieder.</p>
+
+<div class="kasten merke">
+	<span class="titel">Wer Bewegung abbestellt hat, bekommt keine</span>
+	<p>Hat jemand im Betriebssystem eingestellt, dass Animationen reduziert werden sollen, blättert die Reihe bei ihm gar nicht von allein – und der Pausenknopf erscheint erst gar nicht, weil es nichts zu pausieren gibt. Das ist für manche Menschen kein Geschmack, sondern eine Frage der Verträglichkeit.</p>
+</div>
+
+<p>Dort ist sie schon eingebaut, du musst nichts tun. Wer sie zusätzlich woanders haben will, hat zwei Wege:</p>
+
+<ul>
+	<li><strong>Im Seiten-Editor:</strong> den Block <em>Nächste Events</em> einfügen (unter <em>Widgets</em> oder über die Suche). Rechts in der Seitenleiste stehen Überschrift, Anzahl, Eventtyp, der Link auf alle Termine sowie das automatische Weiterblättern und dessen Wartezeit. Die Vorschau im Editor zeigt dieselbe Ausgabe wie die fertige Seite. Steht gerade kein Termin an, sagt der Block das im Editor – auf der Seite selbst erscheint dann nichts.</li>
+	<li><strong>Auf einer Seite oder in einem Beitrag:</strong> den Kurzbefehl <code>[lw16_events]</code> einfügen. Mit Zusätzen: <code>[lw16_events anzahl="4" typ="social-ride"]</code> zeigt nur die nächsten vier Social Rides, <code>[lw16_events autoplay="0"]</code> eine Reihe ohne automatisches Weiterblättern, <code>[lw16_events intervall="12"]</code> eine mit längerer Wartezeit.</li>
+	<li><strong>In einem Widget-Bereich:</strong> unter <span class="weg">Design → Widgets</span> das Widget <em>Lindenweg16: Nächste Events</em> einsetzen. Dort lassen sich Überschrift, Anzahl, Eventtyp, das automatische Weiterblättern und die Wartezeit einstellen.</li>
+</ul>
+
+<div class="kasten merke">
+	<span class="titel">Ohne Datum kein Platz in der Reihe</span>
+	<p>Ein Event ohne <strong>Beginn</strong> taucht dort nicht auf – ohne Datum lässt sich nicht sagen, ob es noch bevorsteht. Trag den Beginn also immer ein, auch wenn die Uhrzeit noch wackelt. Ein Event am heutigen Tag bleibt bis Mitternacht stehen und verschwindet nicht mittags.</p>
+</div>
+
+<p>Steht gar kein Termin an, fällt der ganze Abschnitt weg – auf der Startseite steht dann keine leere Überschrift. Der Balken erscheint nur, wenn die Anmeldung eingeschaltet <em>und</em> eine maximale Teilnehmerzahl gesetzt ist; ohne Begrenzung steht dort nur <em>Anmeldung offen</em>.</p>
 
 <h3>Loyalty</h3>
 <figure>

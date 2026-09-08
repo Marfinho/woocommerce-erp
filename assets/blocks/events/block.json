@@ -1,0 +1,26 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "lindenweg16/events",
+	"title": "Nächste Events",
+	"category": "widgets",
+	"icon": "calendar-alt",
+	"description": "Die nächsten Termine als seitlich blätterbare Reihe – ein Event je Ansicht, mit Datum, Bild, Auszug und freien Plätzen.",
+	"keywords": [ "events", "termine", "kalender", "veranstaltung" ],
+	"textdomain": "lindenweg16",
+	"supports": {
+		"html": false,
+		"align": [ "wide", "full" ],
+		"spacing": { "margin": true, "padding": true }
+	},
+	"attributes": {
+		"anzahl": { "type": "number", "default": 6 },
+		"typ": { "type": "string", "default": "" },
+		"titel": { "type": "string", "default": "Nächste Termine" },
+		"alleLink": { "type": "boolean", "default": true },
+		"autoplay": { "type": "boolean", "default": true },
+		"intervall": { "type": "number", "default": 7 }
+	},
+	"editorScript": "lw16-events-block",
+	"editorStyle": "file:../../css/events.css"
+}

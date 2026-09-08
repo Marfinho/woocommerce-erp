@@ -759,6 +759,71 @@ class Schema {
 			UNIQUE KEY quarter_metric (quarter_key, metric_key)
 		) {$charset_collate};";
 
+		/* ---------------------------------------------------------------
+		 * Druck-Warteschlange: Drucker (Raspberry-Pi-Clients) und Jobs
+		 *
+		 * Ursprünglich nur für DHL-Versandlabels gebaut, seitdem allgemein:
+		 * Ein Job trägt irgendeine PDF-Datei (DHL-Label, Artikel- oder
+		 * Lagerplatz-Etikett, Testlabel) und einen Zieldrucker – was darauf
+		 * steht, ist für die Warteschlange selbst ohne Bedeutung.
+		 * ------------------------------------------------------------- */
+
+		// Ein Drucker ist ein Raspberry-Pi-Client mit eigenem Bearer-Token.
+		// Das Token wird nur gehasht gespeichert (sha256) – der Klartext
+		// wird ausschließlich einmalig bei der Erzeugung angezeigt, so wie
+		// ein Passwort. printer_id ist der stabile Schlüssel, den der Pi in
+		// seiner Konfiguration trägt (z. B. eg_dhl); er ändert sich auch
+		// bei einem Token-Reset nicht, damit der Client nicht neu
+		// eingerichtet werden muss.
+		$t[] = "CREATE TABLE {$p}print_queue_printers (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			printer_model VARCHAR(255) NULL,
+			token_hash CHAR(64) NOT NULL,
+			token_created_at DATETIME NULL,
+			last_seen_at DATETIME NULL,
+			last_ip VARCHAR(45) NULL,
+			active TINYINT(1) NOT NULL DEFAULT 1,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY printer_id (printer_id)
+		) {$charset_collate};";
+
+		// Ein Druckjob referenziert die bereits abgelegte Datei (kein
+		// zusätzlicher Kopiervorgang, keine zusätzliche personenbezogene
+		// Kopie) – außer bei Testlabels, die eine eigene, unbedenkliche
+		// Datei erzeugen. locked_at trägt den Claim/Lease-Zeitstempel, über
+		// den ein abgestürzter Pi den Job nach Ablauf wieder freigibt.
+		// source hält fest, wo der Job herkommt (dhl_label, article_label,
+		// bin_label, test, …) – reine Auskunft für die Admin-Übersicht,
+		// ohne Einfluss auf Claim, Druck oder Auslieferung.
+		$t[] = "CREATE TABLE {$p}print_queue_jobs (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			order_id BIGINT UNSIGNED NULL,
+			label_id BIGINT UNSIGNED NULL,
+			source VARCHAR(30) NOT NULL DEFAULT 'dhl_label',
+			label_path VARCHAR(255) NOT NULL,
+			label_filename VARCHAR(191) NOT NULL,
+			label_format VARCHAR(20) NOT NULL DEFAULT '910-300-610',
+			width_mm SMALLINT UNSIGNED NOT NULL DEFAULT 103,
+			height_mm SMALLINT UNSIGNED NOT NULL DEFAULT 199,
+			status VARCHAR(20) NOT NULL DEFAULT 'queued',
+			printer_id VARCHAR(50) NOT NULL,
+			is_test TINYINT(1) NOT NULL DEFAULT 0,
+			attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			locked_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			printed_at DATETIME NULL,
+			error_message TEXT NULL,
+			PRIMARY KEY  (id),
+			KEY printer_status (printer_id, status),
+			KEY status (status),
+			KEY order_id (order_id),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
 		return $t;
 	}
 }

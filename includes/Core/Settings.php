@@ -75,6 +75,39 @@ class Settings {
 			// DHL Tracking.
 			'dhl_tracking_api_key'      => '',
 			'dhl_tracking_sandbox'      => 1,
+			// DHL Versand (Geschäftskundenversand, Labels). Sandbox und Live
+			// haben getrennte Zugangsdaten – die DHL-Sandbox weist ein
+			// echtes Geschäftskundenportal-Login zurück (invalid_grant) und
+			// umgekehrt. Benutzer/Passwort der Sandbox sind ein von DHL
+			// öffentlich dokumentierter, fester Testzugang (kein Geheimnis),
+			// deshalb hier als Vorbelegung – API-Key und API-Secret sind je
+			// Anwendung individuell und müssen selbst eingetragen werden.
+			'dhl_versand_sandbox_api_key'    => '',
+			'dhl_versand_sandbox_api_secret' => '',
+			'dhl_versand_sandbox_user'       => 'user-valid',
+			'dhl_versand_sandbox_password'   => 'SandboxPasswort2023!',
+			'dhl_versand_live_api_key'       => '',
+			'dhl_versand_live_api_secret'    => '',
+			'dhl_versand_live_user'          => '',
+			'dhl_versand_live_password'      => '',
+			'dhl_versand_ekp'           => '',
+			'dhl_versand_teilnahme'     => '01',
+			'dhl_versand_teilnahme_01'  => '',
+			'dhl_versand_teilnahme_62'  => '',
+			'dhl_versand_teilnahme_53'  => '',
+			'dhl_versand_teilnahme_54'  => '',
+			'dhl_versand_teilnahme_66'  => '',
+			'dhl_versand_profil'        => 'STANDARD_GRUPPENPROFIL',
+			'dhl_versand_printformat'   => '910-300-610',
+			'dhl_versand_sandbox'       => 1,
+			'dhl_versand_warenpost'     => 0,
+			'dhl_versand_vorabmeldung'  => 1,
+			'dhl_versand_verpackung_g'  => 150,
+			'dhl_versand_land'          => 'DE',
+			// DHL Druck-Warteschlange (Raspberry-Pi-Client).
+			'dhl_print_automatisch'     => 0,
+			'dhl_print_standarddrucker' => 'eg_dhl',
+			'dhl_print_aufbewahrung_tage' => 30,
 		);
 	}
 

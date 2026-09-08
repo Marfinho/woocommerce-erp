@@ -23,7 +23,7 @@ class Installer {
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
 	 */
-	const DB_VERSION = '25';
+	const DB_VERSION = '28';
 
 	/**
 	 * Aktivierungsroutine.
@@ -109,6 +109,18 @@ class Installer {
 	public static function models_dir() {
 		$upload = wp_upload_dir();
 		return trailingslashit( $upload['basedir'] ) . 'lw16-modelle';
+	}
+
+	/**
+	 * Dokumentenverzeichnis anlegen, falls es fehlt.
+	 *
+	 * Angelegt wird es beim Aktivieren. Ein Verzeichnis kann aber auch
+	 * später verschwinden – bei einem Umzug, beim Aufräumen des
+	 * Upload-Ordners. Wer eine Datei ablegt, die es sonst nirgends mehr
+	 * gibt – ein Versandlabel etwa –, prüft das vorher.
+	 */
+	public static function ensure_docs_dir() {
+		self::protect_belege_directory();
 	}
 
 	/**
@@ -390,6 +402,23 @@ class Installer {
 			UNIQUE KEY order_id (order_id),
 			KEY tracking_nummer (tracking_nummer),
 			KEY aktueller_status (aktueller_status)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}shipping_labels (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			order_id BIGINT UNSIGNED NOT NULL,
+			shipment_no VARCHAR(50) NOT NULL,
+			product VARCHAR(20) NOT NULL,
+			billing_number VARCHAR(20) NOT NULL,
+			filename VARCHAR(191) NOT NULL,
+			weight_g INT UNSIGNED NOT NULL DEFAULT 0,
+			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			erstellt_am DATETIME NOT NULL,
+			storniert_am DATETIME NULL,
+			PRIMARY KEY  (id),
+			KEY order_id (order_id),
+			KEY shipment_no (shipment_no),
+			KEY storniert (storniert)
 		) {$charset_collate};";
 
 		// --- Modul 6: Kundenbindung ---------------------------------------
@@ -728,6 +757,11 @@ class Installer {
 		// --- Modul Konfigurator -------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Configurator\Schema::tables( $p, $charset_collate ) );
 
+		// Migration: Die Druck-Warteschlange hiess zunächst DHL-spezifisch.
+		// Muss vor dbDelta laufen – sonst legt dbDelta die neuen, leeren
+		// Tabellen an und die alten mit den Daten blieben ungenutzt liegen.
+		self::maybe_rename_print_queue_tables();
+
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
@@ -744,6 +778,69 @@ class Installer {
 
 		// Migration: Tabellen entfernter Funktionen abräumen.
 		self::drop_removed_tables();
+
+		// Migration: DHL-Zugangsdaten auf getrennte Sandbox-/Live-Felder heben.
+		self::maybe_migrate_dhl_credentials();
+	}
+
+	/**
+	 * Die früher einzigen DHL-Zugangsdaten (dhl_versand_api_key/api_secret/
+	 * user/password) galten für Sandbox und Live gleichermaßen – das war
+	 * der Grund für das Problem, das zu dieser Trennung geführt hat: Ein
+	 * Live-Login an der Sandbox (oder umgekehrt) scheitert mit
+	 * „invalid_grant". Wer schon Werte eingetragen hatte, hat damit fast
+	 * immer den Live-Zugang gemeint – die Sandbox hat einen von DHL
+	 * öffentlich dokumentierten festen Testzugang für Benutzer/Passwort,
+	 * den niemand von Hand eintippt. Die alten Werte bleiben zusätzlich
+	 * unangetastet stehen, falls doch etwas anderes gemeint war.
+	 */
+	protected static function maybe_migrate_dhl_credentials() {
+		$alt = get_option( Settings::OPTION, array() );
+
+		if ( ! is_array( $alt ) || empty( $alt['dhl_versand_api_key'] ) ) {
+			return;
+		}
+
+		if ( ! empty( $alt['dhl_versand_live_api_key'] ) ) {
+			return; // Schon migriert oder schon eigens gepflegt.
+		}
+
+		$alt['dhl_versand_live_api_key']    = $alt['dhl_versand_api_key'];
+		$alt['dhl_versand_live_api_secret'] = isset( $alt['dhl_versand_api_secret'] ) ? $alt['dhl_versand_api_secret'] : '';
+		$alt['dhl_versand_live_user']       = isset( $alt['dhl_versand_user'] ) ? $alt['dhl_versand_user'] : '';
+		$alt['dhl_versand_live_password']   = isset( $alt['dhl_versand_password'] ) ? $alt['dhl_versand_password'] : '';
+
+		update_option( Settings::OPTION, $alt );
+	}
+
+	/**
+	 * Die Druck-Warteschlange hiess zunächst dhl_print_printers/
+	 * dhl_print_jobs – sie war nur für DHL-Versandlabels gedacht. Seitdem
+	 * trägt sie auch Artikel- und Lagerplatz-Etiketten, deshalb die
+	 * generischen Namen print_queue_printers/print_queue_jobs.
+	 *
+	 * Ein RENAME TABLE statt eines neuen dbDelta-Anlegens, damit
+	 * registrierte Drucker (samt Token) und bereits wartende Jobs eines
+	 * bestehenden Systems erhalten bleiben – niemand soll seinen
+	 * Raspberry Pi neu einrichten müssen, nur weil die Tabelle umbenannt
+	 * wurde.
+	 */
+	protected static function maybe_rename_print_queue_tables() {
+		global $wpdb;
+
+		$umbenennen = array(
+			$wpdb->prefix . 'lw16_dhl_print_printers' => $wpdb->prefix . 'lw16_print_queue_printers',
+			$wpdb->prefix . 'lw16_dhl_print_jobs'     => $wpdb->prefix . 'lw16_print_queue_jobs',
+		);
+
+		foreach ( $umbenennen as $alt => $neu ) {
+			$alt_da = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $alt ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$neu_da = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $neu ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+			if ( $alt_da && ! $neu_da ) {
+				$wpdb->query( "RENAME TABLE {$alt} TO {$neu}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+			}
+		}
 	}
 
 	/**

@@ -215,6 +215,51 @@ class RsvpRechnung {
 	}
 
 	/**
+	 * Auslastung in Prozent – für die Balkenanzeige.
+	 *
+	 * @param int $max      Maximale Teilnehmerzahl, 0 = unbegrenzt.
+	 * @param int $zugesagt Belegte Plätze.
+	 * @return float|null null bei unbegrenzter Teilnehmerzahl.
+	 */
+	public static function auslastung_prozent( $max, $zugesagt ) {
+		if ( ! self::ist_begrenzt( $max ) ) {
+			return null;
+		}
+
+		$anteil = max( 0, (int) $zugesagt ) / (int) $max * 100;
+
+		// Von Hand nachgetragene Zusagen können die Grenze überschreiten. Der
+		// Balken bleibt trotzdem im Rahmen – ein über den Rand laufender
+		// Balken sagt nichts, was die Zahl daneben nicht besser sagt.
+		return round( min( 100, $anteil ), 1 );
+	}
+
+	/**
+	 * Kurztext zu den freien Plätzen, für Karten und Listen.
+	 *
+	 * @param int $max      Maximale Teilnehmerzahl.
+	 * @param int $zugesagt Belegte Plätze.
+	 * @return string
+	 */
+	public static function freie_plaetze_text( $max, $zugesagt ) {
+		$frei = self::freie_plaetze( $max, $zugesagt );
+
+		if ( null === $frei ) {
+			return __( 'Anmeldung offen', 'lindenweg16' );
+		}
+
+		if ( $frei <= 0 ) {
+			return __( 'Ausgebucht – Warteliste möglich', 'lindenweg16' );
+		}
+
+		return sprintf(
+			/* translators: %d: freie Plätze. */
+			_n( 'noch %d Platz frei', 'noch %d Plätze frei', $frei, 'lindenweg16' ),
+			$frei
+		);
+	}
+
+	/**
 	 * Anzeigetext zur Belegung.
 	 *
 	 * @param int $max      Maximale Teilnehmerzahl.

@@ -78,10 +78,38 @@ class SettingsPage {
 				'email_absender_name' => array( __( 'Absendername', 'lindenweg16' ), 'text' ),
 				'email_footer'        => array( __( 'E-Mail-Footer-Text (erscheint in jeder Mail)', 'lindenweg16' ), 'textarea' ),
 			),
-			__( 'Reporting & DHL', 'lindenweg16' ) => array(
+			__( 'Reporting & DHL-Sendungsverfolgung', 'lindenweg16' ) => array(
 				'export_email'         => array( __( 'E-Mail für Datenexport', 'lindenweg16' ), 'text' ),
 				'dhl_tracking_api_key' => array( __( 'DHL Sendungsverfolgung API-Key', 'lindenweg16' ), 'text' ),
 				'dhl_tracking_sandbox' => array( __( 'DHL Sandbox-Modus', 'lindenweg16' ), 'checkbox' ),
+			),
+			__( 'DHL Geschäftskundenversand (Labels)', 'lindenweg16' ) => array(
+				'dhl_versand_sandbox_api_key'    => array( __( 'Sandbox: API-Key der Anwendung (developer.dhl.com, Sandbox-App)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_sandbox_api_secret' => array( __( 'Sandbox: API-Secret der Anwendung (developer.dhl.com, Sandbox-App)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_sandbox_user'       => array( __( 'Sandbox: Benutzer (von DHL fest vorgegebener Testzugang, i. d. R. unverändert lassen)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_sandbox_password'   => array( __( 'Sandbox: Passwort (von DHL fest vorgegebener Testzugang, i. d. R. unverändert lassen)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_live_api_key'       => array( __( 'Live: API-Key der Anwendung (developer.dhl.com, nach Go-Live-Freigabe)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_live_api_secret'    => array( __( 'Live: API-Secret der Anwendung (developer.dhl.com, nach Go-Live-Freigabe)', 'lindenweg16' ), 'password' ),
+				'dhl_versand_live_user'          => array( __( 'Live: Benutzer des Geschäftskundenportals', 'lindenweg16' ), 'text' ),
+				'dhl_versand_live_password'      => array( __( 'Live: Passwort des Geschäftskundenportals', 'lindenweg16' ), 'password' ),
+				'dhl_versand_ekp'          => array( __( 'Live: Kundennummer EKP (10 Stellen)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme'    => array( __( 'Live: Teilnahme (2 Stellen, gilt für alle Produkte)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_01' => array( __( 'Teilnahme abweichend: DHL Paket', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_62' => array( __( 'Teilnahme abweichend: Warenpost', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_54' => array( __( 'Teilnahme abweichend: Europaket', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_53' => array( __( 'Teilnahme abweichend: Paket International', 'lindenweg16' ), 'text' ),
+				'dhl_versand_teilnahme_66' => array( __( 'Teilnahme abweichend: Warenpost International', 'lindenweg16' ), 'text' ),
+				'dhl_versand_profil'       => array( __( 'Abrechnungsprofil', 'lindenweg16' ), 'text' ),
+				'dhl_versand_printformat'  => array( __( 'Labelformat (910-300-610 für das 103×199-mm-Rollenetikett, A4 für Papier)', 'lindenweg16' ), 'text' ),
+				'dhl_versand_verpackung_g' => array( __( 'Verpackungszuschlag je Sendung (g)', 'lindenweg16' ), 'number' ),
+				'dhl_versand_warenpost'    => array( __( 'Warenpost/Kleinpaket ist gebucht', 'lindenweg16' ), 'checkbox' ),
+				'dhl_versand_vorabmeldung' => array( __( 'Kunden per E-Mail vorab benachrichtigen', 'lindenweg16' ), 'checkbox' ),
+				'dhl_versand_sandbox'      => array( __( 'Sandbox-Modus (erzeugt keine echten Labels)', 'lindenweg16' ), 'checkbox' ),
+			),
+			__( 'Automatischer DHL-Druck (Raspberry Pi)', 'lindenweg16' ) => array(
+				'dhl_print_automatisch'       => array( __( 'Nach erfolgreicher Label-Erzeugung automatisch einen Druckjob anlegen', 'lindenweg16' ), 'checkbox' ),
+				'dhl_print_standarddrucker'   => array( __( 'Standard-Drucker-ID (z. B. eg_dhl)', 'lindenweg16' ), 'text' ),
+				'dhl_print_aufbewahrung_tage' => array( __( 'Aufbewahrung der Druckjob-Einträge der ganzen Warteschlange (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
 			),
 		);
 	}
@@ -104,6 +132,7 @@ class SettingsPage {
 
 		foreach ( $this->fields() as $group => $fields ) {
 			echo '<h2>' . esc_html( $group ) . '</h2>';
+			$this->group_hint( $group );
 			echo '<table class="form-table"><tbody>';
 			foreach ( $fields as $key => $meta ) {
 				list( $label, $type ) = $meta;
@@ -131,6 +160,11 @@ class SettingsPage {
 					}
 					echo '<p class="description">' . esc_html__( 'JPEG-Format empfohlen für PDF-Einbettung.', 'lindenweg16' ) . '</p>';
 					$this->enqueue_media_js( $key );
+				} elseif ( 'password' === $type ) {
+					// Ein gespeichertes Passwort wird nicht zurückgezeigt.
+					// Wer über die Schulter schaut, sieht sonst den Zugang
+					// zum Frankierkonto.
+					echo '<input type="password" class="regular-text" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '" value="" autocomplete="new-password" placeholder="' . esc_attr( '' !== (string) $val ? __( '— gespeichert, zum Ändern neu eingeben —', 'lindenweg16' ) : '' ) . '">';
 				} elseif ( 'textarea' === $type ) {
 					echo '<textarea class="large-text" rows="3" id="' . esc_attr( $key ) . '" name="' . esc_attr( $key ) . '">' . esc_textarea( $val ) . '</textarea>';
 				} else {
@@ -147,6 +181,33 @@ class SettingsPage {
 
 		submit_button( __( 'Einstellungen speichern', 'lindenweg16' ) );
 		echo '</form></div>';
+	}
+
+	/**
+	 * Erklärender Vorspann zu einer Gruppe.
+	 *
+	 * Nur dort, wo die Feldnamen allein in die Irre führen.
+	 *
+	 * @param string $group Überschrift der Gruppe.
+	 */
+	protected function group_hint( $group ) {
+		if ( __( 'DHL Geschäftskundenversand (Labels)', 'lindenweg16' ) !== $group ) {
+			return;
+		}
+
+		echo '<div class="notice notice-info inline" style="margin:0 0 12px"><p><strong>';
+		esc_html_e( 'Für die Sandbox legt man keinen Benutzer an.', 'lindenweg16' );
+		echo '</strong> ';
+		esc_html_e( 'Benutzer und Passwort der Sandbox sind der feste Testzugang der DHL und stehen schon da – selbst eintragen musst du dort nur API-Key und API-Secret deiner Sandbox-App.', 'lindenweg16' );
+		echo '</p><p>';
+		esc_html_e( 'Kundennummer, Teilnahme und Abrechnungsprofil gelten nur im Echtbetrieb: In der Sandbox bucht die DHL auf ihre eigene Testkundennummer, und das Plugin setzt sie ein, solange der Sandbox-Haken sitzt. Deine Angaben bleiben dabei unberührt.', 'lindenweg16' );
+		echo '</p><p>';
+		printf(
+			/* translators: %s: Link zur Versandseite. */
+			esc_html__( 'Ob der Zugang sitzt, sagt der Knopf „DHL-Zugang prüfen" auf der Seite %s. Er kostet kein Label.', 'lindenweg16' ),
+			'<a href="' . esc_url( admin_url( 'admin.php?page=lw16-betrieb-versand' ) ) . '">' . esc_html__( 'Betrieb → Versand', 'lindenweg16' ) . '</a>'
+		);
+		echo '</p></div>';
 	}
 
 	/**
@@ -266,6 +327,16 @@ class SettingsPage {
 					$clean[ $key ] = MailTemplate::sanitize_color( $raw );
 				} elseif ( 'media' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? (int) $_POST[ $key ] : 0;
+				} elseif ( 'password' === $type ) {
+					// Das Formular zeigt ein gespeichertes Passwort nicht
+					// an. Ein leeres Feld heißt deshalb „unverändert" –
+					// sonst löschte jedes Speichern der Seite den Zugang
+					// zum Frankierkonto.
+					$eingabe = isset( $_POST[ $key ] ) ? (string) wp_unslash( $_POST[ $key ] ) : '';
+
+					if ( '' !== $eingabe ) {
+						$clean[ $key ] = sanitize_text_field( $eingabe );
+					}
 				} elseif ( 'textarea' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $key ] ) ) : '';
 				} else {

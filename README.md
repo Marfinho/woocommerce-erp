@@ -2,7 +2,7 @@
 
 Ein einziges, in sich geschlossenes WooCommerce-Plugin für lindenweg16.de, das
 Buchhaltung, Lagerverwaltung, Loyalty, Produktions-/Bestellplanung,
-Preiskalkulation, Kundenbindung sowie Support & Reporting kombiniert – direkt in
+Preiskalkulation, Versand, Kundenbindung sowie Support & Reporting kombiniert – direkt in
 WooCommerce, ohne externen Sync.
 
 ## Betriebsanleitungen
@@ -56,14 +56,19 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
 includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
-                             RsvpRepository, EventAdmin, EventFrontend, EventsModule
+                             RsvpRepository, EventAdmin, EventFrontend,
+                             EventsWidget, EventsSidebarWidget, EventsBlock,
+                             EventsModule
+assets/blocks/events/        block.json des Blocks „Nächste Events"
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule
-includes/Modules/Pricing/    PricingModule
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
 includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
 includes/Modules/POS/        POSModule
 includes/Modules/Support/    SupportModule
-includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, BetriebModule, Admin/
+includes/Modules/Betrieb/    Schema, CalcSettings, BetriebAudit, PriceSync, ShippingLabel,
+                             BetriebModule, Admin/
+includes/Modules/Betrieb/Dhl/ DhlProduct, DhlAddress, DhlRequest, DhlResponse,
+                             DhlClient, DhlLabelRepository, DhlShipping
 includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, ConfigCodec,
                              Catalog, ShopLink, ColorHex, WebModel, CartIntegration, Frontend,
                              ConfiguratorModule, Admin/ConfiguratorPage
@@ -486,12 +491,34 @@ vorhanden ist – nicht, was geplant war.
   bedienbar ohne WebGL.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
-- **Produktion:** Druck-Queue, Packliste/Versandschein-PDF, DHL-Verlinkung und
+- **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und
   **Sendungsverfolgung im Kundenkonto** (Zeitleiste in den Bestelldetails und
-  Spalte in der Bestellübersicht), Ist-Zeit-Erfassung, Mengenvorschläge.
-- **Preiskalkulation:** rechnet auf den Artikeln des Moduls Betrieb.
-  „Preis übernehmen" schreibt nur `_regular_price`, damit ein laufender
-  Aktionspreis überlebt, dazu `_lw16_margin_percent`.
+  Spalte in der Bestellübersicht), Ist-Zeit-Erfassung. Die Versandliste selbst
+  steht unter Betrieb → Versand, die Fertigungsvorschläge unter Betrieb → Bedarf.
+- **Versand (Betrieb → Versand):** Bestellliste mit Lieferschein,
+  Sendungsnummer und **DHL-Label über den Geschäftskundenversand**
+  (Parcel DE Shipping v2). Anmeldung über die Authentication API: API-Key und
+  API-Secret der Anwendung plus Benutzer und Passwort des
+  Geschäftskundenportals werden gegen ein Bearer-Token getauscht, das je
+  Umgebung getrennt zwischengespeichert und vor Ablauf erneuert wird; ohne
+  API-Secret bleibt es beim bisherigen Basic-Auth-Weg. Sandbox und Live haben
+  eigene Einstellungsfelder für alle vier Zugangsdaten – ein Login der einen
+  Umgebung wird von der anderen mit `invalid_grant` abgewiesen; für die
+  Sandbox legt man keinen Benutzer an, dort steht der feste Testzugang der
+  DHL vorbelegt. Auf welche Kundennummer gebucht wird, entscheidet
+  `DhlSandbox`: in der Testumgebung auf die der DHL, sonst auf die eigene.
+  Produkt und Gewicht werden aus Zielland und
+  Artikelstamm vorgeschlagen, das PDF landet im geschützten
+  Dokumentenverzeichnis, die Sendungsnummer geht direkt in die
+  Sendungsverfolgung. Stornieren nimmt die Frankierung zurück; der Vorgang
+  bleibt als storniert stehen. Produktwahl, Abrechnungsnummer,
+  Adressaufbereitung, Auftrag und Antwortauswertung liegen netzfrei in
+  `Modules/Betrieb/Dhl/` und sind vollständig getestet.
+- **Preise:** entstehen am Betriebsartikel und gehen von dort automatisch ins
+  verknüpfte Shop-Produkt (`PriceSync`). Geschrieben wird nur
+  `_regular_price`, damit ein laufender Aktionspreis überlebt, dazu
+  `_lw16_margin_percent` fürs Empfehlungsprogramm. Zielmarge und
+  Preisvorschlag stehen im Reiter Kalkulation des Artikels.
 - **Kundenbindung:** Warenkorbabbrecher-Mails, Wunschliste, Post-Purchase-
   Sequenz, „Wieder verfügbar"-Warteliste.
 - **Support & Reporting:** Reklamations-Tickets, Gutschrift aufs Guthabenkonto,
@@ -605,6 +632,36 @@ nur die Tour-ID und ein etwaiges Freigabe-Token gelesen und die
 Einbettungsadresse daraus selbst gebaut (`EventFields::komoot_embed_url()`) –
 so kann in dem Feld nichts landen, was auf eine fremde Seite zeigt.
 
+Das Komoot-Feld hat einen **Stil** – dieselben fünf, die Komoots eigener
+Einbettungsdialog anbietet (`EventFields::komoot_stile()`):
+
+| Stil | `layout` | Höhe |
+|---|---|---|
+| Klassisch – Karte, Statistiken, Höhenprofil | `classic` + `profile=1` | 700 |
+| Nur Karte – interaktive Karte, minimale Oberfläche | `map` | 540 |
+| Kompakte Karte – Titelbild und Eckdaten | `compact` | 260 |
+| Fotostreifen – Galerie zuerst | `gallery` + `gallery=1` | 640 |
+| Highlights – scrollbare Reihe | `highlights` | 430 |
+
+Die Höhen stammen aus Komoots Dialog und gehören zum Stil: ein einheitlicher
+Wert ergäbe bei *Kompakte Karte* einen leeren Streifen und bei *Klassisch*
+einen Rollbalken. Ein Test vergleicht die erzeugte Adresse Zeichen für
+Zeichen mit dem Code, den Komoot selbst ausgibt.
+
+`komoot_stil()` ist die Positivliste; ein unbekannter Wert fällt auf
+*Klassisch* zurück, statt als Parameter in der Adresse zu landen. Sie
+übersetzt außerdem die Werte der ersten Fassung (`profil`, `karte`).
+
+Die **Grundkarte** (Karte, Satellit, Gelände) ist davon unberührt – die
+schaltet der Besucher im Kartenfenster selbst um, dafür gibt es keinen
+Parameter.
+
+Im Backend zeigt eine **Vorschau** die Einbettung im gewählten Stil, bevor das
+Event gespeichert ist. Die Adresse dafür baut PHP über denselben Weg wie beim
+Ausliefern (`EventAdmin::ajax_komoot_vorschau()`); sie im Browser
+zusammenzusetzen hieße, die Regeln ein zweites Mal zu schreiben, und die
+zweite Fassung wäre die, die irgendwann abweicht.
+
 ### Anmeldung: bestätigen, warten, nachrücken
 
 Die Anmeldung läuft über einen Bestätigungslink per E-Mail. Der Platz wird
@@ -637,6 +694,76 @@ Das öffentliche Formular hat einen Honigtopf und eine Bremse von zehn
 Versuchen je IP und Stunde. Die Einwilligung zur Speicherung ist Pflichtfeld,
 und `lw16_event_rsvp` ist für DSGVO-Auskunft und -Löschung angemeldet
 (`Privacy::sources()`).
+
+### Die Eventreihe auf der Startseite
+
+Die nächsten Termine als seitlich blätterbare Reihe, ein Event je Ansicht,
+mit Datum, kleinem Titelbild, Auszug und einem Balken der freien Plätze.
+Dieselbe Ausgabe steht über drei Wege bereit – der Aufbau selbst aber nur
+einmal, in `EventsWidget::render()`:
+
+- Block **Nächste Events** für den Seiten-Editor (`EventsBlock`)
+- Shortcode `[lw16_events anzahl="6" typ="social-ride" titel="…" alle_link="0" autoplay="1" intervall="7"]`
+- klassisches Widget für Widget-Bereiche (`EventsSidebarWidget`)
+- direkt in der Theme-Vorlage, so eingebunden in `theme/front-page.php`
+
+Der **Block ist dynamisch**: Gespeichert werden nur die Einstellungen, die
+Ausgabe kommt bei jedem Seitenaufruf frisch vom Server (`save()` gibt `null`
+zurück). Gespeichertes HTML trüge die Teilnehmerzahlen von gestern im Beitrag
+mit sich herum. Die Vorschau im Editor rendert über `ServerSideRender`
+denselben Weg wie die fertige Seite, statt ihn nachzubauen.
+
+Das Editor-Skript ist **ohne JSX und ohne Build-Schritt** geschrieben
+(`wp.element.createElement`), weil das Plugin ohne Build-Werkzeug auskommt –
+ein einzelner Block wäre kein guter Grund, damit anzufangen. Die
+Abhängigkeitsliste steht deshalb von Hand in `EventsBlock::register_block()`,
+und `block.json` verweist mit `editorScript` auf dieses Handle statt auf eine
+Datei. `EventsBlockTest` hält beide Seiten zusammen: Jede Einstellung aus
+`block.json` muss im Editor bedienbar *und* im Render-Rückruf ausgewertet
+sein – sonst fehlt sie später still auf der Seite.
+
+Das **Blättern macht CSS allein**: `scroll-snap-type: x mandatory` rastet
+jede Karte ein, `grid-auto-columns: 100%` gibt eine Karte je Ansicht. Pfeile,
+Punkte und Pausenknopf sind Zugabe, stehen im Markup auf `hidden` und blenden
+sich erst mit JavaScript ein – ohne Skript bleibt die Reihe wischbar und mit
+den Pfeiltasten bedienbar. Auf schmalen Bildschirmen sind die Pfeile
+ausgeblendet: dort wird gewischt.
+
+Die Reihe **blättert von allein weiter** (Standard 7 s, einstellbar zwischen
+`INTERVALL_MIN` und `INTERVALL_MAX`; `intervall_ms()` begrenzt den Wert – zu
+kurz ist Flackern statt Blättern). Sie hält an, sobald jemand hinsieht oder
+sie bedient:
+
+- **Pausenknopf** – die bewusste Entscheidung. Sie überlebt Mausbewegungen;
+  wer von Hand pausiert hat, läuft nicht weiter, nur weil der Zeiger die
+  Karte verlässt.
+- **Zeiger darüber oder Tastaturfokus darin** – solange jemand liest oder
+  sich durchtabbt, bewegt sich nichts.
+- **Tab im Hintergrund** (`visibilitychange`) und **Wischen** auf dem Handy.
+- **`prefers-reduced-motion: reduce`** schaltet den Selbstlauf ganz ab – und
+  dann auch den Pausenknopf, der sonst ohne Wirkung dastünde. Bewegung, die
+  von allein losgeht, ist für manche Menschen ein Problem und nicht nur
+  Geschmackssache.
+
+Die **Punkte** (`role="tablist"`) zeigen die Position und springen auf Klick
+zur Karte; die aktive folgt beim Scrollen über `aria-selected`.
+
+Der **Balken** zeigt die Auslastung, nicht die freien Plätze – ein fast
+voller Balken liest sich schneller als eine kleine Zahl. Bei überschrittener
+Grenze (von Hand nachgetragene Zusagen) bleibt er bei 100 %, statt über den
+Rand zu laufen. Ohne Teilnehmerbegrenzung gibt es keinen Balken, sondern nur
+den Hinweis, dass die Anmeldung offen ist; ist die Anmeldung ausgeschaltet,
+fehlt der Bereich ganz.
+
+Ein Event **ohne Beginn taucht nicht auf** – ohne Datum lässt sich weder
+sortieren noch sagen, ob es noch bevorsteht. Gezählt wird ab Mitternacht,
+damit ein Event am eigenen Tag nicht mittags von der Startseite verschwindet.
+Steht nichts an, gibt `render()` einen leeren String zurück und der ganze
+Abschnitt entfällt – eine Überschrift ohne Inhalt sähe nach Fehler aus.
+
+Stil und Skript lädt `EventsModule::braucht_assets()` nur, wo Events
+vorkommen: auf Eventseiten, auf der Startseite, wo das Widget aktiv ist oder
+der Shortcode im Inhalt steht.
 
 ### Zwei Lagerverwaltungen, eine zuständig
 

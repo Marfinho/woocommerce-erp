@@ -123,7 +123,7 @@ class ResetTool {
 			),
 			'kunden'       => array(
 				'label'  => __( 'Kundenbindung und Support', 'lindenweg16' ),
-				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung und Tickets.', 'lindenweg16' ),
+				'hint'   => __( 'Punktekonten, Empfehlungen, Wunsch- und Wartelisten, Warenkorbverfolgung, Tickets und alles zu Sendungen: verfolgte Nummern und erzeugte Versandlabels.', 'lindenweg16' ),
 				'tables' => array(
 					'points_ledger',
 					'referrals',
@@ -132,6 +132,15 @@ class ResetTool {
 					'cart_tracking',
 					'tickets',
 					'tracking_cache',
+					// Probelabels aus der Sandbox müssen vor dem Livegang
+					// weg: Sie sind keine Frankierung, sähen in der Liste
+					// aber genauso aus wie eine.
+					'shipping_labels',
+					// Druckjobs der DHL-Warteschlange sind Warteschlangen-
+					// Buchhaltung, kein Beleg – die referenzierten Labels
+					// selbst liegen in shipping_labels und bleiben davon
+					// unberührt, solange dieser Bereich nicht mit angekreuzt ist.
+					'print_queue_jobs',
 				),
 			),
 			'altes_lager'  => array(
@@ -209,6 +218,10 @@ class ResetTool {
 			'lagerorte',
 			'anlagen',
 			'dauerbuchungen',
+			// Registrierte Raspberry-Pi-Drucker samt Token sind Konfiguration,
+			// keine Testdaten – ein Reset darf einen bereits eingerichteten
+			// Pi nicht aussperren.
+			'print_queue_printers',
 		);
 	}
 

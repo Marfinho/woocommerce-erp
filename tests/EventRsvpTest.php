@@ -12,6 +12,7 @@
 use PHPUnit\Framework\TestCase;
 use Lindenweg16\Modules\Events\RsvpRechnung;
 use Lindenweg16\Modules\Events\EventFields;
+use Lindenweg16\Modules\Events\EventsWidget;
 
 /**
  * @covers \Lindenweg16\Modules\Events\RsvpRechnung
@@ -181,6 +182,66 @@ class EventRsvpTest extends TestCase {
 	}
 
 	/* ----------------------------------------------------------------
+	 * Balken und Kurztext der Reihe auf der Startseite
+	 * -------------------------------------------------------------- */
+
+	public function test_auslastung_in_prozent() {
+		$this->assertSame( 50.0, RsvpRechnung::auslastung_prozent( 20, 10 ) );
+		$this->assertSame( 0.0, RsvpRechnung::auslastung_prozent( 20, 0 ) );
+		$this->assertSame( 100.0, RsvpRechnung::auslastung_prozent( 20, 20 ) );
+	}
+
+	public function test_balken_laeuft_nicht_ueber_den_rand() {
+		// Von Hand nachgetragene Zusagen koennen die Grenze ueberschreiten.
+		$this->assertSame( 100.0, RsvpRechnung::auslastung_prozent( 10, 14 ) );
+	}
+
+	public function test_ohne_grenze_gibt_es_keinen_balken() {
+		$this->assertNull( RsvpRechnung::auslastung_prozent( 0, 30 ) );
+	}
+
+	public function test_kurztext_nennt_die_freien_plaetze() {
+		$this->assertSame( 'noch 8 Plätze frei', RsvpRechnung::freie_plaetze_text( 20, 12 ) );
+		$this->assertSame( 'noch 1 Platz frei', RsvpRechnung::freie_plaetze_text( 20, 19 ) );
+	}
+
+	public function test_kurztext_bei_ausgebucht_weist_auf_die_warteliste_hin() {
+		$this->assertSame( 'Ausgebucht – Warteliste möglich', RsvpRechnung::freie_plaetze_text( 20, 20 ) );
+		$this->assertSame( 'Ausgebucht – Warteliste möglich', RsvpRechnung::freie_plaetze_text( 20, 25 ) );
+	}
+
+	public function test_kurztext_ohne_grenze() {
+		$this->assertSame( 'Anmeldung offen', RsvpRechnung::freie_plaetze_text( 0, 42 ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Selbstlauf der Reihe
+	 * -------------------------------------------------------------- */
+
+	public function test_wartezeit_wird_in_millisekunden_gerechnet() {
+		$this->assertSame( 7000, EventsWidget::intervall_ms( 7 ) );
+	}
+
+	public function test_leere_wartezeit_nimmt_den_standard() {
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( 0 ) );
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( '' ) );
+	}
+
+	public function test_zu_kurze_wartezeit_wird_angehoben() {
+		// Alles darunter waere Flackern statt Blaettern - wer den Auszug
+		// lesen will, kaeme nicht mit.
+		$this->assertSame( EventsWidget::INTERVALL_MIN * 1000, EventsWidget::intervall_ms( 1 ) );
+	}
+
+	public function test_zu_lange_wartezeit_wird_gedeckelt() {
+		$this->assertSame( EventsWidget::INTERVALL_MAX * 1000, EventsWidget::intervall_ms( 9999 ) );
+	}
+
+	public function test_negative_wartezeit_faellt_auf_den_standard() {
+		$this->assertSame( EventsWidget::INTERVALL_STANDARD * 1000, EventsWidget::intervall_ms( -5 ) );
+	}
+
+	/* ----------------------------------------------------------------
 	 * Belegungstext
 	 * -------------------------------------------------------------- */
 
@@ -199,8 +260,8 @@ class EventRsvpTest extends TestCase {
 
 	public function test_komoot_tour_wird_zur_einbettungsadresse() {
 		$this->assertSame(
-			'https://www.komoot.de/tour/123456/embed?profile=1',
-			EventFields::komoot_embed_url( 'https://www.komoot.de/tour/123456' )
+			'https://www.komoot.com/tour/123456/embed?hl=de&layout=classic&profile=1',
+			EventFields::komoot_embed_url( 'https://www.komoot.de/tour/123456', 'classic', 'de' )
 		);
 	}
 
@@ -231,6 +292,97 @@ class EventRsvpTest extends TestCase {
 	public function test_leere_eingabe_bleibt_leer() {
 		$this->assertSame( '', EventFields::komoot_embed_url( '' ) );
 		$this->assertSame( '', EventFields::komoot_embed_url( 'kein-link' ) );
+	}
+
+	public function test_klassisch_ist_der_standard() {
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.com/tour/123456' );
+		$this->assertStringContainsString( 'layout=classic', $url );
+		$this->assertStringContainsString( 'profile=1', $url );
+	}
+
+	public function test_jeder_stil_erzeugt_sein_layout() {
+		$erwartet = array(
+			'classic'    => 'layout=classic',
+			'map'        => 'layout=map',
+			'compact'    => 'layout=compact',
+			'gallery'    => 'layout=gallery',
+			'highlights' => 'layout=highlights',
+		);
+
+		foreach ( $erwartet as $stil => $teil ) {
+			$this->assertStringContainsString(
+				$teil,
+				EventFields::komoot_embed_url( 'https://www.komoot.com/tour/123456', $stil ),
+				$stil . ' erzeugt das falsche Layout.'
+			);
+		}
+	}
+
+	public function test_fotostreifen_bringt_seinen_zusatzschalter_mit() {
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.com/tour/123456', 'gallery' );
+		$this->assertStringContainsString( 'gallery=1', $url );
+	}
+
+	public function test_nur_karte_hat_kein_hoehenprofil() {
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.com/tour/123456', 'map' );
+		$this->assertStringNotContainsString( 'profile=', $url );
+	}
+
+	public function test_erzeugte_adresse_entspricht_komoots_eigenem_einbettungscode() {
+		// Gegenprobe mit dem Code, den Komoots Dialog ausgibt.
+		$roh = 'https://www.komoot.com/tour/2227159188?share_token=auPF1e3Cfn7awmwYjSSkuDnzCAfqFJvSfNBbayX88V4E4OwhaX';
+
+		$this->assertSame(
+			'https://www.komoot.com/tour/2227159188/embed'
+			. '?share_token=auPF1e3Cfn7awmwYjSSkuDnzCAfqFJvSfNBbayX88V4E4OwhaX&hl=de&layout=classic&profile=1',
+			EventFields::komoot_embed_url( $roh, 'classic', 'de' )
+		);
+
+		$this->assertSame(
+			'https://www.komoot.com/tour/2227159188/embed'
+			. '?share_token=auPF1e3Cfn7awmwYjSSkuDnzCAfqFJvSfNBbayX88V4E4OwhaX&hl=de&layout=compact',
+			EventFields::komoot_embed_url( $roh, 'compact', 'de' )
+		);
+	}
+
+	public function test_jeder_stil_hat_die_hoehe_aus_komoots_dialog() {
+		$this->assertSame( 700, EventFields::komoot_hoehe( 'classic' ) );
+		$this->assertSame( 540, EventFields::komoot_hoehe( 'map' ) );
+		$this->assertSame( 260, EventFields::komoot_hoehe( 'compact' ) );
+		$this->assertSame( 640, EventFields::komoot_hoehe( 'gallery' ) );
+		$this->assertSame( 430, EventFields::komoot_hoehe( 'highlights' ) );
+	}
+
+	public function test_unbekannter_stil_faellt_auf_klassisch_zurueck() {
+		// Ein erfundener Wert darf nicht als Parameter in der Adresse landen.
+		$url = EventFields::komoot_embed_url( 'https://www.komoot.com/tour/123456', 'satellit' );
+		$this->assertStringContainsString( 'layout=classic', $url );
+		$this->assertStringNotContainsString( 'satellit', $url );
+	}
+
+	public function test_alte_stilwerte_werden_uebersetzt() {
+		// Die erste Fassung kannte nur profil und karte. Wer damit ein Event
+		// angelegt hat, soll nach dem Update nicht auf einem toten Wert sitzen.
+		$this->assertSame( 'classic', EventFields::komoot_stil( 'profil' ) );
+		$this->assertSame( 'map', EventFields::komoot_stil( 'karte' ) );
+	}
+
+	public function test_stil_wird_gegen_eine_positivliste_geprueft() {
+		$this->assertSame( 'gallery', EventFields::sanitize_option( 'komoot', 'gallery' ) );
+		$this->assertSame( 'classic', EventFields::sanitize_option( 'komoot', 'gelaende' ) );
+		$this->assertSame( 'classic', EventFields::sanitize_option( 'komoot', array( 'unfug' ) ) );
+	}
+
+	public function test_andere_feldtypen_haben_keinen_stil() {
+		$this->assertSame( '', EventFields::sanitize_option( 'text', 'map' ) );
+		$this->assertSame( '', EventFields::sanitize_option( 'url', 'classic' ) );
+	}
+
+	public function test_sprachkuerzel_kommt_aus_der_website_sprache() {
+		$this->assertSame( 'de', EventFields::sprachkuerzel( 'de_DE' ) );
+		$this->assertSame( 'en', EventFields::sprachkuerzel( 'en_GB' ) );
+		// Unbrauchbares faellt auf Deutsch zurueck, statt in die Adresse zu gehen.
+		$this->assertSame( 'de', EventFields::sprachkuerzel( '1;drop' ) );
 	}
 
 	public function test_unbrauchbares_freigabe_token_wird_weggelassen() {

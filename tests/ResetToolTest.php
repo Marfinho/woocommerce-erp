@@ -75,12 +75,23 @@ class ResetToolTest extends TestCase {
 	 * Genau so sind user_rates, purchases und kpi_goals durchgerutscht.
 	 */
 	public function test_jede_betriebstabelle_ist_eingeordnet() {
-		$schema = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/Schema.php' );
+		$treffer = array( 1 => array() );
 
-		$this->assertNotFalse( $schema );
+		// Beide Schemata: das des Moduls Betrieb und das des Kerns. Eine
+		// Tabelle, die nur im Installer steht, ist genauso echt – sie
+		// blieb hier nur unentdeckt, weil der Test einmal nur die eine
+		// Datei las.
+		foreach ( array( '/includes/Modules/Betrieb/Schema.php', '/includes/Core/Installer.php' ) as $datei ) {
+			$schema = file_get_contents( dirname( __DIR__ ) . $datei );
 
-		preg_match_all( '/CREATE TABLE \{\$p\}(\w+)/', $schema, $treffer );
-		$this->assertNotEmpty( $treffer[1], 'Das Schema wurde nicht gelesen.' );
+			$this->assertNotFalse( $schema, $datei . ' ist nicht lesbar.' );
+
+			preg_match_all( '/CREATE TABLE \{\$p\}(\w+)/', $schema, $gefunden );
+
+			$this->assertNotEmpty( $gefunden[1], $datei . ' wurde nicht gelesen.' );
+
+			$treffer[1] = array_merge( $treffer[1], $gefunden[1] );
+		}
 
 		$eingeordnet = ResetTool::protected_tables();
 

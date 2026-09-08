@@ -156,3 +156,342 @@
 	border-color: #dba617;
 	background: rgba(219, 166, 23, 0.08);
 }
+
+/* ------------------------------------------------------------------
+ * Reihe der nächsten Events
+ *
+ * Das seitliche Blättern macht CSS allein: scroll-snap rastet jede Karte
+ * ein, eine Karte je Ansicht. Die Pfeile sind Zugabe und blenden sich
+ * erst mit JavaScript ein - ohne Skript bleibt die Reihe wischbar.
+ * ------------------------------------------------------------------ */
+
+.lw16-events-widget {
+	margin: 2rem 0;
+}
+
+.lw16-events-widget__kopf {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 0.5rem 1rem;
+	margin-bottom: 1rem;
+}
+
+.lw16-events-widget__titel {
+	margin: 0;
+}
+
+.lw16-events-widget__alle {
+	white-space: nowrap;
+}
+
+.lw16-events-widget__rahmen {
+	position: relative;
+}
+
+.lw16-events-widget__spur {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 100%;
+	gap: 1rem;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scroll-behavior: smooth;
+	/* Der Rollbalken bleibt bedienbar, tritt aber nicht in den Vordergrund. */
+	scrollbar-width: thin;
+	padding-bottom: 0.5rem;
+}
+
+.lw16-events-widget__spur:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 3px;
+}
+
+.lw16-events-widget__karte {
+	scroll-snap-align: start;
+	min-width: 0;
+}
+
+.lw16-events-widget__link {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	height: 100%;
+	padding: 1rem;
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	border-radius: 8px;
+	text-decoration: none;
+	color: inherit;
+}
+
+.lw16-events-widget__link:hover,
+.lw16-events-widget__link:focus-visible {
+	border-color: rgba(0, 0, 0, 0.35);
+}
+
+.lw16-events-widget__datum {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-events-widget__tag {
+	font-size: 1.9rem;
+	font-weight: 700;
+	line-height: 1;
+}
+
+.lw16-events-widget__monat {
+	font-size: 1rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.lw16-events-widget__uhrzeit {
+	margin-left: auto;
+	font-size: 0.9rem;
+	opacity: 0.75;
+}
+
+.lw16-events-widget__inhalt {
+	display: flex;
+	gap: 0.85rem;
+	align-items: flex-start;
+}
+
+.lw16-events-widget__bild {
+	flex: 0 0 auto;
+	width: 84px;
+}
+
+.lw16-events-widget__bild img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 6px;
+	object-fit: cover;
+	aspect-ratio: 1 / 1;
+}
+
+.lw16-events-widget__text {
+	min-width: 0;
+}
+
+.lw16-events-widget__typ {
+	font-size: 0.78rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	opacity: 0.7;
+}
+
+.lw16-events-widget__name {
+	margin: 0.15rem 0 0.25rem;
+	font-size: 1.1rem;
+	line-height: 1.25;
+}
+
+.lw16-events-widget__ort {
+	font-size: 0.9rem;
+	opacity: 0.75;
+}
+
+.lw16-events-widget__auszug {
+	margin: 0.5rem 0 0;
+	font-size: 0.92rem;
+	line-height: 1.45;
+}
+
+/* --- Belegung --- */
+
+.lw16-events-widget__plaetze {
+	margin-top: auto;
+	padding-top: 0.5rem;
+}
+
+.lw16-events-widget__balken {
+	height: 6px;
+	border-radius: 999px;
+	background: rgba(0, 0, 0, 0.1);
+	overflow: hidden;
+}
+
+.lw16-events-widget__balken span {
+	display: block;
+	height: 100%;
+	background: #46b450;
+	border-radius: inherit;
+}
+
+.lw16-events-widget__balken.is-voll span {
+	background: #dba617;
+}
+
+.lw16-events-widget__frei {
+	margin-top: 0.35rem;
+	font-size: 0.85rem;
+	font-weight: 600;
+}
+
+/* --- Pfeile --- */
+
+.lw16-events-widget__pfeil {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 2;
+	width: 2.25rem;
+	height: 2.25rem;
+	padding: 0;
+	font-size: 1.4rem;
+	line-height: 1;
+	cursor: pointer;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 50%;
+	background: #fff;
+	color: inherit;
+}
+
+.lw16-events-widget__pfeil[disabled] {
+	opacity: 0.35;
+	cursor: default;
+}
+
+.lw16-events-widget__pfeil--zurueck {
+	left: -0.75rem;
+}
+
+.lw16-events-widget__pfeil--vor {
+	right: -0.75rem;
+}
+
+/* Auf schmalen Bildschirmen wird gewischt, nicht geklickt - dort waeren
+   die Pfeile nur zwei Knoepfe ueber dem Inhalt. */
+@media (max-width: 48rem) {
+	.lw16-events-widget__pfeil {
+		display: none;
+	}
+}
+
+/* --- Punkte und Pause --- */
+
+.lw16-events-widget__steuerung {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	margin-top: 0.75rem;
+}
+
+.lw16-events-widget__punkte {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.lw16-events-widget__punkt {
+	padding: 0.35rem;
+	border: 0;
+	background: none;
+	cursor: pointer;
+	line-height: 0;
+}
+
+.lw16-events-widget__punkt span {
+	display: block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: currentColor;
+	opacity: 0.28;
+	transition: opacity 0.2s, transform 0.2s;
+}
+
+.lw16-events-widget__punkt[aria-selected="true"] span {
+	opacity: 1;
+	transform: scale(1.35);
+}
+
+.lw16-events-widget__punkt:hover span {
+	opacity: 0.6;
+}
+
+.lw16-events-widget__punkt:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 1px;
+	border-radius: 50%;
+}
+
+.lw16-events-widget__pause {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	border-radius: 50%;
+	background: none;
+	color: inherit;
+	cursor: pointer;
+}
+
+/* Zwei Balken für „läuft" (Pause anbieten), ein Dreieck für „pausiert"
+   (Weiterlaufen anbieten). Reines CSS, damit keine Symbolschrift nötig ist. */
+.lw16-events-widget__pause-zeichen {
+	display: block;
+	width: 8px;
+	height: 9px;
+	border-left: 3px solid currentColor;
+	border-right: 3px solid currentColor;
+}
+
+.lw16-events-widget.is-pausiert .lw16-events-widget__pause-zeichen {
+	width: 0;
+	height: 0;
+	border-left: 8px solid currentColor;
+	border-right: 0;
+	border-top: 5px solid transparent;
+	border-bottom: 5px solid transparent;
+	margin-left: 2px;
+}
+
+.lw16-events-widget__pause:focus-visible {
+	outline: 2px solid currentColor;
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lw16-events-widget__spur {
+		scroll-behavior: auto;
+	}
+
+	.lw16-events-widget__punkt span {
+		transition: none;
+	}
+}
+
+/* ------------------------------------------------------------------
+ * Nur im Seiten-Editor
+ * ------------------------------------------------------------------ */
+
+.lw16-events-block-editor__schirm {
+	position: relative;
+}
+
+/* Ein Klick soll den Block auswaehlen, nicht einem Eventlink folgen. */
+.lw16-events-block-editor__schirm::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+}
+
+.lw16-events-widget__leer {
+	padding: 1rem 1.25rem;
+	border: 1px dashed rgba(0, 0, 0, 0.25);
+	border-radius: 6px;
+	font-size: 0.95rem;
+	opacity: 0.85;
+}

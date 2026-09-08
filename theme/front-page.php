@@ -77,6 +77,39 @@ $about_url     = $about_page ? get_permalink( $about_page ) : '#';
 	</section>
 	<?php endif; ?>
 
+	<!-- Naechste Events -->
+	<?php
+	// Das Plugin liefert die Reihe. Fehlt es, faellt der Abschnitt weg,
+	// statt die Startseite mit einem Fehler anzuhalten.
+	$events_html = '';
+	if ( class_exists( '\Lindenweg16\Modules\Events\EventsWidget' ) ) {
+		// Ueberschrift und Link baut die Vorlage selbst, damit der Abschnitt
+		// aussieht wie die uebrigen auf dieser Seite.
+		$events_html = \Lindenweg16\Modules\Events\EventsWidget::render(
+			array(
+				'anzahl'    => 6,
+				'titel'     => '',
+				'alle_link' => false,
+				'autoplay'  => true,
+				'intervall' => 7,
+			)
+		);
+	}
+
+	if ( $events_html ) :
+		$events_archiv = get_post_type_archive_link( 'lw16_event' );
+		?>
+	<section class="lw16-section">
+		<div class="lw16-section__header">
+			<h2 class="lw16-section__title"><?php esc_html_e( 'Nächste Termine', 'lindenweg16' ); ?></h2>
+			<?php if ( $events_archiv ) : ?>
+				<a href="<?php echo esc_url( $events_archiv ); ?>" class="lw16-section__link"><?php esc_html_e( 'Alle Termine ansehen', 'lindenweg16' ); ?> &rarr;</a>
+			<?php endif; ?>
+		</div>
+		<?php echo $events_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+	</section>
+	<?php endif; ?>
+
 	<!-- Story Teaser -->
 	<section class="lw16-story">
 		<div class="lw16-story__image">

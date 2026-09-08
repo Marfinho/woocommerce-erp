@@ -15,7 +15,7 @@ use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Inventory\StockManager;
 
 /**
- * Druck-Queue, Packliste, DHL-Verlinkung/-Tracking, Ist-Zeit-Erfassung
+ * Lieferschein (intern noch „Packliste"), DHL-Tracking, Ist-Zeit-Erfassung
  * und vorausschauende Mengenvorschläge.
  */
 class ProductionModule {
@@ -26,7 +26,8 @@ class ProductionModule {
 	public function register() {
 		add_action( 'lw16_render_page_lw16_produktion', array( $this, 'render_admin' ) );
 
-		// Packliste automatisch bei Status processing (asynchron).
+		// Lieferschein automatisch bei Status processing (asynchron). Der
+		// Hook heißt aus Rücksicht auf eingereihte Jobs weiter „packing".
 		add_action( 'woocommerce_order_status_processing', array( $this, 'enqueue_packing_slip' ), 20, 1 );
 		add_action( Scheduler::HOOK_GENERATE_PACKING, array( $this, 'generate_packing_slip' ), 10, 1 );
 		add_action( 'admin_post_lw16_packliste', array( $this, 'serve_or_generate_packing_slip' ) );
@@ -79,7 +80,7 @@ class ProductionModule {
 		// Immer frisch generieren (deckt Adressänderungen ab).
 		$filename = PackingSlipGenerator::generate( $order_id, $notiz );
 		if ( ! $filename ) {
-			wp_die( esc_html__( 'Packliste konnte nicht erzeugt werden.', 'lindenweg16' ) );
+			wp_die( esc_html__( 'Lieferschein konnte nicht erzeugt werden.', 'lindenweg16' ) );
 		}
 
 		$path = trailingslashit( Installer::docs_dir() ) . $filename;
@@ -130,43 +131,21 @@ class ProductionModule {
 	 * Druck-Queue aus offenen Bestellungen (Status processing).
 	 */
 	protected function render_queue() {
-		// Die frühere Druck-Queue las den alten Produktstamm und löste
-		// Stücklisten nur eine Ebene tief auf. Seit der Zusammenlegung der
-		// Lagerverwaltung ist dieser Stamm nicht mehr die führende Quelle,
-		// und seit es Halbzeuge gibt, reicht eine Ebene nicht. Die Rechnung
-		// steht deshalb im Modul Betrieb; hier bleiben die Versandaktionen,
-		// die es dort nicht gibt.
+		// Diese Seite hatte einmal beides: die Rechnung, was gedruckt
+		// werden muss, und die Aktionen, um das Gepackte loszuschicken.
+		// Beides ist umgezogen - die Rechnung ins Modul Betrieb, weil sie
+		// dort ueber alle Stufen geht statt nur eine tief, und der Versand
+		// dazu, weil Ware, Picklisten und Fertigungsauftraege ebenfalls
+		// dort liegen. Wer gepackt hat, sollte fuer denselben Karton nicht
+		// das Menue wechseln muessen.
 		printf(
-			'<div class="notice notice-info inline"><p>%s</p><p><a class="button button-primary" href="%s">%s</a></p></div>',
-			esc_html__( 'Die Fertigungsvorschläge stehen jetzt unter Betrieb → Bedarf. Sie rechnen über alle Stufen – vom fertigen Artikel über Halbzeuge bis zu Rohlingen und Kleinteilen – und verrechnen Bestand und laufende Aufträge.', 'lindenweg16' ),
+			'<div class="notice notice-info inline"><p>%s</p><p><a class="button button-primary" href="%s">%s</a> <a class="button" href="%s">%s</a></p></div>',
+			esc_html__( 'Fertigungsvorschläge und Versand stehen jetzt im Modul Betrieb: der Bedarf rechnet über alle Stufen – vom fertigen Artikel über Halbzeuge bis zu Rohlingen – und verrechnet Bestand und laufende Aufträge; die Versandliste zeigt jede offene Bestellung mit Lieferschein, Sendungsnummer und Label.', 'lindenweg16' ),
+			esc_url( admin_url( 'admin.php?page=lw16-betrieb-versand' ) ),
+			esc_html__( 'Zum Versand', 'lindenweg16' ),
 			esc_url( admin_url( 'admin.php?page=lw16-betrieb-bedarf' ) ),
 			esc_html__( 'Zum Bedarf', 'lindenweg16' )
 		);
-
-		$orders = wc_get_orders(
-			array( 'status' => array( 'wc-processing' ), 'limit' => -1, 'orderby' => 'date', 'order' => 'ASC', 'return' => 'objects' )
-		);
-
-		// Packlisten + DHL-Label je Bestellung.
-		echo '<h2>' . esc_html__( 'Versand-Aktionen je Bestellung', 'lindenweg16' ) . '</h2>';
-		echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Bestellung', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Kunde', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Aktionen', 'lindenweg16' ) . '</th></tr></thead><tbody>';
-		foreach ( $orders as $order ) {
-			echo '<tr><td>#' . esc_html( $order->get_order_number() ) . '</td>';
-			echo '<td>' . esc_html( $order->get_formatted_billing_full_name() ) . '</td><td>';
-			$pl_base = admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $order->get_id() );
-			$pl = wp_nonce_url( $pl_base, 'lw16_packliste_' . $order->get_id() );
-			echo '<form method="get" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="lw16-inline-form" style="display:inline" target="_blank">';
-			echo '<input type="hidden" name="action" value="lw16_packliste"><input type="hidden" name="order_id" value="' . (int) $order->get_id() . '">';
-			echo '<input type="hidden" name="_wpnonce" value="' . esc_attr( wp_create_nonce( 'lw16_packliste_' . $order->get_id() ) ) . '">';
-			echo '<input type="text" name="notiz" placeholder="' . esc_attr__( 'Notiz…', 'lindenweg16' ) . '" class="small-text" style="width:120px"> ';
-			echo '<button type="submit" class="button button-small">' . esc_html__( 'Packliste', 'lindenweg16' ) . '</button>';
-			echo '</form> ';
-			$label = admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' );
-			echo '<a class="button button-small" href="' . esc_url( $label ) . '#dhl">' . esc_html__( 'DHL-Label erstellen', 'lindenweg16' ) . '</a>';
-			echo '</td></tr>';
-		}
-		echo '</tbody></table>';
-		echo '<p class="description">' . esc_html__( 'Der DHL-Label-Button führt zur Bestellung, wo das DHL-Plugin die Ein-Klick-Label-Erstellung bereitstellt.', 'lindenweg16' ) . '</p>';
 	}
 
 	/**
@@ -230,7 +209,7 @@ class ProductionModule {
 			} else {
 				echo '<td>–</td><td>–</td><td>–</td>';
 			}
-			echo '<td><a href="' . esc_url( admin_url( 'admin.php?page=lw16-preiskalkulation' ) ) . '">' . esc_html__( 'zur Kalkulation', 'lindenweg16' ) . '</a></td>';
+			echo '<td><a href="' . esc_url( admin_url( 'admin.php?page=lw16-betrieb-artikel&tab=kalkulation' ) ) . '">' . esc_html__( 'zur Kalkulation', 'lindenweg16' ) . '</a></td>';
 			echo '</tr>';
 		}
 		echo '</tbody></table>';

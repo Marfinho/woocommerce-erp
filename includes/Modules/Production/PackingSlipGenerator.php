@@ -1,6 +1,12 @@
 <?php
 /**
- * Packliste / Versandschein als PDF (mit Stücklisten-Auflösung).
+ * Lieferschein als PDF (mit Stücklisten-Auflösung).
+ *
+ * Heißt im Code noch „Packliste", weil der Hook des Action Schedulers so
+ * heißt und eingereihte Jobs sonst ins Leere liefen. Gedruckt wird ein
+ * Lieferschein: Empfängeranschrift, Inhalt, keine Preise. Die Pickliste
+ * im Modul Betrieb ist etwas anderes – der Zettel fürs Lager, mit
+ * Lagerplätzen statt Anschrift.
  *
  * @package Lindenweg16
  */
