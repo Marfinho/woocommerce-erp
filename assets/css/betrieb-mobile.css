@@ -57,12 +57,19 @@ body.lw16-mobile {
 
 .lw16-mobile__tabs {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 8px;
 	padding: 12px 16px 0;
 }
 
+/* Umbrechen statt ueberlaufen: Mit dem fuenften Reiter passt die Zeile auf
+ * einem schmalen Telefon nicht mehr, und ohne Umbruch verschwindet der
+ * letzte hinter dem Bildschirmrand - erreichbar nur noch durch seitliches
+ * Wischen, auf das niemand kommt. min-width haelt lange Beschriftungen
+ * davon ab, die Zeile aufzublaehen. */
 .lw16-mobile__tabs button {
-	flex: 1;
+	flex: 1 1 28%;
+	min-width: 0;
 	min-height: 48px;
 	font-size: 16px;
 	border: 1px solid var(--lw16-line);
@@ -306,3 +313,48 @@ body.lw16-mobile {
 .lw16-timer__knoepfe .lw16-submit { margin: 0; }
 .lw16-timer__start.is-running { background: #8c3327; }
 .lw16-timer__hinweis { margin: 10px 0 0; font-size: 13px; color: #50575e; }
+
+/* Kommissionsliste.
+ *
+ * Eine Zeile je Artikel, darin ein Feld je Farbe. Am Handy zaehlt jeder
+ * Fingerbreit: Die Felder stehen nebeneinander, solange sie passen, und
+ * brechen sonst um. Ein Feld ist mindestens 44 Punkte hoch, damit man es
+ * mit dem Daumen trifft, ohne die Nachbarfarbe zu erwischen. */
+.lw16-komm { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+.lw16-komm__artikel {
+	border: 1px solid #d5d7db;
+	border-radius: 10px;
+	padding: 8px 10px 10px;
+	background: #fff;
+}
+.lw16-komm__name { font-weight: 600; font-size: 15px; }
+.lw16-komm__name span { display: block; font-weight: 400; font-size: 13px; color: #646970; }
+.lw16-komm__farben { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.lw16-komm__feld { flex: 1 1 110px; min-width: 100px; }
+.lw16-komm__feld span { display: block; font-size: 12px; color: #50575e; margin-bottom: 2px; }
+/* Was der Haendler schon hat, steht fett daneben – beim Zuruecknehmen und
+ * Abrechnen geht es fast immer um genau diese Kombinationen. */
+.lw16-komm__feld b { color: #135e96; }
+.lw16-komm__feld input {
+	width: 100%;
+	min-height: 44px;
+	font-size: 17px;
+	text-align: center;
+	border: 1px solid #8c8f94;
+	border-radius: 8px;
+	padding: 4px;
+	box-sizing: border-box;
+}
+.lw16-komm__feld--vorhanden input { border-color: #135e96; }
+.lw16-komm__hinweis { color: #50575e; font-size: 13px; margin: 4px 0; }
+.lw16-komm__summe {
+	position: sticky;
+	bottom: 0;
+	background: #135e96;
+	color: #fff;
+	border-radius: 8px;
+	padding: 8px 12px;
+	font-weight: 600;
+	text-align: center;
+	margin: 10px 0;
+}

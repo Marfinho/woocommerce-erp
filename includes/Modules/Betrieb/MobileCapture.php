@@ -130,6 +130,7 @@ class MobileCapture {
 		<button type="button" class="is-active" data-tab="druck"><?php esc_html_e( 'Druckjob', 'lindenweg16' ); ?></button>
 		<button type="button" data-tab="lager"><?php esc_html_e( 'Lager', 'lindenweg16' ); ?></button>
 		<button type="button" data-tab="picken"><?php esc_html_e( 'Picken', 'lindenweg16' ); ?></button>
+		<button type="button" data-tab="kommission"><?php esc_html_e( 'Kommission', 'lindenweg16' ); ?></button>
 		<button type="button" data-tab="zeit"><?php esc_html_e( 'Zeit', 'lindenweg16' ); ?></button>
 	</nav>
 
@@ -264,6 +265,31 @@ class MobileCapture {
 			<div id="lw16-picklists"></div>
 		</section>
 
+		<form id="lw16-form-kommission" class="lw16-mobile__form" data-panel="kommission" hidden>
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></span>
+				<select name="contact_id" id="lw16-komm-contact" required></select>
+			</label>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Vorgang', 'lindenweg16' ); ?></span>
+				<select name="movement_type" id="lw16-komm-type"></select>
+			</label>
+
+			<label class="lw16-field">
+				<span><?php esc_html_e( 'Artikel suchen', 'lindenweg16' ); ?></span>
+				<input type="search" id="lw16-komm-suche" inputmode="search" autocomplete="off" placeholder="<?php esc_attr_e( 'Nummer oder Name', 'lindenweg16' ); ?>" />
+			</label>
+
+			<p class="lw16-komm__hinweis" id="lw16-komm-hinweis"><?php esc_html_e( 'Mengen eintragen, dann einmal buchen. Leere Felder bleiben unberührt.', 'lindenweg16' ); ?></p>
+
+			<div class="lw16-komm" id="lw16-komm-liste"></div>
+
+			<div class="lw16-komm__summe" id="lw16-komm-summe" hidden></div>
+
+			<button type="submit" class="lw16-submit"><?php esc_html_e( 'Liste buchen', 'lindenweg16' ); ?></button>
+		</form>
+
 		<form id="lw16-form-zeit" class="lw16-mobile__form" data-panel="zeit" hidden>
 			<div class="lw16-timer">
 				<div class="lw16-timer__wert" id="lw16-zeit-anzeige" role="timer" aria-live="off">0:00:00</div>
@@ -350,6 +376,10 @@ class MobileCapture {
 						'camNone'    => __( 'Der Browser findet keine Kamera an diesem Gerät.', 'lindenweg16' ),
 						'camBusy'    => __( 'Die Kamera ist gerade von einer anderen App belegt.', 'lindenweg16' ),
 						'qrOnly'     => __( 'Dieser Browser liest nur QR-Codes – Strichcodes von Lieferanten bitte eintippen.', 'lindenweg16' ),
+						'keineMenge' => __( 'Es steht keine Menge in der Liste.', 'lindenweg16' ),
+						'position'   => __( 'Position', 'lindenweg16' ),
+						'positionen' => __( 'Positionen', 'lindenweg16' ),
+						'stueck'     => __( 'Stück', 'lindenweg16' ),
 						'timerStart' => __( 'Starten', 'lindenweg16' ),
 						'timerPause' => __( 'Pause', 'lindenweg16' ),
 						'timerRuns'  => __( 'Läuft mit. Du kannst die Seite schließen – die Zeit läuft weiter.', 'lindenweg16' ),

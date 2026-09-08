@@ -474,3 +474,25 @@
 	font-variant-numeric: tabular-nums;
 }
 .lw16-quartal-label { color: #50575e; align-self: center; }
+
+/* Kommissionsliste am Schreibtisch – dieselbe Idee wie am Handy, nur mit
+ * mehr Platz nebeneinander. */
+.lw16-kommission { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; max-width: 62em; }
+.lw16-kommission__artikel {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 10px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 6px 10px;
+	background: #fff;
+}
+.lw16-kommission__name { flex: 1 1 16em; font-weight: 600; }
+.lw16-kommission__name span { font-weight: 400; color: #646970; }
+.lw16-kommission__farben { display: flex; flex-wrap: wrap; gap: 8px; }
+.lw16-kommission__feld { font-size: 12px; color: #50575e; }
+.lw16-kommission__feld span { display: block; margin-bottom: 2px; }
+.lw16-kommission__feld b { color: #135e96; }
+.lw16-kommission__feld input { width: 72px; text-align: center; }
+.lw16-kommission__feld--vorhanden input { border-color: #135e96; }

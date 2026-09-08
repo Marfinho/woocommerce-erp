@@ -167,6 +167,164 @@
 		} );
 	}
 
+	/* ---------------------------------------------------------------- */
+	/* Kommission: eine Liste statt einer Zeile                          */
+	/* ---------------------------------------------------------------- */
+
+	/**
+	 * Die Kommissionsliste aufbauen.
+	 *
+	 * Eine Zeile je Artikel, darin ein Feld je Farbe. Der Bestand des
+	 * gewaehlten Haendlers steht als kleine Zahl daneben: Beim Zuruecknehmen
+	 * und Abrechnen geht es fast immer um genau das, was schon draussen
+	 * liegt, und niemand soll mehr abrechnen als das.
+	 */
+	function kommissionAufbauen() {
+		if ( ! context || ! context.sellable ) {
+			return;
+		}
+
+		var liste = document.getElementById( 'lw16-komm-liste' );
+		var farben = Object.keys( context.colors );
+
+		liste.innerHTML = '';
+
+		context.sellable.forEach( function ( article ) {
+			var zeile = document.createElement( 'div' );
+			zeile.className = 'lw16-komm__artikel';
+			zeile.dataset.suche = ( article.sku + ' ' + article.name ).toLowerCase();
+
+			var kopf = document.createElement( 'div' );
+			kopf.className = 'lw16-komm__name';
+			kopf.textContent = article.sku;
+
+			var name = document.createElement( 'span' );
+			name.textContent = article.name;
+			kopf.appendChild( name );
+			zeile.appendChild( kopf );
+
+			var felder = document.createElement( 'div' );
+			felder.className = 'lw16-komm__farben';
+
+			farben.forEach( function ( slug ) {
+				var label = document.createElement( 'label' );
+				label.className = 'lw16-komm__feld';
+
+				var text = document.createElement( 'span' );
+				text.textContent = context.colors[ slug ];
+
+				var vorhanden = document.createElement( 'b' );
+				vorhanden.dataset.vorhanden = article.id + '|' + slug;
+				text.appendChild( vorhanden );
+
+				var feld = document.createElement( 'input' );
+				feld.type = 'text';
+				feld.inputMode = 'numeric';
+				feld.placeholder = '0';
+				feld.dataset.article = article.id;
+				feld.dataset.color = slug;
+
+				label.appendChild( text );
+				label.appendChild( feld );
+				felder.appendChild( label );
+			} );
+
+			zeile.appendChild( felder );
+			liste.appendChild( zeile );
+		} );
+
+		kommissionBestandZeigen();
+	}
+
+	/**
+	 * Den Bestand des gewaehlten Haendlers in die Liste schreiben.
+	 */
+	function kommissionBestandZeigen() {
+		if ( ! context || ! context.contacts ) {
+			return;
+		}
+
+		var id = document.getElementById( 'lw16-komm-contact' ).value;
+		var contact = context.contacts.filter( function ( c ) {
+			return String( c.id ) === String( id );
+		} )[ 0 ];
+
+		var bestand = contact ? contact.commission : {};
+
+		document.querySelectorAll( '[data-vorhanden]' ).forEach( function ( el ) {
+			var menge = bestand[ el.dataset.vorhanden ];
+
+			el.textContent = menge ? ' ' + menge : '';
+			el.parentNode.parentNode.classList.toggle( 'lw16-komm__feld--vorhanden', !! menge );
+		} );
+	}
+
+	/**
+	 * Die eingetippten Mengen einsammeln.
+	 *
+	 * @return {Array} Zeilen mit article_id, color, qty.
+	 */
+	function kommissionZeilen() {
+		var zeilen = [];
+
+		document.querySelectorAll( '#lw16-komm-liste input[data-article]' ).forEach( function ( feld ) {
+			if ( '' === feld.value.trim() ) {
+				return;
+			}
+
+			zeilen.push( {
+				article_id: parseInt( feld.dataset.article, 10 ),
+				color: feld.dataset.color,
+				qty: feld.value.trim()
+			} );
+		} );
+
+		return zeilen;
+	}
+
+	/**
+	 * Die Summe unter der Liste mitfuehren.
+	 *
+	 * Wer zwanzig Felder ausfuellt, will vor dem Buchen sehen, was er da
+	 * gleich bucht - nicht danach in der Bewegungsliste nachzaehlen.
+	 */
+	function kommissionSummeZeigen() {
+		var zeilen = kommissionZeilen();
+		var stueck = 0;
+
+		zeilen.forEach( function ( z ) {
+			stueck += parseFloat( String( z.qty ).replace( ',', '.' ) ) || 0;
+		} );
+
+		var el = document.getElementById( 'lw16-komm-summe' );
+
+		el.hidden = 0 === zeilen.length;
+		el.textContent = zeilen.length + ' ' + ( 1 === zeilen.length ? config.i18n.position : config.i18n.positionen )
+			+ ' · ' + stueck + ' ' + config.i18n.stueck;
+	}
+
+	/**
+	 * Die Liste auf einen Suchbegriff eindampfen.
+	 *
+	 * Bei sechzig Artikeln ist Scrollen am Handy die eigentliche Arbeit.
+	 */
+	function kommissionFiltern() {
+		var suche = document.getElementById( 'lw16-komm-suche' ).value.trim().toLowerCase();
+
+		document.querySelectorAll( '#lw16-komm-liste .lw16-komm__artikel' ).forEach( function ( zeile ) {
+			// Eine ausgefuellte Zeile bleibt immer sichtbar, sonst bucht man
+			// blind eine Menge mit, die man gerade nicht sieht.
+			var gefuellt = Array.prototype.some.call(
+				zeile.querySelectorAll( 'input[data-article]' ),
+				function ( feld ) {
+					return '' !== feld.value.trim();
+				}
+			);
+
+			zeile.hidden = '' !== suche && ! gefuellt && -1 === zeile.dataset.suche.indexOf( suche );
+		} );
+	}
+
 	function applyArticleDefaults() {
 		if ( ! context ) {
 			return;
@@ -226,6 +384,20 @@
 			fill( document.getElementById( 'lw16-lot' ), lots, 'id', function ( l ) {
 				return l.label;
 			}, data.defaults.filament_lot_id );
+
+			var contacts = data.contacts || [];
+			fill( document.getElementById( 'lw16-komm-contact' ), contacts, 'id', function ( c ) {
+				return c.name;
+			}, contacts.length ? contacts[ 0 ].id : 0 );
+
+			var kommTypen = Object.keys( data.commissionTypes || {} ).map( function ( key ) {
+				return { key: key, label: data.commissionTypes[ key ] };
+			} );
+			fill( document.getElementById( 'lw16-komm-type' ), kommTypen, 'key', function ( t ) {
+				return t.label;
+			}, 'kommission_raus' );
+
+			kommissionAufbauen();
 
 			var categories = Object.keys( data.categories ).map( function ( key ) {
 				return { key: key, label: data.categories[ key ] };
@@ -1049,6 +1221,42 @@
 
 			var data = Object.fromEntries( new FormData( event.target ).entries() );
 			submit( 'druckjobs', data );
+			status( config.i18n.saved, 'ok' );
+		} );
+
+		document.getElementById( 'lw16-komm-contact' ).addEventListener( 'change', kommissionBestandZeigen );
+		document.getElementById( 'lw16-komm-suche' ).addEventListener( 'input', kommissionFiltern );
+
+		document.getElementById( 'lw16-komm-liste' ).addEventListener( 'input', function ( event ) {
+			if ( event.target.dataset && event.target.dataset.article ) {
+				kommissionSummeZeigen();
+			}
+		} );
+
+		document.getElementById( 'lw16-form-kommission' ).addEventListener( 'submit', function ( event ) {
+			event.preventDefault();
+
+			var zeilen = kommissionZeilen();
+
+			if ( ! zeilen.length ) {
+				status( config.i18n.keineMenge, 'error' );
+				return;
+			}
+
+			submit( 'kommission', {
+				contact_id: parseInt( document.getElementById( 'lw16-komm-contact' ).value, 10 ),
+				movement_type: document.getElementById( 'lw16-komm-type' ).value,
+				lines: zeilen
+			} );
+
+			// Gebuchte Mengen sind verbraucht. Blieben sie stehen, buchte man
+			// dieselbe Lieferung beim naechsten Absenden ein zweites Mal.
+			document.querySelectorAll( '#lw16-komm-liste input[data-article]' ).forEach( function ( feld ) {
+				feld.value = '';
+			} );
+
+			kommissionSummeZeigen();
+			kommissionFiltern();
 			status( config.i18n.saved, 'ok' );
 		} );
 

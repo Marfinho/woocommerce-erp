@@ -184,6 +184,21 @@ und die Papierformulare ab.
   Gleichstand, und wird im Formular begründet („38 Min. Produktion, 12 Min.
   Verwaltung"). Eine offen gelassene Seite zählt je Sprung höchstens 15
   Minuten.
+- **Kommission als Liste** (`CommissionBatch`, `CommissionRepository`): Eine
+  Auslieferung umfasst selten einen Artikel – bis hierher war sie achtzehnmal
+  Auswahlfeld, Menge, Buchen. Jetzt eine Liste über alle Artikel und Farben,
+  einmal buchen, am Schreibtisch wie am Handy (eigener Reiter in der mobilen
+  Erfassung, mit Suche und mitlaufender Summe). `CommissionBatch` ist rein:
+  leere Felder erzeugen keine Buchung über null Stück, dieselbe Ware zweimal
+  wird zusammengezählt statt zweimal gebucht, und ein Fehler in einer Zeile
+  verhindert die ganze Liste – eine halb gebuchte Lieferung sieht aus wie
+  eine fertige. Die Bewegungen kommen weiterhin aus
+  `StockLedger::commission_pair()`; ein Test vergleicht Liste gegen
+  Einzelbuchung, damit die Regel nur an einer Stelle steht. **Nebeneffekt mit
+  Geld dahinter:** Abrechnen erzeugt nun *einen* offenen Posten über die
+  ganze Lieferung. Die Rabattstaffel hängt am Bestellwert – acht einzeln
+  abgerechnete Artikel landeten achtmal in der untersten Stufe. Der alte
+  Einzelhandler ist entfallen, samt seiner Kopie der Abrechnungslogik.
 - **Ein Etikettenformat für alles** (`LabelSheet::DEFAULT_ROLL`): Eine Anlage
   hat einen Etikettendrucker, und darin liegt eine Rolle. Der plugin-weite
   Standard ist **DK-11201** (29 × 90 mm, längs beschriftet) und steht als

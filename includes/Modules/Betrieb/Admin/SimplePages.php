@@ -20,6 +20,8 @@ use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CapacityPlanner;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\CommissionBatch;
+use Lindenweg16\Modules\Betrieb\CommissionRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
@@ -64,7 +66,7 @@ class SimplePages {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_kontakte', array( $this, 'contacts' ) );
 		add_action( 'lw16_betrieb_render_lw16_betrieb_berichte', array( $this, 'reports' ) );
 
-		foreach ( array( 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission', 'goals' ) as $what ) {
+		foreach ( array( 'time', 'contact', 'activity', 'term', 'token', 'maintenance', 'freeze', 'commission_batch', 'goals' ) as $what ) {
 			add_action( 'admin_post_lw16_betrieb_' . $what, array( $this, 'handle_' . $what ) );
 		}
 	}
@@ -278,85 +280,137 @@ class SimplePages {
 	}
 
 	/**
-	 * Kommissionsbewegung buchen.
+	 * Die Kommissionsliste: alle Artikel und Farben, eine Menge je Zeile.
+	 *
+	 * Eine Auslieferung umfasst selten einen Artikel. Wer sie Zeile für
+	 * Zeile bucht, macht achtzehn Seitenladungen und verzählt sich – vor
+	 * allem, wenn er dabei im Laden steht und den Karton auspackt.
+	 *
+	 * Oben stehen die Kombinationen, die der Händler schon hat: Beim
+	 * Zurücknehmen und Abrechnen geht es fast immer um genau die, und die
+	 * vorhandene Menge steht daneben, damit niemand mehr abrechnet, als
+	 * draussen ist.
+	 *
+	 * @param int   $contact_id Händler.
+	 * @param array $commission Kommissionsbestand des Händlers.
 	 */
-	public function handle_commission() {
-		$input = $this->input();
+	protected function commission_form( $contact_id, array $commission ) {
+		$articles = ArticleRepository::all_by_id();
+		$farben   = ColorRegistry::all();
 
-		$type       = isset( $input['movement_type'] ) ? sanitize_key( $input['movement_type'] ) : '';
-		$contact_id = isset( $input['contact_id'] ) ? (int) $input['contact_id'] : 0;
-		$article_id = isset( $input['article_id'] ) ? (int) $input['article_id'] : 0;
-		$color      = isset( $input['color'] ) ? sanitize_text_field( $input['color'] ) : '';
-		$qty        = isset( $input['qty'] ) ? (float) str_replace( ',', '.', (string) $input['qty'] ) : 0.0;
+		// Was draussen liegt, zuerst – als article_id|color => Menge.
+		$draussen = array();
 
-		$movements = StockLedger::commission_pair( $type, $article_id, $color, $qty, $contact_id );
-
-		if ( ! $movements || $qty <= 0 ) {
-			$this->redirect( 'lw16-betrieb-kontakte', __( 'Bitte Bewegungsart, Artikel und Menge angeben.', 'lindenweg16' ), 'error', array( 'contact' => $contact_id ) );
+		foreach ( $commission as $row ) {
+			$draussen[ (int) $row['article_id'] . '|' . (string) $row['color'] ] = (float) $row['qty'];
 		}
 
-		StockRepository::book_many(
-			$movements,
-			array(
-				'ref_type' => 'manual',
-				'note'     => __( 'Kommission', 'lindenweg16' ),
-			)
+		echo '<h3>' . esc_html__( 'Buchen', 'lindenweg16' ) . '</h3>';
+		echo '<p>' . esc_html__( 'Mengen eintragen und einmal buchen – so viele Zeilen wie nötig. Leere Felder bleiben unberührt.', 'lindenweg16' ) . '</p>';
+
+		$this->form( 'commission_batch' );
+		printf( '<input type="hidden" name="contact_id" value="%d" />', (int) $contact_id );
+
+		echo '<p><label>' . esc_html__( 'Vorgang', 'lindenweg16' ) . ' <select name="movement_type">';
+		foreach ( CommissionBatch::types() as $key => $label ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
+		}
+		echo '</select></label></p>';
+
+		echo '<div class="lw16-kommission">';
+
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
+			$id = (int) $article['id'];
+
+			printf(
+				'<div class="lw16-kommission__artikel"><div class="lw16-kommission__name">%s <span>%s</span></div><div class="lw16-kommission__farben">',
+				esc_html( $article['sku'] ),
+				esc_html( (string) $article['name'] )
+			);
+
+			foreach ( $farben as $slug => $label ) {
+				$hat = isset( $draussen[ $id . '|' . $slug ] ) ? $draussen[ $id . '|' . $slug ] : 0.0;
+
+				printf(
+					'<label class="lw16-kommission__feld%1$s"><span>%2$s%3$s</span>'
+					. '<input type="text" inputmode="numeric" name="menge[%4$d][%5$s]" value="" placeholder="0" /></label>',
+					$hat > 0 ? ' lw16-kommission__feld--vorhanden' : '',
+					esc_html( $label ),
+					$hat > 0 ? ' <b>' . esc_html( number_format_i18n( $hat, 0 ) ) . '</b>' : '',
+					$id,
+					esc_attr( $slug )
+				);
+			}
+
+			echo '</div></div>';
+		}
+
+		echo '</div>';
+
+		echo '<p>';
+		printf( '<button class="button button-primary">%s</button> ', esc_html__( 'Liste buchen', 'lindenweg16' ) );
+		printf(
+			'<span class="description">%s</span>',
+			esc_html__( 'Fett steht daneben, was der Händler von dieser Farbe bereits hat.', 'lindenweg16' )
 		);
+		echo '</p></form>';
+	}
 
-		// Erst mit der Abrechnung entsteht Umsatz: Die Ware verlässt den
-		// Bestand endgültig. Ohne diesen Bestellsatz tauchte der Verkauf in
-		// keiner Auswertung auf und der Händler bekäme keine Rechnung.
-		if ( 'kommission_abgerechnet' === $type ) {
-			$article = ArticleRepository::find( $article_id );
+	/**
+	 * Eine ganze Kommissionsliste auf einmal buchen.
+	 *
+	 * Der Unterschied zur Einzelbuchung ist nicht nur Bequemlichkeit. Beim
+	 * Abrechnen entsteht **ein** Bestellsatz über die ganze Lieferung statt
+	 * einer je Artikel – und erst dadurch greift die Rabattstaffel richtig:
+	 * Sie hängt am Bestellwert, und acht einzeln abgerechnete Artikel
+	 * ergeben achtmal einen kleinen Wert statt einmal einen grossen.
+	 */
+	public function handle_commission_batch() {
+		$this->require_cap( 'lw16_capture' );
+		check_admin_referer( self::NONCE );
 
-			if ( $article ) {
-				$items = array(
-					array(
-						'article_id'       => $article_id,
-						'color'            => $color,
-						'qty'              => $qty,
-						'unit_price_gross' => (float) $article['price_gross'],
-						'discountable'     => (int) $article['discountable'],
-					),
-				);
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$contact_id = isset( $_POST['contact_id'] ) ? (int) $_POST['contact_id'] : 0;
+		$type       = isset( $_POST['movement_type'] ) ? sanitize_key( wp_unslash( $_POST['movement_type'] ) ) : '';
+		$roh        = isset( $_POST['menge'] ) && is_array( $_POST['menge'] ) ? wp_unslash( $_POST['menge'] ) : array();
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-				$discount = DiscountResolver::for_contact( $contact_id, $items, gmdate( 'Y-m-d' ) );
+		$rows = array();
 
-				// Die Lagerbuchung ist oben bereits erfolgt – der Bestellsatz
-				// darf sie nicht ein zweites Mal auslösen.
-				$order_id = OrderOpsRepository::create_manual(
-					array(
-						'contact_id'           => $contact_id ? $contact_id : null,
-						'manual_order_date'    => gmdate( 'Y-m-d' ),
-						'manual_order_value'   => $discount['order_value_net_of_discount'],
-						'channel'              => 'Fachhandel',
-						'customer_type'        => 'B2B',
-						'price_level'          => 'haendler',
-						'applied_discount_pct' => $discount['discount_pct'],
-						'applied_tier_id'      => $discount['tier_id'],
-						'payment_terms_days'   => $discount['payment_terms_days'],
-						'invoice_status'       => 'offen',
-						'order_status'         => 'bestaetigt',
-						'note'                 => __( 'Kommissionsabrechnung', 'lindenweg16' ),
-					),
-					$items,
-					false
-				);
-
-				$this->redirect(
-					'lw16-betrieb-kontakte',
-					sprintf(
-						/* translators: %s: Bestellwert. */
-						__( 'Kommission abgerechnet und als offener Posten über %s erfasst.', 'lindenweg16' ),
-						number_format_i18n( $discount['order_value_net_of_discount'], 2 ) . ' €'
-					),
-					'success',
-					array( 'contact' => $contact_id )
+		// Die Feldnamen tragen Artikel und Farbe: menge[7][weiss].
+		foreach ( (array) $roh as $article_id => $farben ) {
+			foreach ( (array) $farben as $color => $qty ) {
+				$rows[] = array(
+					'article_id' => (int) $article_id,
+					'color'      => sanitize_text_field( $color ),
+					'qty'        => sanitize_text_field( is_scalar( $qty ) ? $qty : '' ),
 				);
 			}
 		}
 
-		$this->redirect( 'lw16-betrieb-kontakte', __( 'Kommissionsbewegung gebucht.', 'lindenweg16' ), 'success', array( 'contact' => $contact_id ) );
+		if ( CommissionBatch::too_long( $rows ) ) {
+			$this->redirect(
+				'lw16-betrieb-kontakte',
+				__( 'Die Liste ist zu lang für eine Lieferung.', 'lindenweg16' ),
+				'error',
+				array( 'contact' => $contact_id )
+			);
+		}
+
+		$result = CommissionBatch::validate( $rows, $type, $contact_id );
+
+		if ( $result['errors'] ) {
+			$this->redirect(
+				'lw16-betrieb-kontakte',
+				implode( ' ', $result['errors'] ),
+				'error',
+				array( 'contact' => $contact_id )
+			);
+		}
+
+		$meldung = CommissionRepository::book_batch( $result['lines'], $type, $contact_id );
+
+		$this->redirect( 'lw16-betrieb-kontakte', $meldung, 'success', array( 'contact' => $contact_id ) );
 	}
 
 	/**
@@ -1269,27 +1323,7 @@ class SimplePages {
 			echo '<p>' . esc_html__( 'Keine Kommissionsware.', 'lindenweg16' ) . '</p>';
 		}
 
-		$this->form( 'commission' );
-		printf( '<input type="hidden" name="contact_id" value="%d" />', $contact_id );
-		echo '<p><select name="movement_type">';
-		foreach ( array(
-			'kommission_raus'        => __( 'ausliefern', 'lindenweg16' ),
-			'kommission_abgerechnet' => __( 'abrechnen', 'lindenweg16' ),
-			'kommission_retour'      => __( 'zurücknehmen', 'lindenweg16' ),
-		) as $key => $label ) {
-			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $label ) );
-		}
-		echo '</select> <select name="article_id">';
-		foreach ( ArticleRepository::selectable( true ) as $article ) {
-			printf( '<option value="%d">%s</option>', (int) $article['id'], esc_html( $article['sku'] ) );
-		}
-		echo '</select> <select name="color">';
-		foreach ( ColorRegistry::all() as $slug => $label ) {
-			printf( '<option value="%s">%s</option>', esc_attr( $slug ), esc_html( $label ) );
-		}
-		echo '</select> ';
-		printf( '<input type="text" name="qty" placeholder="%s" size="6" /> ', esc_attr__( 'Menge', 'lindenweg16' ) );
-		printf( '<button class="button">%s</button></p></form>', esc_html__( 'Buchen', 'lindenweg16' ) );
+		$this->commission_form( $contact_id, $commission );
 
 		// Aktivitäten.
 		echo '<h3>' . esc_html__( 'Aktivitäten', 'lindenweg16' ) . '</h3>';
