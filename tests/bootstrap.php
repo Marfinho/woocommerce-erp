@@ -225,6 +225,7 @@ foreach ( array(
 	'StockOwnership',
 	'IsoWeek',
 	'StockLedger',
+	'CommissionBatch',
 	'BomResolver',
 	'ComponentConsumption',
 	'CostCalculator',

@@ -99,6 +99,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/kommission',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'book_commission' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/picklisten',
 			array(
 				'methods'             => 'GET',
@@ -393,6 +403,36 @@ class RestApi {
 			);
 		}
 
+		// Für die Kommissionsliste: alle verkäuflichen Artikel, nicht nur die
+		// gedruckten – ausgeliefert wird auch Zukauf. Dazu die Händler mit
+		// dem, was bei ihnen schon liegt, damit niemand mehr abrechnet, als
+		// draussen ist.
+		$verkaufbar = array();
+
+		foreach ( ArticleRepository::selectable( true ) as $article ) {
+			$verkaufbar[] = array(
+				'id'   => (int) $article['id'],
+				'sku'  => $article['sku'],
+				'name' => (string) $article['name'],
+			);
+		}
+
+		$contacts = array();
+
+		foreach ( ContactRepository::all() as $contact ) {
+			$bestand = array();
+
+			foreach ( ContactRepository::commission_stock( (int) $contact['id'] ) as $row ) {
+				$bestand[ (int) $row['article_id'] . '|' . (string) $row['color'] ] = (float) $row['qty'];
+			}
+
+			$contacts[] = array(
+				'id'         => (int) $contact['id'],
+				'name'       => (string) $contact['name'],
+				'commission' => $bestand,
+			);
+		}
+
 		return new WP_REST_Response(
 			array(
 				'printers'   => $printers,
@@ -400,9 +440,58 @@ class RestApi {
 				'lots'       => $lots,
 				'colors'     => ColorRegistry::all(),
 				'categories' => TimeRepository::category_labels(),
-				'defaults'   => $defaults,
+				'defaults'        => $defaults,
+				'sellable'        => $verkaufbar,
+				'contacts'        => $contacts,
+				'commissionTypes' => CommissionBatch::types(),
 			),
 			200
+		);
+	}
+
+	/**
+	 * Eine Kommissionsliste vom Handy buchen.
+	 *
+	 * Geprüft und gebucht wird über dieselben Klassen wie am Schreibtisch –
+	 * zwei Fassungen derselben Regel drifteten sonst auseinander, und die
+	 * eine buchte den Bestellsatz, die andere nicht.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function book_commission( $request ) {
+		$contact_id = (int) $request->get_param( 'contact_id' );
+		$type       = sanitize_key( (string) $request->get_param( 'movement_type' ) );
+		$rows       = (array) $request->get_param( 'lines' );
+
+		if ( CommissionBatch::too_long( $rows ) ) {
+			return new WP_Error( 'lw16_zu_lang', __( 'Die Liste ist zu lang für eine Lieferung.', 'lindenweg16' ), array( 'status' => 400 ) );
+		}
+
+		$sauber = array();
+
+		foreach ( $rows as $row ) {
+			$row      = (array) $row;
+			$sauber[] = array(
+				'article_id' => isset( $row['article_id'] ) ? (int) $row['article_id'] : 0,
+				'color'      => isset( $row['color'] ) ? sanitize_text_field( (string) $row['color'] ) : '',
+				'qty'        => isset( $row['qty'] ) && is_scalar( $row['qty'] ) ? sanitize_text_field( (string) $row['qty'] ) : '',
+			);
+		}
+
+		$result = CommissionBatch::validate( $sauber, $type, $contact_id );
+
+		if ( $result['errors'] ) {
+			return new WP_Error( 'lw16_ungueltig', implode( ' ', $result['errors'] ), array( 'status' => 400 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'message'   => CommissionRepository::book_batch( $result['lines'], $type, $contact_id ),
+				'positions' => $result['positions'],
+				'pieces'    => $result['pieces'],
+			),
+			201
 		);
 	}
 
