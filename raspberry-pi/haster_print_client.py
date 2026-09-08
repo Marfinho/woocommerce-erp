@@ -6,9 +6,15 @@ Holt Druckjobs über Long Polling von der WordPress-/WooCommerce-Instanz
 ab (DHL-Versandlabels ebenso wie Artikel-/Lagerplatz-Etiketten und
 andere Etiketten aus der Druck-Warteschlange), lädt das jeweilige PDF
 herunter und übergibt es unverändert (kein Skalieren, kein "fit to
-page") an CUPS. Ein Client bedient genau einen Drucker (PRINTER_ID) –
-was er druckt, entscheidet allein die Warteschlange auf der
-WordPress-Seite, nicht der Client.
+page") an den Drucker. Ein Client bedient genau einen Drucker
+(PRINTER_ID) – was er druckt, entscheidet allein die Warteschlange auf
+der WordPress-Seite, nicht der Client.
+
+Zwei Druckwege (PRINT_BACKEND in .env):
+- "cups" (Standard): PDF per lp/CUPS an PRINTER_NAME.
+- "brother_ql": Direktdruck per USB an einen Brother-QL-Etiketten-
+  drucker, ohne CUPS/PPD – für Modelle wie den QL-710W, die CUPS/
+  Gutenprint nicht unterstützt.
 
 Netzwerk: Der Pi baut ausschließlich ausgehende HTTPS-Verbindungen zum
 WordPress-Server auf (Pull-Client). Es wird kein eingehender Port
@@ -83,6 +89,19 @@ class Config:
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
     API_NAMESPACE = "lw16-print-queue/v1"
+
+    # "cups" (Standard): PDF unverändert per lp/CUPS an PRINTER_NAME.
+    # "brother_ql": Direktdruck per USB an einen Brother-QL-Etiketten-
+    # drucker, ohne CUPS/PPD – für Modelle, die CUPS/Gutenprint nicht
+    # unterstützt (z. B. QL-710W). Siehe README, Abschnitt "Brother QL
+    # über brother_ql (ohne CUPS)".
+    PRINT_BACKEND = os.environ.get("PRINT_BACKEND", "cups").strip().lower()
+
+    BROTHER_QL_MODEL = os.environ.get("BROTHER_QL_MODEL", "QL-710W")
+    BROTHER_QL_LABEL = os.environ.get("BROTHER_QL_LABEL", "29x90")
+    BROTHER_QL_USB_IDENTIFIER = os.environ.get(
+        "BROTHER_QL_USB_IDENTIFIER", "usb://0x04f9:0x2043"
+    )
 
     @classmethod
     def validate(cls) -> None:
@@ -271,6 +290,122 @@ def cups_printer_model() -> str:
 
 
 # ---------------------------------------------------------------------
+# Brother QL (Direktdruck per USB, ohne CUPS)
+# ---------------------------------------------------------------------
+
+# Erwartete Etikettengrösse je brother_ql-Bezeichner, in Millimetern.
+# Höhe None heisst: Endlosrolle, die Länge ist frei (kein fester Wert zu
+# prüfen). Diese Tabelle spiegelt bewusst LabelSheet::rolls() in PHP –
+# das PDF kommt bereits exakt in Etikettengrösse an, ohne Rand.
+_BROTHER_QL_LABEL_MM = {
+    "62x29": (62, 29),
+    "29x90": (29, 90),
+    "62": (62, None),
+    "38": (38, None),
+    "12": (12, None),
+}
+
+
+def _render_pdf_page(pdf_path: Path, dpi: int = 300):
+    """Erste Seite des PDF als Graustufen-Bild, in der übergebenen DPI.
+
+    Import von PyMuPDF/Pillow erst hier (nicht am Modulanfang), damit ein
+    reiner CUPS-Client (PRINT_BACKEND=cups) diese Pakete gar nicht
+    installiert haben muss.
+    """
+    import fitz  # PyMuPDF
+    from PIL import Image
+
+    doc = fitz.open(str(pdf_path))
+    try:
+        page = doc.load_page(0)
+        zoom = dpi / 72.0  # PDF-Punkte sind 72 dpi.
+        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), colorspace=fitz.csGRAY)
+        return Image.frombytes("L", (pix.width, pix.height), pix.samples)
+    finally:
+        doc.close()
+
+
+def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
+    """PDF per USB direkt an einen Brother-QL-Drucker rastern und senden.
+
+    Umgeht CUPS/PPD komplett – nötig für Modelle, die weder von CUPS'
+    "everywhere"-Treiber (nur IPP/Netzwerk) noch von Gutenprint erkannt
+    werden (z. B. QL-710W). Das Etikettenformat (BROTHER_QL_LABEL) muss
+    zur eingelegten Rolle passen; eine grobe Plausibilitätsprüfung
+    verhindert, dass ein Label falscher Grösse (z. B. versehentlich ein
+    DHL-Label auf diesem Drucker) unbemerkt schiefgeht.
+    """
+    try:
+        image = _render_pdf_page(pdf_path)
+    except Exception as exc:  # noqa: BLE001 - jede Ursache soll als Fehlermeldung zurück
+        return False, f"PDF konnte nicht gerastert werden: {exc}"[:500]
+
+    erwartet = _BROTHER_QL_LABEL_MM.get(Config.BROTHER_QL_LABEL)
+    if erwartet is None:
+        return False, (
+            f"Unbekanntes BROTHER_QL_LABEL '{Config.BROTHER_QL_LABEL}' – "
+            "siehe README für gültige Bezeichner."
+        )
+
+    dpi = 300
+    mm_to_px = dpi / 25.4
+    erwartet_w_px = erwartet[0] * mm_to_px
+    toleranz = 0.15  # 15% Spielraum für Rundung/Rand.
+
+    if abs(image.width - erwartet_w_px) > erwartet_w_px * toleranz:
+        return False, (
+            f"Seitenbreite des Labels ({image.width}px) passt nicht zum "
+            f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
+            f"(erwartet ca. {round(erwartet_w_px)}px) – falscher Drucker für "
+            "diesen Job gewählt?"
+        )
+
+    if erwartet[1] is not None:
+        erwartet_h_px = erwartet[1] * mm_to_px
+        if abs(image.height - erwartet_h_px) > erwartet_h_px * toleranz:
+            return False, (
+                f"Seitenhöhe des Labels ({image.height}px) passt nicht zum "
+                f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
+                f"(erwartet ca. {round(erwartet_h_px)}px) – falscher Drucker für "
+                "diesen Job gewählt?"
+            )
+
+    try:
+        from brother_ql.raster import BrotherQLRaster
+        from brother_ql.conversion import convert
+        from brother_ql.backends.helpers import send
+
+        qlr = BrotherQLRaster(Config.BROTHER_QL_MODEL)
+        qlr.exception_on_warning = True
+
+        instructions = convert(
+            qlr=qlr,
+            images=[image],
+            label=Config.BROTHER_QL_LABEL,
+            rotate=0,  # Das PDF liegt bereits fertig ausgerichtet vor.
+            threshold=70.0,
+            dither=False,
+            compress=False,
+            red=False,
+            dpi_600=False,
+            hq=True,
+            cut=True,
+        )
+
+        send(
+            instructions=instructions,
+            printer_identifier=Config.BROTHER_QL_USB_IDENTIFIER,
+            backend_identifier="pyusb",
+            blocking=True,
+        )
+    except Exception as exc:  # noqa: BLE001 - USB-/Druckerfehler sollen als Fehlermeldung zurück
+        return False, str(exc)[:500]
+
+    return True, "brother_ql: Job gesendet."
+
+
+# ---------------------------------------------------------------------
 # Hauptschleife
 # ---------------------------------------------------------------------
 
@@ -298,7 +433,10 @@ def process_job(api: ApiClient, job: dict) -> None:
 
     api.mark_printing(job_id)
 
-    ok, message = print_via_cups(target, int(job.get("width_mm", 103)), int(job.get("height_mm", 199)))
+    if Config.PRINT_BACKEND == "brother_ql":
+        ok, message = print_via_brother_ql(target)
+    else:
+        ok, message = print_via_cups(target, int(job.get("width_mm", 103)), int(job.get("height_mm", 199)))
 
     if ok:
         log.info("Job %s gedruckt.", job_id)
@@ -316,9 +454,10 @@ def run() -> None:
     backoff = 1
 
     log.info(
-        "Haster-Print-Client gestartet: %s, Drucker-ID %s, Long-Poll=%s",
+        "Haster-Print-Client gestartet: %s, Drucker-ID %s, Backend=%s, Long-Poll=%s",
         Config.WORDPRESS_URL,
         Config.PRINTER_ID,
+        Config.PRINT_BACKEND,
         Config.LONG_POLL_ENABLED,
     )
 
