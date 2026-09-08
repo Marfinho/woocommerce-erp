@@ -82,20 +82,25 @@ echo "Testseite" | lp -d DHL_PRINTER
 
 ### 6. Python-Abhängigkeiten installieren
 
+Im `raspberry-pi`-Ordner des Checkouts ausführen (dort liegen
+`haster_print_client.py` & Co.):
+
 ```bash
+SRC="$(pwd)"
 sudo mkdir -p /opt/haster-print
 sudo chown $(whoami):$(whoami) /opt/haster-print
-cp haster_print_client.py requirements.txt .env.example /opt/haster-print/
+cp "$SRC"/haster_print_client.py "$SRC"/requirements.txt "$SRC"/.env.example /opt/haster-print/
 cd /opt/haster-print
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
 ```
 
 Bei `PRINT_BACKEND=brother_ql` (siehe unten) zusätzlich `requirements-brother-ql.txt`
-mitkopieren und installieren:
+mitkopieren und installieren (weiterhin in `/opt/haster-print`, `$SRC` ist
+noch aus dem Befehl oben gesetzt):
 
 ```bash
-cp ../requirements-brother-ql.txt /opt/haster-print/
+cp "$SRC"/requirements-brother-ql.txt /opt/haster-print/
 venv/bin/pip install -r requirements-brother-ql.txt
 ```
 
