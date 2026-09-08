@@ -1,0 +1,10 @@
+# Zusätzlich zu requirements.txt nur nötig, wenn PRINT_BACKEND=brother_ql
+# gesetzt ist (Direktdruck per USB, ohne CUPS – siehe README, Abschnitt
+# "Brother QL über brother_ql (ohne CUPS)").
+#
+#   venv/bin/pip install -r requirements.txt -r requirements-brother-ql.txt
+
+brother_ql>=1.2,<2
+pyusb>=1.2,<2
+PyMuPDF>=1.23,<2
+Pillow>=10,<11

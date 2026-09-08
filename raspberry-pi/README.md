@@ -28,11 +28,22 @@ SSH beim Flashen aktivieren, dann den Pi per SSH erreichen.
 sudo apt update && sudo apt full-upgrade -y
 ```
 
+**Hinweis zum Benutzernamen:** Die Beispielbefehle in dieser Anleitung
+verwenden `pi` als Benutzername. Auf aktuellen Raspberry Pi OS-Images
+(Bookworm und neuer) gibt es diesen Standardbenutzer nicht mehr – es
+zählt der Benutzer, den man beim Flashen selbst festgelegt hat. Vor dem
+Copy-Paste einmal mit `whoami` den eigenen Benutzernamen prüfen und
+überall `pi` dadurch ersetzen (auch in `haster-print.service`, Schritt 9).
+
 ### 3. CUPS installieren
+
+Nur nötig für den CUPS-Druckweg (Standard, `PRINT_BACKEND=cups`). Wird
+stattdessen `brother_ql` verwendet (siehe Abschnitt weiter unten), kann
+dieser Schritt komplett übersprungen werden.
 
 ```bash
 sudo apt install -y cups python3-venv python3-pip
-sudo usermod -aG lpadmin pi
+sudo usermod -aG lpadmin $(whoami)
 ```
 
 Web-Oberfläche von außerhalb des Pi erreichbar machen (optional, für die
@@ -73,11 +84,19 @@ echo "Testseite" | lp -d DHL_PRINTER
 
 ```bash
 sudo mkdir -p /opt/haster-print
-sudo chown pi:pi /opt/haster-print
+sudo chown $(whoami):$(whoami) /opt/haster-print
 cp haster_print_client.py requirements.txt .env.example /opt/haster-print/
 cd /opt/haster-print
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
+```
+
+Bei `PRINT_BACKEND=brother_ql` (siehe unten) zusätzlich `requirements-brother-ql.txt`
+mitkopieren und installieren:
+
+```bash
+cp ../requirements-brother-ql.txt /opt/haster-print/
+venv/bin/pip install -r requirements-brother-ql.txt
 ```
 
 ### 7./8. `.env` konfigurieren und Token eintragen
@@ -102,8 +121,11 @@ PRINTER_NAME=DHL_PRINTER
 
 ### 9. systemd-Service installieren
 
+`haster-print.service` enthält `User=pi` – vor dem Kopieren durch den
+eigenen Benutzernamen ersetzen (siehe Hinweis in Schritt 3):
+
 ```bash
-sudo cp haster-print.service /etc/systemd/system/
+sed "s/User=pi/User=$(whoami)/" haster-print.service | sudo tee /etc/systemd/system/haster-print.service
 sudo systemctl daemon-reload
 sudo systemctl enable haster-print
 ```
@@ -198,6 +220,72 @@ andere trotzdem weiter.
 
 In beiden Fällen ändert sich am WordPress-Backend nichts weiter: Jeder
 Drucker wird dort einmal angelegt, unabhängig davon, wie viele Pis dahinterstehen.
+
+### Brother QL über brother_ql (ohne CUPS)
+
+Manche Brother-QL-Modelle (u. a. der QL-710W) lassen sich unter Linux
+über CUPS **nicht** sauber einrichten: `-m everywhere` funktioniert nur
+über IPP/Netzwerk (nicht USB), und weder Gutenprint noch Brothers
+eigenes `.deb`-Treiberpaket (nur i386, läuft nicht auf einem ARM-Pi)
+liefern ein passendes PPD. Für diese Fälle druckt der Client stattdessen
+direkt per USB mit der Python-Bibliothek [`brother_ql`](https://github.com/pklaus/brother_ql) –
+CUPS wird dabei komplett umgangen, Schritt 3–5 dieser Anleitung entfallen.
+
+**1. Abhängigkeiten installieren** (siehe Schritt 6 oben):
+
+```bash
+cd /opt/haster-print
+venv/bin/pip install -r requirements-brother-ql.txt
+```
+
+**2. USB-Zugriff ohne root erlauben.** Der Dienst läuft nicht als root –
+ohne udev-Regel bekommt `brother_ql` beim Senden „Permission denied".
+Vendor-/Produkt-ID mit `lsusb` ermitteln (Zeile z. B.
+`Bus 001 Device 004: ID 04f9:2043 Brother Industries, Ltd`) und eine
+Regel für genau diese IDs anlegen:
+
+```bash
+lsusb | grep -i brother
+sudo tee /etc/udev/rules.d/99-brother-ql.rules <<'EOF'
+SUBSYSTEM=="usb", ATTR{idVendor}=="04f9", ATTR{idProduct}=="2043", MODE="0666"
+EOF
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+(idVendor/idProduct ggf. an die `lsusb`-Ausgabe anpassen, falls
+abweichend von 04f9:2043.)
+
+**3. `.env` konfigurieren:**
+
+```env
+PRINT_BACKEND=brother_ql
+BROTHER_QL_MODEL=QL-710W
+# Muss zur eingelegten Rolle passen (siehe LabelSheet::rolls() im Plugin):
+# DK-11201 (29x90mm, gestanzt)  -> 29x90
+# DK-11209 (62x29mm, gestanzt)  -> 62x29
+# DK-22205 (endlos, 62mm breit) -> 62
+BROTHER_QL_LABEL=29x90
+BROTHER_QL_USB_IDENTIFIER=usb://0x04f9:0x2043
+```
+
+`PRINTER_NAME` bleibt in der `.env` stehen, wird bei diesem Backend aber
+nicht verwendet – es wird kein CUPS-Drucker benötigt.
+
+**4. Testen.** Schritt 9/10 (systemd-Service) wie gewohnt einrichten,
+dann Schritt 11 (Testlabel im Backend anklicken). Bei Problemen zeigt
+`journalctl -u haster-print -f` die genaue Fehlermeldung – häufigste
+Ursachen: udev-Regel fehlt/IDs falsch (`Permission denied` oder
+`Errno 13`), oder `BROTHER_QL_LABEL` passt nicht zur eingelegten Rolle
+(der Client meldet dann selbst eine Grössenabweichung, statt schief zu
+drucken).
+
+**Wichtig:** Das konfigurierte `BROTHER_QL_LABEL` muss zur *physisch
+eingelegten* Rolle passen – die Software kann das nicht automatisch
+erkennen. Ein Drucker, der auf diesem Weg betrieben wird, sollte im
+Backend nur für die eine dazu passende Etikettenart (z. B.
+Artikel-/Lagerplatz-Etiketten im Standardformat) ausgewählt werden,
+nicht für DHL-Labels anderer Grösse.
 
 ### Token neu erzeugen
 
