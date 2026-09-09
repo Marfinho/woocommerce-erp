@@ -319,3 +319,140 @@ Etikett kommt am Drucker heraus
         ↓
 Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: Eintrag wechselt auf "Gedruckt"
 ```
+
+## Bambu-Lab-Bridge (3D-Drucker)
+
+Zweiter, unabhängiger Dienst in diesem Ordner: `bambu_bridge.py`
+verbindet einen Bambu-Lab-3D-Drucker im **LAN-Modus** (kein
+Bambu-Cloud-Login) mit der Bambu-Warteschlange von WordPress
+(`Lindenweg16 → Betrieb → Bambu-Lab-Drucker`). Sie holt geslicte
+Druckdateien (`.gcode.3mf`) per Long Polling ab, lädt sie per FTPS auf
+den Drucker, startet den Druck per MQTT und meldet Fortschritt sowie
+Live-Status (Temperaturen, Restzeit) laufend zurück.
+
+**Anders als beim Etikettendrucker-Client** genügt hier kein reiner
+Internetzugang: Die Bridge braucht zusätzlich eine Verbindung im
+**lokalen Netz** zum Drucker (MQTT Port 8883, FTPS Port 990) – Bridge und
+Drucker müssen also im selben Netzwerk stehen. Für den Weg zu WordPress
+gilt weiterhin: nur ausgehende HTTPS-Verbindungen, kein eingehender Port.
+
+### 1. Am Drucker: LAN-Modus aktivieren
+
+Am Display: Einstellungen → LAN-Modus (bzw. „LAN Only Mode") aktivieren.
+Notiert werden IP-Adresse, Zugangscode und Seriennummer – alle drei
+stehen dort auf einem Bildschirm.
+
+Eine feste IP-Reservierung im Router (DHCP-Reservierung anhand der
+MAC-Adresse des Druckers) verhindert, dass sich die Adresse nach einem
+Neustart des Druckers ändert und die `.env.bambu` dadurch veraltet.
+
+### 2. Im WordPress-Backend: Drucker anlegen
+
+Unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker** einen Drucker
+anlegen (Drucker-ID, Name, IP, Zugangscode, Seriennummer wie in Schritt 1
+notiert). Das dabei angezeigte Token wird **nur einmalig** angezeigt –
+sofort übernehmen.
+
+### 3. Python-Abhängigkeiten installieren
+
+```bash
+SRC="$(pwd)"
+sudo mkdir -p /opt/bambu-bridge
+sudo chown $(whoami):$(whoami) /opt/bambu-bridge
+cp "$SRC"/bambu_bridge.py "$SRC"/requirements-bambu.txt "$SRC"/.env.bambu.example /opt/bambu-bridge/
+cd /opt/bambu-bridge
+python3 -m venv venv
+venv/bin/pip install -r requirements-bambu.txt
+```
+
+### 4. `.env.bambu` konfigurieren
+
+```bash
+cp .env.bambu.example .env.bambu
+nano .env.bambu
+```
+
+Mindestens ausfüllen: `WORDPRESS_URL`, `API_TOKEN` (aus Schritt 2),
+`PRINTER_ID` (dieselbe Drucker-ID wie im Backend), `BAMBU_IP`,
+`BAMBU_ACCESS_CODE`, `BAMBU_SERIAL`.
+
+### 5. systemd-Service installieren
+
+`bambu-bridge.service` enthält `User=pi` – vor dem Kopieren durch den
+eigenen Benutzernamen ersetzen:
+
+```bash
+sed "s/User=pi/User=$(whoami)/" bambu-bridge.service | sudo tee /etc/systemd/system/bambu-bridge.service
+sudo systemctl daemon-reload
+sudo systemctl enable bambu-bridge
+sudo systemctl start bambu-bridge
+sudo systemctl status bambu-bridge
+journalctl -u bambu-bridge -f
+```
+
+### 6. Test
+
+Im WordPress-Backend unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker**
+sollte der Drucker nach kurzer Zeit als „Online" mit Live-Status
+erscheinen. Über den Reiter **„Aufträge"** lässt sich eine geslicte
+`.gcode.3mf`-Datei hochladen und einreihen – die Bridge holt sie beim
+nächsten Kontakt ab, überträgt sie und startet den Druck. Fortschritt und
+Restzeit erscheinen live in der Druckerkarte, bis der Auftrag als
+„Fertig" markiert wird.
+
+### Mehrere Bambu-Drucker
+
+Jeder Drucker bekommt eine eigene Drucker-ID und ein eigenes Token,
+genau wie bei den Etikettendruckern. Für mehrere Bambu-Drucker am selben
+Raspberry Pi mehrere Kopien von `/opt/bambu-bridge` mit je eigener
+`.env.bambu` und eigener systemd-Unit anlegen (kopiert aus
+`bambu-bridge.service` mit angepasstem `WorkingDirectory` und
+`ExecStart`) – dieselbe Bauform wie bei mehreren Etikettendruckern an
+einem Pi (siehe oben, Abschnitt „Mehrere Drucker").
+
+### Polling: klassisch (Standard) oder Long Polling
+
+Anders als der Etikettendrucker-Client (dort ist Long Polling der
+Standard) pollt die Bambu-Bridge standardmäßig **klassisch**: kurzer
+Hold von `SHORT_POLL_WAIT` Sekunden je Anfrage, danach `204` und eine
+Pause von `FALLBACK_POLL_INTERVAL` Sekunden bis zur nächsten Anfrage.
+Grund: Auf manchen Webhosting-Paketen (v. a. günstigen Shared-Hosting-
+Tarifen) kappt der Provider oder ein davorstehender Reverse-Proxy eine
+offen gehaltene Verbindung nach wenigen Sekunden von sich aus – die
+Bridge sähe das als Netzwerkfehler statt als sauberes `204` und würde
+ständig in den Backoff laufen, ohne dass ein Job je zuverlässig ankommt.
+
+Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
+zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-
+WordPress-Hoster), kann in `.env.bambu` auf Long Polling umstellen für
+etwas geringere Verzögerung bis zum Abholen eines Jobs:
+
+```env
+LONG_POLL_ENABLED=true
+```
+
+Ob Long Polling beim eigenen Hoster überhaupt funktioniert, zeigt sich
+im Log: Bricht `GET /jobs` regelmäßig mit einem Verbindungsfehler statt
+mit einem sauberen `204` ab, bleibt es bei `LONG_POLL_ENABLED=false`.
+
+### Ist-Druckzeit im Druckjournal
+
+Ist ein Bambu-Job aus einem Fertigungsauftrag entstanden (z. B. künftig
+direkt aus „Artikel & Revisionen" heraus eingereiht), trägt ein
+erfolgreich abgeschlossener Druck seine tatsächliche Druckzeit
+automatisch in die Ist-vs-Plan-Auswertung unter „Produktionsplanung" ein
+– ohne die manuelle Eingabe, die dort für rein manuell geführte
+Druckaufträge weiterhin nötig ist. Die Ist-Arbeitszeit (Verpacken,
+Stützstrukturen entfernen …) bleibt in jedem Fall eine manuelle Eingabe,
+da sie sich aus dem Druckerstatus nicht ableiten lässt.
+
+### Unsicherheiten des LAN-Protokolls
+
+Bambu Lab dokumentiert das LAN-MQTT-/FTPS-Protokoll nicht offiziell. Die
+hier verwendeten Topics und Kommandos entsprechen dem öffentlich
+bekannten, breit genutzten Reverse-Engineering (u. a. aus
+Home-Assistant- und OctoPrint-Integrationen) und funktionieren zum
+Zeitpunkt dieser Anleitung mit aktueller Firmware. Ein künftiges
+Firmware-Update **kann** Details ändern – meldet die Bridge dauerhaft
+Verbindungsfehler nach einem Firmware-Update, lohnt ein Blick in die
+aktuellen Quellen dieser Projekte.

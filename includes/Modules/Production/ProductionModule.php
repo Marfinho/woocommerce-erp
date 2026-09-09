@@ -323,20 +323,51 @@ class ProductionModule {
 		$job_id = (int) ( $_POST['job_id'] ?? 0 );
 		check_admin_referer( 'lw16_job_complete_' . $job_id );
 
+		$ok = self::complete_job(
+			$job_id,
+			(float) ( $_POST['ist_druckzeit_h'] ?? 0 ),
+			(float) ( $_POST['ist_arbeitszeit_min'] ?? 0 )
+		);
+
+		if ( ! $ok ) {
+			$this->redirect( 'jobs', __( 'Druckauftrag nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		$this->redirect( 'jobs', __( 'Druckauftrag abgeschlossen und Ist-Zeit erfasst.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Druckauftrag abschließen, unabhängig von einem Formular: Ist-Zeit
+	 * loggen, Bestand als Produktion buchen, Status auf "verpackt" setzen.
+	 *
+	 * Eigener statischer Einstiegspunkt (statt Logik nur in
+	 * handle_job_complete()), damit auch eine automatische Meldung – z. B.
+	 * "Druck auf dem Bambu-Lab-Drucker fertig" aus der Bambu-Anbindung im
+	 * Modul Betrieb – dieselbe Buchung auslösen kann wie der manuelle
+	 * Abschluss im Druckjournal.
+	 *
+	 * @param int   $job_id              Druckauftrag.
+	 * @param float $ist_druckzeit_h     Tatsächliche Druckzeit in Stunden.
+	 * @param float $ist_arbeitszeit_min Tatsächliche Arbeitszeit in Minuten
+	 *                                    (0, wenn (noch) nicht bekannt – z. B.
+	 *                                    bei einem automatischen Abschluss).
+	 * @return bool Erfolg (false, wenn der Auftrag nicht existiert).
+	 */
+	public static function complete_job( $job_id, $ist_druckzeit_h, $ist_arbeitszeit_min = 0 ) {
 		$job = ProductionRepository::get_job( $job_id );
 		if ( ! $job ) {
-			$this->redirect( 'jobs', __( 'Druckauftrag nicht gefunden.', 'lindenweg16' ) );
+			return false;
 		}
 		$produkt = Repository::get_product( $job->produkt_id );
 
 		ProductionRepository::add_log(
 			array(
-				'produkt_id'             => (int) $job->produkt_id,
-				'menge'                  => (float) $job->menge,
-				'geplante_druckzeit_h'   => $produkt ? (float) $produkt->druckzeit_stunden : null,
-				'ist_druckzeit_h'        => (float) ( $_POST['ist_druckzeit_h'] ?? 0 ),
+				'produkt_id'               => (int) $job->produkt_id,
+				'menge'                    => (float) $job->menge,
+				'geplante_druckzeit_h'     => $produkt ? (float) $produkt->druckzeit_stunden : null,
+				'ist_druckzeit_h'          => (float) $ist_druckzeit_h,
 				'geplante_arbeitszeit_min' => $produkt ? (float) $produkt->arbeitszeit_minuten : null,
-				'ist_arbeitszeit_min'    => (float) ( $_POST['ist_arbeitszeit_min'] ?? 0 ),
+				'ist_arbeitszeit_min'      => (float) $ist_arbeitszeit_min,
 			)
 		);
 
@@ -347,7 +378,8 @@ class ProductionModule {
 		}
 
 		ProductionRepository::set_job_status( $job_id, 'verpackt' );
-		$this->redirect( 'jobs', __( 'Druckauftrag abgeschlossen und Ist-Zeit erfasst.', 'lindenweg16' ) );
+
+		return true;
 	}
 
 	/**

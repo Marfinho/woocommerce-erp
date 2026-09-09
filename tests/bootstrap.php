@@ -289,6 +289,12 @@ foreach ( array( 'PrintJobRepository', 'PrinterRepository', 'TestLabelPdf' ) as 
 	require $lw16_root . '/includes/Modules/Betrieb/PrintQueue/' . $lw16_class . '.php';
 }
 
+// Bambu-Lab-Anbindung: dasselbe Muster wie die Druck-Warteschlange - die
+// Claim-/Lock-Logik und das Token-Hashing sind ohne Datenbank prüfbar.
+foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Betrieb/Bambu/' . $lw16_class . '.php';
+}
+
 // Seiteneffektfreie Klassen des Moduls Konfigurator.
 foreach ( array(
 	'Layout',

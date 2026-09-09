@@ -29,10 +29,13 @@ use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintQueuePrintersPage;
+use Lindenweg16\Modules\Betrieb\Admin\BambuPrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
 use Lindenweg16\Modules\Betrieb\Admin\TimerBar;
 use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuRestApi;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueRestApi;
 
@@ -87,6 +90,11 @@ class BetriebModule {
 			// (siehe PrintQueuePrintersPage::render()), ein Menüpunkt
 			// weniger.
 			'lw16-betrieb-druckwarteschlange-drucker' => array( __( 'Etikettendrucker', 'lindenweg16' ), 'lw16_capture', MenuGroups::VERWALTUNG ),
+			// Live-Anbindung der 3D-Drucker (LAN-Modus über eine Bridge auf
+			// dem Raspberry Pi) - eigener Menüpunkt neben "3D-Drucker &
+			// Wartung", weil dort weiterhin ausschließlich die
+			// Kalkulationsdaten (Stundensatz, Wartung) gepflegt werden.
+			'lw16-betrieb-bambu' => array( __( 'Bambu-Lab-Drucker', 'lindenweg16' ), 'lw16_capture', MenuGroups::FERTIGUNG ),
 		);
 	}
 
@@ -130,8 +138,10 @@ class BetriebModule {
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
 		( new PrintQueueRestApi() )->register();
+		( new BambuRestApi() )->register();
 
 		add_action( Scheduler::HOOK_DHL_PRINT_MAINTENANCE, array( PrintQueueService::class, 'run_maintenance' ) );
+		add_action( Scheduler::HOOK_BAMBU_MAINTENANCE, array( BambuService::class, 'run_maintenance' ) );
 
 		// Die Adminleiste steht auch im Frontend, wenn jemand angemeldet
 		// ist – die Uhr soll dort genauso laufen.
@@ -154,6 +164,7 @@ class BetriebModule {
 			// PrintQueueJobsPage hat kein register() mehr - ist jetzt ein
 			// Reiter auf der Etikettendrucker-Seite, kein eigener
 			// Menüpunkt (siehe PrintQueuePrintersPage::render()).
+			( new BambuPrintersPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();
 			( new UsersPage() )->register();
