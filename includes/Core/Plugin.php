@@ -10,6 +10,7 @@ namespace Lindenweg16\Core;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Admin\Menu;
+use Lindenweg16\Admin\MenuGroups;
 use Lindenweg16\Admin\SettingsPage;
 use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
@@ -78,6 +79,7 @@ class Plugin {
 
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
+			( new MenuGroups() )->register();
 			( new Menu() )->register();
 			( new SettingsPage() )->register();
 			( new ResetPage() )->register();

@@ -149,12 +149,23 @@ class PrintQueuePrintersPage {
 	}
 
 	/**
-	 * Seite ausgeben.
+	 * Seite ausgeben. Ein Menüpunkt für beide Ansichten (Drucker/Aufträge),
+	 * per Reiter umgeschaltet – bündelt, was vorher zwei getrennte
+	 * Menüpunkte waren.
 	 */
 	public function render() {
 		$this->require_cap();
 
-		echo '<h1>' . esc_html__( 'Drucker', 'lindenweg16' ) . '</h1>';
+		echo '<h1>' . esc_html__( 'Etikettendrucker', 'lindenweg16' ) . '</h1>';
+
+		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'drucker'; // phpcs:ignore WordPress.Security.NonceVerification
+		$this->render_tabs( $tab );
+
+		if ( 'auftraege' === $tab ) {
+			$base = add_query_arg( 'tab', 'auftraege', admin_url( 'admin.php?page=' . self::SLUG ) );
+			( new PrintQueueJobsPage() )->render_content( $base );
+			return;
+		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification
 		if ( isset( $_GET['lw16_msg'] ) ) {
@@ -188,6 +199,30 @@ class PrintQueuePrintersPage {
 		foreach ( $printers as $printer ) {
 			$this->render_card( $printer );
 		}
+	}
+
+	/**
+	 * Reiter „Drucker" / „Aufträge".
+	 *
+	 * @param string $active Aktiver Reiter.
+	 */
+	protected function render_tabs( $active ) {
+		$base = admin_url( 'admin.php?page=' . self::SLUG );
+
+		echo '<nav class="lw16-tabs">';
+		printf(
+			'<a href="%s" class="%s">%s</a> ',
+			esc_url( $base ),
+			'auftraege' === $active ? '' : 'active',
+			esc_html__( 'Drucker', 'lindenweg16' )
+		);
+		printf(
+			'<a href="%s" class="%s">%s</a> ',
+			esc_url( add_query_arg( 'tab', 'auftraege', $base ) ),
+			'auftraege' === $active ? 'active' : '',
+			esc_html__( 'Aufträge', 'lindenweg16' )
+		);
+		echo '</nav>';
 	}
 
 	/**

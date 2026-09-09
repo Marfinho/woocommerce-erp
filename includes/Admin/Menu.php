@@ -12,7 +12,9 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Assets;
 
 /**
- * Registriert das Hauptmenü und die Untermenüseiten in wp-admin.
+ * Registriert die (vormals eigenständigen) "Lindenweg16"-Unterseiten als
+ * Untermenüs der fünf gemeinsamen Hauptmenüs aus MenuGroups, statt ein
+ * eigenes Hauptmenü zu eröffnen.
  */
 class Menu {
 
@@ -20,47 +22,60 @@ class Menu {
 	 * Hooks registrieren.
 	 */
 	public function register() {
+		// Priorität 10 (Standard): MenuGroups (Priorität 5) hat die
+		// Elternmenüs zu diesem Zeitpunkt schon angelegt.
 		add_action( 'admin_menu', array( $this, 'add_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 	}
 
 	/**
 	 * Menüstruktur aufbauen.
+	 *
+	 * Jeder Eintrag: Slug => [Titel, Elternmenü aus MenuGroups].
 	 */
 	public function add_menu() {
-		add_menu_page(
-			__( 'Lindenweg16', 'lindenweg16' ),
-			__( 'Lindenweg16', 'lindenweg16' ),
+		// Eigener Callback (render_dashboard, nicht render_page) - feuert
+		// lw16_render_dashboard statt des generischen lw16_render_page_*,
+		// genau wie zuvor als Klick auf das (jetzt entfallene) eigene
+		// Hauptmenü.
+		add_submenu_page(
+			MenuGroups::FINANZEN,
+			__( 'Dashboard: Finanzen', 'lindenweg16' ),
+			__( 'Dashboard: Finanzen', 'lindenweg16' ),
 			LW16_CAPABILITY,
 			LW16_MENU_SLUG,
-			array( $this, 'render_dashboard' ),
-			'dashicons-store',
-			56
+			array( $this, 'render_dashboard' )
 		);
 
 		$pages = array(
-			LW16_MENU_SLUG              => __( 'Dashboard', 'lindenweg16' ),
-			'lw16-buchhaltung'         => __( 'Buchhaltung', 'lindenweg16' ),
-			'lw16-loyalty'             => __( 'Loyalty', 'lindenweg16' ),
-			'lw16-produktion'          => __( 'Produktion', 'lindenweg16' ),
-			'lw16-kasse'               => __( 'Kasse', 'lindenweg16' ),
-			'lw16-marketing'           => __( 'Marketing', 'lindenweg16' ),
-			'lw16-support'             => __( 'Support', 'lindenweg16' ),
-			'lw16-reporting'           => __( 'Reporting', 'lindenweg16' ),
-			'lw16-einstellungen'       => __( 'Einstellungen', 'lindenweg16' ),
-			'lw16-anleitungen'         => __( 'Anleitungen', 'lindenweg16' ),
+			'lw16-buchhaltung'   => array( __( 'Buchhaltung', 'lindenweg16' ), MenuGroups::FINANZEN ),
+			'lw16-reporting'     => array( __( 'Reporting', 'lindenweg16' ), MenuGroups::FINANZEN ),
+			'lw16-loyalty'       => array( __( 'Loyalty', 'lindenweg16' ), MenuGroups::VERKAUF ),
+			'lw16-kasse'         => array( __( 'Kasse', 'lindenweg16' ), MenuGroups::VERKAUF ),
+			'lw16-marketing'     => array( __( 'Marketing', 'lindenweg16' ), MenuGroups::VERKAUF ),
+			'lw16-produktion'    => array( __( 'Produktion', 'lindenweg16' ), MenuGroups::FERTIGUNG ),
+			'lw16-support'       => array( __( 'Support', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
+			'lw16-anleitungen'   => array( __( 'Anleitungen', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
+			// TODO: mit "Einstellungen" aus Betrieb zu einer Seite mit
+			// Reitern zusammenlegen (siehe Absprache) - bis dahin zwei
+			// getrennte, klar benannte Einträge statt eines mehrdeutigen.
+			'lw16-einstellungen' => array( __( 'Einstellungen: Plugin', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
 		);
 
-		foreach ( $pages as $slug => $title ) {
+		foreach ( $pages as $slug => $config ) {
 			add_submenu_page(
-				LW16_MENU_SLUG,
-				$title,
-				$title,
+				$config[1],
+				$config[0],
+				$config[0],
 				LW16_CAPABILITY,
 				$slug,
 				array( $this, 'render_page' )
 			);
 		}
+
+		// Dashboard/Einstellungen laufen über eigene register()-Aufrufe
+		// (Dashboard-Klasse, SettingsPage) - hier nur die schlichten
+		// Modul-Seiten ohne eigene Klasse.
 
 		// Das Zurücksetzen vor dem Livegang loescht Bewegungsdaten
 		// unwiderruflich. Es erscheint deshalb nur fuer Benutzer, die die
@@ -68,7 +83,7 @@ class Menu {
 		// den man nicht benutzen darf, waere nur verwirrend.
 		if ( current_user_can( 'manage_options' ) ) {
 			add_submenu_page(
-				LW16_MENU_SLUG,
+				MenuGroups::VERWALTUNG,
 				__( 'Livegang', 'lindenweg16' ),
 				__( 'Livegang', 'lindenweg16' ),
 				'manage_options',

@@ -152,7 +152,7 @@ class PrintersPage {
 		$settings = CalcSettings::for_date();
 		$edit     = $edit_id ? PrinterRepository::find( $edit_id ) : null;
 
-		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Drucker & Wartung', 'lindenweg16' ) . '</h1>';
+		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( '3D-Drucker & Wartung', 'lindenweg16' ) . '</h1>';
 		$this->render_notice();
 
 		$this->render_list( $printers, $settings );
