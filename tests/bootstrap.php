@@ -290,8 +290,12 @@ foreach ( array( 'PrintJobRepository', 'PrinterRepository', 'TestLabelPdf' ) as 
 }
 
 // Bambu-Lab-Anbindung: dasselbe Muster wie die Druck-Warteschlange - die
-// Claim-/Lock-Logik und das Token-Hashing sind ohne Datenbank prüfbar.
-foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository' ) as $lw16_class ) {
+// Claim-/Lock-Logik, das Token-Hashing und die Entscheidung, welche Datei
+// mit einem Job vergehen darf, sind ohne Datenbank prüfbar.
+if ( ! defined( 'MB_IN_BYTES' ) ) {
+	define( 'MB_IN_BYTES', 1048576 );
+}
+foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository', 'BambuService' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/Bambu/' . $lw16_class . '.php';
 }
 

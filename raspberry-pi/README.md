@@ -326,9 +326,10 @@ Zweiter, unabhängiger Dienst in diesem Ordner: `bambu_bridge.py`
 verbindet einen Bambu-Lab-3D-Drucker im **LAN-Modus** (kein
 Bambu-Cloud-Login) mit der Bambu-Warteschlange von WordPress
 (`Lindenweg16 → Betrieb → Bambu-Lab-Drucker`). Sie holt geslicte
-Druckdateien (`.gcode.3mf`) per Long Polling ab, lädt sie per FTPS auf
-den Drucker, startet den Druck per MQTT und meldet Fortschritt sowie
-Live-Status (Temperaturen, Restzeit) laufend zurück.
+Druckdateien (`.gcode.3mf`) per Polling ab (Long Polling optional, siehe
+unten), lädt sie per **implizitem FTPS** (Port 990) auf den Drucker,
+startet den Druck per MQTT und meldet Fortschritt sowie Live-Status
+(Temperaturen, Restzeit) laufend zurück.
 
 **Anders als beim Etikettendrucker-Client** genügt hier kein reiner
 Internetzugang: Die Bridge braucht zusätzlich eine Verbindung im
@@ -395,10 +396,22 @@ journalctl -u bambu-bridge -f
 Im WordPress-Backend unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker**
 sollte der Drucker nach kurzer Zeit als „Online" mit Live-Status
 erscheinen. Über den Reiter **„Aufträge"** lässt sich eine geslicte
-`.gcode.3mf`-Datei hochladen und einreihen – die Bridge holt sie beim
-nächsten Kontakt ab, überträgt sie und startet den Druck. Fortschritt und
-Restzeit erscheinen live in der Druckerkarte, bis der Auftrag als
-„Fertig" markiert wird.
+`.gcode.3mf`-Datei hochladen und einreihen – oder eine Druckdatei wählen,
+die ohnehin schon an einer aktiven Artikelrevision hängt („Aus der
+Modellablage einreihen"). Die Bridge holt sie beim nächsten Kontakt ab,
+überträgt sie und startet den Druck. Fortschritt und Restzeit erscheinen
+live in der Druckerkarte, bis der Auftrag als „Fertig" markiert wird.
+
+Meldet die Karte **„Drucker nicht erreichbar"**, läuft die Bridge, findet
+aber den Drucker im LAN nicht: Gerät aus, IP geändert (DHCP-Reservierung
+im Router setzen) oder Zugangscode falsch. Startet ein Auftrag nicht
+innerhalb von `PRINT_START_TIMEOUT` Sekunden (Standard 300), gilt er als
+fehlgeschlagen und blockiert die Warteschlange nicht weiter.
+
+Der LAN-Zugangscode ist das Passwort des Druckers – wer ihn kennt, kann
+im selben Netz Dateien aufspielen und Drucke auslösen. Er wird deshalb
+nur Benutzern mit der Berechtigung zur Druckerverwaltung angezeigt und
+nach dem Speichern nicht mehr in die Seite zurückgeschrieben.
 
 ### Mehrere Bambu-Drucker
 

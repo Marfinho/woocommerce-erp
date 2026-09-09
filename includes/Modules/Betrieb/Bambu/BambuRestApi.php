@@ -32,11 +32,11 @@ class BambuRestApi {
 	const POLL_INTERVAL_SECONDS = 1;
 
 	/**
-	 * Höchstgröße einer 3MF-Datei. Großzügig bemessen – ein 3MF-Projekt
-	 * kann eingebettete Vorschaubilder enthalten und ist deutlich größer
-	 * als ein reines G-Code-Etikett.
+	 * Höchstgröße einer 3MF-Datei. Eine Grenze für beide Enden, deshalb
+	 * steht sie beim Service, der das Einreihen prüft (siehe
+	 * BambuService::MAX_FILE_BYTES).
 	 */
-	const MAX_FILE_BYTES = 200 * MB_IN_BYTES;
+	const MAX_FILE_BYTES = BambuService::MAX_FILE_BYTES;
 
 	/**
 	 * Hooks registrieren.

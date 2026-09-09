@@ -194,8 +194,15 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'ip', $data ) ) {
 			$update['ip'] = sanitize_text_field( (string) $data['ip'] );
 		}
-		if ( array_key_exists( 'access_code', $data ) ) {
+		// Ein leerer Zugangscode heißt "unverändert lassen", nicht "löschen":
+		// Das Bearbeitungsformular zeigt den hinterlegten Code nicht an
+		// (siehe BambuPrintersPage::render_card()), also käme er bei jedem
+		// Speichern leer zurück und würde sonst den funktionierenden Code
+		// überschreiben. Zum Entfernen dient das ausdrückliche Flag.
+		if ( array_key_exists( 'access_code', $data ) && '' !== trim( (string) $data['access_code'] ) ) {
 			$update['access_code'] = sanitize_text_field( (string) $data['access_code'] );
+		} elseif ( ! empty( $data['access_code_loeschen'] ) ) {
+			$update['access_code'] = '';
 		}
 		if ( array_key_exists( 'geraet_id', $data ) ) {
 			$update['geraet_id'] = $data['geraet_id'] ? (int) $data['geraet_id'] : null;

@@ -523,17 +523,37 @@ class BambuJobRepository {
 	}
 
 	/**
-	 * Alle Jobs eines Druckers löschen (beim Löschen des Druckers selbst).
+	 * Alle Jobs eines Druckers löschen (beim Löschen des Druckers selbst),
+	 * samt der eigens dafür hochgeladenen Druckdateien.
 	 *
 	 * @param string $printer_id Drucker.
 	 */
 	public static function delete_for_printer( $printer_id ) {
 		global $wpdb;
+
+		$jobs = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id, file_path FROM ' . self::table() . ' WHERE printer_id = %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $printer_id
+			)
+		);
+
+		foreach ( (array) $jobs as $job ) {
+			BambuService::delete_job_file( $job->file_path );
+		}
+
 		$wpdb->delete( self::table(), array( 'printer_id' => (string) $printer_id ) );
 	}
 
 	/**
 	 * Alte, abgeschlossene Job-Einträge nach Aufbewahrungsfrist entfernen.
+	 *
+	 * Mit dem Eintrag verschwindet auch die zugehörige Druckdatei – aber
+	 * nur, wenn sie eigens für die Warteschlange hochgeladen wurde. Eine
+	 * Datei aus der Modellablage gehört der Artikelrevision und bleibt
+	 * liegen (siehe BambuService::delete_job_file()). Ohne dieses
+	 * Aufräumen wüchse der Dokumentenordner mit jedem Druck weiter,
+	 * während die Datenbankzeilen verschwinden.
 	 *
 	 * @param int $tage 0 = unbegrenzt (keine Löschung).
 	 * @return int Anzahl gelöschter Zeilen.
@@ -549,11 +569,20 @@ class BambuJobRepository {
 
 		$grenze = gmdate( 'Y-m-d H:i:s', time() - $tage * DAY_IN_SECONDS );
 
-		return (int) $wpdb->query(
+		$alte = $wpdb->get_results(
 			$wpdb->prepare(
-				'DELETE FROM ' . self::table() . " WHERE status IN ('completed','failed','cancelled') AND created_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT id, file_path FROM ' . self::table() . " WHERE status IN ('completed','failed','cancelled') AND created_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$grenze
 			)
 		);
+
+		$geloescht = 0;
+
+		foreach ( (array) $alte as $job ) {
+			BambuService::delete_job_file( $job->file_path );
+			$geloescht += (int) $wpdb->delete( self::table(), array( 'id' => (int) $job->id ) );
+		}
+
+		return $geloescht;
 	}
 }

@@ -133,6 +133,11 @@ class Config:
     SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "5"))
     FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "5"))
 
+    # Wie lange nach dem Startkommando auf einen laufenden Druckzustand
+    # gewartet wird, bevor der Job als fehlgeschlagen gilt. Der Drucker
+    # prüft die Datei, fährt hoch und nivelliert - das dauert.
+    PRINT_START_TIMEOUT = int(os.environ.get("PRINT_START_TIMEOUT", "300"))
+
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
 
@@ -184,6 +189,14 @@ def redact(text: str) -> str:
 # Hauptschleife gelesen) - ein einfaches Lock genügt, da nur kurze
 # Zuweisungen geschützt werden, keine Wartezeit.
 # ---------------------------------------------------------------------
+
+
+# Zustände, die der Drucker meldet, während ein Druck läuft. PREPARE
+# deckt das Vorbereiten ab (Datei prüfen, aufheizen, nivellieren), PAUSE
+# einen unterbrochenen, aber nicht beendeten Druck. Nur wenn einer dieser
+# Zustände nach dem Startkommando gesehen wurde, ist ein anschließendes
+# FINISH auch wirklich das Ende DIESES Jobs (siehe warte_auf_druckstart).
+DRUCKT_ZUSTAENDE = ("PREPARE", "RUNNING", "PAUSE", "SLICING")
 
 
 class PrinterState:
@@ -362,15 +375,95 @@ def send_print_command(client: "mqtt.Client", remote_filename: str) -> None:
 # ---------------------------------------------------------------------
 
 
+class ImplicitFTP_TLS(FTP_TLS):
+    """FTPS im *impliziten* Modus (TLS ab dem ersten Byte, Port 990).
+
+    Python's ftplib kann von Haus aus nur *explizites* FTPS: connect()
+    öffnet einen Klartext-Socket und liest die Begrüßungszeile, erst
+    danach schaltet AUTH TLS auf Verschlüsselung um. Der Bambu-Drucker
+    erwartet auf Port 990 aber sofort einen TLS-Handshake - gegen ihn
+    bliebe ein Klartext-connect() bis zum Timeout hängen, und der Upload
+    schlüge grundsätzlich fehl.
+
+    Deshalb wird der Socket hier bereits beim Setzen umhüllt. Genau dieses
+    Vorgehen nutzen auch die bekannten Bambu-Integrationen; FTP_TLS.login()
+    erkennt einen bereits verschlüsselten Socket und lässt AUTH dann
+    korrekterweise weg.
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        self._sock = None
+        super().__init__(*args, **kwargs)
+
+    @property
+    def sock(self):
+        """Der (bereits verschlüsselte) Steuerkanal."""
+        return self._sock
+
+    @sock.setter
+    def sock(self, value) -> None:
+        if value is not None and not isinstance(value, ssl.SSLSocket):
+            value = self.context.wrap_socket(value, server_hostname=None)
+        self._sock = value
+
+    def storbinary(self, cmd, fp, blocksize=8192, callback=None, rest=None):
+        """Wie FTP_TLS.storbinary, aber ohne harten Fehler bei unsauberem
+        TLS-Abschluss des Datenkanals.
+
+        Eingebettete FTPS-Server schließen die Datenverbindung nach der
+        Übertragung häufig einfach zu, ohne das vorgeschriebene
+        close_notify zu senden. ftplib's unwrap() läuft dann in einen
+        SSLError ("UNEXPECTED_EOF_WHILE_READING"), obwohl die Datei
+        vollständig angekommen ist - die Bridge meldete den Job dann als
+        fehlgeschlagen, während die Druckdatei in Wirklichkeit fertig auf
+        dem Drucker liegt. Maßgeblich ist deshalb allein die abschließende
+        Antwort des Servers auf dem Steuerkanal (voidresp: 226).
+        """
+        self.voidcmd("TYPE I")
+        with self.transfercmd(cmd, rest) as conn:
+            while True:
+                buf = fp.read(blocksize)
+                if not buf:
+                    break
+                conn.sendall(buf)
+                if callback:
+                    callback(buf)
+
+            if isinstance(conn, ssl.SSLSocket):
+                try:
+                    conn.unwrap()
+                except (ssl.SSLError, OSError):
+                    pass
+
+        return self.voidresp()
+
+
+def _printer_ssl_context() -> ssl.SSLContext:
+    """TLS-Kontext für die Verbindungen zum Drucker im LAN.
+
+    Der Drucker verwendet ein selbstsigniertes Zertifikat - es gibt keine
+    öffentliche CA, gegen die sich prüfen ließe. Verschlüsselt wird
+    trotzdem, nur die Zertifikatsprüfung entfällt. Der Kontext wird hier
+    bewusst explizit gebaut statt sich auf den ftplib-Standard zu
+    verlassen, damit diese Entscheidung im Code sichtbar ist und nicht
+    von der Python-Version abhängt.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    return context
+
+
 def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
     """3MF-Datei per FTPS auf die interne SD-Karte des Druckers legen.
 
-    Der Drucker bietet im LAN-Modus einen FTPS-Server (Port 990, "bblp"/
-    Zugangscode) - denselben, den auch Bambu Studio beim "Senden" einer
-    Druckdatei verwendet.
+    Der Drucker bietet im LAN-Modus einen impliziten FTPS-Server (Port
+    990, "bblp"/Zugangscode) - denselben, den auch Bambu Studio beim
+    "Senden" einer Druckdatei verwendet.
     """
+    ftp = None
     try:
-        ftp = FTP_TLS()
+        ftp = ImplicitFTP_TLS(context=_printer_ssl_context())
         ftp.connect(Config.BAMBU_IP, Config.FTPS_PORT, timeout=30)
         ftp.login("bblp", Config.BAMBU_ACCESS_CODE)
         # Nach dem Login-Handshake auch die Datenverbindung verschlüsseln -
@@ -381,11 +474,22 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
             ftp.storbinary(f"STOR {remote_filename}", fh)
 
         ftp.quit()
+        ftp = None
         return True, ""
     except error_perm as exc:
         return False, f"FTPS vom Drucker abgelehnt: {exc}"
-    except OSError as exc:
+    except (OSError, ssl.SSLError) as exc:
         return False, f"FTPS-Verbindung fehlgeschlagen: {exc}"
+    finally:
+        # Nach einem Fehler mitten in der Übertragung bleibt sonst eine
+        # halboffene Verbindung stehen, die der Drucker erst nach seinem
+        # eigenen Timeout aufräumt - der nächste Versuch liefe dann in
+        # "zu viele Verbindungen".
+        if ftp is not None:
+            try:
+                ftp.close()
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------
@@ -450,8 +554,23 @@ class ApiClient:
 
     def post_status(self) -> None:
         snap = STATE.snapshot()
+
         if not snap["connected"]:
+            # Die Bridge läuft, erreicht aber den Drucker nicht (Gerät aus,
+            # IP geändert, Zugangscode falsch). Früher wurde in dem Fall gar
+            # nichts gemeldet - im Admin sah der Drucker dann weiter
+            # "online" aus, weil schon das Job-Polling den Heartbeat setzt,
+            # und Status/Temperaturen blieben auf dem letzten Stand stehen.
+            # Deshalb wird der Ausfall jetzt ausdrücklich gemeldet.
+            self._post(
+                "status",
+                data={
+                    "status": "mqtt_getrennt",
+                    "error": "Keine MQTT-Verbindung zum Drucker (Gerät, IP und Zugangscode prüfen).",
+                },
+            )
             return
+
         self._post(
             "status",
             data={
@@ -480,6 +599,12 @@ class ApiClient:
                 return True
         except requests.RequestException as exc:
             log.warning("Netzwerkfehler beim 3MF-Download (Job %s): %s", job_id, redact(str(exc)))
+            # Bruchstück nicht liegen lassen - sonst sammeln sich nach
+            # jedem Verbindungsabbruch halbe 3MF-Dateien auf dem Pi an.
+            try:
+                target.with_suffix(target.suffix + ".part").unlink(missing_ok=True)
+            except OSError:
+                pass
             return False
 
 
@@ -500,9 +625,62 @@ def status_reporter_loop(api: ApiClient, stop_event: threading.Event) -> None:
 # ---------------------------------------------------------------------
 
 
+def safe_local_name(filename: str, job_id: int) -> str:
+    """Dateinamen aus der Serverantwort auf einen harmlosen Namen bringen.
+
+    Der Server sanitisiert bereits (sanitize_file_name), aber die Bridge
+    setzt den Namen in einen Pfad und in ein FTP-Kommando ein - beides
+    darf nicht von einer fremden Antwort steuerbar sein. Deshalb hier
+    unabhängig nochmal: keine Pfadanteile, keine Steuerzeichen (ein \\r\\n
+    im Namen wäre sonst eine FTP-Kommandozeile), nur eine bekannte
+    Zeichenmenge.
+    """
+    name = os.path.basename(str(filename).replace("\\", "/").strip())
+    name = "".join(ch for ch in name if ch.isalnum() or ch in "._- ").strip(" .")
+
+    if not name.lower().endswith(".3mf"):
+        name = f"{name}.3mf" if name else f"job-{job_id}.3mf"
+
+    # Der Drucker mag keine überlangen Namen auf der SD-Karte.
+    if len(name) > 100:
+        name = name[-100:].lstrip(" .-_") or f"job-{job_id}.3mf"
+
+    return name
+
+
+def warte_auf_druckstart() -> tuple[bool, str]:
+    """Warten, bis der Drucker den Druck tatsächlich begonnen hat.
+
+    Wichtig, weil der zuletzt gelesene gcode_state nach einem vorherigen
+    Druck noch auf FINISH steht: Würde die Fortschrittsschleife direkt
+    nach dem Startkommando lauschen, sähe sie dieses alte FINISH und
+    meldete den gerade erst beginnenden Job sofort als fertig - samt
+    automatischer Ist-Zeit- und Bestandsbuchung auf der WordPress-Seite.
+    Erst wenn der Drucker einen laufenden Zustand meldet, ist ein
+    späteres FINISH/FAILED auch wirklich das dieses Jobs.
+    """
+    deadline = time.monotonic() + Config.PRINT_START_TIMEOUT
+
+    while time.monotonic() < deadline:
+        time.sleep(2)
+        snap = STATE.snapshot()
+
+        if snap["gcode_state"] in DRUCKT_ZUSTAENDE:
+            return True, ""
+
+        if not snap["connected"]:
+            continue
+
+    return False, (
+        "Drucker hat den Druck nicht begonnen (kein laufender Zustand "
+        f"innerhalb von {Config.PRINT_START_TIMEOUT}s) - Druckdatei oder "
+        "Druckerzustand am Gerät prüfen."
+    )
+
+
 def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
     job_id = int(job["id"])
-    filename = job.get("filename") or f"job-{job_id}.3mf"
+    filename = safe_local_name(job.get("filename") or "", job_id)
 
     log.info("Job %s verfügbar – claime …", job_id)
 
@@ -513,51 +691,75 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
 
     local_path = Config.DOWNLOAD_DIRECTORY / filename
 
-    if not api.download_file(job_id, local_path):
-        log.error("3MF-Download für Job %s fehlgeschlagen – Job bleibt offen.", job_id)
-        return
-
-    api.mark_uploading(job_id)
-    log.info("Job %s: übertrage %s per FTPS an den Drucker …", job_id, filename)
-
-    remote_filename = f"lw16-{job_id}-{filename}"
-    ok, message = upload_via_ftps(local_path, remote_filename)
-
-    if not ok:
-        log.error("Upload für Job %s fehlgeschlagen: %s", job_id, message)
-        api.fail(job_id, message)
-        return
-
-    STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")
-    send_print_command(mqtt_client, remote_filename)
-    api.mark_printing(job_id)
-    log.info("Job %s: Druck gestartet, verfolge Fortschritt über MQTT.", job_id)
-
-    # Fortschritt aus dem MQTT-Report ablesen, bis der Drucker FINISH oder
-    # FAILED meldet. Kein fester Timeout - ein 3D-Druck kann viele Stunden
-    # dauern; die Bridge bleibt so lange dran, wie der Drucker verbunden
-    # bleibt (fällt die Verbindung dauerhaft aus, gibt die Wartung auf der
-    # WordPress-Seite den Job nach LOCK_TIMEOUT_MINUTES wieder frei).
-    last_reported = -1
-    while True:
-        time.sleep(5)
-        snap = STATE.snapshot()
-        state = snap["gcode_state"]
-
-        if snap["progress_percent"] is not None and snap["progress_percent"] != last_reported:
-            api.report_progress(job_id, snap["progress_percent"], snap["remaining_minutes"] or 0)
-            last_reported = snap["progress_percent"]
-
-        if state == "FINISH":
-            log.info("Job %s: Drucker meldet FINISH.", job_id)
-            api.complete(job_id)
+    try:
+        if not api.download_file(job_id, local_path):
+            # Der Job muss hier ausdrücklich als fehlgeschlagen gemeldet
+            # werden. Bliebe er "claimed", sperrte er serverseitig die
+            # gesamte Warteschlange dieses Druckers, bis die Wartung ihn
+            # nach LOCK_TIMEOUT_MINUTES freigibt - und liefe danach in
+            # genau denselben Fehler.
+            log.error("3MF-Download für Job %s fehlgeschlagen.", job_id)
+            api.fail(job_id, "3MF-Datei konnte nicht von WordPress geladen werden.")
             return
 
-        if state == "FAILED":
-            fehler = snap["last_error"] or "Drucker meldet FAILED (Fehlercode siehe Druckerdisplay)."
-            log.error("Job %s: Drucker meldet FAILED – %s", job_id, fehler)
+        api.mark_uploading(job_id)
+        log.info("Job %s: übertrage %s per FTPS an den Drucker …", job_id, filename)
+
+        remote_filename = f"lw16-{job_id}-{filename}"
+        ok, message = upload_via_ftps(local_path, remote_filename)
+
+        if not ok:
+            log.error("Upload für Job %s fehlgeschlagen: %s", job_id, message)
+            api.fail(job_id, message)
+            return
+
+        STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")
+        send_print_command(mqtt_client, remote_filename)
+        api.mark_printing(job_id)
+
+        gestartet, fehler = warte_auf_druckstart()
+
+        if not gestartet:
+            log.error("Job %s: %s", job_id, fehler)
             api.fail(job_id, fehler)
             return
+
+        log.info("Job %s: Druck läuft, verfolge Fortschritt über MQTT.", job_id)
+
+        # Fortschritt aus dem MQTT-Report ablesen, bis der Drucker FINISH
+        # oder FAILED meldet. Kein fester Timeout - ein 3D-Druck kann viele
+        # Stunden dauern; die Bridge bleibt so lange dran, wie der Drucker
+        # verbunden bleibt (fällt die Verbindung dauerhaft aus, gibt die
+        # Wartung auf der WordPress-Seite den Job nach LOCK_TIMEOUT_MINUTES
+        # wieder frei).
+        last_reported = -1
+        while True:
+            time.sleep(5)
+            snap = STATE.snapshot()
+            state = snap["gcode_state"]
+
+            if snap["progress_percent"] is not None and snap["progress_percent"] != last_reported:
+                api.report_progress(job_id, snap["progress_percent"], snap["remaining_minutes"] or 0)
+                last_reported = snap["progress_percent"]
+
+            if state == "FINISH":
+                log.info("Job %s: Drucker meldet FINISH.", job_id)
+                api.complete(job_id)
+                return
+
+            if state == "FAILED":
+                fehler = snap["last_error"] or "Drucker meldet FAILED (Fehlercode siehe Druckerdisplay)."
+                log.error("Job %s: Drucker meldet FAILED – %s", job_id, fehler)
+                api.fail(job_id, fehler)
+                return
+    finally:
+        # Die 3MF liegt jetzt auf dem Drucker; die lokale Kopie auf dem Pi
+        # wird nicht mehr gebraucht. Ohne dieses Aufräumen füllt sich die
+        # SD-Karte des Pi mit jedem Druck weiter (3MF-Projekte sind groß).
+        try:
+            local_path.unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("Temporäre Datei %s konnte nicht gelöscht werden: %s", local_path, exc)
 
 
 # ---------------------------------------------------------------------
