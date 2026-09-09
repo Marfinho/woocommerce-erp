@@ -378,7 +378,9 @@ class BambuJobRepository {
 				current_time( 'mysql', true ),
 				current_time( 'mysql', true ),
 				max( 0, min( 100, (int) $progress_percent ) ),
-				max( 0, (int) $remaining_minutes ),
+				// SMALLINT UNSIGNED – ein größerer Wert ließe MySQL im strict
+				// mode das ganze UPDATE zurückweisen (siehe apply_status()).
+				max( 0, min( 65535, (int) $remaining_minutes ) ),
 				(int) $id,
 				(string) $printer_id
 			)

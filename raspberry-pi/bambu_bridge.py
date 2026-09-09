@@ -138,6 +138,10 @@ class Config:
     # prüft die Datei, fährt hoch und nivelliert - das dauert.
     PRINT_START_TIMEOUT = int(os.environ.get("PRINT_START_TIMEOUT", "300"))
 
+    # Höchstgröße einer heruntergeladenen 3MF - dieselbe Grenze, die der
+    # Server beim Einreihen setzt (BambuService::MAX_FILE_BYTES).
+    MAX_DOWNLOAD_BYTES = int(os.environ.get("MAX_DOWNLOAD_MB", "200")) * 1024 * 1024
+
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
 
@@ -166,6 +170,15 @@ class Config:
             sys.exit(
                 "Fehlende Konfiguration: %s. Bitte .env.bambu prüfen "
                 "(siehe .env.bambu.example)." % ", ".join(missing)
+            )
+
+        if not cls.WORDPRESS_URL.lower().startswith("https://"):
+            # Das Bearer-Token geht bei jeder Anfrage mit. Über http wäre es
+            # für jeden im selben Netz mitlesbar - und mit ihm ließen sich
+            # Druckaufträge abgreifen und Statusmeldungen fälschen.
+            log.warning(
+                "WORDPRESS_URL ist keine https-Adresse - das API-Token ginge "
+                "im Klartext über das Netz. Nur für lokale Tests vertretbar."
             )
 
 
@@ -592,9 +605,27 @@ class ApiClient:
                     return False
                 target.parent.mkdir(parents=True, exist_ok=True)
                 tmp = target.with_suffix(target.suffix + ".part")
+                geladen = 0
+
                 with open(tmp, "wb") as fh:
                     for chunk in r.iter_content(chunk_size=262144):
+                        geladen += len(chunk)
+
+                        # Dieselbe Grenze wie serverseitig. Ohne sie liefe die
+                        # SD-Karte des Pi voll, sobald die Gegenstelle mehr
+                        # schickt als vereinbart.
+                        if geladen > Config.MAX_DOWNLOAD_BYTES:
+                            log.error(
+                                "3MF für Job %s überschreitet %s Byte - Abbruch.",
+                                job_id,
+                                Config.MAX_DOWNLOAD_BYTES,
+                            )
+                            fh.close()
+                            tmp.unlink(missing_ok=True)
+                            return False
+
                         fh.write(chunk)
+
                 tmp.replace(target)
                 return True
         except requests.RequestException as exc:
@@ -668,9 +699,6 @@ def warte_auf_druckstart() -> tuple[bool, str]:
         if snap["gcode_state"] in DRUCKT_ZUSTAENDE:
             return True, ""
 
-        if not snap["connected"]:
-            continue
-
     return False, (
         "Drucker hat den Druck nicht begonnen (kein laufender Zustand "
         f"innerhalb von {Config.PRINT_START_TIMEOUT}s) - Druckdatei oder "
@@ -681,6 +709,18 @@ def warte_auf_druckstart() -> tuple[bool, str]:
 def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
     job_id = int(job["id"])
     filename = safe_local_name(job.get("filename") or "", job_id)
+
+    # Druckt das Gerät gerade schon - etwa von Hand am Display gestartet -,
+    # wird der Auftrag gar nicht erst angenommen: Er bleibt in der
+    # Warteschlange stehen und kommt beim nächsten freien Drucker dran.
+    # (Nach dem Claim wäre die einzige Möglichkeit, ihn scheitern zu
+    # lassen; unangetastet in der Warteschlange ist er besser aufgehoben.)
+    laeuft = STATE.snapshot()["gcode_state"]
+
+    if laeuft in DRUCKT_ZUSTAENDE:
+        log.info("Drucker ist beschäftigt (%s) – Job %s bleibt in der Warteschlange.", laeuft, job_id)
+        time.sleep(10)
+        return
 
     log.info("Job %s verfügbar – claime …", job_id)
 
@@ -711,6 +751,20 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
         if not ok:
             log.error("Upload für Job %s fehlgeschlagen: %s", job_id, message)
             api.fail(job_id, message)
+            return
+
+        # Zweite Prüfung kurz vor dem Startkommando: Zwischen Annahme und
+        # hier liegen Download und Übertragung, in denen jemand am Display
+        # einen eigenen Druck gestartet haben kann. Ohne diese Prüfung
+        # sähe die Bridge den fremden laufenden Druck als "gestartet" an
+        # und meldete dessen FINISH als Ende unseres Jobs - mit falscher
+        # Ist-Zeit und Bestandsbuchung.
+        laeuft = STATE.snapshot()["gcode_state"]
+
+        if laeuft in DRUCKT_ZUSTAENDE:
+            meldung = f"Drucker ist bereits beschäftigt (Zustand {laeuft}) - Auftrag nicht gestartet."
+            log.error("Job %s: %s", job_id, meldung)
+            api.fail(job_id, meldung)
             return
 
         STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")

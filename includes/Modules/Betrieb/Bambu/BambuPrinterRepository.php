@@ -152,11 +152,11 @@ class BambuPrinterRepository {
 			self::table(),
 			array(
 				'geraet_id'        => $geraet_id ? (int) $geraet_id : null,
-				'printer_id'       => sanitize_key( $printer_id ),
-				'name'             => sanitize_text_field( $name ),
-				'bambu_serial'     => sanitize_text_field( $bambu_serial ),
-				'ip'               => sanitize_text_field( $ip ),
-				'access_code'      => sanitize_text_field( $access_code ),
+				'printer_id'       => substr( sanitize_key( $printer_id ), 0, 50 ),
+				'name'             => mb_substr( sanitize_text_field( $name ), 0, 255 ),
+				'bambu_serial'     => mb_substr( sanitize_text_field( $bambu_serial ), 0, 50 ),
+				'ip'               => substr( sanitize_text_field( $ip ), 0, 45 ),
+				'access_code'      => mb_substr( sanitize_text_field( $access_code ), 0, 20 ),
 				'token_hash'       => self::hash_token( $token ),
 				'token_created_at' => current_time( 'mysql', true ),
 				'active'           => 1,
@@ -185,14 +185,17 @@ class BambuPrinterRepository {
 		}
 
 		$update = array();
+		// Gekürzt wird auf die zugesagte Spaltenbreite – sonst weist MySQL
+		// im strict mode das ganze UPDATE zurück, und das Speichern
+		// scheiterte an einem zu langen Namen, ohne es zu sagen.
 		if ( array_key_exists( 'name', $data ) ) {
-			$update['name'] = sanitize_text_field( (string) $data['name'] );
+			$update['name'] = mb_substr( sanitize_text_field( (string) $data['name'] ), 0, 255 );
 		}
 		if ( array_key_exists( 'bambu_serial', $data ) ) {
-			$update['bambu_serial'] = sanitize_text_field( (string) $data['bambu_serial'] );
+			$update['bambu_serial'] = mb_substr( sanitize_text_field( (string) $data['bambu_serial'] ), 0, 50 );
 		}
 		if ( array_key_exists( 'ip', $data ) ) {
-			$update['ip'] = sanitize_text_field( (string) $data['ip'] );
+			$update['ip'] = substr( sanitize_text_field( (string) $data['ip'] ), 0, 45 );
 		}
 		// Ein leerer Zugangscode heißt "unverändert lassen", nicht "löschen":
 		// Das Bearbeitungsformular zeigt den hinterlegten Code nicht an
@@ -200,7 +203,7 @@ class BambuPrinterRepository {
 		// Speichern leer zurück und würde sonst den funktionierenden Code
 		// überschreiben. Zum Entfernen dient das ausdrückliche Flag.
 		if ( array_key_exists( 'access_code', $data ) && '' !== trim( (string) $data['access_code'] ) ) {
-			$update['access_code'] = sanitize_text_field( (string) $data['access_code'] );
+			$update['access_code'] = mb_substr( sanitize_text_field( (string) $data['access_code'] ), 0, 20 );
 		} elseif ( ! empty( $data['access_code_loeschen'] ) ) {
 			$update['access_code'] = '';
 		}
@@ -286,29 +289,47 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'ip', $data ) && '' !== (string) $data['ip'] ) {
 			$update['last_ip'] = substr( (string) $data['ip'], 0, 45 );
 		}
+		// Jeder Wert wird auf das zugesagte Format der Spalte gebracht.
+		// Die Werte stammen aus einer HTTP-Anfrage der Bridge: Käme ein zu
+		// langer Text oder eine unsinnig große Zahl an, wiese MySQL im
+		// strict mode das gesamte UPDATE zurück – und der Drucker verlöre
+		// stillschweigend seinen Heartbeat, statt nur einen krummen Wert
+		// zu zeigen.
 		if ( array_key_exists( 'status', $data ) ) {
-			$update['status'] = sanitize_key( (string) $data['status'] );
+			$update['status'] = substr( sanitize_key( (string) $data['status'] ), 0, 20 );
 		}
 		if ( array_key_exists( 'progress_percent', $data ) && null !== $data['progress_percent'] ) {
 			$update['progress_percent'] = max( 0, min( 100, (int) $data['progress_percent'] ) );
 		}
 		if ( array_key_exists( 'remaining_minutes', $data ) && null !== $data['remaining_minutes'] ) {
-			$update['remaining_minutes'] = max( 0, (int) $data['remaining_minutes'] );
+			$update['remaining_minutes'] = max( 0, min( 65535, (int) $data['remaining_minutes'] ) );
 		}
 		if ( array_key_exists( 'nozzle_temp', $data ) && null !== $data['nozzle_temp'] ) {
-			$update['nozzle_temp'] = (float) $data['nozzle_temp'];
+			$update['nozzle_temp'] = self::clamp_temp( $data['nozzle_temp'] );
 		}
 		if ( array_key_exists( 'bed_temp', $data ) && null !== $data['bed_temp'] ) {
-			$update['bed_temp'] = (float) $data['bed_temp'];
+			$update['bed_temp'] = self::clamp_temp( $data['bed_temp'] );
 		}
 		if ( array_key_exists( 'printer_model', $data ) && '' !== (string) $data['printer_model'] ) {
-			$update['printer_model'] = sanitize_text_field( (string) $data['printer_model'] );
+			$update['printer_model'] = mb_substr( sanitize_text_field( (string) $data['printer_model'] ), 0, 100 );
 		}
 		if ( array_key_exists( 'last_error', $data ) ) {
-			$update['last_error'] = '' === (string) $data['last_error'] ? null : sanitize_textarea_field( (string) $data['last_error'] );
+			$update['last_error'] = '' === (string) $data['last_error']
+				? null
+				: mb_substr( sanitize_textarea_field( (string) $data['last_error'] ), 0, 1000 );
 		}
 
 		$wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Temperaturwert auf das Format der Spalte bringen (DECIMAL(5,1)).
+	 *
+	 * @param mixed $wert Gemeldeter Wert.
+	 * @return float
+	 */
+	protected static function clamp_temp( $wert ) {
+		return max( -999.9, min( 9999.9, round( (float) $wert, 1 ) ) );
 	}
 
 	/**

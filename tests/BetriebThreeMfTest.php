@@ -255,4 +255,62 @@ class BetriebThreeMfTest extends TestCase {
 		$this->assertSame( 15.5, $info['weight_g'] );
 		$this->assertSame( 2, $info['parts'] );
 	}
+
+	/* ----------------------------------------------------------------
+	 * Schutz vor einer Zip-Bombe
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Eine kleine 3MF-Datei mit riesigem, stark komprimiertem Inhalt darf
+	 * nicht entpackt werden – sonst risse sie den PHP-Prozess am
+	 * Speicherlimit ab. Der Inhalt hier ist gut komprimierbar: Die Datei
+	 * bleibt winzig, das entpackte XML läge weit über der Grenze.
+	 */
+	public function test_zip_bombe_wird_nicht_entpackt() {
+		if ( ! class_exists( '\ZipArchive' ) ) {
+			$this->markTestSkipped( 'ZipArchive fehlt.' );
+		}
+
+		$gross = sys_get_temp_dir() . '/lw16-gross-' . uniqid() . '.bin';
+		$pfad  = sys_get_temp_dir() . '/lw16-bombe-' . uniqid() . '.3mf';
+
+		// Die Quelle wird als Datei angelegt und gestreamt, nicht als
+		// PHP-String – sonst risse schon der Test am Speicherlimit, genau
+		// an dem Problem, gegen das hier geprüft wird.
+		$fh = fopen( $gross, 'wb' );
+		ftruncate( $fh, ModelFile::MAX_MODEL_XML_BYTES + 1024 );
+		fclose( $fh );
+
+		$zip = new \ZipArchive();
+		$zip->open( $pfad, \ZipArchive::CREATE );
+		$zip->addFile( $gross, ThreeMf::MODEL_PATH );
+		$zip->close();
+		unlink( $gross );
+
+		$this->assertLessThan( 5 * 1024 * 1024, filesize( $pfad ), 'Testdatei sollte klein bleiben.' );
+		$this->assertSame( '', ModelFile::read_model( $pfad ) );
+
+		unlink( $pfad );
+	}
+
+	/**
+	 * Eine normale Datei wird davon nicht beeinträchtigt.
+	 */
+	public function test_normales_modell_wird_weiterhin_gelesen() {
+		if ( ! class_exists( '\ZipArchive' ) ) {
+			$this->markTestSkipped( 'ZipArchive fehlt.' );
+		}
+
+		$pfad = sys_get_temp_dir() . '/lw16-modell-' . uniqid() . '.3mf';
+		$xml  = '<?xml version="1.0"?><model><build><item objectid="1"/></build></model>';
+
+		$zip = new \ZipArchive();
+		$zip->open( $pfad, \ZipArchive::CREATE );
+		$zip->addFromString( ThreeMf::MODEL_PATH, $xml );
+		$zip->close();
+
+		$this->assertSame( $xml, ModelFile::read_model( $pfad ) );
+
+		unlink( $pfad );
+	}
 }
