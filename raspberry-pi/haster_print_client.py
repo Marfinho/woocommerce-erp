@@ -155,7 +155,20 @@ class ApiClient:
         try:
             return self.session.get(
                 f"{self.base}/jobs",
-                params={"printer_id": Config.PRINTER_ID, "wait": wait},
+                params={
+                    "printer_id": Config.PRINTER_ID,
+                    "wait": wait,
+                    # Erzwingt eine je Anfrage eindeutige URL. Manche
+                    # CDN-/Seiten-Caches (beobachtet: QUIC.cloud vor
+                    # LiteSpeed) cachen GET-Antworten trotz
+                    # Authorization-Header und ignorieren dabei sogar
+                    # eigene "nie cachen"-Response-Header der API - ohne
+                    # dieses Feld bekäme der Client sonst denselben
+                    # eingefrorenen Zustand (z. B. dauerhaft "kein Job
+                    # da") bei jeder weiteren Anfrage zurück, ganz ohne
+                    # Fehlermeldung.
+                    "_": int(time.time() * 1000),
+                },
                 # Etwas länger als der Server maximal wartet, damit ein
                 # normaler 204-Timeout nicht schon als Client-Timeout gilt.
                 timeout=Config.REQUEST_TIMEOUT,
