@@ -63,7 +63,11 @@ class ModelFile {
 		$base = realpath( Installer::models_dir() );
 		$real = realpath( self::path( $name ) );
 
-		if ( ! $base || ! $real || 0 !== strpos( $real, $base ) || ! is_file( $real ) ) {
+		// Mit Trennzeichen vergleichen – sonst passt der Präfix auch auf ein
+		// gleichnamig beginnendes Nachbarverzeichnis. Der Name ist durch
+		// path() ohnehin schon auf basename() reduziert; beides zusammen
+		// schliesst den Ausbruch strukturell aus.
+		if ( ! $base || ! $real || 0 !== strpos( $real, rtrim( $base, '/\\' ) . DIRECTORY_SEPARATOR ) || ! is_file( $real ) ) {
 			return '';
 		}
 
