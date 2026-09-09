@@ -68,13 +68,25 @@ class PrintQueueService {
 
 	/**
 	 * Testlabel für einen Drucker anlegen – keine echte Sendung, dient
-	 * ausschließlich der Prüfung der Kette Pi → CUPS → Drucker.
+	 * ausschließlich der Prüfung der Kette Pi → CUPS/brother_ql → Drucker.
 	 *
-	 * @param string $printer_id Drucker.
+	 * Grösse ist wählbar: Ein Testlabel im DHL-Mass (Standard) hilft beim
+	 * DHL-Drucker nichts, wenn der zu testende Drucker tatsächlich eine
+	 * schmale Etikettenrolle bedient – bei brother_ql würde die eigene
+	 * Grössenprüfung des Pi-Clients einen so falsch bemessenen Job ohnehin
+	 * zurückweisen (siehe README), aber auch bei CUPS druckt ein falsches
+	 * Mass nicht das, was man eigentlich prüfen wollte.
+	 *
+	 * @param string $printer_id  Drucker.
+	 * @param int    $width_mm    Breite in mm.
+	 * @param int    $height_mm   Höhe in mm.
+	 * @param string $label_format Freitext, nur zur Anzeige/Protokollierung.
 	 * @return int Job-ID, 0 bei Fehler.
 	 */
-	public static function create_test_job( $printer_id ) {
+	public static function create_test_job( $printer_id, $width_mm = 103, $height_mm = 199, $label_format = '910-300-610' ) {
 		$printer_id = sanitize_key( (string) $printer_id );
+		$width_mm   = max( 1, (int) $width_mm );
+		$height_mm  = max( 1, (int) $height_mm );
 
 		if ( '' === $printer_id ) {
 			return 0;
@@ -91,7 +103,9 @@ class PrintQueueService {
 				'TESTLABEL',
 				'KEINE VERSENDUNG',
 				gmdate( 'Y-m-d H:i' ) . ' UTC',
-			)
+			),
+			$width_mm,
+			$height_mm
 		);
 
 		if ( false === file_put_contents( $pfad, $inhalt ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
@@ -103,9 +117,9 @@ class PrintQueueService {
 				'source'         => 'test',
 				'label_path'     => $pfad,
 				'label_filename' => $filename,
-				'label_format'   => '910-300-610',
-				'width_mm'       => 103,
-				'height_mm'      => 199,
+				'label_format'   => (string) $label_format,
+				'width_mm'       => $width_mm,
+				'height_mm'      => $height_mm,
 				'printer_id'     => $printer_id,
 				'is_test'        => 1,
 			)
