@@ -110,12 +110,28 @@ class SlicingRestApi {
 
 		$ip = $this->client_ip();
 
-		if ( $this->rate_limited( $ip ) ) {
-			return new WP_Error( 'lw16_slicing_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
-		}
+		// Erst das Token prüfen, dann erst das Ratenlimit: Das Limit zählt
+		// Fehlversuche je IP – und hinter einem Reverse-Proxy oder CDN
+		// tragen alle Anfragen dieselbe REMOTE_ADDR, auch die des eigenen
+		// Slicing-Workers. Käme die Sperre zuerst, könnte jeder Fremde ohne
+		// Anmeldung mit 30 falschen Token pro Minute den Worker dauerhaft
+		// aussperren und damit die Plattenanordnung stilllegen. Ein gültiges
+		// Token wird deshalb nie gesperrt; der Schutz gegen Token-Raten
+		// bleibt unverändert, weil weiterhin nur 30 Fehlversuche je Minute
+		// und IP durchkommen.
+		//
+		// Dieselbe Reihenfolge wie in PrintQueueRestApi und BambuRestApi –
+		// BridgeAuthReihenfolgeTest hält alle drei darauf fest.
+		$gueltig = '' !== $token && SlicingWorkerAuth::has_token() && SlicingWorkerAuth::verify( $token );
 
-		if ( '' === $token || ! SlicingWorkerAuth::verify( $token ) ) {
+		if ( ! $gueltig ) {
+			if ( $this->rate_limited( $ip ) ) {
+				return new WP_Error( 'lw16_slicing_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
+			}
+
 			$this->register_auth_failure( $ip );
+
+			// Niemals das Token selbst loggen – nur, dass ein Versuch scheiterte.
 			return new WP_Error( 'lw16_slicing_unauthorized', __( 'Ungültiges Token.', 'lindenweg16' ), array( 'status' => 401 ) );
 		}
 
