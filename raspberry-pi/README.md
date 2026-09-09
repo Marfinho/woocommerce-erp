@@ -410,6 +410,31 @@ Raspberry Pi mehrere Kopien von `/opt/bambu-bridge` mit je eigener
 `ExecStart`) – dieselbe Bauform wie bei mehreren Etikettendruckern an
 einem Pi (siehe oben, Abschnitt „Mehrere Drucker").
 
+### Polling: klassisch (Standard) oder Long Polling
+
+Anders als der Etikettendrucker-Client (dort ist Long Polling der
+Standard) pollt die Bambu-Bridge standardmäßig **klassisch**: kurzer
+Hold von `SHORT_POLL_WAIT` Sekunden je Anfrage, danach `204` und eine
+Pause von `FALLBACK_POLL_INTERVAL` Sekunden bis zur nächsten Anfrage.
+Grund: Auf manchen Webhosting-Paketen (v. a. günstigen Shared-Hosting-
+Tarifen) kappt der Provider oder ein davorstehender Reverse-Proxy eine
+offen gehaltene Verbindung nach wenigen Sekunden von sich aus – die
+Bridge sähe das als Netzwerkfehler statt als sauberes `204` und würde
+ständig in den Backoff laufen, ohne dass ein Job je zuverlässig ankommt.
+
+Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
+zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-
+WordPress-Hoster), kann in `.env.bambu` auf Long Polling umstellen für
+etwas geringere Verzögerung bis zum Abholen eines Jobs:
+
+```env
+LONG_POLL_ENABLED=true
+```
+
+Ob Long Polling beim eigenen Hoster überhaupt funktioniert, zeigt sich
+im Log: Bricht `GET /jobs` regelmäßig mit einem Verbindungsfehler statt
+mit einem sauberen `204` ab, bleibt es bei `LONG_POLL_ENABLED=false`.
+
 ### Ist-Druckzeit im Druckjournal
 
 Ist ein Bambu-Job aus einem Fertigungsauftrag entstanden (z. B. künftig

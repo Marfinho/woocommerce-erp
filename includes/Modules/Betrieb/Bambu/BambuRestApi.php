@@ -232,20 +232,23 @@ class BambuRestApi {
 		BambuJobRepository::release_stale_locks();
 		BambuPrinterRepository::apply_status( (int) $printer->id, array( 'ip' => $this->client_ip() ) );
 
-		// Ein Drucker kann immer nur einen Auftrag gleichzeitig drucken –
-		// läuft noch einer, wird kein neuer ausgeliefert, auch wenn schon
-		// mehrere in der Warteschlange stehen.
-		if ( BambuJobRepository::active_for_printer( $printer->printer_id ) ) {
-			return new WP_REST_Response( array( 'jobs' => array() ), 200 );
-		}
-
 		$deadline = microtime( true ) + $wait;
 
 		while ( true ) {
-			$jobs = BambuJobRepository::queued_for_printer( $printer->printer_id, 1 );
+			// Ein Drucker kann immer nur einen Auftrag gleichzeitig drucken –
+			// läuft noch einer, wird kein neuer ausgeliefert, auch wenn schon
+			// mehrere in der Warteschlange stehen. Das muss INNERHALB der
+			// Warteschleife geprüft werden, nicht davor: sonst würde die
+			// Bridge während eines laufenden Drucks bei jeder Anfrage sofort
+			// eine leere Liste zurückbekommen (statt bis `wait` Sekunden zu
+			// warten) und in eine Busy-Loop laufen – unabhängig davon, ob
+			// Long Polling aktiv ist oder die Bridge klassisch pollt.
+			if ( ! BambuJobRepository::active_for_printer( $printer->printer_id ) ) {
+				$jobs = BambuJobRepository::queued_for_printer( $printer->printer_id, 1 );
 
-			if ( $jobs ) {
-				return new WP_REST_Response( array( 'jobs' => array_map( array( $this, 'job_to_array' ), $jobs ) ), 200 );
+				if ( $jobs ) {
+					return new WP_REST_Response( array( 'jobs' => array_map( array( $this, 'job_to_array' ), $jobs ) ), 200 );
+				}
 			}
 
 			if ( microtime( true ) >= $deadline ) {

@@ -16,11 +16,12 @@ Zwei Aufgaben laufen nebenläufig:
    Dieser Status wird regelmäßig an POST /status gemeldet – das dient
    zugleich als Heartbeat, unabhängig davon, ob gerade gedruckt wird.
 
-2. Die Hauptschleife holt wartende Druckaufträge per Long Polling ab
-   (GET /jobs), lädt die geslicte 3MF-Datei herunter, überträgt sie per
-   FTPS auf den Drucker (Port 990, derselbe Benutzer/Zugangscode) und
-   löst den Druck per MQTT-Kommando aus. Der weitere Fortschritt wird
-   dann aus dem MQTT-Report des laufenden Jobs abgelesen.
+2. Die Hauptschleife holt wartende Druckaufträge ab (GET /jobs, per
+   Standard klassisches Intervall-Polling, optional Long Polling – siehe
+   LONG_POLL_ENABLED weiter unten), lädt die geslicte 3MF-Datei herunter,
+   überträgt sie per FTPS auf den Drucker (Port 990, derselbe Benutzer/
+   Zugangscode) und löst den Druck per MQTT-Kommando aus. Der weitere
+   Fortschritt wird dann aus dem MQTT-Report des laufenden Jobs abgelesen.
 
 Wichtig zum Netzwerk: Anders als beim Etikettendrucker-Client (reiner
 Pull-Client zu WordPress) braucht diese Bridge zusätzlich eine
@@ -111,7 +112,27 @@ class Config:
     # Zustandswechseln.
     STATUS_INTERVAL = int(os.environ.get("STATUS_INTERVAL", "10"))
 
+    # Long Polling ist hier bewusst NICHT der Standard (anders als beim
+    # Etikettendrucker-Client): Auf manchen (v. a. günstigen Shared-)
+    # Webhosting-Paketen kappt der Provider oder ein davorstehender
+    # Reverse-Proxy eine offen gehaltene HTTP-Verbindung nach wenigen
+    # Sekunden von sich aus - die Anfrage bricht dann mit einem
+    # Verbindungsfehler ab, statt sauber mit 204 zu enden, und die Bridge
+    # sieht das wie einen Netzwerkfehler (Backoff, erneuter Versuch).
+    # Klassisches Intervall-Polling (kurzer Hold + Pause) ist deshalb der
+    # Standard; wer weiß, dass der eigene Webspace lang offen gehaltene
+    # Verbindungen zuverlässig durchreicht, kann LONG_POLL_ENABLED=true
+    # setzen für etwas geringere Verzögerung bis zum Abholen eines Jobs.
+    LONG_POLL_ENABLED = _env_bool("LONG_POLL_ENABLED", False)
     LONG_POLL_TIMEOUT = int(os.environ.get("LONG_POLL_TIMEOUT", "25"))
+
+    # Nur relevant, wenn LONG_POLL_ENABLED=false (Standard): Wie lange der
+    # Server je Anfrage kurz auf einen neuen Job wartet, bevor er ohnehin
+    # mit 204 antwortet (serverseitig auf 5-30s begrenzt), und wie lange
+    # die Bridge zwischen zwei Anfragen pausiert.
+    SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "5"))
+    FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "5"))
+
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
 
@@ -558,15 +579,17 @@ def run() -> None:
     backoff = 1
 
     log.info(
-        "Bambu-Bridge gestartet: %s, Drucker-ID %s, Bambu-IP %s.",
+        "Bambu-Bridge gestartet: %s, Drucker-ID %s, Bambu-IP %s, Long-Poll=%s.",
         Config.WORDPRESS_URL,
         Config.PRINTER_ID,
         Config.BAMBU_IP,
+        Config.LONG_POLL_ENABLED,
     )
 
     try:
         while True:
-            response = api.get_jobs(Config.LONG_POLL_TIMEOUT)
+            wait = Config.LONG_POLL_TIMEOUT if Config.LONG_POLL_ENABLED else Config.SHORT_POLL_WAIT
+            response = api.get_jobs(wait)
 
             if response is None:
                 log.info("Kein Kontakt zu WordPress – erneuter Versuch in %ss.", backoff)
@@ -585,9 +608,20 @@ def run() -> None:
                 for job in jobs:
                     process_job(api, mqtt_client, job)
 
+                # Sofort die nächste Anfrage stellen - im Long-Poll-Modus,
+                # weil das der normale Betrieb ist; im klassischen
+                # Poll-Modus, weil gerade ein Job da war und gleich der
+                # nächste warten könnte (die Pause unten gilt nur für den
+                # Leerlauf-Fall unten bei 204).
                 continue
 
             if response.status_code == 204:
+                if not Config.LONG_POLL_ENABLED:
+                    # Klassisches Intervall-Polling: Der Server hat schon
+                    # SHORT_POLL_WAIT Sekunden kurz gehalten (s. o.) - die
+                    # zusätzliche Pause hier verhindert, dass die Bridge den
+                    # Server trotzdem im Sekundentakt mit Anfragen bombardiert.
+                    time.sleep(Config.FALLBACK_POLL_INTERVAL)
                 continue
 
             if response.status_code == 401:
