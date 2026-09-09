@@ -13,6 +13,7 @@ use PHPUnit\Framework\TestCase;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
+use Lindenweg16\Modules\Betrieb\Bambu\BedSizeLookup;
 
 /**
  * Prüft die netzfreie Hälfte der Bambu-Lab-Anbindung.
@@ -314,5 +315,65 @@ class BambuTest extends TestCase {
 		$this->assertFalse( BambuService::is_queue_upload( '', $d['docs'] ) );
 		$this->assertFalse( BambuService::is_queue_upload( $d['docs'] . '/gibt-es-nicht.3mf', $d['docs'] ) );
 		$this->assertFalse( BambuService::is_queue_upload( $d['docs'], $d['docs'] ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Druckbett-Nachschlagetabelle
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Ein bekanntes Modell wird per Teilstring gefunden, unabhängig davon,
+	 * ob "Bambu Lab" davorsteht oder nicht.
+	 */
+	public function test_bed_size_lookup_findet_bekanntes_modell() {
+		$this->assertSame( array( 'width_mm' => 256, 'height_mm' => 256 ), BedSizeLookup::match( 'P1S' ) );
+		$this->assertSame( array( 'width_mm' => 256, 'height_mm' => 256 ), BedSizeLookup::match( 'Bambu Lab P1S' ) );
+	}
+
+	/**
+	 * "A1 mini" darf nicht fälschlich schon auf den kürzeren Schlüssel
+	 * "A1" treffen – beide Drucker haben unterschiedliche Bettmasse.
+	 */
+	public function test_bed_size_lookup_unterscheidet_a1_und_a1_mini() {
+		$this->assertSame( array( 'width_mm' => 180, 'height_mm' => 180 ), BedSizeLookup::match( 'Bambu Lab A1 mini' ) );
+		$this->assertSame( array( 'width_mm' => 256, 'height_mm' => 256 ), BedSizeLookup::match( 'Bambu Lab A1' ) );
+	}
+
+	/**
+	 * Ein unbekanntes oder leeres Modell liefert null statt eines Ratewerts.
+	 */
+	public function test_bed_size_lookup_unbekanntes_modell_ist_null() {
+		$this->assertNull( BedSizeLookup::match( 'Prusa MK4' ) );
+		$this->assertNull( BedSizeLookup::match( '' ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Wirksames Druckbettmass
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Ein eigens hinterlegtes Mass hat Vorrang vor der Schätzung nach
+	 * Druckermodell.
+	 */
+	public function test_effective_bed_size_bevorzugt_eigenes_mass() {
+		$printer = (object) array( 'bed_width_mm' => 300, 'bed_height_mm' => 300, 'printer_model' => 'P1S' );
+		$this->assertSame( array( 'width_mm' => 300, 'height_mm' => 300 ), BambuPrinterRepository::effective_bed_size( $printer ) );
+	}
+
+	/**
+	 * Ohne eigenes Mass greift die Schätzung nach dem gemeldeten Modell.
+	 */
+	public function test_effective_bed_size_faellt_auf_modell_zurueck() {
+		$printer = (object) array( 'bed_width_mm' => null, 'bed_height_mm' => null, 'printer_model' => 'Bambu Lab X1C' );
+		$this->assertSame( array( 'width_mm' => 256, 'height_mm' => 256 ), BambuPrinterRepository::effective_bed_size( $printer ) );
+	}
+
+	/**
+	 * Ohne Drucker, ohne Mass und ohne erkennbares Modell gibt es kein
+	 * Ergebnis – kein geratenes Mass, das zu Fehlplatzierungen führen könnte.
+	 */
+	public function test_effective_bed_size_ohne_angaben_ist_null() {
+		$this->assertNull( BambuPrinterRepository::effective_bed_size( null ) );
+		$this->assertNull( BambuPrinterRepository::effective_bed_size( (object) array( 'bed_width_mm' => null, 'bed_height_mm' => null, 'printer_model' => '' ) ) );
 	}
 }

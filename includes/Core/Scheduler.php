@@ -48,6 +48,10 @@ class Scheduler {
 	// aufräumen.
 	const HOOK_BAMBU_MAINTENANCE = 'lw16_bambu_maintenance';
 
+	// Headless-Slicing-Warteschlange: dieselbe Wartung wie oben, für die
+	// Slicing-Aufträge statt die Druckaufträge.
+	const HOOK_SLICING_MAINTENANCE = 'lw16_slicing_maintenance';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -74,6 +78,7 @@ class Scheduler {
 			self::HOOK_DAILY_EVENTS,
 			self::HOOK_DHL_PRINT_MAINTENANCE,
 			self::HOOK_BAMBU_MAINTENANCE,
+			self::HOOK_SLICING_MAINTENANCE,
 		);
 	}
 
@@ -102,6 +107,7 @@ class Scheduler {
 			self::HOOK_DAILY_EVENTS       => DAY_IN_SECONDS,
 			self::HOOK_DHL_PRINT_MAINTENANCE => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_BAMBU_MAINTENANCE     => 5 * MINUTE_IN_SECONDS,
+			self::HOOK_SLICING_MAINTENANCE   => 5 * MINUTE_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

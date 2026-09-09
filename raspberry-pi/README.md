@@ -469,3 +469,91 @@ Zeitpunkt dieser Anleitung mit aktueller Firmware. Ein künftiges
 Firmware-Update **kann** Details ändern – meldet die Bridge dauerhaft
 Verbindungsfehler nach einem Firmware-Update, lohnt ein Blick in die
 aktuellen Quellen dieser Projekte.
+
+## Headless-Slicing-Worker (Plattenanordnung → automatischer Druck)
+
+Dritter, unabhängiger Dienst in diesem Ordner: `slicing_worker.py`
+schliesst die Kette **Bedarf → Plattenanordnung → automatisch slicen →
+Bambu-Warteschlange** ab. Unter „Lindenweg16 → Betrieb →
+Bambu-Lab-Drucker" lassen sich im Reiter **„Platte anordnen"** mehrere
+Artikel und Mengen automatisch auf dem virtuellen Druckbett anordnen
+(konturbasiertes Nesting anhand der tatsächlichen Bauteilform, nicht nur
+des Begrenzungsrechtecks) – das Ergebnis ist eine zusammengesetzte, noch
+ungeslicte Projekt-3MF. Dieser Worker holt sie ab, slict sie mit einem
+Kommandozeilen-Slicer (OrcaSlicer) anhand hinterlegter Profile und lädt
+das Ergebnis zurück hoch; WordPress reiht die fertige Druckdatei danach
+automatisch in die ganz normale Bambu-Warteschlange ein.
+
+**Wichtiger Vorbehalt:** Anders als das MQTT-/FTPS-Protokoll der
+Bambu-Bridge lässt sich der eigentliche Slice-Aufruf hier nicht ohne
+eine echte OrcaSlicer-Installation gegenprüfen. Vor dem produktiven
+Einsatz unbedingt mit einer unkritischen Testplatte von Hand
+kontrollieren (Ergebnis-3MF in Bambu Studio öffnen, Druckdaten ansehen),
+bevor ein automatisch geslicter Auftrag ungeprüft auf einen echten
+Drucker geht.
+
+### 1. OrcaSlicer installieren
+
+Auf dem Rechner, der slicen soll (kann derselbe Pi wie die Bambu-Bridge
+sein, wenn er genug Leistung hat, oder ein eigener Rechner): die
+[OrcaSlicer](https://github.com/SoftFever/OrcaSlicer)-AppImage bzw. das
+passende Paket für die eigene Plattform installieren. Den Pfad zum
+Programm für Schritt 4 notieren.
+
+### 2. Slicing-Profile exportieren und hochladen
+
+In OrcaSlicer bzw. Bambu Studio für jedes verwendete Material × Drucker
+das Drucker-, Filament- und Prozessprofil exportieren (Rechtsklick auf
+das Profil → „Export"). Unter **Lindenweg16 → Betrieb →
+Bambu-Lab-Drucker → Reiter „Slicing-Profile"** die drei Dateien je
+Material/Druckermodell hochladen und dort auch das Worker-Token
+erzeugen (**„Token neu erzeugen"**, wird nur einmalig angezeigt).
+
+### 3. Python-Abhängigkeiten installieren
+
+```bash
+SRC="$(pwd)"
+sudo mkdir -p /opt/slicing-worker
+sudo chown $(whoami):$(whoami) /opt/slicing-worker
+cp "$SRC"/slicing_worker.py "$SRC"/requirements-slicing.txt "$SRC"/.env.slicing.example /opt/slicing-worker/
+cd /opt/slicing-worker
+python3 -m venv venv
+venv/bin/pip install -r requirements-slicing.txt
+```
+
+### 4. `.env.slicing` konfigurieren
+
+```bash
+cp .env.slicing.example .env.slicing
+nano .env.slicing
+```
+
+Mindestens ausfüllen: `WORDPRESS_URL`, `API_TOKEN` (aus Schritt 2),
+`SLICER_CLI` (Pfad aus Schritt 1).
+
+### 5. systemd-Service installieren
+
+```bash
+sed "s/User=pi/User=$(whoami)/" slicing-worker.service | sudo tee /etc/systemd/system/slicing-worker.service
+sudo systemctl daemon-reload
+sudo systemctl enable slicing-worker
+sudo systemctl start slicing-worker
+sudo systemctl status slicing-worker
+journalctl -u slicing-worker -f
+```
+
+### 6. Test
+
+Im Reiter „Platte anordnen" eine kleine Testplatte anlegen und auf
+„Automatisch slicen" klicken. Der Worker holt sie beim nächsten Kontakt
+ab; im Log (`journalctl -u slicing-worker -f`) ist der Slicer-Aufruf und
+sein Ergebnis zu sehen. Nach Erfolg erscheint die Platte im Reiter
+„Aufträge" als neuer Bambu-Druckauftrag.
+
+### Ohne Worker: Plattenanordnung + manuelles Slicen
+
+Auch ohne diesen Dienst ist die Plattenanordnung nutzbar: Im Reiter
+„Platte anordnen" lässt sich die zusammengesetzte, ungeslicte
+Projekt-3MF jeder angeordneten Platte herunterladen, von Hand in Bambu
+Studio slicen und die fertige Druckdatei über den Reiter „Aufträge"
+hochladen – derselbe Weg wie beim manuellen Einzeldruck.

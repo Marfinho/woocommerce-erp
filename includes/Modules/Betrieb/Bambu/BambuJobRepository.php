@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Betrieb\Bambu;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Modules\Betrieb\PrintJobRepository;
+use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Production\ProductionModule;
 
 /**
@@ -180,7 +182,9 @@ class BambuJobRepository {
 	/**
 	 * Job anlegen (status = queued).
 	 *
-	 * @param array $data {printer_id, druckauftrag_id, file_path, file_name}
+	 * @param array $data {printer_id, druckauftrag_id, work_order_id,
+	 *                      article_revision_id, parts_planned, plate_job_id,
+	 *                      file_path, file_name}
 	 * @return int Neue ID.
 	 */
 	public static function create( array $data ) {
@@ -189,15 +193,19 @@ class BambuJobRepository {
 		$wpdb->insert(
 			self::table(),
 			array(
-				'printer_id'      => sanitize_key( (string) $data['printer_id'] ),
-				'druckauftrag_id' => isset( $data['druckauftrag_id'] ) && $data['druckauftrag_id'] ? (int) $data['druckauftrag_id'] : null,
-				'file_path'       => (string) $data['file_path'],
-				'file_name'       => (string) $data['file_name'],
-				'status'          => 'queued',
-				'attempts'        => 0,
-				'created_at'      => current_time( 'mysql', true ),
+				'printer_id'          => sanitize_key( (string) $data['printer_id'] ),
+				'druckauftrag_id'     => isset( $data['druckauftrag_id'] ) && $data['druckauftrag_id'] ? (int) $data['druckauftrag_id'] : null,
+				'work_order_id'       => isset( $data['work_order_id'] ) && $data['work_order_id'] ? (int) $data['work_order_id'] : null,
+				'article_revision_id' => isset( $data['article_revision_id'] ) && $data['article_revision_id'] ? (int) $data['article_revision_id'] : null,
+				'parts_planned'       => isset( $data['parts_planned'] ) && $data['parts_planned'] ? (int) $data['parts_planned'] : null,
+				'plate_job_id'        => isset( $data['plate_job_id'] ) && $data['plate_job_id'] ? (int) $data['plate_job_id'] : null,
+				'file_path'           => (string) $data['file_path'],
+				'file_name'           => (string) $data['file_name'],
+				'status'              => 'queued',
+				'attempts'            => 0,
+				'created_at'          => current_time( 'mysql', true ),
 			),
-			array( '%s', '%d', '%s', '%s', '%s', '%d', '%s' )
+			array( '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s' )
 		);
 
 		return (int) $wpdb->insert_id;
@@ -442,7 +450,88 @@ class BambuJobRepository {
 			ProductionModule::complete_job( (int) $job->druckauftrag_id, $ist_minuten / 60, 0 );
 		}
 
+		if ( $ok && $job->work_order_id ) {
+			self::book_work_order_completion( $job, $ist_minuten );
+		}
+
 		return array( 'ok' => $ok, 'already' => false );
+	}
+
+	/**
+	 * Nach einem erfolgreich abgeschlossenen Druck aus "Bedarf direkt
+	 * drucken" (siehe BambuService::dispatch_from_demand()) automatisch
+	 * einen Druckjournal-Eintrag buchen und den Fertigungsauftrag
+	 * schliessen – dieselbe Buchung, die sonst von Hand über
+	 * Admin\PrintJobsPage liefe.
+	 *
+	 * Gebucht wird ausschliesslich bei einem sauberen "completed" (der
+	 * Drucker hat FINISH gemeldet) und mit der vollen geplanten Menge als
+	 * gute Teile: Der Bambu-Status allein sagt nicht, ob z. B. ein
+	 * einzelnes Teil auf der Platte sich gelöst hat, obwohl der Rest fertig
+	 * wurde – genau deshalb bucht ein fehlgeschlagener Druck (siehe fail())
+	 * nichts automatisch, sondern bleibt zur manuellen Prüfung offen.
+	 *
+	 * Schlägt die Buchung fehl (Auftrag inzwischen storniert, Artikel
+	 * gelöscht o. Ä.), bleibt der Job selbst dennoch "completed" – nur die
+	 * Folgebuchung unterbleibt, mit einer Protokollzeile, damit das
+	 * auffällt, statt einen fertigen Druck stillschweigend zu verlieren.
+	 *
+	 * @param object     $job         Job-Datensatz (vor dieser Methode bereits "completed").
+	 * @param float|null $ist_minuten Ist-Druckzeit in Minuten, oder null.
+	 */
+	protected static function book_work_order_completion( $job, $ist_minuten ) {
+		if ( ! class_exists( WorkOrderRepository::class ) || ! class_exists( PrintJobRepository::class ) ) {
+			return;
+		}
+
+		$order = WorkOrderRepository::find( (int) $job->work_order_id );
+
+		if ( ! $order || 'druck' !== $order['kind'] || ! in_array( $order['status'], WorkOrderRepository::OPEN_STATES, true ) ) {
+			// Auftrag längst geschlossen/storniert oder gar kein Druckauftrag
+			// (mehrfache Statusmeldung, Bridge-Wiederholung o. Ä.) – nichts zu tun.
+			return;
+		}
+
+		// PrintJobRepository::validate() ermittelt article_revision_id selbst
+		// über RevisionRepository::current_for_article() – also die zu diesem
+		// Zeitpunkt AKTUELLE Revision, nicht zwingend die, mit der tatsächlich
+		// gedruckt wurde (job->article_revision_id, beim Einreihen
+		// festgehalten). Weicht das je auseinander (Revision zwischen
+		// Druckstart und -ende gewechselt), bucht das Journal auf die neuere
+		// Revision – ein bewusst hingenommener Randfall, statt den
+		// gemeinsamen Buchungsweg von Hand- und Automatikbuchung zu
+		// verzweigen.
+		$parts = (int) $job->parts_planned > 0 ? (int) $job->parts_planned : max( 1, (int) $order['qty_planned'] );
+
+		$result = PrintJobRepository::validate(
+			array(
+				'printer_id'     => $order['printer_id'],
+				'article_id'     => $order['article_id'],
+				'color'          => $order['color'],
+				'parts_planned'  => $parts,
+				'parts_ok'       => $parts,
+				'failure_reason' => 'keine',
+				'print_time_h'   => null === $ist_minuten ? 0 : round( $ist_minuten / 60, 3 ),
+				'plate_changes'  => 1,
+				'note'           => __( 'Automatisch über die Bambu-Lab-Anbindung gebucht (Bedarf → direkt drucken).', 'lindenweg16' ),
+			)
+		);
+
+		if ( $result['errors'] || ! $order['printer_id'] ) {
+			// Fehlt z. B. der Drucker (kein verknüpftes Kalkulationsgerät)
+			// oder die Revision wurde inzwischen entfernt: nicht raten,
+			// sondern den Auftrag offen lassen – er taucht dann weiterhin im
+			// Bedarf auf und wird von Hand über das Druckjournal geschlossen.
+			return;
+		}
+
+		$print_job_id = PrintJobRepository::insert( $result['data'] );
+
+		if ( ! $print_job_id ) {
+			return;
+		}
+
+		WorkOrderRepository::close_by_print_job( (int) $order['id'], $print_job_id, (float) $parts );
 	}
 
 	/**

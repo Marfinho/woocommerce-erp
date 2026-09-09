@@ -290,13 +290,21 @@ foreach ( array( 'PrintJobRepository', 'PrinterRepository', 'TestLabelPdf' ) as 
 }
 
 // Bambu-Lab-Anbindung: dasselbe Muster wie die Druck-Warteschlange - die
-// Claim-/Lock-Logik, das Token-Hashing und die Entscheidung, welche Datei
-// mit einem Job vergehen darf, sind ohne Datenbank prüfbar.
+// Claim-/Lock-Logik, das Token-Hashing, die Bettmasse und die Entscheidung,
+// welche Datei mit einem Job vergehen darf, sind ohne Datenbank prüfbar.
 if ( ! defined( 'MB_IN_BYTES' ) ) {
 	define( 'MB_IN_BYTES', 1048576 );
 }
-foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository', 'BambuService' ) as $lw16_class ) {
+foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository', 'BambuService', 'BedSizeLookup' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/Bambu/' . $lw16_class . '.php';
+}
+
+// Plattenanordnung/Nesting und die Slicing-Warteschlange: reine Geometrie
+// (Polygon, Sat, MeshOutline, BinPacker), die Transformationsmatrix-
+// Berechnung von PlateComposer sowie dieselbe Claim-/Lock-/Token-Logik wie
+// bei den übrigen Warteschlangen sind ohne Datenbank prüfbar.
+foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'PlateComposer', 'SlicingJobRepository', 'SlicingWorkerAuth' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Betrieb/Nesting/' . $lw16_class . '.php';
 }
 
 // Seiteneffektfreie Klassen des Moduls Konfigurator.

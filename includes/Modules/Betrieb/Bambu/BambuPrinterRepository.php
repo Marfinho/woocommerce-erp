@@ -174,7 +174,8 @@ class BambuPrinterRepository {
 	 * bleibt unangetastet – dafür gibt es regenerate_token().
 	 *
 	 * @param int   $id   Datensatz-ID.
-	 * @param array $data {name, bambu_serial, ip, access_code, geraet_id, active}
+	 * @param array $data {name, bambu_serial, ip, access_code, geraet_id,
+	 *                      bed_width_mm, bed_height_mm, active}
 	 * @return bool
 	 */
 	public static function update( $id, array $data ) {
@@ -210,6 +211,12 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'geraet_id', $data ) ) {
 			$update['geraet_id'] = $data['geraet_id'] ? (int) $data['geraet_id'] : null;
 		}
+		if ( array_key_exists( 'bed_width_mm', $data ) ) {
+			$update['bed_width_mm'] = $data['bed_width_mm'] ? max( 1, (int) $data['bed_width_mm'] ) : null;
+		}
+		if ( array_key_exists( 'bed_height_mm', $data ) ) {
+			$update['bed_height_mm'] = $data['bed_height_mm'] ? max( 1, (int) $data['bed_height_mm'] ) : null;
+		}
 		if ( array_key_exists( 'active', $data ) ) {
 			$update['active'] = ! empty( $data['active'] ) ? 1 : 0;
 		}
@@ -219,6 +226,29 @@ class BambuPrinterRepository {
 		}
 
 		return false !== $wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Wirksames Druckbett-Innenmass eines Druckers: eigens hinterlegtes
+	 * Mass hat Vorrang, sonst die Schätzung nach gemeldetem Druckermodell
+	 * (siehe BedSizeLookup).
+	 *
+	 * @param object $printer Datensatz.
+	 * @return array|null {width_mm, height_mm} oder null, wenn beides fehlt.
+	 */
+	public static function effective_bed_size( $printer ) {
+		if ( ! $printer ) {
+			return null;
+		}
+
+		if ( ! empty( $printer->bed_width_mm ) && ! empty( $printer->bed_height_mm ) ) {
+			return array(
+				'width_mm'  => (int) $printer->bed_width_mm,
+				'height_mm' => (int) $printer->bed_height_mm,
+			);
+		}
+
+		return BedSizeLookup::match( isset( $printer->printer_model ) ? $printer->printer_model : '' );
 	}
 
 	/**

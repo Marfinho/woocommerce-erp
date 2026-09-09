@@ -29,13 +29,17 @@ use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintQueuePrintersPage;
+use Lindenweg16\Modules\Betrieb\Admin\BambuPlatesPage;
 use Lindenweg16\Modules\Betrieb\Admin\BambuPrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
+use Lindenweg16\Modules\Betrieb\Admin\SlicingProfilesPage;
 use Lindenweg16\Modules\Betrieb\Admin\TimerBar;
 use Lindenweg16\Modules\Betrieb\Admin\UsersPage;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuRestApi;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingRestApi;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueRestApi;
 
@@ -139,9 +143,11 @@ class BetriebModule {
 		( new Exporter() )->register();
 		( new PrintQueueRestApi() )->register();
 		( new BambuRestApi() )->register();
+		( new SlicingRestApi() )->register();
 
 		add_action( Scheduler::HOOK_DHL_PRINT_MAINTENANCE, array( PrintQueueService::class, 'run_maintenance' ) );
 		add_action( Scheduler::HOOK_BAMBU_MAINTENANCE, array( BambuService::class, 'run_maintenance' ) );
+		add_action( Scheduler::HOOK_SLICING_MAINTENANCE, array( SlicingService::class, 'run_maintenance' ) );
 
 		// Die Adminleiste steht auch im Frontend, wenn jemand angemeldet
 		// ist – die Uhr soll dort genauso laufen.
@@ -165,6 +171,8 @@ class BetriebModule {
 			// Reiter auf der Etikettendrucker-Seite, kein eigener
 			// Menüpunkt (siehe PrintQueuePrintersPage::render()).
 			( new BambuPrintersPage() )->register();
+			( new BambuPlatesPage() )->register();
+			( new SlicingProfilesPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();
 			( new UsersPage() )->register();

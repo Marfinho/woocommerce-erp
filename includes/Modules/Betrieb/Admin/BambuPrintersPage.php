@@ -239,6 +239,18 @@ class BambuPrintersPage {
 			return;
 		}
 
+		if ( 'platte' === $tab ) {
+			$this->render_notice();
+			( new BambuPlatesPage() )->render_content();
+			return;
+		}
+
+		if ( 'slicing' === $tab ) {
+			$this->render_notice();
+			( new SlicingProfilesPage() )->render_content();
+			return;
+		}
+
 		$this->render_notice();
 
 		// phpcs:ignore WordPress.Security.NonceVerification
@@ -291,19 +303,22 @@ class BambuPrintersPage {
 	protected function render_tabs( $active ) {
 		$base = admin_url( 'admin.php?page=' . self::SLUG );
 
+		$tabs = array(
+			'drucker'   => __( 'Drucker', 'lindenweg16' ),
+			'auftraege' => __( 'Aufträge', 'lindenweg16' ),
+			'platte'    => __( 'Platte anordnen', 'lindenweg16' ),
+			'slicing'   => __( 'Slicing-Profile', 'lindenweg16' ),
+		);
+
 		echo '<nav class="lw16-tabs">';
-		printf(
-			'<a href="%s" class="%s">%s</a> ',
-			esc_url( $base ),
-			'auftraege' === $active ? '' : 'active',
-			esc_html__( 'Drucker', 'lindenweg16' )
-		);
-		printf(
-			'<a href="%s" class="%s">%s</a> ',
-			esc_url( add_query_arg( 'tab', 'auftraege', $base ) ),
-			'auftraege' === $active ? 'active' : '',
-			esc_html__( 'Aufträge', 'lindenweg16' )
-		);
+		foreach ( $tabs as $key => $label ) {
+			printf(
+				'<a href="%s" class="%s">%s</a> ',
+				esc_url( 'drucker' === $key ? $base : add_query_arg( 'tab', $key, $base ) ),
+				$active === $key ? 'active' : '',
+				esc_html( $label )
+			);
+		}
 		echo '</nav>';
 	}
 
