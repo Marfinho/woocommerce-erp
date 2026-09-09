@@ -47,7 +47,7 @@ class HandbuchPage {
 			'start'      => array(
 				__( 'Übersicht', 'lindenweg16' ),
 				'index.html',
-				__( 'Wer liest was, die zwei Menüs, fünf Grundregeln.', 'lindenweg16' ),
+				__( 'Wer liest was, die fünf Menüs, fünf Grundregeln.', 'lindenweg16' ),
 			),
 			'produktion' => array(
 				__( 'Produktion', 'lindenweg16' ),
