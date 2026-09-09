@@ -4,7 +4,13 @@
 #
 #   venv/bin/pip install -r requirements.txt -r requirements-brother-ql.txt
 
+# Pillow bewusst < 10: brother_ql 0.9.4 skaliert Endlosrollen-Bilder
+# intern noch mit dem seit Pillow 10 entfernten Image.ANTIALIAS - mit
+# Pillow >= 10 stuerzt genau dieser Pfad (Endlosrollen-Formate wie "62",
+# "38", "12") mit AttributeError ab. Gestanzte Etiketten (z.B. "29x90")
+# sind davon nicht betroffen, aber ohne diese Pin waere es nur eine
+# Frage der Zeit.
 brother_ql>=0.9,<1
 pyusb>=1.2,<2
 PyMuPDF>=1.23,<2
-Pillow>=10,<11
+Pillow>=9,<10
