@@ -293,16 +293,25 @@ def cups_printer_model() -> str:
 # Brother QL (Direktdruck per USB, ohne CUPS)
 # ---------------------------------------------------------------------
 
-# Erwartete Etikettengrösse je brother_ql-Bezeichner, in Millimetern.
-# Höhe None heisst: Endlosrolle, die Länge ist frei (kein fester Wert zu
-# prüfen). Diese Tabelle spiegelt bewusst LabelSheet::rolls() in PHP –
-# das PDF kommt bereits exakt in Etikettengrösse an, ohne Rand.
-_BROTHER_QL_LABEL_MM = {
-    "62x29": (62, 29),
-    "29x90": (29, 90),
-    "62": (62, None),
-    "38": (38, None),
-    "12": (12, None),
+# Bedruckbare Fläche je brother_ql-Bezeichner, in Pixeln bei 300dpi –
+# direkt aus brother_ql.labels (Label.dots_printable) übernommen, NICHT
+# aus der Rollenbreite/-länge in Millimetern gerechnet: Ein Etikett hat
+# unbedruckbare Ränder, die brother_ql selbst kennt und die kleiner sind
+# als das nominelle Rollenmass (z. B. 29×90mm-Rolle → 306×991 Punkte
+# bedruckbar, nicht 343×1063 = 29mm/90mm × 300dpi/25.4). Höhe None heisst
+# Endlosrolle: die Länge ist frei, brother_ql skaliert dort selbst.
+#
+# Bei einer Endlosrolle genügt die richtige Breite, brother_ql passt die
+# Bildhöhe selbst an. Bei einem gestanzten Etikett (Höhe gesetzt)
+# verlangt brother_ql dagegen exakte Pixelmasse und wirft sonst
+# "Bad image dimensions" - deshalb wird unten vor dem Senden exakt auf
+# dieses Mass skaliert.
+_BROTHER_QL_DOTS_PRINTABLE = {
+    "62x29": (696, 271),
+    "29x90": (306, 991),
+    "62": (696, None),
+    "38": (413, None),
+    "12": (106, None),
 }
 
 
@@ -341,35 +350,44 @@ def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
     except Exception as exc:  # noqa: BLE001 - jede Ursache soll als Fehlermeldung zurück
         return False, f"PDF konnte nicht gerastert werden: {exc}"[:500]
 
-    erwartet = _BROTHER_QL_LABEL_MM.get(Config.BROTHER_QL_LABEL)
-    if erwartet is None:
+    dots = _BROTHER_QL_DOTS_PRINTABLE.get(Config.BROTHER_QL_LABEL)
+    if dots is None:
         return False, (
             f"Unbekanntes BROTHER_QL_LABEL '{Config.BROTHER_QL_LABEL}' – "
             "siehe README für gültige Bezeichner."
         )
 
-    dpi = 300
-    mm_to_px = dpi / 25.4
-    erwartet_w_px = erwartet[0] * mm_to_px
-    toleranz = 0.15  # 15% Spielraum für Rundung/Rand.
+    width_px, height_px = dots
+    toleranz = 0.25  # Grosszügig - die Ränder sind modellabhängig unterschiedlich breit.
 
-    if abs(image.width - erwartet_w_px) > erwartet_w_px * toleranz:
+    if abs(image.width - width_px) > width_px * toleranz:
         return False, (
             f"Seitenbreite des Labels ({image.width}px) passt nicht zum "
             f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
-            f"(erwartet ca. {round(erwartet_w_px)}px) – falscher Drucker für "
-            "diesen Job gewählt?"
+            f"(erwartet ca. {width_px}px) – falscher Drucker für diesen Job "
+            "gewählt?"
         )
 
-    if erwartet[1] is not None:
-        erwartet_h_px = erwartet[1] * mm_to_px
-        if abs(image.height - erwartet_h_px) > erwartet_h_px * toleranz:
+    if height_px is not None:
+        if abs(image.height - height_px) > height_px * toleranz:
             return False, (
                 f"Seitenhöhe des Labels ({image.height}px) passt nicht zum "
                 f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
-                f"(erwartet ca. {round(erwartet_h_px)}px) – falscher Drucker für "
-                "diesen Job gewählt?"
+                f"(erwartet ca. {height_px}px) – falscher Drucker für diesen "
+                "Job gewählt?"
             )
+
+        # Gestanztes Etikett: brother_ql verlangt exakte Pixelmasse (anders
+        # als bei einer Endlosrolle, wo es selbst auf die Breite skaliert)
+        # und wirft sonst "Bad image dimensions" statt zu drucken. Die
+        # Plausibilitätsprüfung oben lässt Abweichungen bis 25% zu (z. B.
+        # durch den unbedruckbaren Rand), das exakte Mass stellt erst
+        # dieser Resize her.
+        if image.size != (width_px, height_px):
+            from PIL import Image
+
+            resample = getattr(Image, "LANCZOS", None) or Image.Resampling.LANCZOS
+            image = image.resize((width_px, height_px), resample)
 
     try:
         from brother_ql.raster import BrotherQLRaster
