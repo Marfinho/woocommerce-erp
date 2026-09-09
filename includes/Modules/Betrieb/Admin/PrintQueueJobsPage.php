@@ -145,8 +145,15 @@ class PrintQueueJobsPage {
 	 * @return string
 	 */
 	protected function local_time( $mysql_gmt ) {
-		$timestamp = strtotime( $mysql_gmt . ' UTC' );
+		if ( ! $mysql_gmt ) {
+			return '';
+		}
 
-		return $timestamp ? date_i18n( 'd.m.Y H:i', $timestamp ) : '';
+		// date_i18n() rechnet einen übergebenen Zeitstempel NICHT auf die
+		// Seiten-Zeitzone um (nur bei $timestamp = null passiert das) - mit
+		// strtotime()+date_i18n() kam hier immer die UTC-Uhrzeit heraus,
+		// nicht die lokale. get_date_from_gmt() ist genau für diesen Fall
+		// gedacht: GMT-Datetime aus der Datenbank -> lokal formatiert.
+		return get_date_from_gmt( $mysql_gmt, 'd.m.Y H:i' );
 	}
 }
