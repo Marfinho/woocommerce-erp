@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Admin\SettingsPage as PluginSettingsPage;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
@@ -105,7 +106,7 @@ class SettingsPage {
 		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'annahmen'; // phpcs:ignore WordPress.Security.NonceVerification
 		$base = admin_url( 'admin.php?page=lw16-betrieb-einstellungen' );
 
-		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Betrieb · Einstellungen', 'lindenweg16' ) . '</h1>';
+		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Einstellungen', 'lindenweg16' ) . '</h1>';
 
 		echo '<nav class="lw16-tabs">';
 		printf(
@@ -133,12 +134,24 @@ class SettingsPage {
 			esc_html__( 'Protokoll & Kettenprüfung', 'lindenweg16' )
 		);
 		printf(
-			'<a href="%s" class="%s">%s</a>',
+			'<a href="%s" class="%s">%s</a> ',
 			esc_url( add_query_arg( 'view', 'systempruefung', $base ) ),
 			'systempruefung' === $view ? 'active' : '',
 			esc_html__( 'Systemprüfung', 'lindenweg16' )
 		);
+		printf(
+			'<a href="%s" class="%s">%s</a>',
+			esc_url( add_query_arg( 'view', 'plugin', $base ) ),
+			'plugin' === $view ? 'active' : '',
+			esc_html__( 'Plugin (Firma, DHL, E-Mail, …)', 'lindenweg16' )
+		);
 		echo '</nav>';
+
+		if ( 'plugin' === $view ) {
+			$this->render_plugin_tab();
+			echo '</div>';
+			return;
+		}
 
 		$this->render_notice();
 
@@ -173,6 +186,27 @@ class SettingsPage {
 			esc_attr( $type ),
 			esc_html( $msg )
 		);
+	}
+
+	/**
+	 * Reiter "Plugin": die vormals eigene, plugin-weite Einstellungen-
+	 * Seite (Firma, DHL-Zugänge, E-Mail-Vorlagen, …).
+	 *
+	 * Eigene Rechteprüfung, weil diese Einstellungen weiterreichend sind
+	 * als Betriebs eigene (DHL-Zugangsdaten, Firmendaten) – wer nur
+	 * lw16_manage_settings hat, aber nicht LW16_CAPABILITY, sieht den
+	 * Reiter, aber nicht das Formular. Speichern (admin_post_lw16_save_
+	 * settings) prüft ohnehin unabhängig davon dieselbe Capability –
+	 * diese Sperre verhindert nur, ein Formular zu zeigen, dessen
+	 * Abschicken dann ins Leere liefe.
+	 */
+	protected function render_plugin_tab() {
+		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Für diesen Bereich (Firma, DHL-Zugänge, E-Mail-Vorlagen) fehlt die Berechtigung.', 'lindenweg16' ) . '</p></div>';
+			return;
+		}
+
+		( new PluginSettingsPage() )->render_content();
 	}
 
 	/**

@@ -79,7 +79,6 @@ class TimeCategoryGuess {
 			'lw16-betrieb-benutzer'      => 'verwaltung',
 			'lw16-betrieb-einstellungen' => 'verwaltung',
 			'lw16-betrieb-import'        => 'verwaltung',
-			'lw16-einstellungen'         => 'verwaltung',
 			'lw16-reporting'             => 'verwaltung',
 			'lw16-kasse'                 => 'vertrieb',
 			'lw16-support'               => 'vertrieb',

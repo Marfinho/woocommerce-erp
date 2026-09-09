@@ -322,7 +322,7 @@ class DhlTracking {
 				<p class="description" style="color:#dc3232">
 					<?php echo wp_kses_post( sprintf(
 						__( 'Kein DHL API-Key hinterlegt. <a href="%s">Einstellungen &rarr;</a>', 'lindenweg16' ),
-						admin_url( 'admin.php?page=lw16-einstellungen' )
+						admin_url( 'admin.php?page=lw16-betrieb-einstellungen&view=plugin' )
 					) ); ?>
 				</p>
 			<?php elseif ( (int) Settings::get( 'dhl_tracking_sandbox', 1 ) === 1 ) : ?>
