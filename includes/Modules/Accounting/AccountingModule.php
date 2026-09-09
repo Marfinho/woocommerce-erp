@@ -625,7 +625,10 @@ class AccountingModule {
 		// Path-Traversal-Schutz.
 		$real_base = realpath( \Lindenweg16\Core\Installer::belege_dir() );
 		$real_file = realpath( $path );
-		if ( ! $real_file || ! $real_base || strpos( $real_file, $real_base ) !== 0 || ! is_file( $real_file ) ) {
+		// Der Vergleich braucht das Trennzeichen: Ohne es passt der Präfix
+		// "/uploads/lw16-belege" auch auf "/uploads/lw16-belege-alt/x.pdf",
+		// also auf ein Nachbarverzeichnis ausserhalb der Ablage.
+		if ( ! $real_file || ! $real_base || 0 !== strpos( $real_file, rtrim( $real_base, '/\\' ) . DIRECTORY_SEPARATOR ) || ! is_file( $real_file ) ) {
 			wp_die( esc_html__( 'Datei nicht verfügbar.', 'lindenweg16' ) );
 		}
 
@@ -755,7 +758,10 @@ class AccountingModule {
 		$path      = trailingslashit( \Lindenweg16\Core\Installer::docs_dir() ) . $rechnung->datei_pfad;
 		$real_base = realpath( \Lindenweg16\Core\Installer::docs_dir() );
 		$real_file = realpath( $path );
-		if ( ! $real_file || ! $real_base || strpos( $real_file, $real_base ) !== 0 || ! is_file( $real_file ) ) {
+		// Der Vergleich braucht das Trennzeichen: Ohne es passt der Präfix
+		// "/uploads/lw16-belege" auch auf "/uploads/lw16-belege-alt/x.pdf",
+		// also auf ein Nachbarverzeichnis ausserhalb der Ablage.
+		if ( ! $real_file || ! $real_base || 0 !== strpos( $real_file, rtrim( $real_base, '/\\' ) . DIRECTORY_SEPARATOR ) || ! is_file( $real_file ) ) {
 			wp_die( esc_html__( 'Datei nicht verfügbar.', 'lindenweg16' ) );
 		}
 
@@ -1491,7 +1497,15 @@ class AccountingModule {
 			wp_send_json_error( array( 'error' => __( 'Keine Datei empfangen.', 'lindenweg16' ) ) );
 		}
 
-		$tmp = $_FILES['beleg_foto']['tmp_name'];
+		$tmp = $_FILES['beleg_foto']['tmp_name']; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		// Wie bei jedem anderen Upload im Projekt: bestätigen lassen, dass
+		// die Datei wirklich aus diesem Request stammt, bevor sie an ein
+		// externes Programm geht.
+		if ( ! is_uploaded_file( $tmp ) ) {
+			wp_send_json_error( array( 'error' => __( 'Kein Datei-Upload erkannt.', 'lindenweg16' ) ) );
+		}
+
 		$result = BelegOcr::scan( $tmp );
 
 		if ( ! $result['success'] ) {

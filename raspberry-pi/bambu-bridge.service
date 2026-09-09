@@ -3,6 +3,11 @@ Description=Haster/Lindenweg16 Bambu-Lab-Bridge
 After=network-online.target
 Wants=network-online.target
 
+# Nach einem Stromausfall/Neustart des Pi startet der Dienst selbstständig
+# wieder; ohne Startversuch-Limit gibt systemd auch nach vielen
+# Fehlversuchen (z. B. Netz noch nicht da) nicht auf.
+StartLimitIntervalSec=0
+
 [Service]
 Type=simple
 User=pi
@@ -11,9 +16,16 @@ ExecStart=/opt/bambu-bridge/venv/bin/python3 /opt/bambu-bridge/bambu_bridge.py
 Restart=always
 RestartSec=5
 
-# Nach einem Stromausfall/Neustart des Pi startet der Dienst selbstständig
-# wieder (systemd "enable" + der Server hält offene Jobs ohnehin vor).
-StartLimitIntervalSec=0
+# Grundabsicherung: Der Dienst braucht nur ausgehende Netzverbindungen und
+# sein eigenes Arbeitsverzeichnis - kein Schreibzugriff auf das restliche
+# System, keine zusätzlichen Rechte.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/bambu-bridge
+# Wird DOWNLOAD_DIRECTORY in der .env geändert, muss der neue Pfad hier
+# ebenfalls stehen - sonst kann die Bridge die 3MF nicht zwischenspeichern.
 
 # Kein eingehender Port nötig - die Bridge baut nur ausgehende
 # Verbindungen auf (zu WordPress per HTTPS, zum Drucker per MQTT/FTPS im

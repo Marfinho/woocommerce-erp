@@ -34,6 +34,7 @@ class BambuPrintersPage {
 		add_action( 'admin_post_lw16_bambu_regen_token', array( $this, 'handle_regen' ) );
 		add_action( 'admin_post_lw16_bambu_delete_printer', array( $this, 'handle_delete' ) );
 		add_action( 'admin_post_lw16_bambu_enqueue_job', array( $this, 'handle_enqueue_job' ) );
+		add_action( 'admin_post_lw16_bambu_enqueue_model', array( $this, 'handle_enqueue_model' ) );
 	}
 
 	/**
@@ -45,6 +46,22 @@ class BambuPrintersPage {
 		if ( ! Roles::current_user_can_betrieb( $cap ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
+	}
+
+	/**
+	 * Darf der aktuelle Nutzer die Drucker verwalten?
+	 *
+	 * Maßgeblich für alles, was Verbindungsgeheimnisse zeigt oder ändert:
+	 * Der LAN-Zugangscode ist faktisch das Passwort des Druckers – wer ihn
+	 * kennt, kann im selben Netz Dateien auf das Gerät legen und Drucke
+	 * auslösen, ganz ohne dieses Plugin. Deshalb sehen ihn nur Nutzer, die
+	 * die Drucker auch verwalten dürfen; zum Einreihen eines Druckauftrags
+	 * (lw16_capture) wird er nicht gebraucht.
+	 *
+	 * @return bool
+	 */
+	protected function can_manage() {
+		return Roles::current_user_can_betrieb( 'lw16_manage_production' );
 	}
 
 	/**
@@ -83,16 +100,21 @@ class BambuPrintersPage {
 
 		$id = isset( $_POST['printer_pk'] ) ? (int) $_POST['printer_pk'] : 0;
 
-		BambuPrinterRepository::update(
+		$ok = BambuPrinterRepository::update(
 			$id,
 			array(
 				'name'         => isset( $_POST['name'] ) ? wp_unslash( $_POST['name'] ) : '',
 				'bambu_serial' => isset( $_POST['bambu_serial'] ) ? wp_unslash( $_POST['bambu_serial'] ) : '',
 				'ip'           => isset( $_POST['ip'] ) ? wp_unslash( $_POST['ip'] ) : '',
 				'access_code'  => isset( $_POST['access_code'] ) ? wp_unslash( $_POST['access_code'] ) : '',
+				'access_code_loeschen' => ! empty( $_POST['access_code_loeschen'] ),
 				'geraet_id'    => isset( $_POST['geraet_id'] ) ? (int) $_POST['geraet_id'] : 0,
 			)
 		);
+
+		if ( ! $ok ) {
+			$this->back( __( 'Drucker nicht gefunden – nichts gespeichert.', 'lindenweg16' ), 0 );
+		}
 
 		$this->back( __( 'Verbindungsdaten gespeichert.', 'lindenweg16' ), 0 );
 	}
@@ -122,7 +144,10 @@ class BambuPrintersPage {
 		check_admin_referer( self::NONCE );
 
 		$id = isset( $_POST['printer_pk'] ) ? (int) $_POST['printer_pk'] : 0;
-		BambuPrinterRepository::delete( $id );
+
+		if ( ! BambuPrinterRepository::delete( $id ) ) {
+			$this->back( __( 'Drucker nicht gefunden.', 'lindenweg16' ), 0 );
+		}
 
 		$this->back( __( 'Drucker gelöscht.', 'lindenweg16' ), 0 );
 	}
@@ -145,6 +170,26 @@ class BambuPrintersPage {
 			$_FILES['datei']['tmp_name'], // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			sanitize_file_name( wp_unslash( $_FILES['datei']['name'] ) )
 		);
+
+		$this->back(
+			$result['ok']
+				? __( 'Druckauftrag angelegt. Der Bambu-Drucker holt ihn beim nächsten Kontakt der Bridge ab.', 'lindenweg16' )
+				: $result['error'],
+			0
+		);
+	}
+
+	/**
+	 * Geslicte Druckdatei einer Artikelrevision in die Warteschlange legen.
+	 */
+	public function handle_enqueue_model() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE );
+
+		$printer_id = isset( $_POST['printer_id'] ) ? sanitize_key( wp_unslash( $_POST['printer_id'] ) ) : '';
+		$datei      = isset( $_POST['model_file'] ) ? sanitize_file_name( wp_unslash( $_POST['model_file'] ) ) : '';
+
+		$result = BambuService::enqueue_model( $printer_id, $datei );
 
 		$this->back(
 			$result['ok']
@@ -218,7 +263,9 @@ class BambuPrintersPage {
 			);
 		}
 
-		$this->render_add_form();
+		if ( $this->can_manage() ) {
+			$this->render_add_form();
+		}
 
 		echo '<h2>' . esc_html__( 'Registrierte Drucker', 'lindenweg16' ) . '</h2>';
 
@@ -348,7 +395,52 @@ class BambuPrintersPage {
 		echo '</select> ';
 		echo '<input type="file" name="datei" accept=".3mf" required> ';
 		printf( '<button type="submit" class="button button-primary">%s</button>', esc_html__( 'Hochladen & einreihen', 'lindenweg16' ) );
-		echo '<p class="description">' . esc_html__( 'Nur bereits geslicte Druckdateien (.gcode.3mf aus Bambu Studio) – der Drucker kann keine reinen Projektdateien ausführen.', 'lindenweg16' ) . '</p>';
+		printf(
+			'<p class="description">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: Höchstgröße, z. B. "200 MB". */
+					__( 'Nur bereits geslicte Druckdateien (.gcode.3mf aus Bambu Studio), höchstens %s – der Drucker kann keine reinen Projektdateien ausführen.', 'lindenweg16' ),
+					size_format( BambuService::MAX_FILE_BYTES )
+				)
+			)
+		);
+		echo '</form>';
+
+		$this->render_model_form( $printers );
+	}
+
+	/**
+	 * Formular zum Einreihen einer Druckdatei aus der Modellablage – der
+	 * Weg für Artikel, deren geslicte Datei ohnehin schon an der aktiven
+	 * Revision hängt (Artikel & Revisionen). Kein erneuter Upload nötig.
+	 *
+	 * @param array $printers Registrierte Bambu-Drucker.
+	 */
+	protected function render_model_form( $printers ) {
+		$dateien = BambuService::verfuegbare_druckdateien();
+
+		echo '<h2>' . esc_html__( 'Aus der Modellablage einreihen', 'lindenweg16' ) . '</h2>';
+
+		if ( ! $dateien ) {
+			echo '<p class="description">' . esc_html__( 'Keine aktive Artikelrevision hat eine geslicte Druckdatei hinterlegt (Artikel & Revisionen).', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="lw16_bambu_enqueue_model">';
+		wp_nonce_field( self::NONCE );
+		echo '<select name="printer_id" required>';
+		foreach ( $printers as $printer ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $printer->printer_id ), esc_html( $printer->name ) );
+		}
+		echo '</select> ';
+		echo '<select name="model_file" required>';
+		foreach ( $dateien as $datei ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $datei['file'] ), esc_html( $datei['label'] ) );
+		}
+		echo '</select> ';
+		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Einreihen', 'lindenweg16' ) );
 		echo '</form>';
 	}
 
@@ -382,7 +474,7 @@ class BambuPrintersPage {
 			printf(
 				'<p><strong>%s:</strong> %s%s%s</p>',
 				esc_html__( 'Drucker-Status', 'lindenweg16' ),
-				esc_html( $printer->status ),
+				esc_html( self::status_text( $printer->status ) ),
 				null !== $printer->progress_percent ? ' — ' . esc_html( (string) (int) $printer->progress_percent ) . ' %' : '',
 				null !== $printer->remaining_minutes ? ' — ' . sprintf(
 					/* translators: %d: Minuten. */
@@ -414,11 +506,20 @@ class BambuPrintersPage {
 		if ( $printer->printer_model ) {
 			printf( '<p><strong>%s:</strong> %s</p>', esc_html__( 'Modell', 'lindenweg16' ), esc_html( $printer->printer_model ) );
 		}
-		if ( $printer->ip ) {
+		if ( $printer->ip && $this->can_manage() ) {
 			printf( '<p><strong>%s:</strong> %s</p>', esc_html__( 'IP', 'lindenweg16' ), esc_html( $printer->ip ) );
 		}
 
 		printf( '<p><strong>%s:</strong> %d</p>', esc_html__( 'Wartende Aufträge', 'lindenweg16' ), (int) $queue );
+
+		if ( ! $this->can_manage() ) {
+			// Verbindungsdaten (v. a. der LAN-Zugangscode), Token-Erneuerung
+			// und Löschen bleiben der Druckerverwaltung vorbehalten – siehe
+			// can_manage(). Zum Einreihen eines Auftrags braucht es das alles
+			// nicht.
+			echo '</div>';
+			return;
+		}
 
 		echo '<details style="margin:8px 0"><summary>' . esc_html__( 'Verbindungsdaten bearbeiten', 'lindenweg16' ) . '</summary>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:8px">';
@@ -427,7 +528,22 @@ class BambuPrintersPage {
 		wp_nonce_field( self::NONCE );
 		printf( '<p><label>%s <input type="text" name="name" value="%s"></label></p>', esc_html__( 'Name', 'lindenweg16' ), esc_attr( $printer->name ) );
 		printf( '<p><label>%s <input type="text" name="ip" value="%s"></label></p>', esc_html__( 'IP', 'lindenweg16' ), esc_attr( (string) $printer->ip ) );
-		printf( '<p><label>%s <input type="text" name="access_code" value="%s" autocomplete="off"></label></p>', esc_html__( 'Zugangscode', 'lindenweg16' ), esc_attr( (string) $printer->access_code ) );
+		// Der hinterlegte Zugangscode wird bewusst nicht in die Seite
+		// geschrieben – ein leeres Feld lässt ihn unverändert, ein gefülltes
+		// ersetzt ihn (siehe BambuPrinterRepository::update()).
+		printf(
+			'<p><label>%s <input type="password" name="access_code" value="" autocomplete="new-password" placeholder="%s"></label></p>',
+			esc_html__( 'Zugangscode', 'lindenweg16' ),
+			$printer->access_code
+				? esc_attr__( 'hinterlegt – zum Ändern neu eintragen', 'lindenweg16' )
+				: esc_attr__( 'nicht hinterlegt', 'lindenweg16' )
+		);
+		if ( $printer->access_code ) {
+			printf(
+				'<p><label><input type="checkbox" name="access_code_loeschen" value="1"> %s</label></p>',
+				esc_html__( 'Hinterlegten Zugangscode entfernen', 'lindenweg16' )
+			);
+		}
 		printf( '<p><label>%s <input type="text" name="bambu_serial" value="%s"></label></p>', esc_html__( 'Seriennummer', 'lindenweg16' ), esc_attr( (string) $printer->bambu_serial ) );
 		echo '<p><label>' . esc_html__( 'Verknüpftes Gerät', 'lindenweg16' ) . ' <select name="geraet_id"><option value="0">' . esc_html__( '– keine –', 'lindenweg16' ) . '</option>';
 		foreach ( PrinterRepository::all() as $geraet ) {
@@ -457,6 +573,32 @@ class BambuPrintersPage {
 		echo '</form>';
 
 		echo '</div>';
+	}
+
+	/**
+	 * Vom Drucker gemeldeten Zustand in Klartext übersetzen.
+	 *
+	 * "mqtt_getrennt" meldet die Bridge selbst, wenn sie den Drucker im
+	 * LAN nicht erreicht – die Bridge läuft dann, das Gerät antwortet aber
+	 * nicht (aus, andere IP, falscher Zugangscode).
+	 *
+	 * @param string $status Gemeldeter Zustand.
+	 * @return string
+	 */
+	protected static function status_text( $status ) {
+		$texte = array(
+			'mqtt_getrennt' => __( 'Drucker nicht erreichbar (Bridge läuft, keine Verbindung zum Gerät)', 'lindenweg16' ),
+			'idle'          => __( 'bereit', 'lindenweg16' ),
+			'running'       => __( 'druckt', 'lindenweg16' ),
+			'prepare'       => __( 'bereitet vor', 'lindenweg16' ),
+			'pause'         => __( 'pausiert', 'lindenweg16' ),
+			'finish'        => __( 'fertig', 'lindenweg16' ),
+			'failed'        => __( 'Fehler', 'lindenweg16' ),
+		);
+
+		$key = strtolower( (string) $status );
+
+		return isset( $texte[ $key ] ) ? $texte[ $key ] : (string) $status;
 	}
 
 	/**

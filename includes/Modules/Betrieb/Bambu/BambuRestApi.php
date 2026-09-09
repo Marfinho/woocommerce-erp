@@ -32,11 +32,11 @@ class BambuRestApi {
 	const POLL_INTERVAL_SECONDS = 1;
 
 	/**
-	 * Höchstgröße einer 3MF-Datei. Großzügig bemessen – ein 3MF-Projekt
-	 * kann eingebettete Vorschaubilder enthalten und ist deutlich größer
-	 * als ein reines G-Code-Etikett.
+	 * Höchstgröße einer 3MF-Datei. Eine Grenze für beide Enden, deshalb
+	 * steht sie beim Service, der das Einreihen prüft (siehe
+	 * BambuService::MAX_FILE_BYTES).
 	 */
-	const MAX_FILE_BYTES = 200 * MB_IN_BYTES;
+	const MAX_FILE_BYTES = BambuService::MAX_FILE_BYTES;
 
 	/**
 	 * Hooks registrieren.
@@ -122,21 +122,32 @@ class BambuRestApi {
 
 		$ip = $this->client_ip();
 
-		if ( $this->rate_limited( $ip ) ) {
-			return new WP_Error( 'lw16_bambu_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
-		}
-
-		if ( '' === $token ) {
-			$this->register_auth_failure( $ip );
-			return new WP_Error( 'lw16_bambu_unauthorized', __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' ), array( 'status' => 401 ) );
-		}
-
-		$printer = BambuPrinterRepository::find_by_token( $token );
+		// Erst das Token prüfen, dann erst das Ratenlimit: Das Limit zählt
+		// Fehlversuche je IP – und hinter einem Reverse-Proxy oder CDN
+		// tragen alle Anfragen dieselbe REMOTE_ADDR, auch die der eigenen
+		// Bridge. Käme die Sperre zuerst, könnte jeder Fremde ohne
+		// Anmeldung mit 30 falschen Token pro Minute die eigene Bridge
+		// dauerhaft aussperren und damit die ganze Warteschlange
+		// stillegen. Ein gültiges Token wird deshalb nie gesperrt; der
+		// Schutz gegen Token-Raten bleibt unverändert, weil weiterhin nur
+		// 30 Fehlversuche je Minute und IP durchkommen.
+		$printer = '' === $token ? null : BambuPrinterRepository::find_by_token( $token );
 
 		if ( ! $printer ) {
+			if ( $this->rate_limited( $ip ) ) {
+				return new WP_Error( 'lw16_bambu_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
+			}
+
 			$this->register_auth_failure( $ip );
+
 			// Niemals das Token selbst loggen – nur, dass ein Versuch scheiterte.
-			return new WP_Error( 'lw16_bambu_unauthorized', __( 'Ungültiges Token.', 'lindenweg16' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'lw16_bambu_unauthorized',
+				'' === $token
+					? __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' )
+					: __( 'Ungültiges Token.', 'lindenweg16' ),
+				array( 'status' => 401 )
+			);
 		}
 
 		$requested_printer_id = (string) $request->get_param( 'printer_id' );
@@ -334,6 +345,16 @@ class BambuRestApi {
 		header( 'Content-Type: model/3mf' );
 		header( 'Content-Disposition: attachment; filename="' . rawurlencode( $job->file_name ) . '"' );
 		header( 'Content-Length: ' . $groesse );
+
+		// Alle offenen Ausgabepuffer leeren, bevor die Datei rausgeht: Eine
+		// 3MF-Druckdatei kann hunderte Megabyte groß sein, und liefe sie
+		// durch einen Puffer (WordPress, Caching-Plugin, ob_gzhandler),
+		// landete sie komplett im Arbeitsspeicher des PHP-Prozesses – der
+		// Download bräche mit "memory exhausted" ab, statt zu laufen.
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+
 		readfile( $pfad ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		exit;
 	}
@@ -453,7 +474,9 @@ class BambuRestApi {
 	public function action_failed( $request ) {
 		$printer = $this->printer_of( $request );
 		$id      = (int) $request->get_param( 'id' );
-		$message = (string) $request->get_param( 'message' );
+		// Die Meldung kommt von der Bridge und landet in einem TEXT-Feld;
+		// ohne Grenze ließe sich die Tabelle damit vollschreiben.
+		$message = mb_substr( (string) $request->get_param( 'message' ), 0, 1000 );
 
 		if ( ! BambuJobRepository::fail( $id, $printer->printer_id, $message ) ) {
 			return new WP_Error( 'lw16_bambu_invalid_state', __( 'Ungültiger Statuswechsel (Job evtl. bereits abgeschlossen).', 'lindenweg16' ), array( 'status' => 409 ) );

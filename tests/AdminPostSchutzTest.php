@@ -2,8 +2,9 @@
 /**
  * Jeder Formular-Handler prüft Nonce und Recht.
  *
- * `admin_post_*` ist eine offene Tür: Die Adresse ist erratbar, und wer sie
- * aufruft, landet mitten in einer schreibenden Funktion. Ohne Nonce lässt
+ * `admin_post_*` und `wp_ajax_*` sind offene Türen: Die Adresse ist
+ * erratbar, und wer sie aufruft, landet mitten in einer schreibenden
+ * Funktion. Ohne Nonce lässt
  * sich ein angemeldeter Betreiber von einer fremden Seite aus dazu bringen,
  * die Aktion auszuführen; ohne Rechteprüfung darf sie jeder Abonnent.
  *
@@ -35,6 +36,12 @@ class AdminPostSchutzTest extends TestCase {
 	const OHNE_RECHT = array(
 		'handle_signup',
 		'handle_ticket_create',
+		// Dasselbe gilt für die beiden Kunden-AJAX-Handler: Die Merkliste
+		// und der Guthaben-Einsatz im Warenkorb gehören dem angemeldeten
+		// Kunden. Beide arbeiten ausschliesslich auf get_current_user_id()
+		// und prüfen die Nonce.
+		'ajax_toggle',
+		'ajax_set_redeem',
 	);
 
 	/**
@@ -115,31 +122,46 @@ class AdminPostSchutzTest extends TestCase {
 	 * @return array Liste aus {datei, methode, nopriv}.
 	 */
 	protected function handler() {
-		$out   = array();
-		$basis = dirname( __DIR__ ) . '/includes';
-		$dirs  = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $basis ) );
+		$out = array();
 
-		foreach ( $dirs as $datei ) {
-			if ( 'php' !== $datei->getExtension() ) {
+		// Beide Verzeichnisse: Ein Handler im Theme ist genauso eine offene
+		// Tür wie einer im Plugin.
+		foreach ( array( '/includes', '/theme' ) as $unter ) {
+			$basis = dirname( __DIR__ ) . $unter;
+
+			if ( ! is_dir( $basis ) ) {
 				continue;
 			}
 
-			$src = file_get_contents( $datei->getPathname() );
+			$dirs = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $basis ) );
 
-			preg_match_all(
-				"/add_action\(\s*'admin_post(_nopriv)?_\w+'\s*,\s*array\(\s*\\\$this\s*,\s*'(\w+)'\s*\)/",
-				$src,
-				$treffer,
-				PREG_SET_ORDER
-			);
+			foreach ( $dirs as $datei ) {
+				if ( 'php' !== $datei->getExtension() ) {
+					continue;
+				}
 
-			foreach ( $treffer as $m ) {
-				$out[] = array(
-					'datei'   => str_replace( $basis . '/', '', $datei->getPathname() ),
-					'methode' => $m[2],
-					'nopriv'  => '' !== $m[1],
-					'src'     => $src,
+				$src = file_get_contents( $datei->getPathname() );
+
+				// admin_post_* UND wp_ajax_*: Beide landen in einer
+				// schreibenden Funktion, beide sind über eine erratbare
+				// Adresse erreichbar. wp_ajax_* verlangt zwar eine Anmeldung,
+				// aber in einem Shop meldet sich jeder Kunde selbst an - als
+				// Schutz taugt das nicht.
+				preg_match_all(
+					"/add_action\(\s*'(admin_post|wp_ajax)(_nopriv)?_\w+'\s*,\s*array\(\s*(?:\\\$this|__CLASS__|self::class)\s*,\s*'(\w+)'\s*\)/",
+					$src,
+					$treffer,
+					PREG_SET_ORDER
 				);
+
+				foreach ( $treffer as $m ) {
+					$out[] = array(
+						'datei'   => ltrim( str_replace( dirname( __DIR__ ), '', $datei->getPathname() ), '/' ),
+						'methode' => $m[3],
+						'nopriv'  => '' !== $m[2],
+						'src'     => $src,
+					);
+				}
 			}
 		}
 

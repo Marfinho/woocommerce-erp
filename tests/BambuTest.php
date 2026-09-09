@@ -12,6 +12,7 @@
 use PHPUnit\Framework\TestCase;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\Bambu\BedSizeLookup;
 
 /**
@@ -220,6 +221,100 @@ class BambuTest extends TestCase {
 
 		$this->assertTrue( BambuPrinterRepository::is_online( $frisch, 120 ) );
 		$this->assertFalse( BambuPrinterRepository::is_online( $alt, 120 ) );
+	}
+
+	/* ----------------------------------------------------------------
+	 * Welche Datei darf mit einem Job vergehen?
+	 *
+	 * Die Frage entscheidet über einen Löschvorgang: Ein Job zeigt
+	 * entweder auf eine eigens hochgeladene Kopie (vergeht mit dem Job)
+	 * oder auf eine Datei der Modellablage, die einer Artikelrevision
+	 * gehört und bleiben muss.
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Verzeichnisse und Dateien für die Löschprüfung anlegen.
+	 *
+	 * @return array {docs, modelle}
+	 */
+	private function dateien_anlegen() {
+		$basis   = sys_get_temp_dir() . '/lw16-bambu-' . uniqid();
+		$docs    = $basis . '/dokumente';
+		$modelle = $basis . '/modelle';
+
+		mkdir( $docs, 0777, true );
+		mkdir( $modelle, 0777, true );
+
+		file_put_contents( $docs . '/bambu-upload-1700000000-abcdef.3mf', 'x' );
+		file_put_contents( $docs . '/rechnung-2024-001.pdf', 'x' );
+		file_put_contents( $modelle . '/bambu-upload-tarnung.3mf', 'x' );
+		file_put_contents( $modelle . '/haken-v3.gcode.3mf', 'x' );
+
+		return array( 'basis' => $basis, 'docs' => $docs, 'modelle' => $modelle );
+	}
+
+	/**
+	 * Eine hochgeladene Druckdatei im Dokumentenordner gehört der
+	 * Warteschlange.
+	 */
+	public function test_eigener_upload_darf_geloescht_werden() {
+		$d = $this->dateien_anlegen();
+
+		$this->assertTrue(
+			BambuService::is_queue_upload( $d['docs'] . '/bambu-upload-1700000000-abcdef.3mf', $d['docs'] )
+		);
+	}
+
+	/**
+	 * Eine Datei der Modellablage gehört der Artikelrevision – sie darf
+	 * nicht mitgelöscht werden, auch wenn ihr Name den Upload-Präfix
+	 * trägt.
+	 */
+	public function test_modellablage_bleibt_unangetastet() {
+		$d = $this->dateien_anlegen();
+
+		$this->assertFalse(
+			BambuService::is_queue_upload( $d['modelle'] . '/haken-v3.gcode.3mf', $d['docs'] )
+		);
+		$this->assertFalse(
+			BambuService::is_queue_upload( $d['modelle'] . '/bambu-upload-tarnung.3mf', $d['docs'] )
+		);
+	}
+
+	/**
+	 * Fremde Dateien im Dokumentenordner (Belege!) gehören nicht der
+	 * Warteschlange.
+	 */
+	public function test_fremde_datei_im_dokumentenordner_bleibt() {
+		$d = $this->dateien_anlegen();
+
+		$this->assertFalse(
+			BambuService::is_queue_upload( $d['docs'] . '/rechnung-2024-001.pdf', $d['docs'] )
+		);
+	}
+
+	/**
+	 * Ein Pfad, der über .. aus dem Dokumentenordner herausführt, zählt
+	 * nicht als eigener Upload – realpath löst ihn vorher auf.
+	 */
+	public function test_pfad_ausbruch_wird_erkannt() {
+		$d = $this->dateien_anlegen();
+
+		$this->assertFalse(
+			BambuService::is_queue_upload( $d['docs'] . '/../modelle/bambu-upload-tarnung.3mf', $d['docs'] )
+		);
+	}
+
+	/**
+	 * Leere Pfade und nicht vorhandene Dateien führen zu keinem
+	 * Löschversuch.
+	 */
+	public function test_leerer_oder_unbekannter_pfad() {
+		$d = $this->dateien_anlegen();
+
+		$this->assertFalse( BambuService::is_queue_upload( '', $d['docs'] ) );
+		$this->assertFalse( BambuService::is_queue_upload( $d['docs'] . '/gibt-es-nicht.3mf', $d['docs'] ) );
+		$this->assertFalse( BambuService::is_queue_upload( $d['docs'], $d['docs'] ) );
 	}
 
 	/* ----------------------------------------------------------------

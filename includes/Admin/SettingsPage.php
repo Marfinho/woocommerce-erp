@@ -116,6 +116,9 @@ class SettingsPage {
 				'dhl_print_standarddrucker'   => array( __( 'Standard-Drucker-ID (z. B. eg_dhl)', 'lindenweg16' ), 'text' ),
 				'dhl_print_aufbewahrung_tage' => array( __( 'Aufbewahrung der Druckjob-Einträge der ganzen Warteschlange (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
 			),
+			__( 'Bambu-Lab-Drucker (Raspberry Pi)', 'lindenweg16' ) => array(
+				'bambu_aufbewahrung_tage' => array( __( 'Aufbewahrung der Bambu-Druckaufträge samt hochgeladener Druckdatei (Tage, 0 = unbegrenzt)', 'lindenweg16' ), 'number' ),
+			),
 		);
 	}
 

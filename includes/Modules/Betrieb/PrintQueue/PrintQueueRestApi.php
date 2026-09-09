@@ -114,21 +114,32 @@ class PrintQueueRestApi {
 
 		$ip = $this->client_ip();
 
-		if ( $this->rate_limited( $ip ) ) {
-			return new WP_Error( 'lw16_print_queue_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
-		}
-
-		if ( '' === $token ) {
-			$this->register_auth_failure( $ip );
-			return new WP_Error( 'lw16_print_queue_unauthorized', __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' ), array( 'status' => 401 ) );
-		}
-
-		$printer = PrinterRepository::find_by_token( $token );
+		// Erst das Token prüfen, dann erst das Ratenlimit: Das Limit zählt
+		// Fehlversuche je IP – und hinter einem Reverse-Proxy oder CDN
+		// tragen alle Anfragen dieselbe REMOTE_ADDR, auch die des eigenen
+		// Pi-Clients. Käme die Sperre zuerst, könnte jeder Fremde ohne
+		// Anmeldung mit 30 falschen Token pro Minute den eigenen Drucker
+		// dauerhaft aussperren – und ohne Etikett steht der Versand.
+		// Ein gültiges Token wird deshalb nie gesperrt; der Schutz gegen
+		// Token-Raten bleibt unverändert, weil weiterhin nur 30
+		// Fehlversuche je Minute und IP durchkommen.
+		$printer = '' === $token ? null : PrinterRepository::find_by_token( $token );
 
 		if ( ! $printer ) {
+			if ( $this->rate_limited( $ip ) ) {
+				return new WP_Error( 'lw16_print_queue_rate_limited', __( 'Zu viele Anfragen. Bitte kurz warten.', 'lindenweg16' ), array( 'status' => 429 ) );
+			}
+
 			$this->register_auth_failure( $ip );
+
 			// Niemals das Token selbst loggen – nur, dass ein Versuch scheiterte.
-			return new WP_Error( 'lw16_print_queue_unauthorized', __( 'Ungültiges Token.', 'lindenweg16' ), array( 'status' => 401 ) );
+			return new WP_Error(
+				'lw16_print_queue_unauthorized',
+				'' === $token
+					? __( 'Kein Bearer-Token übermittelt.', 'lindenweg16' )
+					: __( 'Ungültiges Token.', 'lindenweg16' ),
+				array( 'status' => 401 )
+			);
 		}
 
 		$requested_printer_id = (string) $request->get_param( 'printer_id' );
