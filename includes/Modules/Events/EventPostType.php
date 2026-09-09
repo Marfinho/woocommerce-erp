@@ -14,6 +14,8 @@
 
 namespace Lindenweg16\Modules\Events;
 
+use Lindenweg16\Admin\MenuGroups;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -83,7 +85,9 @@ class EventPostType {
 				'public'        => true,
 				'has_archive'   => 'events',
 				'menu_icon'     => 'dashicons-calendar-alt',
-				'menu_position' => 57,
+				// Kein eigenes Hauptmenü mehr - haengt sich unter das
+				// gemeinsame "Verkauf"-Menü (siehe MenuGroups).
+				'show_in_menu'  => MenuGroups::VERKAUF,
 				'supports'      => array( 'title', 'editor', 'excerpt', 'thumbnail', 'revisions' ),
 				'rewrite'       => array( 'slug' => 'event', 'with_front' => false ),
 				'show_in_rest'  => true,

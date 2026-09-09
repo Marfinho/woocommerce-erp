@@ -36,11 +36,12 @@ class PrintQueueJobsPage {
 	}
 
 	/**
-	 * Hooks registrieren.
+	 * Kein eigener Menüpunkt mehr – diese Ansicht ist jetzt ein Reiter auf
+	 * der Etikettendrucker-Seite (siehe PrintQueuePrintersPage::render(),
+	 * das render_content() dieser Klasse direkt aufruft). register() gibt
+	 * es deshalb nicht mehr; das Modul instanziiert die Klasse nicht mehr
+	 * eigenständig.
 	 */
-	public function register() {
-		add_action( 'lw16_betrieb_render_lw16_betrieb_druckwarteschlange_jobs', array( $this, 'render' ) );
-	}
 
 	/**
 	 * Zugriff prüfen.
@@ -52,16 +53,28 @@ class PrintQueueJobsPage {
 	}
 
 	/**
-	 * Seite ausgeben.
+	 * Seite ausgeben (eigener Titel, für den eigenständigen Aufruf).
 	 */
 	public function render() {
 		$this->require_cap();
 
 		echo '<h1>' . esc_html__( 'Druckjobs', 'lindenweg16' ) . '</h1>';
+		$this->render_content( admin_url( 'admin.php?page=' . self::SLUG ) );
+	}
+
+	/**
+	 * Nur der Inhalt, ohne eigene Überschrift – zur Einbettung als Reiter
+	 * auf der gemeinsamen Etikettendrucker-Seite (siehe
+	 * PrintQueuePrintersPage::render()).
+	 *
+	 * @param string $base Grund-URL für die Statusfilter-Links (inkl.
+	 *                      eines evtl. nötigen tab-Parameters).
+	 */
+	public function render_content( $base ) {
+		$this->require_cap();
 
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$filter = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
-		$base   = admin_url( 'admin.php?page=' . self::SLUG );
 
 		$this->render_filter( $filter, $base );
 
