@@ -419,7 +419,12 @@ def process_job(api: ApiClient, job: dict) -> None:
     if not api.claim(job_id):
         # Ein anderer Pi war schneller, oder der Job ist nicht mehr
         # verfügbar. Kein Fehlerzustand – einfach weiter zum nächsten Poll.
+        # Kurze Pause, damit ein Job, der (aus welchem Grund auch immer,
+        # z. B. einer veralteten zwischengespeicherten Serverantwort) bei
+        # jedem Poll erneut als verfügbar gemeldet wird, den Server nicht
+        # im Sekundenbruchteil-Takt mit Claim-Versuchen bombardiert.
         log.info("Job %s konnte nicht geclaimt werden (vermutlich schon vergeben).", job_id)
+        time.sleep(2)
         return
 
     target = Config.DOWNLOAD_DIRECTORY / filename
