@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb\Admin;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
@@ -84,13 +85,32 @@ class PrintQueuePrintersPage {
 
 	/**
 	 * Testlabel-Job anlegen.
+	 *
+	 * Die Größe ist wählbar (DHL-Mass oder eine der Rollenformate aus
+	 * LabelSheet) – ein Drucker mit schmaler Etikettenrolle kann mit
+	 * einem 103×199-mm-DHL-Testlabel nichts anfangen, und beim
+	 * brother_ql-Backend weist der Pi-Client ein falsch bemessenes Label
+	 * ohnehin zurück (siehe README).
 	 */
 	public function handle_test_label() {
 		$this->require_cap();
 		check_admin_referer( self::NONCE );
 
 		$printer_id = isset( $_POST['printer_id'] ) ? sanitize_key( wp_unslash( $_POST['printer_id'] ) ) : '';
-		$job_id     = PrintQueueService::create_test_job( $printer_id );
+		$format     = isset( $_POST['format'] ) ? sanitize_key( wp_unslash( $_POST['format'] ) ) : 'dhl';
+
+		if ( LabelSheet::has_roll( $format ) ) {
+			$roll         = LabelSheet::roll( $format );
+			$width_mm     = (float) $roll['w'];
+			$height_mm    = (float) $roll['h'];
+			$label_format = $roll['label'];
+		} else {
+			$width_mm     = 103;
+			$height_mm    = 199;
+			$label_format = '910-300-610 (DHL)';
+		}
+
+		$job_id = PrintQueueService::create_test_job( $printer_id, $width_mm, $height_mm, $label_format );
 
 		$this->back(
 			$job_id
@@ -223,6 +243,12 @@ class PrintQueuePrintersPage {
 		echo '<input type="hidden" name="action" value="lw16_print_queue_test_label">';
 		printf( '<input type="hidden" name="printer_id" value="%s">', esc_attr( $printer->printer_id ) );
 		wp_nonce_field( self::NONCE );
+		echo '<select name="format" style="margin-right:4px">';
+		printf( '<option value="dhl">%s</option>', esc_html__( 'DHL-Mass 103 × 199 mm', 'lindenweg16' ) );
+		foreach ( LabelSheet::rolls() as $key => $roll ) {
+			printf( '<option value="%s">%s</option>', esc_attr( $key ), esc_html( $roll['label'] ) );
+		}
+		echo '</select>';
 		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Testlabel drucken', 'lindenweg16' ) );
 		echo '</form>';
 
