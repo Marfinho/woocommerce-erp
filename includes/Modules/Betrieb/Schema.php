@@ -824,6 +824,76 @@ class Schema {
 			KEY created_at (created_at)
 		) {$charset_collate};";
 
+		/* ---------------------------------------------------------------
+		 * Bambu-Lab-Anbindung: Drucker (per LAN-Modus über einen kleinen
+		 * Bridge-Dienst auf dem Raspberry Pi) und ihre 3MF-Druckaufträge.
+		 *
+		 * Dieselbe Bauform wie die Etikettendrucker-Warteschlange oben: Ein
+		 * Bridge-Prozess authentifiziert sich per Bearer-Token (nur gehasht
+		 * gespeichert), holt wartende Jobs per Long-Poll ab und meldet den
+		 * per MQTT gelesenen Live-Status zurück. geraet_id verknüpft den
+		 * Bambu-Drucker optional mit dem bereits vorhandenen Geräteeintrag
+		 * der Kalkulation (wp_lw16_printers) – für Stundensatz und Wartung
+		 * bleibt dieser die alleinige Quelle, hier kommt nur die
+		 * Live-Anbindung dazu.
+		 * ------------------------------------------------------------- */
+
+		$t[] = "CREATE TABLE {$p}bambu_printers (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			geraet_id BIGINT UNSIGNED NULL,
+			printer_id VARCHAR(50) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			bambu_serial VARCHAR(50) NULL,
+			ip VARCHAR(45) NULL,
+			access_code VARCHAR(20) NULL,
+			printer_model VARCHAR(100) NULL,
+			token_hash CHAR(64) NOT NULL,
+			token_created_at DATETIME NULL,
+			active TINYINT(1) NOT NULL DEFAULT 1,
+			last_seen_at DATETIME NULL,
+			last_ip VARCHAR(45) NULL,
+			status VARCHAR(20) NULL,
+			progress_percent TINYINT UNSIGNED NULL,
+			remaining_minutes SMALLINT UNSIGNED NULL,
+			nozzle_temp DECIMAL(5,1) NULL,
+			bed_temp DECIMAL(5,1) NULL,
+			last_error TEXT NULL,
+			last_status_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY printer_id (printer_id),
+			KEY geraet_id (geraet_id)
+		) {$charset_collate};";
+
+		// Ein Bambu-Job referenziert eine bereits abgelegte 3MF-Datei und
+		// optional den Fertigungsauftrag (wp_lw16_druckauftrag), aus dem er
+		// entstanden ist – darüber trägt ein abgeschlossener Druck seine
+		// Ist-Druckzeit automatisch in die Ist-vs-Plan-Auswertung ein
+		// (siehe ProductionModule::complete_job()).
+		$t[] = "CREATE TABLE {$p}bambu_jobs (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			druckauftrag_id BIGINT UNSIGNED NULL,
+			file_path VARCHAR(255) NOT NULL,
+			file_name VARCHAR(191) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'queued',
+			progress_percent TINYINT UNSIGNED NULL,
+			remaining_minutes SMALLINT UNSIGNED NULL,
+			attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			locked_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			started_at DATETIME NULL,
+			completed_at DATETIME NULL,
+			actual_print_minutes DECIMAL(8,2) NULL,
+			error_message TEXT NULL,
+			PRIMARY KEY  (id),
+			KEY printer_status (printer_id, status),
+			KEY status (status),
+			KEY druckauftrag_id (druckauftrag_id),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
 		return $t;
 	}
 }

@@ -1,0 +1,23 @@
+[Unit]
+Description=Haster/Lindenweg16 Bambu-Lab-Bridge
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/bambu-bridge
+ExecStart=/opt/bambu-bridge/venv/bin/python3 /opt/bambu-bridge/bambu_bridge.py
+Restart=always
+RestartSec=5
+
+# Nach einem Stromausfall/Neustart des Pi startet der Dienst selbstständig
+# wieder (systemd "enable" + der Server hält offene Jobs ohnehin vor).
+StartLimitIntervalSec=0
+
+# Kein eingehender Port nötig - die Bridge baut nur ausgehende
+# Verbindungen auf (zu WordPress per HTTPS, zum Drucker per MQTT/FTPS im
+# selben lokalen Netz).
+
+[Install]
+WantedBy=multi-user.target
