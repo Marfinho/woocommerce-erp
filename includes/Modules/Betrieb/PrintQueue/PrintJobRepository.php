@@ -157,7 +157,9 @@ class PrintJobRepository {
 				'source'         => isset( $data['source'] ) ? sanitize_key( (string) $data['source'] ) : 'dhl_label',
 				'label_path'     => (string) $data['label_path'],
 				'label_filename' => (string) $data['label_filename'],
-				'label_format'   => isset( $data['label_format'] ) ? (string) $data['label_format'] : '910-300-610',
+				// Spalte ist VARCHAR(20) - ein zu langer Wert lässt den Insert
+				// unter strict SQL mode fehlschlagen statt nur zu kürzen.
+				'label_format'   => isset( $data['label_format'] ) ? substr( (string) $data['label_format'], 0, 20 ) : '910-300-610',
 				'width_mm'       => isset( $data['width_mm'] ) ? (int) $data['width_mm'] : 103,
 				'height_mm'      => isset( $data['height_mm'] ) ? (int) $data['height_mm'] : 199,
 				'status'         => 'queued',

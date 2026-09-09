@@ -178,7 +178,7 @@ class Exporter {
 		$breite   = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
 		$hoehe    = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
 		$anzahl   = count( $labels );
-		$job_id   = PrintQueueService::enqueue_pdf_labels( $printer_id, $pdf->output(), 'article_bin_label', $breite, $hoehe, $roll['label'] );
+		$job_id   = PrintQueueService::enqueue_pdf_labels( $printer_id, $pdf->output(), 'article_bin_label', $breite, $hoehe, $format );
 
 		if ( ! $job_id ) {
 			$this->redirect_to_labels( __( 'Der Druckjob konnte nicht angelegt werden – ist die Drucker-ID richtig geschrieben?', 'lindenweg16' ), 'error' );
