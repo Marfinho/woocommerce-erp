@@ -103,6 +103,8 @@ class PrintQueueRestApi {
 	 * @return bool|WP_Error
 	 */
 	public function authenticate( $request ) {
+		$this->send_nocache_headers();
+
 		$header = $request->get_header( 'authorization' );
 		$token  = '';
 
@@ -143,6 +145,28 @@ class PrintQueueRestApi {
 		$request->set_param( '_dhl_printer', $printer );
 
 		return true;
+	}
+
+	/**
+	 * Jede Antwort dieser API ist Live-Zustand für genau diesen einen
+	 * Drucker (per Bearer-Token) – ein Seiten-/CDN-Cache (hier: QUIC.cloud
+	 * vor LiteSpeed) darf sie unter keinen Umständen zwischenspeichern.
+	 * Ohne dieses "niemals cachen" friert ein Cache-Treffer den Zustand
+	 * ein (z. B. dauerhaft "kein Job da"), egal was sich in der
+	 * Datenbank tatsächlich ändert – der Pi-Client sieht dann nie mehr
+	 * einen neuen Job, ohne dass irgendwo ein Fehler auftaucht.
+	 */
+	protected function send_nocache_headers() {
+		if ( headers_sent() ) {
+			return;
+		}
+
+		nocache_headers();
+
+		// LiteSpeed/QUIC.cloud respektiert diese Kopfzeile ausdrücklich als
+		// Anweisung "diese Antwort nie cachen", unabhängig von den
+		// allgemeinen Cache-Control-Regeln der Seite.
+		header( 'X-LiteSpeed-Cache-Control: no-cache' );
 	}
 
 	/**
