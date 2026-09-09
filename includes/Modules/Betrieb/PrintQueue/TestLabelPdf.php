@@ -39,20 +39,42 @@ class TestLabelPdf {
 	/**
 	 * PDF-Inhalt als Zeichenkette (roh, nicht base64).
 	 *
-	 * @param array $zeilen    Textzeilen, oben nach unten.
-	 * @param int   $width_mm  Breite in mm.
-	 * @param int   $height_mm Höhe in mm.
+	 * @param array $zeilen     Textzeilen, oben nach unten.
+	 * @param int   $width_mm   Breite in mm.
+	 * @param int   $height_mm  Höhe in mm.
+	 * @param bool  $landscape  Quer beschriftet (z. B. DK-11201)? Die Seite
+	 *                          bleibt dabei exakt so gross wie das Etikett -
+	 *                          nur der Inhalt wird gedreht, genau wie
+	 *                          Pdf::begin_quarter_turn() es für die echten
+	 *                          Etiketten macht. Ohne das käme der Text bei
+	 *                          einem quer beschrifteten Format um 90 Grad
+	 *                          verdreht aus dem Drucker.
 	 * @return string
 	 */
-	public static function build( array $zeilen = array( 'HASTER HAKEN', 'TESTLABEL', 'KEINE VERSENDUNG' ), $width_mm = 103, $height_mm = 199 ) {
+	public static function build( array $zeilen = array( 'HASTER HAKEN', 'TESTLABEL', 'KEINE VERSENDUNG' ), $width_mm = 103, $height_mm = 199, $landscape = false ) {
 		list( $w, $h ) = self::page_points( $width_mm, $height_mm );
 
-		$content  = "BT /F1 20 Tf 14 " . ( $h - 40 ) . " Td 24 TL\n";
+		// Logische Zeichenfläche: bei quer beschrifteten Etiketten sind
+		// Breite und Höhe vertauscht, die physische Seite (MediaBox)
+		// bleibt unangetastet.
+		$log_w = $landscape ? $h : $w;
+		$log_h = $landscape ? $w : $h;
+
+		$content = '';
+		if ( $landscape ) {
+			$content .= sprintf( "q 0 1 -1 0 %s 0 cm\n", self::pt( $w ) );
+		}
+
+		$content .= "BT /F1 20 Tf 14 " . ( $log_h - 40 ) . " Td 24 TL\n";
 		foreach ( $zeilen as $zeile ) {
 			$content .= '(' . self::escape( $zeile ) . ") Tj 0 -28 Td\n";
 		}
 		$content .= "ET\n";
-		$content .= sprintf( '0 0 0 RG %s %s %s %s re S', self::pt( 6 ), self::pt( 6 ), self::pt( $w - 12 ), self::pt( $h - 12 ) );
+		$content .= sprintf( '0 0 0 RG %s %s %s %s re S', self::pt( 6 ), self::pt( 6 ), self::pt( $log_w - 12 ), self::pt( $log_h - 12 ) );
+
+		if ( $landscape ) {
+			$content .= "\nQ";
+		}
 
 		$objects   = array();
 		$objects[] = "<< /Type /Catalog /Pages 2 0 R >>";

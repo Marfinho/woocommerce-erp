@@ -225,4 +225,24 @@ class PrintQueueTest extends TestCase {
 
 		$this->assertStringContainsString( '\\(mit\\)', $pdf );
 	}
+
+	/**
+	 * Bei einem quer beschrifteten Testlabel (z. B. DK-11201) wird der
+	 * Inhalt gedreht (Rotationsmatrix in der PDF-Syntax), nicht die
+	 * Seite - sonst kommt der Text um 90 Grad verdreht aus dem Drucker.
+	 */
+	public function test_testlabel_quer_dreht_den_inhalt_nicht_die_seite() {
+		$hochkant = TestLabelPdf::build( array( 'X' ), 29, 90, false );
+		$quer     = TestLabelPdf::build( array( 'X' ), 29, 90, true );
+
+		$this->assertStringNotContainsString( ' cm', $hochkant );
+		$this->assertStringContainsString( ' cm', $quer, 'Die Rotationsmatrix (cm-Operator) muss vorhanden sein.' );
+
+		// Beide MediaBoxen bleiben exakt gleich gross - nur der Inhalt
+		// dreht sich, nicht das physische Etikettenmass.
+		list( $w, $h ) = TestLabelPdf::page_points( 29, 90 );
+		$mediabox = sprintf( '/MediaBox [0 0 %s %s]', rtrim( rtrim( number_format( $w, 2, '.', '' ), '0' ), '.' ), rtrim( rtrim( number_format( $h, 2, '.', '' ), '0' ), '.' ) );
+		$this->assertStringContainsString( $mediabox, $hochkant );
+		$this->assertStringContainsString( $mediabox, $quer );
+	}
 }
