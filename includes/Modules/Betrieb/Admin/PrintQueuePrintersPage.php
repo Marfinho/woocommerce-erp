@@ -103,16 +103,18 @@ class PrintQueuePrintersPage {
 			$roll         = LabelSheet::roll( $format );
 			$width_mm     = (float) $roll['w'];
 			$height_mm    = (float) $roll['h'];
+			$landscape    = LabelSheet::is_landscape( $roll );
 			// Kurzer technischer Schlüssel statt der langen Beschreibung -
 			// die Spalte label_format ist VARCHAR(20).
 			$label_format = $format;
 		} else {
 			$width_mm     = 103;
 			$height_mm    = 199;
+			$landscape    = false;
 			$label_format = '910-300-610';
 		}
 
-		$job_id = PrintQueueService::create_test_job( $printer_id, $width_mm, $height_mm, $label_format );
+		$job_id = PrintQueueService::create_test_job( $printer_id, $width_mm, $height_mm, $label_format, $landscape );
 
 		$this->back(
 			$job_id

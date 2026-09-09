@@ -77,13 +77,14 @@ class PrintQueueService {
 	 * zurückweisen (siehe README), aber auch bei CUPS druckt ein falsches
 	 * Mass nicht das, was man eigentlich prüfen wollte.
 	 *
-	 * @param string $printer_id  Drucker.
-	 * @param int    $width_mm    Breite in mm.
-	 * @param int    $height_mm   Höhe in mm.
+	 * @param string $printer_id   Drucker.
+	 * @param int    $width_mm     Breite in mm.
+	 * @param int    $height_mm    Höhe in mm.
 	 * @param string $label_format Freitext, nur zur Anzeige/Protokollierung.
+	 * @param bool   $landscape    Quer beschriftet (z. B. DK-11201)?
 	 * @return int Job-ID, 0 bei Fehler.
 	 */
-	public static function create_test_job( $printer_id, $width_mm = 103, $height_mm = 199, $label_format = '910-300-610' ) {
+	public static function create_test_job( $printer_id, $width_mm = 103, $height_mm = 199, $label_format = '910-300-610', $landscape = false ) {
 		$printer_id = sanitize_key( (string) $printer_id );
 		$width_mm   = max( 1, (int) $width_mm );
 		$height_mm  = max( 1, (int) $height_mm );
@@ -105,7 +106,8 @@ class PrintQueueService {
 				gmdate( 'Y-m-d H:i' ) . ' UTC',
 			),
 			$width_mm,
-			$height_mm
+			$height_mm,
+			$landscape
 		);
 
 		if ( false === file_put_contents( $pfad, $inhalt ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
