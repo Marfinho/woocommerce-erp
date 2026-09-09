@@ -19,9 +19,14 @@ class SettingsPage {
 
 	/**
 	 * Hooks registrieren.
+	 *
+	 * Kein eigener Menüpunkt mehr – diese Seite ist jetzt der Reiter
+	 * "Plugin" auf der gemeinsamen Einstellungen-Seite (siehe
+	 * Lindenweg16\Modules\Betrieb\Admin\SettingsPage::render(), das
+	 * render_content() dieser Klasse direkt aufruft). Der Speichern-Hook
+	 * bleibt unverändert bestehen, das Formular postet weiterhin hierher.
 	 */
 	public function register() {
-		add_action( 'lw16_render_page_lw16_einstellungen', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_save_settings', array( $this, 'save' ) );
 	}
 
@@ -115,12 +120,12 @@ class SettingsPage {
 	}
 
 	/**
-	 * Einstellungsformular rendern.
+	 * Einstellungsformular rendern – Inhalt ohne eigene Überschrift, zur
+	 * Einbettung als Reiter auf der gemeinsamen Einstellungen-Seite
+	 * (siehe Betrieb\Admin\SettingsPage::render_plugin_tab()).
 	 */
-	public function render() {
+	public function render_content() {
 		$values = Settings::all();
-		echo '<div class="wrap lw16-wrap">';
-		echo '<h1>' . esc_html__( 'Lindenweg16 – Einstellungen', 'lindenweg16' ) . '</h1>';
 
 		if ( isset( $_GET['updated'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Einstellungen gespeichert.', 'lindenweg16' ) . '</p></div>';
@@ -180,7 +185,7 @@ class SettingsPage {
 		$this->render_mail_templates( $values );
 
 		submit_button( __( 'Einstellungen speichern', 'lindenweg16' ) );
-		echo '</form></div>';
+		echo '</form>';
 	}
 
 	/**
@@ -355,7 +360,18 @@ class SettingsPage {
 
 		Settings::update( $clean );
 
-		wp_safe_redirect( add_query_arg( array( 'page' => 'lw16-einstellungen', 'updated' => 1 ), admin_url( 'admin.php' ) ) );
+		// Zurück auf den "Plugin"-Reiter der gemeinsamen Einstellungen-Seite
+		// (kein eigener Menüpunkt/Slug mehr, siehe register()).
+		wp_safe_redirect(
+			add_query_arg(
+				array(
+					'page'    => 'lw16-betrieb-einstellungen',
+					'view'    => 'plugin',
+					'updated' => 1,
+				),
+				admin_url( 'admin.php' )
+			)
+		);
 		exit;
 	}
 }

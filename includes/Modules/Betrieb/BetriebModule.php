@@ -76,10 +76,10 @@ class BetriebModule {
 			'lw16-betrieb-berichte'     => array( __( 'Berichte', 'lindenweg16' ), 'lw16_view_reports', MenuGroups::FINANZEN ),
 
 			'lw16-betrieb-benutzer'      => array( __( 'Benutzer & Rechte', 'lindenweg16' ), 'lw16_manage_users', MenuGroups::VERWALTUNG ),
-			// TODO: mit "Einstellungen: Plugin" (Menu.php) zu einer Seite
-			// mit Reitern zusammenlegen - bis dahin zwei getrennte, klar
-			// benannte Einträge statt eines mehrdeutigen "Einstellungen".
-			'lw16-betrieb-einstellungen' => array( __( 'Einstellungen: Kalkulation', 'lindenweg16' ), 'lw16_manage_settings', MenuGroups::VERWALTUNG ),
+			// Bündelt jetzt auch die vormals eigene "Lindenweg16 –
+			// Einstellungen" (Plugin/DHL) als weiteren Reiter, siehe
+			// SettingsPage::render_plugin_tab().
+			'lw16-betrieb-einstellungen' => array( __( 'Einstellungen', 'lindenweg16' ), 'lw16_manage_settings', MenuGroups::VERWALTUNG ),
 			'lw16-betrieb-import'        => array( __( 'Import & Doku', 'lindenweg16' ), 'lw16_manage_settings', MenuGroups::VERWALTUNG ),
 			'lw16-betrieb-zeit'          => array( __( 'Zeiterfassung', 'lindenweg16' ), 'lw16_capture', MenuGroups::VERWALTUNG ),
 			// Umbenannt von "Druck-Warteschlange: Drucker" - bündelt jetzt

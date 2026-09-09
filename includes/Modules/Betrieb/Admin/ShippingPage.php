@@ -312,7 +312,7 @@ class ShippingPage {
 						implode( ', ', $fehlt )
 					)
 				),
-				esc_url( admin_url( 'admin.php?page=lw16-einstellungen' ) ),
+				esc_url( admin_url( 'admin.php?page=lw16-betrieb-einstellungen&view=plugin' ) ),
 				esc_html__( 'Zu den Einstellungen', 'lindenweg16' )
 			);
 

@@ -56,10 +56,10 @@ class Menu {
 			'lw16-produktion'    => array( __( 'Produktion', 'lindenweg16' ), MenuGroups::FERTIGUNG ),
 			'lw16-support'       => array( __( 'Support', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
 			'lw16-anleitungen'   => array( __( 'Anleitungen', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
-			// TODO: mit "Einstellungen" aus Betrieb zu einer Seite mit
-			// Reitern zusammenlegen (siehe Absprache) - bis dahin zwei
-			// getrennte, klar benannte Einträge statt eines mehrdeutigen.
-			'lw16-einstellungen' => array( __( 'Einstellungen: Plugin', 'lindenweg16' ), MenuGroups::VERWALTUNG ),
+			// "Einstellungen" hat keinen eigenen Eintrag mehr - ist jetzt
+			// der Reiter "Plugin" auf der gemeinsamen Einstellungen-Seite
+			// unter Betrieb (Lindenweg16\Admin\SettingsPage::render_content()
+			// wird von dort direkt aufgerufen).
 		);
 
 		foreach ( $pages as $slug => $config ) {
