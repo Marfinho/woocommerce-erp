@@ -53,7 +53,7 @@ import sys
 import tempfile
 import threading
 import time
-from ftplib import FTP_TLS, error_perm
+from ftplib import FTP, FTP_TLS, error_perm
 from pathlib import Path
 from typing import Optional
 
@@ -428,6 +428,25 @@ class ImplicitFTP_TLS(FTP_TLS):
         if value is not None and not isinstance(value, ssl.SSLSocket):
             value = self.context.wrap_socket(value, server_hostname=None)
         self._sock = value
+
+    def ntransfercmd(self, cmd, rest=None):
+        """Wie FTP_TLS.ntransfercmd, aber mit erzwungener Session-
+        Wiederverwendung für den Datenkanal.
+
+        Bambu-Drucker setzen intern vsftpd mit require_ssl_reuse (Schutz
+        gegen FTP-Session-Hijacking) ein: der Datenkanal muss exakt die
+        TLS-Sitzung des Kontrollkanals wiederverwenden, sonst lehnt der
+        Drucker mit "522 SSL connection failed: session reuse required"
+        ab. ftplib.FTP_TLS macht das eigentlich selbst (session=self.sock.
+        session beim Wrap des Datenkanals) - in der auf dem Pi verwendeten
+        Python-Version griff das aber nicht zuverlässig, die Standard-
+        Methode lieferte denselben 522-Fehler. Deshalb hier bewusst
+        dieselbe Wiederverwendung erzwungen, statt sich auf die geerbte
+        Implementierung zu verlassen.
+        """
+        conn, size = FTP.ntransfercmd(self, cmd, rest)
+        conn = self.context.wrap_socket(conn, server_hostname=self.host, session=self.sock.session)
+        return conn, size
 
     def storbinary(self, cmd, fp, blocksize=8192, callback=None, rest=None):
         """Wie FTP_TLS.storbinary, aber ohne harten Fehler bei unsauberem
