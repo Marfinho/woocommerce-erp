@@ -1,0 +1,19 @@
+[Unit]
+Description=Haster/Lindenweg16 Headless-Slicing-Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/slicing-worker
+ExecStart=/opt/slicing-worker/venv/bin/python3 /opt/slicing-worker/slicing_worker.py
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+
+# Kein eingehender Port nötig - der Worker baut nur ausgehende
+# Verbindungen zu WordPress auf (HTTPS) und ruft lokal den Slicer auf.
+
+[Install]
+WantedBy=multi-user.target

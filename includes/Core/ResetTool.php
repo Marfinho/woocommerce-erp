@@ -141,6 +141,16 @@ class ResetTool {
 					// selbst liegen in shipping_labels und bleiben davon
 					// unberührt, solange dieser Bereich nicht mit angekreuzt ist.
 					'print_queue_jobs',
+					// Dasselbe gilt für die Bambu-Warteschlange: reine
+					// Warteschlangen-Buchhaltung, kein Beleg.
+					'bambu_jobs',
+					// Angeordnete Platten und Slicing-Aufträge sind ebenfalls
+					// reine Warteschlangen-Buchhaltung, kein Beleg - die
+					// tatsächlichen Druckdateien/Ergebnisse hängen ohnehin
+					// nur an einer laufenden Anordnung, nicht an einem
+					// abgeschlossenen Geschäftsvorfall.
+					'bambu_plate_jobs',
+					'slicing_jobs',
 				),
 			),
 			'altes_lager'  => array(
@@ -222,6 +232,12 @@ class ResetTool {
 			// keine Testdaten – ein Reset darf einen bereits eingerichteten
 			// Pi nicht aussperren.
 			'print_queue_printers',
+			// Dasselbe gilt für registrierte Bambu-Lab-Drucker samt Token
+			// und Verbindungsdaten (IP, Zugangscode).
+			'bambu_printers',
+			// Slicing-Profile (OrcaSlicer-Profildateien je Material und
+			// Druckermodell) sind ebenfalls Konfiguration, keine Testdaten.
+			'slicing_profiles',
 		);
 	}
 

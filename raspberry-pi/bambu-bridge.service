@@ -1,0 +1,41 @@
+[Unit]
+Description=Haster/Lindenweg16 Bambu-Lab-Bridge
+After=network-online.target
+Wants=network-online.target
+
+# Nach einem Stromausfall/Neustart des Pi startet der Dienst selbstständig
+# wieder; ohne Startversuch-Limit gibt systemd auch nach vielen
+# Fehlversuchen (z. B. Netz noch nicht da) nicht auf.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/bambu-bridge
+ExecStart=/opt/bambu-bridge/venv/bin/python3 /opt/bambu-bridge/bambu_bridge.py
+Restart=always
+RestartSec=5
+
+# Grundabsicherung: Der Dienst braucht nur ausgehende Netzverbindungen und
+# sein eigenes Arbeitsverzeichnis - kein Schreibzugriff auf das restliche
+# System, keine zusätzlichen Rechte.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# StateDirectory legt /var/lib/bambu-bridge selbst an (samt Besitzrechten
+# für User= oben), noch bevor ExecStart läuft - anders als ReadWritePaths=,
+# das einen bereits vorhandenen Pfad voraussetzt und sonst mit
+# "Failed to set up mount namespacing" abbricht, weil der Pfad beim ersten
+# Start noch nicht existiert.
+StateDirectory=bambu-bridge
+# Wird DOWNLOAD_DIRECTORY in der .env auf einen anderen Namen unterhalb von
+# /var/lib geändert, muss StateDirectory= hier entsprechend angepasst werden
+# - ein Pfad ausserhalb von /var/lib braucht stattdessen ReadWritePaths=.
+
+# Kein eingehender Port nötig - die Bridge baut nur ausgehende
+# Verbindungen auf (zu WordPress per HTTPS, zum Drucker per MQTT/FTPS im
+# selben lokalen Netz).
+
+[Install]
+WantedBy=multi-user.target

@@ -824,6 +824,166 @@ class Schema {
 			KEY created_at (created_at)
 		) {$charset_collate};";
 
+		/* ---------------------------------------------------------------
+		 * Bambu-Lab-Anbindung: Drucker (per LAN-Modus über einen kleinen
+		 * Bridge-Dienst auf dem Raspberry Pi) und ihre 3MF-Druckaufträge.
+		 *
+		 * Dieselbe Bauform wie die Etikettendrucker-Warteschlange oben: Ein
+		 * Bridge-Prozess authentifiziert sich per Bearer-Token (nur gehasht
+		 * gespeichert), holt wartende Jobs per Long-Poll ab und meldet den
+		 * per MQTT gelesenen Live-Status zurück. geraet_id verknüpft den
+		 * Bambu-Drucker optional mit dem bereits vorhandenen Geräteeintrag
+		 * der Kalkulation (wp_lw16_printers) – für Stundensatz und Wartung
+		 * bleibt dieser die alleinige Quelle, hier kommt nur die
+		 * Live-Anbindung dazu.
+		 * ------------------------------------------------------------- */
+
+		// bed_width_mm/bed_height_mm: Druckbett-Innenmass. Leer gelassen,
+		// greift die Plattenanordnung auf eine Schätzung nach Druckermodell
+		// zurück (siehe Bambu\BedSizeLookup) – hier eingetragen, hat das
+		// Vorrang, falls das eigene Gerät (z. B. ein modifiziertes Bett)
+		// von der Bambu-Werksangabe abweicht.
+		$t[] = "CREATE TABLE {$p}bambu_printers (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			geraet_id BIGINT UNSIGNED NULL,
+			printer_id VARCHAR(50) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			bambu_serial VARCHAR(50) NULL,
+			ip VARCHAR(45) NULL,
+			access_code VARCHAR(20) NULL,
+			printer_model VARCHAR(100) NULL,
+			bed_width_mm SMALLINT UNSIGNED NULL,
+			bed_height_mm SMALLINT UNSIGNED NULL,
+			token_hash CHAR(64) NOT NULL,
+			token_created_at DATETIME NULL,
+			active TINYINT(1) NOT NULL DEFAULT 1,
+			last_seen_at DATETIME NULL,
+			last_ip VARCHAR(45) NULL,
+			status VARCHAR(20) NULL,
+			progress_percent TINYINT UNSIGNED NULL,
+			remaining_minutes SMALLINT UNSIGNED NULL,
+			nozzle_temp DECIMAL(5,1) NULL,
+			bed_temp DECIMAL(5,1) NULL,
+			last_error TEXT NULL,
+			last_status_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY printer_id (printer_id),
+			KEY geraet_id (geraet_id)
+		) {$charset_collate};";
+
+		// Ein Bambu-Job referenziert eine bereits abgelegte 3MF-Datei und
+		// optional den Fertigungsauftrag (wp_lw16_druckauftrag), aus dem er
+		// entstanden ist – darüber trägt ein abgeschlossener Druck seine
+		// Ist-Druckzeit automatisch in die Ist-vs-Plan-Auswertung ein
+		// (siehe ProductionModule::complete_job()). work_order_id/
+		// article_revision_id/parts_planned tragen denselben Gedanken in
+		// das aktuelle Modul Betrieb: Ist der Job aus "Bedarf direkt
+		// drucken" entstanden, bucht ein abgeschlossener Druck automatisch
+		// einen Druckjournal-Eintrag und schliesst den Fertigungsauftrag
+		// (siehe Bambu\BambuService::dispatch_from_demand() und
+		// BambuJobRepository::complete()). Beide Verknüpfungen (die alte
+		// über druckauftrag_id und die neue über work_order_id) schliessen
+		// sich je Job gegenseitig aus, sind aber unabhängig gültig - je
+		// nachdem, über welchen Weg der Job entstanden ist.
+		$t[] = "CREATE TABLE {$p}bambu_jobs (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			druckauftrag_id BIGINT UNSIGNED NULL,
+			work_order_id BIGINT UNSIGNED NULL,
+			article_revision_id BIGINT UNSIGNED NULL,
+			parts_planned SMALLINT UNSIGNED NULL,
+			plate_job_id BIGINT UNSIGNED NULL,
+			file_path VARCHAR(255) NOT NULL,
+			file_name VARCHAR(191) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'queued',
+			progress_percent TINYINT UNSIGNED NULL,
+			remaining_minutes SMALLINT UNSIGNED NULL,
+			attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			locked_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			started_at DATETIME NULL,
+			completed_at DATETIME NULL,
+			actual_print_minutes DECIMAL(8,2) NULL,
+			error_message TEXT NULL,
+			PRIMARY KEY  (id),
+			KEY printer_status (printer_id, status),
+			KEY status (status),
+			KEY druckauftrag_id (druckauftrag_id),
+			KEY work_order_id (work_order_id),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
+		/* ---------------------------------------------------------------
+		 * Plattenanordnung: mehrere Bauteile (verschiedene Artikel und/
+		 * oder mehrfach) automatisch auf einem virtuellen Druckbett
+		 * angeordnet (siehe Nesting\BinPacker) und zu einer gemeinsamen
+		 * Projekt-3MF zusammengesetzt (siehe Nesting\PlateComposer). Diese
+		 * Projekt-3MF ist noch UNGESLICT - erst nach dem Slicing (manuell
+		 * oder über die Slicing-Warteschlange unten) landet das Ergebnis
+		 * in der eigentlichen Bambu-Druckwarteschlange (bambu_jobs).
+		 * ------------------------------------------------------------- */
+
+		$t[] = "CREATE TABLE {$p}bambu_plate_jobs (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'entworfen',
+			file_path VARCHAR(255) NOT NULL,
+			file_name VARCHAR(191) NOT NULL,
+			plate_width_mm SMALLINT UNSIGNED NOT NULL,
+			plate_height_mm SMALLINT UNSIGNED NOT NULL,
+			placements LONGTEXT NOT NULL,
+			bambu_job_id BIGINT UNSIGNED NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			updated_at DATETIME NULL,
+			note TEXT NULL,
+			PRIMARY KEY  (id),
+			KEY printer_status (printer_id, status),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
+		/* ---------------------------------------------------------------
+		 * Headless-Slicing: Profile (Drucker-/Filament-/Prozess-JSON aus
+		 * OrcaSlicer je Material × Druckermodell) und die Warteschlange, die
+		 * ein Slicing-Worker abarbeitet. Dieselbe Claim/Lock-Bauform wie die
+		 * übrigen Warteschlangen dieses Plugins.
+		 * ------------------------------------------------------------- */
+
+		$t[] = "CREATE TABLE {$p}slicing_profiles (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			material VARCHAR(20) NOT NULL,
+			printer_model VARCHAR(100) NOT NULL,
+			printer_profile_path VARCHAR(255) NOT NULL,
+			filament_profile_path VARCHAR(255) NOT NULL,
+			process_profile_path VARCHAR(255) NOT NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY material_printer (material, printer_model)
+		) {$charset_collate};";
+
+		$t[] = "CREATE TABLE {$p}slicing_jobs (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			plate_job_id BIGINT UNSIGNED NOT NULL,
+			profile_id BIGINT UNSIGNED NOT NULL,
+			status VARCHAR(20) NOT NULL DEFAULT 'queued',
+			attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			locked_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NULL,
+			started_at DATETIME NULL,
+			completed_at DATETIME NULL,
+			result_file_path VARCHAR(255) NULL,
+			result_file_name VARCHAR(191) NULL,
+			error_message TEXT NULL,
+			PRIMARY KEY  (id),
+			KEY status (status),
+			KEY plate_job_id (plate_job_id),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
 		return $t;
 	}
 }

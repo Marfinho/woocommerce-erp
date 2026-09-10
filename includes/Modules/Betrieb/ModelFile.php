@@ -31,6 +31,15 @@ class ModelFile {
 	const MAX_BYTES = 67108864;
 
 	/**
+	 * Höchstgrösse des entpackten 3dmodel.model. Schutz vor einer
+	 * Zip-Bombe: Die 3MF selbst ist klein, ihr Inhalt kann es nicht sein
+	 * (siehe read_model()). 128 MB XML entspricht einem sehr feinen Netz
+	 * mit Millionen Dreiecken – darüber ist es keine Konstruktionsdatei
+	 * mehr.
+	 */
+	const MAX_MODEL_XML_BYTES = 134217728;
+
+	/**
 	 * Absoluter Pfad zu einer abgelegten Datei.
 	 *
 	 * @param string $name Dateiname ohne Pfad.
@@ -54,7 +63,11 @@ class ModelFile {
 		$base = realpath( Installer::models_dir() );
 		$real = realpath( self::path( $name ) );
 
-		if ( ! $base || ! $real || 0 !== strpos( $real, $base ) || ! is_file( $real ) ) {
+		// Mit Trennzeichen vergleichen – sonst passt der Präfix auch auf ein
+		// gleichnamig beginnendes Nachbarverzeichnis. Der Name ist durch
+		// path() ohnehin schon auf basename() reduziert; beides zusammen
+		// schliesst den Ausbruch strukturell aus.
+		if ( ! $base || ! $real || 0 !== strpos( $real, rtrim( $base, '/\\' ) . DIRECTORY_SEPARATOR ) || ! is_file( $real ) ) {
 			return '';
 		}
 
@@ -77,7 +90,20 @@ class ModelFile {
 			return '';
 		}
 
-		$xml = $zip->getFromName( ThreeMf::MODEL_PATH );
+		// Vor dem Entpacken die angekündigte Größe prüfen. Eine 3MF ist ein
+		// ZIP, und ein ZIP kann stark komprimiert sein: Aus wenigen Megabyte
+		// Datei lassen sich Gigabyte Inhalt entpacken ("Zip-Bombe"). Ohne
+		// diese Prüfung ginge der ganze Inhalt in eine PHP-Variable und
+		// risse den Prozess am Speicherlimit ab. Ein echtes 3dmodel.model
+		// bleibt weit unter der Grenze – auch bei sehr feiner Geometrie.
+		$stat = $zip->statName( ThreeMf::MODEL_PATH );
+
+		if ( ! is_array( $stat ) || $stat['size'] > self::MAX_MODEL_XML_BYTES ) {
+			$zip->close();
+			return '';
+		}
+
+		$xml = $zip->getFromName( ThreeMf::MODEL_PATH, self::MAX_MODEL_XML_BYTES );
 		$zip->close();
 
 		return is_string( $xml ) ? $xml : '';

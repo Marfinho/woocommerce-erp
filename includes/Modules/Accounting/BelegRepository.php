@@ -460,6 +460,10 @@ class BelegRepository {
 	 * @return string
 	 */
 	public static function file_path( $filename ) {
-		return trailingslashit( Installer::belege_dir() ) . ltrim( $filename, '/' );
+		// basename() statt ltrim(): Ein Pfadanteil im gespeicherten Namen –
+		// gleich woher er stammt – darf nicht aus der Ablage herausführen.
+		// Die Prüfung beim Ausliefern bleibt trotzdem bestehen; ein Schutz,
+		// der nur an einer Stelle sitzt, fällt mit ihr.
+		return trailingslashit( Installer::belege_dir() ) . basename( (string) $filename );
 	}
 }

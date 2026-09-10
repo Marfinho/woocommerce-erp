@@ -248,7 +248,9 @@ class LoyaltyFrontend {
 		$credit_verf = LoyaltyRepository::get_credit( $user_id );
 		$points_verf = LoyaltyRepository::get_points( $user_id );
 
-		$use_credit = ! empty( $_POST['use_credit'] ) ? min( $credit_verf, (float) $_POST['use_credit'] ) : 0;
+		// Nach unten wie nach oben begrenzen: Ein negativer Wert aus dem
+		// Formular ist kein Einsatz, sondern ein Aufschlag.
+		$use_credit = ! empty( $_POST['use_credit'] ) ? max( 0, min( $credit_verf, (float) $_POST['use_credit'] ) ) : 0;
 		$use_points = isset( $_POST['use_points'] ) ? min( $points_verf, absint( $_POST['use_points'] ) ) : 0;
 
 		if ( WC()->session ) {
