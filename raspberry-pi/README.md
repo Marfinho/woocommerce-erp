@@ -145,7 +145,7 @@ venv/bin/pip install -r requirements-brother-ql.txt
 
 ### 7./8. `.env` konfigurieren und Token eintragen
 
-Im WordPress-Backend unter **Lindenweg16 → Betrieb → Druck-Warteschlange: Drucker** einen
+Im WordPress-Backend unter **Verwaltung → Etikettendrucker** einen
 Drucker anlegen (z. B. Drucker-ID `eg_dhl`, Name „EG DHL"). Das dabei
 angezeigte Token wird **nur einmalig** angezeigt – sofort übernehmen.
 
@@ -187,7 +187,7 @@ Der Dienst startet nach jedem Neustart des Pi automatisch wieder
 
 ### 11. Testlabel aus WordPress drucken
 
-Im WordPress-Backend unter **Lindenweg16 → Betrieb → Druck-Warteschlange: Drucker** bei dem
+Im WordPress-Backend unter **Verwaltung → Etikettendrucker** bei dem
 angelegten Drucker auf **„Testlabel drucken"** klicken. Der Pi holt den
 Job beim nächsten Kontakt ab (in der Regel deutlich unter 5 Sekunden) und
 druckt ein Label mit dem Text „HASTER HAKEN / TESTLABEL / KEINE
@@ -348,7 +348,7 @@ WooCommerce-Testbestellung anlegen
         ↓
 DHL-Label erzeugen (Einstellung "Automatisch drucken" muss aktiv sein)
         ↓
-Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: neuer Eintrag "Wartend"
+Verwaltung → Etikettendrucker → Reiter „Aufträge": neuer Eintrag "Wartend"
         ↓
 Pi erkennt den Job (journalctl -u haster-print -f zeigt "Job … verfügbar")
         ↓
@@ -356,7 +356,7 @@ Pi lädt das PDF herunter und übergibt es an CUPS
         ↓
 Etikett kommt am Drucker heraus
         ↓
-Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: Eintrag wechselt auf "Gedruckt"
+Verwaltung → Etikettendrucker → Reiter „Aufträge": Eintrag wechselt auf "Gedruckt"
 ```
 
 ## Bambu-Lab-Bridge (3D-Drucker)
@@ -364,7 +364,7 @@ Lindenweg16 → Betrieb → Druck-Warteschlange: Jobs: Eintrag wechselt auf "Ged
 Zweiter, unabhängiger Dienst in diesem Ordner: `bambu_bridge.py`
 verbindet einen Bambu-Lab-3D-Drucker im **LAN-Modus** (kein
 Bambu-Cloud-Login) mit der Bambu-Warteschlange von WordPress
-(`Lindenweg16 → Betrieb → Bambu-Lab-Drucker`). Sie holt geslicte
+(`Fertigung → Bambu-Lab-Drucker`). Sie holt geslicte
 Druckdateien (`.gcode.3mf`) per Polling ab (Long Polling optional, siehe
 unten), lädt sie per **implizitem FTPS** (Port 990) auf den Drucker,
 startet den Druck per MQTT und meldet Fortschritt sowie Live-Status
@@ -408,7 +408,7 @@ Neustart des Druckers ändert und die `.env.bambu` dadurch veraltet.
 
 ### 2. Im WordPress-Backend: Drucker anlegen
 
-Unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker** einen Drucker
+Unter **Fertigung → Bambu-Lab-Drucker** einen Drucker
 anlegen (Drucker-ID, Name, IP, Zugangscode, Seriennummer wie in Schritt 1
 notiert). Das dabei angezeigte Token wird **nur einmalig** angezeigt –
 sofort übernehmen.
@@ -452,7 +452,7 @@ journalctl -u bambu-bridge -f
 
 ### 6. Test
 
-Im WordPress-Backend unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker**
+Im WordPress-Backend unter **Fertigung → Bambu-Lab-Drucker**
 sollte der Drucker nach kurzer Zeit als „Online" mit Live-Status
 erscheinen. Über den Reiter **„Aufträge"** lässt sich eine geslicte
 `.gcode.3mf`-Datei hochladen und einreihen – oder eine Druckdatei wählen,
@@ -542,7 +542,7 @@ aktuellen Quellen dieser Projekte.
 
 Dritter, unabhängiger Dienst in diesem Ordner: `slicing_worker.py`
 schliesst die Kette **Bedarf → Plattenanordnung → automatisch slicen →
-Bambu-Warteschlange** ab. Unter „Lindenweg16 → Betrieb →
+Bambu-Warteschlange** ab. Unter „Fertigung →
 Bambu-Lab-Drucker" lassen sich im Reiter **„Platte anordnen"** mehrere
 Artikel und Mengen automatisch auf dem virtuellen Druckbett anordnen
 (konturbasiertes Nesting anhand der tatsächlichen Bauteilform, nicht nur
@@ -572,7 +572,7 @@ Programm für Schritt 4 notieren.
 
 In OrcaSlicer bzw. Bambu Studio für jedes verwendete Material × Drucker
 das Drucker-, Filament- und Prozessprofil exportieren (Rechtsklick auf
-das Profil → „Export"). Unter **Lindenweg16 → Betrieb →
+das Profil → „Export"). Unter **Fertigung →
 Bambu-Lab-Drucker → Reiter „Slicing-Profile"** die drei Dateien je
 Material/Druckermodell hochladen und dort auch das Worker-Token
 erzeugen (**„Token neu erzeugen"**, wird nur einmalig angezeigt).

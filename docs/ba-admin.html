@@ -39,6 +39,7 @@
 		<li><a href="#preise">Kalkulation und Preise</a></li>
 		<li><a href="#buchhaltung">Buchhaltung</a></li>
 		<li><a href="#kasse">Kasse, Marketing, Events, Loyalty, Support</a></li>
+		<li><a href="#geraete">Geräte am Raspberry Pi: Etiketten, Bambu-Lab und Slicing</a></li>
 		<li><a href="#berichte">Berichte, Ziele und Monatsabschluss</a></li>
 		<li><a href="#pruefung">Systemprüfung und Protokollkette</a></li>
 		<li><a href="#import">Import und Verfahrensdokumentation</a></li>
@@ -60,7 +61,7 @@
 <thead><tr><th>Menü</th><th>Inhalt</th></tr></thead>
 <tbody>
 <tr><td><strong>Verkauf</strong> (Laden)</td><td>Dashboard, Bestellungen, Versand, Kontakte/B2B, Kasse, Marketing, Loyalty, Events</td></tr>
-<tr><td><strong>Fertigung</strong> (Hammer)</td><td>Artikel &amp; Revisionen, Konfigurator, Kapazität, Qualität, Druckjournal, 3D-Drucker &amp; Wartung, Produktion</td></tr>
+<tr><td><strong>Fertigung</strong> (Hammer)</td><td>Artikel &amp; Revisionen, Konfigurator, Kapazität, Qualität, Druckjournal, 3D-Drucker &amp; Wartung, Bambu-Lab-Drucker, Produktion</td></tr>
 <tr><td><strong>Lager</strong> (Archiv)</td><td>Lager, Lagerplätze/Fertigung/Picklisten, Material, Bedarf</td></tr>
 <tr><td><strong>Finanzen</strong> (Balkendiagramm)</td><td>Dashboard: Finanzen, Buchhaltung, Reporting, Berichte</td></tr>
 <tr><td><strong>Verwaltung</strong> (Zahnrad)</td><td>Benutzer &amp; Rechte, Einstellungen (mit Reiter „Plugin“ für Firma/DHL/E-Mail), Import &amp; Doku, Support, Anleitungen, Zeiterfassung, Etikettendrucker, Livegang</td></tr>
@@ -126,7 +127,8 @@
 <tr><td>8</td><td>Revisionen und Stücklisten</td><td>gleiche Seite, andere Reiter</td><td>Ohne sie keine Herstellkosten</td></tr>
 <tr><td>9</td><td>Rabattstaffel</td><td>Verwaltung → Einstellungen → Rabattstaffel B2B</td><td>Wird bei jeder Händlerbestellung aufgelöst</td></tr>
 <tr><td>10</td><td>Benutzer und Rechteprofile</td><td>Verwaltung → Benutzer &amp; Rechte</td><td>Damit alle arbeiten können</td></tr>
-<tr><td>11</td><td>Livegang (Probedaten löschen)</td><td>Verwaltung → Livegang</td><td>Ganz zum Schluss, siehe Kapitel 16</td></tr>
+<tr><td>11</td><td>Geräte anbinden: Etikettendrucker, Bambu-Lab, Slicing</td><td>Verwaltung → Etikettendrucker, Fertigung → Bambu-Lab-Drucker</td><td>Braucht die Gerätedaten aus Schritt 5, siehe Kapitel 12</td></tr>
+<tr><td>12</td><td>Livegang (Probedaten löschen)</td><td>Verwaltung → Livegang</td><td>Ganz zum Schluss, siehe Kapitel 17</td></tr>
 </tbody>
 </table>
 </div>
@@ -369,7 +371,7 @@
 
 <h2 id="stammdaten"><span class="nr">8.</span> Stammdaten anlegen</h2>
 
-<p>Der ausführliche Weg steht in der Anleitung <a href="ba-produktion.html">Produktion</a>, Kapitel 10. Hier nur, was aus Verwaltungssicht wichtig ist.</p>
+<p>Der ausführliche Weg steht in der Anleitung <a href="ba-produktion.html">Produktion</a>, Kapitel 11. Hier nur, was aus Verwaltungssicht wichtig ist.</p>
 
 <figure>
 	<img src="bilder/artikel-liste.png" alt="Artikelliste mit Nummer, Bezeichnung, Beschaffungsweg, Status und Preis">
@@ -639,7 +641,96 @@
 	<figcaption>Kundenanfragen aus dem Formular auf der Website. Jede Statusänderung wird protokolliert.</figcaption>
 </figure>
 
-<h2 id="berichte"><span class="nr">12.</span> Berichte, Ziele und Monatsabschluss</h2>
+<h2 id="geraete"><span class="nr">12.</span> Geräte am Raspberry Pi: Etiketten, Bambu-Lab und Slicing</h2>
+
+<p>Drei Dienste verbinden das Plugin mit echter Hardware. Alle drei laufen auf einem kleinen Rechner im Haus – üblicherweise ein Raspberry Pi –, alle drei melden sich <strong>von sich aus</strong> bei der Website und brauchen deshalb keinen offenen Port von außen. Die technische Schritt-für-Schritt-Anleitung mit allen Befehlen steht in <code>raspberry-pi/README.md</code> im Plugin-Ordner; hier steht, was die Verwaltung im Backend dazu tut und wie die Teile zusammenhängen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Dienst</th><th>Wofür</th><th>Seite im Backend</th></tr></thead>
+<tbody>
+<tr><td><strong>Etikettendrucker-Client</strong></td><td>Druckt Lagerplatz-, Artikel- und Geräteetiketten auf dem Brother QL</td><td><span class="weg">Verwaltung → Etikettendrucker</span></td></tr>
+<tr><td><strong>Bambu-Bridge</strong></td><td>Überträgt geslicte Druckdateien an die Bambu-Lab-Drucker und startet sie; meldet Status und Fortschritt zurück</td><td><span class="weg">Fertigung → Bambu-Lab-Drucker</span></td></tr>
+<tr><td><strong>Slicing-Worker</strong></td><td>Slict angeordnete Platten automatisch mit OrcaSlicer und reiht das Ergebnis in die Bambu-Warteschlange ein</td><td><span class="weg">Fertigung → Bambu-Lab-Drucker → Reiter „Slicing-Profile“</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Ein Token wird genau einmal angezeigt</span>
+	<p>Jeder dieser Dienste meldet sich mit einem Token an, das beim Anlegen <strong>einmalig</strong> auf dem Bildschirm steht. Verlässt du die Seite, ist es weg – gespeichert ist im Plugin nur eine Prüfsumme. Dann hilft nur „Token neu erzeugen“, und der Dienst muss neu eingetragen werden. Also: erst das Gerät konfigurieren, dann die Seite verlassen.</p>
+</div>
+
+<h3>Etikettendrucker</h3>
+
+<p><span class="weg">Verwaltung → Etikettendrucker</span></p>
+
+<p>Die Seite hat zwei Reiter: <strong>Drucker</strong> (anlegen, Token, Status) und <strong>Aufträge</strong> (die Warteschlange mit Erstellungs- und Druckzeitpunkt). Angelegt wird der Drucker hier, das Token wandert in die <code>.env</code> auf dem Pi. Danach gilt: Wer im Plugin auf „Etikett drucken“ klickt, legt einen Auftrag in die Warteschlange, und der Client holt ihn ab.</p>
+
+<p>Alle Etiketten benutzen bewusst dasselbe Rollenformat <strong>DK-11201</strong>, damit im Brother nur eine Rolle liegen muss.</p>
+
+<h3>Bambu-Lab-Drucker anbinden</h3>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker → Reiter „Drucker“</span></p>
+
+<p>Die Anbindung läuft über den <strong>LAN-Modus</strong> der Drucker – ohne Bambu-Cloud-Konto. Voraussetzung: Bridge und Drucker stehen im selben Netz.</p>
+
+<ol class="schritte">
+	<li>Am Drucker: <strong>Einstellungen → LAN-Modus</strong> aktivieren. IP-Adresse, Zugangscode und Seriennummer stehen dort auf einem Bildschirm – alle drei notieren.</li>
+	<li>Im Router eine <strong>feste IP</strong> für den Drucker reservieren. Ohne das ändert sich die Adresse irgendwann bei einem Neustart, und die Bridge findet das Gerät nicht mehr.</li>
+	<li>Im Backend <strong>Drucker anlegen</strong>: Drucker-ID (der technische Schlüssel, der später auf dem Pi eingetragen wird), Name, IP, Zugangscode, Seriennummer.</li>
+	<li>Bei <strong>Verknüpftes Gerät (Kalkulation)</strong> den passenden Eintrag aus <span class="weg">Fertigung → 3D-Drucker &amp; Wartung</span> auswählen. Das ist keine Kür: Ohne diese Verknüpfung fehlt der Maschinenstundensatz, die Betriebsstunden laufen nicht mit – und „Bedarf direkt drucken“ verweigert den Dienst.</li>
+	<li>Das angezeigte <strong>Token</strong> sofort auf dem Pi eintragen.</li>
+	<li>Auf dem Pi das Installationsskript <code>install-bambu-bridge.sh</code> ausführen. Es erkennt eine vorhandene Etikettendrucker-Installation, lässt sie unangetastet und übernimmt deren Website-Adresse als Vorschlag.</li>
+</ol>
+
+<p>Danach erscheint die Druckerkarte im Backend nach kurzer Zeit als <strong>Online</strong>, mit Modell, Temperaturen und – sobald etwas läuft – Fortschritt und Restzeit. Die Bedienung im Alltag steht in der Anleitung <a href="ba-produktion.html">Produktion</a>, Kapitel 6.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Der LAN-Zugangscode ist das Passwort des Druckers</span>
+	<p>Wer ihn kennt, kann Dateien auf das Gerät legen und Drucke starten. Das Plugin zeigt ihn nie wieder im Klartext an, und die Seite verlangt ohnehin ein Rechteprofil mit Zugriff auf die Fertigung. Trotzdem: Der Zugangscode gehört nicht in eine E-Mail und nicht in eine geteilte Notiz.</p>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Bei WLAN: Energiesparmodus abschalten</span>
+	<p>Hängt der Pi im WLAN statt am Kabel, schaltet Raspberry Pi OS die WLAN-Karte im Leerlauf in den Stromsparmodus. Das äußert sich als sporadische Verbindungsabbrüche, die aussehen wie ein Netzproblem und keins sind. Wie man ihn dauerhaft abschaltet, steht in <code>raspberry-pi/README.md</code>. Kabel ist besser.</p>
+</div>
+
+<h3>Automatisches Slicen einrichten</h3>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker → Reiter „Slicing-Profile“</span></p>
+
+<p>Ohne diesen Schritt funktioniert die Plattenanordnung trotzdem – nur eben mit Herunterladen und Slicen von Hand. Wer den Worker einrichtet, spart genau diesen Schritt:</p>
+
+<ol class="schritte">
+	<li>In OrcaSlicer bzw. Bambu Studio je <strong>Material × Druckermodell</strong> die drei Profile exportieren (Rechtsklick auf das Profil → „Export“): <strong>Drucker-, Filament- und Prozessprofil</strong>, jeweils als JSON.</li>
+	<li>Die drei Dateien hier hochladen, mit Angabe von Material und Druckermodell. Das Modell muss zu dem passen, was die Bridge meldet – der Vergleich läuft über einen Teilstring, „P1S“ trifft also auf „Bambu Lab P1S“.</li>
+	<li>Oben <strong>Token neu erzeugen</strong> klicken und das Token in die <code>.env.slicing</code> des Workers eintragen. Anders als bei den Druckern gibt es hier nur <em>ein</em> Token für einen Worker.</li>
+	<li>Auf dem Rechner, der slicen soll, OrcaSlicer installieren und den Worker als Dienst einrichten (siehe <code>raspberry-pi/README.md</code>). Das kann derselbe Pi sein, wenn er genug Leistung hat.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Vor dem produktiven Einsatz gegenprüfen</span>
+	<p>Der eigentliche Slice-Aufruf konnte bei der Entwicklung nicht gegen eine echte OrcaSlicer-Installation geprüft werden. Nimm zum Einstieg eine unkritische Testplatte, öffne das automatisch erzeugte Ergebnis einmal in Bambu Studio und sieh es dir an, bevor ein automatisch geslicter Auftrag auf ein echtes Gerät geht.</p>
+</div>
+
+<h3>Woran man merkt, dass etwas nicht läuft</h3>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
+<tbody>
+<tr><td>Bridge-Status <strong>Offline</strong>, letzter Kontakt liegt zurück</td><td>Der Dienst läuft nicht, der Pi ist aus oder ohne Netz</td><td>Auf dem Pi <code>systemctl status bambu-bridge</code> und das Journal ansehen</td></tr>
+<tr><td><strong>Drucker nicht erreichbar</strong></td><td>Die Bridge läuft, findet das Gerät im LAN aber nicht</td><td>Gerät einschalten; sonst IP geändert (Reservierung im Router) oder Zugangscode falsch</td></tr>
+<tr><td>Aufträge bleiben „wartend“, obwohl die Bridge online ist</td><td>Auf dem Gerät läuft noch ein Druck – die Warteschlange arbeitet einen nach dem anderen ab</td><td>abwarten</td></tr>
+<tr><td>Der Upload zum Drucker bricht ab</td><td>Kurze Netzaussetzer; die Bridge wiederholt die Übertragung selbstständig</td><td>Erst wenn es bleibt: WLAN prüfen, Energiesparmodus abschalten, notfalls den FTP-Debug-Modus einschalten (siehe README)</td></tr>
+<tr><td>Platten bleiben auf <strong>Wird geslict</strong> stehen</td><td>Der Slicing-Worker läuft nicht oder hat kein gültiges Token</td><td>Dienst prüfen, im Zweifel Token neu erzeugen und beim Worker eintragen</td></tr>
+<tr><td>„Kein Slicing-Profil für … hinterlegt“</td><td>Für diese Kombination aus Material und Druckermodell fehlen die drei Profildateien</td><td>Profile exportieren und hochladen</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="berichte"><span class="nr">13.</span> Berichte, Ziele und Monatsabschluss</h2>
 
 <p><span class="weg">Finanzen → Berichte</span></p>
 
@@ -673,7 +764,7 @@
 <h3>Auszug zur Analyse</h3>
 <p>Der Export lädt den Betriebszustand als Textdatei herunter: Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen, Druckjournal, Arbeitszeit. Namen von Geschäftskunden bleiben draußen, solange du sie nicht ausdrücklich mitgibst – die Kunden sind dann durchnummeriert.</p>
 
-<h2 id="pruefung"><span class="nr">13.</span> Systemprüfung und Protokollkette</h2>
+<h2 id="pruefung"><span class="nr">14.</span> Systemprüfung und Protokollkette</h2>
 
 <p><span class="weg">Verwaltung → Einstellungen → Reiter „Systemprüfung“</span></p>
 
@@ -691,7 +782,7 @@
 	<figcaption>Der Reiter <strong>Protokoll &amp; Kettenprüfung</strong> zeigt die letzten 50 Vorgänge.</figcaption>
 </figure>
 
-<h2 id="import"><span class="nr">14.</span> Import und Verfahrensdokumentation</h2>
+<h2 id="import"><span class="nr">15.</span> Import und Verfahrensdokumentation</h2>
 
 <p><span class="weg">Verwaltung → Import &amp; Doku</span></p>
 
@@ -720,7 +811,7 @@
 
 <p>Das Dokument liest die Werte beim Erzeugen frisch aus dem System – es ist also immer aktuell und kein Schnappschuss von damals. Erzeug es einmal jährlich und nach jeder größeren Änderung als PDF und leg es zu den Steuerunterlagen.</p>
 
-<h2 id="automatisch"><span class="nr">15.</span> Was von allein läuft</h2>
+<h2 id="automatisch"><span class="nr">16.</span> Was von allein läuft</h2>
 
 <p>Diese Dinge passieren ohne Zutun über den Action Scheduler, den WooCommerce mitbringt:</p>
 
@@ -745,7 +836,7 @@
 	<p>Der Action Scheduler braucht Besucher oder einen echten Cron-Job, um seine Warteschlange abzuarbeiten. Auf einer Seite ohne Verkehr bleiben Aufgaben liegen. Unter <strong>WooCommerce → Status → Geplante Aktionen</strong> siehst du, was hängt.</p>
 </div>
 
-<h2 id="livegang"><span class="nr">16.</span> Livegang: sauber starten</h2>
+<h2 id="livegang"><span class="nr">17.</span> Livegang: sauber starten</h2>
 
 <p><span class="weg">Verwaltung → Livegang</span></p>
 
@@ -778,7 +869,7 @@
 	<p>Danach ist dieses Werkzeug nicht mehr zu benutzen – jeder Schnitt wird protokolliert und dieses Protokoll wird selbst nicht gelöscht. Eine Hashkette, die bei null beginnt, ist erklärbar; eine, die mitten in der Geschichte springt, nicht.</p>
 </div>
 
-<h2 id="sicherung"><span class="nr">17.</span> Datensicherung und Notfall</h2>
+<h2 id="sicherung"><span class="nr">18.</span> Datensicherung und Notfall</h2>
 
 <div class="tabelle">
 <table>
@@ -799,7 +890,7 @@
 	<figcaption><span class="weg">Finanzen → Reporting</span> – Auswertungen und der Datenexport.</figcaption>
 </figure>
 
-<h2 id="fehler"><span class="nr">18.</span> Wenn etwas nicht geht</h2>
+<h2 id="fehler"><span class="nr">19.</span> Wenn etwas nicht geht</h2>
 
 <div class="tabelle">
 <table>
@@ -825,7 +916,7 @@
 	<p>Lies die Meldung zu Ende. Dieses Plugin schreibt keine Fehlercodes, sondern ganze Sätze – und im Satz steht fast immer schon, was zu tun ist.</p>
 </div>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Administration · Stand: Plugin-Version 0.12.0 ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Administration · Stand: Plugin-Version 0.14.0 ·
 <a href="index.html">Übersicht</a> ·
 <a href="ba-produktion.html">Produktion</a> ·
 <a href="ba-versand.html">Versand</a> ·

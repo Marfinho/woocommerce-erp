@@ -225,7 +225,7 @@ und die Papierformulare ab.
   Quelle verschwindet; vorhandene eigene Angaben bleiben stehen. Der
   Papierkorb löst nichts aus – eine Bestellung dort lässt sich zurückholen.
   Für alles, was vorher gelöscht wurde, gleicht `orphaned()` ab; die
-  Systemprüfung meldet es und `Betrieb → Bestellungen` bietet ein Storno an,
+  Systemprüfung meldet es und `Verkauf → Bestellungen` bietet ein Storno an,
   das die Lagerbewegungen als Gegenbuchungen zurücknimmt. Der Verbrauch an
   Kleinteilen geht bewusst **nicht** zurück: Er wird als Feld
   fortgeschrieben, die damalige Menge ist nirgends nachrechenbar, und aus
@@ -360,7 +360,7 @@ gebucht und gemeldet, nie verworfen.
 Betrieb bucht die Lagerabgänge genau der Produkte, die über `wc_product_id`
 auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie über
 den Filter `lw16_inventory_skip_product`. Alles andere bleibt beim Lager-Modul.
-Abschaltbar unter *Betrieb → Einstellungen → Farben & Lagerhoheit*.
+Abschaltbar unter *Verwaltung → Einstellungen → Farben & Lagerhoheit*.
 
 **Nachbestell-Link**
 
@@ -397,7 +397,7 @@ liefern nur die Ortsangabe.
 
 Der Haster Haken zum Zusammenstellen: ein Basismodul und Module, die daran
 vertikal frei verschiebbar sind. Eingebunden wird er mit dem Shortcode
-`[lw16_konfigurator]`; gepflegt wird er unter **Betrieb → Konfigurator**.
+`[lw16_konfigurator]`; gepflegt wird er unter **Fertigung → Konfigurator**.
 
 **Grundsätze**
 
@@ -494,8 +494,8 @@ vorhanden ist – nicht, was geplant war.
 - **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und
   **Sendungsverfolgung im Kundenkonto** (Zeitleiste in den Bestelldetails und
   Spalte in der Bestellübersicht), Ist-Zeit-Erfassung. Die Versandliste selbst
-  steht unter Betrieb → Versand, die Fertigungsvorschläge unter Betrieb → Bedarf.
-- **Versand (Betrieb → Versand):** Bestellliste mit Lieferschein,
+  steht unter Verkauf → Versand, die Fertigungsvorschläge unter Lager → Bedarf.
+- **Versand (Verkauf → Versand):** Bestellliste mit Lieferschein,
   Sendungsnummer und **DHL-Label über den Geschäftskundenversand**
   (Parcel DE Shipping v2). Anmeldung über die Authentication API: API-Key und
   API-Secret der Anwendung plus Benutzer und Passwort des
@@ -770,7 +770,7 @@ der Shortcode im Inhalt steht.
 `includes/Modules/Inventory/` ist der ältere Bestand (Tabellen `lw16_produkte`,
 `lw16_lagerbestand` …). Zuständig ist heute das Modul Betrieb; die alte
 Verwaltung überspringt alle Produkte, die auf einen Betrieb-Artikel zeigen.
-Die Übernahme läuft einmalig über *Betrieb → Import & Doku*. Der alte Code
+Die Übernahme läuft einmalig über *Verwaltung → Import & Doku*. Der alte Code
 bleibt, solange nicht alle Altdaten übernommen sind.
 
 ### Bewusste Vereinfachungen
@@ -810,7 +810,7 @@ bleibt, solange nicht alle Altdaten übernommen sind.
   und werden nur über einen authentifizierten Endpoint mit `manage_lw16`-Prüfung
   und Path-Traversal-Schutz ausgeliefert. Dasselbe gilt für erzeugte PDFs.
 - Kritische Aktionen landen im hashverketteten Audit-Log; ein nachträglich
-  geänderter Datensatz bricht die Kette und wird unter *Betrieb → Einstellungen
+  geänderter Datensatz bricht die Kette und wird unter *Verwaltung → Einstellungen
   → Protokoll & Kettenprüfung* gemeldet.
 - Nonces auf allen schreibenden Aktionen, Capability-Prüfung auf jeder Seite.
 - Rücksprungziele aus Formularen werden gegen die bekannten Seiten geprüft,

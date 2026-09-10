@@ -33,6 +33,7 @@
 		<li><a href="#bedarf">Bedarf: was heute entstehen muss</a></li>
 		<li><a href="#auftrag">Einen Auftrag anlegen und starten</a></li>
 		<li><a href="#drucken">Drucken und den Druckjob buchen</a></li>
+		<li><a href="#bambu">Bambu-Lab-Drucker: aus dem System heraus drucken</a></li>
 		<li><a href="#handy">Am Drucker mit dem Handy buchen</a></li>
 		<li><a href="#montage">Montieren und fertigmelden</a></li>
 		<li><a href="#material">Material: Filament und Kleinteile</a></li>
@@ -71,7 +72,7 @@
 
 <div class="kasten merke">
 	<span class="titel">Du siehst weniger Menüpunkte als hier abgebildet?</span>
-	<p>Das ist Absicht. Je nach Rechteprofil blendet das Plugin aus, was du nicht brauchst. Mit dem Profil <em>Werkstatt</em> siehst du Dashboard, Druckjournal, Lager, Lagerplätze, Qualität und Zeiterfassung – genau das, was in dieser Anleitung in den Kapiteln 1 bis 7 und 11 steht. Der Rest ist für die Betriebsleitung.</p>
+	<p>Das ist Absicht. Je nach Rechteprofil blendet das Plugin aus, was du nicht brauchst. Mit dem Profil <em>Werkstatt</em> siehst du Dashboard, Druckjournal, Lager, Lagerplätze, Qualität und Zeiterfassung – genau das, was in dieser Anleitung in den Kapiteln 1 bis 8 und 12 steht. Der Rest ist für die Betriebsleitung.</p>
 </div>
 
 <h2 id="dashboard"><span class="nr">2.</span> Das Dashboard: der Blick am Morgen</h2>
@@ -108,12 +109,12 @@
 <table>
 <thead><tr><th>Kasten</th><th>Was er bedeutet</th><th>Was du tust</th></tr></thead>
 <tbody>
-<tr><td>Überfällige Wartungen</td><td>Ein Drucker hat seine Wartung überzogen</td><td>Kapitel 9</td></tr>
-<tr><td>Beschaffungsalarm</td><td>Ein Kleinteil oder Filament reicht nicht mehr lange</td><td>Kapitel 8, der Betriebsleitung sagen</td></tr>
+<tr><td>Überfällige Wartungen</td><td>Ein Drucker hat seine Wartung überzogen</td><td>Kapitel 10</td></tr>
+<tr><td>Beschaffungsalarm</td><td>Ein Kleinteil oder Filament reicht nicht mehr lange</td><td>Kapitel 9, der Betriebsleitung sagen</td></tr>
 <tr><td>Artikel unter Sollbestand</td><td>Von einem Artikel liegen weniger Stück im Regal als vereinbart</td><td>Kapitel 3 und 4</td></tr>
 <tr><td>Zu fertigen</td><td>Offene Aufträge, die noch niemand angefasst hat</td><td>Kapitel 4</td></tr>
 <tr><td>Fällige Wiedervorlagen</td><td>Ein Händler wartet auf einen Rückruf</td><td>Betriebsleitung</td></tr>
-<tr><td>Bewegungen ohne Farbzuordnung</td><td>Eine Lagerbuchung ohne erkennbare Farbe</td><td>Kapitel 11</td></tr>
+<tr><td>Bewegungen ohne Farbzuordnung</td><td>Eine Lagerbuchung ohne erkennbare Farbe</td><td>Kapitel 12</td></tr>
 </tbody>
 </table>
 </div>
@@ -152,6 +153,8 @@
 	<span class="titel">Die wichtigste Regel dieser Seite</span>
 	<p>Arbeite <strong>von oben nach unten</strong> ab. Was am tiefsten in der Stückliste steckt, steht oben. Ein Set kannst du erst montieren, wenn die Haken gedruckt sind – deshalb stehen die Haken über dem Set.</p>
 </div>
+
+<p>Steht bei einer Zeile mit der Arbeit <em>drucken</em> rechts ein Auswahlfeld mit dem Knopf <strong>Direkt drucken</strong>, kannst du den Druck von hier aus ohne Umweg starten – Aufträge und Buchung erledigt das System dann selbst. Wie das genau läuft und worauf du dabei achten musst, steht in Kapitel 6.</p>
 
 <h3>Abschnitt „Produktionsplan“</h3>
 
@@ -273,7 +276,128 @@
 	<p>Es gibt keinen Löschknopf, und das ist Absicht. Trag rechts in der Zeile bei <strong>Begründung</strong> ein, was falsch war (zum Beispiel „Stückzahl vertippt, waren 12 statt 21“), und klick dann auf <strong>Stornieren</strong>. Die alte Zeile bleibt stehen, eine Gegenbuchung hebt sie auf, und du buchst danach neu. Damit ist die Bestandsrechnung wieder richtig und man sieht trotzdem, was passiert ist.</p>
 </div>
 
-<h2 id="handy"><span class="nr">6.</span> Am Drucker mit dem Handy buchen</h2>
+<h2 id="bambu"><span class="nr">6.</span> Bambu-Lab-Drucker: aus dem System heraus drucken</h2>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker</span></p>
+
+<p>Steht ein Bambu-Lab-Drucker im Netz und ist er angeschlossen (die Einrichtung steht in der Anleitung <em>Administration</em>), musst du die Druckdatei nicht mehr auf einen USB-Stick ziehen und am Gerät antippen. Du reihst sie hier ein, und ein kleiner Rechner im Werkstattnetz – die <strong>Bridge</strong> – überträgt sie zum Drucker und startet ihn.</p>
+
+<div class="kasten info">
+	<span class="titel">Zwei Menüpunkte, zwei verschiedene Dinge</span>
+	<p><span class="weg">Fertigung → Bambu-Lab-Drucker</span> ist die <em>Live-Anbindung</em>: Warteschlange, Temperaturen, Fortschritt.<br>
+	<span class="weg">Fertigung → 3D-Drucker &amp; Wartung</span> (Kapitel 10) sind die <em>Stammdaten</em>: Stundensatz, Betriebsstunden, Wartungsintervalle. Beide gehören zusammen, aber nur die Stammdatenseite rechnet Geld.</p>
+</div>
+
+<p>Die Seite hat vier Reiter. In der Werkstatt brauchst du meistens nur die ersten beiden.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Reiter</th><th>Wofür</th></tr></thead>
+<tbody>
+<tr><td><strong>Drucker</strong></td><td>Je Gerät eine Karte: online oder offline, was gerade läuft, Düsen- und Betttemperatur, Restzeit, wie viele Aufträge warten</td></tr>
+<tr><td><strong>Aufträge</strong></td><td>Die Warteschlange – und die beiden Wege, etwas hineinzulegen</td></tr>
+<tr><td><strong>Platte anordnen</strong></td><td>Mehrere Artikel automatisch auf ein Druckbett verteilen lassen</td></tr>
+<tr><td><strong>Slicing-Profile</strong></td><td>Einstellungssache der Verwaltung – siehe Anleitung <em>Administration</em></td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Reiter „Drucker“: was das Gerät gerade tut</h3>
+
+<p>Jede Karte zeigt oben den <strong>Bridge-Status</strong>. Ein grüner Punkt heißt: Der kleine Rechner meldet sich. Ein roter heißt: Er meldet sich nicht – dann wird auch nichts gedruckt, egal was in der Warteschlange steht. Darunter steht der letzte Kontakt.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Was dort steht</th><th>Was das heißt</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>Bridge <strong>Online</strong>, Drucker-Status <em>Bereit</em></td><td>Alles gut, der nächste Auftrag startet von allein</td><td>nichts</td></tr>
+<tr><td>Bridge <strong>Online</strong>, Fortschritt und Restzeit laufen</td><td>Es wird gerade gedruckt</td><td>warten</td></tr>
+<tr><td>Bridge <strong>Offline</strong></td><td>Der kleine Rechner ist aus, hängt oder das Netz ist weg</td><td>Betriebsleitung, siehe Kapitel 15</td></tr>
+<tr><td><strong>Drucker nicht erreichbar</strong></td><td>Die Bridge läuft, findet den Drucker aber nicht: Gerät aus oder IP-Adresse geändert</td><td>Drucker einschalten, sonst Betriebsleitung</td></tr>
+<tr><td><strong>Letzter Fehler</strong> mit rotem Text</td><td>Der letzte Versuch ist schiefgegangen, der Text sagt womit</td><td>Text lesen, Kapitel 15</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Reiter „Aufträge“: etwas in die Warteschlange legen</h3>
+
+<p>Es gibt zwei Wege – beide verlangen eine <strong>geslicte</strong> Datei, also eine <code>.gcode.3mf</code> aus Bambu Studio. Eine reine Projektdatei kann der Drucker nicht ausführen; die muss vorher durch das Slicen (oder durch den Reiter „Platte anordnen“, siehe unten).</p>
+
+<ol class="schritte">
+	<li><strong>Aus der Modellablage einreihen.</strong> Der Normalfall. Du wählst Artikel und Drucker, klickst <strong>Einreihen</strong> – die Datei hängt schon an der freigegebenen Revision des Artikels und wird von dort genommen. Nichts hochladen, nichts verwechseln.</li>
+	<li><strong>Hochladen &amp; einreihen.</strong> Der Ausnahmefall: ein Einzelstück, ein Test, etwas ohne Artikelnummer. Datei auswählen, Drucker wählen, hochladen.</li>
+</ol>
+
+<p>Nach dem Einreihen passiert nichts sofort sichtbar – das ist normal. Die Bridge fragt in kurzen Abständen nach neuer Arbeit und holt den Auftrag beim nächsten Kontakt ab. Danach siehst du auf der Druckerkarte, wie die Datei übertragen wird und der Druck anläuft.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Der Drucker fängt an, ohne dass jemand danebensteht</span>
+	<p>Ein eingereihter Auftrag startet, sobald das Gerät frei ist. Sorg vorher dafür, dass das Bett leer und sauber ist und das richtige Filament eingelegt ist. Das System weiß nicht, was auf dem Bett liegt – das weißt nur du.</p>
+</div>
+
+<h3>„Direkt drucken“ von der Bedarfsseite</h3>
+
+<p><span class="weg">Lager → Bedarf</span></p>
+
+<p>Der schnellste Weg von „fehlt“ zu „läuft“: In der Liste <em>Zu tun</em> steht bei jeder Zeile mit der Arbeitsart <em>drucken</em> ein Auswahlfeld für den Drucker und daneben der Knopf <strong>Direkt drucken</strong>. Ein Klick, und das System</p>
+
+<ul>
+	<li>rechnet die fehlende Menge in ganze Platten um (aufgerundet – für zwölf Haken bei acht Stück je Platte werden es zwei Platten),</li>
+	<li>legt <strong>je Platte einen eigenen Druckauftrag</strong> an,</li>
+	<li>und reiht je Platte einen Druck in die Warteschlange des gewählten Geräts ein.</li>
+</ul>
+
+<p>Je Platte ein Auftrag klingt kleinlich, hat aber einen Grund: Geht eine Platte schief, steht nur die eine still. Die anderen laufen weiter, und die Ist-Druckzeit bleibt je Platte richtig zugeordnet.</p>
+
+<div class="kasten merke">
+	<span class="titel">Das Wichtigste an diesem Knopf: Du buchst danach nichts mehr</span>
+	<p>Meldet der Drucker den Druck sauber als fertig, schreibt das System <strong>von allein</strong> den Druckjournal-Eintrag – mit der vollen geplanten Menge als gute Teile und der wirklich gemessenen Druckzeit – und schließt den Druckauftrag. Lagerzugang, Charge, Filamentverbrauch und Betriebsstunden entstehen dabei genauso wie bei einer Buchung von Hand (Kapitel 5). In der Bemerkung steht, dass automatisch gebucht wurde.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Und wenn ein Teil danebengeht?</span>
+	<p>Dann stimmt die automatische Buchung nicht – der Drucker meldet „fertig“, auch wenn sich ein Teil vom Bett gelöst hat. <strong>Schau dir die Platte an, bevor du sie abräumst.</strong> Ist etwas kaputt, stornier den automatischen Eintrag im Druckjournal mit Begründung und buch die Zeile neu mit den wirklichen Zahlen (Kapitel 5). Ein <em>fehlgeschlagener</em> Druck bucht übrigens gar nichts automatisch: Der Auftrag bleibt offen und wartet auf deine Buchung von Hand – das ist Absicht.</p>
+</div>
+
+<p>Fehlt an der Zeile der Knopf, fehlt eine Voraussetzung. Das System sagt beim Klicken, welche:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Meldung</th><th>Was fehlt</th></tr></thead>
+<tbody>
+<tr><td>„Für die aktive Revision liegt keine geslicte Druckdatei vor“</td><td>Am Artikel hängt nur eine Projektdatei oder gar nichts – slicen und bei <em>Artikel &amp; Revisionen</em> hinterlegen, oder die Plattenanordnung nutzen</td></tr>
+<tr><td>„Für diesen Artikel ist keine Revision freigegeben“</td><td>Es gibt keine aktive Revision (Kapitel 11)</td></tr>
+<tr><td>„… noch nicht mit einem Gerät der Kalkulation verknüpft“</td><td>Der Bambu-Drucker ist nicht mit seinem Geräteeintrag verbunden – Sache der Verwaltung</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Reiter „Platte anordnen“: mehrere Artikel auf ein Bett</h3>
+
+<p>Wenn du nicht 24-mal denselben Haken drucken willst, sondern acht Haken, vier Schienen und zwei Kappen in einem Rutsch, ordnet dir das System die Teile selbst auf dem Druckbett an.</p>
+
+<ol class="schritte">
+	<li>Reiter <strong>Platte anordnen</strong> öffnen und den <strong>Drucker</strong> wählen. Dahinter steht sein Bettmaß in Millimetern – daran wird gerechnet.</li>
+	<li><strong>Sicherheitsabstand</strong> stehen lassen, außer du weißt, warum du ihn änderst. Er ist der Rand, den jedes Teil um sich herum frei behält.</li>
+	<li>In der Tabelle bei den Artikeln die <strong>Mengen</strong> eintragen. Zur Auswahl stehen nur Artikel mit einer Projektdatei an der aktiven Revision.</li>
+	<li>Auf <strong>Automatisch anordnen</strong> klicken.</li>
+</ol>
+
+<p>Das System legt die Teile anhand ihrer <em>tatsächlichen Umrisse</em> aneinander, nicht nur nach ihren Kästchen – ein L-förmiges Teil darf also in der Lücke eines anderen liegen. Passt nicht alles auf ein Bett, verteilt es den Rest auf weitere Platten. Das Ergebnis erscheint oben in der Liste <strong>Angeordnete Platten</strong> mit Maß, Teilezahl und Status.</p>
+
+<p>Von dort geht es auf zwei Wegen weiter:</p>
+
+<ul>
+	<li><strong>Projekt-3MF</strong> herunterladen, in Bambu Studio öffnen, dort slicen und wie gewohnt drucken. Dieser Weg geht immer.</li>
+	<li><strong>Automatisch slicen</strong> – nur wenn die Verwaltung den Slicing-Worker eingerichtet hat. Die Platte wandert dann in die Warteschlange <em>Wird geslict</em>, und ist sie fertig, landet sie ganz von selbst in der normalen Bambu-Warteschlange. Status <em>Fehlgeschlagen</em> heißt: Der Worker kam nicht durch – dann den Weg über den Download nehmen und der Betriebsleitung Bescheid geben.</li>
+</ul>
+
+<div class="kasten achtung">
+	<span class="titel">Automatisch geslict heißt nicht ungeprüft</span>
+	<p>Solange ihr mit dem automatischen Slicen anfangt, öffne die fertige Datei einmal in Bambu Studio und schau sie an, bevor sie auf ein Gerät geht. Ein falsches Profil erkennt man am Bildschirm in zehn Sekunden – am Drucker erst nach zwei Stunden und einem Haufen Filament.</p>
+</div>
+
+<h2 id="handy"><span class="nr">7.</span> Am Drucker mit dem Handy buchen</h2>
 
 <p>Am Gerät steht selten ein Computer. Deshalb gibt es eine eigene, sehr kurze Seite fürs Handy.</p>
 
@@ -301,7 +425,7 @@
 	<p>Unter dem Formular steht dieser Link. Damit stellst du dauerhaft ein, welcher Drucker, welcher Artikel und welche Menge beim Öffnen schon eingetragen sind. Wenn du drei Wochen lang dasselbe druckst, sparst du dir damit jedes Mal vier Tipper.</p>
 </div>
 
-<h2 id="montage"><span class="nr">7.</span> Montieren und fertigmelden</h2>
+<h2 id="montage"><span class="nr">8.</span> Montieren und fertigmelden</h2>
 
 <p>Ein Set kommt nicht aus dem Drucker – es wird aus Teilen zusammengebaut, die schon im Regal liegen. Der Ablauf:</p>
 
@@ -321,7 +445,7 @@
 	<p>Trag die wirkliche Menge ein, nicht die geplante. Der Auftrag bleibt dann mit dem Rest offen, und der Bedarf zeigt weiterhin an, was fehlt. Wer die Sollmenge einträgt, um „den Haken zu setzen“, erzeugt Bestand, der nicht existiert – und der fällt erst beim Packen auf, wenn der Kunde schon wartet.</p>
 </div>
 
-<h2 id="material"><span class="nr">8.</span> Material: Filament und Kleinteile</h2>
+<h2 id="material"><span class="nr">9.</span> Material: Filament und Kleinteile</h2>
 
 <p><span class="weg">Lager → Material</span></p>
 
@@ -356,13 +480,13 @@
 
 <div class="kasten merke">
 	<span class="titel">Warum der Chargencode zählt</span>
-	<p>Wenn ein Kunde reklamiert, ist die erste Frage: aus welchem Material war das Teil? Über die Charge findest du in zwei Klicks alle Teile derselben Rolle und alle Bestellungen, in denen sie steckten (Kapitel 12). Ohne Charge ist diese Frage nicht mehr zu beantworten.</p>
+	<p>Wenn ein Kunde reklamiert, ist die erste Frage: aus welchem Material war das Teil? Über die Charge findest du in zwei Klicks alle Teile derselben Rolle und alle Bestellungen, in denen sie steckten (Kapitel 13). Ohne Charge ist diese Frage nicht mehr zu beantworten.</p>
 </div>
 
 <h3>Kleinteile und Verbrauchsmaterial</h3>
 <p>Weiter unten stehen Kartons, Holzwolle, Klebeband und Ähnliches. Diese Positionen werden pauschal je Bestellung abgebucht. Wenn ein Vorrat zur Neige geht, meldet sich der Beschaffungsalarm oben von selbst.</p>
 
-<h2 id="drucker"><span class="nr">9.</span> Drucker und Wartung</h2>
+<h2 id="drucker"><span class="nr">10.</span> Drucker und Wartung</h2>
 
 <p><span class="weg">Fertigung → 3D-Drucker &amp; Wartung</span></p>
 
@@ -401,7 +525,7 @@
 
 <p>Über den Aufklebern steht <strong>Aufkleber als PDF für den Etikettendrucker</strong>. Der Knopf erzeugt dieselben Aufkleber im Rollenformat <strong>DK-11201</strong> – dasselbe, das auch Lagerplätze und Artikel benutzen, damit im Brother nur eine Rolle liegen muss. Die Kacheln darunter bleiben für den Fall, dass du sie lieber auf Papier ausdruckst und aufklebst.</p>
 
-<h2 id="artikel"><span class="nr">10.</span> Artikel, Revisionen und Stücklisten</h2>
+<h2 id="artikel"><span class="nr">11.</span> Artikel, Revisionen und Stücklisten</h2>
 
 <p><span class="weg">Fertigung → Artikel &amp; Revisionen</span></p>
 
@@ -473,7 +597,7 @@
 	<p>Wenn du versuchst, das Set in die Stückliste des Sets zu legen, weist das System das ab. Das ist kein Fehler, sondern verhindert eine Rechnung, die nie zu Ende käme.</p>
 </div>
 
-<h2 id="lager"><span class="nr">11.</span> Lager: Bestand und Korrekturen</h2>
+<h2 id="lager"><span class="nr">12.</span> Lager: Bestand und Korrekturen</h2>
 
 <p><span class="weg">Lager → Lager</span></p>
 
@@ -519,7 +643,7 @@
 <h3>„Bewegungen ohne Farbzuordnung“</h3>
 <p>Steht diese Meldung auf der Seite, hat der Shop bei einer Bestellung keine Farbe mitgeliefert. Die Buchung ist trotzdem gemacht worden – sie hängt nur an keiner Farbe. Sag der Betriebsleitung Bescheid, damit das Farbattribut am Produkt ergänzt wird; anschließend lässt sich die Bewegung per Korrektur auf die richtige Farbe umbuchen.</p>
 
-<h2 id="qualitaet"><span class="nr">12.</span> Qualität: Chargen und Rückverfolgung</h2>
+<h2 id="qualitaet"><span class="nr">13.</span> Qualität: Chargen und Rückverfolgung</h2>
 
 <p><span class="weg">Fertigung → Qualität</span></p>
 
@@ -546,7 +670,7 @@
 
 <p>Das ist der Weg, wenn eine Rolle Material sich als schlecht herausstellt: Du siehst in einem Schritt, welche Kunden betroffen sind – und musst nicht raten.</p>
 
-<h2 id="kapazitaet"><span class="nr">13.</span> Kapazität: schaffe ich das?</h2>
+<h2 id="kapazitaet"><span class="nr">14.</span> Kapazität: schaffe ich das?</h2>
 
 <p><span class="weg">Fertigung → Kapazität</span></p>
 
@@ -557,26 +681,31 @@
 
 <p>Das System löst die Stücklisten auf und sagt dir, wie viele Druckerstunden und wie viele Handstunden das kostet – und ob das in eine Woche passt. Nutz das vor Weihnachten oder vor einem Markt, bevor du zusagst.</p>
 
-<h2 id="fehler"><span class="nr">14.</span> Wenn etwas nicht geht</h2>
+<h2 id="fehler"><span class="nr">15.</span> Wenn etwas nicht geht</h2>
 
 <div class="tabelle">
 <table>
 <thead><tr><th>Meldung oder Beobachtung</th><th>Was wirklich los ist</th><th>Was du tust</th></tr></thead>
 <tbody>
 <tr><td>„Bei Ausschuss ist eine Fehlerursache Pflicht“</td><td>Du hast weniger gute als geplante Teile eingetragen, aber keine Ursache gewählt</td><td>Fehlerursache auswählen, nochmal buchen</td></tr>
-<tr><td>„Für diesen Artikel ist keine Revision hinterlegt“</td><td>Der Artikel hat kein freigegebenes Druckprofil</td><td>Kapitel 10 – oder die Betriebsleitung fragen</td></tr>
-<tr><td>„Dieser Artikel wird nicht gedruckt“</td><td>Du hast im Druckjournal ein Set oder einen Zukaufartikel gewählt</td><td>Sets über einen Fertigungsauftrag (Kapitel 7)</td></tr>
+<tr><td>„Für diesen Artikel ist keine Revision hinterlegt“</td><td>Der Artikel hat kein freigegebenes Druckprofil</td><td>Kapitel 11 – oder die Betriebsleitung fragen</td></tr>
+<tr><td>„Dieser Artikel wird nicht gedruckt“</td><td>Du hast im Druckjournal ein Set oder einen Zukaufartikel gewählt</td><td>Sets über einen Fertigungsauftrag (Kapitel 8)</td></tr>
 <tr><td>„Die Wartung ist noch nicht vollständig“</td><td>In der Checkliste fehlen Haken</td><td>Die genannten Punkte machen und abhaken</td></tr>
 <tr><td>„Es können nicht mehr Teile gut sein als geplant waren“</td><td>Zahlendreher in einem der beiden Felder</td><td>Beide Zahlen prüfen</td></tr>
 <tr><td>„Der Chargencode ist bereits vergeben“</td><td>Diesen Code gibt es schon</td><td>Laufende Nummer erhöhen</td></tr>
 <tr><td>Ein Menüpunkt fehlt</td><td>Dein Rechteprofil deckt ihn nicht ab</td><td>Person mit Vollzugriff fragen</td></tr>
-<tr><td>Der Bestand stimmt nicht mit dem Regal überein</td><td>Eine Buchung fehlt oder ist doppelt</td><td>Kapitel 11, Korrekturbuchung mit Begründung</td></tr>
+<tr><td>Der Bestand stimmt nicht mit dem Regal überein</td><td>Eine Buchung fehlt oder ist doppelt</td><td>Kapitel 12, Korrekturbuchung mit Begründung</td></tr>
+<tr><td>Die Druckerkarte zeigt <strong>Bridge offline</strong></td><td>Der kleine Rechner im Werkstattnetz meldet sich nicht – aus, abgestürzt oder ohne Netz</td><td>Betriebsleitung; eingereihte Aufträge bleiben stehen und laufen später an</td></tr>
+<tr><td>„Drucker nicht erreichbar“</td><td>Die Bridge läuft, findet das Gerät im Netz aber nicht</td><td>Drucker einschalten; bleibt es dabei, hat sich seine IP-Adresse geändert – Betriebsleitung</td></tr>
+<tr><td>Der eingereihte Auftrag startet nicht</td><td>Der Drucker hat den Start nicht innerhalb von fünf Minuten bestätigt; der Auftrag gilt dann als fehlgeschlagen</td><td>Gerät am Display prüfen (Tür zu? Bett leer?) und erneut einreihen</td></tr>
+<tr><td>Ein automatisch gebuchter Druckjournal-Eintrag stimmt nicht</td><td>Der Drucker meldet „fertig“, ohne zu wissen, ob jedes Teil gelungen ist</td><td>Eintrag mit Begründung stornieren und mit den wirklichen Zahlen neu buchen (Kapitel 5)</td></tr>
+<tr><td>Platte steht auf <strong>Fehlgeschlagen</strong></td><td>Das automatische Slicen ist nicht durchgelaufen</td><td>Projekt-3MF herunterladen und von Hand slicen; Betriebsleitung informieren</td></tr>
 <tr><td>Der QR-Aufkleber führt auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update noch nicht neu registriert</td><td>Auf der Druckerseite auf <strong>Adressen neu registrieren</strong> klicken</td></tr>
 </tbody>
 </table>
 </div>
 
-<h2 id="spickzettel"><span class="nr">15.</span> Spickzettel für den Tag</h2>
+<h2 id="spickzettel"><span class="nr">16.</span> Spickzettel für den Tag</h2>
 
 <div class="kasten tipp">
 	<span class="titel">Morgens</span>
@@ -594,6 +723,7 @@
 		<li>Jeder fertige Druck wird sofort gebucht – am Handy am Drucker, das dauert zwanzig Sekunden.</li>
 		<li>Jedes montierte Los wird fertiggemeldet, bevor du zum nächsten gehst.</li>
 		<li>Kaputte Teile buchst du als Ausschuss mit Ursache. Nicht heimlich in den Müll.</li>
+		<li>Läuft ein Bambu-Drucker automatisch: Platte anschauen, <em>bevor</em> du sie abräumst – die Buchung dazu ist schon geschrieben.</li>
 	</ol>
 </div>
 
@@ -606,7 +736,7 @@
 	</ol>
 </div>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Produktion · Stand: Plugin-Version 0.12.0 ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung Produktion · Stand: Plugin-Version 0.14.0 ·
 <a href="index.html">Übersicht</a> ·
 <a href="ba-versand.html">Versand</a> ·
 <a href="ba-personal.html">Personal</a> ·
