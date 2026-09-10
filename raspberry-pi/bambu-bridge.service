@@ -23,9 +23,15 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/bambu-bridge
-# Wird DOWNLOAD_DIRECTORY in der .env geändert, muss der neue Pfad hier
-# ebenfalls stehen - sonst kann die Bridge die 3MF nicht zwischenspeichern.
+# StateDirectory legt /var/lib/bambu-bridge selbst an (samt Besitzrechten
+# für User= oben), noch bevor ExecStart läuft - anders als ReadWritePaths=,
+# das einen bereits vorhandenen Pfad voraussetzt und sonst mit
+# "Failed to set up mount namespacing" abbricht, weil der Pfad beim ersten
+# Start noch nicht existiert.
+StateDirectory=bambu-bridge
+# Wird DOWNLOAD_DIRECTORY in der .env auf einen anderen Namen unterhalb von
+# /var/lib geändert, muss StateDirectory= hier entsprechend angepasst werden
+# - ein Pfad ausserhalb von /var/lib braucht stattdessen ReadWritePaths=.
 
 # Kein eingehender Port nötig - die Bridge baut nur ausgehende
 # Verbindungen auf (zu WordPress per HTTPS, zum Drucker per MQTT/FTPS im

@@ -148,7 +148,7 @@ class BambuPrinterRepository {
 
 		$token = self::generate_token();
 
-		$wpdb->insert(
+		$inserted = $wpdb->insert(
 			self::table(),
 			array(
 				'geraet_id'        => $geraet_id ? (int) $geraet_id : null,
@@ -165,7 +165,18 @@ class BambuPrinterRepository {
 			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
 		);
 
-		return array( 'id' => (int) $wpdb->insert_id, 'token' => $token );
+		// $wpdb->insert() scheitert standardmässig lautlos (z. B. wenn die
+		// Tabelle - etwa nach einem verpassten Schema-Upgrade - noch gar
+		// nicht existiert): kein Fehler, kein Abbruch, nur insert_id bleibt
+		// 0. Ohne diese Prüfung hätte der Aufrufer "Drucker angelegt"
+		// gemeldet, obwohl in Wahrheit nichts gespeichert wurde - genau der
+		// Fehlerbericht "Drucker angelegt, aber taucht nicht in der Liste
+		// auf" wäre die Folge.
+		if ( false === $inserted ) {
+			return array( 'id' => 0, 'token' => '', 'error' => $wpdb->last_error );
+		}
+
+		return array( 'id' => (int) $wpdb->insert_id, 'token' => $token, 'error' => '' );
 	}
 
 	/**
