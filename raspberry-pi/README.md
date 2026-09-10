@@ -527,6 +527,27 @@ Druckaufträge weiterhin nötig ist. Die Ist-Arbeitszeit (Verpacken,
 Stützstrukturen entfernen …) bleibt in jedem Fall eine manuelle Eingabe,
 da sie sich aus dem Druckerstatus nicht ableiten lässt.
 
+### AMS-Filamente, Kamera-Standbild, "Druckfarm"
+
+Die Bridge liest aus demselben MQTT-Report, der Status/Temperaturen
+liefert, auch die AMS-Belegung (Material, Farbe, Restmenge je Fach) mit
+und meldet sie beim normalen Status-Heartbeat – kein eigener Kanal, kein
+zusätzlicher Verbindungsaufbau. Im Admin erscheint sie direkt auf der
+Druckerkarte.
+
+Zusätzlich holt die Bridge alle `CAMERA_SNAPSHOT_INTERVAL` Sekunden
+(Standard 10s) ein einzelnes JPEG-Standbild über den unoffiziellen
+Video-Kanal des Druckers (Port 6000, dasselbe Prinzip wie FTPS auf Port
+990: TLS ab dem ersten Byte, Anmeldung mit "bblp"/Zugangscode) und lädt
+es hoch – kein Dauerstream, nur ein regelmäßiges Bild. Abschalten mit
+`CAMERA_ENABLED=false` in `.env.bambu`.
+
+Beides erscheint auf der Druckerkarte unter „Bambu-Lab-Drucker" sowie
+auf der eigenständigen Übersichtsseite **Fertigung → Druckfarm** (reine
+Live-Ansicht ohne Verwaltungsformulare, für die Werkstatt-Anzeige) –
+beide aktualisieren sich automatisch alle paar Sekunden per AJAX, ohne
+manuelles Neuladen.
+
 ### Unsicherheiten des LAN-Protokolls
 
 Bambu Lab dokumentiert das LAN-MQTT-/FTPS-Protokoll nicht offiziell. Die

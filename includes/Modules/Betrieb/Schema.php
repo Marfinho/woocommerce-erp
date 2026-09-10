@@ -866,6 +866,8 @@ class Schema {
 			bed_temp DECIMAL(5,1) NULL,
 			last_error TEXT NULL,
 			last_status_at DATETIME NULL,
+			ams_json LONGTEXT NULL,
+			snapshot_at DATETIME NULL,
 			created_at DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY printer_id (printer_id),

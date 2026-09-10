@@ -89,6 +89,34 @@
 			} );
 		}
 
+		// Bambu-Druckerkarten (Live-Status, Kamera-Standbild): alle paar
+		// Sekunden per AJAX neu laden, statt dass jemand manuell F5 drückt.
+		// Container trägt data-lw16-autorefresh (AJAX-Action) und
+		// data-lw16-interval (Millisekunden) - siehe BambuPrintersPage::
+		// render_printer_cards()/handle_ajax_cards().
+		$( '[data-lw16-autorefresh]' ).each( function () {
+			var $container = $( this );
+			var action = $container.data( 'lw16-autorefresh' );
+			var interval = parseInt( $container.data( 'lw16-interval' ), 10 ) || 5000;
+
+			if ( typeof LW16Admin === 'undefined' || ! action ) {
+				return;
+			}
+
+			function refresh() {
+				$.post( LW16Admin.ajaxUrl, { action: action, nonce: LW16Admin.nonce } )
+					.done( function ( html ) {
+						$container.html( html );
+					} )
+					// Bei einem Netzwerk-Hakler einfach beim nächsten
+					// Intervall erneut versuchen, statt den Nutzer mit
+					// einer Fehlermeldung mitten im Adminbereich zu stören.
+					.fail( function () {} );
+			}
+
+			setInterval( refresh, interval );
+		} );
+
 		// Barcode-Rendering (Code 128B) für Lagerorte.
 		$( '.lw16-barcode' ).each( function () {
 			var container = this;

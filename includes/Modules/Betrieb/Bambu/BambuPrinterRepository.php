@@ -359,8 +359,71 @@ class BambuPrinterRepository {
 				? null
 				: mb_substr( sanitize_textarea_field( (string) $data['last_error'] ), 0, 1000 );
 		}
+		if ( array_key_exists( 'ams', $data ) ) {
+			$update['ams_json'] = self::normalize_ams_json( $data['ams'] );
+		}
 
 		$wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * AMS-Rohdaten aus der Bridge auf ein sicher speicherbares JSON bringen.
+	 *
+	 * Kommt als bereits von der Bridge JSON-kodierter String an (sie liest
+	 * die Werte selbst aus dem MQTT-Report). Nur strukturell prüfen und der
+	 * Länge nach begrenzen - der genaue Aufbau (Material, Farbe, Restmenge
+	 * je AMS-Fach) ist reine Anzeigesache, keine sicherheitsrelevante
+	 * Auswertung hier nötig.
+	 *
+	 * @param mixed $roh Rohwert aus der Anfrage.
+	 * @return string|null
+	 */
+	public static function normalize_ams_json( $roh ) {
+		$roh = (string) $roh;
+
+		if ( '' === $roh ) {
+			return null;
+		}
+
+		// Nur speichern, was auch tatsächlich gültiges JSON ist - eine
+		// kaputte oder unerwartet riesige Nutzlast soll nicht ungeprüft in
+		// der Datenbank landen und beim Anzeigen erneut geparst werden.
+		if ( null === json_decode( $roh, true ) || JSON_ERROR_NONE !== json_last_error() ) {
+			return null;
+		}
+
+		return mb_substr( $roh, 0, 20000 );
+	}
+
+	/**
+	 * Zeitpunkt eines neu gespeicherten Kamera-Standbilds vermerken - die
+	 * Datei selbst liegt im Dokumentenordner (siehe BambuService::
+	 * save_snapshot()), hier nur der Zeitstempel fürs Cache-Busting beim
+	 * Anzeigen.
+	 *
+	 * @param int $id Primärschlüssel.
+	 */
+	public static function mark_snapshot( $id ) {
+		global $wpdb;
+
+		$wpdb->update( self::table(), array( 'snapshot_at' => current_time( 'mysql', true ) ), array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Zuletzt gemeldete AMS-Belegung eines Druckers, zum Anzeigen entpackt.
+	 *
+	 * @param object $printer Datensatz.
+	 * @return array Liste von AMS-Einheiten ({id, humidity, temp, trays}),
+	 *               leer wenn keine (mehr) gemeldet.
+	 */
+	public static function ams_units( $printer ) {
+		if ( empty( $printer->ams_json ) ) {
+			return array();
+		}
+
+		$daten = json_decode( (string) $printer->ams_json, true );
+
+		return is_array( $daten ) ? $daten : array();
 	}
 
 	/**
