@@ -88,6 +88,19 @@ class BambuPrintersPage {
 
 		$result = BambuPrinterRepository::create( $printer_id, $name, $bambu_serial, $ip, $access_code, $geraet_id );
 
+		if ( ! $result['id'] ) {
+			$this->back(
+				$result['error']
+					? sprintf(
+						/* translators: %s: Datenbankfehler. */
+						__( 'Drucker konnte nicht gespeichert werden: %s', 'lindenweg16' ),
+						$result['error']
+					)
+					: __( 'Drucker konnte nicht gespeichert werden.', 'lindenweg16' ),
+				0
+			);
+		}
+
 		$this->back( __( 'Drucker angelegt.', 'lindenweg16' ), $result['id'], $result['token'] );
 	}
 

@@ -22,8 +22,20 @@ class Installer {
 
 	/**
 	 * Aktuelle Schema-Version. Bei Änderungen an den Tabellen erhöhen.
+	 *
+	 * DB_VERSION 29: Die Bambu-Lab-/Plattenanordnungs-/Slicing-Tabellen
+	 * (bambu_printers, bambu_jobs, bambu_plate_jobs, slicing_profiles,
+	 * slicing_jobs) kamen dazu, ohne dass diese Nummer mit hochgezählt
+	 * wurde - auf jeder Installation, die den vorherigen Stand schon
+	 * einmal geladen hatte, lief create_tables() dadurch nie für sie:
+	 * maybe_upgrade() vergleicht nur diese Zahl, nicht den tatsächlichen
+	 * Tabellenbestand. Sichtbar wurde das dadurch, dass ein neu
+	 * angelegter Bambu-Drucker zwar als "angelegt" gemeldet wurde
+	 * (INSERT gegen eine nicht existierende Tabelle schlägt bei
+	 * $wpdb->insert() standardmässig ohne Fehlermeldung fehl), aber nie
+	 * in der Liste auftauchte.
 	 */
-	const DB_VERSION = '28';
+	const DB_VERSION = '29';
 
 	/**
 	 * Aktivierungsroutine.
