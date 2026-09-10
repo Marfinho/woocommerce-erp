@@ -695,7 +695,11 @@ def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
     scheiterndes Kamera-Feature aus dem Log heraus nicht diagnostizieren
     (genau das Problem, das ohne diese Rückmeldung live aufgetreten ist).
     """
-    jpeg_start = b"\xff\xd8\xff\xe0"
+    # Nur das SOI-Markerpaar prüfen (jedes JPEG beginnt damit) statt
+    # zusätzlich ein APP0/JFIF-Segment (FF D8 FF E0) vorauszusetzen - die
+    # Bambu-Kamera liefert Frames ohne APP0, ein zu strenger Start-Check
+    # verwarf deshalb sonst jedes empfangene Bild als "kein gültiges JPEG".
+    jpeg_start = b"\xff\xd8"
     jpeg_end = b"\xff\xd9"
 
     ctx = _printer_ssl_context()
@@ -725,8 +729,16 @@ def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
                         return None, "Verbindung während der Bildübertragung abgebrochen."
                     bild += chunk
 
-                if bild[:4] != jpeg_start or bild[-2:] != jpeg_end:
-                    return None, "Empfangene Daten sind kein gültiges JPEG (fehlende Start-/End-Marker)."
+                if bild[:2] != jpeg_start or bild[-2:] != jpeg_end:
+                    # Diagnose-Ausschnitt mit in den Grund - falls das
+                    # Protokoll doch noch abweicht, zeigt das sofort, womit
+                    # die Daten tatsächlich beginnen/enden, ohne ein
+                    # weiteres Diagnoseskript von Hand ausführen zu müssen.
+                    return None, (
+                        "Empfangene Daten sind kein gültiges JPEG (Header "
+                        f"{header.hex()}, Größe {payload_size}, "
+                        f"Anfang {bytes(bild[:8]).hex()}, Ende {bytes(bild[-8:]).hex()})."
+                    )
 
                 return bytes(bild), "ok"
     except (OSError, ssl.SSLError) as exc:
@@ -738,26 +750,30 @@ def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
     hochladen - läuft unabhängig von MQTT/Job-Polling, ein Fehler hier
     bleibt lokal und stört den restlichen Betrieb nicht.
 
-    Loggt nur bei einem Wechsel des Ergebnisses (erster Erfolg, erster
-    Fehlschlag, oder ein anderer Fehlergrund als beim letzten Mal) - sonst
-    würde ein dauerhafter Fehler alle CAMERA_SNAPSHOT_INTERVAL Sekunden
-    dieselbe Zeile ins Log schreiben.
+    Loggt nur bei einem Wechsel der Fehler-ART (erster Erfolg, erster
+    Fehlschlag, oder eine andere Fehlerursache als beim letzten Mal) -
+    sonst würde ein dauerhafter Fehler alle CAMERA_SNAPSHOT_INTERVAL
+    Sekunden dieselbe Zeile ins Log schreiben. Verglichen wird dafür nur
+    der Teil vor einer evtl. Klammer mit Diagnose-Details (z. B. rohe
+    Bytes bei einem ungültigen JPEG) - die ändern sich von Bild zu Bild,
+    auch wenn die eigentliche Fehlerursache dieselbe bleibt.
     """
-    letzter_grund = None
+    letzte_art = None
 
     while not stop_event.is_set():
         bild, grund = capture_snapshot()
+        art = grund.split(" (", 1)[0]
 
         if bild:
             hochgeladen = api.upload_snapshot(bild)
             if not hochgeladen:
-                grund = "Standbild aufgenommen, aber Hochladen zu WordPress fehlgeschlagen."
-            elif grund != letzter_grund:
+                art = grund = "Standbild aufgenommen, aber Hochladen zu WordPress fehlgeschlagen."
+            elif art != letzte_art:
                 log.info("Kamera-Standbild erfolgreich aufgenommen und hochgeladen.")
-        elif grund != letzter_grund:
+        elif art != letzte_art:
             log.warning("Kein Kamera-Standbild verfügbar: %s", grund)
 
-        letzter_grund = grund
+        letzte_art = art
         stop_event.wait(Config.CAMERA_SNAPSHOT_INTERVAL)
 
 
