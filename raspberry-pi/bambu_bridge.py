@@ -165,6 +165,11 @@ class Config:
     FTPS_UPLOAD_RETRIES = int(os.environ.get("FTPS_UPLOAD_RETRIES", "3"))
     FTPS_UPLOAD_RETRY_DELAY = int(os.environ.get("FTPS_UPLOAD_RETRY_DELAY", "5"))
 
+    # Bei Bedarf den kompletten FTP-Befehlsdialog mitschreiben (siehe
+    # upload_via_ftps) - zur Fehlersuche bei Uploads, die mitten in der
+    # Übertragung abbrechen.
+    FTPS_DEBUG = _env_bool("FTPS_DEBUG", False)
+
     DOWNLOAD_DIRECTORY = Path(os.environ.get("DOWNLOAD_DIRECTORY", "/var/lib/bambu-bridge"))
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
@@ -516,6 +521,16 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
     ftp = None
     try:
         ftp = ImplicitFTP_TLS(context=_printer_ssl_context())
+
+        if Config.FTPS_DEBUG:
+            # Schreibt den kompletten FTP-Befehlsdialog (connect/login/
+            # PASV/STOR/Antworten) direkt ins stdout - unter systemd landet
+            # das automatisch im Journal, vermischt mit den log.*-Zeilen.
+            # ftplib maskiert den Zugangscode dabei selbst ("PASS ********"),
+            # trotzdem nur bei Bedarf einschalten (FTPS_DEBUG=true in
+            # .env.bambu), das Log wird dadurch deutlich gesprächiger.
+            ftp.set_debuglevel(2)
+
         ftp.connect(Config.BAMBU_IP, Config.FTPS_PORT, timeout=30)
         ftp.login("bblp", Config.BAMBU_ACCESS_CODE)
         # Nach dem Login-Handshake auch die Datenverbindung verschlüsseln -
