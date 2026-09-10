@@ -446,14 +446,23 @@ einem Pi (siehe oben, Abschnitt „Mehrere Drucker").
 ### Polling: klassisch (Standard) oder Long Polling
 
 Anders als der Etikettendrucker-Client (dort ist Long Polling der
-Standard) pollt die Bambu-Bridge standardmäßig **klassisch**: kurzer
-Hold von `SHORT_POLL_WAIT` Sekunden je Anfrage, danach `204` und eine
-Pause von `FALLBACK_POLL_INTERVAL` Sekunden bis zur nächsten Anfrage.
-Grund: Auf manchen Webhosting-Paketen (v. a. günstigen Shared-Hosting-
-Tarifen) kappt der Provider oder ein davorstehender Reverse-Proxy eine
-offen gehaltene Verbindung nach wenigen Sekunden von sich aus – die
-Bridge sähe das als Netzwerkfehler statt als sauberes `204` und würde
-ständig in den Backoff laufen, ohne dass ein Job je zuverlässig ankommt.
+Standard) pollt die Bambu-Bridge standardmäßig **klassisch**: Jede
+Anfrage bekommt sofort eine Antwort (`SHORT_POLL_WAIT=0` – der Server
+hält dafür keinen PHP-Worker offen), danach eine Pause von
+`FALLBACK_POLL_INTERVAL` Sekunden bis zur nächsten Anfrage. Grund: Auf
+manchen Webhosting-Paketen (v. a. günstigen Shared-Hosting-Tarifen)
+kappt der Provider oder ein davorstehender Reverse-Proxy eine offen
+gehaltene Verbindung nach wenigen Sekunden von sich aus – die Bridge
+sähe das als Netzwerkfehler statt als sauberes `204` und würde ständig
+in den Backoff laufen, ohne dass ein Job je zuverlässig ankommt.
+Genauso wichtig auf Shared-Hosting mit wenigen PHP-FPM-Workern: Ein
+`SHORT_POLL_WAIT` größer als 0 hält je Anfrage einen Worker samt
+Datenbankverbindung für die gewählte Zeit offen (serverseitig auf
+5–30s begrenzt) – schon ein einzelner Drucker kann damit dauerhaft
+die Hälfte eines Workers belegen und die ganze Website spürbar
+verlangsamen. `SHORT_POLL_WAIT=0` sollte deshalb im klassischen Modus
+so bleiben; für kürzere Verzögerung eher `FALLBACK_POLL_INTERVAL`
+senken.
 
 Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
 zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-

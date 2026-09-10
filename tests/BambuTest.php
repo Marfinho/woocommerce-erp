@@ -65,7 +65,6 @@ class BambuTest extends TestCase {
 	public function test_wait_ohne_angabe_ist_der_standardwert() {
 		$this->assertSame( 25, BambuJobRepository::clamp_wait( '', 5, 30, 25 ) );
 		$this->assertSame( 25, BambuJobRepository::clamp_wait( null, 5, 30, 25 ) );
-		$this->assertSame( 25, BambuJobRepository::clamp_wait( 0, 5, 30, 25 ) );
 	}
 
 	/**
@@ -74,6 +73,22 @@ class BambuTest extends TestCase {
 	public function test_wait_wird_auf_min_und_max_begrenzt() {
 		$this->assertSame( 5, BambuJobRepository::clamp_wait( 1, 5, 30 ) );
 		$this->assertSame( 30, BambuJobRepository::clamp_wait( 999, 5, 30 ) );
+	}
+
+	/**
+	 * wait=0 ist explizit "sofort antworten" fürs klassische
+	 * Intervall-Polling (siehe BambuRestApi::get_jobs()) - anders als
+	 * "kein wait angegeben" oben, das den Long-Poll-Default ergibt. Ohne
+	 * diese Unterscheidung würde jede Anfrage einen PHP-Worker samt
+	 * Datenbankverbindung mindestens `$min` Sekunden lang blockieren, auch
+	 * im klassischen Poll-Modus - das kann auf Shared-Hosting mit wenigen
+	 * PHP-FPM-Workern schon durch einen einzelnen Drucker die ganze
+	 * Website spürbar verlangsamen.
+	 */
+	public function test_wait_null_bedeutet_sofort_antworten() {
+		$this->assertSame( 0, BambuJobRepository::clamp_wait( 0, 5, 30, 25 ) );
+		$this->assertSame( 0, BambuJobRepository::clamp_wait( '0', 5, 30, 25 ) );
+		$this->assertSame( 25, BambuJobRepository::clamp_wait( -5, 5, 30, 25 ) );
 	}
 
 	/* ----------------------------------------------------------------

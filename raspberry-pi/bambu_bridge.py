@@ -127,10 +127,20 @@ class Config:
     LONG_POLL_TIMEOUT = int(os.environ.get("LONG_POLL_TIMEOUT", "25"))
 
     # Nur relevant, wenn LONG_POLL_ENABLED=false (Standard): Wie lange der
-    # Server je Anfrage kurz auf einen neuen Job wartet, bevor er ohnehin
-    # mit 204 antwortet (serverseitig auf 5-30s begrenzt), und wie lange
-    # die Bridge zwischen zwei Anfragen pausiert.
-    SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "5"))
+    # Server je Anfrage auf einen neuen Job wartet, bevor er antwortet, und
+    # wie lange die Bridge zwischen zwei Anfragen pausiert.
+    #
+    # SHORT_POLL_WAIT=0 (Standard) heißt "sofort antworten" - der Server
+    # hält dafür keinen PHP-Worker samt Datenbankverbindung offen, sondern
+    # prüft einmal und antwortet direkt (204, wenn nichts ansteht). Ein Wert
+    # >0 würde stattdessen serverseitig bis zu diese vielen Sekunden lang je
+    # Anfrage einen Worker in einer Warteschleife binden (auf 5-30s begrenzt,
+    # siehe BambuRestApi::WAIT_MIN/WAIT_MAX) - bei einem kleinen
+    # PHP-FPM-Worker-Pool auf Shared-Hosting reicht schon ein Drucker, der
+    # dauerhaft die Hälfte eines Workers belegt, um die ganze Website
+    # spürbar zu verlangsamen. Die Pause zwischen den Anfragen übernimmt
+    # stattdessen FALLBACK_POLL_INTERVAL unten.
+    SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "0"))
     FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "5"))
 
     # Wie lange nach dem Startkommando auf einen laufenden Druckzustand

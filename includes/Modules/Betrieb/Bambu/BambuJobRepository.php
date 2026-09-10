@@ -93,7 +93,18 @@ class BambuJobRepository {
 
 		$wert = (int) $requested;
 
-		if ( $wert <= 0 ) {
+		// Explizit angefordertes wait=0 heißt "sofort antworten, nicht
+		// serverseitig warten" - das braucht klassisches Intervall-Polling
+		// (siehe BambuRestApi::get_jobs()): Dort übernimmt die Bridge die
+		// Pause zwischen zwei Anfragen selbst, statt einen PHP-Worker samt
+		// Datenbankverbindung minutenlang in einer Warteschleife zu binden.
+		// "Kein wait angegeben" (leer/null, oben abgefangen) bleibt davon
+		// unberührt und ergibt weiterhin den Long-Poll-Default.
+		if ( 0 === $wert ) {
+			return 0;
+		}
+
+		if ( $wert < 0 ) {
 			return $default;
 		}
 
