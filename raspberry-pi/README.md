@@ -425,6 +425,13 @@ python3 -m venv venv
 venv/bin/pip install -r requirements-bambu.txt
 ```
 
+Für das Kamera-Standbild (nur X1-Serie, siehe Abschnitt weiter unten)
+zusätzlich:
+
+```bash
+sudo apt install -y ffmpeg
+```
+
 ### 4. `.env.bambu` konfigurieren
 
 ```bash
@@ -536,11 +543,21 @@ zusätzlicher Verbindungsaufbau. Im Admin erscheint sie direkt auf der
 Druckerkarte.
 
 Zusätzlich holt die Bridge alle `CAMERA_SNAPSHOT_INTERVAL` Sekunden
-(Standard 10s) ein einzelnes JPEG-Standbild über den unoffiziellen
-Video-Kanal des Druckers (Port 6000, dasselbe Prinzip wie FTPS auf Port
-990: TLS ab dem ersten Byte, Anmeldung mit "bblp"/Zugangscode) und lädt
-es hoch – kein Dauerstream, nur ein regelmäßiges Bild. Abschalten mit
+(Standard 10s) ein einzelnes JPEG-Standbild und lädt es hoch – kein
+Dauerstream, nur ein regelmäßiges Bild. Abschalten mit
 `CAMERA_ENABLED=false` in `.env.bambu`.
+
+**Nur die X1-Serie (X1C/X1E) wird unterstützt.** Sie liefert ihre
+Kamera per RTSPS (RTSP über TLS, Port 322) – dafür braucht die Bridge
+zusätzlich **`ffmpeg`** auf dem Pi:
+
+```bash
+sudo apt install -y ffmpeg
+```
+
+P1/A1-Drucker nutzen ein anderes, proprietäres Protokoll (JPEG-Framing
+auf Port 6000) – das ist hier (noch) nicht implementiert, dort bleibt
+das Kamera-Feld auf der Druckerkarte leer.
 
 Beides erscheint auf der Druckerkarte unter „Bambu-Lab-Drucker" sowie
 auf der eigenständigen Übersichtsseite **Fertigung → Druckfarm** (reine

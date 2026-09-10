@@ -52,6 +52,13 @@ done
 command -v python3 >/dev/null 2>&1 || fail "python3 wurde nicht gefunden. 'sudo apt install python3 python3-venv' und erneut versuchen."
 command -v systemctl >/dev/null 2>&1 || fail "systemd (systemctl) wurde nicht gefunden - dieses Skript ist für Raspberry Pi OS gedacht."
 
+# ffmpeg ist nur fürs Kamera-Standbild nötig (nur X1-Serie) - kein
+# fail(), damit die Installation ohne Kamera-Feature trotzdem durchläuft.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+	warn "ffmpeg wurde nicht gefunden - ohne ffmpeg funktioniert die Bridge, aber ohne Kamera-Standbild (nur X1-Serie)."
+	warn "Nachinstallieren mit: sudo apt install -y ffmpeg"
+fi
+
 INSTALL_DIR="/opt/bambu-bridge"
 SERVICE_NAME="bambu-bridge"
 CURRENT_USER="$(whoami)"
