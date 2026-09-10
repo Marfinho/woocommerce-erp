@@ -48,9 +48,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-import socket
 import ssl
-import struct
+import subprocess
 import sys
 import tempfile
 import threading
@@ -178,7 +177,10 @@ class Config:
     API_NAMESPACE = "lw16-bambu/v1"
     MQTT_PORT = 8883
     FTPS_PORT = 990
-    CAMERA_PORT = 6000
+    # RTSPS (X1-Serie). P1/A1 nutzen ein anderes, hier nicht implementiertes
+    # Protokoll (proprietäres JPEG-Framing auf Port 6000) - siehe Kommentar
+    # bei capture_snapshot().
+    CAMERA_PORT = int(os.environ.get("CAMERA_PORT", "322"))
 
     # Regelmäßiges Kamera-Standbild statt Dauerstream (siehe capture_
     # snapshot()/camera_loop()) - einfacher und robuster als ein
@@ -662,29 +664,21 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
 # Kamera-Standbild
 # ---------------------------------------------------------------------
 
-# Bambu-Drucker bieten im LAN-Modus einen eigenen, unoffiziellen Video-
-# Kanal auf Port 6000 (TLS ab dem ersten Byte, wie FTPS auf Port 990):
-# nach einem festen 96-Byte-Auth-Paket (Nutzername "bblp" + Zugangscode,
-# jeweils auf 32 Byte aufgefüllt) schickt der Drucker fortlaufend JPEG-
-# Frames, jedem geht ein 16-Byte-Header mit der Nutzlastgröße voraus
-# (erste 3 Byte, little-endian). Dasselbe Protokoll nutzen die bekannten
-# Bambu-Python-Integrationen (u. a. bambulabs_api).
+# Die X1-Serie (X1C/X1E) liefert ihre Kamera per RTSPS (RTSP über TLS,
+# Port 322) - ein Standardprotokoll, aber mit H.264-kodiertem Video statt
+# einzelner JPEG-Frames. Das eigene, proprietäre JPEG-Framing-Protokoll
+# auf Port 6000 (das bekannte Integrationen wie bambulabs_api nutzen)
+# gehört zur P1/A1-Serie und wurde live gegen einen X1C ausprobiert -
+# der Drucker antwortete mit einer kurzen, nicht auswertbaren Nutzlast
+# statt echter Bilddaten (falsches Protokoll für dieses Modell).
 #
-# Für ein einzelnes Standbild reicht eine kurze Verbindung: Auth senden,
-# auf den ersten vollständigen Frame warten, Verbindung wieder schließen
-# - kein Dauer-Socket, kein Hintergrund-Thread mit eigenem Zustand nötig.
+# Statt einen RTSP-Client samt H.264-Decoder selbst zu schreiben, wird
+# dafür ffmpeg genutzt (Kommandozeilen-Tool, muss auf dem Pi installiert
+# sein: apt install ffmpeg) - dieselbe Vorgehensweise wie bei bekannten
+# Bambu-Integrationen (z. B. go2rtc-Relays): einen einzelnen Frame aus
+# dem Stream extrahieren, als JPEG speichern.
 
-
-def _camera_auth_packet() -> bytes:
-    username = "bblp"  # derselbe feste Benutzername wie bei MQTT/FTPS
-    auth = bytearray()
-    auth += struct.pack("<I", 0x40)
-    auth += struct.pack("<I", 0x3000)
-    auth += struct.pack("<I", 0)
-    auth += struct.pack("<I", 0)
-    auth += username.encode("ascii").ljust(32, b"\x00")
-    auth += Config.BAMBU_ACCESS_CODE.encode("ascii").ljust(32, b"\x00")
-    return bytes(auth)
+RTSPS_SNAPSHOT_URL = "rtsps://bblp:{code}@{ip}:{port}/streaming/live/1"
 
 
 def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
@@ -695,54 +689,44 @@ def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
     scheiterndes Kamera-Feature aus dem Log heraus nicht diagnostizieren
     (genau das Problem, das ohne diese Rückmeldung live aufgetreten ist).
     """
-    # Nur das SOI-Markerpaar prüfen (jedes JPEG beginnt damit) statt
-    # zusätzlich ein APP0/JFIF-Segment (FF D8 FF E0) vorauszusetzen - die
-    # Bambu-Kamera liefert Frames ohne APP0, ein zu strenger Start-Check
-    # verwarf deshalb sonst jedes empfangene Bild als "kein gültiges JPEG".
-    jpeg_start = b"\xff\xd8"
-    jpeg_end = b"\xff\xd9"
+    url = RTSPS_SNAPSHOT_URL.format(
+        code=Config.BAMBU_ACCESS_CODE, ip=Config.BAMBU_IP, port=Config.CAMERA_PORT
+    )
 
-    ctx = _printer_ssl_context()
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        ziel = Path(tmp_dir) / "snapshot.jpg"
 
-    try:
-        with socket.create_connection((Config.BAMBU_IP, Config.CAMERA_PORT), timeout=timeout) as raw:
-            with ctx.wrap_socket(raw, server_hostname=None) as sock:
-                sock.settimeout(timeout)
-                sock.sendall(_camera_auth_packet())
+        try:
+            ergebnis = subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-rtsp_transport", "tcp",
+                    "-timeout", str(int(timeout * 1_000_000)),  # ffmpeg erwartet Mikrosekunden
+                    "-i", url,
+                    "-frames:v", "1",
+                    "-q:v", "4",
+                    str(ziel),
+                ],
+                capture_output=True,
+                timeout=timeout + 5,
+            )
+        except FileNotFoundError:
+            return None, "ffmpeg ist nicht installiert (sudo apt install ffmpeg auf dem Pi)."
+        except subprocess.TimeoutExpired:
+            return None, f"ffmpeg hat innerhalb von {timeout + 5:.0f}s keinen Frame geliefert."
 
-                header = b""
-                while len(header) < 16:
-                    chunk = sock.recv(16 - len(header))
-                    if not chunk:
-                        return None, "Verbindung geschlossen beim Warten auf den Bild-Header (Zugangscode falsch, oder Drucker unterstützt/erlaubt den Kamera-Kanal nicht)."
-                    header += chunk
+        if 0 != ergebnis.returncode or not ziel.is_file():
+            # Nur die letzte(n) Zeile(n) von stderr - ffmpeg ist sehr
+            # gesprächig, die eigentliche Fehlerursache steht meist ganz
+            # am Ende.
+            zeilen = redact(ergebnis.stderr.decode("utf-8", errors="replace")).strip().splitlines()
+            return None, "ffmpeg-Fehler: " + (zeilen[-1] if zeilen else f"Exit-Code {ergebnis.returncode}")
 
-                payload_size = int.from_bytes(header[0:3], byteorder="little")
-
-                if payload_size <= 0 or payload_size > 10 * 1024 * 1024:
-                    return None, f"Unplausible Bildgröße im Header ({payload_size} Byte)."
-
-                bild = bytearray()
-                while len(bild) < payload_size:
-                    chunk = sock.recv(min(65536, payload_size - len(bild)))
-                    if not chunk:
-                        return None, "Verbindung während der Bildübertragung abgebrochen."
-                    bild += chunk
-
-                if bild[:2] != jpeg_start or bild[-2:] != jpeg_end:
-                    # Diagnose-Ausschnitt mit in den Grund - falls das
-                    # Protokoll doch noch abweicht, zeigt das sofort, womit
-                    # die Daten tatsächlich beginnen/enden, ohne ein
-                    # weiteres Diagnoseskript von Hand ausführen zu müssen.
-                    return None, (
-                        "Empfangene Daten sind kein gültiges JPEG (Header "
-                        f"{header.hex()}, Größe {payload_size}, "
-                        f"Anfang {bytes(bild[:8]).hex()}, Ende {bytes(bild[-8:]).hex()})."
-                    )
-
-                return bytes(bild), "ok"
-    except (OSError, ssl.SSLError) as exc:
-        return None, f"Verbindung zum Kamera-Kanal fehlgeschlagen: {exc}"
+        try:
+            return ziel.read_bytes(), "ok"
+        except OSError as exc:
+            return None, f"Standbild-Datei konnte nicht gelesen werden: {exc}"
 
 
 def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
