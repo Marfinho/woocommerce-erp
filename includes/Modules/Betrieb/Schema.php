@@ -896,6 +896,7 @@ class Schema {
 			article_revision_id BIGINT UNSIGNED NULL,
 			parts_planned SMALLINT UNSIGNED NULL,
 			plate_job_id BIGINT UNSIGNED NULL,
+			ams_tray_id TINYINT UNSIGNED NULL,
 			file_path VARCHAR(255) NOT NULL,
 			file_name VARCHAR(191) NOT NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'queued',

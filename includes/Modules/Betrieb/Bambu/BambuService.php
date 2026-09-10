@@ -54,13 +54,17 @@ class BambuService {
 	 *
 	 * @param string $printer_id      Stabiler Schlüssel des Bambu-Druckers.
 	 * @param string $model_filename  Dateiname in der Modellablage (ModelFile::path()).
-	 * @param int    $druckauftrag_id Optional: der Fertigungsauftrag, aus dem
-	 *                                 der Job entstanden ist – darüber trägt ein
-	 *                                 abgeschlossener Druck seine Ist-Druckzeit
-	 *                                 automatisch ein (siehe BambuJobRepository::complete()).
+	 * @param int      $druckauftrag_id Optional: der Fertigungsauftrag, aus dem
+	 *                                   der Job entstanden ist – darüber trägt ein
+	 *                                   abgeschlossener Druck seine Ist-Druckzeit
+	 *                                   automatisch ein (siehe BambuJobRepository::complete()).
+	 * @param int|null $ams_tray_id     Optional: gewähltes AMS-Fach für den
+	 *                                   gesamten Druckauftrag - null lässt den
+	 *                                   Drucker beim gerade eingelegten/externen
+	 *                                   Filament (wie bisher).
 	 * @return array {ok, job_id, error}
 	 */
-	public static function enqueue_model( $printer_id, $model_filename, $druckauftrag_id = 0 ) {
+	public static function enqueue_model( $printer_id, $model_filename, $druckauftrag_id = 0, $ams_tray_id = null ) {
 		$printer_id = sanitize_key( (string) $printer_id );
 
 		if ( '' === $printer_id ) {
@@ -94,6 +98,7 @@ class BambuService {
 			array(
 				'printer_id'      => $printer_id,
 				'druckauftrag_id' => $druckauftrag_id ? (int) $druckauftrag_id : 0,
+				'ams_tray_id'     => $ams_tray_id,
 				'file_path'       => $path,
 				'file_name'       => basename( $path ),
 			)
@@ -126,10 +131,12 @@ class BambuService {
 	 * @param string $printer_id Stabiler Schlüssel des Bambu-Druckers.
 	 * @param string $tmp_path   Temporärer Pfad der hochgeladenen Datei
 	 *                            (z. B. $_FILES[...]['tmp_name']).
-	 * @param string $original_filename Ursprünglicher Dateiname, nur zur Anzeige.
+	 * @param string   $original_filename Ursprünglicher Dateiname, nur zur Anzeige.
+	 * @param int|null $ams_tray_id       Optional: gewähltes AMS-Fach für den
+	 *                                     gesamten Druckauftrag.
 	 * @return array {ok, job_id, error}
 	 */
-	public static function enqueue_upload( $printer_id, $tmp_path, $original_filename ) {
+	public static function enqueue_upload( $printer_id, $tmp_path, $original_filename, $ams_tray_id = null ) {
 		$printer_id = sanitize_key( (string) $printer_id );
 
 		if ( '' === $printer_id ) {
@@ -186,9 +193,10 @@ class BambuService {
 
 		$job_id = BambuJobRepository::create(
 			array(
-				'printer_id' => $printer_id,
-				'file_path'  => $pfad,
-				'file_name'  => sanitize_file_name( (string) $original_filename ),
+				'printer_id'  => $printer_id,
+				'ams_tray_id' => $ams_tray_id,
+				'file_path'   => $pfad,
+				'file_name'   => sanitize_file_name( (string) $original_filename ),
 			)
 		);
 
@@ -328,12 +336,14 @@ class BambuService {
 	 * Druck fertig, bucht BambuJobRepository::complete() automatisch das
 	 * Druckjournal und schliesst den zugehörigen Fertigungsauftrag.
 	 *
-	 * @param int    $article_id       Artikel.
-	 * @param string $bambu_printer_id Stabiler Schlüssel des Bambu-Druckers.
-	 * @param float  $qty              Gewünschte Menge (wird auf ganze Platten aufgerundet).
+	 * @param int      $article_id       Artikel.
+	 * @param string   $bambu_printer_id Stabiler Schlüssel des Bambu-Druckers.
+	 * @param float    $qty              Gewünschte Menge (wird auf ganze Platten aufgerundet).
+	 * @param int|null $ams_tray_id      Optional: gewähltes AMS-Fach, gilt für
+	 *                                    alle daraus entstehenden Platten.
 	 * @return array {ok, plates, work_order_ids, job_ids, error}
 	 */
-	public static function dispatch_from_demand( $article_id, $bambu_printer_id, $qty ) {
+	public static function dispatch_from_demand( $article_id, $bambu_printer_id, $qty, $ams_tray_id = null ) {
 		$article_id       = (int) $article_id;
 		$bambu_printer_id = sanitize_key( (string) $bambu_printer_id );
 		$qty              = max( 0.0, (float) $qty );
@@ -414,6 +424,7 @@ class BambuService {
 					'work_order_id'       => $work_order_id,
 					'article_revision_id' => (int) $revision['id'],
 					'parts_planned'       => (int) $plate_qty,
+					'ams_tray_id'         => $ams_tray_id,
 					'file_path'           => $path,
 					'file_name'           => basename( $path ),
 				)

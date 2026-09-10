@@ -457,15 +457,28 @@ def start_mqtt_client() -> "mqtt.Client":
     return client
 
 
-def send_print_command(client: "mqtt.Client", remote_filename: str) -> None:
+def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id: Optional[int] = None) -> None:
     """Druck der zuvor per FTPS hochgeladenen Datei anstoßen.
 
     "project_file" ist das von Bambu Studio selbst verwendete Kommando,
     um eine bereits auf dem Drucker liegende (S)3MF-Druckdatei zu
-    starten. use_ams=false, weil die Filamentzuordnung in dieser
-    Anbindung bewusst nicht automatisiert wird - der Slicer/das Profil
-    entscheidet beim Erzeugen der Druckdatei bereits, welches Material
-    gemeint ist; ein AMS-Wechsel ohne Sichtprüfung vor Ort wäre riskant.
+    starten.
+
+    ams_tray_id ist optional das beim Einreihen in WordPress gewählte
+    AMS-Fach (siehe BambuPrinterRepository::ams_tray_options() auf der
+    PHP-Seite - "globale" Fach-Nummer: AMS-Einheit * 4 + Fach-Index,
+    dieselbe Zählweise, die ams_mapping selbst erwartet). Ohne Auswahl
+    bleibt es wie bisher beim gerade eingelegten/externen Filament
+    (use_ams=false) - der Slicer/das Profil hat beim Erzeugen der
+    Druckdatei bereits festgelegt, welches Material gemeint ist, und ein
+    automatischer AMS-Wechsel ohne Sichtprüfung vor Ort wäre riskant.
+
+    ams_mapping bildet die Filament-IDs IM G-CODE auf physische AMS-
+    Fächer ab. Diese Anbindung erzeugt nur Ein-Material-Druckdateien
+    (siehe SlicingService::enqueue_plate() auf der PHP-Seite - "echtes
+    Mehrmaterial-Slicing mit AMS-Zuordnung leistet dieser Worker nicht"),
+    deshalb genügt ein einzelner Eintrag: Filament-ID 0 im G-Code zeigt
+    auf das gewählte physische Fach.
     """
     command = {
         "print": {
@@ -484,9 +497,13 @@ def send_print_command(client: "mqtt.Client", remote_filename: str) -> None:
             "flow_cali": False,
             "vibration_cali": False,
             "layer_inspect": False,
-            "use_ams": False,
+            "use_ams": ams_tray_id is not None,
         }
     }
+
+    if ams_tray_id is not None:
+        command["print"]["ams_mapping"] = [ams_tray_id]
+
     client.publish(f"device/{Config.BAMBU_SERIAL}/request", json.dumps(command))
 
 
@@ -1036,7 +1053,7 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
             return
 
         STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")
-        send_print_command(mqtt_client, remote_filename)
+        send_print_command(mqtt_client, remote_filename, job.get("ams_tray_id"))
         api.mark_printing(job_id)
 
         gestartet, fehler = warte_auf_druckstart()

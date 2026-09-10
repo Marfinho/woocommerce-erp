@@ -130,12 +130,13 @@ class DemandPage {
 		check_admin_referer( self::NONCE . '_bambu' );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
-		$article_id = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
-		$qty        = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', wp_unslash( $_POST['qty'] ) ) : 0;
-		$printer_id = isset( $_POST['bambu_printer_id'] ) ? sanitize_key( wp_unslash( $_POST['bambu_printer_id'] ) ) : '';
+		$article_id  = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
+		$qty         = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', wp_unslash( $_POST['qty'] ) ) : 0;
+		$printer_id  = isset( $_POST['bambu_printer_id'] ) ? sanitize_key( wp_unslash( $_POST['bambu_printer_id'] ) ) : '';
+		$ams_tray_id = isset( $_POST['ams_tray_id'] ) && '' !== $_POST['ams_tray_id'] ? max( 0, min( 255, (int) $_POST['ams_tray_id'] ) ) : null;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		$result = BambuService::dispatch_from_demand( $article_id, $printer_id, $qty );
+		$result = BambuService::dispatch_from_demand( $article_id, $printer_id, $qty, $ams_tray_id );
 
 		if ( ! $result['ok'] ) {
 			$this->redirect( $result['error'], 'error' );
@@ -447,11 +448,46 @@ class DemandPage {
 			printf( '<option value="%s">%s</option>', esc_attr( $printer->printer_id ), esc_html( $printer->name ) );
 		}
 		echo '</select> ';
+		$this->render_ams_tray_select( $bambu_printers );
 		printf(
 			'<button class="button button-small">%s</button>',
 			esc_html__( 'Direkt drucken', 'lindenweg16' )
 		);
 		echo '</form>';
+	}
+
+	/**
+	 * Auswahl "welches Filament" für "Direkt drucken" - ein Fach gilt für
+	 * die gesamte Platte (kein Mehrfarb-Mapping pro Bauteil). Dasselbe
+	 * Muster wie BambuPrintersPage::render_ams_tray_select().
+	 *
+	 * @param array $bambu_printers Registrierte Bambu-Drucker.
+	 */
+	protected function render_ams_tray_select( array $bambu_printers ) {
+		$gruppen = array();
+
+		foreach ( $bambu_printers as $printer ) {
+			$optionen = BambuPrinterRepository::ams_tray_options( $printer );
+
+			if ( $optionen ) {
+				$gruppen[ $printer->name ] = $optionen;
+			}
+		}
+
+		if ( ! $gruppen ) {
+			return;
+		}
+
+		echo '<select name="ams_tray_id" style="max-width:200px">';
+		echo '<option value="">' . esc_html__( '– aktuell eingelegtes Filament –', 'lindenweg16' ) . '</option>';
+		foreach ( $gruppen as $drucker_name => $optionen ) {
+			printf( '<optgroup label="%s">', esc_attr( $drucker_name ) );
+			foreach ( $optionen as $option ) {
+				printf( '<option value="%d">%s</option>', (int) $option['value'], esc_html( $option['label'] ) );
+			}
+			echo '</optgroup>';
+		}
+		echo '</select> ';
 	}
 
 	/**
