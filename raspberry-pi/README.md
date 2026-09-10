@@ -337,6 +337,26 @@ Internetzugang: Die Bridge braucht zusätzlich eine Verbindung im
 Drucker müssen also im selben Netzwerk stehen. Für den Weg zu WordPress
 gilt weiterhin: nur ausgehende HTTPS-Verbindungen, kein eingehender Port.
 
+### Schnellinstallation
+
+Am Drucker zuerst LAN-Modus aktivieren und in WordPress einen Drucker
+anlegen (Schritte 1–2 unten), danach führt
+[`install-bambu-bridge.sh`](install-bambu-bridge.sh) durch den Rest:
+Python-Umgebung, Abhängigkeiten, Konfiguration (fragt IP/Zugangscode/
+Token interaktiv ab) und den systemd-Dienst. Es erkennt eine bestehende
+Etikettendrucker-Installation (`haster-print`) automatisch, lässt sie
+unangetastet und übernimmt daraus sogar `WORDPRESS_URL` als Vorschlag.
+Erneutes Ausführen ist unbedenklich (fragt, ob eine vorhandene
+Konfiguration erhalten bleiben soll).
+
+```bash
+cd raspberry-pi
+./install-bambu-bridge.sh
+```
+
+Wer lieber jeden Schritt einzeln nachvollziehen (oder das Skript nicht
+nutzen) möchte, findet ihn im Folgenden unverändert von Hand beschrieben.
+
 ### 1. Am Drucker: LAN-Modus aktivieren
 
 Am Display: Einstellungen → LAN-Modus (bzw. „LAN Only Mode") aktivieren.
