@@ -35,6 +35,45 @@ zählt der Benutzer, den man beim Flashen selbst festgelegt hat. Vor dem
 Copy-Paste einmal mit `whoami` den eigenen Benutzernamen prüfen und
 überall `pi` dadurch ersetzen (auch in `haster-print.service`, Schritt 9).
 
+### 2b. Bei WLAN: Energiesparmodus abschalten (dringend empfohlen)
+
+Läuft der Pi über WLAN statt Kabel, schaltet der WLAN-Chip standardmäßig
+zwischendurch kurz in den Stromsparmodus – dabei können laufende
+Verbindungen (egal ob zum Etikettendrucker-Server, zur Bambu-Bridge oder
+zu WordPress) mit einem harten `Connection reset by peer` abreißen, auch
+mitten in einer Übertragung. Das äußert sich als sporadische,
+scheinbar zusammenhanglose Netzwerkfehler in den Logs beider Bridges.
+
+Prüfen:
+
+```bash
+iwconfig wlan0 | grep -i power
+```
+
+Steht dort `Power Management:on`, dauerhaft abschalten:
+
+```bash
+sudo tee /etc/systemd/system/wifi-powersave-off.service > /dev/null <<'UNIT'
+[Unit]
+Description=WLAN-Energiesparmodus dauerhaft abschalten (verhindert sporadische Verbindungsabbrueche)
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/sbin/iw dev wlan0 set power_save off
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now wifi-powersave-off.service
+```
+
+Ein einfaches `iw wlan0 set power_save off` von Hand reicht nur bis zum
+nächsten Neustart – der Dienst oben setzt es bei jedem Boot neu.
+
 ### 3. CUPS installieren
 
 Nur nötig für den CUPS-Druckweg (Standard, `PRINT_BACKEND=cups`). Wird
