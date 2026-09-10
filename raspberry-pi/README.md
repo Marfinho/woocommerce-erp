@@ -548,6 +548,17 @@ Live-Ansicht ohne Verwaltungsformulare, für die Werkstatt-Anzeige) –
 beide aktualisieren sich automatisch alle paar Sekunden per AJAX, ohne
 manuelles Neuladen.
 
+### Filament-Auswahl beim Einreihen
+
+Überall, wo ein Druckauftrag eingereiht wird (Bambu-Lab-Drucker →
+Aufträge, Bedarf → „Direkt drucken"), steht – sofern der Drucker
+gerade eine AMS-Belegung meldet – eine zusätzliche Auswahl „welches
+Filament" zur Verfügung. Sie gilt für den **gesamten** Druckauftrag
+(ein Material für die ganze Platte, kein Mehrfarb-/Mehrmaterial-Mapping
+pro Bauteil – dafür weiterhin manuell in Bambu Studio slicen). Ohne
+Auswahl verhält sich die Bridge wie bisher: der Drucker nutzt das
+gerade eingelegte bzw. externe Filament, ohne AMS-Beteiligung.
+
 ### Unsicherheiten des LAN-Protokolls
 
 Bambu Lab dokumentiert das LAN-MQTT-/FTPS-Protokoll nicht offiziell. Die

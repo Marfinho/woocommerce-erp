@@ -195,7 +195,7 @@ class BambuJobRepository {
 	 *
 	 * @param array $data {printer_id, druckauftrag_id, work_order_id,
 	 *                      article_revision_id, parts_planned, plate_job_id,
-	 *                      file_path, file_name}
+	 *                      ams_tray_id, file_path, file_name}
 	 * @return int Neue ID.
 	 */
 	public static function create( array $data ) {
@@ -210,13 +210,21 @@ class BambuJobRepository {
 				'article_revision_id' => isset( $data['article_revision_id'] ) && $data['article_revision_id'] ? (int) $data['article_revision_id'] : null,
 				'parts_planned'       => isset( $data['parts_planned'] ) && $data['parts_planned'] ? (int) $data['parts_planned'] : null,
 				'plate_job_id'        => isset( $data['plate_job_id'] ) && $data['plate_job_id'] ? (int) $data['plate_job_id'] : null,
+				// null = kein AMS-Fach gewählt, der Drucker nutzt beim Start
+				// das gerade eingelegte/externe Filament (siehe send_print_
+				// command() auf der Bridge-Seite) - 0 ist ein gültiges
+				// Fach (das erste), deshalb ausdrücklich auf '' statt auf
+				// falsy prüfen.
+				'ams_tray_id'         => isset( $data['ams_tray_id'] ) && '' !== $data['ams_tray_id'] && null !== $data['ams_tray_id']
+					? max( 0, min( 255, (int) $data['ams_tray_id'] ) )
+					: null,
 				'file_path'           => (string) $data['file_path'],
 				'file_name'           => (string) $data['file_name'],
 				'status'              => 'queued',
 				'attempts'            => 0,
 				'created_at'          => current_time( 'mysql', true ),
 			),
-			array( '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s' )
+			array( '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s' )
 		);
 
 		return (int) $wpdb->insert_id;

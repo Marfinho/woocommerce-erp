@@ -38,8 +38,11 @@ class Installer {
 	 * DB_VERSION 30: bambu_printers um ams_json (AMS-Belegung: Material,
 	 * Farbe, Restmenge je Fach) und snapshot_at (Zeitpunkt des letzten
 	 * Kamera-Standbilds) erweitert.
+	 *
+	 * DB_VERSION 31: bambu_jobs um ams_tray_id (gewähltes AMS-Fach für
+	 * den gesamten Druckauftrag) erweitert.
 	 */
-	const DB_VERSION = '30';
+	const DB_VERSION = '31';
 
 	/**
 	 * Aktivierungsroutine.

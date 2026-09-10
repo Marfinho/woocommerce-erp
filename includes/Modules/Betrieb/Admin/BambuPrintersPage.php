@@ -183,7 +183,8 @@ class BambuPrintersPage {
 		$result = BambuService::enqueue_upload(
 			$printer_id,
 			$_FILES['datei']['tmp_name'], // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-			sanitize_file_name( wp_unslash( $_FILES['datei']['name'] ) )
+			sanitize_file_name( wp_unslash( $_FILES['datei']['name'] ) ),
+			$this->read_ams_tray_id()
 		);
 
 		$this->back(
@@ -204,7 +205,7 @@ class BambuPrintersPage {
 		$printer_id = isset( $_POST['printer_id'] ) ? sanitize_key( wp_unslash( $_POST['printer_id'] ) ) : '';
 		$datei      = isset( $_POST['model_file'] ) ? sanitize_file_name( wp_unslash( $_POST['model_file'] ) ) : '';
 
-		$result = BambuService::enqueue_model( $printer_id, $datei );
+		$result = BambuService::enqueue_model( $printer_id, $datei, 0, $this->read_ams_tray_id() );
 
 		$this->back(
 			$result['ok']
@@ -212,6 +213,21 @@ class BambuPrintersPage {
 				: $result['error'],
 			0
 		);
+	}
+
+	/**
+	 * Gewähltes AMS-Fach aus $_POST lesen - leer/nicht gesetzt bedeutet
+	 * "kein AMS" (siehe render_ams_tray_select()), nicht "Fach 0".
+	 *
+	 * @return int|null
+	 */
+	protected function read_ams_tray_id() {
+		// phpcs:ignore WordPress.Security.NonceVerification -- durch check_admin_referer() im Aufrufer abgedeckt.
+		if ( ! isset( $_POST['ams_tray_id'] ) || '' === $_POST['ams_tray_id'] ) {
+			return null;
+		}
+
+		return max( 0, min( 255, (int) $_POST['ams_tray_id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 	}
 
 	/**
@@ -484,6 +500,7 @@ class BambuPrintersPage {
 			printf( '<option value="%s">%s</option>', esc_attr( $printer->printer_id ), esc_html( $printer->name ) );
 		}
 		echo '</select> ';
+		$this->render_ams_tray_select( $printers );
 		echo '<input type="file" name="datei" accept=".3mf" required> ';
 		printf( '<button type="submit" class="button button-primary">%s</button>', esc_html__( 'Hochladen & einreihen', 'lindenweg16' ) );
 		printf(
@@ -531,8 +548,48 @@ class BambuPrintersPage {
 			printf( '<option value="%s">%s</option>', esc_attr( $datei['file'] ), esc_html( $datei['label'] ) );
 		}
 		echo '</select> ';
+		$this->render_ams_tray_select( $printers );
 		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Einreihen', 'lindenweg16' ) );
 		echo '</form>';
+	}
+
+	/**
+	 * Auswahl "welches Filament" für ein Einreih-Formular - ein Fach gilt
+	 * für den gesamten Druckauftrag (kein Mehrfarb-/Mehrmaterial-Mapping
+	 * pro Bauteil, siehe SlicingService::enqueue_plate()). Gruppiert nach
+	 * Drucker, weil die Fach-Nummer nur zusammen mit dem im selben
+	 * Formular gewählten Drucker Sinn ergibt.
+	 *
+	 * @param array $printers Registrierte Bambu-Drucker.
+	 */
+	protected function render_ams_tray_select( $printers ) {
+		$gruppen = array();
+
+		foreach ( $printers as $printer ) {
+			$optionen = BambuPrinterRepository::ams_tray_options( $printer );
+
+			if ( $optionen ) {
+				$gruppen[ $printer->name ] = $optionen;
+			}
+		}
+
+		if ( ! $gruppen ) {
+			// Kein Drucker meldet aktuell AMS-Fächer - Formular funktioniert
+			// trotzdem, der Drucker nutzt dann das eingelegte/externe
+			// Filament wie bisher.
+			return;
+		}
+
+		echo '<select name="ams_tray_id">';
+		echo '<option value="">' . esc_html__( '– aktuell eingelegtes Filament (kein AMS) –', 'lindenweg16' ) . '</option>';
+		foreach ( $gruppen as $drucker_name => $optionen ) {
+			printf( '<optgroup label="%s">', esc_attr( $drucker_name ) );
+			foreach ( $optionen as $option ) {
+				printf( '<option value="%d">%s</option>', (int) $option['value'], esc_html( $option['label'] ) );
+			}
+			echo '</optgroup>';
+		}
+		echo '</select> ';
 	}
 
 	/**

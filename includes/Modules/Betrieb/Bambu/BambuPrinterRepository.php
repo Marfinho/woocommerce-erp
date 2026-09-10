@@ -427,6 +427,58 @@ class BambuPrinterRepository {
 	}
 
 	/**
+	 * Belegte AMS-Fächer als Auswahlliste fürs Einreihen eines Druckauftrags
+	 * - gemeinsam genutzt von allen Stellen, an denen ein Job in die
+	 * Warteschlange gelegt wird (BambuPrintersPage, DemandPage).
+	 *
+	 * @param object $printer Datensatz.
+	 * @return array Liste von {value, color, label}. value ist die "globale"
+	 *               Fach-Nummer (AMS-Einheit * 4 + Fach-Index), dieselbe
+	 *               Zählweise, die die Firmware selbst in ams_mapping
+	 *               erwartet (siehe send_print_command() auf der Bridge).
+	 */
+	public static function ams_tray_options( $printer ) {
+		$optionen = array();
+
+		foreach ( self::ams_units( $printer ) as $einheit ) {
+			if ( ! is_array( $einheit ) ) {
+				continue;
+			}
+
+			$einheit_id = isset( $einheit['id'] ) ? (int) $einheit['id'] : 0;
+
+			foreach ( (array) ( $einheit['trays'] ?? array() ) as $fach ) {
+				$material = isset( $fach['type'] ) ? trim( (string) $fach['type'] ) : '';
+
+				if ( '' === $material ) {
+					// Leeres Fach - nicht auswählbar.
+					continue;
+				}
+
+				$fach_id = isset( $fach['id'] ) ? (int) $fach['id'] : 0;
+				$farbe   = isset( $fach['color'] ) ? preg_replace( '/[^0-9A-Fa-f]/', '', (string) $fach['color'] ) : '';
+				$farbe   = $farbe ? substr( str_pad( $farbe, 6, '0' ), 0, 6 ) : 'cccccc';
+				$rest    = isset( $fach['remain'] ) && null !== $fach['remain'] && '' !== $fach['remain'] ? (int) $fach['remain'] : null;
+
+				$optionen[] = array(
+					'value' => $einheit_id * 4 + $fach_id,
+					'color' => $farbe,
+					'label' => sprintf(
+						/* translators: 1: AMS-Einheit, 2: Fach, 3: Material, 4: " (Restmenge %)" oder leer. */
+						__( 'AMS %1$d Fach %2$d – %3$s%4$s', 'lindenweg16' ),
+						$einheit_id + 1,
+						$fach_id + 1,
+						$material,
+						null !== $rest ? ' (' . $rest . ' %)' : ''
+					),
+				);
+			}
+		}
+
+		return $optionen;
+	}
+
+	/**
 	 * Temperaturwert auf das Format der Spalte bringen (DECIMAL(5,1)).
 	 *
 	 * @param mixed $wert Gemeldeter Wert.

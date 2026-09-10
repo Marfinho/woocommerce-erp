@@ -292,10 +292,14 @@ class BambuRestApi {
 	 */
 	protected function job_to_array( $job ) {
 		return array(
-			'id'         => (int) $job->id,
-			'printer_id' => (string) $job->printer_id,
-			'filename'   => (string) $job->file_name,
-			'created_at' => self::to_rfc3339( $job->created_at ),
+			'id'          => (int) $job->id,
+			'printer_id'  => (string) $job->printer_id,
+			'filename'    => (string) $job->file_name,
+			'created_at'  => self::to_rfc3339( $job->created_at ),
+			// Gewähltes AMS-Fach für den gesamten Druckauftrag - null, wenn
+			// beim Einreihen keins gewählt wurde (die Bridge startet den
+			// Druck dann ohne AMS, wie bisher).
+			'ams_tray_id' => isset( $job->ams_tray_id ) && null !== $job->ams_tray_id ? (int) $job->ams_tray_id : null,
 		);
 	}
 

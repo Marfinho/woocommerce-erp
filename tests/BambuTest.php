@@ -439,4 +439,46 @@ class BambuTest extends TestCase {
 		$this->assertSame( array(), BambuPrinterRepository::ams_units( (object) array( 'ams_json' => null ) ) );
 		$this->assertSame( array(), BambuPrinterRepository::ams_units( (object) array( 'ams_json' => 'kaputt' ) ) );
 	}
+
+	/**
+	 * ams_tray_options() bildet die "globale" Fach-Nummer (AMS-Einheit * 4 +
+	 * Fach-Index) - dieselbe Zählweise, die die Firmware in ams_mapping
+	 * erwartet - und lässt leere Fächer aus der Auswahl weg.
+	 */
+	public function test_ams_tray_options_globale_nummerierung() {
+		$printer = (object) array(
+			'ams_json' => json_encode(
+				array(
+					array(
+						'id'    => 0,
+						'trays' => array(
+							array( 'id' => 0, 'type' => 'PLA', 'color' => 'FF0000FF', 'remain' => 80 ),
+							array( 'id' => 1, 'type' => '', 'color' => '', 'remain' => null ), // leeres Fach
+						),
+					),
+					array(
+						'id'    => 1,
+						'trays' => array(
+							array( 'id' => 0, 'type' => 'PETG', 'color' => '00FF00FF', 'remain' => 45 ),
+						),
+					),
+				)
+			),
+		);
+
+		$optionen = BambuPrinterRepository::ams_tray_options( $printer );
+
+		$this->assertCount( 2, $optionen );
+		$this->assertSame( 0, $optionen[0]['value'] ); // Einheit 0, Fach 0 -> 0*4+0
+		$this->assertSame( 4, $optionen[1]['value'] ); // Einheit 1, Fach 0 -> 1*4+0
+		$this->assertStringContainsString( 'PLA', $optionen[0]['label'] );
+		$this->assertStringContainsString( 'PETG', $optionen[1]['label'] );
+	}
+
+	/**
+	 * Ohne AMS-Daten (oder nur leere Fächer) gibt es nichts zur Auswahl.
+	 */
+	public function test_ams_tray_options_ohne_daten_ist_leer() {
+		$this->assertSame( array(), BambuPrinterRepository::ams_tray_options( (object) array( 'ams_json' => null ) ) );
+	}
 }
