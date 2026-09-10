@@ -262,6 +262,10 @@ def _safe_float(wert) -> Optional[float]:
 # FINISH auch wirklich das Ende DIESES Jobs (siehe warte_auf_druckstart).
 DRUCKT_ZUSTAENDE = ("PREPARE", "RUNNING", "PAUSE", "SLICING")
 
+# Nur zum einmaligen Loggen, ob/wie der AMS-Report erkannt wird (siehe
+# _on_mqtt_message) - kein State, der irgendwo sonst gebraucht wird.
+_AMS_LOG_STATE = {"erkannt": False, "unerwartetes_format": False}
+
 
 class PrinterState:
     """Letzter aus dem MQTT-Report gelesener Druckerzustand."""
@@ -378,6 +382,13 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
     # Format statt der rohen Bambu-Struktur durchzureichen, damit WordPress
     # nicht an Firmware-Eigenheiten (mal String, mal Zahl) hängenbleibt.
     ams_report = printer.get("ams")
+    if isinstance(ams_report, dict) and not isinstance(ams_report.get("ams"), list) and not _AMS_LOG_STATE["unerwartetes_format"]:
+        # Der Drucker sendet einen "ams"-Schlüssel, aber nicht in der
+        # erwarteten Form - einmalig mit Inhalt loggen, damit sich ein
+        # abweichendes Firmware-Format überhaupt diagnostizieren lässt.
+        log.warning("AMS-Report in unerwartetem Format erhalten: %s", json.dumps(ams_report)[:300])
+        _AMS_LOG_STATE["unerwartetes_format"] = True
+
     if isinstance(ams_report, dict) and isinstance(ams_report.get("ams"), list):
         einheiten = []
         for einheit in ams_report["ams"]:
@@ -405,6 +416,14 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
             )
         if einheiten:
             updates["ams"] = einheiten
+            if not _AMS_LOG_STATE["erkannt"]:
+                log.info("AMS erkannt: %d Einheit(en).", len(einheiten))
+                _AMS_LOG_STATE["erkannt"] = True
+    elif ams_report is None and not _AMS_LOG_STATE["erkannt"] and not _AMS_LOG_STATE["unerwartetes_format"]:
+        # Ganz ohne "ams"-Schlüssel im Report meldet der Drucker vermutlich
+        # kein AMS (oder noch keinen vollständigen Report gesendet) - auch
+        # das einmalig sichtbar machen, statt stillschweigend nichts zu tun.
+        log.debug("Report enthält (noch) keinen AMS-Abschnitt.")
 
     if updates:
         STATE.update(**updates)
@@ -651,10 +670,14 @@ def _camera_auth_packet() -> bytes:
     return bytes(auth)
 
 
-def capture_snapshot(timeout: float = 10.0) -> Optional[bytes]:
-    """Ein einzelnes JPEG-Standbild vom Drucker holen, oder None bei
-    jedem Fehler - die Kamera ist ein Zusatzfeature, ein Aussetzer soll
-    nie den Druckbetrieb (Jobs, Status) beeinträchtigen."""
+def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
+    """Ein einzelnes JPEG-Standbild vom Drucker holen.
+
+    Gibt immer einen Grund mit zurück (auch bei Erfolg: "ok") - camera_loop()
+    loggt das gezielt bei jedem Wechsel, sonst liesse sich ein dauerhaft
+    scheiterndes Kamera-Feature aus dem Log heraus nicht diagnostizieren
+    (genau das Problem, das ohne diese Rückmeldung live aufgetreten ist).
+    """
     jpeg_start = b"\xff\xd8\xff\xe0"
     jpeg_end = b"\xff\xd9"
 
@@ -670,41 +693,54 @@ def capture_snapshot(timeout: float = 10.0) -> Optional[bytes]:
                 while len(header) < 16:
                     chunk = sock.recv(16 - len(header))
                     if not chunk:
-                        return None
+                        return None, "Verbindung geschlossen beim Warten auf den Bild-Header (Zugangscode falsch, oder Drucker unterstützt/erlaubt den Kamera-Kanal nicht)."
                     header += chunk
 
                 payload_size = int.from_bytes(header[0:3], byteorder="little")
 
                 if payload_size <= 0 or payload_size > 10 * 1024 * 1024:
-                    return None
+                    return None, f"Unplausible Bildgröße im Header ({payload_size} Byte)."
 
                 bild = bytearray()
                 while len(bild) < payload_size:
                     chunk = sock.recv(min(65536, payload_size - len(bild)))
                     if not chunk:
-                        return None
+                        return None, "Verbindung während der Bildübertragung abgebrochen."
                     bild += chunk
 
                 if bild[:4] != jpeg_start or bild[-2:] != jpeg_end:
-                    return None
+                    return None, "Empfangene Daten sind kein gültiges JPEG (fehlende Start-/End-Marker)."
 
-                return bytes(bild)
-    except (OSError, ssl.SSLError):
-        return None
+                return bytes(bild), "ok"
+    except (OSError, ssl.SSLError) as exc:
+        return None, f"Verbindung zum Kamera-Kanal fehlgeschlagen: {exc}"
 
 
 def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
     """Alle CAMERA_SNAPSHOT_INTERVAL Sekunden ein Standbild holen und
     hochladen - läuft unabhängig von MQTT/Job-Polling, ein Fehler hier
-    bleibt lokal und stört den restlichen Betrieb nicht."""
+    bleibt lokal und stört den restlichen Betrieb nicht.
+
+    Loggt nur bei einem Wechsel des Ergebnisses (erster Erfolg, erster
+    Fehlschlag, oder ein anderer Fehlergrund als beim letzten Mal) - sonst
+    würde ein dauerhafter Fehler alle CAMERA_SNAPSHOT_INTERVAL Sekunden
+    dieselbe Zeile ins Log schreiben.
+    """
+    letzter_grund = None
+
     while not stop_event.is_set():
-        bild = capture_snapshot()
+        bild, grund = capture_snapshot()
 
         if bild:
-            api.upload_snapshot(bild)
-        else:
-            log.debug("Kein Kamera-Standbild verfügbar (Drucker ohne Kamera, aus, oder Aussetzer).")
+            hochgeladen = api.upload_snapshot(bild)
+            if not hochgeladen:
+                grund = "Standbild aufgenommen, aber Hochladen zu WordPress fehlgeschlagen."
+            elif grund != letzter_grund:
+                log.info("Kamera-Standbild erfolgreich aufgenommen und hochgeladen.")
+        elif grund != letzter_grund:
+            log.warning("Kein Kamera-Standbild verfügbar: %s", grund)
 
+        letzter_grund = grund
         stop_event.wait(Config.CAMERA_SNAPSHOT_INTERVAL)
 
 
@@ -806,13 +842,14 @@ class ApiClient:
 
         self._post("status", data=data)
 
-    def upload_snapshot(self, jpeg_bytes: bytes) -> None:
+    def upload_snapshot(self, jpeg_bytes: bytes) -> bool:
         """Aktuelles Kamera-Standbild hochladen - rohe JPEG-Bytes im Body,
         kein Formularfeld (siehe BambuRestApi::post_snapshot() auf der
-        PHP-Seite). Ein Fehlschlag ist nicht kritisch, deshalb kein
-        Rückgabewert, den jemand auswerten müsste - camera_loop() versucht
-        es beim nächsten Intervall einfach erneut."""
-        self._post("snapshot", data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+        PHP-Seite). camera_loop() nutzt den Rückgabewert nur fürs Log -
+        ein Fehlschlag ist nicht kritisch, beim nächsten Intervall wird es
+        einfach erneut versucht."""
+        r = self._post("snapshot", data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+        return r is not None and r.status_code == 200
 
     def download_file(self, job_id: int, target: Path) -> bool:
         try:
