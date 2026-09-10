@@ -48,7 +48,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import socket
 import ssl
+import struct
 import sys
 import tempfile
 import threading
@@ -176,6 +178,13 @@ class Config:
     API_NAMESPACE = "lw16-bambu/v1"
     MQTT_PORT = 8883
     FTPS_PORT = 990
+    CAMERA_PORT = 6000
+
+    # Regelmäßiges Kamera-Standbild statt Dauerstream (siehe capture_
+    # snapshot()/camera_loop()) - einfacher und robuster als ein
+    # durchgehender Video-Relay-Dienst, für die Admin-Übersicht reicht das.
+    CAMERA_ENABLED = _env_bool("CAMERA_ENABLED", True)
+    CAMERA_SNAPSHOT_INTERVAL = int(os.environ.get("CAMERA_SNAPSHOT_INTERVAL", "10"))
 
     @classmethod
     def validate(cls) -> None:
@@ -222,6 +231,23 @@ def redact(text: str) -> str:
     return text
 
 
+def _safe_int(wert) -> Optional[int]:
+    """Bambu liefert AMS-Werte je nach Firmware mal als Zahl, mal als
+    Zahl-in-String - robust in beide Richtungen parsen statt bei jeder
+    Variante einzeln zu prüfen."""
+    try:
+        return int(wert)
+    except (TypeError, ValueError):
+        return None
+
+
+def _safe_float(wert) -> Optional[float]:
+    try:
+        return float(wert)
+    except (TypeError, ValueError):
+        return None
+
+
 # ---------------------------------------------------------------------
 # Geteilter Live-Status (vom MQTT-Thread geschrieben, von der
 # Hauptschleife gelesen) - ein einfaches Lock genügt, da nur kurze
@@ -250,6 +276,10 @@ class PrinterState:
         self.bed_temp: Optional[float] = None
         self.printer_model = ""
         self.last_error = ""
+        # AMS-Belegung (Material/Farbe/Restmenge je Fach) - siehe
+        # _on_mqtt_message(). None solange noch kein AMS-Report kam (z. B.
+        # Drucker ohne AMS), dann bleibt es auch dauerhaft None.
+        self.ams: Optional[list] = None
 
     def update(self, **kwargs) -> None:
         with self._lock:
@@ -267,6 +297,7 @@ class PrinterState:
                 "bed_temp": self.bed_temp,
                 "printer_model": self.printer_model,
                 "last_error": self.last_error,
+                "ams": self.ams,
             }
 
 
@@ -342,6 +373,38 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
         updates["last_error"] = f"Fehlercode {fehler_code}"
     elif "gcode_state" in printer and str(printer["gcode_state"]).upper() not in ("FAILED",):
         updates["last_error"] = ""
+
+    # AMS-Belegung (Material/Farbe/Restmenge je Fach) - eigenes, schlankes
+    # Format statt der rohen Bambu-Struktur durchzureichen, damit WordPress
+    # nicht an Firmware-Eigenheiten (mal String, mal Zahl) hängenbleibt.
+    ams_report = printer.get("ams")
+    if isinstance(ams_report, dict) and isinstance(ams_report.get("ams"), list):
+        einheiten = []
+        for einheit in ams_report["ams"]:
+            if not isinstance(einheit, dict):
+                continue
+            faecher = []
+            for fach in einheit.get("tray", []) or []:
+                if not isinstance(fach, dict):
+                    continue
+                faecher.append(
+                    {
+                        "id": _safe_int(fach.get("id")),
+                        "type": str(fach.get("tray_type") or "").strip(),
+                        "color": str(fach.get("tray_color") or "").strip(),
+                        "remain": _safe_int(fach.get("remain")),
+                    }
+                )
+            einheiten.append(
+                {
+                    "id": _safe_int(einheit.get("id")),
+                    "humidity": _safe_float(einheit.get("humidity")),
+                    "temp": _safe_float(einheit.get("temp")),
+                    "trays": faecher,
+                }
+            )
+        if einheiten:
+            updates["ams"] = einheiten
 
     if updates:
         STATE.update(**updates)
@@ -560,6 +623,92 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------
+# Kamera-Standbild
+# ---------------------------------------------------------------------
+
+# Bambu-Drucker bieten im LAN-Modus einen eigenen, unoffiziellen Video-
+# Kanal auf Port 6000 (TLS ab dem ersten Byte, wie FTPS auf Port 990):
+# nach einem festen 96-Byte-Auth-Paket (Nutzername "bblp" + Zugangscode,
+# jeweils auf 32 Byte aufgefüllt) schickt der Drucker fortlaufend JPEG-
+# Frames, jedem geht ein 16-Byte-Header mit der Nutzlastgröße voraus
+# (erste 3 Byte, little-endian). Dasselbe Protokoll nutzen die bekannten
+# Bambu-Python-Integrationen (u. a. bambulabs_api).
+#
+# Für ein einzelnes Standbild reicht eine kurze Verbindung: Auth senden,
+# auf den ersten vollständigen Frame warten, Verbindung wieder schließen
+# - kein Dauer-Socket, kein Hintergrund-Thread mit eigenem Zustand nötig.
+
+
+def _camera_auth_packet() -> bytes:
+    username = "bblp"  # derselbe feste Benutzername wie bei MQTT/FTPS
+    auth = bytearray()
+    auth += struct.pack("<I", 0x40)
+    auth += struct.pack("<I", 0x3000)
+    auth += struct.pack("<I", 0)
+    auth += struct.pack("<I", 0)
+    auth += username.encode("ascii").ljust(32, b"\x00")
+    auth += Config.BAMBU_ACCESS_CODE.encode("ascii").ljust(32, b"\x00")
+    return bytes(auth)
+
+
+def capture_snapshot(timeout: float = 10.0) -> Optional[bytes]:
+    """Ein einzelnes JPEG-Standbild vom Drucker holen, oder None bei
+    jedem Fehler - die Kamera ist ein Zusatzfeature, ein Aussetzer soll
+    nie den Druckbetrieb (Jobs, Status) beeinträchtigen."""
+    jpeg_start = b"\xff\xd8\xff\xe0"
+    jpeg_end = b"\xff\xd9"
+
+    ctx = _printer_ssl_context()
+
+    try:
+        with socket.create_connection((Config.BAMBU_IP, Config.CAMERA_PORT), timeout=timeout) as raw:
+            with ctx.wrap_socket(raw, server_hostname=None) as sock:
+                sock.settimeout(timeout)
+                sock.sendall(_camera_auth_packet())
+
+                header = b""
+                while len(header) < 16:
+                    chunk = sock.recv(16 - len(header))
+                    if not chunk:
+                        return None
+                    header += chunk
+
+                payload_size = int.from_bytes(header[0:3], byteorder="little")
+
+                if payload_size <= 0 or payload_size > 10 * 1024 * 1024:
+                    return None
+
+                bild = bytearray()
+                while len(bild) < payload_size:
+                    chunk = sock.recv(min(65536, payload_size - len(bild)))
+                    if not chunk:
+                        return None
+                    bild += chunk
+
+                if bild[:4] != jpeg_start or bild[-2:] != jpeg_end:
+                    return None
+
+                return bytes(bild)
+    except (OSError, ssl.SSLError):
+        return None
+
+
+def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
+    """Alle CAMERA_SNAPSHOT_INTERVAL Sekunden ein Standbild holen und
+    hochladen - läuft unabhängig von MQTT/Job-Polling, ein Fehler hier
+    bleibt lokal und stört den restlichen Betrieb nicht."""
+    while not stop_event.is_set():
+        bild = capture_snapshot()
+
+        if bild:
+            api.upload_snapshot(bild)
+        else:
+            log.debug("Kein Kamera-Standbild verfügbar (Drucker ohne Kamera, aus, oder Aussetzer).")
+
+        stop_event.wait(Config.CAMERA_SNAPSHOT_INTERVAL)
+
+
+# ---------------------------------------------------------------------
 # WordPress-REST-API
 # ---------------------------------------------------------------------
 
@@ -638,18 +787,32 @@ class ApiClient:
             )
             return
 
-        self._post(
-            "status",
-            data={
-                "status": snap["gcode_state"] or "idle",
-                "progress_percent": snap["progress_percent"],
-                "remaining_minutes": snap["remaining_minutes"],
-                "nozzle_temp": snap["nozzle_temp"],
-                "bed_temp": snap["bed_temp"],
-                "printer_model": snap["printer_model"],
-                "error": snap["last_error"],
-            },
-        )
+        data = {
+            "status": snap["gcode_state"] or "idle",
+            "progress_percent": snap["progress_percent"],
+            "remaining_minutes": snap["remaining_minutes"],
+            "nozzle_temp": snap["nozzle_temp"],
+            "bed_temp": snap["bed_temp"],
+            "printer_model": snap["printer_model"],
+            "error": snap["last_error"],
+        }
+
+        # Nur mitschicken, wenn schon mindestens ein AMS-Report da war -
+        # sonst würde jeder Heartbeat vor dem ersten AMS-Report die zuletzt
+        # bekannte Belegung in WordPress mit "nichts Neues" überschreiben
+        # (siehe BambuRestApi::post_status() auf der PHP-Seite).
+        if snap["ams"] is not None:
+            data["ams"] = json.dumps(snap["ams"])
+
+        self._post("status", data=data)
+
+    def upload_snapshot(self, jpeg_bytes: bytes) -> None:
+        """Aktuelles Kamera-Standbild hochladen - rohe JPEG-Bytes im Body,
+        kein Formularfeld (siehe BambuRestApi::post_snapshot() auf der
+        PHP-Seite). Ein Fehlschlag ist nicht kritisch, deshalb kein
+        Rückgabewert, den jemand auswerten müsste - camera_loop() versucht
+        es beim nächsten Intervall einfach erneut."""
+        self._post("snapshot", data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
 
     def download_file(self, job_id: int, target: Path) -> bool:
         try:
@@ -899,6 +1062,10 @@ def run() -> None:
     stop_event = threading.Event()
     reporter = threading.Thread(target=status_reporter_loop, args=(api, stop_event), daemon=True)
     reporter.start()
+
+    if Config.CAMERA_ENABLED:
+        camera = threading.Thread(target=camera_loop, args=(api, stop_event), daemon=True)
+        camera.start()
 
     backoff = 1
 

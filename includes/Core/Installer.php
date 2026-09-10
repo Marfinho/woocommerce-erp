@@ -34,8 +34,12 @@ class Installer {
 	 * (INSERT gegen eine nicht existierende Tabelle schlägt bei
 	 * $wpdb->insert() standardmässig ohne Fehlermeldung fehl), aber nie
 	 * in der Liste auftauchte.
+	 *
+	 * DB_VERSION 30: bambu_printers um ams_json (AMS-Belegung: Material,
+	 * Farbe, Restmenge je Fach) und snapshot_at (Zeitpunkt des letzten
+	 * Kamera-Standbilds) erweitert.
 	 */
-	const DB_VERSION = '29';
+	const DB_VERSION = '30';
 
 	/**
 	 * Aktivierungsroutine.

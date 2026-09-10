@@ -31,6 +31,7 @@ use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintQueuePrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\BambuPlatesPage;
 use Lindenweg16\Modules\Betrieb\Admin\BambuPrintersPage;
+use Lindenweg16\Modules\Betrieb\Admin\DruckfarmPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
 use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
 use Lindenweg16\Modules\Betrieb\Admin\SlicingProfilesPage;
@@ -99,6 +100,9 @@ class BetriebModule {
 			// Wartung", weil dort weiterhin ausschließlich die
 			// Kalkulationsdaten (Stundensatz, Wartung) gepflegt werden.
 			'lw16-betrieb-bambu' => array( __( 'Bambu-Lab-Drucker', 'lindenweg16' ), 'lw16_capture', MenuGroups::FERTIGUNG ),
+			// Reine Live-Status-Übersicht ohne Verwaltungsformulare - für
+			// die Werkstatt-Anzeige (siehe DruckfarmPage).
+			'lw16-betrieb-druckfarm' => array( __( 'Druckfarm', 'lindenweg16' ), 'lw16_capture', MenuGroups::FERTIGUNG ),
 		);
 	}
 
@@ -171,6 +175,7 @@ class BetriebModule {
 			// Reiter auf der Etikettendrucker-Seite, kein eigener
 			// Menüpunkt (siehe PrintQueuePrintersPage::render()).
 			( new BambuPrintersPage() )->register();
+			( new DruckfarmPage() )->register();
 			( new BambuPlatesPage() )->register();
 			( new SlicingProfilesPage() )->register();
 			( new SimplePages() )->register();

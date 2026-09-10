@@ -35,6 +35,8 @@ class BambuPrintersPage {
 		add_action( 'admin_post_lw16_bambu_delete_printer', array( $this, 'handle_delete' ) );
 		add_action( 'admin_post_lw16_bambu_enqueue_job', array( $this, 'handle_enqueue_job' ) );
 		add_action( 'admin_post_lw16_bambu_enqueue_model', array( $this, 'handle_enqueue_model' ) );
+		add_action( 'admin_post_lw16_bambu_snapshot', array( $this, 'handle_snapshot' ) );
+		add_action( 'wp_ajax_lw16_bambu_cards', array( $this, 'handle_ajax_cards' ) );
 	}
 
 	/**
@@ -213,6 +215,60 @@ class BambuPrintersPage {
 	}
 
 	/**
+	 * Aktuelles Kamera-Standbild eines Druckers ausliefern.
+	 *
+	 * GET-Aufruf aus einem <img src="…"> - das kann sehr wohl eine Nonce
+	 * als URL-Parameter mitschicken (siehe render_snapshot(), wp_nonce_url()),
+	 * genau wie die Datei-Downloads in Exporter.php.
+	 */
+	public function handle_snapshot() {
+		$this->require_cap();
+		check_admin_referer( self::NONCE . '_snapshot' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$printer_id = isset( $_GET['printer_id'] ) ? sanitize_key( wp_unslash( $_GET['printer_id'] ) ) : '';
+		$printer    = $printer_id ? BambuPrinterRepository::find_by_printer_id( $printer_id ) : null;
+
+		if ( ! $printer ) {
+			wp_die( esc_html__( 'Drucker nicht gefunden.', 'lindenweg16' ), '', array( 'response' => 404 ) );
+		}
+
+		$pfad = BambuService::snapshot_path( $printer->printer_id );
+
+		if ( ! is_file( $pfad ) ) {
+			wp_die( esc_html__( 'Noch kein Kamera-Standbild vorhanden.', 'lindenweg16' ), '', array( 'response' => 404 ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: image/jpeg' );
+		header( 'Content-Length: ' . filesize( $pfad ) );
+
+		while ( ob_get_level() > 0 ) {
+			ob_end_clean();
+		}
+
+		readfile( $pfad ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		exit;
+	}
+
+	/**
+	 * Live-Status-Karten aller Drucker neu ausliefern - für das
+	 * automatische Aktualisieren per AJAX (siehe assets/js/admin.js),
+	 * damit Status, Temperaturen und Kamera-Standbild ohne manuelles Neu-
+	 * laden aktuell bleiben.
+	 */
+	public function handle_ajax_cards() {
+		$this->require_cap();
+		check_ajax_referer( 'lw16_admin', 'nonce' );
+
+		ob_start();
+		$this->render_printer_cards_inner();
+		$html = ob_get_clean();
+
+		wp_die( $html ); // phpcs:ignore WordPress.Security.EscapeOutput -- render_card() escapt selbst, das hier ist nur der fertige HTML-Block.
+	}
+
+	/**
 	 * Zurück zur Liste, optional mit einmalig angezeigtem Klartext-Token.
 	 *
 	 * @param string $msg   Meldung.
@@ -282,6 +338,28 @@ class BambuPrintersPage {
 
 		echo '<h2>' . esc_html__( 'Registrierte Drucker', 'lindenweg16' ) . '</h2>';
 
+		$this->render_printer_cards();
+	}
+
+	/**
+	 * Live-Status-Karten aller registrierten Drucker, automatisch
+	 * aktualisiert (siehe handle_ajax_cards()). Eigene Methode, weil
+	 * sowohl dieser Standard-Reiter als auch die eigenständige
+	 * "Druckfarm"-Übersichtsseite (siehe Fertigung → Druckfarm,
+	 * DruckfarmPage) genau dieselbe Liste zeigen.
+	 */
+	public function render_printer_cards() {
+		printf( '<div id="lw16-bambu-cards" data-lw16-autorefresh="lw16_bambu_cards" data-lw16-interval="5000">' );
+		$this->render_printer_cards_inner();
+		echo '</div>';
+	}
+
+	/**
+	 * Nur der Karten-Inhalt, ohne den umschließenden Auto-Refresh-
+	 * Container - der bleibt beim AJAX-Nachladen stehen, nur sein Inhalt
+	 * wird ersetzt (siehe handle_ajax_cards()).
+	 */
+	protected function render_printer_cards_inner() {
 		$printers = BambuPrinterRepository::all();
 
 		if ( ! $printers ) {
@@ -512,8 +590,16 @@ class BambuPrintersPage {
 			);
 		}
 
+		if ( $online ) {
+			$this->render_ams( $printer );
+		}
+
 		if ( $printer->last_error ) {
 			printf( '<p class="lw16-fehlend"><strong>%s:</strong> %s</p>', esc_html__( 'Letzter Fehler', 'lindenweg16' ), esc_html( $printer->last_error ) );
+		}
+
+		if ( $printer->snapshot_at ) {
+			$this->render_snapshot( $printer );
 		}
 
 		if ( $printer->printer_model ) {
@@ -612,6 +698,76 @@ class BambuPrintersPage {
 		$key = strtolower( (string) $status );
 
 		return isset( $texte[ $key ] ) ? $texte[ $key ] : (string) $status;
+	}
+
+	/**
+	 * AMS-Belegung (Material, Farbe, Restmenge je Fach) einer Druckerkarte.
+	 *
+	 * @param object $printer Datensatz.
+	 */
+	protected function render_ams( $printer ) {
+		$einheiten = BambuPrinterRepository::ams_units( $printer );
+
+		if ( ! $einheiten ) {
+			return;
+		}
+
+		echo '<div><strong>' . esc_html__( 'AMS-Filamente', 'lindenweg16' ) . ':</strong>';
+		echo '<ul style="margin:4px 0 0 18px;padding:0;list-style:disc">';
+
+		foreach ( $einheiten as $einheit ) {
+			foreach ( (array) ( $einheit['trays'] ?? array() ) as $fach ) {
+				$material = isset( $fach['type'] ) ? trim( (string) $fach['type'] ) : '';
+
+				if ( '' === $material ) {
+					// Leeres AMS-Fach - für die Auswahl beim Drucken
+					// irrelevant, in der Übersicht nur Verwirrung.
+					continue;
+				}
+
+				$farbe = isset( $fach['color'] ) ? preg_replace( '/[^0-9A-Fa-f]/', '', (string) $fach['color'] ) : '';
+				$farbe = $farbe ? substr( str_pad( $farbe, 6, '0' ), 0, 6 ) : 'cccccc';
+				$rest  = isset( $fach['remain'] ) && null !== $fach['remain'] && '' !== $fach['remain'] ? (int) $fach['remain'] : null;
+
+				printf(
+					'<li><span style="display:inline-block;width:12px;height:12px;border:1px solid #999;background:#%s;vertical-align:middle;margin-right:4px"></span>%s%s</li>',
+					esc_attr( $farbe ),
+					esc_html( $material ),
+					null !== $rest ? ' – ' . esc_html( (string) $rest ) . ' %' : ''
+				);
+			}
+		}
+
+		echo '</ul></div>';
+	}
+
+	/**
+	 * Zuletzt gemeldetes Kamera-Standbild einer Druckerkarte - wird beim
+	 * automatischen Aktualisieren der Karte (siehe render_printer_cards())
+	 * mit ausgetauscht, weil der Zeitstempel in der Bild-URL jedes Mal neu
+	 * ist und der Browser das Bild dadurch neu lädt statt es aus dem Cache
+	 * zu zeigen.
+	 *
+	 * @param object $printer Datensatz.
+	 */
+	protected function render_snapshot( $printer ) {
+		$url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action'     => 'lw16_bambu_snapshot',
+					'printer_id' => $printer->printer_id,
+					't'          => strtotime( $printer->snapshot_at . ' UTC' ),
+				),
+				admin_url( 'admin-post.php' )
+			),
+			self::NONCE . '_snapshot'
+		);
+
+		printf(
+			'<p><img src="%s" alt="%s" style="max-width:100%%;border:1px solid #dcdcde;border-radius:4px"></p>',
+			esc_url( $url ),
+			esc_attr__( 'Kamera-Standbild', 'lindenweg16' )
+		);
 	}
 
 	/**

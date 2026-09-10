@@ -97,6 +97,16 @@ class BambuRestApi {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/snapshot',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'post_snapshot' ),
+				'permission_callback' => array( $this, 'authenticate' ),
+			)
+		);
 	}
 
 	/* -----------------------------------------------------------------
@@ -523,19 +533,68 @@ class BambuRestApi {
 	public function post_status( $request ) {
 		$printer = $this->printer_of( $request );
 
-		BambuPrinterRepository::apply_status(
-			(int) $printer->id,
-			array(
-				'ip'                => $this->client_ip(),
-				'status'            => $request->get_param( 'status' ),
-				'progress_percent'  => null !== $request->get_param( 'progress_percent' ) ? (int) $request->get_param( 'progress_percent' ) : null,
-				'remaining_minutes' => null !== $request->get_param( 'remaining_minutes' ) ? (int) $request->get_param( 'remaining_minutes' ) : null,
-				'nozzle_temp'       => null !== $request->get_param( 'nozzle_temp' ) ? (float) $request->get_param( 'nozzle_temp' ) : null,
-				'bed_temp'          => null !== $request->get_param( 'bed_temp' ) ? (float) $request->get_param( 'bed_temp' ) : null,
-				'printer_model'     => (string) $request->get_param( 'printer_model' ),
-				'last_error'        => (string) $request->get_param( 'error' ),
-			)
+		$update = array(
+			'ip'                => $this->client_ip(),
+			'status'            => $request->get_param( 'status' ),
+			'progress_percent'  => null !== $request->get_param( 'progress_percent' ) ? (int) $request->get_param( 'progress_percent' ) : null,
+			'remaining_minutes' => null !== $request->get_param( 'remaining_minutes' ) ? (int) $request->get_param( 'remaining_minutes' ) : null,
+			'nozzle_temp'       => null !== $request->get_param( 'nozzle_temp' ) ? (float) $request->get_param( 'nozzle_temp' ) : null,
+			'bed_temp'          => null !== $request->get_param( 'bed_temp' ) ? (float) $request->get_param( 'bed_temp' ) : null,
+			'printer_model'     => (string) $request->get_param( 'printer_model' ),
+			'last_error'        => (string) $request->get_param( 'error' ),
 		);
+
+		// 'ams' nur mitschicken, wenn der Parameter tatsächlich da ist -
+		// sonst würde jeder Status-Heartbeat ohne AMS-Angabe (z. B. weil
+		// die Bridge gerade nicht verbunden ist) die zuletzt bekannte
+		// AMS-Belegung löschen, obwohl sich am AMS gar nichts geändert hat.
+		if ( null !== $request->get_param( 'ams' ) ) {
+			$update['ams'] = (string) $request->get_param( 'ams' );
+		}
+
+		BambuPrinterRepository::apply_status( (int) $printer->id, $update );
+
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/* -----------------------------------------------------------------
+	 * POST /snapshot
+	 * ------------------------------------------------------------- */
+
+	/**
+	 * Höchstgröße eines Kamera-Standbilds. Ein einzelnes JPEG-Frame vom
+	 * Drucker ist klein (typischerweise deutlich unter 500 KB) - die
+	 * Grenze ist grosszügig bemessen, aber deutlich unter der einer
+	 * kompletten 3MF-Druckdatei.
+	 */
+	const MAX_SNAPSHOT_BYTES = 5 * MB_IN_BYTES;
+
+	/**
+	 * Aktuelles Kamera-Standbild entgegennehmen - dieselbe Bridge, dieselbe
+	 * Authentifizierung wie beim Status-Heartbeat, nur mit rohem JPEG statt
+	 * Formulardaten im Body. Überschreibt je Drucker immer nur die eine,
+	 * zuletzt gemeldete Datei - es wird kein Verlauf aufgehoben.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function post_snapshot( $request ) {
+		$printer = $this->printer_of( $request );
+		$body    = $request->get_body();
+
+		if ( '' === $body ) {
+			return new WP_Error( 'lw16_bambu_empty_snapshot', __( 'Leeres Standbild.', 'lindenweg16' ), array( 'status' => 400 ) );
+		}
+
+		if ( strlen( $body ) > self::MAX_SNAPSHOT_BYTES ) {
+			return new WP_Error( 'lw16_bambu_snapshot_too_large', __( 'Standbild ist unerwartet groß.', 'lindenweg16' ), array( 'status' => 413 ) );
+		}
+
+		if ( ! BambuService::save_snapshot( $printer->printer_id, $body ) ) {
+			return new WP_Error( 'lw16_bambu_snapshot_failed', __( 'Standbild konnte nicht gespeichert werden.', 'lindenweg16' ), array( 'status' => 500 ) );
+		}
+
+		BambuPrinterRepository::mark_snapshot( (int) $printer->id );
 
 		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}

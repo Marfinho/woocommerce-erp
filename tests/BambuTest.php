@@ -391,4 +391,52 @@ class BambuTest extends TestCase {
 		$this->assertNull( BambuPrinterRepository::effective_bed_size( null ) );
 		$this->assertNull( BambuPrinterRepository::effective_bed_size( (object) array( 'bed_width_mm' => null, 'bed_height_mm' => null, 'printer_model' => '' ) ) );
 	}
+
+	/* ----------------------------------------------------------------
+	 * AMS-Belegung
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Gültiges JSON wird unverändert (bis zur Längenbegrenzung) übernommen.
+	 */
+	public function test_ams_json_gueltig_wird_uebernommen() {
+		$json = '[{"id":0,"humidity":51,"temp":25.6,"trays":[{"id":0,"type":"PLA","color":"FFFFFFFF","remain":92}]}]';
+		$this->assertSame( $json, BambuPrinterRepository::normalize_ams_json( $json ) );
+	}
+
+	/**
+	 * Leerer Wert und kaputtes JSON dürfen nicht in die Datenbank
+	 * durchrutschen - ein Fehler hier soll beim Anzeigen nicht erneut
+	 * geparst und dabei unbemerkt verschluckt werden.
+	 */
+	public function test_ams_json_leer_oder_kaputt_wird_null() {
+		$this->assertNull( BambuPrinterRepository::normalize_ams_json( '' ) );
+		$this->assertNull( BambuPrinterRepository::normalize_ams_json( '{kaputt' ) );
+		$this->assertNull( BambuPrinterRepository::normalize_ams_json( 'nicht mal json' ) );
+	}
+
+	/**
+	 * Eine unerwartet riesige Nutzlast wird gekappt, statt unbegrenzt in
+	 * der Datenbank zu landen.
+	 */
+	public function test_ams_json_wird_der_laenge_nach_begrenzt() {
+		$riesig = '[' . str_repeat( '1', 25000 ) . ']';
+		$ergebnis = BambuPrinterRepository::normalize_ams_json( $riesig );
+		$this->assertSame( 20000, strlen( $ergebnis ) );
+	}
+
+	/**
+	 * ams_units() entpackt das gespeicherte JSON wieder zur Anzeige -
+	 * kaputtes/fehlendes JSON liefert eine leere Liste statt eines Fehlers.
+	 */
+	public function test_ams_units_entpackt_gespeichertes_json() {
+		$printer = (object) array( 'ams_json' => '[{"id":0,"trays":[{"type":"PLA"}]}]' );
+		$einheiten = BambuPrinterRepository::ams_units( $printer );
+
+		$this->assertCount( 1, $einheiten );
+		$this->assertSame( 'PLA', $einheiten[0]['trays'][0]['type'] );
+
+		$this->assertSame( array(), BambuPrinterRepository::ams_units( (object) array( 'ams_json' => null ) ) );
+		$this->assertSame( array(), BambuPrinterRepository::ams_units( (object) array( 'ams_json' => 'kaputt' ) ) );
+	}
 }

@@ -449,6 +449,57 @@ class BambuService {
 	}
 
 	/**
+	 * Präfix der Kamera-Standbilder im Dokumentenordner - wie
+	 * UPLOAD_PREFIX nur zur Abgrenzung beim Aufräumen/Zugriff, hier gibt
+	 * es aber ohnehin nur eine Datei je Drucker (wird bei jedem neuen
+	 * Standbild überschrieben statt ergänzt).
+	 */
+	const SNAPSHOT_PREFIX = 'bambu-snapshot-';
+
+	/**
+	 * Aktuelles Kamera-Standbild eines Druckers speichern - überschreibt
+	 * ein evtl. vorhandenes älteres Bild, es wird kein Verlauf gehalten.
+	 *
+	 * @param string $printer_id Stabiler Schlüssel des Bambu-Druckers.
+	 * @param string $jpeg_bytes Rohe JPEG-Daten.
+	 * @return bool
+	 */
+	public static function save_snapshot( $printer_id, $jpeg_bytes ) {
+		$printer_id = sanitize_key( (string) $printer_id );
+
+		if ( '' === $printer_id ) {
+			return false;
+		}
+
+		Installer::ensure_docs_dir();
+
+		$pfad = self::snapshot_path( $printer_id );
+		$tmp  = $pfad . '.tmp';
+
+		// Erst in eine temporäre Datei schreiben, dann umbenennen: rename()
+		// ist atomar - ein Seitenaufruf mitten im Schreibvorgang bekommt so
+		// nie ein halb geschriebenes JPEG zu sehen.
+		if ( false === file_put_contents( $tmp, $jpeg_bytes ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+			return false;
+		}
+
+		return rename( $tmp, $pfad ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rename
+	}
+
+	/**
+	 * Pfad zum Kamera-Standbild eines Druckers - reine Pfadbildung, ohne
+	 * Dateisystemzugriff, damit sie sowohl beim Schreiben (hier) als auch
+	 * beim Ausliefern (BambuPrintersPage::handle_snapshot()) dieselbe
+	 * Logik verwenden.
+	 *
+	 * @param string $printer_id Bereits validierter (sanitize_key) Schlüssel.
+	 * @return string
+	 */
+	public static function snapshot_path( $printer_id ) {
+		return trailingslashit( Installer::docs_dir() ) . self::SNAPSHOT_PREFIX . $printer_id . '.jpg';
+	}
+
+	/**
 	 * Wartung: verwaiste Claims freigeben und alte Job-Einträge löschen.
 	 * Aufgerufen aus dem wiederkehrenden Hintergrundjob
 	 * (Scheduler::HOOK_BAMBU_MAINTENANCE).
