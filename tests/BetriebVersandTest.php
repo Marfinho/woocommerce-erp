@@ -92,12 +92,17 @@ class BetriebVersandTest extends TestCase {
 	/**
 	 * Die alte Produktionsseite darf die Versandaktionen nicht mehr
 	 * doppelt anbieten – zwei Wege zur selben Packliste sind ein Weg zu
-	 * viel.
+	 * viel. Der frühere Umzugshinweis samt Reiter "Druck-Queue" (nur ein
+	 * Verweis auf Bedarf/Versand, ohne eigene Funktion) ist inzwischen
+	 * selbst entfernt worden - der Umzug ist lange abgeschlossen, ein
+	 * toter Reiter, der nur noch woanders hinzeigt, ist kein Mehrwert
+	 * mehr.
 	 */
 	public function test_produktionsseite_bietet_den_versand_nicht_mehr_an() {
 		$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Production/ProductionModule.php' );
 
 		$this->assertStringNotContainsString( 'Versand-Aktionen je Bestellung', $quelle );
-		$this->assertStringContainsString( 'page=lw16-betrieb-versand', $quelle );
+		$this->assertStringNotContainsString( 'Druck-Queue', $quelle );
+		$this->assertStringNotContainsString( 'page=lw16-betrieb-versand', $quelle );
 	}
 }

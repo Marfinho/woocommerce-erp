@@ -103,13 +103,12 @@ class ProductionModule {
 	 * Produktions-Admin-Seite mit Tabs.
 	 */
 	public function render_admin() {
-		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'queue'; // phpcs:ignore WordPress.Security.NonceVerification
+		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'jobs'; // phpcs:ignore WordPress.Security.NonceVerification
 		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Produktionsplanung', 'lindenweg16' ) . '</h1>';
 
 		$base = admin_url( 'admin.php?page=lw16-produktion' );
 		echo '<nav class="lw16-tabs">';
-		printf( '<a href="%s" class="%s">%s</a> ', esc_url( $base ), 'queue' === $view ? 'active' : '', esc_html__( 'Druck-Queue', 'lindenweg16' ) );
-		printf( '<a href="%s" class="%s">%s</a> ', esc_url( add_query_arg( 'view', 'jobs', $base ) ), 'jobs' === $view ? 'active' : '', esc_html__( 'Druckaufträge', 'lindenweg16' ) );
+		printf( '<a href="%s" class="%s">%s</a> ', esc_url( $base ), 'jobs' === $view ? 'active' : '', esc_html__( 'Druckaufträge', 'lindenweg16' ) );
 		printf( '<a href="%s" class="%s">%s</a>', esc_url( add_query_arg( 'view', 'auswertung', $base ) ), 'auswertung' === $view ? 'active' : '', esc_html__( 'Ist vs. Plan', 'lindenweg16' ) );
 		echo '</nav>';
 
@@ -117,35 +116,12 @@ class ProductionModule {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) ) . '</p></div>'; // phpcs:ignore
 		}
 
-		if ( 'jobs' === $view ) {
-			$this->render_jobs();
-		} elseif ( 'auswertung' === $view ) {
+		if ( 'auswertung' === $view ) {
 			$this->render_auswertung();
 		} else {
-			$this->render_queue();
+			$this->render_jobs();
 		}
 		echo '</div>';
-	}
-
-	/**
-	 * Druck-Queue aus offenen Bestellungen (Status processing).
-	 */
-	protected function render_queue() {
-		// Diese Seite hatte einmal beides: die Rechnung, was gedruckt
-		// werden muss, und die Aktionen, um das Gepackte loszuschicken.
-		// Beides ist umgezogen - die Rechnung ins Modul Betrieb, weil sie
-		// dort ueber alle Stufen geht statt nur eine tief, und der Versand
-		// dazu, weil Ware, Picklisten und Fertigungsauftraege ebenfalls
-		// dort liegen. Wer gepackt hat, sollte fuer denselben Karton nicht
-		// das Menue wechseln muessen.
-		printf(
-			'<div class="notice notice-info inline"><p>%s</p><p><a class="button button-primary" href="%s">%s</a> <a class="button" href="%s">%s</a></p></div>',
-			esc_html__( 'Fertigungsvorschläge und Versand stehen jetzt im Modul Betrieb: der Bedarf rechnet über alle Stufen – vom fertigen Artikel über Halbzeuge bis zu Rohlingen – und verrechnet Bestand und laufende Aufträge; die Versandliste zeigt jede offene Bestellung mit Lieferschein, Sendungsnummer und Label.', 'lindenweg16' ),
-			esc_url( admin_url( 'admin.php?page=lw16-betrieb-versand' ) ),
-			esc_html__( 'Zum Versand', 'lindenweg16' ),
-			esc_url( admin_url( 'admin.php?page=lw16-betrieb-bedarf' ) ),
-			esc_html__( 'Zum Bedarf', 'lindenweg16' )
-		);
 	}
 
 	/**
