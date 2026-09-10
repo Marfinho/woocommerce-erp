@@ -114,9 +114,25 @@ class MenuGroups {
 		// phpcs:ignore WordPress.Security.NonceVerification
 		$parent = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 
-		if ( isset( $submenu[ $parent ][0][2] ) ) {
-			wp_safe_redirect( admin_url( 'admin.php?page=' . $submenu[ $parent ][0][2] ) );
-			exit;
+		if ( isset( $submenu[ $parent ] ) && is_array( $submenu[ $parent ] ) ) {
+			foreach ( $submenu[ $parent ] as $eintrag ) {
+				$ziel = isset( $eintrag[2] ) ? $eintrag[2] : '';
+
+				// WordPress hängt an add_menu_page() automatisch einen
+				// ersten Untermenüpunkt mit demselben Titel UND Slug wie
+				// der Elternmenüpunkt selbst an (hier sichtbar als
+				// doppeltes "Fertigung"/"Lager"/... in der Seitenleiste) -
+				// außer man überschreibt ihn explizit, wie "Verkauf" es
+				// bewusst tut (siehe Kommentar oben bei add_menus()). Ohne
+				// diesen Filter würde genau dieser Auto-Eintrag als erstes
+				// gefunden und die Umleitung ginge zurück auf denselben
+				// Elternmenüpunkt - eine Endlosschleife (ERR_TOO_MANY_
+				// REDIRECTS im Browser).
+				if ( '' !== $ziel && $ziel !== $parent ) {
+					wp_safe_redirect( admin_url( 'admin.php?page=' . $ziel ) );
+					exit;
+				}
+			}
 		}
 
 		echo '<div class="wrap"><p>' . esc_html__( 'Bitte einen Punkt in der Seitenleiste wählen.', 'lindenweg16' ) . '</p></div>';
