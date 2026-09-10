@@ -155,6 +155,16 @@ class Config:
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
 
+    # Ein einzelner kurzer Netzwerk-Aussetzer (schwaches WLAN-Signal, ein
+    # kurzer Hakler am Router) soll nicht sofort den ganzen Druckauftrag
+    # scheitern lassen - der FTPS-Upload zum Drucker ist der Schritt, der
+    # am ehesten mitten in der Übertragung durch so einen Aussetzer
+    # abbricht (im Gegensatz zu den kurzen Steuerbefehlen davor). Deshalb
+    # hier ein paar automatische Versuche mit kurzer Pause, bevor der Job
+    # endgültig als fehlgeschlagen gemeldet wird.
+    FTPS_UPLOAD_RETRIES = int(os.environ.get("FTPS_UPLOAD_RETRIES", "3"))
+    FTPS_UPLOAD_RETRY_DELAY = int(os.environ.get("FTPS_UPLOAD_RETRY_DELAY", "5"))
+
     DOWNLOAD_DIRECTORY = Path(os.environ.get("DOWNLOAD_DIRECTORY", "/var/lib/bambu-bridge"))
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
@@ -775,10 +785,24 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
         log.info("Job %s: übertrage %s per FTPS an den Drucker …", job_id, filename)
 
         remote_filename = f"lw16-{job_id}-{filename}"
-        ok, message = upload_via_ftps(local_path, remote_filename)
+        ok, message = False, ""
+
+        for versuch in range(1, Config.FTPS_UPLOAD_RETRIES + 1):
+            ok, message = upload_via_ftps(local_path, remote_filename)
+
+            if ok:
+                break
+
+            log.warning(
+                "Upload für Job %s fehlgeschlagen (Versuch %s/%s): %s",
+                job_id, versuch, Config.FTPS_UPLOAD_RETRIES, message,
+            )
+
+            if versuch < Config.FTPS_UPLOAD_RETRIES:
+                time.sleep(Config.FTPS_UPLOAD_RETRY_DELAY)
 
         if not ok:
-            log.error("Upload für Job %s fehlgeschlagen: %s", job_id, message)
+            log.error("Upload für Job %s endgültig fehlgeschlagen nach %s Versuchen: %s", job_id, Config.FTPS_UPLOAD_RETRIES, message)
             api.fail(job_id, message)
             return
 
