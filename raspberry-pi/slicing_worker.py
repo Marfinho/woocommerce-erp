@@ -249,12 +249,19 @@ def run_slicer(input_path: Path, output_path: Path, printer_json: Path, filament
     "--load-settings" (Semikolon-getrennt) geladen, das Filamentprofil
     separat über "--load-filaments" (siehe
     https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode).
+
+    "--arrange 0" ist Pflicht, kein Optimum: ohne dieses Flag steht
+    Arrange laut CLI-Doku auf "auto" (nicht "unverändert lassen") und
+    würde die von PlateComposer/BinPacker bereits berechnete,
+    kollisionsfreie Platzierung (siehe dortige Klassendoku) beim Slicen
+    stillschweigend durch eine eigene Anordnung ersetzen können.
     """
     cmd = [
         Config.SLICER_CLI,
         str(input_path),
         "--load-settings", f"{printer_json};{process_json}",
         "--load-filaments", str(filament_json),
+        "--arrange", "0",
         "--slice", "1",
         "--export-3mf", str(output_path),
     ]
