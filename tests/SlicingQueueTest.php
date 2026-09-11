@@ -10,6 +10,7 @@
  */
 
 use PHPUnit\Framework\TestCase;
+use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingWorkerAuth;
 
@@ -113,6 +114,34 @@ class SlicingQueueTest extends TestCase {
 		$this->assertTrue( SlicingJobRepository::can_fail( 'failed' ), 'failed->failed ist idempotent erlaubt.' );
 		$this->assertFalse( SlicingJobRepository::can_fail( 'completed' ) );
 		$this->assertFalse( SlicingJobRepository::can_fail( 'queued' ) );
+	}
+
+	/**
+	 * Eine Platte darf aus "entworfen" UND aus "fehlgeschlagen" (erneut)
+	 * zum Slicen eingereiht werden - ein gescheiterter Lauf soll sich
+	 * nach Behebung der Ursache per Klick wiederholen lassen. Aus "wird
+	 * geslict" oder "geslict" dagegen nie (doppelter Auftrag bzw. schon
+	 * in der Bambu-Warteschlange).
+	 */
+	public function test_platte_darf_aus_entworfen_und_fehlgeschlagen_eingereiht_werden() {
+		$this->assertTrue( PlateJobRepository::can_enqueue_for_slicing( 'entworfen' ) );
+		$this->assertTrue( PlateJobRepository::can_enqueue_for_slicing( 'fehlgeschlagen' ) );
+		$this->assertFalse( PlateJobRepository::can_enqueue_for_slicing( 'wird_geslict' ) );
+		$this->assertFalse( PlateJobRepository::can_enqueue_for_slicing( 'geslict' ) );
+		$this->assertFalse( PlateJobRepository::can_enqueue_for_slicing( '' ) );
+	}
+
+	/**
+	 * Offen ist ein Slicing-Auftrag, solange er wartet oder bearbeitet
+	 * wird - nur dann blockiert er ein erneutes Einreihen derselben Platte.
+	 */
+	public function test_offene_auftraege() {
+		foreach ( array( 'queued', 'claimed', 'slicing' ) as $status ) {
+			$this->assertTrue( SlicingJobRepository::is_open( $status ), $status );
+		}
+		foreach ( array( 'completed', 'failed', 'cancelled', '' ) as $status ) {
+			$this->assertFalse( SlicingJobRepository::is_open( $status ), $status );
+		}
 	}
 
 	/* ----------------------------------------------------------------

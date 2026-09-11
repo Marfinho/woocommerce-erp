@@ -172,6 +172,62 @@ class SlicingJobRepository {
 	}
 
 	/**
+	 * Jüngster Slicing-Auftrag je Platte – für die Plattenübersicht
+	 * (Fehlermeldung des letzten Laufs, Fortschritt) und die Prüfung, ob
+	 * eine Platte gerade schon bearbeitet wird.
+	 *
+	 * @param int[] $plate_job_ids Platten-IDs.
+	 * @return array plate_job_id => Datensatz.
+	 */
+	public static function latest_for_plates( array $plate_job_ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $plate_job_ids ) ) ) );
+		if ( ! $ids ) {
+			return array();
+		}
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::table() . ' WHERE plate_job_id IN (' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ') ORDER BY id DESC', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$ids
+			)
+		);
+
+		$latest = array();
+		foreach ( (array) $rows as $row ) {
+			$plate_id = (int) $row->plate_job_id;
+			if ( ! isset( $latest[ $plate_id ] ) ) {
+				$latest[ $plate_id ] = $row;
+			}
+		}
+
+		return $latest;
+	}
+
+	/**
+	 * Jüngster Slicing-Auftrag einer Platte.
+	 *
+	 * @param int $plate_job_id Platte.
+	 * @return object|null
+	 */
+	public static function latest_for_plate( $plate_job_id ) {
+		$latest = self::latest_for_plates( array( (int) $plate_job_id ) );
+		return isset( $latest[ (int) $plate_job_id ] ) ? $latest[ (int) $plate_job_id ] : null;
+	}
+
+	/**
+	 * Ist ein Auftrag in diesem Status noch offen (wartet oder wird
+	 * gerade bearbeitet)?
+	 *
+	 * @param string $status Status.
+	 * @return bool
+	 */
+	public static function is_open( $status ) {
+		return in_array( (string) $status, array( 'queued', 'claimed', 'slicing' ), true );
+	}
+
+	/**
 	 * Wartende Aufträge, älteste zuerst.
 	 *
 	 * @param int $limit Höchstzahl.

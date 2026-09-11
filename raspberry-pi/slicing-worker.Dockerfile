@@ -6,10 +6,16 @@
 #   docker build -f slicing-worker.Dockerfile -t lw16-slicing-worker .
 # Start siehe docker-compose.slicing-worker.yml.
 #
-# WICHTIGER VORBEHALT (siehe auch slicing_worker.py): Dieses Image wurde
-# nicht in dieser Umgebung gebaut/getestet (kein Docker, kein Zugriff auf
-# eine echte OrcaSlicer-Installation hier) - vor dem produktiven Einsatz
-# unbedingt mit einer unkritischen Testplatte von Hand kontrollieren.
+# Stand: Image mit OrcaSlicer 2.4.2 gebaut und gestartet (der Slicer
+# läuft im Container an und verarbeitet die Kommandozeile). Den
+# eigentlichen Slice-Lauf vor dem produktiven Einsatz trotzdem mit einer
+# unkritischen Testplatte von Hand kontrollieren (siehe slicing_worker.py).
+#
+# Diagnose bei fehlgeschlagenem Slice-Lauf: Im Volume /data bleibt je
+# Auftrag ein Verzeichnis job-<ID> mit slicer.log, result.json (Fehlercode
+# und Klartext von OrcaSlicer) und slicer-output.txt liegen, z. B.
+#   docker compose -f docker-compose.slicing-worker.yml exec slicing-worker \
+#     sh -c 'ls /data; cat /data/job-*/result.json'
 
 # Ubuntu 24.04, nicht Debian - die OrcaSlicer-Linux-AppImage heisst nicht
 # zufällig "..._Ubuntu2404_...": sie ist gegen dessen glibc/libstdc++
@@ -31,9 +37,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # OrcaSlicer eingebettete Hilfe-/Onboarding-Oberfläche ist eine
 # WebKitGTK-Ansicht (libwebkit2gtk-4.1) - fehlt sie, bricht schon der
 # Start ab, auch im reinen CLI-Slice-Betrieb ohne sichtbares Fenster.
+# libgl1-mesa-dri liefert den Software-Renderer (llvmpipe), mit dem
+# OrcaSlicer unter Xvfb die Plattenvorschaubilder der Ergebnis-3MF
+# rendert - ohne ihn scheitert die OpenGL-Initialisierung.
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates curl \
-		xvfb xauth libgl1 libglu1-mesa libegl1 libopengl0 \
+		xvfb xauth libgl1 libgl1-mesa-dri libglu1-mesa libegl1 libopengl0 \
 		libxkbcommon0 libxkbcommon-x11-0 libdbus-1-3 \
 		libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
 		libxcb-randr0 libxcb-render-util0 libxcb-shape0 \

@@ -15,6 +15,7 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateService;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 
@@ -245,6 +246,20 @@ class BambuPlatesPage {
 			'fehlgeschlagen' => __( 'Fehlgeschlagen', 'lindenweg16' ),
 		);
 
+		// Jüngster Slicing-Auftrag je Platte: liefert den Grund eines
+		// Fehlschlags (vorher nur in der Datenbank sichtbar) und zeigt bei
+		// "Wird geslict", ob der Worker die Platte überhaupt schon abgeholt
+		// hat - "wartet seit 20 Minuten auf den Worker" ist ein anderer
+		// Fehler (Worker läuft nicht / Token) als ein Slicer-Absturz.
+		$latest_jobs = SlicingJobRepository::latest_for_plates(
+			array_map(
+				static function ( $plate ) {
+					return (int) $plate->id;
+				},
+				$plates
+			)
+		);
+
 		echo '<div class="lw16-scrollx"><table class="widefat striped"><thead><tr>';
 		foreach ( array( __( 'ID', 'lindenweg16' ), __( 'Drucker', 'lindenweg16' ), __( 'Masse', 'lindenweg16' ), __( 'Teile', 'lindenweg16' ), __( 'Status', 'lindenweg16' ), __( 'Erstellt', 'lindenweg16' ), '' ) as $head ) {
 			echo '<th>' . esc_html( $head ) . '</th>';
@@ -254,6 +269,7 @@ class BambuPlatesPage {
 		foreach ( $plates as $plate ) {
 			$placements  = json_decode( (string) $plate->placements, true );
 			$item_count  = is_array( $placements ) && isset( $placements['items'] ) ? count( $placements['items'] ) : 0;
+			$slicing_job = isset( $latest_jobs[ (int) $plate->id ] ) ? $latest_jobs[ (int) $plate->id ] : null;
 
 			echo '<tr>';
 			printf( '<td>%d</td>', (int) $plate->id );
@@ -261,9 +277,10 @@ class BambuPlatesPage {
 			printf( '<td>%d × %d mm</td>', (int) $plate->plate_width_mm, (int) $plate->plate_height_mm );
 			printf( '<td>%d</td>', $item_count );
 			printf(
-				'<td><span class="lw16-status lw16-status-%s">%s</span></td>',
+				'<td><span class="lw16-status lw16-status-%s">%s</span>%s</td>',
 				esc_attr( $plate->status ),
-				esc_html( isset( $labels[ $plate->status ] ) ? $labels[ $plate->status ] : $plate->status )
+				esc_html( isset( $labels[ $plate->status ] ) ? $labels[ $plate->status ] : $plate->status ),
+				$this->slicing_detail_html( $plate, $slicing_job ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in slicing_detail_html().
 			);
 			echo '<td>' . esc_html( get_date_from_gmt( $plate->created_at, 'd.m.Y H:i' ) ) . '</td>';
 
@@ -278,12 +295,17 @@ class BambuPlatesPage {
 				),
 				esc_html__( 'Projekt-3MF', 'lindenweg16' )
 			);
-			if ( 'entworfen' === $plate->status ) {
+			if ( PlateJobRepository::can_enqueue_for_slicing( $plate->status ) ) {
 				echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block">';
 				echo '<input type="hidden" name="action" value="lw16_bambu_slice_plate">';
 				printf( '<input type="hidden" name="plate_id" value="%d">', (int) $plate->id );
 				wp_nonce_field( self::NONCE );
-				printf( '<button type="submit" class="button button-small button-primary">%s</button>', esc_html__( 'Automatisch slicen', 'lindenweg16' ) );
+				printf(
+					'<button type="submit" class="button button-small button-primary">%s</button>',
+					'fehlgeschlagen' === $plate->status
+						? esc_html__( 'Erneut slicen', 'lindenweg16' )
+						: esc_html__( 'Automatisch slicen', 'lindenweg16' )
+				);
 				echo '</form>';
 			}
 			if ( 'geslict' === $plate->status && $plate->bambu_job_id ) {
@@ -293,5 +315,49 @@ class BambuPlatesPage {
 		}
 
 		echo '</tbody></table></div>';
+	}
+
+	/**
+	 * Zusatzzeile unter dem Plattenstatus: Fehlergrund des letzten
+	 * Slice-Laufs bzw. Fortschritt beim Slicen. Gibt fertiges, escaptes
+	 * HTML zurück.
+	 *
+	 * @param object      $plate       Platte.
+	 * @param object|null $slicing_job Jüngster Slicing-Auftrag dazu, falls vorhanden.
+	 * @return string
+	 */
+	protected function slicing_detail_html( $plate, $slicing_job ) {
+		if ( ! $slicing_job ) {
+			return '';
+		}
+
+		if ( 'fehlgeschlagen' === $plate->status ) {
+			$message = trim( (string) $slicing_job->error_message );
+			return sprintf(
+				'<br><span class="description" style="color:#b32d2e">%s</span>',
+				esc_html( '' !== $message ? $message : __( 'Kein Fehlergrund übermittelt.', 'lindenweg16' ) )
+			);
+		}
+
+		if ( 'wird_geslict' === $plate->status ) {
+			if ( 'queued' === $slicing_job->status ) {
+				$text = sprintf(
+					/* translators: %s: Zeitpunkt. */
+					__( 'wartet seit %s auf den Slicing-Worker', 'lindenweg16' ),
+					get_date_from_gmt( $slicing_job->created_at, 'd.m.Y H:i' )
+				);
+			} elseif ( in_array( $slicing_job->status, array( 'claimed', 'slicing' ), true ) ) {
+				$text = sprintf(
+					/* translators: %s: Zeitpunkt. */
+					__( 'Worker hat die Platte um %s übernommen', 'lindenweg16' ),
+					get_date_from_gmt( $slicing_job->started_at ? $slicing_job->started_at : $slicing_job->created_at, 'd.m.Y H:i' )
+				);
+			} else {
+				return '';
+			}
+			return '<br><span class="description">' . esc_html( $text ) . '</span>';
+		}
+
+		return '';
 	}
 }

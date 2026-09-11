@@ -601,13 +601,15 @@ Kommandozeilen-Slicer (OrcaSlicer) anhand hinterlegter Profile und lädt
 das Ergebnis zurück hoch; WordPress reiht die fertige Druckdatei danach
 automatisch in die ganz normale Bambu-Warteschlange ein.
 
-**Wichtiger Vorbehalt:** Anders als das MQTT-/FTPS-Protokoll der
-Bambu-Bridge lässt sich der eigentliche Slice-Aufruf hier nicht ohne
-eine echte OrcaSlicer-Installation gegenprüfen. Vor dem produktiven
-Einsatz unbedingt mit einer unkritischen Testplatte von Hand
-kontrollieren (Ergebnis-3MF in Bambu Studio öffnen, Druckdaten ansehen),
-bevor ein automatisch geslicter Auftrag ungeprüft auf einen echten
-Drucker geht.
+**Wichtiger Vorbehalt:** Der Slicer-Aufruf ist gegen OrcaSlicer 2.4.2
+abgeglichen (`--load-settings` für Drucker- und Prozessprofil,
+`--load-filaments` für das Filamentprofil, `--allow-newer-file`, siehe
+Kommentar in `slicing_worker.py`) und lässt sich über
+`SLICER_ARGS_TEMPLATE` in `.env.slicing` an eine andere Version
+anpassen. Vor dem produktiven Einsatz trotzdem mit einer unkritischen
+Testplatte von Hand kontrollieren (Ergebnis-3MF in Bambu Studio öffnen,
+Druckdaten ansehen), bevor ein automatisch geslicter Auftrag ungeprüft
+auf einen echten Drucker geht.
 
 **Läuft nicht auf dem Bambu-Pi selbst** – OrcaSlicer braucht x86_64,
 der Pi ist ARM. Ein eigener Server im selben Netz (oder irgendwo mit
@@ -698,6 +700,38 @@ ab; im Log (Docker: `docker compose -f docker-compose.slicing-worker.yml
 logs -f`, ohne Docker: `journalctl -u slicing-worker -f`) ist der
 Slicer-Aufruf und sein Ergebnis zu sehen. Nach Erfolg erscheint die
 Platte im Reiter „Aufträge" als neuer Bambu-Druckauftrag.
+
+### Fehlersuche
+
+Scheitert ein Slice-Lauf, steht die Platte im Reiter „Platte anordnen"
+auf **Fehlgeschlagen**, und direkt unter dem Status steht der Grund, den
+der Worker gemeldet hat (OrcaSlicer-Fehlercode mit Erklärung, dazu der
+Klartext des Slicers). Nach Behebung der Ursache genügt **„Erneut
+slicen"** – die Platte muss nicht neu angeordnet werden. Steht eine
+Platte lange auf „Wird geslict" mit dem Hinweis „wartet seit … auf den
+Slicing-Worker", läuft der Worker nicht oder sein Token stimmt nicht
+(Worker-Log prüfen).
+
+Je fehlgeschlagenem Auftrag bleibt im Arbeitsverzeichnis des Workers
+(Docker: Volume `/data`, sonst `DOWNLOAD_DIRECTORY`) ein Ordner
+`job-<ID>` mit den Eingabedateien, `slicer.log` (Warnungen/Fehler von
+OrcaSlicer), `result.json` (Fehlercode und Klartext-Grund) und
+`slicer-output.txt` (vollständige Konsolenausgabe samt Aufruf) liegen –
+standardmässig 7 Tage (`KEEP_FAILED_JOBS_DAYS`). Mit Docker:
+
+```bash
+docker compose -f docker-compose.slicing-worker.yml exec slicing-worker sh -c 'ls /data; cat /data/job-*/result.json'
+```
+
+Typische Ursachen:
+
+| Meldung / Code | Ursache | Abhilfe |
+| --- | --- | --- |
+| `Invalid option --load` | alter Worker-Aufruf, OrcaSlicer kennt `--load` nicht | Worker aktualisieren (dieser Stand nutzt `--load-settings`/`--load-filaments`) |
+| `-24` Unsupported 3MF version | Projektdatei stammt aus neuerer Bambu-Studio-Version als der OrcaSlicer im Worker | ist mit `--allow-newer-file` im Standardaufruf behoben; alternativ `--build-arg ORCASLICER_VERSION=…` auf eine neuere Version |
+| `-5` Profil ungültig | eines der drei Profil-JSON lässt sich nicht laden (z. B. verweist per `inherits` auf ein Systemprofil, das diese OrcaSlicer-Version nicht kennt) | Profil in OrcaSlicer neu exportieren und unter „Slicing-Profile" ersetzen |
+| `-50` Platte leer / Objekt nicht im Druckraum | Druckbettmass des Druckers in WordPress passt nicht zum Druckerprofil, oder Teile ragen über den Rand | Bettmass beim Drucker prüfen, Sicherheitsabstand erhöhen |
+| `-2` ungültige Parameter | andere OrcaSlicer-Version mit anderen Flags | `orca-slicer --help` im Container ansehen, `SLICER_ARGS_TEMPLATE` anpassen |
 
 ### Ohne Worker: Plattenanordnung + manuelles Slicen
 
