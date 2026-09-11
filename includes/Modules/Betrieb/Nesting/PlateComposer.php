@@ -18,11 +18,14 @@ use Lindenweg16\Modules\Betrieb\ThreeMf;
  * <item>-Platzierungen (Transformationsmatrix je Kopie).
  *
  * Grenzen (bewusst, siehe MeshOutline für dieselbe Einschränkung): Es wird
- * je Quelldatei nur das ERSTE <object> übernommen, und nur, wenn es ein
- * reiner Mesh-Körper ist (kein <components>-Verweis auf andere Objekte
- * innerhalb derselben Datei – eine solche Unterbaugruppe liesse sich ohne
- * die referenzierten Objekte nicht sinnvoll mitnehmen). compose() bricht
- * in diesem Fall mit einer verständlichen Fehlermeldung ab, statt eine
+ * je Quelldatei nur das ERSTE <object> übernommen. Verweist es per
+ * <components> auf andere Objekte statt einen eigenen <mesh>-Block zu
+ * haben (Bambu-Studio-Production-Extension, Geometrie in einer eigenen
+ * Datei innerhalb der 3MF ausgelagert – siehe MeshOutline), wird daraus
+ * ein flaches Objekt mit eingebetteter, transformierter Geometrie gebaut
+ * (flatten_components(), eine Ebene tief). Bleibt danach nichts übrig
+ * (Verweis fehlt oder ist seinerseits wieder nur eine Verschachtelung),
+ * bricht compose() mit einer verständlichen Fehlermeldung ab, statt eine
  * unvollständige 3MF zu erzeugen.
  */
 class PlateComposer {
@@ -52,12 +55,10 @@ class PlateComposer {
 		return implode(
 			' ',
 			array_map(
-				static function ( $n ) {
-					// Bis zu 6 Nachkommastellen, ohne unnötige Nullen -
-					// genug Präzision für den Slicer, ohne die Datei mit
-					// Fliesskomma-Rauschen aufzublähen.
-					return rtrim( rtrim( sprintf( '%.6F', $n ), '0' ), '.' );
-				},
+				// Bis zu 6 Nachkommastellen, ohne unnötige Nullen - genug
+				// Präzision für den Slicer, ohne die Datei mit
+				// Fliesskomma-Rauschen aufzublähen (siehe format_number()).
+				array( self::class, 'format_number' ),
 				$numbers
 			)
 		);
@@ -124,8 +125,14 @@ class PlateComposer {
 		$base_object = $objects[0];
 
 		if ( self::has_components( $base_object ) ) {
-			$base_zip->close();
-			return array( 'ok' => false, 'error' => __( 'Diese Projektdatei ist eine Unterbaugruppe (verweist per <components> auf andere Objekte) – das unterstützt die Plattenanordnung nicht.', 'lindenweg16' ) );
+			$flattened = self::flatten_components( $doc, $base_object, $base_zip );
+
+			if ( ! $flattened ) {
+				$base_zip->close();
+				return array( 'ok' => false, 'error' => __( 'Diese Projektdatei ist eine Unterbaugruppe ohne auflösbare Geometrie (verweist per <components> auf ein Objekt, das nicht gefunden wurde oder selbst wieder nur verschachtelt ist) – das unterstützt die Plattenanordnung nicht.', 'lindenweg16' ) );
+			}
+
+			$base_object = $flattened;
 		}
 
 		foreach ( $objects as $obj ) {
@@ -288,17 +295,189 @@ class PlateComposer {
 		}
 
 		if ( self::has_components( $object ) ) {
-			return array(
-				'ok'        => false,
-				'object_id' => 0,
-				'error'     => __( 'Eine der Projektdateien ist eine Unterbaugruppe (verweist per <components> auf andere Objekte) – das unterstützt die Plattenanordnung nicht.', 'lindenweg16' ),
-			);
+			$flattened = self::flatten_components( $doc, $object, $zip );
+
+			if ( ! $flattened ) {
+				return array(
+					'ok'        => false,
+					'object_id' => 0,
+					'error'     => __( 'Eine der Projektdateien ist eine Unterbaugruppe ohne auflösbare Geometrie (verweist per <components> auf ein Objekt, das nicht gefunden wurde oder selbst wieder nur verschachtelt ist) – das unterstützt die Plattenanordnung nicht.', 'lindenweg16' ),
+				);
+			}
+
+			$imported = $flattened;
+		} else {
+			$imported = $doc->importNode( $object, true );
 		}
 
-		$imported = $doc->importNode( $object, true );
 		$imported->setAttribute( 'id', (string) $new_id );
 		$resources->appendChild( $imported );
 
 		return array( 'ok' => true, 'object_id' => $new_id, 'error' => '' );
+	}
+
+	/**
+	 * Ein <object> mit <components>-Verweis(en) statt eigenem <mesh>
+	 * (Bambu-Studio-Production-Extension, siehe MeshOutline) durch ein
+	 * flaches Objekt mit eingebetteter, transformierter Geometrie ersetzen
+	 * – eine Ebene tief: ein referenziertes Objekt, das seinerseits wieder
+	 * nur verschachtelt ist, wird übersprungen. Mehrere <component>-Kinder
+	 * werden zu einem gemeinsamen Mesh zusammengefasst (Dreiecksindizes
+	 * entsprechend verschoben), damit z. B. eine aus mehreren Körpern
+	 * bestehende Baugruppe vollständig mitkommt.
+	 *
+	 * @param \DOMDocument $doc    Zieldokument – die neuen Elemente gehören dorthin, unabhängig davon, aus welchem Dokument $object stammt.
+	 * @param \DOMElement  $object Das <object> mit <components>.
+	 * @param \ZipArchive  $zip    Die 3MF, in der per p:path referenzierte Dateien liegen.
+	 * @return \DOMElement|null Neues <object> mit eingebettetem <mesh>, oder null, wenn nichts auflösbar war.
+	 */
+	protected static function flatten_components( \DOMDocument $doc, \DOMElement $object, \ZipArchive $zip ) {
+		$components = self::first_child( $object, 'components' );
+
+		if ( ! $components ) {
+			return null;
+		}
+
+		$vertices  = array();
+		$triangles = array();
+
+		foreach ( $components->childNodes as $component ) {
+			if ( ! ( $component instanceof \DOMElement ) || 'component' !== $component->localName ) {
+				continue;
+			}
+
+			$object_id = $component->getAttribute( 'objectid' );
+			if ( '' === $object_id ) {
+				continue;
+			}
+
+			$path    = $component->getAttributeNS( MeshOutline::PRODUCTION_NS, 'path' );
+			$sub_doc = $object->ownerDocument;
+
+			if ( '' !== $path ) {
+				$sub_xml = $zip->getFromName( ltrim( $path, '/' ) );
+				$sub_doc = is_string( $sub_xml ) ? ThreeMf::document( $sub_xml ) : null;
+			}
+
+			if ( ! $sub_doc ) {
+				continue;
+			}
+
+			$referenced = null;
+			foreach ( $sub_doc->getElementsByTagName( 'object' ) as $candidate ) {
+				if ( $candidate->getAttribute( 'id' ) === (string) $object_id ) {
+					$referenced = $candidate;
+					break;
+				}
+			}
+
+			// Selbst wieder nur eine Verschachtelung, oder fehlt ganz -
+			// eine Ebene tiefer wird bewusst nicht aufgelöst (siehe
+			// Klassendoku von MeshOutline).
+			if ( ! $referenced || self::has_components( $referenced ) ) {
+				continue;
+			}
+
+			$mesh = self::first_child( $referenced, 'mesh' );
+			if ( ! $mesh ) {
+				continue;
+			}
+
+			list( $sub_vertices, $sub_triangles ) = self::mesh_vertices_and_triangles( $mesh );
+			$sub_vertices = MeshOutline::apply_transform( $sub_vertices, $component->getAttribute( 'transform' ) );
+
+			$offset = count( $vertices );
+			foreach ( $sub_vertices as $v ) {
+				$vertices[] = $v;
+			}
+			foreach ( $sub_triangles as $t ) {
+				$triangles[] = array( $t[0] + $offset, $t[1] + $offset, $t[2] + $offset );
+			}
+		}
+
+		if ( ! $vertices || ! $triangles ) {
+			return null;
+		}
+
+		$ns         = $doc->documentElement->namespaceURI ?: null;
+		$new_object = $doc->createElementNS( $ns, 'object' );
+		$new_object->setAttribute( 'id', $object->getAttribute( 'id' ) );
+		if ( $object->hasAttribute( 'type' ) ) {
+			$new_object->setAttribute( 'type', $object->getAttribute( 'type' ) );
+		}
+
+		$mesh_el      = $doc->createElementNS( $ns, 'mesh' );
+		$vertices_el  = $doc->createElementNS( $ns, 'vertices' );
+		foreach ( $vertices as $v ) {
+			$vertex_el = $doc->createElementNS( $ns, 'vertex' );
+			$vertex_el->setAttribute( 'x', self::format_number( $v[0] ) );
+			$vertex_el->setAttribute( 'y', self::format_number( $v[1] ) );
+			$vertex_el->setAttribute( 'z', self::format_number( $v[2] ) );
+			$vertices_el->appendChild( $vertex_el );
+		}
+		$triangles_el = $doc->createElementNS( $ns, 'triangles' );
+		foreach ( $triangles as $t ) {
+			$triangle_el = $doc->createElementNS( $ns, 'triangle' );
+			$triangle_el->setAttribute( 'v1', (string) $t[0] );
+			$triangle_el->setAttribute( 'v2', (string) $t[1] );
+			$triangle_el->setAttribute( 'v3', (string) $t[2] );
+			$triangles_el->appendChild( $triangle_el );
+		}
+		$mesh_el->appendChild( $vertices_el );
+		$mesh_el->appendChild( $triangles_el );
+		$new_object->appendChild( $mesh_el );
+
+		return $new_object;
+	}
+
+	/**
+	 * Vertex- und Dreieckslisten eines <mesh>-Elements.
+	 *
+	 * @param \DOMElement $mesh <mesh>-Knoten.
+	 * @return array [ [[x,y,z], ...], [[v1,v2,v3], ...] ]
+	 */
+	protected static function mesh_vertices_and_triangles( \DOMElement $mesh ) {
+		$vertices    = array();
+		$vertices_el = self::first_child( $mesh, 'vertices' );
+
+		if ( $vertices_el ) {
+			foreach ( $vertices_el->childNodes as $vertex ) {
+				if ( $vertex instanceof \DOMElement && 'vertex' === $vertex->localName ) {
+					$vertices[] = array(
+						(float) $vertex->getAttribute( 'x' ),
+						(float) $vertex->getAttribute( 'y' ),
+						(float) $vertex->getAttribute( 'z' ),
+					);
+				}
+			}
+		}
+
+		$triangles    = array();
+		$triangles_el = self::first_child( $mesh, 'triangles' );
+
+		if ( $triangles_el ) {
+			foreach ( $triangles_el->childNodes as $triangle ) {
+				if ( $triangle instanceof \DOMElement && 'triangle' === $triangle->localName ) {
+					$triangles[] = array(
+						(int) $triangle->getAttribute( 'v1' ),
+						(int) $triangle->getAttribute( 'v2' ),
+						(int) $triangle->getAttribute( 'v3' ),
+					);
+				}
+			}
+		}
+
+		return array( $vertices, $triangles );
+	}
+
+	/**
+	 * Zahl fürs 3MF-XML formatieren – bis zu 6 Nachkommastellen, ohne
+	 * unnötige Nullen (siehe transform_matrix()).
+	 *
+	 * @param float $n Zahl.
+	 * @return string
+	 */
+	protected static function format_number( $n ) {
+		return rtrim( rtrim( sprintf( '%.6F', $n ), '0' ), '.' );
 	}
 }

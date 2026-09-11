@@ -175,7 +175,7 @@ class MeshOutline {
 	 * @param string $transform  Wert des transform-Attributs, oder leer.
 	 * @return array Liste [x, y, z].
 	 */
-	protected static function apply_transform( array $points_xyz, $transform ) {
+	public static function apply_transform( array $points_xyz, $transform ) {
 		$zahlen = preg_split( '/\s+/', trim( (string) $transform ) );
 
 		if ( ! is_array( $zahlen ) || 12 !== count( $zahlen ) || array_filter( $zahlen, static fn( $n ) => ! is_numeric( $n ) ) ) {

@@ -740,4 +740,110 @@ class NestingTest extends TestCase {
 		$this->assertFalse( $result['ok'] );
 		$this->assertNotSame( '', $result['error'] );
 	}
+
+	/**
+	 * Eine 3MF mit Geometrie in einer ausgelagerten Objektdatei (Bambu-
+	 * Studio-Production-Extension, siehe MeshOutline) anlegen – dieselbe
+	 * Struktur wie beim Nutzer live gemeldet ("Keine Platte konnte
+	 * gespeichert werden", weil compose() das Objekt bisher als
+	 * unauflösbare Unterbaugruppe ablehnte).
+	 *
+	 * @param string $path Zielpfad.
+	 * @param float  $w    Breite.
+	 * @param float  $d    Tiefe.
+	 */
+	protected function write_component_3mf( $path, $w, $d ) {
+		$ns   = 'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"';
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . ' requiredextensions="p">'
+			. '<resources><object id="2" type="model"><components>'
+			. '<component p:path="/3D/Objects/object_8.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>'
+			. '</components></object></resources>'
+			. '<build><item objectid="2"/></build></model>';
+
+		$sub = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . '>'
+			. '<resources><object id="1" type="model"><mesh><vertices>'
+			. "<vertex x=\"0\" y=\"0\" z=\"0\"/><vertex x=\"$w\" y=\"0\" z=\"0\"/>"
+			. "<vertex x=\"$w\" y=\"$d\" z=\"0\"/><vertex x=\"0\" y=\"$d\" z=\"0\"/>"
+			. '</vertices><triangles><triangle v1="0" v2="1" v3="2"/><triangle v1="0" v2="2" v3="3"/></triangles>'
+			. '</mesh></object></resources></model>';
+
+		$zip = new \ZipArchive();
+		$zip->open( $path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE );
+		$zip->addFromString( '[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>' );
+		$zip->addFromString( '_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model"/></Relationships>' );
+		$zip->addFromString( '3D/3dmodel.model', $root );
+		$zip->addFromString( '3D/Objects/object_8.model', $sub );
+		$zip->close();
+	}
+
+	/**
+	 * compose() muss eine ausgelagerte Objektdatei (Production Extension)
+	 * genauso zusammensetzen können wie ein Bauteil mit eingebettetem
+	 * Mesh – als Basis-Platzierung UND als weitere (importierte) Quelle.
+	 */
+	public function test_plate_composer_loest_ausgelagerte_objektdatei_auf() {
+		$dir = $this->fixture_dir();
+		$this->write_component_3mf( $dir . '/hmhr.3mf', 30, 20 );
+		$this->write_cuboid_3mf( $dir . '/b.3mf', 15, 15 );
+
+		$placements = array(
+			array( 'source_path' => $dir . '/hmhr.3mf', 'x' => 5, 'y' => 5, 'rotation_deg' => 0 ),
+			array( 'source_path' => $dir . '/b.3mf', 'x' => 40, 'y' => 5, 'rotation_deg' => 0 ),
+		);
+
+		$out    = $dir . '/combined-hmhr.3mf';
+		$result = PlateComposer::compose( $placements, $out );
+
+		$this->assertTrue( $result['ok'], $result['error'] );
+
+		$zip = new \ZipArchive();
+		$zip->open( $out );
+		$xml = $zip->getFromName( '3D/3dmodel.model' );
+		$zip->close();
+
+		$doc = new \DOMDocument();
+		$doc->loadXML( $xml );
+
+		$this->assertSame( 2, $doc->getElementsByTagName( 'object' )->length );
+		// Die zusammengesetzte Datei muss ein eingebettetes Mesh haben,
+		// keine <components> mehr - die Hülle des ersten Objekts (30x20)
+		// muss auslesbar sein.
+		$hull = MeshOutline::xy_hull_from_xml( $xml );
+		$this->assertEqualsWithDelta( 600.0, Polygon::area( $hull ), 0.001 );
+	}
+
+	/**
+	 * Verweist die ausgelagerte Komponente auf ein Objekt, das nicht
+	 * existiert, bleibt es beim verständlichen Fehler statt einer
+	 * kaputten Datei.
+	 */
+	public function test_plate_composer_ausgelagerte_komponente_ohne_treffer_ist_fehler() {
+		$dir  = $this->fixture_dir();
+		$path = $dir . '/kaputt.3mf';
+
+		$ns   = 'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"';
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . ' requiredextensions="p">'
+			. '<resources><object id="2" type="model"><components>'
+			. '<component p:path="/3D/Objects/fehlt.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>'
+			. '</components></object></resources>'
+			. '<build><item objectid="2"/></build></model>';
+
+		$zip = new \ZipArchive();
+		$zip->open( $path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE );
+		$zip->addFromString( '[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>' );
+		$zip->addFromString( '_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model"/></Relationships>' );
+		$zip->addFromString( '3D/3dmodel.model', $root );
+		$zip->close();
+
+		$result = PlateComposer::compose(
+			array( array( 'source_path' => $path, 'x' => 0, 'y' => 0, 'rotation_deg' => 0 ) ),
+			$dir . '/kaputt-out.3mf'
+		);
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertNotSame( '', $result['error'] );
+	}
 }
