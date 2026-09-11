@@ -20,7 +20,7 @@ FROM debian:bookworm-slim
 # echter Bildschirm oder X-Server am Container hängen muss.
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates curl \
-		xvfb libgl1 libglu1-mesa libegl1 libopengl0 \
+		xvfb xauth libgl1 libglu1-mesa libegl1 libopengl0 \
 		libxkbcommon0 libxkbcommon-x11-0 libdbus-1-3 \
 		libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
 		libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
