@@ -729,9 +729,24 @@ Typische Ursachen:
 | --- | --- | --- |
 | `Invalid option --load` | alter Worker-Aufruf, OrcaSlicer kennt `--load` nicht | Worker aktualisieren (dieser Stand nutzt `--load-settings`/`--load-filaments`) |
 | `-24` Unsupported 3MF version | Projektdatei stammt aus neuerer Bambu-Studio-Version als der OrcaSlicer im Worker | ist mit `--allow-newer-file` im Standardaufruf behoben; alternativ `--build-arg ORCASLICER_VERSION=…` auf eine neuere Version |
-| `-5` Profil ungültig | eines der drei Profil-JSON lässt sich nicht laden (z. B. verweist per `inherits` auf ein Systemprofil, das diese OrcaSlicer-Version nicht kennt) | Profil in OrcaSlicer neu exportieren und unter „Slicing-Profile" ersetzen |
+| `-5` Profil ungültig | eines der drei Profil-JSON lässt sich nicht laden. Der Klartext dahinter sagt, welches: „Preset was not found in the loaded bundle" hiess früher, dass ein Benutzerprofil mit `inherits` übergeben wurde (der CLI löst das für lose Dateien nicht auf, der Worker tut es seit diesem Stand selbst, siehe unten) | Profil in OrcaSlicer neu exportieren und unter „Slicing-Profile" ersetzen; bei „kennt die OrcaSlicer-Version im Worker nicht" den Worker mit `--build-arg ORCASLICER_VERSION=…` neuer bauen |
+| „Slicing-Profile unbrauchbar: … erbt von …" | das Elternprofil (`inherits`) gibt es in der OrcaSlicer-Version des Workers nicht, oder Drucker-/Filament-/Prozessdatei sind vertauscht | siehe Meldung; Profile in der Reihenfolge Drucker, Filament, Prozess hochladen |
 | `-50` Platte leer / Objekt nicht im Druckraum | Druckbettmass des Druckers in WordPress passt nicht zum Druckerprofil, oder Teile ragen über den Rand | Bettmass beim Drucker prüfen, Sicherheitsabstand erhöhen |
 | `-2` ungültige Parameter | andere OrcaSlicer-Version mit anderen Flags | `orca-slicer --help` im Container ansehen, `SLICER_ARGS_TEMPLATE` anpassen |
+
+### Wie der Worker die Profile aufbereitet
+
+Ein aus OrcaSlicer exportiertes Benutzerprofil ist meist nur eine
+Differenzdatei: `"from": "User"`, `"inherits": "Bambu PLA Matte @BBL X1C"`
+und die paar geänderten Werte. Der OrcaSlicer-CLI löst so ein `inherits`
+nur für Dateien in seinem eigenen Profilverzeichnis auf; eine lose
+übergebene Datei lehnt er ab (`-5`, „Preset was not found in the loaded
+bundle"). Der Worker löst die Vererbungskette deshalb selbst gegen die
+Herstellerprofile der installierten OrcaSlicer-Version auf
+(`ORCA_PROFILES_DIR`, im Docker-Image `/opt/orca-profiles`), schreibt je
+Auftrag ein kleines eigenes Profilpaket (`job-<ID>/profiles/LW16.json`
+samt `LW16/machine|filament|process/`) und übergibt diese Dateien an den
+Slicer. Die Dateien bleiben bei einem Fehlschlag zur Diagnose liegen.
 
 ### Ohne Worker: Plattenanordnung + manuelles Slicen
 

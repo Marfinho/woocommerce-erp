@@ -2258,7 +2258,7 @@
 
 <ol class="schritte">
 	<li><strong>Token erzeugen</strong> und in die <code>.env.slicing</code> des Workers eintragen.</li>
-	<li>In OrcaSlicer oder Bambu Studio für jede Kombination aus Material und Druckermodell die drei Profile exportieren – Druckerprofil, Filamentprofil, Prozessprofil (Rechtsklick auf das Profil → <em>Export</em>). Das ergibt drei JSON-Dateien.</li>
+	<li>In OrcaSlicer oder Bambu Studio für jede Kombination aus Material und Druckermodell die drei Profile exportieren – Druckerprofil, Filamentprofil, Prozessprofil (Rechtsklick auf das Profil → <em>Export</em>). Das ergibt drei JSON-Dateien. Es dürfen Benutzerprofile sein, die von einem Systemprofil abgeleitet sind – die Vererbung löst der Worker selbst gegen die Profile seiner OrcaSlicer-Version auf.</li>
 	<li>Unter <strong>Slicing-Profile</strong> Material (z.&nbsp;B. PETG) und Druckermodell eintragen und die drei Dateien hochladen. Das Druckermodell muss im gemeldeten Modellnamen des Druckers vorkommen: „P1S“ trifft auf „Bambu Lab P1S“.</li>
 	<li>Eine kleine Testplatte anordnen und <strong>Automatisch slicen</strong> klicken. Das Ergebnis erscheint im Reiter <em>Aufträge</em>; öffne die Druckdatei einmal in Bambu Studio und sieh dir die Druckvorschau an, bevor du ihr blind vertraust.</li>
 </ol>
@@ -2277,7 +2277,7 @@
 <thead><tr><th>Meldung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
 <tbody>
 <tr><td>„wartet seit … auf den Slicing-Worker“ (kein Fehler, aber Stillstand)</td><td>Der Worker läuft nicht, oder sein Token stimmt nicht</td><td>Worker-Log ansehen; Token neu erzeugen und eintragen</td></tr>
-<tr><td>Fehler −5, Profil ungültig</td><td>Eines der drei Profile lässt sich in der OrcaSlicer-Version des Workers nicht laden</td><td>Profil in OrcaSlicer neu exportieren und ersetzen</td></tr>
+<tr><td>Fehler −5, Profil ungültig, oder „Slicing-Profile unbrauchbar: … erbt von …“</td><td>Ein Profil verweist auf ein Systemprofil, das die OrcaSlicer-Version des Workers nicht kennt, oder Drucker-, Filament- und Prozessdatei sind vertauscht</td><td>Meldung lesen; Profil in OrcaSlicer neu exportieren und in der richtigen Reihenfolge hochladen</td></tr>
 <tr><td>Fehler −50, Platte leer oder Bauteil nicht im Druckraum</td><td>Druckbettmaß in WordPress passt nicht zum Druckerprofil, oder Teile ragen über den Rand</td><td>Bettmaß beim Drucker prüfen, Sicherheitsabstand erhöhen</td></tr>
 <tr><td>Fehler −24, neuere 3MF-Version</td><td>OrcaSlicer im Worker ist älter als das Bambu Studio, aus dem die Projektdatei stammt</td><td>Ist im Standardaufruf abgefangen; sonst den Worker mit neuerer OrcaSlicer-Version bauen</td></tr>
 <tr><td>Ergebnis-Upload fehlgeschlagen</td><td>Der Webserver nimmt die fertige Datei nicht an – zu groß oder Zeitlimit</td><td>Upload-Grenze und Zeitlimit beim Hoster prüfen</td></tr>
