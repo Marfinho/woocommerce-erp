@@ -11,7 +11,17 @@
 # eine echte OrcaSlicer-Installation hier) - vor dem produktiven Einsatz
 # unbedingt mit einer unkritischen Testplatte von Hand kontrollieren.
 
-FROM debian:bookworm-slim
+# Ubuntu 24.04, nicht Debian - die OrcaSlicer-Linux-AppImage heisst nicht
+# zufällig "..._Ubuntu2404_...": sie ist gegen dessen glibc/libstdc++
+# gelinkt (glibc >= 2.38, GLIBCXX >= 3.4.32). debian:bookworm-slim
+# (Debian 12) bringt nur glibc 2.36 mit - der Slicer startete damit gar
+# nicht erst ("version `GLIBCXX_3.4.32' not found").
+FROM ubuntu:24.04
+
+# Ohne das würde apt-get bei manchen Paketen (z. B. tzdata als
+# Abhängigkeit) interaktiv nach der Zeitzone fragen und den Build ohne
+# Terminal endlos hängen lassen.
+ENV DEBIAN_FRONTEND=noninteractive
 
 # OrcaSlicer ist im "CLI-Modus" technisch dieselbe GUI-Anwendung wie im
 # normalen Betrieb, nur ohne sichtbares Fenster - sie braucht deshalb
