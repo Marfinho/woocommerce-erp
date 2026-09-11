@@ -1,0 +1,24 @@
+# Headless-Slicing-Worker per Docker Compose - Alternative zur manuellen
+# Installation (siehe README.md, Abschnitt "Headless-Slicing-Worker
+# (OrcaSlicer)"). Läuft auf einem eigenen Server im selben Netz wie der
+# Bambu-Pi, nicht auf dem Pi selbst.
+#
+# Einrichtung:
+#   cp .env.slicing.example .env.slicing
+#   nano .env.slicing   # WORDPRESS_URL, API_TOKEN eintragen
+#   docker compose -f docker-compose.slicing-worker.yml up -d --build
+#   docker compose -f docker-compose.slicing-worker.yml logs -f
+
+services:
+  slicing-worker:
+    build:
+      context: .
+      dockerfile: slicing-worker.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.slicing
+    volumes:
+      - slicing-data:/data
+
+volumes:
+  slicing-data:

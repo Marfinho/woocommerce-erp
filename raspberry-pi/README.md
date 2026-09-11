@@ -609,10 +609,39 @@ kontrollieren (Ergebnis-3MF in Bambu Studio öffnen, Druckdaten ansehen),
 bevor ein automatisch geslicter Auftrag ungeprüft auf einen echten
 Drucker geht.
 
+**Läuft nicht auf dem Bambu-Pi selbst** – OrcaSlicer braucht x86_64,
+der Pi ist ARM. Ein eigener Server im selben Netz (oder irgendwo mit
+Zugriff auf die WordPress-Seite) übernimmt diesen Dienst, per Docker
+(empfohlen) oder manuell installiert.
+
 ### 1. OrcaSlicer installieren
 
-Auf dem Rechner, der slicen soll (kann derselbe Pi wie die Bambu-Bridge
-sein, wenn er genug Leistung hat, oder ein eigener Rechner): die
+**Per Docker (empfohlen):** übernimmt zugleich Python-Abhängigkeiten
+und Dienst-Start (Schritte 3 und 5 unten entfallen damit) –
+
+```bash
+cd raspberry-pi
+cp .env.slicing.example .env.slicing
+nano .env.slicing   # mindestens WORDPRESS_URL, API_TOKEN (siehe Schritt 2) eintragen
+docker compose -f docker-compose.slicing-worker.yml up -d --build
+docker compose -f docker-compose.slicing-worker.yml logs -f
+```
+
+`slicing-worker.Dockerfile` lädt beim Bauen automatisch die aktuellste
+OrcaSlicer-Linux-AppImage von GitHub, entpackt sie (kein FUSE im
+Container nötig) und startet sie beim Slicen unter einer virtuellen
+Anzeige (`xvfb-run`) – OrcaSlicer ist im "CLI-Modus" technisch dieselbe
+Anwendung wie mit Fenster, nur ohne sichtbare Oberfläche, und braucht
+trotzdem denselben grafischen Unterbau. Für eine reproduzierbare, feste
+Version statt "jeweils aktuellste beim Bauen": `--build-arg
+ORCASLICER_VERSION=v2.2.0` (Tag-Namen siehe
+[Releases](https://github.com/OrcaSlicer/OrcaSlicer/releases)).
+
+Mit Docker weiter bei Schritt 2 (Profile hochladen), Schritt 4
+(`.env.slicing`) ist mit obigem `nano .env.slicing` schon erledigt.
+
+**Ohne Docker:** auf dem Rechner, der slicen soll (ein eigener x86_64-
+Rechner, siehe oben – nicht der Bambu-Pi), die
 [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer)-AppImage bzw. das
 passende Paket für die eigene Plattform installieren. Den Pfad zum
 Programm für Schritt 4 notieren.
@@ -626,7 +655,7 @@ Bambu-Lab-Drucker → Reiter „Slicing-Profile"** die drei Dateien je
 Material/Druckermodell hochladen und dort auch das Worker-Token
 erzeugen (**„Token neu erzeugen"**, wird nur einmalig angezeigt).
 
-### 3. Python-Abhängigkeiten installieren
+### 3. Python-Abhängigkeiten installieren (nur ohne Docker)
 
 ```bash
 SRC="$(pwd)"
@@ -638,7 +667,9 @@ python3 -m venv venv
 venv/bin/pip install -r requirements-slicing.txt
 ```
 
-### 4. `.env.slicing` konfigurieren
+### 4. `.env.slicing` konfigurieren (nur ohne Docker)
+
+Mit Docker schon in Schritt 1 erledigt.
 
 ```bash
 cp .env.slicing.example .env.slicing
@@ -646,9 +677,9 @@ nano .env.slicing
 ```
 
 Mindestens ausfüllen: `WORDPRESS_URL`, `API_TOKEN` (aus Schritt 2),
-`SLICER_CLI` (Pfad aus Schritt 1).
+`SLICER_CLI` (Pfad aus Schritt 1, dort einkommentieren).
 
-### 5. systemd-Service installieren
+### 5. systemd-Service installieren (nur ohne Docker)
 
 ```bash
 sed "s/User=pi/User=$(whoami)/" slicing-worker.service | sudo tee /etc/systemd/system/slicing-worker.service
@@ -663,9 +694,10 @@ journalctl -u slicing-worker -f
 
 Im Reiter „Platte anordnen" eine kleine Testplatte anlegen und auf
 „Automatisch slicen" klicken. Der Worker holt sie beim nächsten Kontakt
-ab; im Log (`journalctl -u slicing-worker -f`) ist der Slicer-Aufruf und
-sein Ergebnis zu sehen. Nach Erfolg erscheint die Platte im Reiter
-„Aufträge" als neuer Bambu-Druckauftrag.
+ab; im Log (Docker: `docker compose -f docker-compose.slicing-worker.yml
+logs -f`, ohne Docker: `journalctl -u slicing-worker -f`) ist der
+Slicer-Aufruf und sein Ergebnis zu sehen. Nach Erfolg erscheint die
+Platte im Reiter „Aufträge" als neuer Bambu-Druckauftrag.
 
 ### Ohne Worker: Plattenanordnung + manuelles Slicen
 
