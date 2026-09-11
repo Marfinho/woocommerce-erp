@@ -40,6 +40,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # libgl1-mesa-dri liefert den Software-Renderer (llvmpipe), mit dem
 # OrcaSlicer unter Xvfb die Plattenvorschaubilder der Ergebnis-3MF
 # rendert - ohne ihn scheitert die OpenGL-Initialisierung.
+# fontconfig/fonts-dejavu-core: OrcaSlicer ist als GUI-Anwendung auf
+# wxWidgets/GTK aufgebaut, das beim Start eine Systemschrift lädt - auch
+# im reinen CLI-Betrieb ohne sichtbares Fenster. Ohne jede installierte
+# Schriftart findet fontconfig keine einzige Font und die Anwendung
+# stürzt beim Start mit Segfault ab, noch bevor sie ihr eigenes Logfile
+# öffnet (live so beobachtet: leeres slicer.log, sofortiger Absturz).
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates curl \
 		xvfb xauth libgl1 libgl1-mesa-dri libglu1-mesa libegl1 libopengl0 \
@@ -49,6 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libxcb-xinerama0 libxcb-xkb1 libxrender1 libxi6 libsm6 \
 		libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
 		libwebkit2gtk-4.1-0 \
+		fontconfig fonts-dejavu-core \
 		python3 python3-venv python3-pip \
 	&& rm -rf /var/lib/apt/lists/*
 
