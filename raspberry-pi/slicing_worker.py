@@ -86,7 +86,13 @@ class Config:
     # nicht Long Polling.
     LONG_POLL_ENABLED = _env_bool("LONG_POLL_ENABLED", False)
     LONG_POLL_TIMEOUT = int(os.environ.get("LONG_POLL_TIMEOUT", "25"))
-    SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "5"))
+    # SHORT_POLL_WAIT=0 (Standard) heißt "sofort antworten" - der Server
+    # hält dafür keinen PHP-Worker samt Datenbankverbindung offen (siehe
+    # SlicingJobRepository::clamp_wait() auf der PHP-Seite; live als
+    # Performance-Problem bei der Bambu-Warteschlange aufgefallen, siehe
+    # dortiger Fix). Die Pause zwischen den Anfragen übernimmt stattdessen
+    # FALLBACK_POLL_INTERVAL unten.
+    SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "0"))
     FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "5"))
 
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))

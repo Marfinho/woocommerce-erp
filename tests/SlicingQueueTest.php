@@ -64,6 +64,19 @@ class SlicingQueueTest extends TestCase {
 		$this->assertSame( 30, SlicingJobRepository::clamp_wait( 999, 5, 30 ) );
 	}
 
+	/**
+	 * wait=0 ist explizit "sofort antworten" fürs klassische Intervall-
+	 * Polling - anders als "kein wait angegeben" oben, das den Long-Poll-
+	 * Default ergibt. Siehe BambuTest für die ausführliche Begründung
+	 * (ohne diese Unterscheidung blockiert jede Anfrage einen PHP-Worker
+	 * mindestens $min Sekunden lang, auch im klassischen Poll-Modus).
+	 */
+	public function test_wait_null_bedeutet_sofort_antworten() {
+		$this->assertSame( 0, SlicingJobRepository::clamp_wait( 0, 5, 30, 25 ) );
+		$this->assertSame( 0, SlicingJobRepository::clamp_wait( '0', 5, 30, 25 ) );
+		$this->assertSame( 25, SlicingJobRepository::clamp_wait( -5, 5, 30, 25 ) );
+	}
+
 	/* ----------------------------------------------------------------
 	 * Zustandsübergänge
 	 * -------------------------------------------------------------- */
