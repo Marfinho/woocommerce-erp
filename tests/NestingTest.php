@@ -654,6 +654,43 @@ class NestingTest extends TestCase {
 		$this->assertStringContainsString( '-12.5 -3', $matrix );
 	}
 
+	/**
+	 * Ohne Drehung rechnet sich ein eigener Nullpunkt-Versatz ($ox,$oy)
+	 * direkt aus der Zielposition heraus: wendet man die Matrix auf einen
+	 * Punkt an, der genau am eigenen Nullpunkt liegt (x=$ox, y=$oy), muss
+	 * exakt die Zielposition ($tx,$ty) herauskommen (siehe Klassendoku
+	 * "Nullpunkt-Versatz" - genau der vom Nutzer live gemeldete Fall:
+	 * "ein paar Teile liegen ausserhalb der Platte").
+	 */
+	public function test_transform_matrix_nullpunkt_versatz_ohne_drehung() {
+		$matrix  = PlateComposer::transform_matrix( 0, 5, 5, 0, 100, 50 );
+		$numbers = array_map( 'floatval', explode( ' ', $matrix ) );
+
+		// m30, m31 (Index 9, 10): Punkt (100,50) transformiert muss (5,5) ergeben.
+		$x = 100 * $numbers[0] + 50 * $numbers[3] + $numbers[9];
+		$y = 100 * $numbers[1] + 50 * $numbers[4] + $numbers[10];
+
+		$this->assertEqualsWithDelta( 5.0, $x, 0.0001 );
+		$this->assertEqualsWithDelta( 5.0, $y, 0.0001 );
+	}
+
+	/**
+	 * Mit 90°-Drehung UND Nullpunkt-Versatz zusammen: derselbe Punkt
+	 * (eigener Nullpunkt) muss nach Drehung + Verschiebung trotzdem genau
+	 * auf der Zielposition landen - die Reihenfolge (erst Versatz
+	 * herausrechnen, dann drehen, dann verschieben) muss stimmen.
+	 */
+	public function test_transform_matrix_nullpunkt_versatz_mit_drehung() {
+		$matrix  = PlateComposer::transform_matrix( 90, 5, 5, 0, 100, 50 );
+		$numbers = array_map( 'floatval', explode( ' ', $matrix ) );
+
+		$x = 100 * $numbers[0] + 50 * $numbers[3] + $numbers[9];
+		$y = 100 * $numbers[1] + 50 * $numbers[4] + $numbers[10];
+
+		$this->assertEqualsWithDelta( 5.0, $x, 0.0001 );
+		$this->assertEqualsWithDelta( 5.0, $y, 0.0001 );
+	}
+
 	/* ----------------------------------------------------------------
 	 * PlateComposer: Zusammensetzen echter (minimaler) 3MF-Dateien
 	 * -------------------------------------------------------------- */
@@ -739,6 +776,86 @@ class NestingTest extends TestCase {
 		$result = PlateComposer::compose( array(), $this->fixture_dir() . '/leer.3mf' );
 		$this->assertFalse( $result['ok'] );
 		$this->assertNotSame( '', $result['error'] );
+	}
+
+	/**
+	 * Wie write_cuboid_3mf(), aber mit einem Mesh-Nullpunkt, der NICHT an
+	 * der eigenen Bounding-Box-Ecke liegt (Vertices von ($ox,$oy) bis
+	 * ($ox+$w,$oy+$d)) - der Regelfall bei echten Exporten (siehe
+	 * Klassendoku "Nullpunkt-Versatz" von PlateComposer) und genau der vom
+	 * Nutzer live gemeldete Fall ("ein paar Teile liegen ausserhalb der
+	 * Platte").
+	 *
+	 * @param string $path Zielpfad.
+	 * @param float  $w    Breite.
+	 * @param float  $d    Tiefe.
+	 * @param float  $ox   Eigener Nullpunkt-Versatz X.
+	 * @param float  $oy   Eigener Nullpunkt-Versatz Y.
+	 */
+	protected function write_offset_cuboid_3mf( $path, $w, $d, $ox, $oy ) {
+		$xml = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+			. '<resources><object id="1" type="model"><mesh><vertices>'
+			. "<vertex x=\"$ox\" y=\"$oy\" z=\"0\"/><vertex x=\"" . ( $ox + $w ) . "\" y=\"$oy\" z=\"0\"/>"
+			. "<vertex x=\"" . ( $ox + $w ) . "\" y=\"" . ( $oy + $d ) . "\" z=\"0\"/><vertex x=\"$ox\" y=\"" . ( $oy + $d ) . '" z="0"/>'
+			. '</vertices><triangles><triangle v1="0" v2="1" v3="2"/><triangle v1="0" v2="2" v3="3"/></triangles>'
+			. '</mesh></object></resources><build><item objectid="1"/></build></model>';
+
+		$zip = new \ZipArchive();
+		$zip->open( $path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE );
+		$zip->addFromString( '[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>' );
+		$zip->addFromString( '_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model"/></Relationships>' );
+		$zip->addFromString( '3D/3dmodel.model', $xml );
+		$zip->close();
+	}
+
+	/**
+	 * Ein Bauteil, dessen Mesh weit ausserhalb des eigenen Nullpunkts
+	 * liegt (wie bei echten Exporten üblich), muss nach dem Zusammensetzen
+	 * trotzdem genau an der von BinPacker vorgegebenen Position landen -
+	 * nicht um seinen eigenen Versatz daneben (der vom Nutzer live
+	 * gemeldete Fall: "ein paar Teile liegen ausserhalb der Platte").
+	 */
+	public function test_plate_composer_platziert_bauteil_mit_fremdem_nullpunkt_richtig() {
+		$dir = $this->fixture_dir();
+		// Das Mesh liegt lokal bei X=100..130, Y=50..70 - weit weg von
+		// (0,0). Ohne Korrektur würde das Bauteil bei der Zielposition
+		// (5,5) plus diesem Versatz landen, also bei (105,55).
+		$this->write_offset_cuboid_3mf( $dir . '/versetzt.3mf', 30, 20, 100, 50 );
+
+		$placements = array(
+			array( 'source_path' => $dir . '/versetzt.3mf', 'x' => 5, 'y' => 5, 'rotation_deg' => 0 ),
+		);
+
+		$out    = $dir . '/combined-versetzt.3mf';
+		$result = PlateComposer::compose( $placements, $out );
+
+		$this->assertTrue( $result['ok'], $result['error'] );
+
+		$zip = new \ZipArchive();
+		$zip->open( $out );
+		$xml = $zip->getFromName( '3D/3dmodel.model' );
+		$zip->close();
+
+		$doc  = new \DOMDocument();
+		$doc->loadXML( $xml );
+		$item = $doc->getElementsByTagName( 'item' )->item( 0 );
+
+		$m = array_map( 'floatval', explode( ' ', $item->getAttribute( 'transform' ) ) );
+
+		// Rohe Vertices (100,50) und (130,70) durch die Matrix schicken -
+		// muss exakt auf (5,5)..(35,25) landen, nicht auf (105,55)..(135,75).
+		$transform = static function ( $x, $y ) use ( $m ) {
+			return array( $x * $m[0] + $y * $m[3] + $m[9], $x * $m[1] + $y * $m[4] + $m[10] );
+		};
+
+		list( $minx, $miny ) = $transform( 100, 50 );
+		list( $maxx, $maxy ) = $transform( 130, 70 );
+
+		$this->assertEqualsWithDelta( 5.0, $minx, 0.001 );
+		$this->assertEqualsWithDelta( 5.0, $miny, 0.001 );
+		$this->assertEqualsWithDelta( 35.0, $maxx, 0.001 );
+		$this->assertEqualsWithDelta( 25.0, $maxy, 0.001 );
 	}
 
 	/**
@@ -845,5 +962,97 @@ class NestingTest extends TestCase {
 
 		$this->assertFalse( $result['ok'] );
 		$this->assertNotSame( '', $result['error'] );
+	}
+
+	/**
+	 * Liegt der tiefste Punkt eines Objekts unter Z=0 (Mesh-Nullpunkt im
+	 * geometrischen Zentrum statt an der Unterseite - der vom Nutzer live
+	 * gemeldete Fall "Modelle liegen unter statt auf der Platte"), muss
+	 * compose() das Objekt genau um diesen Betrag anheben.
+	 */
+	public function test_plate_composer_hebt_objekt_mit_negativem_z_auf_die_druckplatte() {
+		$dir = $this->fixture_dir();
+		$this->write_component_3mf_mit_z( $dir . '/tief.3mf', 30, 20, -18.5 );
+
+		$placements = array(
+			array( 'source_path' => $dir . '/tief.3mf', 'x' => 5, 'y' => 5, 'rotation_deg' => 0 ),
+		);
+
+		$out    = $dir . '/combined-tief.3mf';
+		$result = PlateComposer::compose( $placements, $out );
+
+		$this->assertTrue( $result['ok'], $result['error'] );
+
+		$zip = new \ZipArchive();
+		$zip->open( $out );
+		$xml = $zip->getFromName( '3D/3dmodel.model' );
+		$zip->close();
+
+		$doc  = new \DOMDocument();
+		$doc->loadXML( $xml );
+		$item = $doc->getElementsByTagName( 'item' )->item( 0 );
+		$m    = array_map( 'floatval', explode( ' ', $item->getAttribute( 'transform' ) ) );
+
+		// Ohne Anhebung läge das Objekt bei Z=-18.5 (unter der
+		// Druckplatte) - m32 (Index 11) muss das exakt ausgleichen.
+		$this->assertEqualsWithDelta( 18.5, $m[11], 0.001 );
+	}
+
+	/**
+	 * Wie write_component_3mf(), aber mit wählbarem Z statt fest 0 - fürs
+	 * Prüfen des Z-Versatzes.
+	 *
+	 * @param string $path Zielpfad.
+	 * @param float  $w    Breite.
+	 * @param float  $d    Tiefe.
+	 * @param float  $z    Z-Koordinate aller Vertices.
+	 */
+	protected function write_component_3mf_mit_z( $path, $w, $d, $z ) {
+		$ns   = 'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"';
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . ' requiredextensions="p">'
+			. '<resources><object id="2" type="model"><components>'
+			. '<component p:path="/3D/Objects/object_8.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>'
+			. '</components></object></resources>'
+			. '<build><item objectid="2"/></build></model>';
+
+		$sub = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . '>'
+			. '<resources><object id="1" type="model"><mesh><vertices>'
+			. "<vertex x=\"0\" y=\"0\" z=\"$z\"/><vertex x=\"$w\" y=\"0\" z=\"$z\"/>"
+			. "<vertex x=\"$w\" y=\"$d\" z=\"$z\"/><vertex x=\"0\" y=\"$d\" z=\"$z\"/>"
+			. '</vertices><triangles><triangle v1="0" v2="1" v3="2"/><triangle v1="0" v2="2" v3="3"/></triangles>'
+			. '</mesh></object></resources></model>';
+
+		$zip = new \ZipArchive();
+		$zip->open( $path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE );
+		$zip->addFromString( '[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>' );
+		$zip->addFromString( '_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel" Target="/3D/3dmodel.model"/></Relationships>' );
+		$zip->addFromString( '3D/3dmodel.model', $root );
+		$zip->addFromString( '3D/Objects/object_8.model', $sub );
+		$zip->close();
+	}
+
+	/**
+	 * Der beim vorigen Fix (#54) behobene "zip zu früh geschlossen"-Bug
+	 * betraf nur die BASIS-Platzierung (erste in der Liste) - dieser Test
+	 * prüft ausdrücklich die ausgelagerte Objektdatei als ZWEITE
+	 * (importierte) Quelle, wo das ZIP-Handle zum Zeitpunkt des
+	 * p:path-Zugriffs schon geschlossen gewesen wäre.
+	 */
+	public function test_plate_composer_loest_ausgelagerte_objektdatei_als_zweite_quelle_auf() {
+		$dir = $this->fixture_dir();
+		$this->write_cuboid_3mf( $dir . '/a.3mf', 15, 15 );
+		$this->write_component_3mf( $dir . '/hmhr.3mf', 30, 20 );
+
+		$placements = array(
+			array( 'source_path' => $dir . '/a.3mf', 'x' => 5, 'y' => 5, 'rotation_deg' => 0 ),
+			array( 'source_path' => $dir . '/hmhr.3mf', 'x' => 40, 'y' => 5, 'rotation_deg' => 0 ),
+		);
+
+		$out    = $dir . '/combined-hmhr-zweite.3mf';
+		$result = PlateComposer::compose( $placements, $out );
+
+		$this->assertTrue( $result['ok'], $result['error'] );
 	}
 }
