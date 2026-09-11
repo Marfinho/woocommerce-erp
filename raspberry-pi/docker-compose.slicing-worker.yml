@@ -19,6 +19,13 @@ services:
       - .env.slicing
     volumes:
       - slicing-data:/data
+    # Dockers Standard-/dev/shm ist nur 64MB - für die
+    # OpenGL-Software-Rendering (llvmpipe unter Xvfb, siehe
+    # slicing-worker.Dockerfile), mit dem OrcaSlicer die
+    # Plattenvorschaubilder der Ergebnis-3MF erzeugt, oft zu wenig; ein
+    # bekannter Docker-Stolperstein, der genau als Segfault (Signal 11)
+    # endet statt einer verständlichen Fehlermeldung.
+    shm_size: "1gb"
 
 volumes:
   slicing-data:
