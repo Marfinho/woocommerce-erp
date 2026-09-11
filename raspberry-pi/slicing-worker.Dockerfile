@@ -17,7 +17,10 @@ FROM debian:bookworm-slim
 # normalen Betrieb, nur ohne sichtbares Fenster - sie braucht deshalb
 # trotzdem denselben grafischen Unterbau (Qt, OpenGL, XCB) wie ein echter
 # Desktop. xvfb liefert dafür eine virtuelle Anzeige, ohne dass ein
-# echter Bildschirm oder X-Server am Container hängen muss.
+# echter Bildschirm oder X-Server am Container hängen muss. Die in
+# OrcaSlicer eingebettete Hilfe-/Onboarding-Oberfläche ist eine
+# WebKitGTK-Ansicht (libwebkit2gtk-4.1) - fehlt sie, bricht schon der
+# Start ab, auch im reinen CLI-Slice-Betrieb ohne sichtbares Fenster.
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		ca-certificates curl \
 		xvfb xauth libgl1 libglu1-mesa libegl1 libopengl0 \
@@ -26,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
 		libxcb-xinerama0 libxcb-xkb1 libxrender1 libxi6 libsm6 \
 		libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 \
+		libwebkit2gtk-4.1-0 \
 		python3 python3-venv python3-pip \
 	&& rm -rf /var/lib/apt/lists/*
 
