@@ -557,6 +557,78 @@ def prepare_profile_bundle(work_dir: Path, printer_json: Path, filament_json: Pa
     return files["machine"], files["filament"], files["process"]
 
 
+# Schluessel aus Metadata/project_settings.config der Platte, die keinem
+# Profil zugeordnet sind, aber zum Projekt gehoeren und erhalten bleiben
+# muessen (Betttyp, Filamentfarben und -zuordnung, Spuelvolumen,
+# Wischturmposition, Presetnamen).
+PROJECT_LEVEL_KEYS = frozenset({
+    "curr_bed_type", "filament_colour", "filament_map", "filament_map_mode", "filament_self_index",
+    "filament_ids", "flush_volumes_matrix", "flush_volumes_vector", "flush_multiplier",
+    "wipe_tower_x", "wipe_tower_y", "printer_settings_id", "print_settings_id",
+    "filament_settings_id", "inherits_group", "different_settings_to_system",
+    "version", "from", "name", "is_custom_defined",
+    "first_layer_print_sequence", "other_layers_print_sequence", "other_layers_print_sequence_nums",
+})
+PROJECT_CONFIG_ENTRY = "Metadata/project_settings.config"
+
+
+def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -> list[str]:
+    """Metadata/project_settings.config der Platte auf die Schluessel der
+    drei Profile plus PROJECT_LEVEL_KEYS eindampfen.
+
+    Die zusammengesetzte Platte traegt die Projekteinstellungen der
+    Bambu-Studio-Datei, aus der das erste Bauteil stammt - komplett, mit
+    allen Werten jener (oft neueren) Studio-Version. Beim Slicen ueberschreibt
+    der CLI davon nur die Schluessel, die in den geladenen Profilen
+    vorkommen; der Rest bleibt stehen und geht durch validate(). Live so
+    gescheitert: Bambu Studio 2.5 schreibt "-1" (= automatisch) fuer
+    raft_first_layer_expansion und tree_support_wall_count, OrcaSlicer 2.4.2
+    erlaubt dort nur >= 0 (Code -18). Alles, was kein Profil setzt, soll
+    deshalb aus dem Standard der installierten OrcaSlicer-Version kommen -
+    das ist auch, was die GUI bei "neues Projekt mit diesen Profilen" taete.
+
+    Liefert die entfernten Schluessel (fuer das Log)."""
+    import tempfile
+    import zipfile
+
+    allowed = set(PROJECT_LEVEL_KEYS)
+    for path in profile_paths:
+        try:
+            allowed.update(_read_json(path).keys())
+        except (OSError, ValueError):
+            pass
+
+    try:
+        with zipfile.ZipFile(input_path) as zin:
+            names = zin.namelist()
+            if PROJECT_CONFIG_ENTRY not in names:
+                return []
+            try:
+                config = json.loads(zin.read(PROJECT_CONFIG_ENTRY).decode("utf-8", errors="replace"))
+            except ValueError:
+                return []
+            if not isinstance(config, dict):
+                return []
+            dropped = sorted(k for k in config if k not in allowed)
+            if not dropped:
+                return []
+            cleaned = {k: v for k, v in config.items() if k in allowed}
+
+            tmp_fd, tmp_name = tempfile.mkstemp(prefix="plate-", suffix=".3mf", dir=str(input_path.parent))
+            os.close(tmp_fd)
+            with zipfile.ZipFile(tmp_name, "w", zipfile.ZIP_DEFLATED) as zout:
+                for item in zin.infolist():
+                    if item.filename == PROJECT_CONFIG_ENTRY:
+                        zout.writestr(item, json.dumps(cleaned, ensure_ascii=False, indent=4))
+                    else:
+                        zout.writestr(item, zin.read(item.filename))
+        Path(tmp_name).replace(input_path)
+        return dropped
+    except (OSError, zipfile.BadZipFile) as exc:
+        log.warning("Projekteinstellungen der Platte konnten nicht bereinigt werden: %s", exc)
+        return []
+
+
 # ---------------------------------------------------------------------
 # Slicer-Aufruf
 # ---------------------------------------------------------------------
@@ -903,6 +975,15 @@ def process_job(api: ApiClient, job: dict) -> None:
         log.error("Auftrag %s: %s", job_id, message)
         api.fail(job_id, message)
         return
+
+    dropped = sanitize_project_config(input_path, (printer_json, filament_json, process_json))
+    if dropped:
+        log.info(
+            "Projekteinstellungen der Platte bereinigt: %d Schlüssel ohne Profilzuordnung entfernt (%s%s).",
+            len(dropped),
+            ", ".join(dropped[:12]),
+            ", …" if len(dropped) > 12 else "",
+        )
 
     slice_ok, message = run_slicer(input_path, output_path, printer_json, filament_json, process_json)
 

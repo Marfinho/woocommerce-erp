@@ -732,6 +732,7 @@ Typische Ursachen:
 | `-5` Profil ungültig | eines der drei Profil-JSON lässt sich nicht laden. Der Klartext dahinter sagt, welches: „Preset was not found in the loaded bundle" hiess früher, dass ein Benutzerprofil mit `inherits` übergeben wurde (der CLI löst das für lose Dateien nicht auf, der Worker tut es seit diesem Stand selbst, siehe unten) | Profil in OrcaSlicer neu exportieren und unter „Slicing-Profile" ersetzen; bei „kennt die OrcaSlicer-Version im Worker nicht" den Worker mit `--build-arg ORCASLICER_VERSION=…` neuer bauen |
 | „Slicing-Profile unbrauchbar: … erbt von …" | das Elternprofil (`inherits`) gibt es in der OrcaSlicer-Version des Workers nicht, oder Drucker-/Filament-/Prozessdatei sind vertauscht | siehe Meldung; Profile in der Reihenfolge Drucker, Filament, Prozess hochladen |
 | `-50` Platte leer / Objekt nicht im Druckraum | Druckbettmass des Druckers in WordPress passt nicht zum Druckerprofil, oder Teile ragen über den Rand | Bettmass beim Drucker prüfen, Sicherheitsabstand erhöhen |
+| `-18` ungültige Parameterwerte in der 3MF (z. B. `tree_support_wall_count: -1 not in range`) | die Projektdatei der Platte trägt Werte einer neueren Bambu-Studio-Version, die diese OrcaSlicer-Version nicht kennt; der Worker entfernt seit diesem Stand alle Projektwerte ohne Profilzuordnung vor dem Slicen | die Meldung nennt den Schlüssel; kommt er aus einem der drei Profile, dort korrigieren |
 | `-2` ungültige Parameter | andere OrcaSlicer-Version mit anderen Flags | `orca-slicer --help` im Container ansehen, `SLICER_ARGS_TEMPLATE` anpassen |
 
 ### Wie der Worker die Profile aufbereitet
@@ -747,6 +748,15 @@ Herstellerprofile der installierten OrcaSlicer-Version auf
 Auftrag ein kleines eigenes Profilpaket (`job-<ID>/profiles/LW16.json`
 samt `LW16/machine|filament|process/`) und übergibt diese Dateien an den
 Slicer. Die Dateien bleiben bei einem Fehlschlag zur Diagnose liegen.
+
+Vor dem Slicen bereinigt der Worker ausserdem `Metadata/project_settings.config`
+der Platte: Alle Schlüssel, die weder in den drei Profilen noch zu den
+projektbezogenen Angaben (Betttyp, Filamentfarben, Spülvolumen,
+Wischturmposition) gehören, werden entfernt, damit OrcaSlicer dafür
+seine eigenen Standardwerte nimmt. Die Projektdatei stammt aus der
+Bambu-Studio-Datei des ersten Bauteils und enthält sonst Werte einer
+womöglich neueren Version, die der Slicer als ungültig ablehnt (`-18`).
+Die entfernten Schlüssel stehen im Worker-Log.
 
 ### Ohne Worker: Plattenanordnung + manuelles Slicen
 
