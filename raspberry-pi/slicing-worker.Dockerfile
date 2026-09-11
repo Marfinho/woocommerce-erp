@@ -104,7 +104,17 @@ RUN set -eux; \
 	cd /opt; \
 	/tmp/OrcaSlicer.AppImage --appimage-extract >/dev/null; \
 	mv squashfs-root /opt/orcaslicer; \
-	rm /tmp/OrcaSlicer.AppImage
+	rm /tmp/OrcaSlicer.AppImage; \
+	profiles="$(find /opt/orcaslicer -type d -path '*resources/profiles' | head -n1)"; \
+	[ -n "$profiles" ] || { echo "Profilverzeichnis (resources/profiles) in der AppImage nicht gefunden"; exit 1; }; \
+	ln -s "$profiles" /opt/orca-profiles
+
+# /opt/orca-profiles zeigt auf die Herstellerprofile der AppImage
+# (BBL.json, BBL/machine/..., OrcaFilamentLibrary/...). Der Worker löst
+# damit die Vererbung ("inherits") der hochgeladenen Benutzerprofile
+# selbst auf - der OrcaSlicer-CLI kann das für lose Dateien nicht, siehe
+# prepare_profile_bundle() in slicing_worker.py.
+ENV ORCA_PROFILES_DIR=/opt/orca-profiles
 
 # Wrapper: OrcaSlicer immer unter einer frischen virtuellen Anzeige
 # starten - dasselbe Kommando, das slicing_worker.py über SLICER_CLI

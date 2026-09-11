@@ -327,6 +327,236 @@ class ApiClient:
 
 
 # ---------------------------------------------------------------------
+# Profile auflösen
+# ---------------------------------------------------------------------
+#
+# Ein aus OrcaSlicer/Bambu Studio exportiertes Benutzerprofil ist meist nur
+# eine Differenzdatei: "from": "User", "inherits": "<Systemprofil>" und die
+# paar geänderten Werte. Der OrcaSlicer-CLI löst so ein "inherits" NUR auf,
+# wenn die Datei in seinem eigenen Profilverzeichnis liegt - eine lose
+# übergebene Datei lehnt er mit "Preset was not found in the loaded bundle"
+# ab (Rückgabecode -5, live so passiert). Ein aufgelöstes Profil OHNE
+# "inherits" und mit "from": "User" scheitert danach an der
+# Kompatibilitätsprüfung (-17), weil der CLI den Systemnamen des Druckers
+# gegen die Liste "compatible_printers" des Prozessprofils vergleicht und
+# ein Benutzerprofil ohne "inherits" keinen Systemnamen hat.
+#
+# Deshalb macht der Worker es so, wie OrcaSlicer seine Herstellerprofile
+# liest: Er löst die Vererbungskette gegen die in der AppImage mitgelieferten
+# Systemprofile (resources/profiles/<Hersteller>/...) selbst auf, schreibt je
+# Auftrag ein kleines eigenes Herstellerpaket (Manifest LW16.json plus
+# machine/filament/process-Dateien mit "from": "system", ohne "inherits")
+# und trägt den Druckernamen in "compatible_printers" von Filament- und
+# Prozessprofil ein. Schlüssel, die die OrcaSlicer-Version im Worker nicht
+# kennt, verwirft der CLI beim Laden von selbst.
+
+PROFILE_TYPES = {
+    "machine": ("machine_list", "printer"),
+    "filament": ("filament_list", "filament"),
+    "process": ("process_list", "process"),
+}
+META_KEYS = ("inherits", "instantiation", "from", "type", "name", "version")
+
+
+def find_profiles_dir() -> Optional[Path]:
+    """Verzeichnis mit den Herstellerpaketen (BBL.json, BBL/...) finden."""
+    candidates = []
+    if os.environ.get("ORCA_PROFILES_DIR"):
+        candidates.append(Path(os.environ["ORCA_PROFILES_DIR"]))
+    candidates += [
+        Path("/opt/orca-profiles"),
+        Path("/opt/orcaslicer/resources/profiles"),
+        Path("/opt/orcaslicer/usr/resources/profiles"),
+        Path("/opt/orcaslicer/usr/share/OrcaSlicer/profiles"),
+    ]
+    try:
+        cli = Path(Config.SLICER_CLI).resolve()
+        candidates.append(cli.parent.parent / "resources" / "profiles")
+    except OSError:
+        pass
+    for path in candidates:
+        if path.is_dir() and any(path.glob("*.json")):
+            return path
+    return None
+
+
+def load_vendor_index(profiles_dir: Path) -> dict:
+    """Profilname -> Datei, je Typ, über alle Herstellermanifeste."""
+    index = {"machine": {}, "filament": {}, "process": {}, "machine_model": {}}
+    manifests = sorted(profiles_dir.glob("*.json"), key=lambda p: (p.stem == "OrcaFilamentLibrary", p.name))
+    for manifest in manifests:
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        vendor_dir = profiles_dir / manifest.stem
+        lists = {"machine": "machine_list", "filament": "filament_list", "process": "process_list", "machine_model": "machine_model_list"}
+        for kind, list_key in lists.items():
+            for entry in data.get(list_key, []) or []:
+                if isinstance(entry, dict) and entry.get("name") and entry.get("sub_path"):
+                    index[kind].setdefault(entry["name"], vendor_dir / entry["sub_path"])
+    return index
+
+
+def _read_json(path: Path) -> dict:
+    data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+    if not isinstance(data, dict):
+        raise ValueError(f"{path.name}: kein JSON-Objekt")
+    return data
+
+
+def flatten_profile(user_json: dict, kind: str, index: dict) -> dict:
+    """Vererbungskette eines Profils auflösen: Wurzel zuerst, jede Ebene
+    überschreibt die Werte der vorigen (dieselbe Regel wie OrcaSlicers
+    PresetBundle::load_vendor_preset)."""
+    chain = [user_json]
+    seen = {user_json.get("name", "")}
+    parent = user_json.get("inherits", "")
+    while parent:
+        if parent in seen:
+            raise ValueError(f"Vererbungsschleife bei '{parent}'")
+        seen.add(parent)
+        path = index[kind].get(parent)
+        if path is None or not path.is_file():
+            # Vertauschte Dateien erkennen: Ein exportiertes Benutzerprofil
+            # traegt oft keinen "type"-Schluessel, das Elternprofil verraet
+            # aber, was es ist.
+            for other_kind, other_index in index.items():
+                if other_kind != kind and other_kind in PROFILE_TYPES and parent in other_index:
+                    raise ValueError(
+                        f"als {PROFILE_TYPES[kind][1]}-Profil wurde ein {PROFILE_TYPES[other_kind][1]}-Profil "
+                        f"hochgeladen (es erbt von '{parent}') - Drucker-, Filament- und Prozessdatei vertauscht?"
+                    )
+            raise ValueError(
+                f"das {PROFILE_TYPES[kind][1]}-Profil erbt von '{parent}', dieses Systemprofil "
+                "kennt die OrcaSlicer-Version im Worker nicht (Profil in OrcaSlicer neu "
+                "exportieren oder Worker mit neuerer OrcaSlicer-Version bauen)"
+            )
+        node = _read_json(path)
+        chain.append(node)
+        parent = node.get("inherits", "")
+
+    merged: dict = {}
+    for level in reversed(chain):
+        for key, value in level.items():
+            if key in ("inherits", "instantiation"):
+                continue
+            merged[key] = value
+
+    merged["type"] = kind
+    merged["name"] = user_json.get("name") or merged.get("name") or PROFILE_TYPES[kind][1]
+    merged["from"] = "system"
+    merged["instantiation"] = "true"
+    merged.pop("inherits", None)
+    return merged
+
+
+def prepare_profile_bundle(work_dir: Path, printer_json: Path, filament_json: Path, process_json: Path) -> tuple[Path, Path, Path]:
+    """Die drei hochgeladenen Profile in ein eigenes Herstellerpaket im
+    Arbeitsverzeichnis umsetzen (siehe Abschnittskommentar). Liefert die
+    Pfade, die an --load-settings/--load-filaments gehen."""
+    sources = {"machine": printer_json, "filament": filament_json, "process": process_json}
+    raw = {}
+    for kind, path in sources.items():
+        try:
+            raw[kind] = _read_json(path)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"{PROFILE_TYPES[kind][1]}-Profil ist kein lesbares JSON: {exc}") from exc
+        declared = str(raw[kind].get("type") or "").lower()
+        if declared and declared != kind:
+            raise ValueError(
+                f"als {PROFILE_TYPES[kind][1]}-Profil wurde eine Datei vom Typ '{declared}' hochgeladen "
+                "(Drucker-, Filament- und Prozessprofil vertauscht?)"
+            )
+
+    needs_resolve = any(r.get("inherits") for r in raw.values())
+    index = None
+    if needs_resolve:
+        profiles_dir = find_profiles_dir()
+        if profiles_dir is None:
+            raise ValueError(
+                "die Profile erben von OrcaSlicer-Systemprofilen, aber das Profilverzeichnis "
+                "der OrcaSlicer-Installation wurde nicht gefunden (ORCA_PROFILES_DIR in .env.slicing setzen)"
+            )
+        index = load_vendor_index(profiles_dir)
+        log.info("Löse Profil-Vererbung gegen %s auf.", profiles_dir)
+
+    flat = {}
+    for kind, data in raw.items():
+        flat[kind] = flatten_profile(data, kind, index) if index is not None else dict(data)
+        if index is None:
+            flat[kind].setdefault("type", kind)
+
+    printer_name = str(flat["machine"].get("name") or "printer")
+    for kind in ("filament", "process"):
+        existing = flat[kind].get("compatible_printers") or []
+        if not isinstance(existing, list):
+            existing = [str(existing)]
+        flat[kind]["compatible_printers"] = list(dict.fromkeys([str(p) for p in existing] + [printer_name]))
+
+    machine = flat["machine"]
+    if not machine.get("printer_variant"):
+        nozzles = machine.get("nozzle_diameter") or []
+        machine["printer_variant"] = str(nozzles[0]) if isinstance(nozzles, list) and nozzles else "0.4"
+    model_name = str(machine.get("printer_model") or "")
+    if not model_name:
+        model_name = printer_name
+        machine["printer_model"] = model_name
+
+    bundle_root = work_dir / "profiles"
+    vendor = "LW16"
+    vendor_dir = bundle_root / vendor
+    for sub in ("machine", "filament", "process"):
+        (vendor_dir / sub).mkdir(parents=True, exist_ok=True)
+
+    model = None
+    if index is not None and index["machine_model"].get(model_name) and index["machine_model"][model_name].is_file():
+        try:
+            model = _read_json(index["machine_model"][model_name])
+        except (OSError, ValueError):
+            model = None
+    if model is None:
+        model = {
+            "type": "machine_model",
+            "name": model_name,
+            "model_id": model_name,
+            "nozzle_diameter": str(machine["printer_variant"]),
+            "machine_tech": "FFF",
+            "family": vendor,
+        }
+    # Der Lader prüft, dass die Düsenvariante des Druckers zum Modell passt.
+    variants = [v for v in str(model.get("nozzle_diameter", "")).split(";") if v]
+    if str(machine["printer_variant"]) not in variants:
+        variants.append(str(machine["printer_variant"]))
+    model["nozzle_diameter"] = ";".join(variants)
+
+    files = {
+        "model": vendor_dir / "machine" / "model.json",
+        "machine": vendor_dir / "machine" / "printer.json",
+        "filament": vendor_dir / "filament" / "filament.json",
+        "process": vendor_dir / "process" / "process.json",
+    }
+    files["model"].write_text(json.dumps(model, ensure_ascii=False, indent=1), encoding="utf-8")
+    for kind in ("machine", "filament", "process"):
+        files[kind].write_text(json.dumps(flat[kind], ensure_ascii=False, indent=1), encoding="utf-8")
+
+    manifest = {
+        "name": "Lindenweg16",
+        "version": "01.00.00.00",
+        "description": "Vom Slicing-Worker je Auftrag erzeugtes Profilpaket",
+        "machine_model_list": [{"name": model_name, "sub_path": "machine/model.json"}],
+        "machine_list": [{"name": printer_name, "sub_path": "machine/printer.json"}],
+        "filament_list": [{"name": str(flat["filament"].get("name") or "filament"), "sub_path": "filament/filament.json"}],
+        "process_list": [{"name": str(flat["process"].get("name") or "process"), "sub_path": "process/process.json"}],
+    }
+    (bundle_root / f"{vendor}.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    return files["machine"], files["filament"], files["process"]
+
+
+# ---------------------------------------------------------------------
 # Slicer-Aufruf
 # ---------------------------------------------------------------------
 
@@ -431,12 +661,13 @@ def describe_slicer_failure(work_dir: Path, returncode: Optional[int], stdout: s
     if reason:
         parts.append(reason)
 
-    # Ohne result.json (z. B. Aufruffehler, der vor dem eigentlichen
-    # Slice-Lauf abbricht) bleibt nur die Konsolenausgabe.
-    if not reason:
-        console = _tail(stderr) or _tail(stdout)
-        if console:
-            parts.append(console)
+    # Die Konsolenausgabe immer mitnehmen: Bei Profilfehlern (-5) steht
+    # der eigentliche Grund ("can not resolve preset ...: Preset was not
+    # found in the loaded bundle") nur dort, result.json sagt bloss
+    # "The input preset file is invalid".
+    console = _tail(stderr, 400) or (_tail(stdout, 400) if not reason else "")
+    if console:
+        parts.append(console)
 
     logfile = work_dir / "slicer.log"
     if logfile.is_file():
@@ -633,6 +864,14 @@ def process_job(api: ApiClient, job: dict) -> None:
         return
 
     api.mark_slicing(job_id)
+
+    try:
+        printer_json, filament_json, process_json = prepare_profile_bundle(work_dir, printer_json, filament_json, process_json)
+    except ValueError as exc:
+        message = f"Slicing-Profile unbrauchbar: {exc}"
+        log.error("Auftrag %s: %s", job_id, message)
+        api.fail(job_id, message)
+        return
 
     slice_ok, message = run_slicer(input_path, output_path, printer_json, filament_json, process_json)
 
