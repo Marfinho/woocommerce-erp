@@ -410,8 +410,20 @@ class ReorderPage {
 		$rows = array();
 		$seen = array();
 
+		// Zuordnung Shop-Produkt -> Artikel aus der schon geladenen
+		// Artikelliste statt je Produkt einer eigenen Datenbankabfrage: Die
+		// Seite steht ohne Login im Netz, jeder Aufruf lief sonst einmal
+		// ueber den ganzen Shop-Katalog mit einer Abfrage pro Produkt.
+		$article_by_product = array();
+		foreach ( $articles as $article_id => $article ) {
+			if ( ! empty( $article['wc_product_id'] ) ) {
+				$article_by_product[ (int) $article['wc_product_id'] ] = (int) $article_id;
+			}
+		}
+
 		foreach ( (array) $products as $product ) {
-			$article_id = StockOwnership::article_for_product( (int) $product->get_id() );
+			$product_id = (int) $product->get_id();
+			$article_id = isset( $article_by_product[ $product_id ] ) ? $article_by_product[ $product_id ] : 0;
 
 			if ( ! $article_id || ! isset( $articles[ $article_id ] ) || isset( $seen[ $article_id ] ) ) {
 				continue;
@@ -475,10 +487,19 @@ class ReorderPage {
 			)
 		);
 
+		// Bewusst ALLE Artikel, auch stillgelegte: Ein Produkt, das an einem
+		// stillgelegten Artikel haengt, ist zugeordnet und fehlt nicht.
+		$linked = array();
+		foreach ( ArticleRepository::all_by_id() as $article ) {
+			if ( ! empty( $article['wc_product_id'] ) ) {
+				$linked[ (int) $article['wc_product_id'] ] = true;
+			}
+		}
+
 		$missing = array();
 
 		foreach ( (array) $products as $product ) {
-			if ( ! StockOwnership::article_for_product( (int) $product->get_id() ) ) {
+			if ( ! isset( $linked[ (int) $product->get_id() ] ) ) {
 				$missing[ (int) $product->get_id() ] = $product->get_name();
 			}
 		}

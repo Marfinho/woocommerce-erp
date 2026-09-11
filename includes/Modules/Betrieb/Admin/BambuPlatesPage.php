@@ -220,12 +220,13 @@ class BambuPlatesPage {
 	 * @return array
 	 */
 	protected function nestable_articles() {
-		$out = array();
+		$out       = array();
+		$revisions = RevisionRepository::active_by_article();
 		foreach ( ArticleRepository::all() as $article ) {
 			if ( 'druck' !== $article['sourcing_type'] ) {
 				continue;
 			}
-			$revision = RevisionRepository::active_for_article( (int) $article['id'] );
+			$revision = isset( $revisions[ (int) $article['id'] ] ) ? $revisions[ (int) $article['id'] ] : null;
 			if ( $revision && ! empty( $revision['model_file'] ) && 'modell' === $revision['model_kind'] ) {
 				$out[] = $article;
 			}

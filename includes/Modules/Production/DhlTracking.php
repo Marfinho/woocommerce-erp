@@ -238,6 +238,11 @@ class DhlTracking {
 		printf( '<a href="%s" style="color:%s;font-weight:600;text-decoration:none">%s</a>', esc_url( $url ), esc_attr( $color ), esc_html( $label ) );
 	}
 
+	/**
+	 * Hoechstzahl Sendungen je Cron-Lauf, siehe refresh_all().
+	 */
+	const MAX_REFRESH_PER_RUN = 50;
+
 	public static function table() {
 		global $wpdb;
 		return $wpdb->prefix . 'lw16_tracking_cache';
@@ -554,8 +559,17 @@ class DhlTracking {
 			return;
 		}
 
+		// Begrenzt je Lauf: Jede Sendung ist ein eigener HTTP-Aufruf mit bis
+		// zu 15 Sekunden Wartezeit. Ohne Obergrenze lief dieser Cron-Job bei
+		// vielen offenen Sendungen (auch verlorene, nie als zugestellt
+		// gemeldete) unbegrenzt lange und blockierte den Action Scheduler.
+		// Die am laengsten nicht abgefragten Sendungen kommen zuerst dran,
+		// der Rest beim naechsten Lauf (alle drei Stunden).
 		$rows = $wpdb->get_results(
-			"SELECT * FROM " . self::table() . " WHERE aktueller_status IS NULL OR aktueller_status NOT IN ('zugestellt', 'delivered')" // phpcs:ignore
+			$wpdb->prepare(
+				"SELECT * FROM " . self::table() . " WHERE aktueller_status IS NULL OR aktueller_status NOT IN ('zugestellt', 'delivered') ORDER BY letzter_abruf IS NULL DESC, letzter_abruf ASC LIMIT %d", // phpcs:ignore
+				self::MAX_REFRESH_PER_RUN
+			)
 		);
 
 		foreach ( $rows as $row ) {

@@ -17,6 +17,9 @@ class Scheduler {
 
 	const GROUP = 'lindenweg16';
 
+	// Merker "wiederkehrende Jobs zuletzt geprueft", siehe ensure_recurring().
+	const TRANSIENT_CHECKED = 'lw16_recurring_checked';
+
 	// Wiederkehrende Jobs (Hook-Name => Intervall in Sekunden).
 	const HOOK_DAILY_LOYALTY   = 'lw16_daily_loyalty_check';
 	const HOOK_DHL_TRACKING    = 'lw16_dhl_tracking_refresh';
@@ -90,6 +93,17 @@ class Scheduler {
 		if ( ! function_exists( 'as_schedule_recurring_action' ) || ! function_exists( 'as_has_scheduled_action' ) ) {
 			return;
 		}
+
+		// Nicht bei jedem Seitenaufruf: as_has_scheduled_action() ist je
+		// Hook eine eigene Datenbankabfrage - 14 Abfragen auf jeder Seite,
+		// im Shop wie im Backend, nur um festzustellen, dass alles schon
+		// eingeplant ist. Einmal je Stunde reicht; Aktivierung und
+		// Deaktivierung loeschen den Merker, damit die Jobs danach sofort
+		// wieder eingeplant werden (siehe Installer).
+		if ( get_transient( self::TRANSIENT_CHECKED ) ) {
+			return;
+		}
+		set_transient( self::TRANSIENT_CHECKED, 1, HOUR_IN_SECONDS );
 
 		$now = time();
 

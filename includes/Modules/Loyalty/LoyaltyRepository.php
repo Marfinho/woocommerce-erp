@@ -147,7 +147,10 @@ class LoyaltyRepository {
 	public static function due_referrals( $wartezeit_tage ) {
 		global $wpdb;
 		$t     = self::table( 'referrals' );
-		$grenze = gmdate( 'Y-m-d H:i:s', time() - $wartezeit_tage * DAY_IN_SECONDS );
+		// created_at steht in lokaler Zeit (create_referral, current_time) -
+		// die Grenze deshalb ebenfalls lokal rechnen, sonst verschiebt sich
+		// die Reifung um den Zeitzonenversatz.
+		$grenze = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp' ) - $wartezeit_tage * DAY_IN_SECONDS );
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'pending' AND created_at <= %s", $grenze ) ); // phpcs:ignore
 	}
 
@@ -203,7 +206,11 @@ class LoyaltyRepository {
 	public static function due_points() {
 		global $wpdb;
 		$t = self::table( 'points_ledger' );
-		$now = current_time( 'mysql' );
+		// available_at wird in GMT geschrieben (LoyaltyModule::on_order_completed,
+		// gmdate) - der Vergleich muss deshalb ebenfalls in GMT laufen. Mit
+		// der lokalen Zeit (current_time) reiften Punkte in Deutschland ein
+		// bis zwei Stunden zu frueh.
+		$now = gmdate( 'Y-m-d H:i:s' );
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE type = 'earned' AND status = 'pending' AND available_at <= %s", $now ) ); // phpcs:ignore
 	}
 
