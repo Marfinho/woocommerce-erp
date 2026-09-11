@@ -37,18 +37,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # "v2.2.0", siehe https://github.com/OrcaSlicer/OrcaSlicer/releases) für
 # reproduzierbare Builds; "latest" (Standard) holt bei jedem Build ohne
 # Cache-Treffer die zu diesem Zeitpunkt aktuellste Version.
+# GitHub listet je Release mehrere Linux-AppImages (x86_64 UND aarch64) -
+# ohne Architektur-Filter griff das vorherige Muster blind die erste
+# gelistete, was auf einem x86_64-Server zum aarch64-Build und "Exec
+# format error" beim Ausführen führte. Deshalb an die tatsächliche
+# Build-Architektur anpassen.
 ARG ORCASLICER_VERSION=latest
 RUN set -eux; \
+	arch="$(uname -m)"; \
+	case "$arch" in \
+		x86_64) pattern="x86_64" ;; \
+		aarch64|arm64) pattern="aarch64" ;; \
+		*) echo "Nicht unterstuetzte Architektur fuer OrcaSlicer: $arch"; exit 1 ;; \
+	esac; \
 	if [ "$ORCASLICER_VERSION" = "latest" ]; then \
-		URL=$(curl -sL https://api.github.com/repos/OrcaSlicer/OrcaSlicer/releases/latest \
-			| grep -o '"browser_download_url": *"[^"]*[Ll]inux[^"]*\.AppImage"' \
-			| head -n1 | cut -d '"' -f4); \
+		API_URL=https://api.github.com/repos/OrcaSlicer/OrcaSlicer/releases/latest; \
 	else \
-		URL=$(curl -sL "https://api.github.com/repos/OrcaSlicer/OrcaSlicer/releases/tags/${ORCASLICER_VERSION}" \
-			| grep -o '"browser_download_url": *"[^"]*[Ll]inux[^"]*\.AppImage"' \
-			| head -n1 | cut -d '"' -f4); \
+		API_URL="https://api.github.com/repos/OrcaSlicer/OrcaSlicer/releases/tags/${ORCASLICER_VERSION}"; \
 	fi; \
-	[ -n "$URL" ] || { echo "Konnte keine Linux-AppImage-URL fuer Version '$ORCASLICER_VERSION' finden."; exit 1; }; \
+	URL=$(curl -sL "$API_URL" \
+		| grep -o "\"browser_download_url\": *\"[^\"]*${pattern}[^\"]*\\.AppImage\"" \
+		| head -n1 | cut -d '"' -f4); \
+	[ -n "$URL" ] || { echo "Konnte keine Linux-AppImage-URL (Architektur $arch) fuer Version '$ORCASLICER_VERSION' finden."; exit 1; }; \
 	echo "Lade $URL"; \
 	curl -L -o /tmp/OrcaSlicer.AppImage "$URL"; \
 	chmod +x /tmp/OrcaSlicer.AppImage; \
