@@ -42,6 +42,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # gelistete, was auf einem x86_64-Server zum aarch64-Build und "Exec
 # format error" beim Ausführen führte. Deshalb an die tatsächliche
 # Build-Architektur anpassen.
+#
+# Die API-Antwort landet dabei in einer Datei statt direkt in grep zu
+# pipen - schlägt die Anfrage fehl (Rate-Limit, Netzwerk, GitHub down),
+# zeigt das sonst nur ein leeres, nicht diagnostizierbares grep-Ergebnis
+# statt der eigentlichen Fehlerantwort.
 ARG ORCASLICER_VERSION=latest
 RUN set -eux; \
 	arch="$(uname -m)"; \
@@ -55,10 +60,16 @@ RUN set -eux; \
 	else \
 		API_URL="https://api.github.com/repos/OrcaSlicer/OrcaSlicer/releases/tags/${ORCASLICER_VERSION}"; \
 	fi; \
-	URL=$(curl -sL "$API_URL" \
-		| grep -o "\"browser_download_url\": *\"[^\"]*${pattern}[^\"]*\\.AppImage\"" \
+	HTTP_CODE=$(curl -sL -o /tmp/release.json -w "%{http_code}" "$API_URL"); \
+	if [ "$HTTP_CODE" != "200" ]; then \
+		echo "GitHub-API-Anfrage fehlgeschlagen (HTTP $HTTP_CODE): $API_URL"; \
+		echo "Antwort:"; cat /tmp/release.json; \
+		exit 1; \
+	fi; \
+	URL=$(grep -o "\"browser_download_url\": *\"[^\"]*${pattern}[^\"]*\\.AppImage\"" /tmp/release.json \
 		| head -n1 | cut -d '"' -f4); \
-	[ -n "$URL" ] || { echo "Konnte keine Linux-AppImage-URL (Architektur $arch) fuer Version '$ORCASLICER_VERSION' finden."; exit 1; }; \
+	[ -n "$URL" ] || { echo "Konnte keine Linux-AppImage-URL (Architektur $arch) fuer Version '$ORCASLICER_VERSION' finden. Verfuegbare Assets:"; grep -o '"browser_download_url": *"[^"]*"' /tmp/release.json; exit 1; }; \
+	rm /tmp/release.json; \
 	echo "Lade $URL"; \
 	curl -L -o /tmp/OrcaSlicer.AppImage "$URL"; \
 	chmod +x /tmp/OrcaSlicer.AppImage; \
