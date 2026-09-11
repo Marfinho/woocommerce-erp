@@ -228,6 +228,20 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'bed_height_mm', $data ) ) {
 			$update['bed_height_mm'] = $data['bed_height_mm'] ? max( 1, (int) $data['bed_height_mm'] ) : null;
 		}
+		// Rückfallwert, falls die Bridge noch kein erkennbares Modell
+		// gemeldet hat (siehe effective_bed_size()) und für die
+		// Slicing-Profil-Zuordnung (SlicingService::printer_model_for(),
+		// SlicingProfileRepository::find_for() - exakter String-Vergleich
+		// mit dem beim Profil-Upload eingetragenen Modell, siehe
+		// SlicingProfilesPage). Meldet die Bridge später selbst ein Modell
+		// (report_status()), überschreibt das diesen Wert wieder - dann
+		// muss das Slicing-Profil auf den gemeldeten Wortlaut umgestellt
+		// werden.
+		if ( array_key_exists( 'printer_model', $data ) ) {
+			$update['printer_model'] = '' !== trim( (string) $data['printer_model'] )
+				? mb_substr( sanitize_text_field( (string) $data['printer_model'] ), 0, 100 )
+				: null;
+		}
 		if ( array_key_exists( 'active', $data ) ) {
 			$update['active'] = ! empty( $data['active'] ) ? 1 : 0;
 		}
