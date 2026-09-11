@@ -129,6 +129,7 @@ class BambuPrintersPage {
 				// ausdrücklich auf null setzen, nicht auf 0.
 				'bed_width_mm'  => isset( $_POST['bed_width_mm'] ) && '' !== trim( wp_unslash( $_POST['bed_width_mm'] ) ) ? (int) $_POST['bed_width_mm'] : null,
 				'bed_height_mm' => isset( $_POST['bed_height_mm'] ) && '' !== trim( wp_unslash( $_POST['bed_height_mm'] ) ) ? (int) $_POST['bed_height_mm'] : null,
+				'printer_model' => isset( $_POST['printer_model'] ) ? wp_unslash( $_POST['printer_model'] ) : '',
 			)
 		);
 
@@ -706,6 +707,18 @@ class BambuPrintersPage {
 			);
 		}
 		printf( '<p><label>%s <input type="text" name="bambu_serial" value="%s"></label></p>', esc_html__( 'Seriennummer', 'lindenweg16' ), esc_attr( (string) $printer->bambu_serial ) );
+		// Nur ein Rückfallwert, falls die Bridge noch nichts gemeldet hat -
+		// wird von einer nächsten Statusmeldung der Bridge überschrieben
+		// (siehe BambuPrinterRepository::update()). Muss dann mit dem
+		// beim Slicing-Profil eingetragenen Modell übereinstimmen (exakter
+		// Vergleich, siehe SlicingProfileRepository::find_for()).
+		printf(
+			'<p><label>%s <input type="text" name="printer_model" value="%s" placeholder="%s"></label> <span class="description">%s</span></p>',
+			esc_html__( 'Druckermodell', 'lindenweg16' ),
+			esc_attr( (string) $printer->printer_model ),
+			esc_attr__( 'z. B. X1C', 'lindenweg16' ),
+			esc_html__( 'leer = wartet auf Meldung durch die Bridge', 'lindenweg16' )
+		);
 		// Nur ein Rückfallwert, falls die Bridge kein erkennbares Modell
 		// meldet oder das eigene Gerät (z. B. ein modifiziertes Bett) von
 		// der Werksangabe abweicht - siehe BambuPrinterRepository::
