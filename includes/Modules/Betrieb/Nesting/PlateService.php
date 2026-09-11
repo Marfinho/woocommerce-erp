@@ -100,7 +100,13 @@ class PlateService {
 				continue;
 			}
 
-			$hull = MeshOutline::xy_hull_from_xml( (string) file_get_contents( $path ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents
+			// xy_hull_from_file() statt xy_hull_from_xml(): manche Bambu-Studio-
+		// Exporte lagern die Geometrie eines Objekts in eine eigene Datei
+		// innerhalb der 3MF aus (Production Extension, siehe MeshOutline)
+		// statt sie im Wurzel-3dmodel.model einzubetten - das lässt sich nur
+		// mit Zugriff auf die ganze ZIP-Datei auflösen, nicht aus dem
+		// XML-String allein.
+		$hull = MeshOutline::xy_hull_from_file( $path );
 
 			if ( ! $hull || count( $hull ) < 3 ) {
 				$warnings[] = sprintf(
