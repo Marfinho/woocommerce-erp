@@ -60,6 +60,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shlex
 import shutil
 import signal
@@ -632,6 +633,34 @@ def _tail(text: str, limit: int = 600) -> str:
     return text if len(text) <= limit else "…" + text[-limit:]
 
 
+_HINT_RE = re.compile(r"error|invalid|not found|can not|cannot|failed|unsupported|not compatible|Param values", re.I)
+
+
+def _console_hints(stderr: str, stdout: str, limit: int = 500) -> str:
+    """Die aussagekraeftigen Zeilen der Konsolenausgabe: alles, was nach
+    einem Grund aussieht, plus die Zeilen direkt nach "Param values in
+    3mf/config error:" (dort stehen Schluessel und Grund). Die reine
+    Abschlusszeile "run found error, return N, exit..." traegt nichts bei."""
+    lines = [line.strip() for line in (stderr + "\n" + stdout).splitlines() if line.strip()]
+    picked: list[str] = []
+    grab_following = 0
+    for line in lines:
+        if "run found error" in line or "found error, exit" in line:
+            continue
+        if grab_following > 0:
+            picked.append(line)
+            grab_following -= 1
+            continue
+        if _HINT_RE.search(line):
+            picked.append(line)
+            if line.startswith("Param values"):
+                grab_following = 6
+    if not picked:
+        return _tail(stderr, limit) or _tail(stdout, limit)
+    text = " | ".join(picked[-8:])
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
 def describe_slicer_failure(work_dir: Path, returncode: Optional[int], stdout: str, stderr: str) -> str:
     """Eine für den Bediener verständliche Fehlermeldung zusammensetzen:
     zuerst der Klartext aus OrcaSlicers result.json (siehe --outputdir im
@@ -661,11 +690,13 @@ def describe_slicer_failure(work_dir: Path, returncode: Optional[int], stdout: s
     if reason:
         parts.append(reason)
 
-    # Die Konsolenausgabe immer mitnehmen: Bei Profilfehlern (-5) steht
-    # der eigentliche Grund ("can not resolve preset ...: Preset was not
-    # found in the loaded bundle") nur dort, result.json sagt bloss
-    # "The input preset file is invalid".
-    console = _tail(stderr, 400) or (_tail(stdout, 400) if not reason else "")
+    # Die Konsolenausgabe immer mitnehmen: Bei Profilfehlern (-5) oder
+    # ungueltigen Werten (-18, "Param values in 3mf/config error: <key>:
+    # <grund>") steht der eigentliche Grund nur dort, result.json sagt
+    # bloss "invalid". Achtung: xvfb-run leitet die Fehlerausgabe des
+    # Slicers in die Standardausgabe um ("$@" 2>&1) - deshalb beide
+    # Kanaele durchsuchen und nicht nur stderr.
+    console = _console_hints(stderr, stdout)
     if console:
         parts.append(console)
 
