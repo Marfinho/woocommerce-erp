@@ -1,8 +1,8 @@
 <?php
 /**
- * Untermenü „Anleitungen": die Betriebsanleitungen aus docs/ im Backend lesen.
+ * Untermenü „Anleitungen": die Betriebsanleitung aus docs/ im Backend lesen.
  *
- * Die Anleitungen sind vollständige HTML-Dokumente mit eigenem Stylesheet,
+ * Die Anleitung ist ein vollständiges HTML-Dokument mit eigenem Stylesheet,
  * eigener Typografie, Hell-/Dunkelvariante und Druckausgabe. Sie werden
  * deshalb in einem Rahmen eingebettet statt in die Adminseite hineinkopiert:
  * Ihr Stylesheet definiert `body`, `h2`, `table` und Ähnliches: in wp-admin
@@ -35,39 +35,46 @@ class HandbuchPage {
 	const DIR = 'docs/';
 
 	/**
-	 * Die Anleitungen: Kennung => [Beschriftung, Datei, Kurzbeschreibung].
+	 * Die eine Datei, in der alle Teile stehen.
+	 */
+	const FILE = 'betriebsanleitung.html';
+
+	/**
+	 * Die Teile der Anleitung: Kennung => [Beschriftung, Sprungmarke, Kurzbeschreibung].
 	 *
-	 * Die Kennung steht in der Adresse, der Dateiname nicht – so lässt sich
-	 * kein beliebiger Pfad in den Rahmen laden.
+	 * Seit der Zusammenführung gibt es nur noch eine Datei; die Reiter
+	 * springen per Sprungmarke an den jeweiligen Teil. Die Kennung steht
+	 * in der Adresse, die Sprungmarke nicht – so lässt sich kein
+	 * beliebiger Pfad in den Rahmen laden.
 	 *
 	 * @return array
 	 */
 	public static function manuals() {
 		return array(
 			'start'      => array(
-				__( 'Übersicht', 'lindenweg16' ),
-				'index.html',
+				__( 'Einstieg', 'lindenweg16' ),
+				'einstieg',
 				__( 'Wer liest was, die fünf Menüs, fünf Grundregeln.', 'lindenweg16' ),
 			),
 			'produktion' => array(
-				__( 'Produktion', 'lindenweg16' ),
-				'ba-produktion.html',
-				__( 'Werkstatt: drucken, montieren, buchen.', 'lindenweg16' ),
+				__( 'A · Produktion', 'lindenweg16' ),
+				'teil-produktion',
+				__( 'Werkstatt: drucken, montieren, buchen, Platten anordnen.', 'lindenweg16' ),
 			),
 			'versand'    => array(
-				__( 'Versand', 'lindenweg16' ),
-				'ba-versand.html',
+				__( 'B · Versand', 'lindenweg16' ),
+				'teil-versand',
 				__( 'Packtisch: picken, packen, versenden.', 'lindenweg16' ),
 			),
 			'personal'   => array(
-				__( 'Personal', 'lindenweg16' ),
-				'ba-personal.html',
+				__( 'C · Personal', 'lindenweg16' ),
+				'teil-personal',
 				__( 'Zeiterfassung, Stundenlöhne, Rechteprofile.', 'lindenweg16' ),
 			),
 			'admin'      => array(
-				__( 'Administration', 'lindenweg16' ),
-				'ba-admin.html',
-				__( 'Einrichtung, Kalkulation, Buchhaltung, Livegang.', 'lindenweg16' ),
+				__( 'D · Administration', 'lindenweg16' ),
+				'teil-admin',
+				__( 'Einrichtung, Kalkulation, Buchhaltung, Drucker im Netz, Livegang.', 'lindenweg16' ),
 			),
 		);
 	}
@@ -97,7 +104,7 @@ class HandbuchPage {
 	public function render() {
 		$manuals = self::manuals();
 		$current = $this->current();
-		$file    = $manuals[ $current ][1];
+		$file    = self::FILE;
 		$base    = admin_url( 'admin.php?page=' . self::SLUG );
 
 		echo '<div class="wrap lw16-wrap lw16-handbuch"><h1>' . esc_html__( 'Anleitungen', 'lindenweg16' ) . '</h1>';
@@ -127,7 +134,7 @@ class HandbuchPage {
 			return;
 		}
 
-		$url = LW16_PLUGIN_URL . self::DIR . $file;
+		$url = LW16_PLUGIN_URL . self::DIR . $file . '#' . $manuals[ $current ][1];
 
 		printf(
 			'<p class="lw16-handbuch-kopf">%s <a href="%s" target="_blank" rel="noopener">%s</a></p>',

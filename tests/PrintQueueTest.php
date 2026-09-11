@@ -71,8 +71,20 @@ class PrintQueueTest extends TestCase {
 	public function test_wait_ohne_angabe_ist_der_standardwert() {
 		$this->assertSame( 25, PrintJobRepository::clamp_wait( '', 5, 30, 25 ) );
 		$this->assertSame( 25, PrintJobRepository::clamp_wait( null, 5, 30, 25 ) );
-		$this->assertSame( 25, PrintJobRepository::clamp_wait( 0, 5, 30, 25 ) );
 		$this->assertSame( 25, PrintJobRepository::clamp_wait( -5, 5, 30, 25 ) );
+	}
+
+	/**
+	 * wait=0 ist explizit "sofort antworten" fürs klassische Intervall-
+	 * Polling des Pi-Clients (LONG_POLL_ENABLED=false) - anders als "kein
+	 * wait angegeben", das den Long-Poll-Default ergibt. Dieselbe Regel
+	 * wie bei der Bambu- und der Slicing-Warteschlange (BambuTest,
+	 * SlicingQueueTest): Ohne sie hält jede Intervall-Anfrage einen
+	 * PHP-Worker 25 Sekunden lang fest.
+	 */
+	public function test_wait_null_bedeutet_sofort_antworten() {
+		$this->assertSame( 0, PrintJobRepository::clamp_wait( 0, 5, 30, 25 ) );
+		$this->assertSame( 0, PrintJobRepository::clamp_wait( '0', 5, 30, 25 ) );
 	}
 
 	/**

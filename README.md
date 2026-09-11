@@ -7,15 +7,15 @@ WooCommerce, ohne externen Sync.
 
 ## Betriebsanleitungen
 
-Vier bebilderte Anleitungen, je eine pro Aufgabe. Einstieg: **`docs/index.html`**
+Eine bebilderte Anleitung in vier Teilen, je einer pro Aufgabe: **`docs/betriebsanleitung.html`**
 (im Browser öffnen).
 
 | Anleitung | Für wen | Datei |
 | --- | --- | --- |
-| Produktion | Werkstatt: drucken, montieren, buchen | `docs/ba-produktion.html` |
-| Versand | Packtisch: picken, packen, versenden | `docs/ba-versand.html` |
-| Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/ba-personal.html` |
-| Administration | Einrichtung, Kalkulation, Buchhaltung, Livegang | `docs/ba-admin.html` |
+| Teil A – Produktion | Werkstatt: drucken, montieren, buchen, Platten anordnen | `docs/betriebsanleitung.html#teil-produktion` |
+| Teil B – Versand | Packtisch: picken, packen, versenden | `docs/betriebsanleitung.html#teil-versand` |
+| Teil C – Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/betriebsanleitung.html#teil-personal` |
+| Teil D – Administration | Einrichtung, Kalkulation, Buchhaltung, Drucker im Netz, Livegang | `docs/betriebsanleitung.html#teil-admin` |
 
 Die Bildschirmfotos in `docs/bilder/` stammen aus einer laufenden Installation
 dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
@@ -78,11 +78,7 @@ assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
-docs/index.html              Wegweiser zu den vier Betriebsanleitungen
-docs/ba-produktion.html      Betriebsanleitung Produktion (Werkstatt)
-docs/ba-versand.html         Betriebsanleitung Versand (Packtisch)
-docs/ba-personal.html        Betriebsanleitung Personal (Zeit, Löhne, Rechte)
-docs/ba-admin.html           Betriebsanleitung Administration (Einrichtung, Zahlen)
+docs/betriebsanleitung.html  Betriebsanleitung in vier Teilen (Produktion, Versand, Personal, Administration)
 docs/ba.css                  gemeinsames Aussehen der Anleitungen
 docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```

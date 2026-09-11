@@ -250,12 +250,24 @@ class SupportModule {
 		if ( ! $user_id ) {
 			wp_die( esc_html__( 'Bitte einloggen.', 'lindenweg16' ) );
 		}
+		// Nur eine eigene Bestellung darf zugeordnet werden - das Formular
+		// bietet zwar nur eigene an, das Feld liesse sich aber mit jeder
+		// beliebigen Nummer abschicken. Ein Ticket mit fremder Bestellnummer
+		// wuerde im Backend als deren Reklamation erscheinen.
+		$order_id = ! empty( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0;
+		if ( $order_id ) {
+			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+			if ( ! $order || (int) $order->get_customer_id() !== $user_id ) {
+				$order_id = 0;
+			}
+		}
+
 		global $wpdb;
 		$wpdb->insert(
 			self::table(),
 			array(
 				'user_id'     => $user_id,
-				'order_id'    => ! empty( $_POST['order_id'] ) ? (int) $_POST['order_id'] : null,
+				'order_id'    => $order_id ? $order_id : null,
 				'betreff'     => sanitize_text_field( wp_unslash( $_POST['betreff'] ?? '' ) ),
 				'nachricht'   => sanitize_textarea_field( wp_unslash( $_POST['nachricht'] ?? '' ) ),
 				'status'      => 'offen',

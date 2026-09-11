@@ -45,8 +45,18 @@ class SlicingService {
 			return $leer;
 		}
 
-		if ( 'entworfen' !== $plate->status ) {
-			$leer['error'] = __( 'Diese Platte ist nicht (mehr) im Status „entworfen".', 'lindenweg16' );
+		if ( ! PlateJobRepository::can_enqueue_for_slicing( $plate->status ) ) {
+			$leer['error'] = __( 'Diese Platte wird bereits geslict oder liegt schon in der Bambu-Warteschlange.', 'lindenweg16' );
+			return $leer;
+		}
+
+		// Sicherheitsnetz gegen Doppel-Klicks und Altlasten: Solange zu
+		// dieser Platte noch ein offener Slicing-Auftrag existiert, keinen
+		// zweiten anlegen - sonst würde der Worker dieselbe Platte zweimal
+		// slicen und zweimal in die Bambu-Warteschlange stellen.
+		$letzter = SlicingJobRepository::latest_for_plate( $plate_job_id );
+		if ( $letzter && SlicingJobRepository::is_open( $letzter->status ) ) {
+			$leer['error'] = __( 'Für diese Platte läuft bereits ein Slicing-Auftrag.', 'lindenweg16' );
 			return $leer;
 		}
 

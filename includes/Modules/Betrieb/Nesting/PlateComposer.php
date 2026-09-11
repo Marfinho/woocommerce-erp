@@ -231,12 +231,15 @@ class PlateComposer {
 		}
 
 		// Alle Nicht-Modell-Einträge des Basis-Containers unverändert
-		// übernehmen ([Content_Types].xml, _rels, ggf. Vorschaubild) –
-		// dieselbe grundsätzliche Struktur, wie Bambu Studio sie erzeugt,
-		// muss nicht neu erfunden werden.
+		// übernehmen ([Content_Types].xml, _rels, Bambu-Projektmetadaten,
+		// ggf. Vorschaubild) – dieselbe grundsätzliche Struktur, wie Bambu
+		// Studio sie erzeugt, muss nicht neu erfunden werden. Ausgenommen
+		// sind die Slicing-ERGEBNISSE der Quelldatei (siehe
+		// is_stale_slicing_entry()): Die gehören zum einzelnen Bauteil,
+		// nicht zur neuen, noch ungeslicten Platte.
 		for ( $i = 0; $i < $base_zip->numFiles; $i++ ) {
 			$name = $base_zip->getNameIndex( $i );
-			if ( ThreeMf::MODEL_PATH === $name ) {
+			if ( ThreeMf::MODEL_PATH === $name || self::is_stale_slicing_entry( $name ) ) {
 				continue;
 			}
 			$out->addFromString( $name, $base_zip->getFromIndex( $i ) );
@@ -248,6 +251,38 @@ class PlateComposer {
 		$out->close();
 
 		return array( 'ok' => true, 'error' => '' );
+	}
+
+	/**
+	 * Ist dieser ZIP-Eintrag ein Slicing-Ergebnis der Quelldatei, das
+	 * nicht in die zusammengesetzte Platte gehört?
+	 *
+	 * Eine als Artikeldatei hinterlegte Bambu-Studio-Projektdatei war
+	 * oft schon einmal geslict und trägt dann den fertigen G-Code des
+	 * EINZELNEN Bauteils samt Auswertung mit sich (Metadata/plate_1.gcode,
+	 * .gcode.md5, plate_1.json, slice_info.config). Würden diese Einträge
+	 * in die Platte übernommen, gälte sie für Bambu Studio beim manuellen
+	 * Slicen als "bereits geslict" - ein Klick auf "Drucken" schickte dann
+	 * den alten Ein-Teil-G-Code statt der ganzen Platte an den Drucker.
+	 * Auch die Slicer-Zahlen (Druckzeit, Gewicht) in slice_info.config
+	 * beschrieben ein anderes Objekt. Vorschaubilder bleiben erhalten,
+	 * die schreibt der Slicer beim Export ohnehin neu.
+	 *
+	 * @param string $name Pfad des ZIP-Eintrags.
+	 * @return bool
+	 */
+	public static function is_stale_slicing_entry( $name ) {
+		$name = ltrim( (string) $name, '/' );
+
+		if ( ThreeMf::SLICE_INFO === $name ) {
+			return true;
+		}
+
+		if ( 0 !== strpos( $name, 'Metadata/' ) ) {
+			return false;
+		}
+
+		return (bool) preg_match( '~^Metadata/plate_\d+\.(gcode|gcode\.md5|json)$~', $name );
 	}
 
 	/**

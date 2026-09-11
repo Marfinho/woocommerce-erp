@@ -204,8 +204,13 @@ class CartTracking {
 		$erste_frist  = (float) Settings::get( 'cart_erinnerung_1_stunden', 3 );
 		$zweite_frist = (float) Settings::get( 'cart_erinnerung_2_stunden', 48 );
 
+		// erstellt_am steht in lokaler Zeit (store(), current_time) - die
+		// Grenzen deshalb ebenfalls lokal rechnen. Mit time() (GMT) kamen
+		// die Erinnerungen um den Zeitzonenversatz zu spaet.
+		$jetzt = current_time( 'timestamp' );
+
 		// Erste Erinnerung.
-		$grenze1 = gmdate( 'Y-m-d H:i:s', time() - $erste_frist * HOUR_IN_SECONDS );
+		$grenze1 = gmdate( 'Y-m-d H:i:s', $jetzt - $erste_frist * HOUR_IN_SECONDS );
 		$rows    = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze1 ) ); // phpcs:ignore
 		foreach ( $rows as $row ) {
 			$this->send_mail( $row, 1 );
@@ -214,7 +219,7 @@ class CartTracking {
 
 		// Zweite Erinnerung.
 		if ( $zweite_frist > 0 ) {
-			$grenze2 = gmdate( 'Y-m-d H:i:s', time() - $zweite_frist * HOUR_IN_SECONDS );
+			$grenze2 = gmdate( 'Y-m-d H:i:s', $jetzt - $zweite_frist * HOUR_IN_SECONDS );
 			$rows2   = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NOT NULL AND zweite_erinnerung_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze2 ) ); // phpcs:ignore
 			foreach ( $rows2 as $row ) {
 				$this->send_mail( $row, 2 );

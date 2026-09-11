@@ -120,6 +120,19 @@ figcaption{
 figure.handy img{max-width:340px;margin:0 auto}
 figure.schmal img{max-width:760px}
 
+/* Teile der zusammengeführten Anleitung */
+section.teil{margin-top:72px}
+.teilkopf{padding:40px 0 20px;border-top:3px solid var(--akzent);border-bottom:2px solid var(--linie);margin-bottom:8px}
+.teilkopf .marke{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--akzent);font-weight:700}
+.teilkopf h1{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:clamp(28px,4.5vw,40px);line-height:1.1;margin:8px 0 10px;letter-spacing:-.02em}
+.teilkopf .unter{font-size:19px;color:var(--text-2);margin:0;max-width:62ch}
+.inhalt p.teilkopf{border:0;padding:14px 0 4px;margin:0;font-family:system-ui,sans-serif;font-weight:700;font-size:16px}
+.inhalt p.teilkopf .fuer{font-weight:400;color:var(--text-3);font-size:13px;margin-left:8px}
+.inhalt ol.flach{columns:2;column-gap:32px;list-style:none;padding-left:0}
+.inhalt ol.flach .nr{color:var(--text-3);margin-right:6px}
+@media (max-width:760px){.inhalt ol.flach{columns:1}}
+@media print{.teilkopf{break-before:page}}
+
 /* Kästen */
 .kasten{
 	border-radius:12px;padding:16px 20px;margin:22px 0;

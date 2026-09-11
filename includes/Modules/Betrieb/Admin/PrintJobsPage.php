@@ -220,11 +220,13 @@ class PrintJobsPage {
 		echo '</select></td></tr>';
 
 		echo '<tr><th scope="row"><label for="lw16-article">' . esc_html__( 'Artikel', 'lindenweg16' ) . '</label></th><td><select name="article_id" id="lw16-article">';
+		// Eine Abfrage fuer alle aktiven Revisionen statt einer je Artikel.
+		$revisions = RevisionRepository::active_by_article();
 		foreach ( $articles as $article ) {
 			if ( in_array( $article['sourcing_type'], array( 'zukauf', 'montage' ), true ) ) {
 				continue;
 			}
-			$revision = RevisionRepository::active_for_article( (int) $article['id'] );
+			$revision = isset( $revisions[ (int) $article['id'] ] ) ? $revisions[ (int) $article['id'] ] : null;
 			printf(
 				'<option value="%d"%s>%s – %s%s</option>',
 				(int) $article['id'],

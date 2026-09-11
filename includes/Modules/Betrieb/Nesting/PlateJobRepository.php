@@ -21,6 +21,28 @@ class PlateJobRepository {
 	 */
 	const STATUSES = array( 'entworfen', 'wird_geslict', 'geslict', 'fehlgeschlagen' );
 
+	/* -----------------------------------------------------------------
+	 * Reine Logik – ohne Datenbank, deshalb ohne WordPress testbar.
+	 * ------------------------------------------------------------- */
+
+	/**
+	 * Darf eine Platte in diesem Status (erneut) zum automatischen
+	 * Slicen eingereiht werden?
+	 *
+	 * Neben "entworfen" ausdrücklich auch "fehlgeschlagen": Ein
+	 * gescheiterter Slice-Lauf (falsches Profil, Worker-Fehler, Netz)
+	 * soll sich nach Behebung der Ursache mit einem Klick wiederholen
+	 * lassen, statt dass die Platte neu angeordnet werden muss. Eine
+	 * Platte, die gerade geslict wird oder schon in der Bambu-
+	 * Warteschlange liegt, darf nicht doppelt eingereiht werden.
+	 *
+	 * @param string $status Aktueller Status.
+	 * @return bool
+	 */
+	public static function can_enqueue_for_slicing( $status ) {
+		return in_array( (string) $status, array( 'entworfen', 'fehlgeschlagen' ), true );
+	}
+
 	/**
 	 * Tabellenname.
 	 *

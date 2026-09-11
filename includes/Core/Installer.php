@@ -65,6 +65,9 @@ class Installer {
 
 		// Sicherheitshalber nochmal beim nächsten init flushen.
 		update_option( 'lw16_flush_rewrite', 1 );
+
+		// Hintergrundjobs beim naechsten Aufruf sofort neu einplanen.
+		delete_transient( Scheduler::TRANSIENT_CHECKED );
 	}
 
 	/**
@@ -77,6 +80,7 @@ class Installer {
 				as_unschedule_all_actions( $hook );
 			}
 		}
+		delete_transient( Scheduler::TRANSIENT_CHECKED );
 		flush_rewrite_rules();
 	}
 

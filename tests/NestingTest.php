@@ -769,6 +769,65 @@ class NestingTest extends TestCase {
 	}
 
 	/**
+	 * Slicing-Ergebnisse der Quelldatei (G-Code, Prüfsumme, plate_1.json,
+	 * slice_info.config) dürfen nicht in die zusammengesetzte Platte
+	 * wandern - sonst gälte die noch ungeslicte Platte in Bambu Studio als
+	 * "bereits geslict" mit dem G-Code eines einzelnen Bauteils. Die
+	 * übrigen Container-Einträge (Content-Types, Beziehungen, Bambu-
+	 * Projektmetadaten, Vorschaubild) bleiben erhalten.
+	 */
+	public function test_plate_composer_uebernimmt_keine_alten_slicing_ergebnisse() {
+		$dir = $this->fixture_dir();
+		$this->write_cuboid_3mf( $dir . '/geslict.3mf', 30, 20 );
+
+		$zip = new \ZipArchive();
+		$zip->open( $dir . '/geslict.3mf' );
+		$zip->addFromString( 'Metadata/model_settings.config', '<?xml version="1.0"?><config/>' );
+		$zip->addFromString( 'Metadata/project_settings.config', '{}' );
+		$zip->addFromString( 'Metadata/plate_1.png', 'png' );
+		$zip->addFromString( 'Metadata/plate_1.gcode', "; alter G-Code eines Einzelteils\nG28\n" );
+		$zip->addFromString( 'Metadata/plate_1.gcode.md5', 'abc' );
+		$zip->addFromString( 'Metadata/plate_1.json', '{}' );
+		$zip->addFromString( 'Metadata/slice_info.config', '<?xml version="1.0"?><config/>' );
+		$zip->close();
+
+		$out    = $dir . '/platte-ohne-altlasten.3mf';
+		$result = PlateComposer::compose(
+			array( array( 'source_path' => $dir . '/geslict.3mf', 'x' => 5, 'y' => 5, 'rotation_deg' => 0 ) ),
+			$out
+		);
+		$this->assertTrue( $result['ok'], $result['error'] );
+
+		$zip = new \ZipArchive();
+		$zip->open( $out );
+		$names = array();
+		for ( $i = 0; $i < $zip->numFiles; $i++ ) {
+			$names[] = $zip->getNameIndex( $i );
+		}
+		$zip->close();
+
+		foreach ( array( 'Metadata/plate_1.gcode', 'Metadata/plate_1.gcode.md5', 'Metadata/plate_1.json', 'Metadata/slice_info.config' ) as $stale ) {
+			$this->assertNotContains( $stale, $names, $stale . ' darf nicht übernommen werden.' );
+		}
+		foreach ( array( '[Content_Types].xml', '_rels/.rels', '3D/3dmodel.model', 'Metadata/model_settings.config', 'Metadata/project_settings.config', 'Metadata/plate_1.png' ) as $keep ) {
+			$this->assertContains( $keep, $names, $keep . ' muss erhalten bleiben.' );
+		}
+	}
+
+	/**
+	 * Die Erkennung veralteter Slicing-Einträge trifft genau die
+	 * Ergebnisdateien je Platte, nicht die Projektmetadaten.
+	 */
+	public function test_erkennung_veralteter_slicing_eintraege() {
+		foreach ( array( 'Metadata/plate_1.gcode', 'Metadata/plate_12.gcode.md5', 'Metadata/plate_2.json', 'Metadata/slice_info.config', '/Metadata/plate_1.gcode' ) as $stale ) {
+			$this->assertTrue( PlateComposer::is_stale_slicing_entry( $stale ), $stale );
+		}
+		foreach ( array( 'Metadata/model_settings.config', 'Metadata/project_settings.config', 'Metadata/plate_1.png', 'Metadata/pick_1.png', '3D/3dmodel.model', '3D/Objects/object_1.model', '[Content_Types].xml', 'plate_1.gcode' ) as $keep ) {
+			$this->assertFalse( PlateComposer::is_stale_slicing_entry( $keep ), $keep );
+		}
+	}
+
+	/**
 	 * Ohne Platzierungen liefert compose() einen Fehler statt einer
 	 * kaputten Datei.
 	 */

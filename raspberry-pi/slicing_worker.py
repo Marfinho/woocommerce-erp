@@ -4,25 +4,44 @@ Haster/Lindenweg16 Headless-Slicing-Worker.
 
 Holt angeordnete, aber noch ungeslicte Druckplatten (Projekt-3MF, aus der
 Plattenanordnung in WordPress) über die Slicing-Warteschlange
-(lw16-slicing/v1) ab, slict sie mit einem Kommandozeilen-Slicer (OrcaSlicer
-oder Bambu Studio im CLI-Modus) anhand der hinterlegten Profile und lädt
-das Ergebnis zurück hoch. WordPress reiht die fertige Druckdatei danach
-automatisch in die Bambu-Warteschlange ein (siehe
-Nesting\\SlicingService::forward_to_bambu_queue()) - ab dort läuft alles
-wie ein manuell hochgeladener Druckauftrag weiter.
+(lw16-slicing/v1) ab, slict sie mit OrcaSlicer im CLI-Modus anhand der
+hinterlegten Profile und lädt das Ergebnis zurück hoch. WordPress reiht
+die fertige Druckdatei danach automatisch in die Bambu-Warteschlange ein
+(siehe Nesting\\SlicingService::forward_to_bambu_queue()) - ab dort läuft
+alles wie ein manuell hochgeladener Druckauftrag weiter.
 
-WICHTIGER VORBEHALT: Das Kommandozeilen-Aufruf-Muster in run_slicer()
-(--load-settings für Drucker-/Prozessprofil, --load-filaments fürs
-Filamentprofil, --slice, --export-3mf) folgt der öffentlich
-dokumentierten OrcaSlicer-CLI
-(https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode), bestätigt
-gegen einen echten Slice-Lauf mit OrcaSlicer 2.4.2 (ein früherer Versuch
-mit "--load" scheiterte live mit "Invalid option --load" - OrcaSlicer
-kennt dieses Flag nicht). Kann sich trotzdem von Version zu Version
-wieder ändern. Vor dem produktiven Einsatz unbedingt mit einer
-einzelnen, unkritischen Platte von Hand gegenprüfen (Ergebnis-3MF in
-Bambu Studio öffnen und die erzeugten Druckdaten ansehen), bevor ein
-automatisch geslicter Auftrag ungeprüft auf einen echten Drucker geht.
+Slicer-Aufruf (siehe run_slicer() und SLICER_ARGS_TEMPLATE in
+.env.slicing.example): Das Muster folgt der OrcaSlicer-CLI ab Version 2.x
+(https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode) und wurde gegen
+das Verhalten von OrcaSlicer 2.4.2 abgeglichen:
+
+  * "--load-settings printer.json;process.json" lädt Drucker- UND
+    Prozessprofil (Semikolon-getrennt), "--load-filaments filament.json"
+    das Filamentprofil. Ein früherer Aufruf mit "--load" scheiterte live
+    mit "Invalid option --load" - dieses Flag kennt OrcaSlicer nicht.
+  * "--allow-newer-file": Die zusammengesetzte Platte trägt die
+    Versionskennung der Bambu-Studio-Projektdatei, aus der sie stammt.
+    Ist die neuer als die OrcaSlicer-Version des Workers, bricht der
+    Slicer ohne dieses Flag mit Code -24 (CLI_FILE_VERSION_NOT_SUPPORTED)
+    ab - live so passiert.
+  * "--outputdir": Dorthin schreibt OrcaSlicer neben der Ausgabedatei
+    eine result.json mit Fehlercode und Klartext-Grund. Die wird hier
+    ausgewertet, damit in WordPress ein verständlicher Fehler steht statt
+    nur "run found error, return -24". Achtung: OrcaSlicer hängt
+    --outputdir stumpf vor den --export-3mf-Pfad, deshalb wird dort nur
+    der Dateiname übergeben, kein absoluter Pfad.
+  * "--slice 1": Die Plattenanordnung legt alles auf Platte 1, und die
+    Bambu-Bridge startet später genau Metadata/plate_1.gcode.
+  * "--arrange 0": automatisches Anordnen ausdrücklich abschalten. Die
+    Platzierung kommt aus der Plattenanordnung in WordPress
+    (PlateComposer/BinPacker) und darf vom Slicer nicht ersetzt werden.
+    Für eine Bambu-Projektdatei ist "nicht anordnen" zwar ohnehin der
+    Standard von OrcaSlicer - explizit ist es unmissverständlich.
+
+Vor dem produktiven Einsatz unbedingt mit einer einzelnen, unkritischen
+Platte von Hand gegenprüfen (Ergebnis-3MF in Bambu Studio öffnen und die
+erzeugten Druckdaten ansehen), bevor ein automatisch geslicter Auftrag
+ungeprüft auf einen echten Drucker geht.
 
 Läuft wie die Bambu-Bridge standardmässig mit klassischem Intervall-
 Polling (LONG_POLL_ENABLED=false) statt Long Polling - siehe dort für die
@@ -38,8 +57,12 @@ Konfiguration ausschliesslich über Umgebungsvariablen / .env.slicing
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import shlex
+import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -77,6 +100,31 @@ def _env_bool(name: str, default: bool) -> bool:
     return val.strip().lower() in ("1", "true", "yes", "on")
 
 
+# Standard-Aufrufvorlage, siehe Modulkommentar. Platzhalter:
+#   {input}     absoluter Pfad der zu slicenden Projekt-3MF
+#   {printer}   absoluter Pfad des Druckerprofils (JSON)
+#   {process}   absoluter Pfad des Prozessprofils (JSON)
+#   {filament}  absoluter Pfad des Filamentprofils (JSON)
+#   {output}    DATEINAME (ohne Pfad) der Ergebnis-3MF - landet in {workdir}
+#   {workdir}   absoluter Pfad des Arbeitsverzeichnisses dieses Auftrags
+#   {logfile}   absoluter Pfad der Slicer-Logdatei im Arbeitsverzeichnis
+# Die Vorlage wird wie eine Kommandozeile in Einzelargumente zerlegt und
+# erst danach werden die Platzhalter eingesetzt - Pfade mit Leerzeichen
+# bleiben dadurch ein Argument.
+DEFAULT_SLICER_ARGS_TEMPLATE = (
+    "{input} "
+    "--load-settings {printer};{process} "
+    "--load-filaments {filament} "
+    "--arrange 0 "
+    "--slice 1 "
+    "--allow-newer-file "
+    "--outputdir {workdir} "
+    "--export-3mf {output} "
+    "--debug 2 "
+    "--logfile {logfile}"
+)
+
+
 class Config:
     """Alle Einstellungen an einer Stelle, mit sinnvollen Defaults."""
 
@@ -105,10 +153,23 @@ class Config:
     # Pfad zum Slicer-Kommandozeilenprogramm.
     SLICER_CLI = os.environ.get("SLICER_CLI", "/usr/bin/orca-slicer")
 
+    # Aufrufvorlage, siehe DEFAULT_SLICER_ARGS_TEMPLATE. Nur anpassen,
+    # wenn eine andere OrcaSlicer-Version andere Flags braucht.
+    SLICER_ARGS_TEMPLATE = os.environ.get("SLICER_ARGS_TEMPLATE", "").strip() or DEFAULT_SLICER_ARGS_TEMPLATE
+
     # Wie lange ein einzelner Slice-Lauf höchstens dauern darf, bevor der
     # Worker ihn abbricht und als fehlgeschlagen meldet (Sekunden). Eine
     # sehr komplexe Mehrteile-Platte kann mehrere Minuten brauchen.
     SLICER_TIMEOUT = int(os.environ.get("SLICER_TIMEOUT", "600"))
+
+    # Wie oft ein Download (Platte, Profile) bei Netzfehlern wiederholt
+    # wird, bevor der Auftrag als fehlgeschlagen gemeldet wird.
+    DOWNLOAD_ATTEMPTS = int(os.environ.get("DOWNLOAD_ATTEMPTS", "3"))
+
+    # Arbeitsverzeichnisse erfolgreicher Aufträge werden sofort gelöscht;
+    # die fehlgeschlagener Aufträge bleiben so viele Tage zur Diagnose
+    # liegen (Slicer-Log, result.json, Eingabedateien). 0 = sofort löschen.
+    KEEP_FAILED_JOBS_DAYS = int(os.environ.get("KEEP_FAILED_JOBS_DAYS", "7"))
 
     API_NAMESPACE = "lw16-slicing/v1"
 
@@ -132,6 +193,24 @@ class Config:
                 "SLICER_CLI (%s) wurde beim Start nicht gefunden - falls das kein "
                 "Tippfehler ist, bitte den Pfad in .env.slicing prüfen.",
                 cls.SLICER_CLI,
+            )
+        try:
+            build_slicer_command(
+                cls.SLICER_ARGS_TEMPLATE,
+                cls.SLICER_CLI,
+                input_path=Path("/x/in.3mf"),
+                output_name="out.3mf",
+                printer_json=Path("/x/printer.json"),
+                filament_json=Path("/x/filament.json"),
+                process_json=Path("/x/process.json"),
+                work_dir=Path("/x"),
+                logfile=Path("/x/slicer.log"),
+            )
+        except (KeyError, ValueError, IndexError) as exc:
+            sys.exit(
+                "SLICER_ARGS_TEMPLATE in .env.slicing ist ungültig (%s). Erlaubte "
+                "Platzhalter: {input} {printer} {process} {filament} {output} "
+                "{workdir} {logfile}." % exc
             )
 
 
@@ -163,7 +242,7 @@ class ApiClient:
         self.session.headers.update(
             {
                 "Authorization": f"Bearer {Config.API_TOKEN}",
-                "User-Agent": "slicing-worker/1.0",
+                "User-Agent": "slicing-worker/1.1",
             }
         )
         self.base = f"{Config.WORDPRESS_URL}/wp-json/{Config.API_NAMESPACE}"
@@ -199,15 +278,17 @@ class ApiClient:
                 r = self.session.post(
                     f"{self.base}/jobs/{job_id}/complete",
                     files={"datei": (result_path.name, fh, "model/3mf")},
-                    timeout=60,
+                    timeout=120,
                 )
+            if r.status_code != 200:
+                log.error("complete(%s) abgelehnt: HTTP %s %s", job_id, r.status_code, redact(r.text[:300]))
             return r.status_code == 200
         except (requests.RequestException, OSError) as exc:
             log.warning("Netzwerkfehler bei complete(%s): %s", job_id, redact(str(exc)))
             return False
 
     def fail(self, job_id: int, message: str) -> bool:
-        r = self._post(f"jobs/{job_id}/failed", data={"message": message[:500]})
+        r = self._post(f"jobs/{job_id}/failed", data={"message": message[:1000]})
         return r is not None and r.status_code == 200
 
     def download_file(self, url: str, target: Path) -> bool:
@@ -223,69 +304,285 @@ class ApiClient:
                         fh.write(chunk)
                 tmp.replace(target)
                 return True
-        except requests.RequestException as exc:
+        except (requests.RequestException, OSError) as exc:
             log.warning("Netzwerkfehler beim Download (%s): %s", url, redact(str(exc)))
             return False
 
+    def download_with_retry(self, url: str, target: Path) -> bool:
+        """Download mit einigen Wiederholungen - ein kurzer Netz-Schluckauf
+        soll nicht gleich den ganzen Auftrag kosten."""
+        attempts = max(1, Config.DOWNLOAD_ATTEMPTS)
+        for attempt in range(1, attempts + 1):
+            if self.download_file(url, target):
+                return True
+            if attempt < attempts:
+                time.sleep(3 * attempt)
+        return False
+
     def download_job_file(self, job_id: int, target: Path) -> bool:
-        return self.download_file(f"{self.base}/jobs/{job_id}/file", target)
+        return self.download_with_retry(f"{self.base}/jobs/{job_id}/file", target)
 
     def download_profile(self, job_id: int, kind: str, target: Path) -> bool:
-        return self.download_file(f"{self.base}/jobs/{job_id}/profile/{kind}", target)
+        return self.download_with_retry(f"{self.base}/jobs/{job_id}/profile/{kind}", target)
 
 
 # ---------------------------------------------------------------------
 # Slicer-Aufruf
 # ---------------------------------------------------------------------
 
+# Rückgabecodes der OrcaSlicer-CLI (src/libslic3r/Utils.hpp, CLI_*) mit
+# einer Erklärung, die dem Bediener in WordPress weiterhilft. Nicht
+# aufgeführte Codes werden nur mit Nummer und dem englischen Klartext
+# aus result.json gemeldet.
+ORCA_EXIT_HINTS = {
+    -1: "Slicer-Umgebung konnte nicht eingerichtet werden (Anzeige/OpenGL im Container prüfen)",
+    -2: "ungültige Aufrufparameter - SLICER_ARGS_TEMPLATE passt nicht zur installierten OrcaSlicer-Version",
+    -3: "Eingabedatei nicht gefunden",
+    -5: "eines der drei Profile (Drucker/Filament/Prozess) ist ungültig oder kann nicht aufgelöst werden - Profil in OrcaSlicer neu exportieren",
+    -6: "die Projekt-3MF der Platte lässt sich nicht lesen",
+    -7: "Profil ist kein FDM-Profil",
+    -13: "Ergebnis-3MF konnte nicht geschrieben werden",
+    -14: "Speicher reicht nicht (Geometrie zu fein aufgelöst)",
+    -15: "Druckerwechsel wird für diese 3MF nicht unterstützt",
+    -16: "Druckerprofil passt nicht zur 3MF",
+    -17: "Prozessprofil passt nicht zum Druckerprofil",
+    -18: "ungültige Parameterwerte in der 3MF",
+    -20: "Druckbett des Druckerprofils ist kleiner als das der Platte",
+    -21: "automatisches Anordnen fehlgeschlagen",
+    -24: "3MF stammt aus einer neueren Bambu-Studio-/OrcaSlicer-Version - '--allow-newer-file' fehlt im Aufruf",
+    -50: "Platte ist leer oder ein Bauteil liegt nicht vollständig im Druckraum (Druckbettmass des Druckers und Sicherheitsabstand prüfen)",
+    -51: "ungültige Slicing-Parameter im Profil",
+    -52: "Bauteil ragt über den Druckbettrand hinaus",
+    -58: "Slicen hat das Zeitlimit des Slicers überschritten",
+    -59: "zu viele Dreiecke auf der Platte (Geometrie vereinfachen)",
+    -61: "Filamentprofil passt nicht zum Druckbett-Typ",
+    -62: "Filamente mit unverträglichen Temperaturen",
+    -63: "Kollision bei sequenziellem Druck",
+    -64: "Kollision im Layer-Druck",
+    -66: "Filamente konnten nicht zugeordnet werden",
+    -100: "Fehler beim Slicen",
+    -101: "G-Code-Pfadkonflikte erkannt",
+    -102: "G-Code-Pfad im nicht bedruckbaren Bereich",
+}
 
-def run_slicer(input_path: Path, output_path: Path, printer_json: Path, filament_json: Path, process_json: Path) -> tuple[bool, str]:
-    """Slicer-CLI aufrufen. Siehe Modulkommentar zum Vorbehalt bezüglich
-    der genauen Kommandozeile - je nach installierter Version kann ein
-    anderer Aufruf nötig sein.
 
-    "--load" existiert in OrcaSlicer nicht (live gemeldet: "Invalid
-    option --load") - Drucker- und Prozessprofil werden zusammen über
-    "--load-settings" (Semikolon-getrennt) geladen, das Filamentprofil
-    separat über "--load-filaments" (siehe
-    https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode).
+def build_slicer_command(
+    template: str,
+    slicer_cli: str,
+    *,
+    input_path: Path,
+    output_name: str,
+    printer_json: Path,
+    filament_json: Path,
+    process_json: Path,
+    work_dir: Path,
+    logfile: Path,
+) -> list[str]:
+    """Aufrufvorlage in eine Argumentliste umsetzen (siehe
+    DEFAULT_SLICER_ARGS_TEMPLATE). Erst zerlegen, dann Platzhalter
+    einsetzen - so bleibt ein Pfad mit Leerzeichen ein einziges Argument
+    und '{printer};{process}' ein einziges Semikolon-Argument."""
+    values = {
+        "input": str(input_path),
+        "output": output_name,
+        "printer": str(printer_json),
+        "filament": str(filament_json),
+        "process": str(process_json),
+        "workdir": str(work_dir),
+        "logfile": str(logfile),
+    }
+    args = [token.format_map(values) for token in shlex.split(template)]
+    if not args:
+        raise ValueError("leere Vorlage")
+    return [slicer_cli] + args
 
-    "--arrange 0" ist Pflicht, kein Optimum: ohne dieses Flag steht
-    Arrange laut CLI-Doku auf "auto" (nicht "unverändert lassen") und
-    würde die von PlateComposer/BinPacker bereits berechnete,
-    kollisionsfreie Platzierung (siehe dortige Klassendoku) beim Slicen
-    stillschweigend durch eine eigene Anordnung ersetzen können.
-    """
-    cmd = [
-        Config.SLICER_CLI,
-        str(input_path),
-        "--load-settings", f"{printer_json};{process_json}",
-        "--load-filaments", str(filament_json),
-        "--arrange", "0",
-        "--slice", "1",
-        "--export-3mf", str(output_path),
-    ]
 
-    log.info("Starte Slicer: %s", " ".join(cmd))
+def _tail(text: str, limit: int = 600) -> str:
+    text = (text or "").strip()
+    return text if len(text) <= limit else "…" + text[-limit:]
+
+
+def describe_slicer_failure(work_dir: Path, returncode: Optional[int], stdout: str, stderr: str) -> str:
+    """Eine für den Bediener verständliche Fehlermeldung zusammensetzen:
+    zuerst der Klartext aus OrcaSlicers result.json (siehe --outputdir im
+    Modulkommentar), ergänzt um die letzten Zeilen der Slicer-Logdatei
+    bzw. der Konsolenausgabe."""
+    code = returncode
+    reason = ""
+
+    result_json = work_dir / "result.json"
+    if result_json.is_file():
+        try:
+            data = json.loads(result_json.read_text(encoding="utf-8", errors="replace"))
+            if isinstance(data, dict):
+                if isinstance(data.get("return_code"), int):
+                    code = data["return_code"]
+                reason = str(data.get("error_string") or "").strip()
+                plate = data.get("plate_index")
+                if reason and isinstance(plate, int) and plate > 0:
+                    reason = f"Platte {plate}: {reason}"
+        except (OSError, ValueError):
+            pass
+
+    parts = []
+    if code is not None:
+        hint = ORCA_EXIT_HINTS.get(code)
+        parts.append(f"OrcaSlicer-Fehler {code}" + (f" ({hint})" if hint else ""))
+    if reason:
+        parts.append(reason)
+
+    # Ohne result.json (z. B. Aufruffehler, der vor dem eigentlichen
+    # Slice-Lauf abbricht) bleibt nur die Konsolenausgabe.
+    if not reason:
+        console = _tail(stderr) or _tail(stdout)
+        if console:
+            parts.append(console)
+
+    logfile = work_dir / "slicer.log"
+    if logfile.is_file():
+        try:
+            lines = [
+                line
+                for line in logfile.read_text(encoding="utf-8", errors="replace").splitlines()
+                if "[error]" in line or "[fatal]" in line
+            ]
+            if lines:
+                parts.append("Log: " + _tail(" | ".join(lines[-5:]), 400))
+        except OSError:
+            pass
+
+    return " - ".join(parts) if parts else "unbekannter Slicer-Fehler"
+
+
+def run_slicer(
+    input_path: Path,
+    output_path: Path,
+    printer_json: Path,
+    filament_json: Path,
+    process_json: Path,
+) -> tuple[bool, str]:
+    """OrcaSlicer aufrufen. output_path muss im selben Verzeichnis wie
+    input_path liegen (dem Arbeitsverzeichnis des Auftrags) - siehe
+    Modulkommentar zu --outputdir."""
+    work_dir = input_path.parent
+    logfile = work_dir / "slicer.log"
+
+    # Reste eines früheren Versuchs würden die Auswertung verfälschen.
+    for stale in (work_dir / "result.json", logfile, output_path):
+        try:
+            stale.unlink()
+        except FileNotFoundError:
+            pass
+        except OSError as exc:
+            log.warning("Konnte %s nicht entfernen: %s", stale, exc)
 
     try:
-        result = subprocess.run(
+        cmd = build_slicer_command(
+            Config.SLICER_ARGS_TEMPLATE,
+            Config.SLICER_CLI,
+            input_path=input_path,
+            output_name=output_path.name,
+            printer_json=printer_json,
+            filament_json=filament_json,
+            process_json=process_json,
+            work_dir=work_dir,
+            logfile=logfile,
+        )
+    except (KeyError, ValueError, IndexError) as exc:
+        return False, f"SLICER_ARGS_TEMPLATE ist ungültig: {exc}"
+
+    log.info("Starte Slicer: %s", " ".join(shlex.quote(c) for c in cmd))
+
+    try:
+        # Eigene Prozessgruppe: Bei Zeitüberschreitung muss die ganze
+        # Gruppe weg (xvfb-run-Wrapper, Xvfb und der eigentliche Slicer),
+        # nicht nur der direkte Kindprozess - sonst blieben verwaiste
+        # Slicer-Prozesse mit voller CPU-Last liegen.
+        proc = subprocess.Popen(
             cmd,
-            capture_output=True,
+            cwd=str(work_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=Config.SLICER_TIMEOUT,
-            check=False,
+            encoding="utf-8",
+            errors="replace",
+            start_new_session=True,
         )
     except FileNotFoundError:
         return False, f"Slicer-Programm nicht gefunden: {Config.SLICER_CLI}"
-    except subprocess.TimeoutExpired:
-        return False, f"Slicer hat das Zeitlimit ({Config.SLICER_TIMEOUT}s) überschritten."
+    except OSError as exc:
+        return False, f"Slicer konnte nicht gestartet werden: {exc}"
 
-    if result.returncode != 0 or not output_path.is_file():
-        message = (result.stderr or result.stdout or "unbekannter Slicer-Fehler").strip()
-        return False, message[:1000]
+    timed_out = False
+    try:
+        stdout, stderr = proc.communicate(timeout=Config.SLICER_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            proc.kill()
+        stdout, stderr = proc.communicate()
+
+    try:
+        (work_dir / "slicer-output.txt").write_text(
+            f"$ {' '.join(shlex.quote(c) for c in cmd)}\n\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+
+    log.debug("Slicer stdout:\n%s", stdout)
+    log.debug("Slicer stderr:\n%s", stderr)
+
+    if timed_out:
+        return False, f"Slicer hat das Zeitlimit ({Config.SLICER_TIMEOUT}s) überschritten und wurde abgebrochen."
+
+    if proc.returncode != 0:
+        return False, describe_slicer_failure(work_dir, proc.returncode, stdout, stderr)
+
+    if not output_path.is_file():
+        return False, (
+            f"Slicer meldete Erfolg, aber die Ergebnisdatei {output_path.name} fehlt - "
+            + describe_slicer_failure(work_dir, None, stdout, stderr)
+        )
+
+    if output_path.stat().st_size == 0:
+        return False, f"Slicer hat eine leere Ergebnisdatei ({output_path.name}) erzeugt."
 
     return True, ""
+
+
+# ---------------------------------------------------------------------
+# Arbeitsverzeichnisse
+# ---------------------------------------------------------------------
+
+
+def remove_work_dir(work_dir: Path) -> None:
+    try:
+        shutil.rmtree(work_dir)
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        log.warning("Arbeitsverzeichnis %s konnte nicht gelöscht werden: %s", work_dir, exc)
+
+
+def prune_old_work_dirs() -> None:
+    """Liegengebliebene Arbeitsverzeichnisse (fehlgeschlagene oder
+    abgebrochene Aufträge) nach KEEP_FAILED_JOBS_DAYS entfernen, damit das
+    Datenvolumen nicht unbegrenzt wächst."""
+    cutoff = time.time() - max(0, Config.KEEP_FAILED_JOBS_DAYS) * 86400
+    try:
+        candidates = list(Config.DOWNLOAD_DIRECTORY.glob("job-*"))
+    except OSError:
+        return
+    for path in candidates:
+        try:
+            if path.is_dir() and path.stat().st_mtime < cutoff:
+                log.info("Entferne altes Arbeitsverzeichnis %s.", path)
+                remove_work_dir(path)
+        except OSError:
+            continue
 
 
 # ---------------------------------------------------------------------
@@ -295,7 +592,7 @@ def run_slicer(input_path: Path, output_path: Path, printer_json: Path, filament
 
 def process_job(api: ApiClient, job: dict) -> None:
     job_id = int(job["id"])
-    filename = job.get("filename") or f"plate-{job_id}.3mf"
+    filename = Path(str(job.get("filename") or "")).name or f"plate-{job_id}.3mf"
 
     log.info("Slicing-Auftrag %s verfügbar – claime …", job_id)
 
@@ -305,6 +602,9 @@ def process_job(api: ApiClient, job: dict) -> None:
         return
 
     work_dir = Config.DOWNLOAD_DIRECTORY / f"job-{job_id}"
+    # Reste eines früheren Versuchs desselben Auftrags (z. B. nach
+    # "Erneut slicen" in WordPress) nicht mit dem neuen Lauf vermischen.
+    remove_work_dir(work_dir)
     work_dir.mkdir(parents=True, exist_ok=True)
 
     input_path = work_dir / filename
@@ -313,15 +613,23 @@ def process_job(api: ApiClient, job: dict) -> None:
     process_json = work_dir / "process.json"
     output_path = work_dir / f"sliced-{filename}"
 
-    ok = (
-        api.download_job_file(job_id, input_path)
-        and api.download_profile(job_id, "printer", printer_json)
-        and api.download_profile(job_id, "filament", filament_json)
-        and api.download_profile(job_id, "process", process_json)
+    downloads = (
+        ("Projekt-3MF", lambda: api.download_job_file(job_id, input_path)),
+        ("Druckerprofil", lambda: api.download_profile(job_id, "printer", printer_json)),
+        ("Filamentprofil", lambda: api.download_profile(job_id, "filament", filament_json)),
+        ("Prozessprofil", lambda: api.download_profile(job_id, "process", process_json)),
     )
 
-    if not ok:
-        log.error("Download für Auftrag %s fehlgeschlagen – Auftrag bleibt offen.", job_id)
+    for label, download in downloads:
+        if download():
+            continue
+        # Früher blieb der Auftrag hier einfach "claimed" liegen, bis der
+        # Server das Lease nach 30 Minuten zurücksetzte - in WordPress war
+        # derweil nichts zu sehen. Jetzt wird der Grund gemeldet, und die
+        # Platte lässt sich dort sofort erneut einreihen.
+        message = f"{label} konnte nicht vom Server heruntergeladen werden (nach {max(1, Config.DOWNLOAD_ATTEMPTS)} Versuchen)."
+        log.error("Auftrag %s: %s", job_id, message)
+        api.fail(job_id, message)
         return
 
     api.mark_slicing(job_id)
@@ -330,16 +638,21 @@ def process_job(api: ApiClient, job: dict) -> None:
 
     if not slice_ok:
         log.error("Slicen für Auftrag %s fehlgeschlagen: %s", job_id, message)
+        log.error("Diagnosedateien liegen in %s (slicer.log, result.json, slicer-output.txt).", work_dir)
         api.fail(job_id, message)
+        prune_old_work_dirs()
         return
 
     log.info("Auftrag %s geslict, lade Ergebnis hoch …", job_id)
 
     if api.complete(job_id, output_path):
         log.info("Auftrag %s abgeschlossen.", job_id)
+        remove_work_dir(work_dir)
     else:
         log.error("Ergebnis-Upload für Auftrag %s fehlgeschlagen.", job_id)
-        api.fail(job_id, "Ergebnis-Upload nach erfolgreichem Slicen fehlgeschlagen.")
+        api.fail(job_id, "Ergebnis-Upload nach erfolgreichem Slicen fehlgeschlagen (Upload-Grösse/Timeout des Webservers prüfen).")
+
+    prune_old_work_dirs()
 
 
 # ---------------------------------------------------------------------
@@ -350,6 +663,7 @@ def process_job(api: ApiClient, job: dict) -> None:
 def run() -> None:
     Config.validate()
     Config.DOWNLOAD_DIRECTORY.mkdir(parents=True, exist_ok=True)
+    prune_old_work_dirs()
 
     api = ApiClient()
     backoff = 1
