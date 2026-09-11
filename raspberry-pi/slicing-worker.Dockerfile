@@ -37,11 +37,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # "v2.2.0", siehe https://github.com/OrcaSlicer/OrcaSlicer/releases) für
 # reproduzierbare Builds; "latest" (Standard) holt bei jedem Build ohne
 # Cache-Treffer die zu diesem Zeitpunkt aktuellste Version.
-# GitHub listet je Release mehrere Linux-AppImages (x86_64 UND aarch64) -
-# ohne Architektur-Filter griff das vorherige Muster blind die erste
-# gelistete, was auf einem x86_64-Server zum aarch64-Build und "Exec
-# format error" beim Ausführen führte. Deshalb an die tatsächliche
-# Build-Architektur anpassen.
+# GitHub listet je Release mehrere Linux-AppImages, aber NICHT
+# symmetrisch benannt: die x86_64-Datei trägt keinerlei Architektur-
+# Kennung im Namen (z. B. "..._Ubuntu2404_V2.4.2.AppImage" - x86_64 ist
+# der unmarkierte Standardfall), nur die aarch64-Variante nennt sich
+# ausdrücklich so ("..._aarch64_V2.4.2.AppImage"). Ein Filter, der nach
+# "x86_64" im Dateinamen sucht, findet deshalb auf x86_64 nichts -
+# stattdessen für x86_64 die Linux-AppImage OHNE "aarch64" im Namen
+# nehmen, für aarch64 die MIT "aarch64" im Namen.
 #
 # Die API-Antwort landet dabei in einer Datei statt direkt in grep zu
 # pipen - schlägt die Anfrage fehl (Rate-Limit, Netzwerk, GitHub down),
@@ -51,8 +54,7 @@ ARG ORCASLICER_VERSION=latest
 RUN set -eux; \
 	arch="$(uname -m)"; \
 	case "$arch" in \
-		x86_64) pattern="x86_64" ;; \
-		aarch64|arm64) pattern="aarch64" ;; \
+		x86_64|aarch64|arm64) : ;; \
 		*) echo "Nicht unterstuetzte Architektur fuer OrcaSlicer: $arch"; exit 1 ;; \
 	esac; \
 	if [ "$ORCASLICER_VERSION" = "latest" ]; then \
@@ -66,8 +68,11 @@ RUN set -eux; \
 		echo "Antwort:"; cat /tmp/release.json; \
 		exit 1; \
 	fi; \
-	URL=$(grep -o "\"browser_download_url\": *\"[^\"]*${pattern}[^\"]*\\.AppImage\"" /tmp/release.json \
-		| head -n1 | cut -d '"' -f4); \
+	LINUX_URLS=$(grep -o '"browser_download_url": *"[^"]*[Ll]inux[^"]*\.AppImage"' /tmp/release.json | cut -d '"' -f4); \
+	case "$arch" in \
+		x86_64) URL=$(echo "$LINUX_URLS" | grep -vi aarch64 | head -n1) ;; \
+		aarch64|arm64) URL=$(echo "$LINUX_URLS" | grep -i aarch64 | head -n1) ;; \
+	esac; \
 	[ -n "$URL" ] || { echo "Konnte keine Linux-AppImage-URL (Architektur $arch) fuer Version '$ORCASLICER_VERSION' finden. Verfuegbare Assets:"; grep -o '"browser_download_url": *"[^"]*"' /tmp/release.json; exit 1; }; \
 	rm /tmp/release.json; \
 	echo "Lade $URL"; \
