@@ -83,6 +83,32 @@ class SlicingProfileRepository {
 	}
 
 	/**
+	 * Absoluter Pfad des Druckerprofils irgendeines Materials für dieses
+	 * Druckermodell - das Druckerprofil (Druckbett, Sperrflächen usw.)
+	 * ist materialunabhängig, ein beliebiges hinterlegtes Profil dieses
+	 * Modells reicht (siehe PrinterBedExclusion).
+	 *
+	 * @param string $printer_model z. B. "Bambu Lab P1S" oder "P1S".
+	 * @return string Absoluter Pfad, oder leer wenn kein Profil hinterlegt ist.
+	 */
+	public static function printer_profile_path_for_model( $printer_model ) {
+		global $wpdb;
+
+		if ( '' === trim( (string) $printer_model ) ) {
+			return '';
+		}
+
+		$filename = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT printer_profile_path FROM ' . self::table() . ' WHERE printer_model = %s ORDER BY id ASC LIMIT 1', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $printer_model
+			)
+		);
+
+		return $filename ? trailingslashit( self::dir() ) . $filename : '';
+	}
+
+	/**
 	 * Eine Profildatei (printer/filament/process) unter geschütztem,
 	 * eindeutigem Namen ablegen.
 	 *

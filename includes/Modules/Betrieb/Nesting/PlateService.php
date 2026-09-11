@@ -53,6 +53,21 @@ class PlateService {
 			return $leer;
 		}
 
+		// Feste Sperrflächen des Druckers (z. B. eine gesperrte Bettecke
+		// bei Bambu-Druckern) aus einem hinterlegten Slicing-Profil lesen,
+		// falls eins mit passendem Druckermodell existiert - ohne das
+		// bleibt es beim bisherigen Verhalten (ganzes Bettrechteck
+		// bebaubar). Sonst würde die Anordnung hier ein Bauteil für gültig
+		// halten, das OrcaSlicer beim Slicen als Kollision mit der
+		// Sperrfläche ablehnt (live so passiert).
+		$exclusion_zones = array();
+		if ( ! empty( $printer->printer_model ) ) {
+			$profile_path = SlicingProfileRepository::printer_profile_path_for_model( $printer->printer_model );
+			if ( $profile_path ) {
+				$exclusion_zones = PrinterBedExclusion::from_profile_json( $profile_path );
+			}
+		}
+
 		$expanded = array();
 		$warnings = array();
 
@@ -141,7 +156,9 @@ class PlateService {
 			),
 			$bed['width_mm'],
 			$bed['height_mm'],
-			$margin_mm
+			$margin_mm,
+			BinPacker::DEFAULT_ROTATIONS,
+			$exclusion_zones
 		);
 
 		foreach ( $result['errors'] as $error ) {
