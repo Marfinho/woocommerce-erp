@@ -27,30 +27,65 @@ use Lindenweg16\Modules\Betrieb\ThreeMf;
  * (Verweis fehlt oder ist seinerseits wieder nur eine Verschachtelung),
  * bricht compose() mit einer verständlichen Fehlermeldung ab, statt eine
  * unvollständige 3MF zu erzeugen.
+ *
+ * Nullpunkt-Versatz (X/Y UND Z): Der Nullpunkt eines Objekts liegt nicht
+ * zwangsläufig an seiner Unterseite bzw. der Ecke seiner Bounding-Box -
+ * manche Exporte legen ihn ins geometrische Zentrum oder sonst wohin.
+ * BinPacker::arrange() normiert jede Hülle intern auf die eigene
+ * Bounding-Box-Ecke (0,0), bevor es X/Y-Positionen berechnet - eine
+ * zurückgegebene Platzierung {x,y} gilt also für diese normierte Hülle,
+ * nicht fürs rohe Mesh. Würde man {x,y} unverändert aufs rohe Mesh
+ * anwenden, läge jedes Bauteil um genau den Versatz seines eigenen
+ * Nullpunkts daneben - bei genug Versatz sogar ausserhalb der Platte.
+ * Für Z gilt dieselbe Überlegung, nur ohne Gegenstück aus BinPacker (das
+ * nur in X/Y anordnet): der tiefste Punkt jedes Objekts muss auf Z=0
+ * gelegt werden, sonst schwebt das Teil über der Druckplatte oder steckt
+ * darunter. compose() berechnet all das selbst aus der Geometrie (siehe
+ * mesh_bounds_min()) und rechnet es in transform_matrix() heraus, bevor
+ * die BinPacker-Platzierung angewandt wird.
  */
 class PlateComposer {
 
 	/**
-	 * 3MF-Transformationsmatrix (12 Zahlen, Zeilen zuerst) für eine reine
-	 * Z-Rotation plus Verschiebung in der XY-Ebene – genau das, was
-	 * BinPacker::arrange() liefert (2D-Anordnung auf dem Druckbett).
+	 * 3MF-Transformationsmatrix (12 Zahlen, Zeilen zuerst): erst das rohe
+	 * Mesh um seinen eigenen Bounding-Box-Nullpunkt ($ox, $oy) verschieben
+	 * (siehe Klassendoku "Nullpunkt-Versatz"), dann um die Z-Achse drehen,
+	 * dann auf die BinPacker-Position ($tx, $ty) plus Z-Anhebung ($tz)
+	 * bringen. Mit $ox = $oy = 0 (Standard) entspricht das genau der
+	 * bisherigen reinen Rotation+Verschiebung.
 	 *
 	 * Reine Rechnung, keine Datei-/Zip-Arbeit – deshalb separat und ohne
 	 * WordPress-Testsuite prüfbar. Die Drehrichtung entspricht
 	 * Polygon::rotate() (Gegenuhrzeigersinn), damit eine BinPacker-
-	 * Platzierung unverändert hier eingesetzt werden kann.
+	 * Platzierung unverändert hier eingesetzt werden kann. Da nur um die
+	 * Z-Achse gedreht wird, ändert die Rotation den Z-Bereich der Punkte
+	 * nicht – $tz gilt deshalb unabhängig vom Rotationswinkel, unabhängig
+	 * von $ox/$oy.
 	 *
 	 * @param float $rotation_deg Winkel um die Z-Achse, Gegenuhrzeigersinn.
-	 * @param float $tx           Verschiebung X (mm).
-	 * @param float $ty           Verschiebung Y (mm).
+	 * @param float $tx           Zielposition X (mm), von BinPacker.
+	 * @param float $ty           Zielposition Y (mm), von BinPacker.
+	 * @param float $tz           Verschiebung Z (mm), Standard 0.
+	 * @param float $ox           Eigener Bounding-Box-Nullpunkt X des rohen Mesh, Standard 0.
+	 * @param float $oy           Eigener Bounding-Box-Nullpunkt Y des rohen Mesh, Standard 0.
 	 * @return string Die 12 Matrixzahlen, leerzeichengetrennt.
 	 */
-	public static function transform_matrix( $rotation_deg, $tx, $ty ) {
+	public static function transform_matrix( $rotation_deg, $tx, $ty, $tz = 0, $ox = 0, $oy = 0 ) {
 		$rad = deg2rad( (float) $rotation_deg );
 		$cos = cos( $rad );
 		$sin = sin( $rad );
 
-		$numbers = array( $cos, $sin, 0, -$sin, $cos, 0, 0, 0, 1, (float) $tx, (float) $ty, 0 );
+		$ox = (float) $ox;
+		$oy = (float) $oy;
+
+		// Erst ($ox,$oy) herausrechnen (Punkt minus eigener Nullpunkt),
+		// dann drehen: rotierter Punkt = R·(p - o) = R·p - R·o. Die
+		// Translation der Matrix trägt deshalb -R·o zusätzlich zum
+		// Zielpunkt.
+		$rotated_ox = $ox * $cos - $oy * $sin;
+		$rotated_oy = $ox * $sin + $oy * $cos;
+
+		$numbers = array( $cos, $sin, 0, -$sin, $cos, 0, 0, 0, 1, (float) $tx - $rotated_ox, (float) $ty - $rotated_oy, (float) $tz );
 
 		return implode(
 			' ',
@@ -146,9 +181,12 @@ class PlateComposer {
 
 		$next_id = self::max_resource_id( $doc ) + 1;
 
-		// path => neu vergebene Objekt-ID im zusammengesetzten Dokument.
-		$object_id_by_path            = array();
+		// path => neu vergebene Objekt-ID bzw. eigener Nullpunkt-Versatz
+		// (siehe Klassendoku) im zusammengesetzten Dokument.
+		$object_id_by_path               = array();
+		$bounds_by_path                  = array();
 		$object_id_by_path[ $base_path ] = $base_object->getAttribute( 'id' );
+		$bounds_by_path[ $base_path ]    = self::mesh_bounds_min( $base_object );
 
 		foreach ( $placements as $placement ) {
 			$path = (string) $placement['source_path'];
@@ -162,14 +200,24 @@ class PlateComposer {
 				}
 
 				$object_id_by_path[ $path ] = $imported['object_id'];
+				$bounds_by_path[ $path ]    = $imported['bounds'];
 				$next_id                    = $imported['object_id'] + 1;
 			}
+
+			$bounds = $bounds_by_path[ $path ];
 
 			$item = $doc->createElementNS( $doc->documentElement->namespaceURI ?: null, 'item' );
 			$item->setAttribute( 'objectid', $object_id_by_path[ $path ] );
 			$item->setAttribute(
 				'transform',
-				self::transform_matrix( isset( $placement['rotation_deg'] ) ? $placement['rotation_deg'] : 0, $placement['x'], $placement['y'] )
+				self::transform_matrix(
+					isset( $placement['rotation_deg'] ) ? $placement['rotation_deg'] : 0,
+					$placement['x'],
+					$placement['y'],
+					-$bounds['min_z'],
+					$bounds['min_x'],
+					$bounds['min_y']
+				)
 			);
 			$build->appendChild( $item );
 		}
@@ -262,23 +310,25 @@ class PlateComposer {
 	 * @param \DOMElement  $resources Ziel-<resources>.
 	 * @param string       $path      Quelldatei.
 	 * @param int          $new_id    Zu vergebende ID.
-	 * @return array {ok, object_id, error}
+	 * @return array {ok, object_id, bounds, error}
 	 */
 	protected static function import_object( \DOMDocument $doc, \DOMElement $resources, $path, $new_id ) {
+		$nichts = array( 'min_x' => 0.0, 'min_y' => 0.0, 'min_z' => 0.0 );
+
 		if ( ! class_exists( '\ZipArchive' ) ) {
-			return array( 'ok' => false, 'object_id' => 0, 'error' => __( 'PHP-Erweiterung ZipArchive fehlt.', 'lindenweg16' ) );
+			return array( 'ok' => false, 'object_id' => 0, 'bounds' => $nichts, 'error' => __( 'PHP-Erweiterung ZipArchive fehlt.', 'lindenweg16' ) );
 		}
 
 		$zip = new \ZipArchive();
 		if ( true !== $zip->open( $path ) ) {
-			return array( 'ok' => false, 'object_id' => 0, 'error' => __( 'Quell-3MF konnte nicht geöffnet werden.', 'lindenweg16' ) );
+			return array( 'ok' => false, 'object_id' => 0, 'bounds' => $nichts, 'error' => __( 'Quell-3MF konnte nicht geöffnet werden.', 'lindenweg16' ) );
 		}
 
 		$xml = $zip->getFromName( ThreeMf::MODEL_PATH );
-		$zip->close();
 
 		if ( ! is_string( $xml ) ) {
-			return array( 'ok' => false, 'object_id' => 0, 'error' => __( 'Quell-3MF enthält kein 3dmodel.model.', 'lindenweg16' ) );
+			$zip->close();
+			return array( 'ok' => false, 'object_id' => 0, 'bounds' => $nichts, 'error' => __( 'Quell-3MF enthält kein 3dmodel.model.', 'lindenweg16' ) );
 		}
 
 		$source_doc = new \DOMDocument();
@@ -291,16 +341,24 @@ class PlateComposer {
 		}
 
 		if ( ! $object ) {
-			return array( 'ok' => false, 'object_id' => 0, 'error' => __( 'Quell-3MF enthält kein Bauteil.', 'lindenweg16' ) );
+			$zip->close();
+			return array( 'ok' => false, 'object_id' => 0, 'bounds' => $nichts, 'error' => __( 'Quell-3MF enthält kein Bauteil.', 'lindenweg16' ) );
 		}
 
 		if ( self::has_components( $object ) ) {
+			// $zip bleibt bis hierhin offen - flatten_components() braucht
+			// sie noch, um eine per p:path referenzierte Datei zu lesen
+			// (vorher wurde $zip schon vor diesem Aufruf geschlossen, was
+			// eine solche Datei bei jeder Nicht-Basis-Platzierung silent
+			// unauflösbar gemacht hätte).
 			$flattened = self::flatten_components( $doc, $object, $zip );
 
 			if ( ! $flattened ) {
+				$zip->close();
 				return array(
 					'ok'        => false,
 					'object_id' => 0,
+					'bounds'    => $nichts,
 					'error'     => __( 'Eine der Projektdateien ist eine Unterbaugruppe ohne auflösbare Geometrie (verweist per <components> auf ein Objekt, das nicht gefunden wurde oder selbst wieder nur verschachtelt ist) – das unterstützt die Plattenanordnung nicht.', 'lindenweg16' ),
 				);
 			}
@@ -310,10 +368,59 @@ class PlateComposer {
 			$imported = $doc->importNode( $object, true );
 		}
 
+		$zip->close();
+
+		$bounds = self::mesh_bounds_min( $imported );
+
 		$imported->setAttribute( 'id', (string) $new_id );
 		$resources->appendChild( $imported );
 
-		return array( 'ok' => true, 'object_id' => $new_id, 'error' => '' );
+		return array( 'ok' => true, 'object_id' => $new_id, 'bounds' => $bounds, 'error' => '' );
+	}
+
+	/**
+	 * Kleinste X-, Y- und Z-Koordinate im eigenen Mesh eines Objekts –
+	 * der Nullpunkt-Versatz, der vor dem Anwenden einer BinPacker-
+	 * Platzierung herausgerechnet werden muss (siehe Klassendoku
+	 * "Nullpunkt-Versatz" und transform_matrix()). Ohne Geometrie (sollte
+	 * durch die vorherigen Prüfungen nicht vorkommen) bleibt es bei 0.
+	 *
+	 * @param \DOMElement $object <object> mit eigenem <mesh>.
+	 * @return array {min_x, min_y, min_z}
+	 */
+	protected static function mesh_bounds_min( \DOMElement $object ) {
+		$nullpunkt = array(
+			'min_x' => 0.0,
+			'min_y' => 0.0,
+			'min_z' => 0.0,
+		);
+
+		$mesh = self::first_child( $object, 'mesh' );
+
+		if ( ! $mesh ) {
+			return $nullpunkt;
+		}
+
+		list( $vertices, ) = self::mesh_vertices_and_triangles( $mesh );
+
+		if ( ! $vertices ) {
+			return $nullpunkt;
+		}
+
+		$min = $vertices[0];
+		foreach ( $vertices as $v ) {
+			$min = array(
+				min( $min[0], $v[0] ),
+				min( $min[1], $v[1] ),
+				min( $min[2], $v[2] ),
+			);
+		}
+
+		return array(
+			'min_x' => $min[0],
+			'min_y' => $min[1],
+			'min_z' => $min[2],
+		);
 	}
 
 	/**
