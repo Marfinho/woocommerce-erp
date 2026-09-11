@@ -11,16 +11,17 @@ automatisch in die Bambu-Warteschlange ein (siehe
 Nesting\\SlicingService::forward_to_bambu_queue()) - ab dort läuft alles
 wie ein manuell hochgeladener Druckauftrag weiter.
 
-WICHTIGER VORBEHALT: Anders als die Bambu-Bridge (MQTT/FTPS, öffentlich
-dokumentiertes Reverse-Engineering) lässt sich der eigentliche Slice-Lauf
-in dieser Umgebung nicht gegen eine echte OrcaSlicer-/Bambu-Studio-Installation
-prüfen. Das Kommandozeilen-Aufruf-Muster unten (--load je Profil,
---slice, --export-3mf) entspricht der öffentlich dokumentierten
-OrcaSlicer-CLI, kann sich aber je nach installierter Version unterscheiden
-- SLICER_ARGS_TEMPLATE in .env.slicing ist deshalb bewusst anpassbar,
-statt fest einprogrammiert. Vor dem produktiven Einsatz unbedingt mit
-einer einzelnen, unkritischen Platte von Hand gegenprüfen (Ergebnis-3MF
-in Bambu Studio öffnen und die erzeugten Druckdaten ansehen), bevor ein
+WICHTIGER VORBEHALT: Das Kommandozeilen-Aufruf-Muster in run_slicer()
+(--load-settings für Drucker-/Prozessprofil, --load-filaments fürs
+Filamentprofil, --slice, --export-3mf) folgt der öffentlich
+dokumentierten OrcaSlicer-CLI
+(https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode), bestätigt
+gegen einen echten Slice-Lauf mit OrcaSlicer 2.4.2 (ein früherer Versuch
+mit "--load" scheiterte live mit "Invalid option --load" - OrcaSlicer
+kennt dieses Flag nicht). Kann sich trotzdem von Version zu Version
+wieder ändern. Vor dem produktiven Einsatz unbedingt mit einer
+einzelnen, unkritischen Platte von Hand gegenprüfen (Ergebnis-3MF in
+Bambu Studio öffnen und die erzeugten Druckdaten ansehen), bevor ein
 automatisch geslicter Auftrag ungeprüft auf einen echten Drucker geht.
 
 Läuft wie die Bambu-Bridge standardmässig mit klassischem Intervall-
@@ -241,15 +242,21 @@ class ApiClient:
 def run_slicer(input_path: Path, output_path: Path, printer_json: Path, filament_json: Path, process_json: Path) -> tuple[bool, str]:
     """Slicer-CLI aufrufen. Siehe Modulkommentar zum Vorbehalt bezüglich
     der genauen Kommandozeile - je nach installierter Version kann ein
-    anderer Aufruf nötig sein."""
+    anderer Aufruf nötig sein.
+
+    "--load" existiert in OrcaSlicer nicht (live gemeldet: "Invalid
+    option --load") - Drucker- und Prozessprofil werden zusammen über
+    "--load-settings" (Semikolon-getrennt) geladen, das Filamentprofil
+    separat über "--load-filaments" (siehe
+    https://github.com/OrcaSlicer/OrcaSlicer/wiki/cli_mode).
+    """
     cmd = [
         Config.SLICER_CLI,
-        "--load", str(printer_json),
-        "--load", str(filament_json),
-        "--load", str(process_json),
+        str(input_path),
+        "--load-settings", f"{printer_json};{process_json}",
+        "--load-filaments", str(filament_json),
         "--slice", "1",
         "--export-3mf", str(output_path),
-        str(input_path),
     ]
 
     log.info("Starte Slicer: %s", " ".join(cmd))
