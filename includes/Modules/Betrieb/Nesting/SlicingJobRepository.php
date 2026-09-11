@@ -84,7 +84,18 @@ class SlicingJobRepository {
 
 		$wert = (int) $requested;
 
-		if ( $wert <= 0 ) {
+		// Explizit angefordertes wait=0 heißt "sofort antworten, nicht
+		// serverseitig warten" - fürs klassische Intervall-Polling (siehe
+		// SlicingRestApi::get_jobs(), dasselbe Muster wie bei der Bambu-
+		// Warteschlange, siehe BambuJobRepository::clamp_wait() für die
+		// ausführliche Begründung: ohne diese Unterscheidung hält jede
+		// Anfrage einen PHP-Worker samt Datenbankverbindung mindestens
+		// $min Sekunden lang fest, auch im klassischen Poll-Modus).
+		if ( 0 === $wert ) {
+			return 0;
+		}
+
+		if ( $wert < 0 ) {
 			return $default;
 		}
 
