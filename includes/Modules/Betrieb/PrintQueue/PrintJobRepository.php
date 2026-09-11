@@ -85,7 +85,22 @@ class PrintJobRepository {
 
 		$wert = (int) $requested;
 
-		if ( $wert <= 0 ) {
+		// Explizit angefordertes wait=0 heißt "sofort antworten, nicht
+		// serverseitig warten" - das schickt der Pi-Client im klassischen
+		// Intervall-Modus (LONG_POLL_ENABLED=false, siehe
+		// haster_print_client.py). Bisher wurde 0 wie "nicht angegeben"
+		// behandelt und auf den Long-Poll-Default gehoben: Jede angeblich
+		// kurze Anfrage hielt dann doch einen PHP-Worker samt
+		// Datenbankverbindung 25 Sekunden in der Warteschleife fest -
+		// derselbe Fehler, der bei der Bambu- und der Slicing-Warteschlange
+		// schon behoben war (siehe BambuJobRepository::clamp_wait()).
+		// "Kein wait angegeben" (leer/null, oben abgefangen) ergibt
+		// weiterhin den Long-Poll-Default.
+		if ( 0 === $wert ) {
+			return 0;
+		}
+
+		if ( $wert < 0 ) {
 			return $default;
 		}
 
