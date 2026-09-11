@@ -124,6 +124,11 @@ class BambuPrintersPage {
 				'access_code'  => isset( $_POST['access_code'] ) ? wp_unslash( $_POST['access_code'] ) : '',
 				'access_code_loeschen' => ! empty( $_POST['access_code_loeschen'] ),
 				'geraet_id'    => isset( $_POST['geraet_id'] ) ? (int) $_POST['geraet_id'] : 0,
+				// Leeres Feld heißt "automatisch anhand des gemeldeten Modells"
+				// (siehe BambuPrinterRepository::effective_bed_size()) - dafür
+				// ausdrücklich auf null setzen, nicht auf 0.
+				'bed_width_mm'  => isset( $_POST['bed_width_mm'] ) && '' !== trim( wp_unslash( $_POST['bed_width_mm'] ) ) ? (int) $_POST['bed_width_mm'] : null,
+				'bed_height_mm' => isset( $_POST['bed_height_mm'] ) && '' !== trim( wp_unslash( $_POST['bed_height_mm'] ) ) ? (int) $_POST['bed_height_mm'] : null,
 			)
 		);
 
@@ -701,6 +706,18 @@ class BambuPrintersPage {
 			);
 		}
 		printf( '<p><label>%s <input type="text" name="bambu_serial" value="%s"></label></p>', esc_html__( 'Seriennummer', 'lindenweg16' ), esc_attr( (string) $printer->bambu_serial ) );
+		// Nur ein Rückfallwert, falls die Bridge kein erkennbares Modell
+		// meldet oder das eigene Gerät (z. B. ein modifiziertes Bett) von
+		// der Werksangabe abweicht - siehe BambuPrinterRepository::
+		// effective_bed_size()/BedSizeLookup. Leer lassen übernimmt die
+		// automatische Erkennung.
+		printf(
+			'<p><label>%s <input type="number" min="1" name="bed_width_mm" value="%s" style="width:6em"> × <input type="number" min="1" name="bed_height_mm" value="%s" style="width:6em"> mm</label> <span class="description">%s</span></p>',
+			esc_html__( 'Druckbettmass (Breite × Höhe)', 'lindenweg16' ),
+			esc_attr( $printer->bed_width_mm ? (string) (int) $printer->bed_width_mm : '' ),
+			esc_attr( $printer->bed_height_mm ? (string) (int) $printer->bed_height_mm : '' ),
+			esc_html__( 'leer = automatisch anhand des gemeldeten Modells', 'lindenweg16' )
+		);
 		echo '<p><label>' . esc_html__( 'Verknüpftes Gerät', 'lindenweg16' ) . ' <select name="geraet_id"><option value="0">' . esc_html__( '– keine –', 'lindenweg16' ) . '</option>';
 		foreach ( PrinterRepository::all() as $geraet ) {
 			printf(

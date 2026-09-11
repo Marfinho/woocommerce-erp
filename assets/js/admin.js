@@ -104,6 +104,15 @@
 			}
 
 			function refresh() {
+				// Ist gerade ein Formular offen (z. B. "Verbindungsdaten
+				// bearbeiten") oder ein Feld fokussiert, würde das Ersetzen
+				// der ganzen Karte das <details> wieder zuklappen bzw.
+				// Eingetipptes verwerfen - diesen Durchlauf dann einfach
+				// auslassen, der nächste greift wieder.
+				if ( $container.find( 'details[open]' ).length || $container.find( ':focus' ).length ) {
+					return;
+				}
+
 				$.post( LW16Admin.ajaxUrl, { action: action, nonce: LW16Admin.nonce } )
 					.done( function ( html ) {
 						$container.html( html );
