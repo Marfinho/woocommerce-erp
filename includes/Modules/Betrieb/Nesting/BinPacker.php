@@ -64,15 +64,37 @@ class BinPacker {
 	 * @param float $margin_mm     Mindestabstand zwischen zwei Bauteilen
 	 *                              und zum Bettrand.
 	 * @param array $rotations     Erlaubte Rotationswinkel in Grad.
+	 * @param array $exclusion_zones Feste Sperrflächen in absoluten
+	 *                                Bett-Koordinaten (z. B. das
+	 *                                "bed_exclude_area" des Druckerprofils
+	 *                                - Bambu-Drucker sperren typischerweise
+	 *                                eine kleine Bettecke). Liste von
+	 *                                Polygonen [[[x,y], ...], ...], gilt
+	 *                                für jede Platte gleich (drucker-,
+	 *                                nicht plattenspezifisch).
 	 * @return array {bins: [{placements: [{key,x,y,rotation_deg}]}, ...], errors: [{key,message}]}
 	 */
-	public static function arrange( array $parts, $bed_width_mm, $bed_height_mm, $margin_mm = 5.0, array $rotations = self::DEFAULT_ROTATIONS ) {
+	public static function arrange( array $parts, $bed_width_mm, $bed_height_mm, $margin_mm = 5.0, array $rotations = self::DEFAULT_ROTATIONS, array $exclusion_zones = array() ) {
 		$bed_width_mm  = (float) $bed_width_mm;
 		$bed_height_mm = (float) $bed_height_mm;
 		$margin_mm     = max( 0.0, (float) $margin_mm );
 
 		if ( ! $rotations ) {
 			$rotations = array( 0 );
+		}
+
+		// Wie ein bereits platziertes Bauteil behandelt (siehe
+		// candidate_points()/try_place()) - dieselbe Kollisionslogik
+		// sorgt dann automatisch dafür, dass kein Bauteil dort landet UND
+		// dass Kandidatenpunkte an den Rändern der Sperrfläche entstehen,
+		// genau wie neben einem echten Nachbarn.
+		$inflated_exclusions = array();
+		foreach ( $exclusion_zones as $zone ) {
+			$hull = Polygon::convex_hull( is_array( $zone ) ? $zone : array() );
+			if ( count( $hull ) < 3 ) {
+				continue;
+			}
+			$inflated_exclusions[] = $margin_mm > 0 ? Polygon::offset( $hull, $margin_mm ) : $hull;
 		}
 
 		// Grösste zuerst: ein klassischer, gut belegter Kniff bei
@@ -130,7 +152,7 @@ class BinPacker {
 			unset( $bin );
 
 			if ( ! $placed ) {
-				$bin = array( 'placements' => array(), 'occupied' => array() );
+				$bin = array( 'placements' => array(), 'occupied' => $inflated_exclusions );
 
 				$fit = self::try_place( $part, $bin, $bed_width_mm, $bed_height_mm, $margin_mm, $rotations );
 

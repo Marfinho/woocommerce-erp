@@ -18,6 +18,7 @@ use Lindenweg16\Modules\Betrieb\Nesting\BinPacker;
 use Lindenweg16\Modules\Betrieb\Nesting\MeshOutline;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateComposer;
 use Lindenweg16\Modules\Betrieb\Nesting\Polygon;
+use Lindenweg16\Modules\Betrieb\Nesting\PrinterBedExclusion;
 use Lindenweg16\Modules\Betrieb\Nesting\Sat;
 
 /**
@@ -623,6 +624,103 @@ class NestingTest extends TestCase {
 		$result = BinPacker::arrange( array(), 100, 100, 5 );
 		$this->assertSame( array(), $result['bins'] );
 		$this->assertSame( array(), $result['errors'] );
+	}
+
+	/**
+	 * Eine Sperrfläche (z. B. "bed_exclude_area" eines Bambu-Druckers,
+	 * siehe PrinterBedExclusion) muss wie ein bereits platziertes Bauteil
+	 * behandelt werden: kein Bauteil darf hineinragen (auch nicht in
+	 * ihren Sicherheitsabstand) - live gemeldet als "Helmhalter.stl is
+	 * too close to exclusion area" beim Slicen einer ohne Kenntnis der
+	 * Sperrfläche angeordneten Platte.
+	 */
+	public function test_bin_packer_meidet_sperrflaeche() {
+		// Sperrfläche wie beim Nutzer (Bambu X1C): Bettecke 0..18 x 0..28.
+		$exclusion = array( array( 0, 0 ), array( 18, 0 ), array( 18, 28 ), array( 0, 28 ) );
+		// Ein einzelnes Bauteil, klein genug, um an vielen Stellen zu
+		// passen (auch in der Ecke, ohne die Sperrfläche) - erzwingt
+		// keinen anderen Grund, warum es nicht dort landen sollte.
+		$part = array( array( 0, 0 ), array( 10, 0 ), array( 10, 10 ), array( 0, 10 ) );
+
+		$result = BinPacker::arrange(
+			array( array( 'key' => 'p1', 'hull' => $part ) ),
+			100,
+			100,
+			2,
+			BinPacker::DEFAULT_ROTATIONS,
+			array( $exclusion )
+		);
+
+		$this->assertEmpty( $result['errors'] );
+		$this->assertCount( 1, $result['bins'] );
+
+		$placement    = $result['bins'][0]['placements'][0];
+		$placed_hull  = Polygon::place( $part, $placement['rotation_deg'], $placement['x'], $placement['y'] );
+		$excl_inflated = Polygon::offset( Polygon::convex_hull( $exclusion ), 2 );
+
+		$this->assertFalse(
+			Sat::overlap( $placed_hull, $excl_inflated ),
+			'Bauteil liegt in oder zu nah an der Sperrfläche.'
+		);
+	}
+
+	/**
+	 * Ohne Sperrflächen (Standard, leeres Array) ändert sich nichts am
+	 * bisherigen Verhalten - Rückwärtskompatibilität zum neuen Parameter.
+	 */
+	public function test_bin_packer_ohne_sperrflaechen_unveraendert() {
+		$square = array( array( 0, 0 ), array( 20, 0 ), array( 20, 20 ), array( 0, 20 ) );
+		$parts  = array( array( 'key' => 's1', 'hull' => $square ) );
+
+		$with_default = BinPacker::arrange( $parts, 100, 100, 5 );
+		$with_empty   = BinPacker::arrange( $parts, 100, 100, 5, BinPacker::DEFAULT_ROTATIONS, array() );
+
+		$this->assertSame( $with_default, $with_empty );
+	}
+
+	/* ----------------------------------------------------------------
+	 * PrinterBedExclusion: Sperrfläche aus dem Druckerprofil lesen
+	 * -------------------------------------------------------------- */
+
+	/**
+	 * Genau das vom Nutzer geschickte Format (Bambu X1C, "bed_exclude_area"
+	 * als Liste von "XxY"-Punkten) muss als Polygon ankommen.
+	 */
+	public function test_printer_bed_exclusion_liest_bambu_format() {
+		$dir  = $this->fixture_dir();
+		$path = $dir . '/printer.json';
+		file_put_contents( // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents
+			$path,
+			json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode
+				array(
+					'printer_model'    => 'Bambu Lab X1 Carbon',
+					'bed_exclude_area' => array( '0x0', '18x0', '18x28', '0x28' ),
+				)
+			)
+		);
+
+		$zones = PrinterBedExclusion::from_profile_json( $path );
+
+		$this->assertCount( 1, $zones );
+		$this->assertSame(
+			array( array( 0.0, 0.0 ), array( 18.0, 0.0 ), array( 18.0, 28.0 ), array( 0.0, 28.0 ) ),
+			$zones[0]
+		);
+	}
+
+	/**
+	 * Fehlt "bed_exclude_area" (z. B. eine reine Differenzdatei ohne
+	 * diesen Schlüssel) oder ist die Datei nicht lesbar, bleibt es bei
+	 * "keine bekannte Sperrfläche" statt eines Fehlers.
+	 */
+	public function test_printer_bed_exclusion_ohne_feld_ist_leer() {
+		$dir  = $this->fixture_dir();
+		$path = $dir . '/ohne-sperrflaeche.json';
+		file_put_contents( $path, json_encode( array( 'printer_model' => 'X' ) ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_put_contents,WordPress.WP.AlternativeFunctions.json_encode_json_encode
+
+		$this->assertSame( array(), PrinterBedExclusion::from_profile_json( $path ) );
+		$this->assertSame( array(), PrinterBedExclusion::from_profile_json( $dir . '/existiert-nicht.json' ) );
+		$this->assertSame( array(), PrinterBedExclusion::from_profile_json( '' ) );
 	}
 
 	/* ----------------------------------------------------------------
