@@ -323,6 +323,129 @@ class NestingTest extends TestCase {
 		$this->assertEqualsWithDelta( 5.0, $bbox['maxx'], 0.001, 'Muss vom ersten (5x5) Objekt kommen, nicht vom zweiten (50x50).' );
 	}
 
+	/**
+	 * Hilfsfunktion: eine 3MF-ZIP-Datei mit den übergebenen Einträgen
+	 * (Pfad => Inhalt) im temporären Testverzeichnis anlegen.
+	 *
+	 * @param array $entries Pfad => Inhalt.
+	 * @return string Absoluter Pfad zur angelegten Datei.
+	 */
+	protected function zip_3mf( array $entries ) {
+		$path = sys_get_temp_dir() . '/lw16-test-' . uniqid( '', true ) . '.3mf';
+		$zip  = new \ZipArchive();
+		$zip->open( $path, \ZipArchive::CREATE );
+		foreach ( $entries as $name => $content ) {
+			$zip->addFromString( $name, $content );
+		}
+		$zip->close();
+
+		// Am Ende des Tests aufräumen.
+		register_shutdown_function(
+			static function () use ( $path ) {
+				if ( is_file( $path ) ) {
+					unlink( $path );
+				}
+			}
+		);
+
+		return $path;
+	}
+
+	/**
+	 * Bambu Studio lagert die Geometrie mancher Objekte in eine eigene
+	 * Datei innerhalb der 3MF aus (Production Extension) statt sie im
+	 * Wurzel-3dmodel.model einzubetten - genau der vom Nutzer live
+	 * gemeldete Fall ("keine auswertbare Geometrie ... gefunden", obwohl
+	 * die Datei eine gültige Projekt-3MF war). xy_hull_from_file() muss
+	 * dem <component p:path="..."> folgen und die dort liegende Geometrie
+	 * lesen.
+	 */
+	public function test_mesh_outline_loest_ausgelagerte_objektdatei_auf() {
+		$ns   = 'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"';
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . ' requiredextensions="p">'
+			. '<resources><object id="2" type="model"><components>'
+			. '<component p:path="/3D/Objects/object_8.model" objectid="1" transform="1 0 0 0 1 0 0 0 1 0 0 0"/>'
+			. '</components></object></resources>'
+			. '<build><item objectid="2" transform="1 0 0 0 1 0 0 0 1 128 128 20"/></build></model>';
+
+		$sub = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . '>'
+			. '<resources><object id="1" type="model"><mesh><vertices>'
+			. '<vertex x="0" y="0" z="0"/><vertex x="30" y="0" z="0"/>'
+			. '<vertex x="30" y="20" z="0"/><vertex x="0" y="20" z="0"/>'
+			. '</vertices><triangles><triangle v1="0" v2="1" v3="2"/><triangle v1="0" v2="2" v3="3"/></triangles>'
+			. '</mesh></object></resources></model>';
+
+		$path = $this->zip_3mf(
+			array(
+				'3D/3dmodel.model'      => $root,
+				'3D/Objects/object_8.model' => $sub,
+			)
+		);
+
+		$hull = MeshOutline::xy_hull_from_file( $path );
+
+		$this->assertNotNull( $hull );
+		$this->assertEqualsWithDelta( 600.0, Polygon::area( $hull ), 0.001 );
+	}
+
+	/**
+	 * Ein transform-Attribut am <component> (Rotation um 90° plus
+	 * Verschiebung) muss auf die ausgelagerte Geometrie angewandt werden,
+	 * bevor die Hülle berechnet wird.
+	 */
+	public function test_mesh_outline_wendet_transform_der_komponente_an() {
+		$ns   = 'xmlns:p="http://schemas.microsoft.com/3dmanufacturing/production/2015/06"';
+		// 90°-Drehung um Z (x'=-y, y'=x) plus Verschiebung um (100, 0).
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . ' requiredextensions="p">'
+			. '<resources><object id="2" type="model"><components>'
+			. '<component p:path="/3D/Objects/object_1.model" objectid="1" transform="0 1 0 -1 0 0 0 0 1 100 0 0"/>'
+			. '</components></object></resources>'
+			. '<build><item objectid="2"/></build></model>';
+
+		$sub = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02" ' . $ns . '>'
+			. '<resources><object id="1" type="model"><mesh><vertices>'
+			. '<vertex x="0" y="0" z="0"/><vertex x="10" y="0" z="0"/>'
+			. '<vertex x="10" y="5" z="0"/><vertex x="0" y="5" z="0"/>'
+			. '</vertices><triangles><triangle v1="0" v2="1" v3="2"/><triangle v1="0" v2="2" v3="3"/></triangles>'
+			. '</mesh></object></resources></model>';
+
+		$path = $this->zip_3mf(
+			array(
+				'3D/3dmodel.model'      => $root,
+				'3D/Objects/object_1.model' => $sub,
+			)
+		);
+
+		$hull = MeshOutline::xy_hull_from_file( $path );
+		$bbox = Polygon::bounding_box( $hull );
+
+		// Der 10x5-Quader (X x Y) steht nach der 90°-Drehung als 5x10 da
+		// (Ausdehnungen vertauscht) und um 100 in X verschoben.
+		$this->assertEqualsWithDelta( 5.0, $bbox['maxx'] - $bbox['minx'], 0.001 );
+		$this->assertEqualsWithDelta( 10.0, $bbox['maxy'] - $bbox['miny'], 0.001 );
+		$this->assertEqualsWithDelta( 95.0, $bbox['minx'], 0.001 );
+		$this->assertEqualsWithDelta( 0.0, $bbox['miny'], 0.001 );
+	}
+
+	/**
+	 * Ohne auflösbare Geometrie (weder eigener Mesh-Block noch eine
+	 * auflösbare Komponente) bleibt es bei null statt eines Fehlers.
+	 */
+	public function test_mesh_outline_from_file_ohne_geometrie_ist_null() {
+		$this->assertNull( MeshOutline::xy_hull_from_file( '/pfad/existiert/nicht.3mf' ) );
+
+		$root = '<?xml version="1.0" encoding="UTF-8"?>'
+			. '<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+			. '<resources><object id="1" type="model"></object></resources><build><item objectid="1"/></build></model>';
+		$path = $this->zip_3mf( array( '3D/3dmodel.model' => $root ) );
+
+		$this->assertNull( MeshOutline::xy_hull_from_file( $path ) );
+	}
+
 	/* ----------------------------------------------------------------
 	 * BinPacker: Anordnung ohne Kollision, innerhalb der Bettgrenzen
 	 * -------------------------------------------------------------- */
