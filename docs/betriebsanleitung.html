@@ -1,0 +1,2407 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Betriebsanleitung · Lindenweg16 ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="ba.css">
+</head>
+<body>
+<div class="seite">
+
+<header class="kopf" id="einstieg">
+	<div class="marke">Lindenweg16 ERP · Version 0.14.0</div>
+	<h1>Betriebsanleitung</h1>
+	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
+	<div class="meta">Alle Bilder sind echte Bildschirmfotos aus dem Plugin, nicht nachgezeichnet. Stand: Plugin-Version 0.14.0.</div>
+	<nav class="wegweiser">
+		<a href="#einstieg" class="hier">Einstieg</a>
+		<a href="#teil-produktion">A · Produktion</a>
+		<a href="#teil-versand">B · Versand</a>
+		<a href="#teil-personal">C · Personal</a>
+		<a href="#teil-admin">D · Administration</a>
+	</nav>
+</header>
+
+<div class="inhalt">
+	<h2>Inhalt</h2>
+	<p class="teilkopf"><a href="#einstieg">Einstieg</a></p>
+	<ol class="flach"><li><a href="#wer">Wer liest was?</a></li><li><a href="#menues">Die fünf Menüs</a></li><li><a href="#grundregeln">Fünf Sätze, die für alle gelten</a></li></ol>
+	<p class="teilkopf"><a href="#teil-produktion">Teil A – Produktion</a> <span class="fuer">Für die Werkstatt</span></p>
+	<ol class="flach">
+		<li><a href="#prod-anmelden"><span class="nr">A.1</span> Anmelden und das Menü finden</a></li>
+		<li><a href="#prod-dashboard"><span class="nr">A.2</span> Das Dashboard: der Blick am Morgen</a></li>
+		<li><a href="#prod-bedarf"><span class="nr">A.3</span> Bedarf: was heute entstehen muss</a></li>
+		<li><a href="#prod-auftrag"><span class="nr">A.4</span> Einen Auftrag anlegen und starten</a></li>
+		<li><a href="#prod-drucken"><span class="nr">A.5</span> Drucken und den Druckjob buchen</a></li>
+		<li><a href="#prod-handy"><span class="nr">A.6</span> Am Drucker mit dem Handy buchen</a></li>
+		<li><a href="#prod-montage"><span class="nr">A.7</span> Montieren und fertigmelden</a></li>
+		<li><a href="#prod-material"><span class="nr">A.8</span> Material: Filament und Kleinteile</a></li>
+		<li><a href="#prod-drucker"><span class="nr">A.9</span> Drucker und Wartung</a></li>
+		<li><a href="#prod-bambu"><span class="nr">A.10</span> Bambu-Lab-Drucker: aus dem System heraus drucken</a></li>
+		<li><a href="#prod-artikel"><span class="nr">A.11</span> Artikel, Revisionen und Stücklisten</a></li>
+		<li><a href="#prod-lager"><span class="nr">A.12</span> Lager: Bestand und Korrekturen</a></li>
+		<li><a href="#prod-qualitaet"><span class="nr">A.13</span> Qualität: Chargen und Rückverfolgung</a></li>
+		<li><a href="#prod-kapazitaet"><span class="nr">A.14</span> Kapazität: schaffe ich das?</a></li>
+		<li><a href="#prod-fehler"><span class="nr">A.15</span> Wenn etwas nicht geht</a></li>
+		<li><a href="#prod-spickzettel"><span class="nr">A.16</span> Spickzettel für den Tag</a></li>
+	</ol>
+	<p class="teilkopf"><a href="#teil-versand">Teil B – Versand</a> <span class="fuer">Für den Packtisch</span></p>
+	<ol class="flach">
+		<li><a href="#vers-ablauf"><span class="nr">B.1</span> Der Ablauf auf einer Seite</a></li>
+		<li><a href="#vers-anmelden"><span class="nr">B.2</span> Anmelden und den Weg finden</a></li>
+		<li><a href="#vers-pickliste"><span class="nr">B.3</span> Schritt 1: Pickliste erzeugen</a></li>
+		<li><a href="#vers-picken"><span class="nr">B.4</span> Schritt 2: Picken mit dem Handy</a></li>
+		<li><a href="#vers-packen"><span class="nr">B.5</span> Schritt 3: Packen</a></li>
+		<li><a href="#vers-lieferschein"><span class="nr">B.6</span> Schritt 4: Lieferschein drucken</a></li>
+		<li><a href="#vers-label"><span class="nr">B.7</span> Schritt 5: Versandlabel</a></li>
+		<li><a href="#vers-bestellungen"><span class="nr">B.8</span> Bestellungen: die Übersicht</a></li>
+		<li><a href="#vers-manuell"><span class="nr">B.9</span> Verkauf ohne Shop: manuell erfassen</a></li>
+		<li><a href="#vers-nachbestellung"><span class="nr">B.10</span> Nachbestellungen von Händlern bestätigen</a></li>
+		<li><a href="#vers-plaetze"><span class="nr">B.11</span> Lagerplätze und Etiketten</a></li>
+		<li><a href="#vers-bestand"><span class="nr">B.12</span> Bestand prüfen und korrigieren</a></li>
+		<li><a href="#vers-fehler"><span class="nr">B.13</span> Wenn etwas nicht geht</a></li>
+		<li><a href="#vers-spickzettel"><span class="nr">B.14</span> Spickzettel für den Packtisch</a></li>
+	</ol>
+	<p class="teilkopf"><a href="#teil-personal">Teil C – Personal</a> <span class="fuer">Für Personal &amp; Zeit</span></p>
+	<ol class="flach">
+		<li><a href="#pers-warum"><span class="nr">C.1</span> Warum überhaupt Zeit erfassen?</a></li>
+		<li><a href="#pers-anmelden"><span class="nr">C.2</span> Anmelden und den Weg finden</a></li>
+		<li><a href="#pers-uhr"><span class="nr">C.3</span> Die Stoppuhr: mitlaufen lassen</a></li>
+		<li><a href="#pers-stoppen"><span class="nr">C.4</span> Die Uhr stoppen und buchen</a></li>
+		<li><a href="#pers-nachtragen"><span class="nr">C.5</span> Zeit von Hand nachtragen</a></li>
+		<li><a href="#pers-kategorien"><span class="nr">C.6</span> Die Kategorien richtig wählen</a></li>
+		<li><a href="#pers-handy"><span class="nr">C.7</span> Zeit am Handy erfassen</a></li>
+		<li><a href="#pers-auftragszeit"><span class="nr">C.8</span> Zeit an einem Auftrag</a></li>
+		<li><a href="#pers-benutzer"><span class="nr">C.9</span> Benutzer &amp; Rechte: die Übersicht</a></li>
+		<li><a href="#pers-profile"><span class="nr">C.10</span> Rechteprofile vergeben</a></li>
+		<li><a href="#pers-lohn"><span class="nr">C.11</span> Stundenlöhne pflegen</a></li>
+		<li><a href="#pers-protokoll"><span class="nr">C.12</span> Das Protokoll eines Nutzers</a></li>
+		<li><a href="#pers-stundensatz"><span class="nr">C.13</span> Gerechnet gegen bezahlt</a></li>
+		<li><a href="#pers-neuer"><span class="nr">C.14</span> Einen neuen Mitarbeiter anlegen</a></li>
+		<li><a href="#pers-datenschutz"><span class="nr">C.15</span> Datenschutz: was hier steht und was nicht</a></li>
+		<li><a href="#pers-fehler"><span class="nr">C.16</span> Wenn etwas nicht geht</a></li>
+	</ol>
+	<p class="teilkopf"><a href="#teil-admin">Teil D – Administration</a> <span class="fuer">Für die Verwaltung</span></p>
+	<ol class="flach">
+		<li><a href="#adm-aufbau"><span class="nr">D.1</span> Wie das Plugin aufgebaut ist</a></li>
+		<li><a href="#adm-installation"><span class="nr">D.2</span> Installation und Update</a></li>
+		<li><a href="#adm-reihenfolge"><span class="nr">D.3</span> Einrichten – in dieser Reihenfolge</a></li>
+		<li><a href="#adm-firmendaten"><span class="nr">D.4</span> Firmendaten und E-Mail-Vorlagen</a></li>
+		<li><a href="#adm-annahmen"><span class="nr">D.5</span> Kalkulationsannahmen</a></li>
+		<li><a href="#adm-farben"><span class="nr">D.6</span> Farben und Lagerhoheit</a></li>
+		<li><a href="#adm-staffel"><span class="nr">D.7</span> Rabattstaffel für Händler</a></li>
+		<li><a href="#adm-stammdaten"><span class="nr">D.8</span> Stammdaten anlegen</a></li>
+		<li><a href="#adm-preise"><span class="nr">D.9</span> Kalkulation und Preise</a></li>
+		<li><a href="#adm-buchhaltung"><span class="nr">D.10</span> Buchhaltung</a></li>
+		<li><a href="#adm-kasse"><span class="nr">D.11</span> Kasse, Marketing, Events, Loyalty, Support</a></li>
+		<li><a href="#adm-berichte"><span class="nr">D.12</span> Berichte, Ziele und Monatsabschluss</a></li>
+		<li><a href="#adm-pruefung"><span class="nr">D.13</span> Systemprüfung und Protokollkette</a></li>
+		<li><a href="#adm-import"><span class="nr">D.14</span> Import und Verfahrensdokumentation</a></li>
+		<li><a href="#adm-pi"><span class="nr">D.15</span> Raspberry Pi und die Dienste im Netz: Etikettendrucker, Bambu-Bridge, Slicing-Worker</a></li>
+		<li><a href="#adm-automatisch"><span class="nr">D.16</span> Was von allein läuft</a></li>
+		<li><a href="#adm-livegang"><span class="nr">D.17</span> Livegang: sauber starten</a></li>
+		<li><a href="#adm-sicherung"><span class="nr">D.18</span> Datensicherung und Notfall</a></li>
+		<li><a href="#adm-fehler"><span class="nr">D.19</span> Wenn etwas nicht geht</a></li>
+	</ol>
+</div>
+
+<h2 id="wer"><span class="nr">1</span> Wer liest was?</h2>
+
+<p>Das Plugin kann viel. Niemand braucht alles. Diese Tabelle sagt dir in einer Zeile, wo du nachschlägst.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Deine Aufgabe</th><th>Deine Anleitung</th><th>Dein Rechteprofil im Plugin</th></tr></thead>
+<tbody>
+<tr><td>Du stehst am Drucker, entgratest Teile, montierst Sets, ordnest Platten an</td><td><a href="#teil-produktion">Teil A – Produktion</a></td><td>Werkstatt oder Fertigung</td></tr>
+<tr><td>Du packst Pakete und bringst sie zur Post</td><td><a href="#teil-versand">Teil B – Versand</a></td><td>Werkstatt oder Fertigung</td></tr>
+<tr><td>Du schreibst deine Arbeitszeit auf</td><td><a href="#teil-personal">Teil C – Personal</a>, Kapitel C.2–C.4</td><td>jedes Profil</td></tr>
+<tr><td>Du legst Löhne fest und vergibst Rechte</td><td><a href="#teil-personal">Teil C – Personal</a>, Kapitel C.9–C.14</td><td>Vollzugriff</td></tr>
+<tr><td>Du richtest das Plugin ein, pflegst Preise, Buchhaltung und die Drucker im Netz</td><td><a href="#teil-admin">Teil D – Administration</a></td><td>Vollzugriff / Administrator</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2 id="menues"><span class="nr">2</span> Die fünf Menüs</h2>
+
+<p>Im schwarzen Menü am linken Rand von WordPress gibt es fünf Einträge, die zu diesem Plugin gehören – nach Aufgabe geordnet statt in einer einzigen langen Liste. Verwechsle sie nicht – sie machen Verschiedenes:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Menü</th><th>Wofür</th><th>Wer arbeitet dort</th></tr></thead>
+<tbody>
+<tr><td><strong>Verkauf</strong> (Laden-Symbol)</td><td>Dashboard, Bestellungen, Versand, Kontakte/B2B, Kasse, Marketing, Loyalty, Events</td><td>Werkstatt, Versand, Betriebsleitung</td></tr>
+<tr><td><strong>Fertigung</strong> (Hammer-Symbol)</td><td>Artikel, Konfigurator, Kapazität, Qualität, Druckjournal, 3D-Drucker &amp; Wartung, Bambu-Lab-Drucker, Druckfarm, Produktion</td><td>Werkstatt, Betriebsleitung</td></tr>
+<tr><td><strong>Lager</strong> (Archiv-Symbol)</td><td>Lager, Lagerplätze, Fertigungsaufträge/Picklisten, Material, Bedarf</td><td>Werkstatt, Versand, Betriebsleitung</td></tr>
+<tr><td><strong>Finanzen</strong> (Balkendiagramm-Symbol)</td><td>Buchhaltung, Preise/Kalkulation, Reporting, Berichte</td><td>Verwaltung</td></tr>
+<tr><td><strong>Verwaltung</strong> (Zahnrad-Symbol)</td><td>Benutzer &amp; Rechte, Einstellungen, Import &amp; Doku, Zeiterfassung, Etikettendrucker, Support, Anleitungen, Livegang</td><td>Verwaltung</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="schmal">
+	<img src="bilder/menue-betrieb.png" alt="Das schwarze WordPress-Menü mit den fünf Einträgen Verkauf, Fertigung, Lager, Finanzen und Verwaltung samt aufgeklappten Unterpunkten">
+	<figcaption>So sieht das Menü aus, wenn du alle Rechte hast. Hast du weniger Rechte, siehst du weniger Einträge – das ist kein Fehler.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Grundregel</span>
+	<p>Was du nicht siehst, darfst du nicht. Fehlt dir ein Menüpunkt aus deiner Anleitung, fehlt dir das passende Recht. Das ist kein Defekt, sondern eine Einstellung – frag die Person, die im Plugin Vollzugriff hat.</p>
+</div>
+
+<h2 id="grundregeln"><span class="nr">3</span> Fünf Sätze, die für alle gelten</h2>
+
+<ol class="schritte">
+	<li><strong>Nichts wird gelöscht, alles wird korrigiert.</strong> Druckjobs, Lagerbewegungen und Chargen kannst du nicht wegradieren. Du stornierst sie mit einer Begründung, und beides bleibt stehen. So ist später nachvollziehbar, was wirklich passiert ist.</li>
+	<li><strong>Der Bestand ist die Summe aller Bewegungen.</strong> Es gibt kein Feld „Bestand“, das jemand von Hand verstellt. Stimmt eine Zahl nicht, fehlt eine Buchung – such die Buchung, nicht das Feld.</li>
+	<li><strong>Berechnetes wird nie gespeichert.</strong> Stückpreise, Herstellkosten, Maschinenstundensätze und Kennzahlen werden bei jedem Aufruf neu gerechnet. Ändert sich eine Grundlage, ändern sich alle Zahlen mit.</li>
+	<li><strong>Jede Eingabe wird geprüft.</strong> Wenn ein Formular meckert, hat es meistens recht. Lies die rote Meldung – sie steht in ganzen Sätzen da und sagt, was fehlt.</li>
+	<li><strong>Im Zweifel erfassen.</strong> Eine Buchung mit Bemerkung ist besser als keine Buchung. Eine fehlende Buchung fällt niemandem auf, eine falsche schon.</li>
+</ol>
+
+<section class="teil" id="teil-produktion">
+<header class="teilkopf">
+	<div class="marke">Teil A · Für die Werkstatt</div>
+	<h1>Produktion</h1>
+	<p class="unter">Für alle, die drucken, entgraten, montieren und Teile ins Regal legen. Diese Anleitung setzt nichts voraus – außer dass du dich am Computer anmelden kannst.</p>
+</header>
+
+<h2 id="prod-anmelden"><span class="nr">A.1</span> Anmelden und das Menü finden</h2>
+
+<p>Alles, was du für die Produktion brauchst, liegt im Verwaltungsbereich der Website. Den erreichst du über den Browser – Chrome, Firefox, Safari, egal.</p>
+
+<ol class="schritte">
+	<li>Öffne den Browser und tippe oben in die Adresszeile die Adresse der Website, dahinter <code>/wp-admin</code>. Also zum Beispiel <code>lindenweg16.de/wp-admin</code>. Dann Enter.</li>
+	<li>Es erscheint eine Anmeldemaske mit zwei Feldern. Oben trägst du deinen Benutzernamen ein, darunter dein Passwort. Klick auf <strong>Anmelden</strong>.</li>
+	<li>Setz vorher einen Haken bei <strong>Angemeldet bleiben</strong>, wenn du am eigenen Rechner sitzt. Dann musst du das nicht jeden Tag machen. An einem Rechner, an dem mehrere Leute arbeiten, lässt du den Haken weg.</li>
+	<li>Jetzt siehst du links einen schwarzen Streifen mit Menüpunkten. Für die Werkstatt sind vor allem zwei davon wichtig: <strong>Fertigung</strong> (das Hammer-Symbol) und <strong>Lager</strong> (das Archiv-Symbol).</li>
+</ol>
+
+<figure class="schmal">
+	<img src="bilder/menue-betrieb.png" alt="Das schwarze Menü am linken Rand, der Eintrag Fertigung ist blau hervorgehoben, darunter stehen seine Unterpunkte">
+	<figcaption>Sobald <strong>Fertigung</strong> angeklickt ist, klappen darunter die Unterpunkte auf. Auf die beziehen sich in dieser Anleitung die meisten Wegangaben.</figcaption>
+</figure>
+
+<div class="kasten info">
+	<span class="titel">So liest du die Wegangaben</span>
+	<p>Wenn irgendwo steht:</p>
+	<p><span class="weg">Fertigung → Druckjournal</span></p>
+	<p>dann heißt das: Klicke links im schwarzen Menü auf <strong>Fertigung</strong> und danach auf den Unterpunkt <strong>Druckjournal</strong>. Das erste Wort ist immer eines der fünf Hauptmenüs (Verkauf, Fertigung, Lager, Finanzen, Verwaltung), das zweite der Unterpunkt darin.</p>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Du siehst weniger Menüpunkte als hier abgebildet?</span>
+	<p>Das ist Absicht. Je nach Rechteprofil blendet das Plugin aus, was du nicht brauchst. Mit dem Profil <em>Werkstatt</em> siehst du Dashboard, Druckjournal, Lager, Lagerplätze, Qualität und Zeiterfassung – genau das, was in dieser Anleitung in den Kapiteln 1 bis 7 und 11 steht. Der Rest ist für die Betriebsleitung.</p>
+</div>
+<h2 id="prod-dashboard"><span class="nr">A.2</span> Das Dashboard: der Blick am Morgen</h2>
+
+<p><span class="weg">Verkauf → Dashboard</span></p>
+
+<p>Diese Seite ist dein Startpunkt. Sie beantwortet drei Fragen: Wie lief der Monat? Was ist gerade offen? Was braucht Aufmerksamkeit?</p>
+
+<figure>
+	<img src="bilder/betrieb-dashboard.png" alt="Das gesamte Betrieb-Dashboard mit Kennzahlen, offenen Aufträgen, Wochenübersicht und den Aufmerksamkeitskästen">
+	<figcaption>Das ganze Dashboard. Von oben nach unten: Kennzahlen, offene Aufträge, laufende Woche, Aufmerksamkeitskästen.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/betrieb-dash-kennzahlen.png" alt="Kachelreihe mit Kennzahlen wie Umsatz, Bestellungen, Ausschussquote, jeweils mit einem Balken für Ziel und Alarmgrenze">
+	<figcaption>Oben die Kennzahlen des laufenden Monats. Der schwarze Strich im Balken ist das Ziel, der rote die Alarmgrenze. Grün heißt erreicht, gelb heißt beobachten, rot heißt handeln.</figcaption>
+</figure>
+
+<p>Darunter stehen die offenen Aufträge und deine Woche:</p>
+
+<figure class="schmal">
+	<img src="bilder/betrieb-dash-woche.png" alt="Abschnitt Diese Woche mit erfasster Arbeitszeit und Wochenbudget">
+	<figcaption>Die laufende Kalenderwoche mit der bisher erfassten Arbeitszeit. Das Wochenbudget stellt die Betriebsleitung ein.</figcaption>
+</figure>
+
+<p>Ganz unten stehen Kästen mit Zahlen. Steht dort überall eine <strong>0</strong>, ist nichts zu tun. Steht irgendwo eine andere Zahl, klick den Kasten an – er führt dich zu der Stelle, an der du das erledigst.</p>
+
+<figure>
+	<img src="bilder/betrieb-dash-aufmerksam.png" alt="Sechs Kästen: Überfällige Wartungen, Beschaffungsalarm, Artikel unter Sollbestand, Zu fertigen, Fällige Wiedervorlagen, Überfällige Posten">
+	<figcaption>„Was Aufmerksamkeit braucht“. Diese sechs Kästen sind deine Morgenrunde – von links oben nach rechts unten.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Kasten</th><th>Was er bedeutet</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>Überfällige Wartungen</td><td>Ein Drucker hat seine Wartung überzogen</td><td>Kapitel A.9</td></tr>
+<tr><td>Beschaffungsalarm</td><td>Ein Kleinteil oder Filament reicht nicht mehr lange</td><td>Kapitel A.8, der Betriebsleitung sagen</td></tr>
+<tr><td>Artikel unter Sollbestand</td><td>Von einem Artikel liegen weniger Stück im Regal als vereinbart</td><td>Kapitel A.3 und A.4</td></tr>
+<tr><td>Zu fertigen</td><td>Offene Aufträge, die noch niemand angefasst hat</td><td>Kapitel A.4</td></tr>
+<tr><td>Fällige Wiedervorlagen</td><td>Ein Händler wartet auf einen Rückruf</td><td>Betriebsleitung</td></tr>
+<tr><td>Bewegungen ohne Farbzuordnung</td><td>Eine Lagerbuchung ohne erkennbare Farbe</td><td>Kapitel A.12</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="prod-bedarf"><span class="nr">A.3</span> Bedarf: was heute entstehen muss</h2>
+
+<p><span class="weg">Lager → Bedarf</span></p>
+
+<p>Diese Seite rechnet dir aus, was fehlt. Sie schaut sich an, was bestellt ist, welcher Sollbestand vereinbart wurde, was im Regal liegt und was schon in Arbeit ist – und sagt dir dann, was übrig bleibt.</p>
+
+<figure>
+	<img src="bilder/bedarf.png" alt="Die Bedarfsseite mit den Abschnitten Zu tun, Produktionsplan, Kleinteile und Gedeckt">
+	<figcaption>Die ganze Seite auf einen Blick. Vier Abschnitte, von oben nach unten zu lesen.</figcaption>
+</figure>
+
+<h3>Abschnitt „Zu tun“</h3>
+
+<p>Hier steht in einer Zeile alles, was du wissen musst:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Was</strong></td><td>Die Art der Arbeit: <em>drucken</em>, <em>montieren</em> oder <em>bestellen</em></td></tr>
+<tr><td><strong>Artikel</strong></td><td>Artikelnummer und Bezeichnung</td></tr>
+<tr><td><strong>Bedarf</strong></td><td>Wie viele Stück insgesamt gebraucht werden</td></tr>
+<tr><td><strong>Bestand</strong></td><td>Wie viele davon schon im Regal liegen</td></tr>
+<tr><td><strong>In Arbeit</strong></td><td>Wie viele in laufenden Aufträgen stecken</td></tr>
+<tr><td><strong>Fehlt</strong></td><td>Die Zahl, die zählt: so viele musst du machen</td></tr>
+<tr><td><strong>Wofür</strong></td><td>Woher der Bedarf kommt – Bestellnummer oder Sollbestand</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Die wichtigste Regel dieser Seite</span>
+	<p>Arbeite <strong>von oben nach unten</strong> ab. Was am tiefsten in der Stückliste steckt, steht oben. Ein Set kannst du erst montieren, wenn die Haken gedruckt sind – deshalb stehen die Haken über dem Set.</p>
+</div>
+
+<h3>Abschnitt „Produktionsplan“</h3>
+
+<figure>
+	<img src="bilder/bedarf-plan.png" alt="Tabelle Produktionsplan mit Woche, Schritt, Artikel, Menge, Platten, Drucker-Stunden und Hand-Stunden">
+	<figcaption>Dieselben Zeilen, aber auf Wochen verteilt und mit Zeiten. „Drucker (h)“ läuft ohne dich, „Hand (h)“ ist deine Arbeitszeit.</figcaption>
+</figure>
+
+<h3>Abschnitt „Kleinteile für diese Bedarfe“</h3>
+<p>Hier siehst du, ob Schrauben, Dübel, Kartons und Beipackzettel für die geplante Arbeit reichen. Steht in der Spalte <strong>Fehlt</strong> überall eine 0, ist alles da. Steht dort eine Zahl, sag der Betriebsleitung Bescheid, bevor du anfängst – sonst stehst du mittendrin ohne Schrauben.</p>
+
+<h3>Abschnitt „Gedeckt“</h3>
+<figure class="schmal">
+	<img src="bilder/bedarf-gedeckt.png" alt="Liste gedeckter Bedarfe mit Bedarf, Bestand und in Arbeit je Artikel">
+	<figcaption>Diese Bedarfe bestehen zwar, sind aber schon abgedeckt. Sie stehen nur da, damit du siehst, dass sie nicht vergessen wurden. Hier ist nichts zu tun.</figcaption>
+</figure>
+<h2 id="prod-auftrag"><span class="nr">A.4</span> Einen Auftrag anlegen und starten</h2>
+
+<p><span class="weg">Lager → Lagerplätze, Fertigung &amp; Picklisten → Reiter „Fertigungsaufträge“</span></p>
+
+<p>Ein Auftrag ist ein Zettel im System: „Von diesem Artikel sollen so viele Stück in dieser Farbe entstehen.“ Es gibt zwei Sorten:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Sorte</th><th>Wofür</th><th>Kürzel</th></tr></thead>
+<tbody>
+<tr><td><strong>Druckauftrag</strong></td><td>Etwas, das aus dem Drucker kommt – ein Haken, eine Schiene</td><td>DA…</td></tr>
+<tr><td><strong>Fertigungsauftrag</strong></td><td>Etwas, das aus vorhandenen Teilen zusammengebaut wird – ein Set</td><td>FA…</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+	<img src="bilder/fertigungsauftraege.png" alt="Der Reiter Fertigungsaufträge mit dem Anlegeformular und einer Tabelle offener Aufträge">
+	<figcaption>Oben legst du an, unten stehen die offenen Aufträge mit ihren Knöpfen.</figcaption>
+</figure>
+
+<h3>So legst du einen Auftrag an</h3>
+
+<ol class="schritte">
+	<li>Wähle im ersten Auswahlfeld <strong>Druckauftrag</strong> oder <strong>Fertigungsauftrag</strong>.</li>
+	<li>Wähle im zweiten Feld den <strong>Artikel</strong>. Es stehen nur Artikel zur Auswahl, die zu der gewählten Sorte passen – ein Set kannst du nicht drucken, einen Rohling nicht montieren.</li>
+	<li>Trag im Feld <strong>Stück</strong> die Menge ein. Nimm die Zahl aus der Spalte <em>Fehlt</em> der Bedarfsseite.</li>
+	<li>Wähle die <strong>Farbe</strong>.</li>
+	<li>Klick auf <strong>Auftrag anlegen</strong>.</li>
+</ol>
+
+<p>Beim Fertigungsauftrag rechnet das System sofort die Materialliste aus und zeigt sie in der Spalte <strong>Material</strong> an: <code>5× SCHIENE-01 · 15× HAKEN-01 · 20× SCHR-M4-40 …</code>. Das ist genau das, was du aus dem Regal holen musst. <strong>Gebucht wird davon noch nichts</strong> – das passiert erst beim Fertigmelden.</p>
+
+<h3>Produktion starten – und warum das wichtig ist</h3>
+
+<p>Klick beim Auftrag auf <strong>Produktion starten</strong>. Damit passiert dreierlei:</p>
+<ul>
+	<li>Der Auftrag wechselt von <em>offen</em> auf <em>läuft</em> – jeder sieht, dass daran gearbeitet wird.</li>
+	<li>Die Uhr am Auftrag läuft mit. Aus ihr entstehen später die Ist-Zeiten und die Lohnkosten je Auftrag.</li>
+	<li>Die Menge zählt auf der Bedarfsseite als <em>in Arbeit</em> und wird nicht doppelt eingeplant.</li>
+</ul>
+
+<div class="kasten tipp">
+	<span class="titel">Pause machen ist erlaubt</span>
+	<p>Musst du zwischendurch etwas anderes tun, klick auf <strong>Pause</strong>. Die Uhr hält an und läuft beim nächsten Start weiter. Die Zeit summiert sich – sie fängt nicht von vorn an.</p>
+</div>
+<h2 id="prod-drucken"><span class="nr">A.5</span> Drucken und den Druckjob buchen</h2>
+
+<p><span class="weg">Fertigung → Druckjournal</span></p>
+
+<p>Das Druckjournal ist das Herz der Produktion. Jeder Druck, der fertig ist, wird hier eingetragen. Aus diesem einen Formular entstehen automatisch:</p>
+<ul>
+	<li>der Lagerzugang über die guten Teile,</li>
+	<li>eine Charge für die Rückverfolgung,</li>
+	<li>der Filamentverbrauch,</li>
+	<li>der Verbrauch der eingebauten Kleinteile,</li>
+	<li>die Betriebsstunden des Druckers,</li>
+	<li>die Ausschussquote in den Kennzahlen.</li>
+</ul>
+
+<figure>
+	<img src="bilder/druckjournal-formular.png" alt="Das Formular Druckjob erfassen mit den Feldern Datum, Drucker, Artikel, Farbe, Filamentcharge, Teile geplant, Teile in Ordnung, Druckzeit, Plattenwechsel, Fehlerursache und Bemerkung">
+	<figcaption>Das Formular. Datum, Plattenwechsel und Farbe sind schon vorbelegt – meistens musst du nur vier Felder ausfüllen.</figcaption>
+</figure>
+
+<p>Feld für Feld:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Feld</th><th>Was du einträgst</th><th>Warum</th></tr></thead>
+<tbody>
+<tr><td><strong>Datum</strong></td><td>Steht schon auf heute. Nur ändern, wenn du etwas von gestern nachträgst.</td><td>Bestimmt die Kalenderwoche in den Auswertungen</td></tr>
+<tr><td><strong>Drucker</strong></td><td>Das Gerät, auf dem gedruckt wurde</td><td>Zählt die Betriebsstunden und den Maschinenstundensatz</td></tr>
+<tr><td><strong>Artikel</strong></td><td>Was gedruckt wurde. In Klammern steht die aktive Revision, z.&nbsp;B. <code>(v1.1)</code></td><td>Aus der Revision kommen Gewicht und Druckzeit je Teil</td></tr>
+<tr><td><strong>Farbe</strong></td><td>Die Farbe des Filaments</td><td>Bestand wird je Farbe geführt</td></tr>
+<tr><td><strong>Filamentcharge</strong></td><td>Die Rolle, von der du gedruckt hast</td><td>Nur damit ist im Ernstfall nachvollziehbar, aus welchem Material ein Teil ist</td></tr>
+<tr><td><strong>Teile geplant</strong></td><td>Wie viele auf der Platte waren</td><td>Grundlage der Ausschussquote</td></tr>
+<tr><td><strong>Teile in Ordnung</strong></td><td>Wie viele brauchbar sind</td><td>Nur diese gehen in den Bestand</td></tr>
+<tr><td><strong>Druckzeit (h)</strong></td><td>Die Zeit, die der Drucker angezeigt hat, in Stunden mit Komma – <code>6,9</code> für 6 Stunden 54 Minuten</td><td>Maschinenkosten und Auslastung</td></tr>
+<tr><td><strong>Plattenwechsel</strong></td><td>Wie oft du die Platte gewechselt hast. Meist 1.</td><td>Kennzahl „Teile je Plattenwechsel“</td></tr>
+<tr><td><strong>Fehlerursache</strong></td><td>Nur nötig, wenn Teile kaputt sind</td><td>Ohne Ursache lässt sich Ausschuss später nicht auswerten</td></tr>
+<tr><td><strong>Bemerkung</strong></td><td>Freitext, alles was auffiel</td><td>Hilft dem nächsten, der dasselbe Problem hat</td></tr>
+</tbody>
+</table>
+</div>
+
+<ol class="schritte">
+	<li>Fülle die Felder aus – von oben nach unten.</li>
+	<li>Sind alle Teile in Ordnung, trag bei <strong>Teile geplant</strong> und <strong>Teile in Ordnung</strong> dieselbe Zahl ein und lass die Fehlerursache auf <em>keine</em>.</li>
+	<li>Sind Teile kaputt, trag bei <em>in Ordnung</em> die kleinere Zahl ein <strong>und wähle eine Fehlerursache</strong>. Ohne Ursache nimmt das Formular die Eingabe nicht an.</li>
+	<li>Klick auf <strong>Druckjob buchen</strong>.</li>
+</ol>
+
+<figure>
+	<img src="bilder/druckjournal-liste.png" alt="Das Journal als Tabelle mit Datum, Kalenderwoche, Drucker, Artikel, Farbe, geplant, in Ordnung, Ausschuss, Quote, Ursache, Druckzeit">
+	<figcaption>Unter dem Formular steht das Journal. Grün ist eine Quote in Ordnung, rot heißt: da ist etwas schiefgegangen.</figcaption>
+</figure>
+
+<div class="kasten achtung">
+	<span class="titel">Falsch gebucht? Nicht löschen – stornieren</span>
+	<p>Es gibt keinen Löschknopf, und das ist Absicht. Trag rechts in der Zeile bei <strong>Begründung</strong> ein, was falsch war (zum Beispiel „Stückzahl vertippt, waren 12 statt 21“), und klick dann auf <strong>Stornieren</strong>. Die alte Zeile bleibt stehen, eine Gegenbuchung hebt sie auf, und du buchst danach neu. Damit ist die Bestandsrechnung wieder richtig und man sieht trotzdem, was passiert ist.</p>
+</div>
+<h2 id="prod-handy"><span class="nr">A.6</span> Am Drucker mit dem Handy buchen</h2>
+
+<p>Am Gerät steht selten ein Computer. Deshalb gibt es eine eigene, sehr kurze Seite fürs Handy.</p>
+
+<h3>Wie du sie öffnest</h3>
+<ul>
+	<li><strong>Am schnellsten:</strong> Am Drucker klebt ein Aufkleber mit QR-Code. Handykamera drauf halten, auf den Hinweis tippen – die Seite öffnet sich mit dem richtigen Drucker schon eingestellt.</li>
+	<li><strong>Ohne Aufkleber:</strong> Am Computer auf <span class="weg">Fertigung → Druckjournal</span> gehen und oben auf <strong>Mobile Schnellerfassung öffnen</strong> klicken. Die Adresse einmal als Lesezeichen aufs Handy legen.</li>
+</ul>
+
+<figure class="handy">
+	<img src="bilder/m-druck.png" alt="Handy-Ansicht mit den vier Reitern Druckjob, Lager, Picken, Zeit und einem kurzen Formular">
+	<figcaption>Die Handy-Erfassung. Oben vier Reiter, darunter das Formular mit großen Plus- und Minus-Knöpfen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Der Reiter <strong>Druckjob</strong> ist schon offen.</li>
+	<li><strong>Drucker</strong> und <strong>Artikel</strong> sind vorbelegt – meistens stimmt es schon. Wenn nicht, tipp drauf und ändere es.</li>
+	<li>Stell mit <strong>−</strong> und <strong>+</strong> ein, wie viele <strong>Teile in Ordnung</strong> sind.</li>
+	<li>Nur wenn etwas kaputt ist: <strong>Fehlerursache</strong> auswählen.</li>
+	<li>Tipp auf den großen Knopf <strong>Buchen</strong>. Fertig.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">„Vorbelegung ändern“</span>
+	<p>Unter dem Formular steht dieser Link. Damit stellst du dauerhaft ein, welcher Drucker, welcher Artikel und welche Menge beim Öffnen schon eingetragen sind. Wenn du drei Wochen lang dasselbe druckst, sparst du dir damit jedes Mal vier Tipper.</p>
+</div>
+<h2 id="prod-montage"><span class="nr">A.7</span> Montieren und fertigmelden</h2>
+
+<p>Ein Set kommt nicht aus dem Drucker – es wird aus Teilen zusammengebaut, die schon im Regal liegen. Der Ablauf:</p>
+
+<ol class="schritte">
+	<li>Auf <span class="weg">Lager → Lagerplätze, Fertigung &amp; Picklisten → Fertigungsaufträge</span> den Auftrag suchen.</li>
+	<li>In der Spalte <strong>Material</strong> steht, was du brauchst. Hol es aus dem Regal. Die Lagerplätze stehen auf den Etiketten am Fach.</li>
+	<li>Auf <strong>Produktion starten</strong> klicken, damit die Uhr läuft.</li>
+	<li>Zusammenbauen.</li>
+	<li>Im kleinen Zahlenfeld eintragen, wie viele Stück wirklich fertig geworden sind – normalerweise steht dort schon die geplante Menge.</li>
+	<li>Auf <strong>Fertigmelden</strong> klicken.</li>
+</ol>
+
+<p>Mit dem Fertigmelden bucht das System in einem Rutsch: das verbaute Material geht ab, die fertigen Sets kommen zu, die gestoppte Zeit wird dem Auftrag zugeschrieben.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Weniger fertig als geplant?</span>
+	<p>Trag die wirkliche Menge ein, nicht die geplante. Der Auftrag bleibt dann mit dem Rest offen, und der Bedarf zeigt weiterhin an, was fehlt. Wer die Sollmenge einträgt, um „den Haken zu setzen“, erzeugt Bestand, der nicht existiert – und der fällt erst beim Packen auf, wenn der Kunde schon wartet.</p>
+</div>
+<h2 id="prod-material"><span class="nr">A.8</span> Material: Filament und Kleinteile</h2>
+
+<p><span class="weg">Lager → Material</span></p>
+
+<figure>
+	<img src="bilder/material-alarm.png" alt="Abschnitt Beschaffungsalarm mit Meldungen zu knappen Positionen">
+	<figcaption>Ganz oben der Beschaffungsalarm: Was reicht nicht mehr lange genug, um die Lieferzeit zu überbrücken?</figcaption>
+</figure>
+
+<h3>Eine neue Filamentrolle einbuchen</h3>
+
+<p>Jede Rolle, die ins Haus kommt, wird einmal erfasst. Danach kannst du sie beim Druckjob auswählen.</p>
+
+<figure>
+	<img src="bilder/material-charge-erfassen.png" alt="Formular Charge erfassen mit Feldern für Chargencode, Zugangsdatum, Material, Hersteller, Farbe, Kilogramm, Preis je Kilogramm, Trocknungsdatum und Lagerort">
+	<figcaption>Das Formular „Charge erfassen“ am unteren Ende der Materialseite.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Chargencode:</strong> Denk dir eine kurze, eindeutige Kennung aus und schreib sie mit einem Stift auf die Rolle. Bewährt hat sich <code>MATERIAL-FARBE-JAHR NUMMER</code>, also zum Beispiel <code>PETG-ANT-2601</code>. Zweimal derselbe Code geht nicht.</li>
+	<li><strong>Zugang am:</strong> Das Datum, an dem die Rolle angekommen ist.</li>
+	<li><strong>Material, Hersteller, Farbe:</strong> Vom Etikett der Rolle abschreiben.</li>
+	<li><strong>Kilogramm:</strong> Was auf der Rolle drauf war, meist <code>1</code> oder <code>0,75</code>.</li>
+	<li><strong>Preis je kg:</strong> Was sie gekostet hat, netto. Daraus rechnet die Kalkulation die Materialkosten je Teil.</li>
+	<li><strong>Getrocknet am:</strong> Nur ausfüllen, wenn du sie getrocknet hast.</li>
+	<li>Auf <strong>Erfassen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/material-chargen.png" alt="Tabelle der Filamentchargen mit Restmenge, Verbrauch und Trocknungsstatus">
+	<figcaption>Die Chargenliste. Der Verbrauch wird aus den Druckjobs gerechnet – geplante Teile mal Bauteilgewicht. Du musst nichts abziehen.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Warum der Chargencode zählt</span>
+	<p>Wenn ein Kunde reklamiert, ist die erste Frage: aus welchem Material war das Teil? Über die Charge findest du in zwei Klicks alle Teile derselben Rolle und alle Bestellungen, in denen sie steckten (Kapitel A.13). Ohne Charge ist diese Frage nicht mehr zu beantworten.</p>
+</div>
+
+<h3>Kleinteile und Verbrauchsmaterial</h3>
+<p>Weiter unten stehen Kartons, Holzwolle, Klebeband und Ähnliches. Diese Positionen werden pauschal je Bestellung abgebucht. Wenn ein Vorrat zur Neige geht, meldet sich der Beschaffungsalarm oben von selbst.</p>
+<h2 id="prod-drucker"><span class="nr">A.9</span> Drucker und Wartung</h2>
+
+<p><span class="weg">Fertigung → 3D-Drucker &amp; Wartung</span></p>
+
+<figure>
+	<img src="bilder/drucker-geraete.png" alt="Geräteliste mit Kürzel, Hersteller, Modell, Betriebsstunden und Maschinenstundensatz">
+	<figcaption>Die Geräte mit ihren Betriebsstunden. Die Stunden kommen aus dem Druckjournal – niemand trägt sie von Hand nach.</figcaption>
+</figure>
+
+<h3>Eine Wartung erfassen</h3>
+
+<figure>
+	<img src="bilder/drucker-wartung.png" alt="Wartungsbereich mit fälligen Wartungen und dem Formular Wartung erfassen samt Checkliste">
+	<figcaption>Oben, was fällig ist. Darunter das Formular mit der Checkliste zum Abhaken.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Wähle das <strong>Gerät</strong>.</li>
+	<li>Wähle das <strong>Intervall</strong>: <em>wöchentlich</em>, <em>monatlich</em>, <em>jährlich</em>, <em>Verschleiß</em> oder <em>Saison</em>.</li>
+	<li>Jetzt erscheint die passende Checkliste. Arbeite sie am Gerät ab und hak jeden Punkt an, den du wirklich gemacht hast.</li>
+	<li>Wenn du ein Teil getauscht hast, trag es bei <strong>Ersatzteil</strong> ein.</li>
+	<li>Beim Düsenwechsel setz zusätzlich den Haken <strong>Düse gewechselt</strong> – damit merkt sich das Gerät seinen Zählerstand.</li>
+	<li>Auf <strong>Wartung erfassen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Bei den festen Intervallen musst du alles abhaken</span>
+	<p>Wöchentlich, monatlich und jährlich nimmt das Formular nur an, wenn jeder Punkt gehakt ist – und es sagt dir namentlich, welche fehlen. Das ist kein Schikane-Formular: Die Liste ist der Nachweis, dass die Wartung wirklich stattgefunden hat. Bist du noch nicht fertig, mach erst die Arbeit und trag danach ein. Für eine Reparatur zwischendurch nimmst du <em>Verschleiß</em> – dort ist keine Liste vorgeschrieben, dafür gehören Ersatzteil und Notiz ausgefüllt.</p>
+</div>
+
+<p>Die längeren Intervalle enthalten die kürzeren: Wer monatlich wartet, saugt vorher aus. Deshalb wird bei „monatlich“ auch die Wochenliste mit abgefragt.</p>
+
+<figure>
+	<img src="bilder/drucker-aufkleber.png" alt="Abschnitt Aufkleber für die Geräte mit QR-Codes je Drucker">
+	<figcaption>Ganz unten die Aufkleber. Ausdrucken, an das jeweilige Gerät kleben – dann ist die Handy-Erfassung einen Scan entfernt.</figcaption>
+</figure>
+
+<p>Über den Aufklebern steht <strong>Aufkleber als PDF für den Etikettendrucker</strong>. Der Knopf erzeugt dieselben Aufkleber im Rollenformat <strong>DK-11201</strong> – dasselbe, das auch Lagerplätze und Artikel benutzen, damit im Brother nur eine Rolle liegen muss. Die Kacheln darunter bleiben für den Fall, dass du sie lieber auf Papier ausdruckst und aufklebst.</p>
+<h2 id="prod-bambu"><span class="nr">A.10</span> Bambu-Lab-Drucker: aus dem System heraus drucken</h2>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker</span> · <span class="weg">Fertigung → Druckfarm</span> · <span class="weg">Lager → Bedarf</span></p>
+
+<p>Bis hierher war der Drucker ein Gerät, dessen Ergebnis du nachträglich ins Druckjournal einträgst. Ein Bambu-Lab-Drucker im LAN-Modus kann mehr: Das System schickt ihm die Druckdatei, startet den Druck, sieht Fortschritt und Restzeit und trägt am Ende die tatsächliche Druckzeit selbst ein. Dafür läuft im Betrieb ein kleiner Vermittler auf einem Raspberry Pi, die <em>Bambu-Bridge</em> – eingerichtet hat sie die Verwaltung (Kapitel D.15). Für dich zählt nur, was auf der Seite passiert.</p>
+
+<h3>Die Druckerkarte lesen</h3>
+
+<p>Im Reiter <strong>Drucker</strong> hat jeder Bambu-Drucker eine Karte. Sie aktualisiert sich von allein alle paar Sekunden.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Zeile</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Bridge-Status</strong></td><td><em>Online</em> heißt: Der Pi meldet sich regelmäßig. <em>Offline</em> heißt: seit einigen Minuten kein Kontakt – Pi aus, Netz weg oder Dienst gestoppt. Dann passiert gar nichts, auch kein Druck.</td></tr>
+<tr><td><strong>Drucker-Status</strong></td><td><em>bereit</em>, <em>druckt</em>, <em>bereitet vor</em>, <em>pausiert</em>, <em>fertig</em> oder <em>Fehler</em>. Steht dort <em>Drucker nicht erreichbar</em>, läuft die Bridge, findet aber den Drucker im Netz nicht: Gerät aus, andere IP-Adresse oder falscher Zugangscode.</td></tr>
+<tr><td><strong>Temperaturen, Restzeit</strong></td><td>Düse und Bett live; bei laufendem Druck die Restzeit in Minuten.</td></tr>
+<tr><td><strong>AMS-Filamente</strong></td><td>Was in den Fächern des AMS liegt – Material, Farbe, Restmenge. Nur, wenn ein AMS angeschlossen ist.</td></tr>
+<tr><td><strong>Kamera-Standbild</strong></td><td>Ein Bild alle paar Sekunden, kein Video. Gibt es nur bei der X1-Serie; bei P1 und A1 bleibt das Feld leer.</td></tr>
+<tr><td><strong>Wartende Aufträge</strong></td><td>Wie viele Druckdateien in der Warteschlange dieses Druckers liegen.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Dieselben Karten ohne Formulare drumherum zeigt <span class="weg">Fertigung → Druckfarm</span> – gedacht für einen Bildschirm in der Werkstatt, auf dem alle Drucker nebeneinander zu sehen sind.</p>
+
+<h3>Einen Druckauftrag einreihen</h3>
+
+<p>Reiter <strong>Aufträge</strong>. Es gibt zwei Wege, und beide brauchen eine <strong>geslicte Druckdatei</strong> (<code>.gcode.3mf</code> aus Bambu Studio oder OrcaSlicer) – eine reine Projektdatei mit Modell kann der Drucker nicht ausführen.</p>
+
+<ol class="schritte">
+	<li><strong>Hochladen &amp; einreihen:</strong> Drucker wählen, Datei auswählen, einreihen. Für alles, was du gerade eben am Rechner gesliced hast.</li>
+	<li><strong>Aus der Modellablage einreihen:</strong> Hier stehen alle Artikel, an deren aktiver Revision eine geslicte Druckdatei hängt (Kapitel A.11, Reiter Revisionen). Artikel wählen, Drucker wählen, einreihen – ohne dass eine Datei durch deinen Rechner muss.</li>
+	<li>Meldet der Drucker eine AMS-Belegung, erscheint zusätzlich die Auswahl <strong>welches Filament</strong>. Sie gilt für die ganze Platte, ein Material. Ohne Auswahl druckt das Gerät mit dem gerade eingelegten Filament.</li>
+</ol>
+
+<p>Die Bridge holt den Auftrag beim nächsten Kontakt ab, überträgt die Datei und startet den Druck. In der Liste wandert er durch die Stationen <em>Wartend → Geclaimt → Wird übertragen → Druckt → Fertig</em>. <em>Fehler</em> heißt: Der Drucker hat abgebrochen oder ist nicht angelaufen; <em>Storniert</em> heißt: jemand hat ihn zurückgezogen.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Die Ist-Druckzeit trägt sich selbst ein</span>
+	<p>Ist ein Bambu-Auftrag aus einem Fertigungsauftrag entstanden (etwa über <em>Direkt drucken</em>, siehe unten), bucht ein fertiger Druck seine tatsächliche Druckzeit von selbst ins Druckjournal und schließt den Fertigungsauftrag. Die Handarbeit danach – Stützen entfernen, entgraten, verpacken – bleibt deine Eingabe; die kann kein Drucker wissen.</p>
+</div>
+
+<h3>„Direkt drucken“ von der Bedarfsseite</h3>
+
+<p>Auf <span class="weg">Lager → Bedarf</span> steht bei jeder Druckposition neben <strong>Druckauftrag anlegen</strong> auch <strong>Direkt drucken</strong>, sobald ein Bambu-Drucker angelegt ist. Du wählst Drucker und Menge; das System rundet auf ganze Platten auf, legt <strong>je Platte einen Druckauftrag</strong> an und reiht je Platte eine Druckdatei ein. Ein fehlgeschlagener Druck blockiert so nicht die ganze Menge, und die Druckzeit landet sauber bei der richtigen Platte.</p>
+
+<div class="kasten merke">
+	<span class="titel">Voraussetzung ist die Druckdatei an der Revision</span>
+	<p>Direkt drucken geht nur für Artikel, deren aktive Revision eine <em>geslicte</em> Druckdatei trägt. Hängt dort nur die Projektdatei, fehlt der Knopf – dann ist die Plattenanordnung im nächsten Abschnitt dein Weg.</p>
+</div>
+
+<h3>Platte anordnen: mehrere Teile automatisch auf ein Bett</h3>
+
+<p>Reiter <strong>Platte anordnen</strong>. Statt in Bambu Studio von Hand Teile zu verschieben, sagst du dem System, welche Artikel in welcher Menge auf welchen Drucker sollen. Es ordnet die Teile anhand ihrer echten Umrisse auf dem Druckbett an – nicht nur nach dem Begrenzungsrechteck – und erzeugt daraus eine oder mehrere Platten, jede als noch <em>ungeslicte</em> Projektdatei.</p>
+
+<ol class="schritte">
+	<li><strong>Drucker</strong> wählen. Sein Druckbettmaß bestimmt, wie viel auf eine Platte passt; steht dort <em>Bettmaß unbekannt</em>, muss die Verwaltung es beim Drucker eintragen.</li>
+	<li>Den <strong>Sicherheitsabstand</strong> zwischen den Teilen prüfen – 5 mm sind voreingestellt.</li>
+	<li>Bei jedem gewünschten Artikel die <strong>Menge</strong> eintragen. Es stehen nur Artikel zur Wahl, an deren aktiver Revision eine ungeslicte Projekt-3MF hängt.</li>
+	<li>Auf <strong>Automatisch anordnen</strong> klicken. Unten erscheinen die neuen Platten mit Status <strong>Entworfen</strong>.</li>
+</ol>
+
+<p>Jede Platte hat zwei Knöpfe:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Knopf</th><th>Was passiert</th></tr></thead>
+<tbody>
+<tr><td><strong>Projekt-3MF</strong></td><td>Lädt die angeordnete Platte herunter. Du öffnest sie in Bambu Studio, slicest wie gewohnt und reihst die fertige Druckdatei im Reiter <em>Aufträge</em> ein. Der Weg ohne Slicing-Worker.</td></tr>
+<tr><td><strong>Automatisch slicen</strong></td><td>Übergibt die Platte an den Slicing-Worker, einen Rechner im Betrieb, auf dem OrcaSlicer ohne Bildschirm läuft (Kapitel D.15). Er slicet mit den hinterlegten Profilen und legt die fertige Druckdatei von selbst in die Warteschlange des Druckers.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Der Status der Platte sagt dir, wo sie steht:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Status</th><th>Bedeutung</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td><strong>Entworfen</strong></td><td>Angeordnet, noch nicht gesliced</td><td>Herunterladen oder automatisch slicen lassen</td></tr>
+<tr><td><strong>Wird gesliced</strong> – „wartet seit … auf den Slicing-Worker“</td><td>Der Auftrag liegt bereit, aber kein Worker hat ihn abgeholt</td><td>Nach ein paar Minuten: der Verwaltung sagen, dass der Worker nicht läuft</td></tr>
+<tr><td><strong>Wird gesliced</strong> – „Worker hat die Platte um … übernommen“</td><td>Der Slicer arbeitet; eine volle Platte kann einige Minuten dauern</td><td>Warten</td></tr>
+<tr><td><strong>Gesliced</strong> – „in der Bambu-Warteschlange“</td><td>Fertig; die Druckdatei steht im Reiter <em>Aufträge</em></td><td>Nichts – der Drucker holt sie</td></tr>
+<tr><td><strong>Fehlgeschlagen</strong></td><td>Der Slicer hat abgebrochen. Der Grund steht in rot direkt unter dem Status – ein Klartext plus Fehlercode</td><td>Grund lesen, Ursache beheben oder weitergeben, dann <strong>Erneut slicen</strong>. Die Platte muss nicht neu angeordnet werden.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Eine Platte, ein Material</span>
+	<p>Die Anordnung nimmt das Material des ersten Artikels auf der Platte und sucht dazu das passende Slicing-Profil. Mehrfarbige oder Mehrmaterial-Platten mit AMS-Zuordnung je Bauteil kann der Worker nicht – dafür bleibt Bambu Studio zuständig: Projekt-3MF herunterladen, von Hand slicen, hochladen.</p>
+</div>
+<h2 id="prod-artikel"><span class="nr">A.11</span> Artikel, Revisionen und Stücklisten</h2>
+
+<p><span class="weg">Fertigung → Artikel &amp; Revisionen</span></p>
+
+<div class="kasten info">
+	<span class="titel">Für wen dieses Kapitel ist</span>
+	<p>Dieser Bereich verlangt das Recht <em>Stammdaten ändern</em> (Profil <em>Fertigung</em> oder höher). Mit dem Profil <em>Werkstatt</em> siehst du den Menüpunkt nicht – dann überspring das Kapitel.</p>
+</div>
+
+<p>Die Seite hat oben Reiter. Der Reihe nach:</p>
+
+<h3>Reiter „Artikel“</h3>
+<figure>
+	<img src="bilder/artikel-liste.png" alt="Artikelliste mit Artikelnummer, Bezeichnung, Beschaffungsweg, Status, Preis und Etikett">
+	<figcaption>Alle Artikel. Der <strong>Beschaffungsweg</strong> entscheidet über alles Weitere.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beschaffungsweg</th><th>Bedeutung</th><th>Braucht</th></tr></thead>
+<tbody>
+<tr><td><strong>Druck</strong></td><td>Kommt aus dem Drucker</td><td>eine Revision (Druckprofil)</td></tr>
+<tr><td><strong>Montage</strong></td><td>Wird aus anderen Teilen gebaut</td><td>eine Stückliste</td></tr>
+<tr><td><strong>Zukauf</strong></td><td>Wird fertig eingekauft</td><td>Beschaffungsdaten (Lieferant, Preis)</td></tr>
+<tr><td><strong>Hybrid</strong></td><td>Teils gedruckt, teils zugekauft</td><td>beides</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Reiter „Revisionen“ – das Druckprofil</h3>
+
+<p>Eine Revision ist die Beschreibung, <em>wie</em> ein Teil gedruckt wird: Material, Düse, Schichthöhe, Füllung, Temperaturen, Teile je Platte, Druckzeit je Platte und Bauteilgewicht. Aus ihr rechnet das System Materialkosten und Druckzeit je Stück.</p>
+
+<figure>
+	<img src="bilder/artikel-revisionen.png" alt="Revisionsliste eines Artikels mit Version, Material, Parametern und Aktiv-Kennzeichen">
+	<figcaption>Wähle oben den Artikel aus, dann erscheinen seine Revisionen. Genau eine ist <strong>aktiv</strong> – mit der wird gedruckt und gerechnet.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben den <strong>Artikel</strong> auswählen und auf <strong>Anzeigen</strong> klicken.</li>
+	<li>Runterscrollen zu <strong>Revision anlegen</strong>.</li>
+	<li>Eine <strong>Version</strong> vergeben, zum Beispiel <code>v1.2</code>. Zweimal dieselbe Version je Artikel geht nicht.</li>
+	<li>Die Druckeinstellungen eintragen, so wie sie im Slicer stehen.</li>
+	<li><strong>Teile je Platte</strong>, <strong>Druckzeit je Platte</strong> und <strong>Bauteilgewicht</strong> sind Pflicht – ohne sie kann nichts gerechnet werden.</li>
+	<li>Speichern. Die neue Revision ist zunächst <strong>inaktiv</strong>.</li>
+	<li>Erst wenn ein Probedruck in Ordnung war, klick bei ihr auf <strong>Aktiv setzen</strong>. Damit löst sie die bisherige ab.</li>
+</ol>
+
+<figure>
+	<img src="bilder/artikel-revision-neu.png" alt="Formular Revision anlegen mit allen Druckparametern und dem Feld für die 3MF-Datei">
+	<figcaption>Häng nach dem Speichern die <strong>3MF-Datei</strong> an – am besten die Projektdatei mit Modell und Einstellungen. Dann muss niemand raten, aus welcher Datei diese Version entstand.</figcaption>
+</figure>
+
+<h3>Reiter „Stückliste“</h3>
+
+<figure>
+	<img src="bilder/artikel-stueckliste.png" alt="Stückliste eines Sets mit Positionen aus Unterartikeln und Komponenten">
+	<figcaption>Die Stückliste eines Sets. Positionen können andere Artikel sein (Schiene, Haken) oder Kleinteile (Schrauben, Karton).</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben den Artikel wählen, zu dem die Stückliste gehört.</li>
+	<li>Unter <strong>Position hinzufügen</strong> auswählen, ob es ein <em>Artikel</em> oder eine <em>Komponente</em> ist.</li>
+	<li>Die Position und die <strong>Menge je Stück</strong> eintragen – also wie viele davon in <em>ein</em> fertiges Stück gehen.</li>
+	<li>Auf <strong>Hinzufügen</strong> klicken.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Ein Artikel darf sich nicht selbst enthalten</span>
+	<p>Wenn du versuchst, das Set in die Stückliste des Sets zu legen, weist das System das ab. Das ist kein Fehler, sondern verhindert eine Rechnung, die nie zu Ende käme.</p>
+</div>
+<h2 id="prod-lager"><span class="nr">A.12</span> Lager: Bestand und Korrekturen</h2>
+
+<p><span class="weg">Lager → Lager</span></p>
+
+<figure>
+	<img src="bilder/lager-bestand.png" alt="Bestandstabelle je Artikel und Farbe mit Soll- und Ist-Werten">
+	<figcaption>Der Bestand je Artikel und Farbe. Rot heißt: unter dem vereinbarten Sollbestand.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Der Bestand ist eine Summe, kein Feld</span>
+	<p>Jede Zahl hier ist die Summe aller Bewegungen zu diesem Artikel. Es gibt nichts, was man „verstellen“ könnte. Stimmt eine Zahl nicht, fehlt eine Buchung oder ist eine zu viel da – such nach der Bewegung, nicht nach einem Bestandsfeld.</p>
+</div>
+
+<h3>Wenn die Zahl nicht stimmt: Korrekturbuchung</h3>
+
+<figure class="schmal">
+	<img src="bilder/lager-korrektur.png" alt="Formularzeile Korrekturbuchung mit Artikel, Farbe, Lagerplatz, Menge und Begründung">
+	<figcaption>Die Korrekturbuchung – eine Zeile, fünf Felder.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Artikel und Farbe auswählen.</li>
+	<li>Den Lagerplatz auswählen, wenn du ihn kennst.</li>
+	<li>Bei <strong>Menge ±</strong> die <em>Differenz</em> eintragen, nicht den neuen Bestand. Liegen 18 Stück im Fach, das System sagt 20, dann trägst du <code>-2</code> ein.</li>
+	<li>Eine <strong>Begründung</strong> eintragen. Die ist Pflicht. „Inventur Fach A-01-01“ oder „zwei Stück beim Entgraten gebrochen“ genügt völlig.</li>
+	<li>Auf <strong>Buchen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/lager-bewegungen.png" alt="Liste der letzten Lagerbewegungen mit Datum, Artikel, Menge, Art, Platz und Begründung">
+	<figcaption>Die letzten Bewegungen. Jede Zeile hat einen Storno-Knopf – auch hier wird nicht gelöscht, sondern gegengebucht.</figcaption>
+</figure>
+
+<h3>Lagerbuchung am Handy</h3>
+
+<p>Wareneingang, Umlagerung oder eine Korrektur direkt am Regal gehen auch am Handy: <code>/betrieb-erfassen/</code> öffnen und oben auf den Reiter <strong>Lager</strong> tippen.</p>
+
+<figure class="handy">
+	<img src="bilder/m-lager.png" alt="Handy-Ansicht Reiter Lager mit Artikelauswahl, Farbe, Lagerplatz, Menge und Buchungsart">
+	<figcaption>Der Reiter <strong>Lager</strong>. Lagerplatz und Artikel kannst du auch scannen, statt sie zu suchen.</figcaption>
+</figure>
+
+<h3>„Bewegungen ohne Farbzuordnung“</h3>
+<p>Steht diese Meldung auf der Seite, hat der Shop bei einer Bestellung keine Farbe mitgeliefert. Die Buchung ist trotzdem gemacht worden – sie hängt nur an keiner Farbe. Sag der Betriebsleitung Bescheid, damit das Farbattribut am Produkt ergänzt wird; anschließend lässt sich die Bewegung per Korrektur auf die richtige Farbe umbuchen.</p>
+<h2 id="prod-qualitaet"><span class="nr">A.13</span> Qualität: Chargen und Rückverfolgung</h2>
+
+<p><span class="weg">Fertigung → Qualität</span></p>
+
+<h3>Chargenbuch</h3>
+
+<figure>
+	<img src="bilder/qualitaet-chargen.png" alt="Chargenbuch mit Chargencode, Datum, Artikel, Menge und Prüfstatus">
+	<figcaption>Jeder Druckjob mit guten Teilen erzeugt automatisch eine Charge. Du legst sie nicht an – sie entsteht beim Buchen.</figcaption>
+</figure>
+
+<p>Klick auf eine Charge, um ihre Akte zu öffnen. Dort steht alles beisammen: Artikel, Revision, Filamentcharge, Drucker, Menge, Prüfung. Von dort kannst du den <strong>GPSR-Nachweis als PDF</strong> erzeugen – das Dokument, das du beiliegen lässt oder auf Nachfrage vorzeigst.</p>
+
+<figure>
+	<img src="bilder/qualitaet-akte.png" alt="Detailansicht einer Charge mit allen Herkunftsdaten und dem Knopf für den GPSR-Nachweis">
+	<figcaption>Die Chargenakte. Den Chargencode prägst du ins Bauteil und übernimmst ihn in den Slicer.</figcaption>
+</figure>
+
+<h3>Rückverfolgung</h3>
+
+<figure>
+	<img src="bilder/qualitaet-rueckverfolgung.png" alt="Rückverfolgungsansicht: von einer Filamentcharge zu betroffenen Chargen und Bestellungen">
+	<figcaption>Wähle eine Filamentcharge und klick auf <strong>Verfolgen</strong>. Du bekommst alle Teile aus dieser Rolle und alle Bestellungen, in denen sie stecken.</figcaption>
+</figure>
+
+<p>Das ist der Weg, wenn eine Rolle Material sich als schlecht herausstellt: Du siehst in einem Schritt, welche Kunden betroffen sind – und musst nicht raten.</p>
+<h2 id="prod-kapazitaet"><span class="nr">A.14</span> Kapazität: schaffe ich das?</h2>
+
+<p><span class="weg">Fertigung → Kapazität</span></p>
+
+<figure>
+	<img src="bilder/kapazitaet.png" alt="Kapazitätsseite mit Eingabefeldern je Artikel und dem Ergebnis der Woche">
+	<figcaption>Trag ein, wie viele Bestellungen du je Artikel und Woche erwartest, und klick auf <strong>Rechnen</strong>.</figcaption>
+</figure>
+
+<p>Das System löst die Stücklisten auf und sagt dir, wie viele Druckerstunden und wie viele Handstunden das kostet – und ob das in eine Woche passt. Nutz das vor Weihnachten oder vor einem Markt, bevor du zusagst.</p>
+<h2 id="prod-fehler"><span class="nr">A.15</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Meldung oder Beobachtung</th><th>Was wirklich los ist</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>„Bei Ausschuss ist eine Fehlerursache Pflicht“</td><td>Du hast weniger gute als geplante Teile eingetragen, aber keine Ursache gewählt</td><td>Fehlerursache auswählen, nochmal buchen</td></tr>
+<tr><td>„Für diesen Artikel ist keine Revision hinterlegt“</td><td>Der Artikel hat kein freigegebenes Druckprofil</td><td>Kapitel A.11 – oder die Betriebsleitung fragen</td></tr>
+<tr><td>„Dieser Artikel wird nicht gedruckt“</td><td>Du hast im Druckjournal ein Set oder einen Zukaufartikel gewählt</td><td>Sets über einen Fertigungsauftrag (Kapitel A.7)</td></tr>
+<tr><td>„Die Wartung ist noch nicht vollständig“</td><td>In der Checkliste fehlen Haken</td><td>Die genannten Punkte machen und abhaken</td></tr>
+<tr><td>„Es können nicht mehr Teile gut sein als geplant waren“</td><td>Zahlendreher in einem der beiden Felder</td><td>Beide Zahlen prüfen</td></tr>
+<tr><td>„Der Chargencode ist bereits vergeben“</td><td>Diesen Code gibt es schon</td><td>Laufende Nummer erhöhen</td></tr>
+<tr><td>Ein Menüpunkt fehlt</td><td>Dein Rechteprofil deckt ihn nicht ab</td><td>Person mit Vollzugriff fragen</td></tr>
+<tr><td>Der Bestand stimmt nicht mit dem Regal überein</td><td>Eine Buchung fehlt oder ist doppelt</td><td>Kapitel A.12, Korrekturbuchung mit Begründung</td></tr>
+<tr><td>Eine Platte steht auf <em>Wird gesliced</em> und „wartet seit … auf den Slicing-Worker“</td><td>Kein Worker holt den Auftrag ab</td><td>Nach ein paar Minuten der Verwaltung Bescheid sagen</td></tr>
+<tr><td>Eine Platte steht auf <em>Fehlgeschlagen</em></td><td>Der Slicer konnte sie nicht verarbeiten – der Grund steht unter dem Status</td><td>Grund lesen, weitergeben, dann <strong>Erneut slicen</strong></td></tr>
+<tr><td>Bei „Direkt drucken“ fehlt der Knopf</td><td>An der aktiven Revision hängt keine geslicte Druckdatei</td><td>Platte anordnen (Kapitel A.10) oder Druckdatei an die Revision hängen</td></tr>
+<tr><td>Der QR-Aufkleber führt auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update noch nicht neu registriert</td><td>Auf der Druckerseite auf <strong>Adressen neu registrieren</strong> klicken</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="prod-spickzettel"><span class="nr">A.16</span> Spickzettel für den Tag</h2>
+
+<div class="kasten tipp">
+	<span class="titel">Morgens</span>
+	<ol>
+		<li><span class="weg">Verkauf → Dashboard</span> öffnen, die sechs Kästen unten anschauen.</li>
+		<li><span class="weg">Lager → Bedarf</span> öffnen, „Zu tun“ von oben nach unten lesen.</li>
+		<li>Aufträge anlegen für das, was fehlt. Ersten Auftrag starten.</li>
+		<li>Uhr in der schwarzen Leiste oben starten (<strong>Zeit starten</strong>).</li>
+	</ol>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Während des Tages</span>
+	<ol>
+		<li>Jeder fertige Druck wird sofort gebucht – am Handy am Drucker, das dauert zwanzig Sekunden.</li>
+		<li>Jedes montierte Los wird fertiggemeldet, bevor du zum nächsten gehst.</li>
+		<li>Kaputte Teile buchst du als Ausschuss mit Ursache. Nicht heimlich in den Müll.</li>
+	</ol>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Abends</span>
+	<ol>
+		<li>Laufende Uhr stoppen und die Zeit erfassen (siehe Teil C, <a href="#teil-personal">Personal</a>).</li>
+		<li>Offene Aufträge auf Pause stellen, wenn du morgen weiterarbeitest.</li>
+		<li>Wochenwartung nicht vergessen – das Dashboard erinnert dich.</li>
+	</ol>
+</div>
+</section>
+<section class="teil" id="teil-versand">
+<header class="teilkopf">
+	<div class="marke">Teil B · Für den Packtisch</div>
+	<h1>Versand</h1>
+	<p class="unter">Für alle, die Pakete packen. Von der offenen Bestellung bis zum Paket in der Kiste für die Post – in einem durchgehenden Ablauf, Schritt für Schritt.</p>
+</header>
+
+<h2 id="vers-ablauf"><span class="nr">B.1</span> Der Ablauf auf einer Seite</h2>
+
+<p>Ein Paket entsteht immer in derselben Reihenfolge. Wenn du nur eine Sache aus dieser Anleitung behältst, dann diese fünf Schritte:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>#</th><th>Schritt</th><th>Wo</th><th>Ergebnis</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Pickliste erzeugen</td><td>Computer, Reiter <em>Picklisten</em></td><td>Eine Liste, sortiert nach Lagerplatz</td></tr>
+<tr><td>2</td><td>Picken</td><td>Handy, Reiter <em>Picken</em></td><td>Ware auf dem Packtisch, Bestand gebucht</td></tr>
+<tr><td>3</td><td>Packen</td><td>Packtisch</td><td>Karton mit Ware und Beipackzettel</td></tr>
+<tr><td>4</td><td>Lieferschein drucken</td><td>Computer, Seite <em>Versand</em> (Shop) oder <em>Bestellungen</em></td><td>PDF, kommt ins Paket</td></tr>
+<tr><td>5</td><td>Versandlabel</td><td>Computer, <em>Verkauf → Versand</em></td><td>Paket ist adressiert und frankiert</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Warum gepickt wird, bevor gepackt wird</span>
+	<p>Die Pickliste ist nicht nach Bestellungen sortiert, sondern <strong>nach Lagerplatz</strong>. Du läufst einmal durchs Regal statt fünfmal. Erst am Packtisch wird die Ware wieder auf Bestellungen verteilt. Bei einer Bestellung merkt man den Unterschied nicht – bei zehn schon.</p>
+</div>
+<h2 id="vers-anmelden"><span class="nr">B.2</span> Anmelden und den Weg finden</h2>
+
+<ol class="schritte">
+	<li>Browser öffnen, in der Adresszeile die Adresse der Website eintippen und <code>/wp-admin</code> anhängen, also zum Beispiel <code>lindenweg16.de/wp-admin</code>, dann Enter.</li>
+	<li>Benutzername und Passwort eintragen, auf <strong>Anmelden</strong> klicken.</li>
+	<li>Links im schwarzen Menü siehst du fünf Einträge. Für den Versand brauchst du vor allem zwei davon: <strong>Lager</strong> (Archiv-Symbol) für die Picklisten und <strong>Verkauf</strong> (Laden-Symbol) für Bestellungen und den DHL-Versand.</li>
+</ol>
+
+<figure class="schmal">
+	<img src="bilder/menue-betrieb.png" alt="Das schwarze Menü mit den Einträgen Lager und Verkauf und ihren Unterpunkten">
+	<figcaption>Für den Versand brauchst du vor allem <strong>Lager → Lagerplätze, Fertigung &amp; Picklisten</strong> und <strong>Verkauf → Bestellungen</strong> bzw. <strong>Verkauf → Versand</strong>.</figcaption>
+</figure>
+
+<div class="kasten info">
+	<span class="titel">So liest du die Wegangaben</span>
+	<p><span class="weg">Verkauf → Bestellungen</span> heißt: links auf <strong>Verkauf</strong> klicken, dann auf <strong>Bestellungen</strong>. Das erste Wort ist immer eines der fünf Hauptmenüs (Verkauf, Fertigung, Lager, Finanzen, Verwaltung).</p>
+</div>
+<h2 id="vers-pickliste"><span class="nr">B.3</span> Schritt 1: Pickliste erzeugen</h2>
+
+<p><span class="weg">Lager → Lagerplätze, Fertigung &amp; Picklisten → Reiter „Picklisten“</span></p>
+
+<figure>
+	<img src="bilder/picklisten.png" alt="Der Reiter Picklisten mit dem Knopf Pickliste aus offenen Bestellungen erzeugen und einer Liste mit Platz, Artikel, Farbe, Bestellung, Soll und Entnommen">
+	<figcaption>Eine erzeugte Pickliste. Jede Zeile ist ein Griff ins Regal.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Klick oben auf den blauen Knopf <strong>Pickliste aus offenen Bestellungen erzeugen</strong>.</li>
+	<li>Darunter erscheint eine neue Liste mit einem Code wie <code>PL260901-01</code> und dem Status <strong>offen</strong>.</li>
+	<li>Schau die Tabelle kurz an. Sie ist nach der Spalte <strong>Platz</strong> sortiert – das ist deine Laufreihenfolge.</li>
+</ol>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Platz</strong></td><td>Das Fach, aus dem du greifst – der Code steht auf dem Etikett am Regal</td></tr>
+<tr><td><strong>Artikel</strong></td><td>Artikelnummer und Bezeichnung; <em>Kleinteil</em> markiert Schrauben, Dübel und Ähnliches</td></tr>
+<tr><td><strong>Farbe</strong></td><td>Die Farbe, die entnommen werden soll – nicht raten, es gibt mehrere</td></tr>
+<tr><td><strong>Bestellung</strong></td><td>Zu welcher Shop-Bestellung diese Zeile gehört, z.&nbsp;B. <code>#19</code></td></tr>
+<tr><td><strong>Soll</strong></td><td>Wie viele Stück</td></tr>
+<tr><td><strong>Entnommen</strong></td><td>Wie viele du schon abgehakt hast. Startet bei 0.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Erzeug nicht zweimal hintereinander eine Liste</span>
+	<p>Die Liste enthält alle offenen Bestellungen. Wenn du sofort noch einmal auf den Knopf drückst, hast du zwei Listen mit derselben Ware und pickst am Ende doppelt. Eine Liste, ein Durchgang. Erst wenn sie abgearbeitet ist, machst du die nächste.</p>
+</div>
+<h2 id="vers-picken"><span class="nr">B.4</span> Schritt 2: Picken mit dem Handy</h2>
+
+<p>Zum Picken nimmst du das Handy mit ins Lager. Der Computer bleibt am Packtisch stehen.</p>
+
+<h3>Die Handy-Seite öffnen</h3>
+<ul>
+	<li>Wenn ein QR-Aufkleber am Regal oder am Packtisch klebt: Kamera drauf, auf den Hinweis tippen.</li>
+	<li>Sonst: Die Adresse der Website plus <code>/betrieb-erfassen/</code> eintippen. Leg sie dir einmal als Lesezeichen auf den Startbildschirm – dann ist sie ein Fingertipp entfernt.</li>
+</ul>
+
+<figure class="handy">
+	<img src="bilder/m-picken.png" alt="Handy-Ansicht Reiter Picken mit Knöpfen Position scannen und Neu laden, einer Listenauswahl, einem Eingabefeld und den offenen Positionen mit Haken-Knöpfen">
+	<figcaption>Der Reiter <strong>Picken</strong>. Jede Zeile hat rechts einen großen grünen Haken.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben auf den Reiter <strong>Picken</strong> tippen.</li>
+	<li>Unter der Überschrift steht der Code der Liste und wie viele Positionen noch offen sind, zum Beispiel <code>PL260901-01 · Bestellungen · 5 offen</code>.</li>
+	<li>Geh zum ersten Platz in der Liste. Nimm die angegebene Menge in der angegebenen Farbe heraus.</li>
+	<li>Tipp in der Zeile rechts auf den <strong>grünen Haken</strong>. Die Zeile ist damit erledigt und der Lagerabgang ist gebucht.</li>
+	<li>Weiter zur nächsten Zeile, bis „0 offen“ dasteht.</li>
+</ol>
+
+<h3>Sicherer: scannen statt tippen</h3>
+<p>Statt auf den Haken zu tippen, kannst du auf <strong>Position scannen</strong> tippen und den QR-Code am Artikel oder am Fach mit der Kamera erfassen. Das System sucht sich die passende Zeile selbst und hakt sie ab. Vorteil: Du kannst nicht die falsche Zeile erwischen, weil du in der falschen Zeile geguckt hast.</p>
+
+<div class="kasten info">
+	<span class="titel">„Dieser Browser liest nur QR-Codes“</span>
+	<p>Diese rote Meldung ist kein Fehler. Sie sagt: Die Kamera dieses Handys erkennt in dieser Ansicht nur QR-Codes, keine Strichcodes vom Lieferanten. Strichcodes tippst du bei <strong>Code eintippen</strong> ein und drückst Enter.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Ware nicht da? Nicht einfach überspringen</span>
+	<p>Wenn im Fach weniger liegt, als auf der Liste steht, nimm mit, was da ist, und sag es weiter. Der Bestand ist dann falsch und muss korrigiert werden – wie das geht, steht in Kapitel B.12. Wer stillschweigend weiterpickt, hinterlässt einen Fehler, der beim nächsten Mal wieder zuschlägt.</p>
+</div>
+<h2 id="vers-packen"><span class="nr">B.5</span> Schritt 3: Packen</h2>
+
+<p>Am Packtisch verteilst du die gepickte Ware auf die Bestellungen. Die Spalte <strong>Bestellung</strong> auf der Pickliste sagt dir, was zusammengehört.</p>
+
+<ol class="schritte">
+	<li>Karton in der passenden Größe nehmen.</li>
+	<li>Ware der einen Bestellnummer hineinlegen und gegen die Liste prüfen: Menge und Farbe.</li>
+	<li>Montageanleitung oder Beipackzettel dazulegen, wenn der Artikel einen hat.</li>
+	<li>Lieferschein drucken (Kapitel B.6) und mit hineinlegen.</li>
+	<li>Karton mit Füllmaterial auffüllen, sodass nichts wandert, und zukleben.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">Kartons und Füllmaterial werden automatisch abgebucht</span>
+	<p>Du musst nicht eintragen, dass du einen Karton verbraucht hast. Verbrauchsmaterial wird je Bestellung pauschal abgezogen. Wenn der Vorrat knapp wird, meldet sich das System von selbst auf <span class="weg">Lager → Material</span> im Beschaffungsalarm.</p>
+</div>
+<h2 id="vers-lieferschein"><span class="nr">B.6</span> Schritt 4: Lieferschein drucken</h2>
+
+<p><span class="weg">Verkauf → Bestellungen</span></p>
+
+<figure>
+	<img src="bilder/bestellungen-liste.png" alt="Tabelle der Bestellungen mit Datum, Herkunft, Typ, Kanal, Wert, Rabatt, Handling, Rechnung und Status">
+	<figcaption>Die Bestellübersicht. Rechts in jeder Zeile liegt der Knopf <strong>Lieferschein</strong>.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Such die Zeile mit der Bestellnummer, die du gerade gepackt hast. Sie steht in der Spalte <strong>Herkunft</strong> als <code>#18</code>, <code>#19</code> und so weiter.</li>
+	<li>Klick rechts in der Zeile auf <strong>Lieferschein</strong>.</li>
+	<li>Es öffnet sich ein PDF mit Lieferadresse und Artikelliste.</li>
+	<li>Drucken mit <kbd>Strg</kbd>+<kbd>P</kbd> (am Mac <kbd>Cmd</kbd>+<kbd>P</kbd>) und ins Paket legen.</li>
+</ol>
+
+<p>Auf dem Lieferschein stehen keine Preise – die Rechnung bekommt der Kunde getrennt. Das ist Absicht und richtig so, besonders wenn ein Paket als Geschenk geht.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Shop-Bestellungen: schneller über den Versand</span>
+	<p>Kommt die Bestellung aus dem Shop, hol dir den Lieferschein gleich unter <span class="weg">Verkauf → Versand</span> (Abschnitt 7). Dort steht er in derselben Zeile wie das Label – ein Weg statt zwei. Diese Liste hier ist für Bestellungen, die im Betrieb entstanden sind: Händler, Telefon, Markt.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Pickliste, Lieferschein, Label – drei Zettel</span>
+	<p>Die <strong>Pickliste</strong> ist der Zettel fürs Lager: Artikel, Menge, Lagerplatz, keine Anschrift. Der <strong>Lieferschein</strong> liegt in der Kiste: Anschrift und Inhalt, keine Preise. Das <strong>Label</strong> klebt außen drauf – nur das kostet Geld.</p>
+</div>
+
+<h3>Die Spalten der Bestellübersicht</h3>
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Herkunft</strong></td><td>Die Nummer der Shop-Bestellung, oder „manuell“ bei Barverkauf</td></tr>
+<tr><td><strong>Typ</strong></td><td><em>B2C</em> = Endkunde, <em>B2B</em> = Händler</td></tr>
+<tr><td><strong>Kanal</strong></td><td>Woher der Auftrag kam: Shop, Markt, Telefon …</td></tr>
+<tr><td><strong>Handling</strong></td><td>Wie lange das Packen gedauert hat, in Minuten – trägst du selbst ein</td></tr>
+<tr><td><strong>Rechnung</strong></td><td>Grün <em>bezahlt</em>, gelb <em>offen</em>, rot <em>überfällig</em></td></tr>
+<tr><td><strong>Status</strong></td><td><em>bestaetigt</em>, <em>entwurf</em> oder <em>storniert</em></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Handlingzeit eintragen lohnt sich</span>
+	<p>Die Minuten, die du hier einträgst, landen in der Kennzahl „Ø Handlingzeit“ auf dem Dashboard. Aus ihr wird sichtbar, welche Bestellart wirklich Arbeit macht – und daran hängt später der Preis. Eine grobe Schätzung ist besser als ein leeres Feld.</p>
+</div>
+<h2 id="vers-label"><span class="nr">B.7</span> Schritt 5: Versandlabel</h2>
+
+<p><span class="weg">Verkauf → Versand</span></p>
+
+<p>Eine Zeile je Shop-Bestellung, älteste zuerst – die, die am längsten wartet, steht oben. Oben drei Ansichten: <strong>Zu versenden</strong>, <strong>Versendet</strong>, <strong>Alle</strong>.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Was du damit machst</th></tr></thead>
+<tbody>
+<tr><td><strong>Bestellung</strong></td><td>Nummer, Datum, Status. Der Klick führt zur Bestellung in WooCommerce.</td></tr>
+<tr><td><strong>Empfänger</strong></td><td>Name und Zielort – zum Abgleich mit dem Paket vor dir.</td></tr>
+<tr><td><strong>Inhalt</strong></td><td>Die Positionen in Kurzfassung.</td></tr>
+<tr><td><strong>Lieferschein</strong></td><td><strong>Drucken</strong> erzeugt das PDF frisch. Ins Paket legen.</td></tr>
+<tr><td><strong>Sendungsnummer</strong></td><td>Steht nach dem Label von selbst da. Von Hand eintragen geht auch – du bleibst danach in der Liste.</td></tr>
+<tr><td><strong>Label</strong></td><td>Produkt und Gewicht prüfen, <strong>Label erzeugen</strong>.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Das DHL-Label erzeugen</h3>
+
+<ol class="schritte">
+	<li><strong>Produkt</strong> steht schon da: Inland Paket, EU Europaket, Rest der Welt Weltpaket – Leichtes als Warenpost, falls gebucht. Ändern kannst du es trotzdem.</li>
+	<li><strong>Gewicht</strong> steht in Gramm daneben, gerechnet aus den Artikelgewichten plus Verpackungszuschlag. <em>Wieg im Zweifel nach und trag das echte Gewicht ein</em> – ein zu leicht frankiertes Paket wird nachberechnet.</li>
+	<li>Passt das Paket nicht aufs Band, den Haken bei <strong>Sperrgut</strong> setzen.</li>
+	<li><strong>Label erzeugen</strong> klicken. Das PDF öffnet sich über <strong>Label öffnen</strong> – ausdrucken, aufkleben, Paket in die Abholkiste.</li>
+</ol>
+
+<p>Die Sendungsnummer geht im selben Moment in die Sendungsverfolgung: Der Kunde sieht sie in seinem Konto, ohne dass jemand sie abtippt.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Ein Label ist Geld</span>
+	<p>Mit dem Klick ist die Sendung frankiert. Falsches Produkt, falsche Adresse, doppelt geklickt? Dann in derselben Zeile auf <strong>stornieren</strong> – solange die Sendung nicht abgeholt ist, wird sie nicht berechnet. Danach nicht mehr. Der Vorgang bleibt als storniert stehen, damit die Abrechnung der DHL nachvollziehbar bleibt.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Wenn kein Label entsteht</span>
+	<p>Die Meldung sagt, woran es liegt. Steht dort etwas von <em>Zugang abgewiesen</em>, ist nicht das Paket schuld, sondern die Einstellung: Dann oben auf <strong>DHL-Zugang prüfen</strong> klicken – das kostet kein Label – und die Meldung an den weitergeben, der die Einstellungen pflegt. Steht dort etwas zu Adresse, Gewicht oder Abrechnungsnummer, ist die Sendung gemeint.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Steht oben ein gelber Kasten?</span>
+	<p><em>„DHL-Sandbox aktiv“</em> heißt: Das Label sieht echt aus, ist aber <strong>keine gültige Frankierung</strong>. Nicht aufkleben und wegschicken – Bescheid sagen, wer die Einstellungen pflegt.</p>
+	<p><em>„Noch kein DHL-Zugang hinterlegt“</em> heißt: Das Label muss woanders herkommen. Dann steht in der Spalte entweder ein Knopf zur Bestellung, wo ein Versandplugin frankiert, oder gar keiner – dann trägst du die Sendungsnummer von Hand ein, sobald du sie hast.</p>
+</div>
+<h2 id="vers-bestellungen"><span class="nr">B.8</span> Bestellungen: die Übersicht</h2>
+
+<p><span class="weg">Verkauf → Bestellungen</span></p>
+
+<figure>
+	<img src="bilder/bestellungen.png" alt="Die gesamte Bestellseite mit Übersicht und Erfassungsformular">
+	<figcaption>Die ganze Seite. Oben ggf. Sonderfälle, darunter die Bestellungen, ganz unten das Formular für manuelle Erfassung.</figcaption>
+</figure>
+
+<p>Zwei Abschnitte können oberhalb der Liste auftauchen. Beide sind Sonderfälle, nicht der Normalfall:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Abschnitt</th><th>Was er bedeutet</th><th>Wer ihn erledigt</th></tr></thead>
+<tbody>
+<tr><td><strong>Ohne Shop-Bestellung</strong></td><td>Zu dieser Zeile gibt es in WooCommerce keine Bestellung mehr – sie wurde dort gelöscht. Lagerabgang und Umsatz hängen aber noch daran.</td><td>Betriebsleitung: prüfen und ggf. stornieren</td></tr>
+<tr><td><strong>Anfragen zur Bestätigung</strong></td><td>Ein Händler hat über seinen Nachbestell-Link bestellt. Erst mit deiner Bestätigung entstehen Lagerabgang und offener Posten.</td><td>siehe Kapitel B.10</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="vers-manuell"><span class="nr">B.9</span> Verkauf ohne Shop: manuell erfassen</h2>
+
+<p>Für Barverkauf am Markt, Abholung ab Werkstatt oder eine Bestellung, die per Telefon kam.</p>
+
+<figure>
+	<img src="bilder/bestellungen-manuell.png" alt="Formular Bestellung manuell erfassen mit Kontaktauswahl, Datum, Kanal und Mengenfeldern je Artikel">
+	<figcaption>Das Formular ganz unten auf der Bestellseite.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Im ersten Feld den <strong>Kontakt</strong> wählen, wenn es ein Händler ist. Bei Barverkauf lässt du <em>– ohne Kontakt (Barverkauf) –</em> stehen.</li>
+	<li><strong>Datum</strong> prüfen – es steht auf heute.</li>
+	<li><strong>Kanal</strong> wählen: Shop, Markt, Telefon und so weiter. Das macht später die Marketing-Auswertung möglich.</li>
+	<li>In der Artikelliste bei jedem verkauften Artikel die <strong>Menge</strong> eintragen. Was du nicht verkauft hast, bleibt auf 0.</li>
+	<li>Auf <strong>Bestellung erfassen</strong> klicken.</li>
+</ol>
+
+<p>Der Rabatt für Händler wird dabei automatisch aus der Rabattstaffel zum Bestelldatum aufgelöst und an der Bestellung <strong>festgeschrieben</strong>. Ändert sich die Staffel später, bleibt diese Bestellung, wie sie war.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Manuell erfasst heißt: Bestand geht ab</span>
+	<p>Eine manuelle Bestellung bucht genauso Ware aus dem Lager wie eine Shop-Bestellung. Erfasse deshalb nur, was wirklich über den Tisch gegangen ist – und nicht zur Übung.</p>
+</div>
+<h2 id="vers-nachbestellung"><span class="nr">B.10</span> Nachbestellungen von Händlern bestätigen</h2>
+
+<p>Händler bekommen eine Karte mit QR-Code. Wer sie scannt, landet auf einer schlichten Seite, wählt Mengen und schickt sie ab. Bei uns erscheint das dann als <strong>Anfrage zur Bestätigung</strong> ganz oben auf der Bestellseite.</p>
+
+<ol class="schritte">
+	<li>Anfrage lesen: Wer, was, wie viel.</li>
+	<li>Prüfen, ob die Ware da ist – notfalls unter <span class="weg">Lager → Lager</span> nachsehen.</li>
+	<li>Auf <strong>Bestätigen</strong> klicken.</li>
+</ol>
+
+<p>Erst mit dem Klick auf Bestätigen entstehen der Lagerabgang und der offene Posten. Vorher ist es nur eine Anfrage. Damit kann kein Händler versehentlich deinen Bestand leerbuchen.</p>
+
+<figure>
+	<img src="bilder/kontakt-nachbestell-link.png" alt="Abschnitt Nachbestell-Link in der Kontaktakte mit QR-Code und den Knöpfen Karte drucken und Link widerrufen">
+	<figcaption>Erzeugt wird so eine Karte in der Kontaktakte: <span class="weg">Verkauf → Kontakte / B2B</span>, Kontakt öffnen, Abschnitt <strong>Nachbestell-Link</strong>.</figcaption>
+</figure>
+
+<div class="kasten achtung">
+	<span class="titel">Der Link wird genau einmal angezeigt</span>
+	<p>Gespeichert wird nur seine Prüfsumme, nicht der Link selbst. Druck die Karte also sofort aus oder gib die Adresse gleich weiter. Ist sie weg, erzeugst du einen neuen Link – der alte wird damit ungültig.</p>
+</div>
+<h2 id="vers-plaetze"><span class="nr">B.11</span> Lagerplätze und Etiketten</h2>
+
+<p><span class="weg">Lager → Lagerplätze, Fertigung &amp; Picklisten → Reiter „Lagerplätze“</span></p>
+
+<figure>
+	<img src="bilder/plaetze-liste.png" alt="Liste der Lagerplätze mit Code, Bezeichnung, Art, aktuellem Inhalt, Status und Etikett-Knopf">
+	<figcaption>Alle Lagerplätze. In der Spalte <strong>Liegt dort</strong> steht, was das System an diesem Platz verbucht hat.</figcaption>
+</figure>
+
+<h3>Einen neuen Platz anlegen</h3>
+<ol class="schritte">
+	<li>Runterscrollen zu <strong>Lagerplatz anlegen</strong>.</li>
+	<li><strong>Code</strong> vergeben. Kurz halten, er kommt aufs Etikett: <code>A-01-01</code>, <code>V-01</code>, <code>WE-01</code>.</li>
+	<li><strong>Bezeichnung</strong> in Klartext: „Regal A, Fach 1 – Haken fertig“.</li>
+	<li><strong>Art</strong> wählen: Regal, Kiste, Fach, Palette, Werkbank oder Versand.</li>
+	<li>Auf <strong>Speichern</strong> klicken, dann in der Zeile auf <strong>drucken</strong> – das Etikett kommt als PDF.</li>
+</ol>
+
+<h3>Alle Etiketten auf einmal</h3>
+
+<figure>
+	<img src="bilder/plaetze-etiketten.png" alt="Der Reiter Etiketten mit Auswahl von Lagerplätzen und Artikeln und einer Liste der Etikettenformate">
+	<figcaption>Der Reiter <strong>Etiketten</strong> erzeugt einen Bogen mit allen QR-Codes auf einmal.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Ankreuzen, was drauf soll: <strong>Lagerplätze</strong>, <strong>Artikel</strong>, <strong>Drucker</strong> oder mehreres davon.</li>
+	<li>Das Format wählen, das zu deinem Papier oder deiner Etikettenrolle passt. Vorausgewählt ist <strong>DK-11201</strong>, das Format der schmalen Rolle.</li>
+	<li>Auf <strong>Etikettenbogen erzeugen</strong> klicken – es öffnet sich ein PDF.</li>
+	<li>Mit <kbd>Strg</kbd>+<kbd>P</kbd> drucken.</li>
+</ol>
+
+<div class="kasten">
+	<span class="titel">Ein Format für alles: DK-11201</span>
+	<p>Lagerplätze, Artikel und Drucker benutzen dasselbe Rollenformat, damit im Brother nur <em>eine</em> Rolle liegen muss. DK-11201 ist <strong>29 mm breit und 90 mm lang</strong> – die erste Zahl ist immer die Rollenbreite, so benennt Brother seine Rollen. Beschriftet wird der Länge nach: QR-Code links, Klartext rechts, neun Zentimeter Platz für lange Bezeichnungen.</p>
+	<p>Gedreht ist dabei der <em>Aufdruck</em>, nicht die Seite. Im Druckdialog also nichts auf Querformat stellen – jede Seite des PDFs ist bereits genau ein Etikett.</p>
+	<p>Liegt bei dir eine andere Rolle im Gerät, wähl das passende Format aus der Liste. Das gewählte Format muss zur eingelegten Rolle passen: 62 × 29 gehört auf die breite, 29 × 90 auf die schmale.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Im Druckdialog: „Tatsächliche Größe“, nicht „An Seite anpassen“</span>
+	<p>Sonst schrumpft der Bogen um ein paar Prozent. Auf dem Klebebogen liegen die Etiketten dann neben der Stanzung, und auf der Rolle wird der QR-Code so klein, dass keine Kamera ihn mehr liest.</p>
+</div>
+<h2 id="vers-bestand"><span class="nr">B.12</span> Bestand prüfen und korrigieren</h2>
+
+<p><span class="weg">Lager → Lager</span></p>
+
+<figure>
+	<img src="bilder/lager-bestand.png" alt="Bestandstabelle je Artikel und Farbe mit Soll und Ist">
+	<figcaption>Der Bestand je Artikel und Farbe. Rot markiert heißt: unter dem Sollbestand.</figcaption>
+</figure>
+
+<p>Wenn beim Picken im Fach weniger lag als auf der Liste:</p>
+
+<ol class="schritte">
+	<li>Runterscrollen zu <strong>Korrekturbuchung</strong>.</li>
+	<li>Artikel, Farbe und Lagerplatz auswählen.</li>
+	<li>Bei <strong>Menge ±</strong> die Differenz eintragen – lagen 18 statt 20 Stück da, trägst du <code>-2</code> ein.</li>
+	<li>Eine <strong>Begründung</strong> eintragen, sie ist Pflicht: „Fach A-01-01 nachgezählt, zwei Stück fehlten“.</li>
+	<li>Auf <strong>Buchen</strong> klicken.</li>
+</ol>
+
+<figure class="schmal">
+	<img src="bilder/lager-korrektur.png" alt="Formularzeile Korrekturbuchung">
+	<figcaption>Die Korrekturbuchung. Nicht der neue Bestand wird eingetragen, sondern die Differenz.</figcaption>
+</figure>
+<h2 id="vers-fehler"><span class="nr">B.13</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Was los ist</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>Die Pickliste ist leer</td><td>Es gibt keine offenen Bestellungen – oder sie wurden schon gepickt</td><td>Unter <em>Bestellungen</em> nachsehen</td></tr>
+<tr><td>Eine Position hat keinen Platz („—“)</td><td>Dem Artikel ist noch kein Lagerplatz zugeordnet</td><td>Picken geht trotzdem; Zuordnung von der Betriebsleitung nachtragen lassen</td></tr>
+<tr><td>Der Haken auf dem Handy reagiert nicht</td><td>Verbindung weg oder Liste veraltet</td><td>Auf <strong>Neu laden</strong> tippen</td></tr>
+<tr><td>Der Scan erkennt den Code nicht</td><td>Etikett verschmutzt, zu klein gedruckt oder es ist ein Strichcode</td><td>Code bei <em>Code eintippen</em> von Hand eingeben</td></tr>
+<tr><td>Zwei Picklisten mit derselben Ware</td><td>Der Erzeugen-Knopf wurde zweimal gedrückt</td><td>Nur eine abarbeiten, die andere liegenlassen und der Betriebsleitung melden</td></tr>
+<tr><td>Der Lieferschein-Knopf fehlt</td><td>Die Zeile ist ein Entwurf oder gehört zu keiner Shop-Bestellung</td><td>Status in der Spalte <em>Status</em> prüfen</td></tr>
+<tr><td>„Ohne Shop-Bestellung“ steht oben</td><td>Eine Bestellung wurde in WooCommerce gelöscht</td><td>Nicht selbst stornieren – der Betriebsleitung sagen</td></tr>
+<tr><td>Der Menüpunkt <em>Bestellungen</em> fehlt</td><td>Dein Profil hat kein Recht auf Stammdaten</td><td>Person mit Vollzugriff fragen</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="vers-spickzettel"><span class="nr">B.14</span> Spickzettel für den Packtisch</h2>
+
+<div class="kasten tipp">
+	<span class="titel">Eine Runde Versand, kurz</span>
+	<ol>
+		<li><span class="weg">Lager → Lagerplätze … → Picklisten</span> → <strong>Pickliste erzeugen</strong>.</li>
+		<li>Handy: <code>/betrieb-erfassen/</code> → Reiter <strong>Picken</strong> → Zeile für Zeile abhaken, bis „0 offen“.</li>
+		<li>Am Packtisch nach Bestellnummer sortieren und packen.</li>
+		<li><span class="weg">Verkauf → Versand</span> → je Bestellung <strong>Lieferschein</strong> drucken, ins Paket. (Bestellungen ohne Shop: <span class="weg">Verkauf → Bestellungen</span>.)</li>
+		<li>Gleiche Zeile: Gewicht prüfen → <strong>Label erzeugen</strong> → <strong>Label öffnen</strong> → drucken, aufkleben.</li>
+		<li>Handlingzeit je Bestellung eintragen.</li>
+	</ol>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Drei Sätze, die Ärger ersparen</span>
+	<p>Immer die <strong>Farbe</strong> auf der Liste prüfen – Anthrazit und Schwarz verwechselt man schneller, als man denkt.<br>
+	Fehlbestand <strong>sofort</strong> korrigieren, nicht „nachher“.<br>
+	Nichts abhaken, was nicht wirklich im Karton liegt.<br>
+	Vor <strong>Label erzeugen</strong> das Gewicht anschauen – ab da ist das Paket frankiert.</p>
+</div>
+</section>
+<section class="teil" id="teil-personal">
+<header class="teilkopf">
+	<div class="marke">Teil C · Für Personal &amp; Zeit</div>
+	<h1>Personal</h1>
+	<p class="unter">Zwei Anleitungen in einer. Die Kapitel C.1 bis C.8 sind für alle, die ihre Arbeitszeit aufschreiben. Ab Kapitel C.9 geht es um Löhne, Rechte und Auswertungen – das braucht nur, wer Personal führt.</p>
+</header>
+
+<h2 id="pers-warum"><span class="nr">C.1</span> Warum überhaupt Zeit erfassen?</h2>
+
+<p>Nicht zur Kontrolle. Die erfasste Zeit hat drei ganz praktische Zwecke:</p>
+
+<ul>
+	<li><strong>Der Preis stimmt.</strong> In jedem Artikelpreis steckt Handarbeit. Wenn niemand aufschreibt, wie lange das Entgraten dauert, rechnet die Kalkulation mit einer Schätzung – und die ist meistens zu niedrig.</li>
+	<li><strong>Die Woche bleibt machbar.</strong> Es gibt ein Wochenbudget an Stunden. Nur wer erfasst, sieht rechtzeitig, dass es nicht reicht.</li>
+	<li><strong>Der Lohn ist nachvollziehbar.</strong> Aus Stunden mal Stundenlohn entstehen die Lohnkosten – ohne Excel-Zettel dazwischen.</li>
+</ul>
+
+<div class="kasten merke">
+	<span class="titel">Fünf Minuten am Tag</span>
+	<p>Zeiterfassung kostet nur dann Nerven, wenn man sie am Monatsende rekonstruiert. Läuft die Uhr mit, sind es zwei Klicks – morgens starten, abends stoppen.</p>
+</div>
+<h2 id="pers-anmelden"><span class="nr">C.2</span> Anmelden und den Weg finden</h2>
+
+<ol class="schritte">
+	<li>Browser öffnen, Adresse der Website plus <code>/wp-admin</code> eintippen, Enter.</li>
+	<li>Benutzername und Passwort eintragen, auf <strong>Anmelden</strong> klicken.</li>
+	<li>Links im schwarzen Menü auf <strong>Verwaltung</strong>, dann auf <strong>Zeiterfassung</strong> klicken.</li>
+</ol>
+
+<p><span class="weg">Verwaltung → Zeiterfassung</span></p>
+
+<figure>
+	<img src="bilder/zeit-seite.png" alt="Die Seite Zeiterfassung mit Eintragsformular, Wochenübersicht und der Liste der letzten Einträge">
+	<figcaption>Die ganze Seite: oben das Formular, in der Mitte die Wochenübersicht, unten deine letzten Einträge.</figcaption>
+</figure>
+<h2 id="pers-uhr"><span class="nr">C.3</span> Die Stoppuhr: mitlaufen lassen</h2>
+
+<p>Ganz oben im Bildschirm läuft eine schwarze Leiste quer über die Seite. Dort steht ein Uhrensymbol mit der Beschriftung <strong>Zeit starten</strong>.</p>
+
+<figure class="schmal">
+	<img src="bilder/adminleiste-uhr.png" alt="Die schwarze Leiste am oberen Bildschirmrand mit dem Uhrensymbol und der Beschriftung Zeit starten">
+	<figcaption>Die Uhr in der oberen Leiste. Sie ist auf jeder Seite da – auch auf der Website selbst, nicht nur im Verwaltungsbereich.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Wenn du anfängst zu arbeiten: einmal auf <strong>Zeit starten</strong> klicken.</li>
+	<li>Die Beschriftung wechselt und zeigt von da an die laufende Zeit.</li>
+	<li>Jetzt arbeitest du ganz normal weiter. Die Uhr merkt sich nebenbei, auf welchen Seiten du warst.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">Die Uhr läuft auch weiter, wenn du den Browser schließt</span>
+	<p>Sie hängt an deinem Benutzerkonto, nicht am Browserfenster. Ein versehentlich geschlossener Tab kostet dich also nichts. Umgekehrt heißt das aber auch: Sie läuft nachts weiter, wenn du sie nicht stoppst – siehe nächstes Kapitel.</p>
+</div>
+<h2 id="pers-stoppen"><span class="nr">C.4</span> Die Uhr stoppen und buchen</h2>
+
+<p>Wenn du fertig bist, geh auf <span class="weg">Verwaltung → Zeiterfassung</span>. Ganz oben steht dann der Abschnitt <strong>Laufende Zeit</strong>.</p>
+
+<figure>
+	<img src="bilder/zeit-stoppuhr.png" alt="Abschnitt Laufende Zeit mit der verstrichenen Zeit, einer Aufstellung der besuchten Bereiche, Feldern für Datum, Kategorie, Stunden und Tätigkeit sowie den Knöpfen Stoppen und erfassen und Verwerfen">
+	<figcaption>Die laufende Uhr. Unter der Zeit steht, wo du während dieser Zeit gearbeitet hast – als Erinnerungshilfe, nicht als Vorgabe.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Lies die Zeile <em>„Währenddessen warst du hier: …“</em>. Sie hilft dir, dich zu erinnern, was du gemacht hast.</li>
+	<li>Wähle im Auswahlfeld die <strong>Kategorie</strong>, die am besten passt (Kapitel C.6 erklärt sie).</li>
+	<li>Prüfe die vorgeschlagene <strong>Stundenzahl</strong>. Sie ist die volle Laufzeit. Hattest du zwischendurch Pause, trag die wirklich gearbeitete Zeit ein – <code>1,26</code> heißt eine Stunde und knapp 16 Minuten.</li>
+	<li>Schreib bei <strong>Tätigkeit</strong> in ein paar Worten auf, was du getan hast: „Nachbearbeitung Haken, Grate entfernt“.</li>
+	<li>Klick auf <strong>Stoppen und erfassen</strong>.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Vergessene Uhr</span>
+	<p>Steht dort eine sehr große Zahl, weist das System darauf hin, dass das nach einer vergessenen Uhr aussieht. <strong>Trag dann die tatsächlich gearbeitete Zeit ein</strong>, bevor du erfasst – überschreib die Vorgabe einfach. Läuft die Uhr weniger als eine Minute, war es vermutlich ein Fehlklick: Dann klick auf <strong>Verwerfen, ohne zu buchen</strong>.</p>
+</div>
+<h2 id="pers-nachtragen"><span class="nr">C.5</span> Zeit von Hand nachtragen</h2>
+
+<p>Uhr vergessen? Kein Drama. Ganz oben auf der Zeitseite steht das Formular <strong>Eintrag</strong> – eine Zeile, fünf Felder.</p>
+
+<figure class="schmal">
+	<img src="bilder/zeit-erfassen.png" alt="Das Eintragsformular mit Datum, Kategorie, Stunden, Tätigkeit, Block und dem Knopf Erfassen">
+	<figcaption>Das Formular für den Nachtrag.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Datum:</strong> Steht auf heute. Für gestern klickst du auf das kleine Kalendersymbol und wählst den Tag.</li>
+	<li><strong>Kategorie:</strong> Aus der Liste wählen.</li>
+	<li><strong>Stunden:</strong> Als Dezimalzahl mit Komma. Eine Dreiviertelstunde ist <code>0,75</code>, zweieinhalb Stunden sind <code>2,5</code>. Nicht <code>2:30</code>.</li>
+	<li><strong>Tätigkeit:</strong> Kurz beschreiben, was war.</li>
+	<li><strong>Block:</strong> Kann leer bleiben. Wer in festen Arbeitsblöcken plant, trägt hier die Blockbezeichnung ein.</li>
+	<li>Auf <strong>Erfassen</strong> klicken.</li>
+</ol>
+
+<div class="kasten info">
+	<span class="titel">Umrechnung Minuten in Dezimalstunden</span>
+	<p>15 Min = 0,25 · 20 Min = 0,33 · 30 Min = 0,5 · 45 Min = 0,75 · 50 Min = 0,83 · 1 Std 10 Min = 1,17</p>
+</div>
+
+<figure>
+	<img src="bilder/zeit-letzte.png" alt="Tabelle der letzten Zeiteinträge mit Datum, Kategorie, Tätigkeit und Stunden">
+	<figcaption>Ganz unten auf der Seite stehen deine letzten Einträge – gut, um am Abend zu prüfen, ob nichts doppelt drin ist.</figcaption>
+</figure>
+
+<h3>Die Wochenübersicht lesen</h3>
+
+<figure>
+	<img src="bilder/zeit-woche.png" alt="Wochenübersicht mit Kalenderwoche, Stunden, Budget und Differenz">
+	<figcaption>Je Kalenderwoche: erfasste Stunden, Budget und die Differenz. Rot heißt über Budget, grau darunter.</figcaption>
+</figure>
+
+<p>Das Budget ist keine Obergrenze, sondern eine Planungsgröße. Es zeigt, ob die Woche so gelaufen ist wie gedacht. Steht dort dauerhaft ein dickes Plus, stimmt entweder die Planung nicht – oder es ist wirklich zu viel Arbeit.</p>
+<h2 id="pers-kategorien"><span class="nr">C.6</span> Die Kategorien richtig wählen</h2>
+
+<p>Es gibt acht Kategorien. Sie entscheiden, in welcher Auswertung deine Stunden landen. Nimm die, die den größten Teil der Zeit ausmacht – es muss nicht auf die Minute stimmen, aber es sollte nicht dauernd „Sonstiges“ sein.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Kategorie</th><th>Beispiele</th></tr></thead>
+<tbody>
+<tr><td><strong>Produktion</strong></td><td>Drucker bestücken, entgraten, montieren, Teile prüfen</td></tr>
+<tr><td><strong>Versand</strong></td><td>Picken, packen, frankieren, zur Post fahren</td></tr>
+<tr><td><strong>Konstruktion</strong></td><td>Modelle zeichnen, Revisionen anpassen, slicen, Probedrucke bewerten</td></tr>
+<tr><td><strong>Marketing</strong></td><td>Produktfotos, Texte, Social Media, Messevorbereitung</td></tr>
+<tr><td><strong>Vertrieb</strong></td><td>Händlergespräche, Angebote schreiben, Kundenanfragen</td></tr>
+<tr><td><strong>Verwaltung</strong></td><td>Belege sortieren, Buchhaltung, Bestellungen beim Lieferanten</td></tr>
+<tr><td><strong>Wartung</strong></td><td>Drucker reinigen, Düse wechseln, Reparaturen</td></tr>
+<tr><td><strong>Sonstiges</strong></td><td>Alles, was in keine der obigen passt</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pers-handy"><span class="nr">C.7</span> Zeit am Handy erfassen</h2>
+
+<p>Wer in der Werkstatt keinen Computer hat, erfasst am Handy. Öffne <code>/betrieb-erfassen/</code> und tipp oben auf den Reiter <strong>Zeit</strong>.</p>
+
+<figure class="handy">
+	<img src="bilder/m-zeit.png" alt="Handy-Ansicht Reiter Zeit mit Kategorie, Stunden und Tätigkeit">
+	<figcaption>Die Zeiterfassung am Handy – dieselben Felder, nur größer.</figcaption>
+</figure>
+<h2 id="pers-auftragszeit"><span class="nr">C.8</span> Zeit an einem Auftrag</h2>
+
+<p>Wenn du auf <span class="weg">Lager → Lagerplätze, Fertigung &amp; Picklisten → Fertigungsaufträge</span> bei einem Auftrag auf <strong>Produktion starten</strong> klickst, läuft die Uhr <em>an diesem Auftrag</em>.</p>
+
+<figure>
+	<img src="bilder/fertigungsauftraege.png" alt="Auftragsliste mit den Spalten Zeit und Lohnkosten und den Knöpfen Produktion starten und Fertigmelden">
+	<figcaption>In den Spalten <strong>Zeit</strong> und <strong>Lohnkosten</strong> steht, was der Auftrag bisher gekostet hat.</figcaption>
+</figure>
+
+<p>Der Vorteil: Die Zeit hängt dann nicht nur am Tag, sondern am konkreten Auftrag. Daraus entstehen die Ist-Lohnkosten je Auftrag – und damit die Antwort auf die Frage, ob ein Set beim aktuellen Preis überhaupt lohnt. Pausierst du den Auftrag, hält auch die Uhr an.</p>
+
+<div class="kasten info">
+	<span class="titel">Ab hier geht es um Personalführung</span>
+	<p>Die folgenden Kapitel setzen das Recht <strong>Rechte und Löhne vergeben</strong> voraus (Profil <em>Vollzugriff</em>). Ohne dieses Recht siehst du den Menüpunkt <em>Benutzer &amp; Rechte</em> nicht – dann ist diese Anleitung für dich hier zu Ende.</p>
+</div>
+<h2 id="pers-benutzer"><span class="nr">C.9</span> Benutzer &amp; Rechte: die Übersicht</h2>
+
+<p><span class="weg">Verwaltung → Benutzer &amp; Rechte</span></p>
+
+<figure>
+	<img src="bilder/benutzer-liste.png" alt="Nutzertabelle mit Profil, Stundenlohn, Stunden im Zeitraum, Lohnkosten, Vorgängen und letzter Aktivität">
+	<figcaption>Alle Nutzer mit Zugriff auf das Modul Betrieb. Oben stellst du den Zeitraum ein und klickst auf <strong>Zeitraum anzeigen</strong>.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Profil</strong></td><td>Das Rechteprofil – siehe Kapitel C.10</td></tr>
+<tr><td><strong>Stundenlohn</strong></td><td>Der aktuell gültige Satz; „—“ heißt: keiner hinterlegt</td></tr>
+<tr><td><strong>Stunden im Zeitraum</strong></td><td>Summe der erfassten Zeit im eingestellten Zeitraum</td></tr>
+<tr><td><strong>Lohnkosten</strong></td><td>Stunden mal Lohn. Steht dort „(2,00 h ohne Lohn)“, sind unbewertete Stunden dabei.</td></tr>
+<tr><td><strong>Vorgänge</strong></td><td>Wie viele protokollierte Aktionen im Zeitraum</td></tr>
+<tr><td><strong>Zuletzt</strong></td><td>Wann diese Person zuletzt etwas im System getan hat</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="pers-profile"><span class="nr">C.10</span> Rechteprofile vergeben</h2>
+
+<p>Es gibt fünf Profile. Sie sind nicht nach Datenbanktabellen geschnitten, sondern danach, was jemand im Betrieb tut.</p>
+
+<figure>
+	<img src="bilder/benutzer-profile.png" alt="Tabelle Was die Profile dürfen mit den Profilen Kein Zugriff, Werkstatt, Fertigung, Betriebsleitung und Vollzugriff und Häkchen je Recht">
+	<figcaption>Die Rechtematrix. Ein Häkchen heißt: darf. Ein Strich heißt: darf nicht.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Profil</th><th>Für wen</th><th>Sieht Preise und Löhne?</th></tr></thead>
+<tbody>
+<tr><td><strong>Kein Zugriff</strong></td><td>Sieht das Modul Betrieb gar nicht</td><td>nein</td></tr>
+<tr><td><strong>Werkstatt</strong></td><td>Aushilfe, Minijob – erfasst und protokolliert</td><td>nein</td></tr>
+<tr><td><strong>Fertigung</strong></td><td>Wie Werkstatt, darf zusätzlich Stammdaten pflegen und Auswertungen sehen</td><td>nein</td></tr>
+<tr><td><strong>Betriebsleitung</strong></td><td>Alles Fachliche samt Kalkulation und Kosten</td><td>ja</td></tr>
+<tr><td><strong>Vollzugriff</strong></td><td>Zusätzlich Grundeinstellungen, Rechte und Löhne</td><td>ja</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure>
+	<img src="bilder/benutzer-rechte-liste.png" alt="Erläuterung der sechs Einzelrechte in Textform">
+	<figcaption>Was die sechs Einzelrechte praktisch bedeuten – damit niemand nach dem Namen raten muss.</figcaption>
+</figure>
+
+<h3>So weist du ein Profil zu</h3>
+
+<ol class="schritte">
+	<li>In der Nutzerliste rechts in der Zeile auf <strong>Ansehen</strong> klicken.</li>
+	<li>Auf der Detailseite zum Abschnitt <strong>Rechte</strong> scrollen.</li>
+	<li>Im Auswahlfeld das passende Profil wählen.</li>
+	<li>Auf <strong>Profil zuweisen</strong> klicken.</li>
+</ol>
+
+<figure>
+	<img src="bilder/benutzer-rechte.png" alt="Abschnitt Rechte auf der Nutzerdetailseite mit Profilauswahl und Knopf Profil zuweisen">
+	<figcaption>Die Profilzuweisung auf der Detailseite eines Nutzers.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Zwei Sicherungen, die absichtlich eingebaut sind</span>
+	<p><strong>Du kannst dich nicht selbst aussperren.</strong> Bei deinem eigenen Konto steht statt des Auswahlfelds ein Hinweis – ändern kann deine Rechte nur eine andere Person mit Vollzugriff.<br>
+	<strong>Administratoren behalten ohnehin vollen Zugriff.</strong> Wer die Website verwaltet, kommt über das WordPress-Recht an alles heran. Ein Profil hier ändert daran nichts, und das System sagt das auch offen.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Rechte hängen am Menschen, nicht an der WordPress-Rolle</span>
+	<p>Jemand kann gleichzeitig Redakteur des Shops und Aushilfe in der Werkstatt sein. Deshalb liegen die Betriebsrechte am Benutzerkonto und nicht an der Rolle – so überschreibt keins das andere.</p>
+</div>
+<h2 id="pers-lohn"><span class="nr">C.11</span> Stundenlöhne pflegen</h2>
+
+<figure>
+	<img src="bilder/benutzer-lohn.png" alt="Abschnitt Stundenlohn mit Verlaufstabelle und Formular für einen neuen Satz mit Stichtag">
+	<figcaption>Der Stundenlohn auf der Nutzerdetailseite, mit seinem Verlauf.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Nutzer öffnen (<strong>Ansehen</strong> in der Liste).</li>
+	<li>Zum Abschnitt <strong>Stundenlohn</strong> scrollen.</li>
+	<li><strong>Satz</strong> eintragen, zum Beispiel <code>14,50</code>.</li>
+	<li><strong>Gültig ab</strong> setzen – das Datum, ab dem der Satz gilt.</li>
+	<li>Eine kurze <strong>Notiz</strong> ist hilfreich: „Erhöhung laut Vertrag vom 12.03.“</li>
+	<li>Auf <strong>Lohn festlegen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Ein Lohn wird nie überschrieben</span>
+	<p>Jede Erhöhung ist eine <strong>neue Zeile</strong> mit einem Stichtag, keine Korrektur der alten. Das ist wichtig: Stunden aus dem letzten Jahr bleiben mit dem damaligen Satz bewertet. Wer den alten Satz einfach ändern könnte, würde rückwirkend alle Auswertungen verbiegen.</p>
+</div>
+
+<p>Hat jemand keinen Lohn hinterlegt, erscheinen seine Stunden in den Auswertungen als <em>unbewertet</em>. Sie sind nicht verloren – sie zählen nur nicht in die Lohnkosten. Das System weist ausdrücklich darauf hin, damit nicht zu wenig herauskommt.</p>
+
+<figure>
+	<img src="bilder/benutzer-zeit.png" alt="Abschnitt Erfasste Zeit im Zeitraum mit Datum, Kategorie, Tätigkeit, Stunden und Summe">
+	<figcaption>Auf derselben Seite steht die erfasste Zeit dieser Person im gewählten Zeitraum, mit Summe.</figcaption>
+</figure>
+<h2 id="pers-protokoll"><span class="nr">C.12</span> Das Protokoll eines Nutzers</h2>
+
+<figure>
+	<img src="bilder/benutzer-protokoll.png" alt="Protokolltabelle mit den letzten Vorgängen eines Nutzers">
+	<figcaption>Die letzten Vorgänge aus dem hashverketteten Protokoll.</figcaption>
+</figure>
+
+<p>Das Protokoll hält fest, wer wann was geändert hat. Jeder Eintrag enthält die Prüfsumme seines Vorgängers – wird ein Datensatz nachträglich verändert, bricht die Kette und das fällt bei der Prüfung auf.</p>
+
+<div class="kasten merke">
+	<span class="titel">Was das Protokoll ist – und was nicht</span>
+	<p>Es sagt, <strong>was geschah</strong>. Es sagt nicht, ob es richtig war. Nimm es als Werkzeug, um einen Fehler zurückzuverfolgen („wann ist der Bestand gekippt?“), nicht als Leistungsmessung. Für Letzteres taugt es nicht, und dafür ist es nicht gebaut.</p>
+</div>
+<h2 id="pers-stundensatz"><span class="nr">C.13</span> Gerechnet gegen bezahlt</h2>
+
+<figure>
+	<img src="bilder/benutzer-stundensatz.png" alt="Abschnitt Stundensatz gerechnet gegen bezahlt mit dem tatsächlich bezahlten Satz, dem kalkulatorischen Satz und der Abweichung">
+	<figcaption>Der Vergleich: Was zahlst du wirklich – und mit welchem Satz rechnest du in den Preisen?</figcaption>
+</figure>
+
+<p>Zwei Zahlen stehen sich gegenüber:</p>
+<ul>
+	<li><strong>Tatsächlich bezahlt</strong> – Lohnkosten geteilt durch bewertete Stunden im Zeitraum.</li>
+	<li><strong>Gerechnet</strong> – der kalkulatorische Stundensatz, der in jeder Preiskalkulation steckt.</li>
+</ul>
+
+<p>Weichen sie deutlich ab, erscheint ein roter Hinweis. Das ist kein Fehler, sondern eine Frage an dich: Ist der kalkulatorische Satz noch richtig?</p>
+
+<div class="kasten info">
+	<span class="titel">Warum das System das nicht selbst anpasst</span>
+	<p>Der kalkulatorische Satz steckt in jedem Preis. Ein Preis, der sich jeden Monat von selbst verschiebt, ist keiner. Ändern kannst du ihn bewusst unter <span class="weg">Verwaltung → Einstellungen → Kalkulationsannahmen</span> – mit einem Stichtag, sodass alte Kalkulationen bleiben, wie sie waren.</p>
+</div>
+<h2 id="pers-neuer"><span class="nr">C.14</span> Einen neuen Mitarbeiter anlegen</h2>
+
+<p>Das läuft in zwei Schritten, weil zwei Systeme beteiligt sind: WordPress kennt das Benutzerkonto, das Plugin vergibt die Betriebsrechte.</p>
+
+<ol class="schritte">
+	<li><strong>Konto anlegen:</strong> Links im schwarzen Menü auf <strong>Benutzer → Neu hinzufügen</strong>. Benutzername, Vor- und Nachname und E-Mail-Adresse eintragen. Als Rolle genügt <em>Abonnent</em> – die Betriebsrechte kommen im nächsten Schritt.</li>
+	<li>Den Haken bei <strong>Benutzer benachrichtigen</strong> setzen, damit die Person eine Mail mit ihrem Zugang bekommt. Auf <strong>Neuen Benutzer hinzufügen</strong> klicken.</li>
+	<li><strong>Profil vergeben:</strong> Auf <span class="weg">Verwaltung → Benutzer &amp; Rechte</span> gehen, die Person in der Liste suchen, auf <strong>Ansehen</strong> klicken und im Abschnitt <em>Rechte</em> das Profil zuweisen (Kapitel C.10).</li>
+	<li><strong>Stundenlohn eintragen</strong>, falls die Person bezahlt wird (Kapitel C.11).</li>
+	<li>Der Person zeigen, wo die Uhr ist, und ihr diese Anleitung geben – Kapitel C.2 bis C.6 reichen für den Anfang.</li>
+</ol>
+
+<div class="kasten tipp">
+	<span class="titel">Beim Ausscheiden</span>
+	<p>Setz das Profil auf <strong>Kein Zugriff</strong> statt das Konto zu löschen. Erfasste Zeiten, Buchungen und Protokolleinträge bleiben so zuordenbar. Ein gelöschtes Konto hinterlässt Buchungen ohne Namen – und die Frage, wer das war, lässt sich dann nicht mehr beantworten.</p>
+</div>
+<h2 id="pers-datenschutz"><span class="nr">C.15</span> Datenschutz: was hier steht und was nicht</h2>
+
+<ul>
+	<li>Erfasst werden Datum, Kategorie, Stundenzahl, eine kurze Tätigkeitsbeschreibung und – wenn die Uhr lief – die Bereiche, in denen gearbeitet wurde.</li>
+	<li>Es gibt <strong>keine</strong> Tastenaufzeichnung, keine Bildschirmfotos, keine Standortdaten und keine Klickstrecken.</li>
+	<li>Wer die Löhne und das Protokoll sehen darf, ist auf das Recht <em>Rechte und Löhne vergeben</em> beschränkt. Werkstatt und Fertigung sehen weder fremde Löhne noch fremde Protokolle.</li>
+	<li>Für die Auswertung nach außen (Steuerberatung, Analyse) gibt es einen eigenen Export, der Namen von Geschäftskunden weglässt, solange man sie nicht ausdrücklich mitgibt.</li>
+</ul>
+<h2 id="pers-fehler"><span class="nr">C.16</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Was los ist</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td>„Bitte eine Stundenzahl größer als 0 eintragen“</td><td>Das Feld ist leer oder enthält eine 0</td><td>Stunden als Dezimalzahl eintragen, z.&nbsp;B. <code>1,5</code></td></tr>
+<tr><td>„Mehr als 24 Stunden an einem Tag sind ein Tippfehler“</td><td>Wahrscheinlich <code>7:30</code> statt <code>7,5</code> eingegeben</td><td>Als Dezimalzahl schreiben</td></tr>
+<tr><td>Die Uhr lief über Nacht</td><td>Stoppen vergessen</td><td>Beim Stoppen die tatsächliche Zeit eintragen, nicht die Vorgabe</td></tr>
+<tr><td>Ich sehe die Uhr nicht mehr</td><td>Die obere schwarze Leiste ist ausgeblendet</td><td>Im eigenen Profil unter <em>Benutzer → Profil</em> die Werkzeugleiste wieder einschalten</td></tr>
+<tr><td>Lohnkosten stehen auf 0 €</td><td>Kein Stundenlohn hinterlegt</td><td>Kapitel C.11</td></tr>
+<tr><td>„… Stunden ohne hinterlegten Lohn“</td><td>Ein Teil der Stunden fällt in eine Zeit vor dem ersten Lohnstichtag</td><td>Lohn mit früherem Stichtag nachtragen</td></tr>
+<tr><td>Ein Nutzer taucht in der Liste nicht auf</td><td>Er hat kein Betriebsrecht</td><td>Profil zuweisen (Kapitel C.10)</td></tr>
+<tr><td>Bei mir selbst fehlt die Profilauswahl</td><td>Absicht – niemand ändert seine eigenen Rechte</td><td>Andere Person mit Vollzugriff bitten</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="teil" id="teil-admin">
+<header class="teilkopf">
+	<div class="marke">Teil D · Für die Verwaltung</div>
+	<h1>Administration</h1>
+	<p class="unter">Für die Person, die das Plugin einrichtet, die Zahlen dahinter pflegt und dafür geradesteht. Von der Installation über die Kalkulationsgrundlagen bis zum Livegang und der Buchhaltung.</p>
+</header>
+
+<h2 id="adm-aufbau"><span class="nr">D.1</span> Wie das Plugin aufgebaut ist</h2>
+
+<p>Lindenweg16 ERP ist ein einziges WordPress-Plugin, das direkt in WooCommerce lebt. Es gibt keinen externen Dienst, keine Zwischenschicht und keinen nächtlichen Abgleich – die Bestellung im Shop und die Buchung im Lager sind dieselbe Datenbank.</p>
+
+<p>Im Verwaltungsbereich erscheint es als <strong>fünf</strong> fachlich geordnete Menüs statt eines einzigen langen:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Menü</th><th>Inhalt</th></tr></thead>
+<tbody>
+<tr><td><strong>Verkauf</strong> (Laden)</td><td>Dashboard, Bestellungen, Versand, Kontakte/B2B, Kasse, Marketing, Loyalty, Events</td></tr>
+<tr><td><strong>Fertigung</strong> (Hammer)</td><td>Artikel &amp; Revisionen, Konfigurator, Kapazität, Qualität, Druckjournal, 3D-Drucker &amp; Wartung, Bambu-Lab-Drucker, Druckfarm, Produktion</td></tr>
+<tr><td><strong>Lager</strong> (Archiv)</td><td>Lager, Lagerplätze/Fertigung/Picklisten, Material, Bedarf</td></tr>
+<tr><td><strong>Finanzen</strong> (Balkendiagramm)</td><td>Dashboard: Finanzen, Buchhaltung, Reporting, Berichte</td></tr>
+<tr><td><strong>Verwaltung</strong> (Zahnrad)</td><td>Benutzer &amp; Rechte, Einstellungen (mit Reiter „Plugin“ für Firma/DHL/E-Mail), Import &amp; Doku, Zeiterfassung, Etikettendrucker, Support, Anleitungen, Livegang</td></tr>
+</tbody>
+</table>
+</div>
+
+<figure class="schmal">
+	<img src="bilder/menue-lindenweg16.png" alt="Das schwarze Menü mit dem aufgeklappten Eintrag Lindenweg16 und seinen Unterpunkten">
+	<figcaption>Das kaufmännische Menü <strong>Lindenweg16</strong>.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/lw16-dashboard.png" alt="Das Lindenweg16-Dashboard mit Umsatz, offenen Bestellungen, Lagerwarnungen, offenen Tickets, Steuer-Rücklage und den letzten Bestellungen">
+	<figcaption><span class="weg">Finanzen → Dashboard: Finanzen</span> – der kaufmännische Überblick. Die Steuer-Rücklage ist ein Richtwert und ersetzt keine steuerliche Beratung.</figcaption>
+</figure>
+
+<h3>Vier Grundsätze, die das Verhalten erklären</h3>
+<ol class="schritte">
+	<li><strong>Nichts Berechnetes wird gespeichert.</strong> Stückpreise, Herstellkosten, Maschinenstundensätze, Bestände und Kennzahlen entstehen bei jedem Aufruf neu aus den Rohdaten. Es gibt deshalb keine Zahl, die „veraltet“ sein kann.</li>
+	<li><strong>Kein hartes Löschen bei Bewegungsdaten.</strong> Druckjobs, Lagerbewegungen und Chargen werden storniert, nicht gelöscht. Stammdaten lassen sich stilllegen und – solange keine Buchung daran hängt – löschen.</li>
+	<li><strong>Annahmen gelten ab einem Stichtag.</strong> Eine Änderung überschreibt nie den alten Wert, sondern erzeugt eine neue Zeile. Alte Kalkulationen bleiben nachrechenbar.</li>
+	<li><strong>Rechte sind fein geschnitten.</strong> Sehen und Ändern sind getrennt, und Geld ist ein eigenes Recht. Ein Aushilfsvertrag ist kein Grund, jemandem den Zugang zu verwehren – aber auch keiner, ihm die Kalkulation zu zeigen.</li>
+</ol>
+<h2 id="adm-installation"><span class="nr">D.2</span> Installation und Update</h2>
+
+<div class="kasten achtung">
+	<span class="titel">Voraussetzung</span>
+	<p><strong>WooCommerce muss installiert und aktiv sein.</strong> Ohne WooCommerce bricht die Aktivierung mit einer Meldung ab und das Plugin deaktiviert sich selbst wieder. Außerdem: WordPress 6.2 oder neuer, PHP 7.4 oder neuer.</p>
+</div>
+
+<ol class="schritte">
+	<li>Den Plugin-Ordner nach <code>wp-content/plugins/</code> kopieren – per FTP, SFTP oder über die Dateiverwaltung des Hosters.</li>
+	<li>Im Verwaltungsbereich auf <strong>Plugins</strong> gehen und bei <em>Lindenweg16 ERP</em> auf <strong>Aktivieren</strong> klicken.</li>
+	<li>Beim Aktivieren passiert automatisch: alle Datenbanktabellen werden angelegt, die Rollen <code>lw16_manager</code> und <code>lw16_betrieb</code> werden registriert, und das geschützte Belegverzeichnis wird erstellt.</li>
+	<li>Den Personen, die mit dem Plugin arbeiten sollen, die passende Rolle beziehungsweise das passende Rechteprofil geben (siehe Teil C, <a href="#pers-profile">Kapitel C.10</a>). Administratoren haben ohnehin vollen Zugriff.</li>
+</ol>
+
+<h3>Update</h3>
+<p>Ein Update ist ein Austausch des Ordners. Beim ersten Aufruf danach läuft der Schema-Abgleich mit und ergänzt fehlende Tabellen und Spalten. Es geht dabei nichts verloren.</p>
+
+<div class="kasten merke">
+	<span class="titel">Vor jedem Update: Datenbanksicherung</span>
+	<p>Das ist kein Ritual, sondern die einzige Rückfahrkarte. Das Plugin hat keinen Papierkorb.</p>
+</div>
+<h2 id="adm-reihenfolge"><span class="nr">D.3</span> Einrichten – in dieser Reihenfolge</h2>
+
+<p>Die Reihenfolge ist nicht beliebig: Jeder Schritt braucht, was der vorige angelegt hat.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>#</th><th>Was</th><th>Wo</th><th>Warum zuerst</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Firmendaten, Logo, Kleinunternehmer-Kennzeichen</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td><td>Steht auf Rechnungen und Lieferscheinen</td></tr>
+<tr><td>2</td><td>Kalkulationsannahmen</td><td>Verwaltung → Einstellungen → Kalkulationsannahmen</td><td>Ohne sie rechnet jede Kalkulation gegen Standardwerte</td></tr>
+<tr><td>3</td><td>Farbattribut und Standardfarbe</td><td>Verwaltung → Einstellungen → Farben &amp; Lagerhoheit</td><td>Jede Lagerbuchung braucht eine Farbe</td></tr>
+<tr><td>4</td><td>Lagerplätze</td><td>Lager → Lagerplätze …</td><td>Artikel bekommen einen Standardplatz</td></tr>
+<tr><td>5</td><td>Drucker</td><td>Fertigung → 3D-Drucker &amp; Wartung</td><td>Aus Gerätedaten kommt der Maschinenstundensatz</td></tr>
+<tr><td>6</td><td>Komponenten (Kleinteile)</td><td>Fertigung → Artikel &amp; Revisionen → Komponenten</td><td>Werden in Stücklisten gebraucht</td></tr>
+<tr><td>7</td><td>Artikel</td><td>Fertigung → Artikel &amp; Revisionen → Artikel</td><td>Grundlage von allem Weiteren</td></tr>
+<tr><td>8</td><td>Revisionen und Stücklisten</td><td>gleiche Seite, andere Reiter</td><td>Ohne sie keine Herstellkosten</td></tr>
+<tr><td>9</td><td>Rabattstaffel</td><td>Verwaltung → Einstellungen → Rabattstaffel B2B</td><td>Wird bei jeder Händlerbestellung aufgelöst</td></tr>
+<tr><td>10</td><td>Benutzer und Rechteprofile</td><td>Verwaltung → Benutzer &amp; Rechte</td><td>Damit alle arbeiten können</td></tr>
+<tr><td>11</td><td>Livegang (Probedaten löschen)</td><td>Verwaltung → Livegang</td><td>Ganz zum Schluss, siehe Kapitel D.17</td></tr>
+</tbody>
+</table>
+</div>
+<h2 id="adm-firmendaten"><span class="nr">D.4</span> Firmendaten und E-Mail-Vorlagen</h2>
+
+<p><span class="weg">Verwaltung → Einstellungen → Reiter „Plugin“</span></p>
+
+<figure>
+	<img src="bilder/lw16-einstellungen.png" alt="Die Einstellungsseite mit den Abschnitten Firmendaten, Corporate Identity, Buchhaltung, Marketing, Loyalty, Kundenbindung, E-Mail sowie Reporting und DHL">
+	<figcaption>Eine lange Seite mit vielen Abschnitten – ganz unten steht <strong>Einstellungen speichern</strong>. Der Knopf speichert alles auf einmal.</figcaption>
+</figure>
+
+<h3>Firmendaten</h3>
+<p>Firmenname, Straße, PLZ/Ort, Steuernummer, E-Mail, Telefon, IBAN und BIC. Diese Angaben erscheinen auf Rechnungen, Lieferscheinen und in den automatischen E-Mails. Trag sie vollständig ein – ein Lieferschein ohne Absender sieht unseriös aus.</p>
+
+<h3>Corporate Identity</h3>
+<ul>
+	<li><strong>Logo:</strong> Auf <em>Logo auswählen</em> klicken und aus der Mediathek wählen. JPEG ist empfohlen, weil es sich sauber in PDFs einbetten lässt.</li>
+	<li><strong>Markenfarbe:</strong> Hintergrundfarbe der Kopfzeile in E-Mails.</li>
+</ul>
+
+<h3>Buchhaltung</h3>
+<div class="tabelle">
+<table>
+<thead><tr><th>Einstellung</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Kleinunternehmer §19 UStG</strong></td><td>Ist der Haken gesetzt, wird keine Umsatzsteuer ausgewiesen und alle Beträge sind brutto. Prüf das mit deiner Steuerberatung, bevor du es änderst.</td></tr>
+<tr><td><strong>Zahlungsgebühren aus Bestellhinweisen übernehmen</strong></td><td>Zieht die Gebühren von PayPal &amp; Co. automatisch aus der Bestellung.</td></tr>
+<tr><td><strong>Geschätzter Steuersatz für Rücklage</strong></td><td>Nur für die Rücklagenanzeige auf dem Dashboard. Ein Richtwert, keine Steuerberatung.</td></tr>
+<tr><td><strong>Rechnungsnummern-Modus</strong></td><td><code>jahr</code> = je Jahr neu durchlaufend.</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>DHL: Sendungsverfolgung und Versandlabel</h3>
+
+<p>Zwei getrennte Abschnitte mit zwei getrennten Zugängen – die DHL vergibt sie einzeln, und der eine funktioniert nicht für den anderen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Abschnitt</th><th>Wofür</th><th>Was hinein gehört</th></tr></thead>
+<tbody>
+<tr><td><strong>Reporting &amp; DHL-Sendungsverfolgung</strong></td><td>Den Stand einer Sendung abfragen</td><td>Ein API-Key für die Tracking-Schnittstelle</td></tr>
+<tr><td><strong>DHL Geschäftskundenversand</strong></td><td>Labels erzeugen und stornieren</td><td>API-Key <em>und</em> API-Secret der Anwendung, dazu Benutzer und Passwort des Geschäftskundenportals</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Vier Angaben, nicht zwei – und zweimal, nicht einmal</span>
+	<p>Fürs Frankieren prüft die DHL auf <strong>zwei Ebenen</strong>: Wer ist die Anwendung (API-Key + API-Secret von developer.dhl.com), und wer ist der Geschäftskunde (Benutzer + Passwort aus dem Geschäftskundenportal). Fehlt eine der beiden Ebenen, lehnt sie ab – ein API-Key allein genügt nicht.</p>
+	<p>Diese vier Angaben gibt es <strong>getrennt für Sandbox und Live</strong> – zwei eigene Zeilenblöcke in den Einstellungen. Ein Login, das im Echtbetrieb gilt, weist die Sandbox mit <code>invalid_grant</code> zurück, und umgekehrt. Benutzer und Passwort der Sandbox sind ein von DHL öffentlich dokumentierter fester Testzugang und stehen deshalb schon vorbelegt da – nur den Sandbox-API-Key (und ggf. das -Secret) trägst du selbst aus deiner Sandbox-App auf developer.dhl.com ein.</p>
+	<p>Beide Passwortfelder zeigen einen gespeicherten Wert nie an. Ein leeres Feld heißt „unverändert“; nur was du hineinschreibst, wird überschrieben.</p>
+</div>
+
+<p>Dazu gehören die zehnstellige <strong>Kundennummer (EKP)</strong> und die zweistellige <strong>Teilnahme</strong> aus dem Geschäftskundenportal. Aus beidem und dem Verfahren des gewählten Produkts baut das Plugin die vierzehnstellige Abrechnungsnummer selbst – sie entscheidet, welcher Vertrag greift und welches Konto belastet wird. Weicht die Teilnahme je Produkt ab, gibt es dafür eigene Felder; sonst gilt überall dieselbe. Beide Felder gelten nur im <strong>Echtbetrieb</strong>: In der Sandbox bucht die DHL auf ihre eigene Testkundennummer, und das Plugin setzt sie ein, solange der Haken sitzt – deine Angaben bleiben dabei unberührt. Die eigene EKP dorthin mitzuschicken ergäbe eine Abrechnungsnummer, die es in der Testumgebung nicht gibt, und die Ablehnung sähe nach einem Fehler in der Adresse aus.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Erst prüfen, dann frankieren</span>
+	<p>Nach dem Speichern auf <span class="weg">Verkauf → Versand</span> gehen und oben auf <strong>DHL-Zugang prüfen</strong> klicken. Der Knopf meldet sich einmal an, ohne ein Label zu erzeugen, und sagt im Klartext, was fehlt. Ohne ihn merkt man einen falschen Zugang erst beim ersten Paket – und liest dort eine Meldung, die nach einem Adressproblem aussieht.</p>
+</div>
+
+<ul>
+	<li><strong>Labelformat:</strong> <code>910-300-610</code> für das Thermo-Rollenetikett (103 × 199 mm), <code>A4</code> für Papier. Was dein Konto kann, steht im Geschäftskundenportal.</li>
+	<li><strong>Verpackungszuschlag:</strong> Wird auf jedes gerechnete Sendungsgewicht addiert – Karton und Polster wiegen mit.</li>
+	<li><strong>Sandbox-Modus:</strong> Ab Werk gesetzt. Sandbox-Labels sehen echt aus, sind aber keine gültige Frankierung. Für Sandbox und Echtbetrieb gelten <em>eigene</em> Zugangsdatenfelder (siehe oben).</li>
+</ul>
+
+
+<h3>E-Mail-Vorlagen</h3>
+<figure>
+	<img src="bilder/lw16-einst-mail.png" alt="Der Abschnitt E-Mail-Vorlagen mit aufklappbaren Einträgen für die einzelnen automatischen Mails">
+	<figcaption>Jede automatische E-Mail lässt sich anpassen. Ein leeres Feld bedeutet: Standardtext verwenden.</figcaption>
+</figure>
+
+<p>Klick auf das kleine Dreieck vor einer Vorlage, um sie aufzuklappen. Unter jedem Feld stehen die verfügbaren Platzhalter – <code>{firmenname}</code> gibt es in jeder Vorlage. Schreib die Platzhalter genau so ab, mit geschweiften Klammern.</p>
+<h2 id="adm-annahmen"><span class="nr">D.5</span> Kalkulationsannahmen</h2>
+
+<p><span class="weg">Verwaltung → Einstellungen → Reiter „Kalkulationsannahmen“</span></p>
+
+<p>Das ist die wichtigste Seite des ganzen Plugins. Hier stehen die Zahlen, aus denen jeder Preis entsteht.</p>
+
+<figure>
+	<img src="bilder/einst-annahmen.png" alt="Tabelle der Kalkulationsannahmen mit Wert am Stichtag, Eingabefeld für einen neuen Wert, Datum, Begründung, Festschreiben-Knopf und Verlauf">
+	<figcaption>Jede Annahme mit ihrem aktuellen Wert, ihrem technischen Namen und ihrem Verlauf.</figcaption>
+</figure>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Annahme</th><th>Was sie bedeutet</th></tr></thead>
+<tbody>
+<tr><td><strong>Filamentpreis (€/kg)</strong></td><td>Rückfallwert, wenn an einem Druckjob keine Charge hängt</td></tr>
+<tr><td><strong>Kalkulatorischer Stundensatz (€/h)</strong></td><td>Der Satz, mit dem Handarbeit in den Preis eingeht – nicht der bezahlte Lohn</td></tr>
+<tr><td><strong>Lebensdauer je Gerät (Betriebsstunden)</strong></td><td>Grundlage der Abschreibung im Maschinenstundensatz</td></tr>
+<tr><td><strong>Ersatzteile und Verschleiß (€ je Gerät und Jahr)</strong></td><td>Wird über die Betriebsstunden umgelegt</td></tr>
+<tr><td><strong>Geplante Betriebsstunden je Gerät und Jahr</strong></td><td>Der Nenner dieser Umlage – darf nie 0 sein</td></tr>
+<tr><td><strong>Leistungsaufnahme (kW) und Strompreis (€/kWh)</strong></td><td>Ergeben die Energiekosten je Druckstunde</td></tr>
+<tr><td><strong>Zahlungsgebühr variabel / fix</strong></td><td>Anteil und Festbetrag je Transaktion</td></tr>
+<tr><td><strong>Verpackung + Beileger (€ je Bestellung)</strong></td><td>Fällt genau einmal je Bestellung an – deshalb trägt sich ein Set besser als Einzelteile</td></tr>
+<tr><td><strong>Ausschusszuschlag (Anteil)</strong></td><td>Kalkulatorischer Aufschlag für Ausschuss</td></tr>
+<tr><td><strong>Umsatzsteuersatz (Anteil)</strong></td><td>Bei Kleinunternehmerregelung 0</td></tr>
+<tr><td><strong>Nettodruckstunden je Gerät und Woche</strong></td><td>Kapazitätsplanung</td></tr>
+<tr><td><strong>Minuten je Plattenwechsel</strong></td><td>Bedienzeit, die auf die Teile umgelegt wird</td></tr>
+<tr><td><strong>Eigene Arbeitsstunden je Woche</strong></td><td>Das Wochenbudget in der Zeiterfassung</td></tr>
+<tr><td><strong>Kundengewinnungskosten Direktverkauf (€)</strong></td><td>Fließt in den Deckungsbeitrag II ein</td></tr>
+<tr><td><strong>Warnschwelle DB II je Position (€)</strong></td><td>Ab wann eine Position als unwirtschaftlich markiert wird</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>Einen Wert ändern</h3>
+<ol class="schritte">
+	<li>In der Zeile der Annahme den <strong>neuen Wert</strong> eintragen. Punkt oder Komma sind beide erlaubt.</li>
+	<li>Das <strong>Datum</strong> setzen, ab dem er gelten soll.</li>
+	<li>Eine <strong>Begründung</strong> schreiben: „Stromvertrag ab 01.10. teurer“. Sie steht später im Verlauf und erspart dir in zwei Jahren das Rätselraten.</li>
+	<li>Auf <strong>Festschreiben</strong> klicken.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Festschreiben überschreibt nichts</span>
+	<p>Der alte Wert wird zum Vortag abgeschlossen und bleibt stehen. Rechts im <strong>Verlauf</strong> siehst du die ganze Geschichte. Mit dem Feld <strong>Gültig zum Stichtag</strong> oben kannst du dir ansehen, welche Werte an einem beliebigen Tag galten – und damit jede alte Kalkulation nachrechnen.</p>
+</div>
+<h2 id="adm-farben"><span class="nr">D.6</span> Farben und Lagerhoheit</h2>
+
+<p><span class="weg">Verwaltung → Einstellungen → Reiter „Farben &amp; Lagerhoheit“</span></p>
+
+<h3>Farbsystem</h3>
+
+<figure>
+	<img src="bilder/einst-farbsystem.png" alt="Abschnitt Farbsystem mit dem Farbattribut, der Liste bekannter Farben und der Standardfarbe">
+	<figcaption>Die Farben kommen aus einem globalen WooCommerce-Produktattribut, üblicherweise <code>pa_farbe</code>.</figcaption>
+</figure>
+
+<p>Es gibt bewusst keine zweite, plugin-eigene Farbliste. Die Farbe muss ohnehin im Shop sichtbar sein, und zwei Listen driften genau dann auseinander, wenn eine Farbe dazukommt. Gespeichert wird immer der <strong>Slug</strong> (<code>anthrazit</code>), nie der Anzeigename – so verlieren alte Buchungen ihre Zuordnung nicht, wenn der Anzeigename sich ändert.</p>
+
+<ol class="schritte">
+	<li>Existiert das Attribut noch nicht, sagt die Seite das. Leg es an unter <strong>Produkte → Attribute</strong> in WooCommerce.</li>
+	<li>Dort für jede Farbe einen Begriff anlegen.</li>
+	<li>Hier die <strong>Standardfarbe</strong> setzen. Sie greift für jede Position, die keine eigene Farbe trägt – bei nur einer produzierten Farbe ist das der Normalfall.</li>
+</ol>
+
+<h3>Lagerhoheit</h3>
+
+<figure>
+	<img src="bilder/einst-lagerhoheit.png" alt="Abschnitt Lagerhoheit mit dem Schalter für die Übernahme der Lagerabgänge durch das Modul Betrieb">
+	<figcaption>Ein Schalter mit großer Wirkung – erst umlegen, wenn der Artikelstamm vollständig ist.</figcaption>
+</figure>
+
+<p>Das Plugin kennt zwei Lagermodelle: den fortgeschriebenen Bestand des alten Lager-Moduls und das Bewegungskonto von <em>Betrieb</em>. Beide gleichzeitig buchen zu lassen, würde jeden Abgang doppelt zählen.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Stellung</th><th>Wirkung</th></tr></thead>
+<tbody>
+<tr><td><strong>Übernahme aktiv</strong></td><td><em>Betrieb</em> bucht die Abgänge genau der Produkte, die auf einen Artikel im Artikelstamm zeigen. Das Lager-Modul lässt diese in Ruhe.</td></tr>
+<tr><td><strong>Abgeschaltet</strong></td><td>Das Lager-Modul bucht alle Abgänge. Das Bewegungskonto bleibt für Verkäufe leer.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Reihenfolge beachten</span>
+	<p>Schalte die Übernahme erst ein, wenn die Artikel angelegt <em>und</em> mit ihren Shop-Produkten verknüpft sind. Sonst laufen Verkäufe von Produkten ohne Artikelzuordnung ins Leere.</p>
+</div>
+
+<h3>Nachbestellseite und Wochenmail</h3>
+<p>Auf derselben Seite stehen zwei weitere Schalter: ob die Nachbestellseite für Händler in das Website-Design eingebettet oder als schlichte eigene Seite mit Logo erscheint, und ob die <strong>Wochenmail</strong> verschickt wird – eine Zusammenfassung von Kennzahlen, Alarmen, Beschaffung, Wartung und Wiedervorlagen der vergangenen Woche.</p>
+<h2 id="adm-staffel"><span class="nr">D.7</span> Rabattstaffel für Händler</h2>
+
+<p><span class="weg">Verwaltung → Einstellungen → Reiter „Rabattstaffel B2B“</span></p>
+
+<figure>
+	<img src="bilder/einst-staffel.png" alt="Die Rabattstaffel mit Stufen, Gültigkeitsdatum und Verlauf">
+	<figcaption>Die Standardstaffel gilt für alle Händler ohne Sondervereinbarung.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Die Stufen eintragen: ab welcher Menge welcher Rabatt gilt.</li>
+	<li>Ein Datum bei <strong>Neue Staffel gültig ab</strong> setzen.</li>
+	<li>Auf <strong>Festschreiben</strong> klicken.</li>
+</ol>
+
+<p>Auch hier wird nichts überschrieben: Die bisherigen Stufen werden zum Vortag abgeschlossen und bleiben stehen. Eine Auswertung alter Bestellungen rechnet weiterhin mit der damals gültigen Staffel.</p>
+
+<h3>Händler pflegen: Kontakte / B2B</h3>
+
+<p><span class="weg">Verkauf → Kontakte / B2B</span></p>
+
+<figure>
+	<img src="bilder/kontakte.png" alt="Kontaktliste mit fälligen Wiedervorlagen, allen Kontakten und dem Formular zum Anlegen">
+	<figcaption>Oben die fälligen Wiedervorlagen, darunter alle Kontakte, ganz unten das Anlegeformular.</figcaption>
+</figure>
+
+<p>Sonderkonditionen für einzelne Händler stehen nicht in der Standardstaffel, sondern in der Kontaktakte. Klick in der Liste auf <strong>Akte öffnen</strong>.</p>
+
+<figure>
+	<img src="bilder/kontakt-akte.png" alt="Kontaktakte mit Stammdaten, Konditionen, Kommissionsbestand, Aktivitäten und Nachbestell-Link">
+	<figcaption>Die Kontaktakte bündelt alles zu einem Händler: Konditionen, Kommissionsbestand, Aktivitäten, Umsatz und den Nachbestell-Link.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/kontakt-aktivitaeten.png" alt="Abschnitt Aktivitäten mit Telefonaten, Mustersendungen und Angeboten samt Wiedervorlage">
+	<figcaption>Jede Aktivität braucht eine Wiedervorlage – ohne nächsten Termin versandet ein Gespräch. Ohne sie nimmt das Formular den Eintrag nicht an.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/kontakt-konditionen.png" alt="Abschnitt Konditionen in einer Kontaktakte">
+	<figcaption>Sonderkonditionen je Händler – ebenfalls mit Stichtag festgeschrieben.</figcaption>
+</figure>
+
+<h3>Kommissionsware buchen</h3>
+
+<p>Unter dem Kommissionsbestand steht die <strong>Liste</strong>: alle verkäuflichen Artikel, je Farbe ein Feld. Oben wählst du den Vorgang — <em>ausliefern</em>, <em>abrechnen</em> oder <em>zurücknehmen</em> —, trägst die Mengen ein und buchst <strong>einmal</strong>. Eine Auslieferung umfasst selten einen Artikel; Zeile für Zeile zu buchen hieß achtzehn Seitenladungen, und wer dabei im Laden steht und den Karton auspackt, verzählt sich.</p>
+
+<p>Was der Händler von einer Farbe bereits hat, steht fett neben dem Feld. Beim Zurücknehmen und Abrechnen geht es fast immer um genau diese Kombinationen — so rechnet niemand mehr ab, als draußen liegt.</p>
+
+<div class="kasten merke">
+	<span class="titel">Leere Felder bleiben unberührt, und es gilt alles oder nichts</span>
+	<p>Von sechzig Feldern füllst du drei aus — die anderen erzeugen keine Buchung über null Stück. Steht dagegen in einer Zeile Unsinn, wird <strong>gar nichts</strong> gebucht: Eine halb gebuchte Lieferung ist schlimmer als eine nicht gebuchte, weil sie aussieht wie eine fertige.</p>
+</div>
+
+<div class="kasten">
+	<span class="titel">Abrechnen ergibt jetzt einen offenen Posten statt vieler</span>
+	<p>Das ist mehr als Bequemlichkeit. Die Rabattstaffel hängt am <em>Bestellwert</em>. Acht einzeln abgerechnete Artikel ergaben achtmal einen kleinen Wert und damit achtmal die unterste Staffel; die Lieferung als Ganzes erreicht die Stufe, die dem Händler zusteht.</p>
+</div>
+
+<h3>Am Handy</h3>
+
+<p>Dieselbe Liste steht in der mobilen Erfassung unter <strong>Kommission</strong> — gedacht für den Moment, in dem du beim Händler im Laden stehst. Oben Händler und Vorgang wählen, mit <em>Artikel suchen</em> die Liste eindampfen, Mengen eintippen. Unten läuft eine Summe mit, damit du vor dem Buchen siehst, was du gleich buchst.</p>
+
+<p>Eine Zeile, in der schon eine Menge steht, bleibt beim Suchen sichtbar — sonst bucht man blind etwas mit, das man gerade nicht sieht. Nach dem Buchen leeren sich die Felder: Sonst schickte der nächste Druck auf <em>Liste buchen</em> dieselbe Lieferung ein zweites Mal. Ohne Netz wandert die Liste wie jede andere Buchung in die Warteschlange und geht raus, sobald wieder Empfang da ist.</p>
+<h2 id="adm-stammdaten"><span class="nr">D.8</span> Stammdaten anlegen</h2>
+
+<p>Der ausführliche Weg steht in Teil A, <a href="#prod-artikel">Kapitel A.11</a>. Hier nur, was aus Verwaltungssicht wichtig ist.</p>
+
+<figure>
+	<img src="bilder/artikel-liste.png" alt="Artikelliste mit Nummer, Bezeichnung, Beschaffungsweg, Status und Preis">
+	<figcaption><span class="weg">Fertigung → Artikel &amp; Revisionen</span> – die Reiter arbeiten alle auf demselben Artikel, den du oben auswählst.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Drei Felder, die man am Anfang gern vergisst</span>
+	<p><strong>Beschaffungsweg</strong> – er entscheidet, ob der Artikel eine Revision, eine Stückliste oder Beschaffungsdaten braucht. Falsch gesetzt, verlangt das System später Dinge, die es gar nicht geben kann.<br>
+	<strong>Verknüpfung zum Shop-Produkt</strong> – ohne sie erkennt das Plugin bei einer Bestellung nicht, welcher Artikel gemeint ist, und bucht keinen Bestand ab.<br>
+	<strong>Standard-Lagerplatz</strong> – ohne ihn steht auf jeder Pickliste ein Strich statt eines Fachs.</p>
+</div>
+
+<figure>
+	<img src="bilder/artikel-komponenten.png" alt="Komponentenliste mit Gebindegröße, Gebindepreis, errechnetem Stückpreis, Lieferant und Bestand">
+	<figcaption>Kleinteile werden im Gebinde gekauft und im Stück verbraucht. Deshalb trägst du <strong>Gebindegröße</strong> und <strong>Gebindepreis</strong> ein – der Stückpreis wird gerechnet, nicht gepflegt.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/artikel-beschaffung.png" alt="Reiter Beschaffung mit Lieferant, Konditionen und Historie">
+	<figcaption>Zukauf- und Hybridartikel brauchen Beschaffungsdaten. Ein Preiswechsel des Lieferanten erzeugt eine neue Zeile – alte Kalkulationen rechnen mit dem damaligen Preis weiter.</figcaption>
+</figure>
+
+<h3>Konfigurator</h3>
+
+<p><span class="weg">Fertigung → Konfigurator</span></p>
+
+<figure>
+	<img src="bilder/konfigurator.png" alt="Die Konfiguratorseite mit Bausteinen, Teilen und Layout-Einstellungen">
+	<figcaption>Der Konfigurator lässt Kunden im Shop ihre Kombination zusammenstellen. Gepflegt werden hier die Bausteine, die Teile dahinter und das Layout.</figcaption>
+</figure>
+
+<p>Was ein Kunde konfiguriert, landet als codierte Konfiguration im Warenkorb und wird beim Bestellen wieder in echte Artikel aufgelöst – Lagerabgang und Kalkulation funktionieren also genauso wie bei einem normalen Artikel.</p>
+<h2 id="adm-preise"><span class="nr">D.9</span> Kalkulation und Preise</h2>
+
+<h3>Die Kalkulation eines Artikels ansehen</h3>
+
+<p><span class="weg">Fertigung → Artikel &amp; Revisionen → Reiter „Kalkulation“</span></p>
+
+<figure>
+	<img src="bilder/artikel-kalkulation.png" alt="Kalkulationsansicht mit Kostenanteilen je Position, Herstellkosten und Preisebenen im Vergleich">
+	<figcaption>Die Kalkulation eines Artikels, aufgeschlüsselt nach Kostenanteilen. Über <strong>Stichtag</strong> rechnest du sie mit den Annahmen eines beliebigen Tages nach.</figcaption>
+</figure>
+
+<p>Ist etwas unvollständig – fehlende Revision, fehlende Stückliste, fehlender Gerätesatz –, sagt die Seite das ausdrücklich, statt still mit null zu rechnen.</p>
+
+<h3>Der Bestellart-Rechner</h3>
+
+<figure>
+	<img src="bilder/artikel-bestellarten.png" alt="Bestellart-Rechner mit Mengen je Artikel und dem Vergleich gegenüber Einzelbestellungen">
+	<figcaption>Verpackung und Zahlungsgebühr fallen genau einmal je Bestellung an – deshalb trägt sich ein Set besser als dieselben Positionen einzeln. Hier rechnest du aus, wie viel.</figcaption>
+</figure>
+
+<h3>Den Preis festlegen</h3>
+
+<p><span class="weg">Fertigung → Artikel &amp; Revisionen → Reiter „Kalkulation“</span>, ganz unten</p>
+
+<p>Unter der Kostenaufstellung steht der Abschnitt <strong>Preis festlegen</strong> – direkt unter der Rechnung, um die es geht.</p>
+
+<ol class="schritte">
+	<li><strong>Zielmarge</strong> eintragen (Deckungsbeitrag II vom Nettoerlös) und auf <strong>Neu rechnen</strong> klicken.</li>
+	<li>Darunter stehen drei Zeilen nebeneinander: der <em>Vorschlag bei dieser Marge</em>, der <em>Preis am Artikel</em> und der <em>Stand im Shop</em>. Steht beim Vorschlag <em>nicht erreichbar</em>, ist die Marge mit den aktuellen Kosten nicht zu schaffen – das ist eine Information, kein Fehler.</li>
+	<li>Der Knopf <strong>… als Artikelpreis übernehmen</strong> schreibt den Vorschlag in den Artikel. Wer den Preis lieber selbst setzt, tippt ihn im Reiter <em>Artikel</em> ins Feld <em>VK brutto</em>.</li>
+</ol>
+
+<div class="kasten info">
+	<span class="titel">Der Shop zieht von selbst nach</span>
+	<p>Es gibt nur eine Stelle, an der ein Preis entsteht: den Artikel. Sobald du ihn speicherst, bekommt das verknüpfte Shop-Produkt ihn als <strong>Normalpreis</strong> – ohne zweiten Handgriff. Ein laufendes Angebot in WooCommerce bleibt unberührt, sonst wäre eine Preisaktion mit einem Klick weg.</p>
+	<p>Der frühere Menüpunkt <em>Lindenweg16 → Preiskalkulation</em> ist deshalb verschwunden. Er rechnete dasselbe zwei Menüs entfernt, und der Preis stand danach an zwei Stellen: Wer den zweiten Schritt vergaß, verkaufte weiter zum alten.</p>
+</div>
+
+<div class="kasten tipp">
+	<span class="titel">Wenn sich nicht ein Preis geändert hat, sondern eine Annahme</span>
+	<p>Dann stimmen auf einen Schlag viele nicht mehr. Dafür gibt es im selben Abschnitt <strong>Alle Preise in den Shop übertragen</strong>. Im Alltag brauchst du den Knopf nicht – nur, wenn jemand einen Shop-Preis von Hand verstellt hat.</p>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Die Annahmen werden hier nicht gepflegt</span>
+	<p>Sie liegen historisiert unter <span class="weg">Verwaltung → Einstellungen → Kalkulationsannahmen</span>. Diese Seite rechnet nur mit ihnen.</p>
+</div>
+<h2 id="adm-buchhaltung"><span class="nr">D.10</span> Buchhaltung</h2>
+
+<p><span class="weg">Finanzen → Buchhaltung</span></p>
+
+<p>Die Seite hat Reiter: <em>Belege</em>, <em>Dashboard</em>, <em>Beleg erfassen</em>, <em>Rechnungen</em>, <em>Journal</em>, <em>Kassenbuch</em>, <em>EÜR</em>, <em>Dauerbuchungen</em>, <em>Anlagen</em>, <em>E-Rechnung</em>, <em>Betriebsprüfung</em>, <em>GoBD-Prüfung</em>.</p>
+
+<figure>
+	<img src="bilder/lw16-buchhaltung.png" alt="Buchhaltungsseite mit Reitern und der Belegliste">
+	<figcaption>Der Einstieg: die Belegliste mit Händler, Kategorie, Betrag und Status.</figcaption>
+</figure>
+
+<h3>Einen Beleg erfassen</h3>
+
+<figure>
+	<img src="bilder/lw16-buchhaltung-beleg.png" alt="Formular Beleg erfassen mit Datum, Händler, Betrag, Kategorie, Konto und Datei-Upload">
+	<figcaption>Beleg hochladen, Felder prüfen, speichern. Das Plugin liest PDF-Belege aus und schlägt Datum, Händler und Betrag vor – die Vorschläge <em>müssen</em> geprüft werden.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Reiter <strong>Beleg erfassen</strong> öffnen.</li>
+	<li>Die Belegdatei hochladen (PDF oder Foto).</li>
+	<li>Die vorgeschlagenen Werte prüfen und korrigieren: Datum, Händler, Betrag.</li>
+	<li>Die <strong>Kategorie</strong> beziehungsweise das SKR03-Konto zuordnen.</li>
+	<li>Speichern.</li>
+</ol>
+
+<h3>Festschreiben und Stornieren</h3>
+<p>Ein festgeschriebener Beleg lässt sich nicht mehr ändern – das verlangt die GoBD. Ist etwas falsch, wird der Beleg <strong>storniert</strong> und neu erfasst; beides bleibt sichtbar.</p>
+
+<h3>EÜR</h3>
+<figure>
+	<img src="bilder/lw16-buchhaltung-euer.png" alt="EÜR-Ansicht mit Einnahmen, Ausgaben nach Kontengruppen und Ergebnis">
+	<figcaption>Einnahmen kommen aus WooCommerce abzüglich Erstattungen, Ausgaben aus den Belegen nach SKR03-Kontengruppen. Über <strong>EÜR als PDF exportieren</strong> bekommst du das Dokument inklusive Belegen.</figcaption>
+</figure>
+
+<h3>GoBD-Prüfung</h3>
+<figure>
+	<img src="bilder/lw16-buchhaltung-gobd.png" alt="GoBD-Prüfseite mit Prüfpunkten und Ergebnissen">
+	<figcaption>Die Prüfung sucht nach Lücken in der Nummernfolge, fehlenden Belegen und unterbrochenen Hashketten.</figcaption>
+</figure>
+
+<div class="kasten merke">
+	<span class="titel">Diese Anleitung ersetzt keine Steuerberatung</span>
+	<p>Das Plugin rechnet, was du ihm gibst. Ob eine Ausgabe abziehbar ist, ob die Kleinunternehmerregelung noch passt und was in die EÜR gehört, entscheidet nicht die Software.</p>
+</div>
+<h2 id="adm-kasse"><span class="nr">D.11</span> Kasse, Marketing, Events, Loyalty, Support</h2>
+
+<h3>Marktkasse</h3>
+<p><span class="weg">Verkauf → Kasse</span></p>
+
+<figure>
+	<img src="bilder/lw16-kasse.png" alt="Kassenseite mit dem Formular für einen neuen Kassatag und der Liste abgeschlossener Tage">
+	<figcaption>Vor dem Markt einen Kassatag starten, am Abend abschließen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Markt / Anlass</strong> eintragen.</li>
+	<li>Eine <strong>Kostenstelle</strong> wählen, wenn zu diesem Anlass eine Marketing-Kampagne läuft – dann zählt der Tagesumsatz dort gegen die Kosten.</li>
+	<li><strong>Kassenbestand Anfang</strong> eintragen: das Wechselgeld.</li>
+	<li>Auf <strong>Neuen Kassatag starten</strong> klicken. Verkauft wird danach über die <strong>Mobile Kasse</strong> auf dem Handy.</li>
+	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz.</li>
+</ol>
+
+<h4>Verkaufen am Stand</h4>
+
+<p>Die Ware steht als <strong>Kachelliste</strong> da – Produktbild, Bezeichnung, Preis. Ein Klick auf die Kachel füllt Name und Preis, beides bleibt überschreibbar; ein zweiter Klick auf dieselbe Kachel hebt die Auswahl wieder auf. Darüber filtert ein Suchfeld die Kacheln. Das Bild kommt aus dem verknüpften Shop-Produkt; ohne Verknüpfung zeigt die Kachel die Anfangsbuchstaben.</p>
+
+<p>Darunter steht <strong>Freier Betrag</strong>: Bezeichnung und Betrag eintippen, buchen. Für alles, was es als Artikel nicht gibt – Restposten, Reparatur, Spende. Der Betrag zählt in Tagesumsatz, Beleg und Kassenbuch, bucht aber <em>kein</em> Lager ab.</p>
+
+<div class="kasten tipp">
+	<span class="titel">Komma ist erlaubt</span>
+	<p>Preise und Kassenbestände dürfen mit Komma getippt werden – „12,50“ wird als 12,50 € verstanden, nicht als zwölf Euro. Punkt geht genauso.</p>
+</div>
+
+<h3>Marketing</h3>
+<p><span class="weg">Verkauf → Marketing</span></p>
+
+<figure>
+	<img src="bilder/lw16-marketing.png" alt="Marketingseite mit Kampagnenliste und Kennzahlen">
+	<figcaption>Jeder Marktbesuch, jede Anzeige, jede Flyeraktion ist eine Kampagne mit eigener Kostenstelle.</figcaption>
+</figure>
+
+<p>Kosten kommen aus zugeordneten Belegen und aus der Kilometerpauschale (in den Einstellungen änderbar, wird als Eigenbeleg gebucht). Gegenübergestellt werden Marktkassenumsatz und nachgewiesener Shop-Umsatz. Daraus entstehen Umsatz je Euro Werbekosten und Kosten je Bestellung.</p>
+
+<h3>Events</h3>
+<p><span class="weg">Events</span> – ein eigener Menüpunkt neben Lindenweg16.</p>
+
+<p>Ein Event ist eine ganz normale Seite mit Titel, Text und Beitragsbild. Darunter stehen Eckdaten, Zusatzfelder und die Anmeldung. Drei Typen sind angelegt – <strong>Social Ride</strong>, <strong>Markt</strong> und <strong>Rennen</strong> –, weitere legst du unter <span class="weg">Events → Eventtypen</span> selbst an.</p>
+
+<ol class="schritte">
+	<li><strong>Typ wählen</strong> in der rechten Spalte. Er entscheidet, welche Feldvorlage vorgeschlagen wird.</li>
+	<li><strong>Eckdaten</strong>: Beginn, Ende, Ort, Treffpunkt.</li>
+	<li><strong>Anmeldung</strong>: der Haken <em>Anmeldung auf der Eventseite anbieten</em>. Ohne ihn erscheint gar kein Formular.</li>
+	<li><strong>Maximale Teilnehmerzahl</strong>, optional. <strong>0 oder leer heißt unbegrenzt</strong>, nicht „niemand".</li>
+	<li><strong>Kostenstelle</strong> wählen, wenn zum Event eine Kampagne läuft – dann stehen Standgebühr, Fahrtkosten und Material im Marketing zusammen.</li>
+	<li><strong>Veröffentlichen</strong>. Danach erscheint rechts der QR-Code auf die Eventseite, als SVG herunterladbar und damit beliebig groß druckbar.</li>
+</ol>
+
+<h3>Zusatzfelder und die Komoot-Karte</h3>
+
+<p>Jedes Event trägt seine eigenen Felder – beim Social Ride die Tour und die Distanz, beim Markt die Standnummer, beim Rennen die Startzeit. Beim ersten Öffnen schlägt das Plugin die Vorlage zum gewählten Typ vor; jede Zeile lässt sich ändern, löschen und ergänzen, <strong>Feld hinzufügen</strong> hängt eine neue an.</p>
+
+<p>Für eine <strong>Komoot-Tour</strong> ein Feld vom Typ <em>Komoot-Tour</em> anlegen und die Adresse der Tour hineinkopieren – die aus der Adresszeile des Browsers, mit oder ohne <code>share_token</code>. Auf der Eventseite erscheint daraus eine eingebettete Karte. Ist die Adresse nicht lesbar, steht dort ein schlichter Link statt der Karte; verschluckt wird nichts.</p>
+
+<p>In der Spalte <strong>Darstellung</strong> wählst du einen der fünf Stile – dieselben, die Komoots eigener Einbettungsdialog anbietet. Die Auswahl erscheint nur bei diesem Feldtyp.</p>
+
+<table class="tabelle">
+	<thead><tr><th>Stil</th><th>Was man sieht</th><th>Höhe</th></tr></thead>
+	<tbody>
+		<tr><td>Klassisch</td><td>Karte, Statistiken und Höhenprofil</td><td>700 px</td></tr>
+		<tr><td>Nur Karte</td><td>Nur die interaktive Karte, minimale Bedienelemente</td><td>540 px</td></tr>
+		<tr><td>Kompakte Karte</td><td>Titelbild und die wichtigsten Statistiken</td><td>260 px</td></tr>
+		<tr><td>Fotostreifen</td><td>Galerie zuerst, darunter Titel und Statistiken</td><td>640 px</td></tr>
+		<tr><td>Highlights</td><td>Horizontal scrollbare Reihe mit Highlight-Karten</td><td>430 px</td></tr>
+	</tbody>
+</table>
+
+<p>Die Höhe gehört zum Stil und wird mitgesetzt – bei <em>Kompakte Karte</em> stünde sonst ein leerer Streifen darunter, bei <em>Klassisch</em> ein Rollbalken.</p>
+
+<p>Neben der Auswahl steht <strong>Vorschau</strong>. Ein Klick zeigt die Tour im gewählten Stil direkt hier im Bearbeitungsfenster, noch bevor du das Event speicherst. Stellst du den Stil um, während die Vorschau offen ist, lädt sie sich neu. Gespeichert wird der Stil erst mit dem Event.</p>
+
+<div class="kasten merke">
+	<span class="titel">Satellit und Gelände sind eine andere Sache</span>
+	<p>Welche Grundkarte zu sehen ist – Karte, Satellit, Gelände –, entscheidet der Besucher im Kartenfenster selbst. Dafür gibt es keinen Schalter in der Einbettung, weder hier noch bei Komoot.</p>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Kein Feld für fertigen Einbettungscode</span>
+	<p>Aus der eingefügten Adresse werden nur Tour-Nummer und Freigabe-Token gelesen, die Einbettung baut das Plugin selbst. Ein Feld, in das man beliebiges Markup kippen kann, läuft auf der eigenen Seite mit – das wäre eine offene Tür, auch wenn heute nur du hineinschreibst.</p>
+</div>
+
+<h3>Wie die Anmeldung abläuft</h3>
+
+<p>Auch ohne Benutzerkonto: Name, E-Mail, Häkchen zur Einwilligung. <strong>Begleitpersonen</strong> trägt man darunter ein – je Klick auf <em>+ weitere Person</em> kommt eine Namenszeile dazu, bis zu zehn. Jede Begleitperson braucht einen Namen und belegt einen eigenen Platz; leere Zeilen werden beim Absenden verworfen.</p>
+
+<p>Die Belegung zählt deshalb <strong>Plätze, nicht Anmeldungen</strong>: Bei 20 Plätzen und einer Anmeldung zu dritt stehen 3 von 20.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Der Platz zählt erst mit dem Klick auf den Bestätigungslink</span>
+	<p>Nach dem Absenden geht eine E-Mail mit Bestätigungslink raus. Eine abgesendete, aber nie bestätigte Anmeldung belegt keinen Platz – sonst könnte jeder mit erfundenen Adressen ein Event blockieren. In der Liste steht sie so lange als <em>unbestätigt</em> und verfällt nach sieben Tagen von allein.</p>
+</div>
+
+<p>Über denselben Link sagt der Teilnehmer später wieder ab. Wird dadurch ein Platz frei, rückt der Erste von der Warteliste automatisch nach und bekommt sofort eine E-Mail – von Hand ist dafür nichts zu tun. Dasselbe passiert, wenn du die maximale Teilnehmerzahl nachträglich erhöhst.</p>
+
+<p>Eine Gruppe rückt nur <strong>geschlossen</strong> nach, und aufgefüllt wird streng der Reihe nach. Wird ein Platz frei, während vorne eine Dreiergruppe wartet, rückt niemand nach – auch kein Einzelner weiter hinten. Das ist Absicht: Sonst käme die Gruppe nie an die Reihe, weil sie jedes Mal überholt würde. Willst du es im Einzelfall anders, setzt du den Status in der Anmeldeliste von Hand.</p>
+
+<p>In der Anmeldeliste am Event änderst du jeden Status per Klick und lädst die <strong>Teilnehmerliste als CSV</strong> – eine Zeile je Person, mit dem Vermerk, wer sie angemeldet hat. Als Startliste direkt brauchbar. Die Texte der vier Event-Mails stehen unter <span class="weg">Verwaltung → Einstellungen → Reiter „Plugin“</span> bei den E-Mail-Vorlagen.</p>
+
+<h3>Die Terminreihe auf der Startseite</h3>
+
+<p>Die nächsten Termine erscheinen auf der Startseite als seitlich blätterbare Reihe – ein Event je Ansicht, mit Datum, kleinem Titelbild, Auszug und einem Balken, wie viele Plätze noch frei sind. Auf dem Handy wischt man, am Rechner klickt man die Pfeile links und rechts oder die Punkte darunter.</p>
+
+<p>Die Reihe blättert alle sieben Sekunden von allein weiter. Sie hält an, sobald jemand mit der Maus darüberfährt, sich mit der Tastatur hineintabbt, wischt oder den Tab wechselt – und über den <strong>Pausenknopf</strong> links neben den Punkten dauerhaft. Wer dort pausiert hat, bleibt pausiert; das kurze Verlassen mit der Maus startet die Reihe nicht wieder.</p>
+
+<div class="kasten merke">
+	<span class="titel">Wer Bewegung abbestellt hat, bekommt keine</span>
+	<p>Hat jemand im Betriebssystem eingestellt, dass Animationen reduziert werden sollen, blättert die Reihe bei ihm gar nicht von allein – und der Pausenknopf erscheint erst gar nicht, weil es nichts zu pausieren gibt. Das ist für manche Menschen kein Geschmack, sondern eine Frage der Verträglichkeit.</p>
+</div>
+
+<p>Dort ist sie schon eingebaut, du musst nichts tun. Wer sie zusätzlich woanders haben will, hat zwei Wege:</p>
+
+<ul>
+	<li><strong>Im Seiten-Editor:</strong> den Block <em>Nächste Events</em> einfügen (unter <em>Widgets</em> oder über die Suche). Rechts in der Seitenleiste stehen Überschrift, Anzahl, Eventtyp, der Link auf alle Termine sowie das automatische Weiterblättern und dessen Wartezeit. Die Vorschau im Editor zeigt dieselbe Ausgabe wie die fertige Seite. Steht gerade kein Termin an, sagt der Block das im Editor – auf der Seite selbst erscheint dann nichts.</li>
+	<li><strong>Auf einer Seite oder in einem Beitrag:</strong> den Kurzbefehl <code>[lw16_events]</code> einfügen. Mit Zusätzen: <code>[lw16_events anzahl="4" typ="social-ride"]</code> zeigt nur die nächsten vier Social Rides, <code>[lw16_events autoplay="0"]</code> eine Reihe ohne automatisches Weiterblättern, <code>[lw16_events intervall="12"]</code> eine mit längerer Wartezeit.</li>
+	<li><strong>In einem Widget-Bereich:</strong> unter <span class="weg">Design → Widgets</span> das Widget <em>Lindenweg16: Nächste Events</em> einsetzen. Dort lassen sich Überschrift, Anzahl, Eventtyp, das automatische Weiterblättern und die Wartezeit einstellen.</li>
+</ul>
+
+<div class="kasten merke">
+	<span class="titel">Ohne Datum kein Platz in der Reihe</span>
+	<p>Ein Event ohne <strong>Beginn</strong> taucht dort nicht auf – ohne Datum lässt sich nicht sagen, ob es noch bevorsteht. Trag den Beginn also immer ein, auch wenn die Uhrzeit noch wackelt. Ein Event am heutigen Tag bleibt bis Mitternacht stehen und verschwindet nicht mittags.</p>
+</div>
+
+<p>Steht gar kein Termin an, fällt der ganze Abschnitt weg – auf der Startseite steht dann keine leere Überschrift. Der Balken erscheint nur, wenn die Anmeldung eingeschaltet <em>und</em> eine maximale Teilnehmerzahl gesetzt ist; ohne Begrenzung steht dort nur <em>Anmeldung offen</em>.</p>
+
+<h3>Loyalty</h3>
+<figure>
+	<img src="bilder/lw16-loyalty.png" alt="Loyalty-Seite mit der Prüf-Warteschlange">
+	<figcaption>Empfehlungen und Bewertungen laufen in eine Prüf-Warteschlange, die du freigibst oder ablehnst – automatisch ausgeschüttet wird nichts.</figcaption>
+</figure>
+
+<h3>Support</h3>
+<figure>
+	<img src="bilder/lw16-support.png" alt="Supportseite mit Ticketliste und Audit-Log">
+	<figcaption>Kundenanfragen aus dem Formular auf der Website. Jede Statusänderung wird protokolliert.</figcaption>
+</figure>
+<h2 id="adm-berichte"><span class="nr">D.12</span> Berichte, Ziele und Monatsabschluss</h2>
+
+<p><span class="weg">Finanzen → Berichte</span></p>
+
+<figure>
+	<img src="bilder/berichte-kennzahlen.png" alt="Kennzahlentabelle mit Wert, Ziel, Alarmgrenze, Lage-Balken und Status je Quartal">
+	<figcaption>Ziele und Alarmgrenzen trägst du hier ein – je Quartal, an einer Stelle.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Oben das <strong>Quartal</strong> wählen.</li>
+	<li>Je Kennzahl <strong>Ziel</strong> und <strong>Alarm bei</strong> eintragen. Leer lassen heißt: kein Ziel, und dann wird auch keines erfunden.</li>
+	<li>Auf <strong>Ziele für … speichern</strong> klicken.</li>
+</ol>
+
+<p>Beim Wechsel des Zeitrasters rechnet das System die Ziele um: Summengrößen wie Umsatz werden nach Tagen verteilt, Verhältnisgrößen wie Quoten bleiben unverändert. Ein früheres Quartal behält seine Ziele, auch wenn du die Latte später höher legst.</p>
+
+<figure>
+	<img src="bilder/berichte-verlauf.png" alt="Verlaufsdiagramm einer Kennzahl mit Ziel- und Alarmlinie">
+	<figcaption>Der Verlauf einer Kennzahl. Ziel- und Alarmlinie liegen nur über den Zeiträumen, für die ein Ziel eingetragen ist.</figcaption>
+</figure>
+
+<h3>Monatsabschluss</h3>
+
+<figure>
+	<img src="bilder/berichte-abschluss.png" alt="Abschnitt Monatsabschluss mit Monatsauswahl und Abschließen-Knopf">
+	<figcaption><strong>Abschließen</strong> friert die automatischen Kennzahlen des gewählten Monats ein.</figcaption>
+</figure>
+
+<p>Eingefrorene Werte ändern sich danach nicht mehr, auch wenn jemand später etwas nachträgt. Das ist der Sinn: Ein Monatsbericht, der sich im Nachhinein noch verändert, ist keiner.</p>
+
+<h3>Auszug zur Analyse</h3>
+<p>Der Export lädt den Betriebszustand als Textdatei herunter: Artikel mit Kalkulation und Bestand, Stücklisten, Kennzahlen, Druckjournal, Arbeitszeit. Namen von Geschäftskunden bleiben draußen, solange du sie nicht ausdrücklich mitgibst – die Kunden sind dann durchnummeriert.</p>
+<h2 id="adm-pruefung"><span class="nr">D.13</span> Systemprüfung und Protokollkette</h2>
+
+<p><span class="weg">Verwaltung → Einstellungen → Reiter „Systemprüfung“</span></p>
+
+<figure>
+	<img src="bilder/einst-systempruefung.png" alt="Systemprüfung mit Prüfergebnis und Kettenprüfung">
+	<figcaption>Zwei Prüfungen auf einer Seite: fachliche Widersprüche und die Unversehrtheit der Protokollkette.</figcaption>
+</figure>
+
+<p><strong>Systemprüfung:</strong> Jedes Formular prüft seine eigene Eingabe. Diese Prüfung sucht Widersprüche, die erst später entstehen – ein Artikel, dessen Revision zurückgezogen wurde; eine Stückliste, deren Position stillgelegt ist; ein Gerät ohne Kalkulationsdaten. Lauf sie nach jeder größeren Änderung einmal durch.</p>
+
+<p><strong>Kettenprüfung:</strong> Jeder Protokolleintrag enthält den Hash seines Vorgängers. Wird ein Datensatz nachträglich in der Datenbank geändert, bricht die Kette und die Prüfung sagt, an welcher Stelle.</p>
+
+<figure>
+	<img src="bilder/einst-protokoll.png" alt="Protokollansicht mit den letzten Vorgängen">
+	<figcaption>Der Reiter <strong>Protokoll &amp; Kettenprüfung</strong> zeigt die letzten 50 Vorgänge.</figcaption>
+</figure>
+<h2 id="adm-import"><span class="nr">D.14</span> Import und Verfahrensdokumentation</h2>
+
+<p><span class="weg">Verwaltung → Import &amp; Doku</span></p>
+
+<h3>Daten aus einer Tabelle übernehmen</h3>
+
+<figure>
+	<img src="bilder/import-schritt1.png" alt="Schritt 1 des Imports: Datei hochladen">
+	<figcaption>Der Import läuft in drei Schritten: hochladen, Spalten zuordnen, Vorschau prüfen.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li>Jedes Blatt der Tabellenmappe einzeln als CSV exportieren (Semikolon oder Komma).</li>
+	<li>Reihenfolge einhalten: <strong>Artikel, dann Druckjournal, dann der Rest</strong> – ein Druckjob ohne Artikel hätte nichts, worauf er zeigen könnte.</li>
+	<li>Datei hochladen, auf <strong>Datei lesen</strong> klicken.</li>
+	<li>In Schritt 2 jede Spalte der Datei einem Feld zuordnen. Was nicht gebraucht wird, bleibt auf <em>– nicht importieren –</em>.</li>
+	<li>Die Datei erneut auswählen (sie wird aus Sicherheitsgründen nicht zwischengespeichert) und auf <strong>Vorschau erstellen</strong> klicken.</li>
+	<li>Die Vorschau <em>lesen</em>. Erst dann auf <strong>Import jetzt durchführen</strong> klicken.</li>
+</ol>
+
+<h3>Verfahrensdokumentation</h3>
+
+<figure>
+	<img src="bilder/import-verfahrensdoku.png" alt="Abschnitt Verfahrensdokumentation mit den Knöpfen Als PDF erzeugen und Vorschau">
+	<figcaption>Die Verfahrensdokumentation beschreibt Konfiguration, Datenmodell, Berechnungsformeln und Prozesse.</figcaption>
+</figure>
+
+<p>Das Dokument liest die Werte beim Erzeugen frisch aus dem System – es ist also immer aktuell und kein Schnappschuss von damals. Erzeug es einmal jährlich und nach jeder größeren Änderung als PDF und leg es zu den Steuerunterlagen.</p>
+<h2 id="adm-pi"><span class="nr">D.15</span> Raspberry Pi und die Dienste im Netz: Etikettendrucker, Bambu-Bridge, Slicing-Worker</h2>
+
+<p>Drei Dinge im Betrieb laufen nicht auf dem Webserver, sondern auf Geräten vor Ort: der Etikettendrucker, die Bambu-Lab-Drucker und der Slicer für die Plattenanordnung. Für jedes gibt es einen kleinen Dienst, der von innen nach außen mit WordPress spricht. Das ist das eine Prinzip, das du dir merken musst:</p>
+
+<div class="kasten merke">
+	<span class="titel">Alle drei Dienste holen ab – nichts wird hineingeschickt</span>
+	<p>Der Pi und der Slicing-Rechner bauen ausschließlich ausgehende HTTPS-Verbindungen zur Website auf und fragen: „Gibt es etwas für mich?“ Es braucht keine Portfreigabe am Router und keinen offenen Port, weder auf dem Pi noch auf dem Server. Zieht der Betrieb um, laufen die Dienste in jedem Netz mit Internetzugang unverändert weiter. Nur die Bambu-Bridge braucht zusätzlich das <em>lokale</em> Netz zum Drucker.</p>
+</div>
+
+<p>Die technische Einrichtung Schritt für Schritt – Betriebssystem, Pakete, Dienste – steht in <code>raspberry-pi/README.md</code> im Plugin-Ordner. Dieses Kapitel beschreibt die Seite von WordPress aus: was du anlegst, wo das Token herkommt und woran du erkennst, dass es läuft.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Tokens werden genau einmal angezeigt</span>
+	<p>Jeder Dienst weist sich mit einem langen Token aus. Das System speichert nur seine Prüfsumme, nicht das Token selbst. Beim Anlegen eines Druckers und bei <strong>Token neu erzeugen</strong> steht es einmal auf dem Bildschirm – sofort in die Konfigurationsdatei des Dienstes übernehmen. Ist die Seite weg, hilft nur ein neues Token, und das alte wird damit ungültig.</p>
+</div>
+
+<h3>Etikettendrucker am Packtisch</h3>
+
+<p><span class="weg">Verwaltung → Etikettendrucker</span></p>
+
+<ol class="schritte">
+	<li>Im Reiter <strong>Drucker</strong> einen Drucker anlegen: Drucker-ID (technischer Schlüssel, den der Pi in seiner Konfiguration einträgt), Name, Standort.</li>
+	<li>Das angezeigte Token in die <code>.env</code> des Druck-Clients auf dem Pi eintragen (<code>API_TOKEN</code>, dazu <code>PRINTER_ID</code>).</li>
+	<li>Dienst starten. Der Drucker meldet sich in der Liste als <em>online</em>.</li>
+	<li>Ein Testlabel drucken – der Knopf steht am Drucker.</li>
+</ol>
+
+<p>Der Reiter <strong>Druckjobs</strong> zeigt alles, was durch die Warteschlange ging: DHL-Labels, Etikettenbögen, Aufkleber. Ein Job wandert von <em>Wartend</em> über <em>Geclaimt</em> und <em>Druckt</em> nach <em>Gedruckt</em>; bleibt er auf <em>Wartend</em> stehen, holt kein Client ab. Ein Client bedient genau einen Drucker – für einen zweiten Drucker legst du einen zweiten an und startest auf dem Pi eine zweite Instanz.</p>
+
+<h3>Bambu-Lab-Drucker anbinden</h3>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker → Reiter „Drucker“</span></p>
+
+<ol class="schritte">
+	<li>Am Drucker den <strong>LAN-Modus</strong> einschalten (Einstellungen → LAN-Modus). Dort stehen IP-Adresse, Zugangscode und Seriennummer auf einem Bildschirm.</li>
+	<li>Im Router eine <strong>feste IP-Reservierung</strong> für den Drucker anlegen. Sonst ändert sich die Adresse nach einem Neustart, und die Bridge findet das Gerät nicht mehr.</li>
+	<li>In WordPress unter <strong>Neuen Bambu-Drucker anlegen</strong>: Drucker-ID, Name, IP-Adresse, LAN-Zugangscode, Seriennummer. Optional das <strong>verknüpfte Gerät</strong> aus <em>3D-Drucker &amp; Wartung</em> wählen – dann bleiben Stundensatz, Betriebsstunden und Wartungsfälligkeit dort gepflegt, und der Live-Drucker ist dasselbe Gerät.</li>
+	<li>Das Token übernehmen. Auf dem Pi <code>./install-bambu-bridge.sh</code> ausführen – das Skript fragt IP, Zugangscode und Token ab und richtet den Dienst ein.</li>
+	<li>Nach einer Minute steht die Karte auf <em>Online</em> und zeigt den Druckerstatus.</li>
+</ol>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Feld in „Verbindungsdaten bearbeiten“</th><th>Wann du es brauchst</th></tr></thead>
+<tbody>
+<tr><td><strong>Druckermodell</strong></td><td>Meldet die Bridge das Modell (z.&nbsp;B. „Bambu Lab P1S“), bleibt das Feld leer. Trag es nur von Hand ein, wenn die Karte dauerhaft <em>unbekannt</em> zeigt – das Modell entscheidet über das Druckbettmaß und über das Slicing-Profil.</td></tr>
+<tr><td><strong>Druckbettmaß</strong></td><td>Leer = automatisch aus dem Modell. Nur bei einem Modell eintragen, das das System nicht kennt. Ohne Bettmaß gibt es keine Plattenanordnung.</td></tr>
+<tr><td><strong>Zugangscode</strong></td><td>Wird nach dem Speichern nie wieder angezeigt. Ein leeres Feld heißt „unverändert“.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Der LAN-Zugangscode ist das Passwort des Druckers</span>
+	<p>Wer ihn kennt, kann im selben Netz Dateien aufspielen und Drucke starten. Er wird deshalb nur Personen mit dem Recht zur Druckerverwaltung gezeigt. Gib ihn nicht weiter, und erzeug am Drucker einen neuen, wenn er in falsche Hände geraten ist.</p>
+</div>
+
+<p><strong>Kamera-Standbild</strong> gibt es nur bei der X1-Serie; dafür muss auf dem Pi zusätzlich <code>ffmpeg</code> installiert sein. Bei P1- und A1-Druckern bleibt das Feld leer – das ist kein Fehler, sondern ein anderes Protokoll, das die Bridge nicht spricht. <strong>Mehrere Bambu-Drucker</strong> bekommen je eine eigene Drucker-ID, ein eigenes Token und eine eigene Bridge-Instanz auf dem Pi.</p>
+
+<h3>Slicing-Worker für die Plattenanordnung</h3>
+
+<p><span class="weg">Fertigung → Bambu-Lab-Drucker → Reiter „Slicing-Profile“</span></p>
+
+<p>Der Worker ist der einzige der drei Dienste, der <strong>nicht auf dem Pi</strong> läuft: OrcaSlicer braucht einen x86-Rechner. Ein Server oder ein ausgedienter PC im Betrieb genügt; am einfachsten per Docker (<code>docker compose -f docker-compose.slicing-worker.yml up -d --build</code> im Ordner <code>raspberry-pi</code>). Es gibt nur ein Token für den einen Worker, nicht eines je Drucker.</p>
+
+<ol class="schritte">
+	<li><strong>Token erzeugen</strong> und in die <code>.env.slicing</code> des Workers eintragen.</li>
+	<li>In OrcaSlicer oder Bambu Studio für jede Kombination aus Material und Druckermodell die drei Profile exportieren – Druckerprofil, Filamentprofil, Prozessprofil (Rechtsklick auf das Profil → <em>Export</em>). Das ergibt drei JSON-Dateien.</li>
+	<li>Unter <strong>Slicing-Profile</strong> Material (z.&nbsp;B. PETG) und Druckermodell eintragen und die drei Dateien hochladen. Das Druckermodell muss im gemeldeten Modellnamen des Druckers vorkommen: „P1S“ trifft auf „Bambu Lab P1S“.</li>
+	<li>Eine kleine Testplatte anordnen und <strong>Automatisch slicen</strong> klicken. Das Ergebnis erscheint im Reiter <em>Aufträge</em>; öffne die Druckdatei einmal in Bambu Studio und sieh dir die Druckvorschau an, bevor du ihr blind vertraust.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Das Material der Platte entscheidet über das Profil</span>
+	<p>Gibt es für Material und Druckermodell kein Profil, lehnt schon das Einreihen ab und sagt, welche Kombination fehlt. Das Material kommt aus der aktiven Revision des ersten Artikels auf der Platte – steht dort nichts, kann auch kein Profil gefunden werden.</p>
+</div>
+
+<h4>Wenn eine Platte auf „Fehlgeschlagen“ steht</h4>
+
+<p>Der Grund steht direkt unter dem Status: ein OrcaSlicer-Fehlercode mit Erklärung und dem Klartext des Slicers. Die häufigsten:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Meldung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
+<tbody>
+<tr><td>„wartet seit … auf den Slicing-Worker“ (kein Fehler, aber Stillstand)</td><td>Der Worker läuft nicht, oder sein Token stimmt nicht</td><td>Worker-Log ansehen; Token neu erzeugen und eintragen</td></tr>
+<tr><td>Fehler −5, Profil ungültig</td><td>Eines der drei Profile lässt sich in der OrcaSlicer-Version des Workers nicht laden</td><td>Profil in OrcaSlicer neu exportieren und ersetzen</td></tr>
+<tr><td>Fehler −50, Platte leer oder Bauteil nicht im Druckraum</td><td>Druckbettmaß in WordPress passt nicht zum Druckerprofil, oder Teile ragen über den Rand</td><td>Bettmaß beim Drucker prüfen, Sicherheitsabstand erhöhen</td></tr>
+<tr><td>Fehler −24, neuere 3MF-Version</td><td>OrcaSlicer im Worker ist älter als das Bambu Studio, aus dem die Projektdatei stammt</td><td>Ist im Standardaufruf abgefangen; sonst den Worker mit neuerer OrcaSlicer-Version bauen</td></tr>
+<tr><td>Ergebnis-Upload fehlgeschlagen</td><td>Der Webserver nimmt die fertige Datei nicht an – zu groß oder Zeitlimit</td><td>Upload-Grenze und Zeitlimit beim Hoster prüfen</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Nach Behebung der Ursache genügt <strong>Erneut slicen</strong> an der Platte. Je fehlgeschlagenem Auftrag bleiben auf dem Worker-Rechner sieben Tage lang Diagnosedateien liegen (Slicer-Log, Fehlerbericht, Eingabedateien) – wo genau, steht im Abschnitt „Fehlersuche“ von <code>raspberry-pi/README.md</code>.</p>
+<h2 id="adm-automatisch"><span class="nr">D.16</span> Was von allein läuft</h2>
+
+<p>Diese Dinge passieren ohne Zutun über den Action Scheduler, den WooCommerce mitbringt:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Vorgang</th><th>Wann</th><th>Wo einstellbar</th></tr></thead>
+<tbody>
+<tr><td>Lagerabgang bei Bestellung</td><td>Beim Statuswechsel der Bestellung</td><td>Lagerhoheit (Kapitel D.6)</td></tr>
+<tr><td>Wochenmail an die Manager</td><td>Wöchentlich</td><td>Verwaltung → Einstellungen → Farben &amp; Lagerhoheit</td></tr>
+<tr><td>Warenkorb-Erinnerungen</td><td>Nach 3 und 48 Stunden</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td></tr>
+<tr><td>Dankeschön- und Bewertungsmails</td><td>Nach 2 bzw. 12 Tagen</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td></tr>
+<tr><td>„Wieder verfügbar“ an die Warteliste</td><td>Beim Übergang von leer auf vorhanden</td><td>—</td></tr>
+<tr><td>Täglicher Bestandsreport</td><td>Täglich</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td></tr>
+<tr><td>Wöchentlicher Datenexport per Mail</td><td>Wöchentlich</td><td>Finanzen → Reporting</td></tr>
+<tr><td>Beschaffungsalarm</td><td>Laufend berechnet</td><td>Vorlaufzeiten je Komponente</td></tr>
+<tr><td>DHL-Sendungsverfolgung</td><td>Alle 3 Stunden, bis zu 50 offene Sendungen je Lauf</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td></tr>
+<tr><td>Wartung der Warteschlangen (Etikettendrucker, Bambu, Slicing)</td><td>Alle 5 Minuten: liegengebliebene Aufträge freigeben, alte Einträge aufräumen</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Wenn nichts läuft</span>
+	<p>Der Action Scheduler braucht Besucher oder einen echten Cron-Job, um seine Warteschlange abzuarbeiten. Auf einer Seite ohne Verkehr bleiben Aufgaben liegen. Unter <strong>WooCommerce → Status → Geplante Aktionen</strong> siehst du, was hängt.</p>
+</div>
+<h2 id="adm-livegang"><span class="nr">D.17</span> Livegang: sauber starten</h2>
+
+<p><span class="weg">Verwaltung → Livegang</span></p>
+
+<p>Beim Einrichten entstehen Probedaten: Testbestellungen, Probebuchungen, Druckjobs zum Ausprobieren. Vor dem echten Start werden die weggeräumt – sonst stehen sie für immer in jeder Auswertung.</p>
+
+<figure>
+	<img src="bilder/lw16-livegang.png" alt="Die Livegang-Seite mit Warnhinweis, den Listen Was bleibt und Was gelöscht wird und dem Bestätigungsknopf">
+	<figcaption>Die Livegang-Seite. Sie sieht nur, wer die Website verwaltet – nicht jeder mit Plugin-Rechten.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/livegang-was-bleibt.png" alt="Liste Was bleibt: Stammdaten wie Artikel, Revisionen, Stücklisten, Drucker, Lagerplätze, Kontakte, Einstellungen">
+	<figcaption><strong>Was bleibt:</strong> Stammdaten. Sie sind Arbeit, die niemand zweimal machen will.</figcaption>
+</figure>
+
+<figure>
+	<img src="bilder/livegang-was-geloescht.png" alt="Liste Was gelöscht wird: Bewegungsdaten wie Druckjobs, Lagerbewegungen, Chargen, Zeiten, Belege">
+	<figcaption><strong>Was gelöscht wird:</strong> Bewegungsdaten. Unwiderruflich.</figcaption>
+</figure>
+
+<ol class="schritte">
+	<li><strong>Datenbanksicherung anlegen.</strong> Es gibt keinen Papierkorb und keine Wiederherstellung im Plugin.</li>
+	<li>Beide Listen lesen – <em>Was bleibt</em> und <em>Was gelöscht wird</em>.</li>
+	<li>Auf <strong>Bestätigen</strong> klicken. Die Bestätigung gilt zehn Minuten; danach muss die Seite neu geladen werden. Das verhindert, dass ein offener Tab von gestern etwas löscht.</li>
+	<li>Auf <strong>Jetzt endgültig löschen</strong> klicken.</li>
+</ol>
+
+<div class="kasten achtung">
+	<span class="titel">Genau einmal, am Tag vor dem Start</span>
+	<p>Danach ist dieses Werkzeug nicht mehr zu benutzen – jeder Schnitt wird protokolliert und dieses Protokoll wird selbst nicht gelöscht. Eine Hashkette, die bei null beginnt, ist erklärbar; eine, die mitten in der Geschichte springt, nicht.</p>
+</div>
+<h2 id="adm-sicherung"><span class="nr">D.18</span> Datensicherung und Notfall</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Wann</th><th>Was sichern</th></tr></thead>
+<tbody>
+<tr><td>Vor jedem Plugin-Update</td><td>Datenbank</td></tr>
+<tr><td>Vor dem Livegang</td><td>Datenbank</td></tr>
+<tr><td>Vor „Alle Preise übernehmen“</td><td>Datenbank</td></tr>
+<tr><td>Laufend</td><td>Datenbank <em>und</em> das Belegverzeichnis in <code>wp-content/uploads</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Unter <span class="weg">Finanzen → Reporting</span> gibt es zusätzlich einen Datenexport, den du dir per E-Mail schicken lassen kannst – wöchentlich automatisch oder auf Knopfdruck. Der ersetzt keine Sicherung des Servers, ist aber eine Kopie der Zahlen außer Haus.</p>
+
+<figure>
+	<img src="bilder/lw16-reporting.png" alt="Reporting-Seite mit VIP-Kunden, Bestellstatistiken und dem Datenexport">
+	<figcaption><span class="weg">Finanzen → Reporting</span> – Auswertungen und der Datenexport.</figcaption>
+</figure>
+<h2 id="adm-fehler"><span class="nr">D.19</span> Wenn etwas nicht geht</h2>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
+<tbody>
+<tr><td>„Lindenweg16 ERP benötigt ein aktives WooCommerce“</td><td>WooCommerce fehlt oder ist deaktiviert</td><td>WooCommerce aktivieren, dann das Plugin erneut</td></tr>
+<tr><td>Das Plugin ist aktiv, aber die Menüs fehlen</td><td>WooCommerce wurde nachträglich deaktiviert</td><td>WooCommerce wieder aktivieren</td></tr>
+<tr><td>„Das Attribut pa_farbe existiert noch nicht“</td><td>Das globale Farbattribut fehlt</td><td>In WooCommerce unter <strong>Produkte → Attribute</strong> anlegen (Kapitel D.6)</td></tr>
+<tr><td>Verkäufe erzeugen keine Lagerbewegung</td><td>Lagerhoheit abgeschaltet oder Produkt nicht mit einem Artikel verknüpft</td><td>Kapitel D.6 und Kapitel D.8</td></tr>
+<tr><td>Bestand doppelt abgezogen</td><td>Beide Lagermodelle buchen</td><td>Lagerhoheit eindeutig einstellen</td></tr>
+<tr><td>Kalkulation zeigt „unvollständig“</td><td>Revision, Stückliste oder Gerätedaten fehlen</td><td>Die genannte Lücke schließen</td></tr>
+<tr><td>„Betriebsstunden je Jahr dürfen nicht 0 sein“</td><td>Ohne Nenner lässt sich der Ersatzteilanteil nicht umlegen</td><td>Realistischen Wert eintragen</td></tr>
+<tr><td>Die Kettenprüfung meldet einen Bruch</td><td>Ein Datensatz wurde außerhalb des Plugins geändert</td><td>Ursache klären; die Stelle steht in der Meldung</td></tr>
+<tr><td>QR-Links führen auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update nicht neu registriert</td><td>Auf der Druckerseite <strong>Adressen neu registrieren</strong>, oder Permalinks einmal speichern</td></tr>
+<tr><td>Automatische Mails kommen nicht an</td><td>Der Action Scheduler arbeitet nicht, oder der Mailversand des Hosters</td><td>WooCommerce → Status → Geplante Aktionen prüfen</td></tr>
+<tr><td>Ein Beleg lässt sich nicht ändern</td><td>Er ist festgeschrieben</td><td>Stornieren und neu erfassen (Kapitel D.10)</td></tr>
+<tr><td>Ein Bambu-Drucker steht auf <em>Offline</em></td><td>Die Bridge auf dem Pi meldet sich nicht</td><td>Pi und Dienst prüfen (Kapitel D.15)</td></tr>
+<tr><td>„Drucker nicht erreichbar“ bei Bridge <em>Online</em></td><td>Der Pi findet den Drucker im lokalen Netz nicht</td><td>Drucker an? IP-Reservierung im Router? Zugangscode richtig?</td></tr>
+<tr><td>Eine Platte steht auf <em>Fehlgeschlagen</em></td><td>Der Slicer hat abgebrochen; der Grund steht unter dem Status</td><td>Ursache beheben, dann <strong>Erneut slicen</strong> (Kapitel D.15)</td></tr>
+<tr><td>Eine Platte wartet endlos auf den Slicing-Worker</td><td>Der Worker läuft nicht oder hat ein falsches Token</td><td>Worker-Log ansehen, Token neu erzeugen</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten merke">
+	<span class="titel">Der Reflex, der am meisten hilft</span>
+	<p>Lies die Meldung zu Ende. Dieses Plugin schreibt keine Fehlercodes, sondern ganze Sätze – und im Satz steht fast immer schon, was zu tun ist.</p>
+</div>
+</section>
+
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.14.0 ·
+<a href="#einstieg">Einstieg</a> ·
+<a href="#teil-produktion">Produktion</a> ·
+<a href="#teil-versand">Versand</a> ·
+<a href="#teil-personal">Personal</a> ·
+<a href="#teil-admin">Administration</a></p>
+
+</div>
+</body>
+</html>

@@ -603,7 +603,7 @@ automatisch in die ganz normale Bambu-Warteschlange ein.
 
 **Wichtiger Vorbehalt:** Der Slicer-Aufruf ist gegen OrcaSlicer 2.4.2
 abgeglichen (`--load-settings` für Drucker- und Prozessprofil,
-`--load-filaments` für das Filamentprofil, `--allow-newer-file`, siehe
+`--load-filaments` für das Filamentprofil, `--arrange 0`, `--allow-newer-file`, siehe
 Kommentar in `slicing_worker.py`) und lässt sich über
 `SLICER_ARGS_TEMPLATE` in `.env.slicing` an eine andere Version
 anpassen. Vor dem produktiven Einsatz trotzdem mit einer unkritischen

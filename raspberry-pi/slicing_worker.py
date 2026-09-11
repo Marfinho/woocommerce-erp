@@ -32,6 +32,11 @@ das Verhalten von OrcaSlicer 2.4.2 abgeglichen:
     der Dateiname übergeben, kein absoluter Pfad.
   * "--slice 1": Die Plattenanordnung legt alles auf Platte 1, und die
     Bambu-Bridge startet später genau Metadata/plate_1.gcode.
+  * "--arrange 0": automatisches Anordnen ausdrücklich abschalten. Die
+    Platzierung kommt aus der Plattenanordnung in WordPress
+    (PlateComposer/BinPacker) und darf vom Slicer nicht ersetzt werden.
+    Für eine Bambu-Projektdatei ist "nicht anordnen" zwar ohnehin der
+    Standard von OrcaSlicer - explizit ist es unmissverständlich.
 
 Vor dem produktiven Einsatz unbedingt mit einer einzelnen, unkritischen
 Platte von Hand gegenprüfen (Ergebnis-3MF in Bambu Studio öffnen und die
@@ -110,6 +115,7 @@ DEFAULT_SLICER_ARGS_TEMPLATE = (
     "{input} "
     "--load-settings {printer};{process} "
     "--load-filaments {filament} "
+    "--arrange 0 "
     "--slice 1 "
     "--allow-newer-file "
     "--outputdir {workdir} "
