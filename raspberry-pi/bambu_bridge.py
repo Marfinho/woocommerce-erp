@@ -54,6 +54,7 @@ import sys
 import tempfile
 import threading
 import time
+import zipfile
 from ftplib import FTP, FTP_TLS, error_perm
 from pathlib import Path
 from typing import Optional
@@ -406,6 +407,14 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
                         "type": str(fach.get("tray_type") or "").strip(),
                         "color": str(fach.get("tray_color") or "").strip(),
                         "remain": _safe_int(fach.get("remain")),
+                        # Bambus eigene Filament-ID (z. B. "GFA01" fuer
+                        # "PLA MATTE Haster Haken") - dieselbe ID, die auch
+                        # in Metadata/project_settings.config der Druckdatei
+                        # als "filament_ids" steht. Genauer als ein
+                        # Typ/Farbe-Abgleich (siehe find_ams_tray_for_filament()),
+                        # weil zwei Filamente zufaellig dieselbe Farbe haben
+                        # koennen.
+                        "tray_info_idx": str(fach.get("tray_info_idx") or "").strip(),
                     }
                 )
             einheiten.append(
@@ -459,6 +468,60 @@ def start_mqtt_client() -> "mqtt.Client":
     return client
 
 
+def read_target_filament_id(local_path: Path) -> Optional[str]:
+    """Bambu-eigene Filament-ID (z. B. "GFA01") lesen, die der
+    Slicing-Worker beim Erzeugen dieser Druckdatei in
+    Metadata/project_settings.config ("filament_ids") hinterlegt hat -
+    Grundlage für die automatische AMS-Fach-Erkennung in
+    find_ams_tray_for_filament(). None bei einer nicht lesbaren/nicht von
+    uns geslicten Datei oder ohne dieses Feld (z. B. manueller Upload
+    einer fremden Druckdatei ohne unser Profil-Handling)."""
+    try:
+        with zipfile.ZipFile(local_path) as zf:
+            config = json.loads(zf.read("Metadata/project_settings.config").decode("utf-8", errors="replace"))
+    except (OSError, KeyError, ValueError, zipfile.BadZipFile):
+        return None
+
+    ids = config.get("filament_ids") if isinstance(config, dict) else None
+    if isinstance(ids, list) and ids and isinstance(ids[0], str) and ids[0].strip():
+        return ids[0].strip()
+    return None
+
+
+def find_ams_tray_for_filament(ams_snapshot: Optional[list], filament_id: str) -> Optional[int]:
+    """Physisches AMS-Fach (globale Nummer: Einheit * 4 + Fach-Index,
+    dieselbe Zählweise wie ams_mapping) suchen, das laut dem zuletzt per
+    MQTT empfangenen AMS-Report gerade die gegebene Bambu-Filament-ID
+    trägt.
+
+    Das ist der automatische Ersatz für das, was Bambu Studio beim
+    manuellen Drucken selbst per RFID-Erkennung macht: dort wählt man nie
+    "Fach 3", sondern die Software erkennt automatisch, in welchem Fach
+    das passende Filament liegt. Ohne diesen Abgleich schickte
+    send_print_command() für automatisch geslicte Aufträge bisher immer
+    use_ams=false, obwohl die Druckdatei ein AMS-Filamentprofil nutzt (mit
+    entsprechendem Toolchange-Gcode) - der Drucker konnte die dafür
+    nötige AMS-Zuordnungstabelle dann nicht auflösen ("Die Zuordnungstabelle
+    des AMS konnte nicht abgerufen werden").
+
+    None, wenn noch kein AMS-Report vorliegt oder keines der Fächer
+    passt (Filament nicht eingelegt oder AMS-Bestückung seit dem letzten
+    Report geändert) - der Aufrufer fällt dann auf das alte Verhalten
+    zurück."""
+    if not ams_snapshot or not filament_id:
+        return None
+
+    for einheit in ams_snapshot:
+        einheit_id = einheit.get("id")
+        if einheit_id is None:
+            continue
+        for fach in einheit.get("trays", []) or []:
+            if fach.get("id") is not None and fach.get("tray_info_idx") == filament_id:
+                return einheit_id * 4 + fach["id"]
+
+    return None
+
+
 def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id: Optional[int] = None) -> None:
     """Druck der zuvor per FTPS hochgeladenen Datei anstoßen.
 
@@ -466,14 +529,15 @@ def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id:
     um eine bereits auf dem Drucker liegende (S)3MF-Druckdatei zu
     starten.
 
-    ams_tray_id ist optional das beim Einreihen in WordPress gewählte
-    AMS-Fach (siehe BambuPrinterRepository::ams_tray_options() auf der
-    PHP-Seite - "globale" Fach-Nummer: AMS-Einheit * 4 + Fach-Index,
-    dieselbe Zählweise, die ams_mapping selbst erwartet). Ohne Auswahl
-    bleibt es wie bisher beim gerade eingelegten/externen Filament
-    (use_ams=false) - der Slicer/das Profil hat beim Erzeugen der
-    Druckdatei bereits festgelegt, welches Material gemeint ist, und ein
-    automatischer AMS-Wechsel ohne Sichtprüfung vor Ort wäre riskant.
+    ams_tray_id ist entweder das beim Einreihen in WordPress manuell
+    gewählte AMS-Fach, oder (siehe find_ams_tray_for_filament()) das
+    automatisch anhand der Filament-ID der Druckdatei erkannte Fach -
+    "globale" Fach-Nummer: AMS-Einheit * 4 + Fach-Index, dieselbe
+    Zählweise, die ams_mapping selbst erwartet. Bleibt es None (weder
+    manuell gewählt noch automatisch erkannt), startet der Druck wie
+    bisher mit dem gerade eingelegten/externen Filament (use_ams=false) -
+    ein automatischer AMS-Wechsel ohne Sichtprüfung vor Ort wäre riskant,
+    falls die Zuordnung nicht sicher feststeht.
 
     ams_mapping bildet die Filament-IDs IM G-CODE auf physische AMS-
     Fächer ab. Diese Anbindung erzeugt nur Ein-Material-Druckdateien
@@ -1052,8 +1116,29 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
             api.fail(job_id, meldung)
             return
 
+        ams_tray_id = job.get("ams_tray_id")
+        if ams_tray_id is None:
+            # Kein manuell in WordPress gewähltes Fach - automatisch anhand
+            # der Filament-ID der Druckdatei erkennen (siehe
+            # find_ams_tray_for_filament()), statt ohne AMS zu drucken.
+            filament_id = read_target_filament_id(local_path)
+            if filament_id:
+                auto_tray = find_ams_tray_for_filament(STATE.snapshot()["ams"], filament_id)
+                if auto_tray is not None:
+                    log.info(
+                        "Job %s: AMS-Fach %s automatisch anhand Filament-ID %s erkannt.",
+                        job_id, auto_tray, filament_id,
+                    )
+                    ams_tray_id = auto_tray
+                else:
+                    log.warning(
+                        "Job %s: kein AMS-Fach mit Filament-ID %s gefunden (Filament nicht eingelegt oder "
+                        "AMS-Bestückung geändert) - Druck startet ohne AMS-Auswahl.",
+                        job_id, filament_id,
+                    )
+
         STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")
-        send_print_command(mqtt_client, remote_filename, job.get("ams_tray_id"))
+        send_print_command(mqtt_client, remote_filename, ams_tray_id)
         api.mark_printing(job_id)
 
         gestartet, fehler = warte_auf_druckstart()
