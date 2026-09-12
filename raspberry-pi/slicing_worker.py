@@ -580,6 +580,18 @@ PROJECT_LEVEL_KEYS = frozenset({
 })
 PROJECT_CONFIG_ENTRY = "Metadata/project_settings.config"
 
+# Diese drei Schluessel tragen je AMS-Filament-Slot ein Listenelement -
+# stammt die Platte aus einem mehrfarbigen Bambu-Studio-Projekt (mehrere
+# Filamente/AMS-Zuordnungen), haben sie entsprechend mehrere Eintraege.
+# Diese Anbindung druckt aber immer nur mit einem einzigen Filament (dem
+# in WordPress gewaehlten Material, siehe Modulkommentar) - unveraendert
+# uebernommen, bekommt der Drucker eine Zuordnungstabelle fuer mehrere
+# Filamente, waehrend der G-Code nur eines definiert, und meldete
+# firmwareseitig "Zuordnungstabelle des AMS konnte nicht abgerufen
+# werden" (live so beobachtet, am Druckerdisplay). Auf das erste
+# Element eindampfen, damit Tabelle und G-Code zueinander passen.
+PER_FILAMENT_LIST_KEYS = ("filament_map", "filament_ids", "filament_colour")
+
 
 def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -> list[str]:
     """Metadata/project_settings.config der Platte auf die Schluessel der
@@ -619,9 +631,23 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
             if not isinstance(config, dict):
                 return []
             dropped = sorted(k for k in config if k not in allowed)
-            if not dropped:
-                return []
             cleaned = {k: v for k, v in config.items() if k in allowed}
+
+            truncated = []
+            for key in PER_FILAMENT_LIST_KEYS:
+                value = cleaned.get(key)
+                if isinstance(value, list) and len(value) > 1:
+                    cleaned[key] = value[:1]
+                    truncated.append(key)
+
+            if not dropped and not truncated:
+                return []
+
+            if truncated:
+                log.info(
+                    "Projekteinstellungen der Platte: Mehrfarben-AMS-Zuordnung (%s) auf ein Filament eingedampft - diese Anbindung druckt einfarbig.",
+                    ", ".join(truncated),
+                )
 
             tmp_fd, tmp_name = tempfile.mkstemp(prefix="plate-", suffix=".3mf", dir=str(input_path.parent))
             os.close(tmp_fd)
