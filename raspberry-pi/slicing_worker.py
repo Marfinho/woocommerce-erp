@@ -591,6 +591,12 @@ PROJECT_CONFIG_ENTRY = "Metadata/project_settings.config"
 # fuenf Slots statt einem.
 PER_FILAMENT_LIST_KEYS = ("filament_map", "filament_ids", "filament_colour")
 
+# Reine Bookkeeping-/Identitaetsfelder DES PROFILS (nicht der eigentlichen
+# Druckeinstellungen) - stehen in printer.json/filament.json/process.json,
+# kommen aber in project_settings.config von Haus aus nicht vor (live
+# geprueft). Sollen nicht als vermeintlich neue Projekteinstellung landen.
+PROFILE_BOOKKEEPING_KEYS = frozenset({"type", "instantiation", "setting_id"})
+
 
 def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -> list[str]:
     """Metadata/project_settings.config der Platte auf die Schluessel der
@@ -628,7 +634,16 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
     ist per Definition schon korrekt fuer genau dieses eine Filament -
     diesen Wert direkt uebernehmen macht Raten ueberfluessig.
     Reihenfolge printer -> filament -> process, damit bei (unerwarteter)
-    Ueberschneidung das speziellste Profil zuletzt gewinnt.
+    Ueberschneidung das speziellste Profil zuletzt gewinnt. Ausnahme:
+    PROJECT_LEVEL_KEYS gewinnt IMMER, auch wenn ein Profil zufaellig
+    denselben Schluesselnamen fuer etwas anderes benutzt - live so
+    gefunden: printer.json/filament.json/process.json tragen alle drei
+    ein eigenes "version" (die Presetschema-Version des Profils, z. B.
+    "2.5.0.14") sowie "name" und "from", was mit der gleichnamigen
+    Projekteinstellung (Studio-/OrcaSlicer-Version der 3MF-Datei selbst)
+    nichts zu tun hat - ungeprueft uebernommen fuehrte das zu einer
+    Platte mit falscher Dateiversion, die OrcaSlicer nicht mehr parsen
+    konnte (Fehler -6, std::bad_alloc beim Einlesen).
 
     Liefert die entfernten Schluessel (fuer das Log)."""
     import tempfile
@@ -663,8 +678,25 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
                     cleaned[key] = value[:1]
                     truncated.append(key)
 
-            overwritten = sorted(k for k, v in profile_data.items() if config.get(k) != v)
-            cleaned.update(profile_data)
+            # PROJECT_LEVEL_KEYS gewinnt IMMER, auch wenn ein Profil zufaellig
+            # denselben Schluesselnamen fuer etwas voelling anderes benutzt.
+            # Live so gefunden: printer.json/filament.json/process.json tragen
+            # alle drei ein eigenes "version" (die Bambu-Studio-Presetschema-
+            # Version des PROFILS, z. B. "2.5.0.14") sowie "name" und "from" -
+            # das hat nichts mit der gleichnamigen Projekteinstellung zu tun
+            # (project_settings.config "version" ist die Studio-/OrcaSlicer-
+            # Version, MIT der die 3MF geschrieben wurde; deswegen gibt es
+            # ueberhaupt "--allow-newer-file"). Ungeprueft uebernommen fuehrte
+            # das dazu, dass die Platte eine falsche Dateiversion trug und
+            # OrcaSlicer die 3MF gar nicht mehr parsen konnte (Fehler -6,
+            # std::bad_alloc beim Einlesen).
+            overwritten = sorted(
+                k for k, v in profile_data.items()
+                if k not in PROJECT_LEVEL_KEYS and k not in PROFILE_BOOKKEEPING_KEYS and config.get(k) != v
+            )
+            for key, value in profile_data.items():
+                if key not in PROJECT_LEVEL_KEYS and key not in PROFILE_BOOKKEEPING_KEYS:
+                    cleaned[key] = value
 
             if not dropped and not overwritten and not truncated:
                 return []
