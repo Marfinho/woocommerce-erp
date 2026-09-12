@@ -83,29 +83,42 @@ class SlicingProfileRepository {
 	}
 
 	/**
-	 * Absoluter Pfad des Druckerprofils irgendeines Materials für dieses
-	 * Druckermodell - das Druckerprofil (Druckbett, Sperrflächen usw.)
-	 * ist materialunabhängig, ein beliebiges hinterlegtes Profil dieses
-	 * Modells reicht (siehe PrinterBedExclusion).
+	 * Absolute Pfade der Druckerprofile ALLER Materialien, die für dieses
+	 * Druckermodell hinterlegt sind - das Druckerprofil (Druckbett,
+	 * Sperrflächen usw.) ist zwar materialunabhängig, aber je Material
+	 * kann eine eigene Kopie hochgeladen worden sein (z. B. PLA zuerst,
+	 * PETG später mit einem aktualisierten Export). Absichtlich ALLE
+	 * zurückgeben statt nur eine (z. B. die älteste) zu raten: fehlt in
+	 * einer Datei ein Feld wie "bed_exclude_area", das eine andere,
+	 * neuere Kopie durchaus hat, soll der Aufrufer die nächste probieren
+	 * können, statt bei der zufällig zuerst gefundenen leer auszugehen
+	 * (siehe PrinterBedExclusion).
 	 *
 	 * @param string $printer_model z. B. "Bambu Lab P1S" oder "P1S".
-	 * @return string Absoluter Pfad, oder leer wenn kein Profil hinterlegt ist.
+	 * @return array Absolute Pfade, neueste zuerst.
 	 */
-	public static function printer_profile_path_for_model( $printer_model ) {
+	public static function printer_profile_paths_for_model( $printer_model ) {
 		global $wpdb;
 
 		if ( '' === trim( (string) $printer_model ) ) {
-			return '';
+			return array();
 		}
 
-		$filename = $wpdb->get_var(
+		$filenames = $wpdb->get_col(
 			$wpdb->prepare(
-				'SELECT printer_profile_path FROM ' . self::table() . ' WHERE printer_model = %s ORDER BY id ASC LIMIT 1', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT printer_profile_path FROM ' . self::table() . ' WHERE printer_model = %s ORDER BY id DESC', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(string) $printer_model
 			)
 		);
 
-		return $filename ? trailingslashit( self::dir() ) . $filename : '';
+		$dir   = trailingslashit( self::dir() );
+		$paths = array();
+		foreach ( (array) $filenames as $filename ) {
+			if ( $filename ) {
+				$paths[] = $dir . $filename;
+			}
+		}
+		return $paths;
 	}
 
 	/**

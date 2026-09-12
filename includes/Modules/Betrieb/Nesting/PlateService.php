@@ -62,9 +62,11 @@ class PlateService {
 		// Sperrfläche ablehnt (live so passiert).
 		$exclusion_zones = array();
 		if ( ! empty( $printer->printer_model ) ) {
-			$profile_path = SlicingProfileRepository::printer_profile_path_for_model( $printer->printer_model );
-			if ( $profile_path ) {
+			foreach ( SlicingProfileRepository::printer_profile_paths_for_model( $printer->printer_model ) as $profile_path ) {
 				$exclusion_zones = PrinterBedExclusion::from_profile_json( $profile_path );
+				if ( $exclusion_zones ) {
+					break; // Erstes Profil, das tatsächlich eine Sperrfläche nennt.
+				}
 			}
 		}
 
