@@ -664,6 +664,91 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
         return []
 
 
+MODEL_CONFIG_ENTRY = "Metadata/model_settings.config"
+
+
+def sanitize_model_settings(input_path: Path) -> int:
+    """Metadata/model_settings.config auf ein einziges Filament eindampfen
+    - das Gegenstueck zu sanitize_project_config() fuer die Objekt-Ebene.
+
+    Ein <object>/<part> traegt dort ein eigenes "extruder"-Metadata (z. B.
+    value="3"), wenn das Bauteil im Original-Bambu-Studio-Projekt einem
+    bestimmten AMS-Filament-Slot zugewiesen war. Bleibt das stehen,
+    waehrend das Projekt jetzt (siehe sanitize_project_config()) nur noch
+    ein Filament kennt, verweist das Bauteil auf einen nicht existenten
+    Extruder - live so beobachtet: viele "variant index out of range"-
+    Warnungen beim Laden, gefolgt von std::bad_alloc beim eigentlichen
+    Slicen (OrcaSlicer 2.4.2 verkraftet dieses Missverhaeltnis offenbar
+    nicht). Alle extruder-Werte auf "1" setzen; die Platten-weiten
+    "filament_maps"/"filament_volume_maps" (ein Wert je Filament-Slot,
+    leerzeichengetrennt) ebenso auf ihren ersten Wert eindampfen.
+
+    Liefert die Anzahl geaenderter Werte (0 = nichts zu tun, Datei bleibt
+    unangetastet)."""
+    import tempfile
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(input_path) as zin:
+            if MODEL_CONFIG_ENTRY not in zin.namelist():
+                return 0
+            xml_bytes = zin.read(MODEL_CONFIG_ENTRY)
+    except (OSError, zipfile.BadZipFile) as exc:
+        log.warning("Metadata/model_settings.config konnte nicht gelesen werden: %s", exc)
+        return 0
+
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError as exc:
+        log.warning("Metadata/model_settings.config ist kein gueltiges XML: %s", exc)
+        return 0
+
+    changed = 0
+    for metadata in root.iter("metadata"):
+        key = metadata.get("key")
+        value = metadata.get("value")
+        if value is None:
+            continue
+        if key == "extruder" and value != "1":
+            metadata.set("value", "1")
+            changed += 1
+        elif key in ("filament_maps", "filament_volume_maps"):
+            first = value.split()[:1]
+            eingedampft = first[0] if first else value
+            if eingedampft != value:
+                metadata.set("value", eingedampft)
+                changed += 1
+
+    if not changed:
+        return 0
+
+    log.info(
+        "Metadata/model_settings.config: %d Extruder-/Filament-Zuordnung(en) auf Filament 1 eingedampft.",
+        changed,
+    )
+
+    tmp_fd, tmp_name = tempfile.mkstemp(prefix="plate-", suffix=".3mf", dir=str(input_path.parent))
+    os.close(tmp_fd)
+    try:
+        with zipfile.ZipFile(input_path) as zin, zipfile.ZipFile(tmp_name, "w", zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.infolist():
+                if item.filename == MODEL_CONFIG_ENTRY:
+                    zout.writestr(item, ET.tostring(root, encoding="unicode", xml_declaration=True))
+                else:
+                    zout.writestr(item, zin.read(item.filename))
+        Path(tmp_name).replace(input_path)
+    except (OSError, zipfile.BadZipFile) as exc:
+        log.warning("Metadata/model_settings.config konnte nicht geschrieben werden: %s", exc)
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        return 0
+
+    return changed
+
+
 # ---------------------------------------------------------------------
 # Slicer-Aufruf
 # ---------------------------------------------------------------------
@@ -1019,6 +1104,7 @@ def process_job(api: ApiClient, job: dict) -> None:
             ", ".join(dropped[:12]),
             ", …" if len(dropped) > 12 else "",
         )
+    sanitize_model_settings(input_path)
 
     slice_ok, message = run_slicer(input_path, output_path, printer_json, filament_json, process_json)
 
