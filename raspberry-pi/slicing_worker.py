@@ -32,11 +32,20 @@ das Verhalten von OrcaSlicer 2.4.2 abgeglichen:
     der Dateiname übergeben, kein absoluter Pfad.
   * "--slice 1": Die Plattenanordnung legt alles auf Platte 1, und die
     Bambu-Bridge startet später genau Metadata/plate_1.gcode.
-  * "--arrange 0": automatisches Anordnen ausdrücklich abschalten. Die
-    Platzierung kommt aus der Plattenanordnung in WordPress
-    (PlateComposer/BinPacker) und darf vom Slicer nicht ersetzt werden.
-    Für eine Bambu-Projektdatei ist "nicht anordnen" zwar ohnehin der
-    Standard von OrcaSlicer - explizit ist es unmissverständlich.
+  * "--arrange 1": OrcaSlicer selbst endgültig anordnen lassen, statt der
+    Platzierung aus der WordPress-Plattenanordnung (PlateComposer/
+    BinPacker) zu vertrauen. Grund für den Wechsel von ursprünglich
+    "--arrange 0": BinPacker kennt nur das reine Bettrechteck, nicht die
+    Sperrflächen des Druckerprofils ("bed_exclude_area", z. B. eine
+    gesperrte Bettecke) - OrcaSlicer selbst schon, und lehnte deshalb
+    live wiederholt mit Code -64 ("too close to exclusion area") ab,
+    obwohl die eigene Anordnung nichts beanstandet hatte. Ausserdem live
+    beobachtet: zwei Bauteile ineinander platziert (ein Fehler in der
+    Anordnungslogik selbst). OrcaSlicer prüft Sperrflächen UND
+    Kollisionen bereits korrekt, wenn es selbst anordnet - PlateComposer
+    liefert weiterhin eine sinnvolle Ausgangslage (u. a. fürs
+    Gewicht/Kosten-Vorabschätzen in WordPress), die tatsächliche
+    Platzierung im Slice-Ergebnis kommt aber von OrcaSlicer.
 
 Vor dem produktiven Einsatz unbedingt mit einer einzelnen, unkritischen
 Platte von Hand gegenprüfen (Ergebnis-3MF in Bambu Studio öffnen und die
@@ -116,7 +125,7 @@ DEFAULT_SLICER_ARGS_TEMPLATE = (
     "{input} "
     "--load-settings {printer};{process} "
     "--load-filaments {filament} "
-    "--arrange 0 "
+    "--arrange 1 "
     "--slice 1 "
     "--allow-newer-file "
     "--outputdir {workdir} "
