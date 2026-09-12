@@ -580,16 +580,15 @@ PROJECT_LEVEL_KEYS = frozenset({
 })
 PROJECT_CONFIG_ENTRY = "Metadata/project_settings.config"
 
-# Diese drei Schluessel tragen je AMS-Filament-Slot ein Listenelement -
-# stammt die Platte aus einem mehrfarbigen Bambu-Studio-Projekt (mehrere
-# Filamente/AMS-Zuordnungen), haben sie entsprechend mehrere Eintraege.
-# Diese Anbindung druckt aber immer nur mit einem einzigen Filament (dem
-# in WordPress gewaehlten Material, siehe Modulkommentar) - unveraendert
-# uebernommen, bekommt der Drucker eine Zuordnungstabelle fuer mehrere
-# Filamente, waehrend der G-Code nur eines definiert, und meldete
-# firmwareseitig "Zuordnungstabelle des AMS konnte nicht abgerufen
-# werden" (live so beobachtet, am Druckerdisplay). Auf das erste
-# Element eindampfen, damit Tabelle und G-Code zueinander passen.
+# Diese drei PROJECT_LEVEL_KEYS sind selbst wieder pro-AMS-Filament-Slot-Listen
+# (welcher Slot welches Filament/welche Farbe hat) - stehen aber nicht in
+# printer.json/filament.json/process.json und werden deshalb von der
+# Profil-Ueberschreibung in sanitize_project_config() gar nicht erst
+# beruehrt. Bei einer aus einem mehrfarbigen Projekt stammenden Platte, die
+# jetzt nur noch ein Filament laedt, muessen sie trotzdem auf genau einen
+# Eintrag eingedampft werden - sonst bleibt z. B. filament_map=[1,2,3,4,5]
+# stehen und der Slicer/Drucker erwartet eine AMS-Zuordnungstabelle mit
+# fuenf Slots statt einem.
 PER_FILAMENT_LIST_KEYS = ("filament_map", "filament_ids", "filament_colour")
 
 
@@ -608,16 +607,40 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
     deshalb aus dem Standard der installierten OrcaSlicer-Version kommen -
     das ist auch, was die GUI bei "neues Projekt mit diesen Profilen" taete.
 
+    Jeder aus einem der drei Profile stammende Schluessel wird mit dem
+    Wert AUS DEM PROFIL ueberschrieben, statt den (moeglicherweise
+    veralteten) Wert aus der Projektdatei nur zu uebernehmen. Bambu Studio
+    spiegelt praktisch jede Filamentprofil-Einstellung (Betttemperatur,
+    Duesentemperatur, Filamenttyp, Luefterkurven, ...) als Liste mit
+    einem Eintrag je frueher verwendetem AMS-Filament-Slot in der
+    Projektdatei - stammt die Platte aus einem mehrfarbigen Projekt,
+    bleiben dort mehrere, teils widerspruechliche Werte stehen (live so
+    gefunden: hot_plate_temp=[60,55,55,55,90], gemischt PLA/ABS, bei
+    nozzle_temperature sogar zehn statt fuenf Eintraege - pro
+    Duesen-Variante verdoppelt). Nur das erste Element dieser Listen zu
+    uebernehmen waere selbst dann noch geraten (stimmt zufaellig, wenn
+    Slot 0 historisch das gewuenschte Material war) UND riskant fuers
+    Erraten anhand der Listenlaenge (z. B. printable_area/
+    print_compatible_printers sind ebenfalls Listen mit mehreren
+    Eintraegen, haben aber nichts mit der Filamentanzahl zu tun - blind
+    kuerzen wuerde dort die Druckbett-Geometrie zerstoeren). Stattdessen:
+    jeder Schluessel, den eines der drei geladenen Profile selbst setzt,
+    ist per Definition schon korrekt fuer genau dieses eine Filament -
+    diesen Wert direkt uebernehmen macht Raten ueberfluessig.
+    Reihenfolge printer -> filament -> process, damit bei (unerwarteter)
+    Ueberschneidung das speziellste Profil zuletzt gewinnt.
+
     Liefert die entfernten Schluessel (fuer das Log)."""
     import tempfile
     import zipfile
 
-    allowed = set(PROJECT_LEVEL_KEYS)
+    profile_data: dict = {}
     for path in profile_paths:
         try:
-            allowed.update(_read_json(path).keys())
+            profile_data.update(_read_json(path))
         except (OSError, ValueError):
             pass
+    allowed = set(PROJECT_LEVEL_KEYS) | set(profile_data.keys())
 
     try:
         with zipfile.ZipFile(input_path) as zin:
@@ -631,7 +654,7 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
             if not isinstance(config, dict):
                 return []
             dropped = sorted(k for k in config if k not in allowed)
-            cleaned = {k: v for k, v in config.items() if k in allowed}
+            cleaned = {k: v for k, v in config.items() if k in PROJECT_LEVEL_KEYS}
 
             truncated = []
             for key in PER_FILAMENT_LIST_KEYS:
@@ -640,13 +663,24 @@ def sanitize_project_config(input_path: Path, profile_paths: tuple[Path, ...]) -
                     cleaned[key] = value[:1]
                     truncated.append(key)
 
-            if not dropped and not truncated:
+            overwritten = sorted(k for k, v in profile_data.items() if config.get(k) != v)
+            cleaned.update(profile_data)
+
+            if not dropped and not overwritten and not truncated:
                 return []
 
             if truncated:
                 log.info(
-                    "Projekteinstellungen der Platte: Mehrfarben-AMS-Zuordnung (%s) auf ein Filament eingedampft - diese Anbindung druckt einfarbig.",
+                    "Projekteinstellungen der Platte: AMS-Zuordnung %s auf ein Filament eingedampft (Platte stammte aus einem mehrfarbigen Projekt).",
                     ", ".join(truncated),
+                )
+
+            if overwritten:
+                log.info(
+                    "Projekteinstellungen der Platte: %d Einstellung(en) durch die geladenen Profile ersetzt (waren fuer mehrere Filamente/eine andere Version gedacht), u. a. %s%s.",
+                    len(overwritten),
+                    ", ".join(overwritten[:12]),
+                    ", …" if len(overwritten) > 12 else "",
                 )
 
             tmp_fd, tmp_name = tempfile.mkstemp(prefix="plate-", suffix=".3mf", dir=str(input_path.parent))
