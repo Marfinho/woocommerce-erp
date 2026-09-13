@@ -238,6 +238,12 @@ class ResetTool {
 			// Slicing-Profile (OrcaSlicer-Profildateien je Material und
 			// Druckermodell) sind ebenfalls Konfiguration, keine Testdaten.
 			'slicing_profiles',
+			// Der Bambu-Filament-Katalog ist gesammeltes Wissen über echte
+			// Spulen (RFID-IDs), keine Testdaten - ein Reset dürfte sonst
+			// vorher hinterlegte Filamentnamen (siehe rename()) und alle
+			// Farbzuordnungen bei Slicing-Profilen/Artikelrevisionen
+			// verwaisen lassen.
+			'bambu_filament_catalog',
 		);
 	}
 

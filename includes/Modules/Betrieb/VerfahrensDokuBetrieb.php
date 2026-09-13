@@ -129,6 +129,7 @@ class VerfahrensDokuBetrieb {
 			'print_queue_printers' => __( 'Registrierte Raspberry-Pi-Druckclients der Druck-Warteschlange; gespeichert wird nur der Hash des Bearer-Tokens, nie das Token selbst', 'lindenweg16' ),
 			'print_queue_jobs'    => __( 'Druckjobs der Druck-Warteschlange (DHL-Versandlabels, Artikel-/Lagerplatz-Etiketten, Testlabel); referenziert wo möglich die vorhandene Datei statt sie zu kopieren', 'lindenweg16' ),
 			'bambu_printers'      => __( 'Registrierte Bambu-Lab-3D-Drucker der LAN-Anbindung samt Live-Status; gespeichert wird nur der Hash des Bearer-Tokens, nie das Token selbst', 'lindenweg16' ),
+			'bambu_filament_catalog' => __( 'Katalog echter Bambu-Lab-Filamente (RFID-Filament-ID je Farbe), automatisch gesammelt aus AMS-Meldungen und hochgeladenen Slicing-Profilen; Grundlage der Farbauswahl bei Artikelrevision und Slicing-Profil', 'lindenweg16' ),
 			'bambu_jobs'          => __( '3MF-Druckaufträge der Bambu-Lab-Anbindung; referenziert die vorhandene Modelldatei statt sie zu kopieren, außer bei einem manuell hochgeladenen Einzeldruck', 'lindenweg16' ),
 			'bambu_plate_jobs'    => __( 'Automatisch angeordnete Druckplatten (mehrere Bauteile auf einem virtuellen Druckbett), samt der zusammengesetzten, noch ungeslicten Projekt-3MF', 'lindenweg16' ),
 			'slicing_profiles'    => __( 'OrcaSlicer-Profildateien (Drucker/Filament/Prozess) je Material und Druckermodell für den Headless-Slicing-Worker', 'lindenweg16' ),
