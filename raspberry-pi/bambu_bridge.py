@@ -1117,11 +1117,18 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
             return
 
         ams_tray_id = job.get("ams_tray_id")
+        # TEMPORAER zur Diagnose (live AMS-Fach-Erkennung feuert nicht) -
+        # nach Klaerung wieder entfernen.
+        log.info(
+            "Job %s: DEBUG ams_tray_id=%r (Typ %s), lokale Datei=%s, AMS-Snapshot=%r",
+            job_id, ams_tray_id, type(ams_tray_id).__name__, local_path, STATE.snapshot()["ams"],
+        )
         if ams_tray_id is None:
             # Kein manuell in WordPress gewähltes Fach - automatisch anhand
             # der Filament-ID der Druckdatei erkennen (siehe
             # find_ams_tray_for_filament()), statt ohne AMS zu drucken.
             filament_id = read_target_filament_id(local_path)
+            log.info("Job %s: DEBUG ermittelte Filament-ID=%r", job_id, filament_id)
             if filament_id:
                 auto_tray = find_ams_tray_for_filament(STATE.snapshot()["ams"], filament_id)
                 if auto_tray is not None:
