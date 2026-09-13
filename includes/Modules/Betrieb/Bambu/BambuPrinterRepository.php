@@ -375,6 +375,16 @@ class BambuPrinterRepository {
 		}
 		if ( array_key_exists( 'ams', $data ) ) {
 			$update['ams_json'] = self::normalize_ams_json( $data['ams'] );
+
+			if ( $update['ams_json'] ) {
+				// In den Bambu-Filament-Katalog übernehmen (siehe
+				// BambuFilamentCatalogRepository) - jedes AMS-Fach mit
+				// erkannter RFID-Filament-ID wird dort gesammelt, damit
+				// Artikelrevisionen und Slicing-Profile später aus einer
+				// Auswahl echter, schon einmal gesehener Bambu-Filamente
+				// wählen können statt Freitext einzutippen.
+				BambuFilamentCatalogRepository::observe_ams_json( $update['ams_json'] );
+			}
 		}
 
 		$wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );

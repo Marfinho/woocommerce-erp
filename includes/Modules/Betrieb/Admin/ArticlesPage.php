@@ -12,6 +12,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuFilamentCatalogRepository;
 use Lindenweg16\Modules\Betrieb\PriceSync;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
@@ -868,13 +869,53 @@ class ArticlesPage {
 	}
 
 	/**
-	 * Ein Auswahlfeld.
+	 * Auswahlliste der Revisions-Farbe: {Bambu-Filament-ID => Anzeigetext}
+	 * aus dem Bambu-Filament-Katalog, mit einer leeren Option für "das
+	 * eine farblose Profil dieses Materials".
 	 *
-	 * @param string $label   Beschriftung.
-	 * @param string $name    Feldname.
-	 * @param array  $options Werte => Beschriftung.
-	 * @param string $current Aktueller Wert.
-	 * @param string $description Hilfetext.
+	 * @return array
+	 */
+	protected function filament_color_options() {
+		$options = array( '' => __( '(farblos - das eine Profil dieses Materials)', 'lindenweg16' ) );
+
+		foreach ( BambuFilamentCatalogRepository::all() as $filament ) {
+			$options[ $filament->filament_id ] = sprintf(
+				'%s%s (%s)',
+				$filament->material ? $filament->material . ' – ' : '',
+				$filament->label ? $filament->label : $filament->filament_id,
+				$filament->filament_id
+			);
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Anzeigename zu einer gespeicherten Bambu-Filament-ID (Revisions-
+	 * Farbe) - "(farblos)" wenn leer, sonst der Katalog-Anzeigename, oder
+	 * die rohe ID, falls sie (noch) nicht im Katalog steht.
+	 *
+	 * @param string $filament_id Gespeicherter Wert des Farbfelds.
+	 * @return string
+	 */
+	protected function color_label( $filament_id ) {
+		if ( '' === $filament_id ) {
+			return __( '(farblos)', 'lindenweg16' );
+		}
+
+		$filament = BambuFilamentCatalogRepository::find( $filament_id );
+
+		return $filament ? sprintf( '%s (%s)', $filament->label, $filament_id ) : $filament_id;
+	}
+
+	/**
+	 * Beschriftetes Auswahlfeld.
+	 *
+	 * @param string $label       Beschriftung.
+	 * @param string $name        Feldname.
+	 * @param array  $options     {Wert => Beschriftung}.
+	 * @param string $current     Aktueller Wert.
+	 * @param string $description Zusatztext.
 	 */
 	protected function select( $label, $name, array $options, $current = '', $description = '' ) {
 		printf(
@@ -1285,7 +1326,7 @@ class ArticlesPage {
 				echo '<tr>';
 				printf( '<td><strong>%s</strong></td>', esc_html( $row['version'] ) );
 				printf( '<td>%s</td>', esc_html( (string) $row['material'] ) );
-				printf( '<td>%s</td>', esc_html( (string) $row['color'] ) );
+				printf( '<td>%s</td>', esc_html( $this->color_label( (string) $row['color'] ) ) );
 				printf( '<td>%s g</td>', esc_html( number_format_i18n( (float) $row['weight_g'], 1 ) ) );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $row['parts_per_plate'], 0 ) ) );
 				printf( '<td>%s h</td>', esc_html( number_format_i18n( (float) $row['print_time_plate_h'], 2 ) ) );
@@ -1327,7 +1368,13 @@ class ArticlesPage {
 
 		$this->field( __( 'Version', 'lindenweg16' ), 'version', '', 'text', __( 'z. B. v1.0', 'lindenweg16' ) );
 		$this->select( __( 'Material', 'lindenweg16' ), 'material', array_combine( RevisionRepository::MATERIALS, RevisionRepository::MATERIALS ), 'PETG' );
-		$this->field( __( 'Farbe', 'lindenweg16' ), 'color', '', 'text', __( 'Freitext, muss zur Farbe eines hinterlegten Slicing-Profils passen (Betrieb → Bambu-Lab-Drucker → Slicing-Profile). Leer = das eine farblose Profil dieses Materials.', 'lindenweg16' ) );
+		$this->select(
+			__( 'Farbe', 'lindenweg16' ),
+			'color',
+			$this->filament_color_options(),
+			'',
+			__( 'Nur echte Bambu-Lab-Filamente, die schon einmal in einem AMS steckten oder per Slicing-Profil hochgeladen wurden (Betrieb → Bambu-Lab-Drucker → Slicing-Profile, dort auch umbenennbar).', 'lindenweg16' )
+		);
 		$this->field( __( 'Bauteilgewicht (g)', 'lindenweg16' ), 'weight_g', '', 'text', __( 'Aus dem Slicer. Grundlage der Materialkosten.', 'lindenweg16' ) );
 		$this->field( __( 'Teile je Platte', 'lindenweg16' ), 'parts_per_plate', '1' );
 		$this->field( __( 'Druckzeit je Platte (h)', 'lindenweg16' ), 'print_time_plate_h', '', 'text', __( 'Die Druckzeit je Teil ergibt sich daraus automatisch.', 'lindenweg16' ) );

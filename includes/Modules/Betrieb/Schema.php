@@ -875,6 +875,28 @@ class Schema {
 			KEY geraet_id (geraet_id)
 		) {$charset_collate};";
 
+		// Katalog echter Bambu-Lab-Filamente: jede eindeutige Bambu-
+		// Filament-ID (z. B. "GFA01"), die je in einem AMS gesteckt hat
+		// (RFID-erkannt, siehe BambuFilamentCatalogRepository::observe_ams())
+		// oder in einem hochgeladenen Slicing-Profil vorkam. filament_id
+		// ist bewusst der Schlüssel statt einer freien Farbbezeichnung -
+		// jede Bambu-Farbvariante hat eine eigene, eindeutige ID; ein
+		// Drittanbieter-/Custom-Filament ohne RFID-Tag hat keine gültige
+		// ID und taucht hier nie auf ("nur mit Bambu-Lab-Filamenten
+		// arbeiten").
+		$t[] = "CREATE TABLE {$p}bambu_filament_catalog (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			filament_id VARCHAR(20) NOT NULL,
+			material VARCHAR(20) NOT NULL DEFAULT '',
+			color_hex VARCHAR(10) NOT NULL DEFAULT '',
+			label VARCHAR(100) NOT NULL DEFAULT '',
+			label_edited TINYINT(1) NOT NULL DEFAULT 0,
+			first_seen_at DATETIME NOT NULL,
+			last_seen_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY filament_id (filament_id)
+		) {$charset_collate};";
+
 		// Ein Bambu-Job referenziert eine bereits abgelegte 3MF-Datei und
 		// optional den Fertigungsauftrag (wp_lw16_druckauftrag), aus dem er
 		// entstanden ist – darüber trägt ein abgeschlossener Druck seine

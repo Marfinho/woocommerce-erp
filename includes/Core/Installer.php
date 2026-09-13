@@ -50,8 +50,15 @@ class Installer {
 	 * braucht. dbDelta legt die neue Spalte automatisch an, den alten
 	 * eindeutigen Schlüssel muss maybe_replace_slicing_profile_unique_key()
 	 * explizit entfernen (dbDelta löscht Indizes nicht selbst).
+	 *
+	 * DB_VERSION 33: neue Tabelle bambu_filament_catalog - ein Katalog
+	 * aller echten Bambu-Lab-Filamente (per RFID-ID, z. B. "GFA01"), die
+	 * je in einem AMS gesteckt haben oder in einem Slicing-Profil
+	 * hochgeladen wurden. Die freie Farb-Texteingabe aus DB_VERSION 32
+	 * wird dadurch zu einer Auswahl aus diesem Katalog (siehe
+	 * BambuFilamentCatalogRepository).
 	 */
-	const DB_VERSION = '32';
+	const DB_VERSION = '33';
 
 	/**
 	 * Aktivierungsroutine.
