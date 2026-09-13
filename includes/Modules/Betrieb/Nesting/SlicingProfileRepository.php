@@ -54,6 +54,23 @@ class SlicingProfileRepository {
 	}
 
 	/**
+	 * Alle (Material, Farbe)-Kombinationen, für die tatsächlich mindestens
+	 * ein Profil existiert (auf irgendeinem Druckermodell) - Grundlage der
+	 * Farbauswahl bei der Artikelrevision (siehe ArticlesPage::
+	 * filament_color_options()). Ohne diese Einschränkung ließe sich dort
+	 * jede je im AMS gesehene Farbe wählen, auch eine, für die nie ein
+	 * Profil hochgeladen wurde - das automatische Slicen schlüge dann erst
+	 * beim Einreihen einer Platte mit "kein Slicing-Profil hinterlegt"
+	 * fehl, statt schon bei der Revisionspflege sichtbar zu sein.
+	 *
+	 * @return array Liste von {material, color}.
+	 */
+	public static function existing_material_colors() {
+		global $wpdb;
+		return $wpdb->get_results( 'SELECT DISTINCT material, color FROM ' . self::table() ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
 	 * Einzelnes Profil.
 	 *
 	 * @param int $id ID.

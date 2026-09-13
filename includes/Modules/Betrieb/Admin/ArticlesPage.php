@@ -13,6 +13,7 @@ use Lindenweg16\Core\Assets;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuFilamentCatalogRepository;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
 use Lindenweg16\Modules\Betrieb\PriceSync;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
@@ -869,22 +870,44 @@ class ArticlesPage {
 	}
 
 	/**
-	 * Auswahlliste der Revisions-Farbe: {Bambu-Filament-ID => Anzeigetext}
-	 * aus dem Bambu-Filament-Katalog, mit einer leeren Option für "das
-	 * eine farblose Profil dieses Materials".
+	 * Auswahlliste der Revisions-Farbe: {Bambu-Filament-ID => Anzeigetext}.
+	 *
+	 * Bewusst NICHT der volle Bambu-Filament-Katalog (der enthält auch
+	 * Filamente, die nur einmal im AMS steckten, aber nie ein Slicing-
+	 * Profil dafür hochgeladen wurde) - eingeschränkt auf die (Material,
+	 * Farbe)-Kombinationen, für die tatsächlich ein Profil existiert
+	 * (SlicingProfileRepository::existing_material_colors()). So kann bei
+	 * der Revisionspflege gar nicht erst eine Farbe gewählt werden, für
+	 * die das automatische Slicen später mit "kein Slicing-Profil
+	 * hinterlegt" scheitern würde - die Verknüpfung ist damit erzwungen,
+	 * nicht nur eine Konvention.
 	 *
 	 * @return array
 	 */
 	protected function filament_color_options() {
-		$options = array( '' => __( '(farblos - das eine Profil dieses Materials)', 'lindenweg16' ) );
+		$options = array();
 
-		foreach ( BambuFilamentCatalogRepository::all() as $filament ) {
-			$options[ $filament->filament_id ] = sprintf(
-				'%s%s (%s)',
-				$filament->material ? $filament->material . ' – ' : '',
-				$filament->label ? $filament->label : $filament->filament_id,
-				$filament->filament_id
+		foreach ( SlicingProfileRepository::existing_material_colors() as $kombination ) {
+			if ( '' === $kombination->color ) {
+				$options[''] = __( '(farblos - das eine Profil dieses Materials)', 'lindenweg16' );
+				continue;
+			}
+
+			$filament = BambuFilamentCatalogRepository::find( $kombination->color );
+
+			$options[ $kombination->color ] = sprintf(
+				'%s – %s (%s)',
+				$kombination->material,
+				$filament && $filament->label ? $filament->label : $kombination->color,
+				$kombination->color
 			);
+		}
+
+		if ( ! $options ) {
+			// Noch gar kein Slicing-Profil hinterlegt - lieber das
+			// sichtbar machen, als eine Auswahl vorzugaukeln, die ins
+			// Leere liefe.
+			$options[''] = __( '(noch kein Slicing-Profil hinterlegt - siehe Betrieb → Bambu-Lab-Drucker → Slicing-Profile)', 'lindenweg16' );
 		}
 
 		return $options;
@@ -1373,7 +1396,7 @@ class ArticlesPage {
 			'color',
 			$this->filament_color_options(),
 			'',
-			__( 'Nur echte Bambu-Lab-Filamente, die schon einmal in einem AMS steckten oder per Slicing-Profil hochgeladen wurden (Betrieb → Bambu-Lab-Drucker → Slicing-Profile, dort auch umbenennbar).', 'lindenweg16' )
+			__( 'Nur Farben, für die tatsächlich ein Slicing-Profil hinterlegt ist (Betrieb → Bambu-Lab-Drucker → Slicing-Profile, dort auch umbenennbar) - das automatische Slicen kann damit nie an einer fehlenden Farbzuordnung scheitern.', 'lindenweg16' )
 		);
 		$this->field( __( 'Bauteilgewicht (g)', 'lindenweg16' ), 'weight_g', '', 'text', __( 'Aus dem Slicer. Grundlage der Materialkosten.', 'lindenweg16' ) );
 		$this->field( __( 'Teile je Platte', 'lindenweg16' ), 'parts_per_plate', '1' );
