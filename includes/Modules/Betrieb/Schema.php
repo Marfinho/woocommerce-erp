@@ -131,6 +131,7 @@ class Schema {
 			article_id BIGINT UNSIGNED NOT NULL,
 			version VARCHAR(20) NOT NULL,
 			material VARCHAR(20) NULL,
+			color VARCHAR(60) NULL,
 			nozzle_mm DECIMAL(10,3) NULL,
 			layer_mm DECIMAL(10,3) NULL,
 			perimeters TINYINT UNSIGNED NULL,
@@ -957,6 +958,7 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}slicing_profiles (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			material VARCHAR(20) NOT NULL,
+			color VARCHAR(60) NOT NULL DEFAULT '',
 			printer_model VARCHAR(100) NOT NULL,
 			printer_profile_path VARCHAR(255) NOT NULL,
 			filament_profile_path VARCHAR(255) NOT NULL,
@@ -964,7 +966,7 @@ class Schema {
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NULL,
 			PRIMARY KEY  (id),
-			UNIQUE KEY material_printer (material, printer_model)
+			UNIQUE KEY material_color_printer (material, color, printer_model)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}slicing_jobs (

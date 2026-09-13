@@ -180,11 +180,19 @@ class RevisionRepository {
 			$material = 'PETG';
 		}
 
+		// Freitext statt fester Liste: Filamentfarben/-varianten sind zu
+		// zahlreich und herstellerspezifisch (z. B. "Weiß", "PLA MATTE
+		// Haster Haken") für eine feste Auswahl wie bei MATERIALS. Leer
+		// bleibt gültig - dann greift beim Slicen das eine, farblose
+		// Profil dieses Materials (siehe SlicingProfileRepository).
+		$color = isset( $input['color'] ) ? sanitize_text_field( $input['color'] ) : '';
+
 		return array(
 			'data'   => array(
 				'article_id'           => $article_id,
 				'version'              => $version,
 				'material'             => $material,
+				'color'                => $color,
 				'nozzle_mm'            => self::decimal( $input, 'nozzle_mm' ),
 				'layer_mm'             => self::decimal( $input, 'layer_mm' ),
 				'perimeters'           => self::int_or( $input, 'perimeters', 0 ),

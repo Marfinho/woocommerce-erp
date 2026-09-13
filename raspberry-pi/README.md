@@ -479,6 +479,35 @@ im selben Netz Dateien aufspielen und Drucke auslösen. Er wird deshalb
 nur Benutzern mit der Berechtigung zur Druckerverwaltung angezeigt und
 nach dem Speichern nicht mehr in die Seite zurückgeschrieben.
 
+### Update einspielen
+
+`bambu_bridge.py` läuft NICHT aus dem geklonten Repository, sondern aus
+einer eigenen Kopie unter `/opt/bambu-bridge/bambu_bridge.py` (siehe
+Schnellinstallation oben) – ein `git pull` im Repository-Verzeichnis
+aktualisiert diese Kopie NICHT von selbst. Nach einem `git pull` also
+zusätzlich:
+
+```bash
+cp ~/woocommerce-erp/raspberry-pi/bambu_bridge.py /opt/bambu-bridge/bambu_bridge.py
+sudo systemctl restart bambu-bridge
+```
+
+Zur Kontrolle, dass der neue Stand wirklich läuft (Beispiel mit einer
+Funktion, die es erst seit einer bestimmten Änderung gibt):
+
+```bash
+grep -c find_ams_tray_for_filament /opt/bambu-bridge/bambu_bridge.py
+```
+
+Ein Neustart mitten in einem laufenden Druck lässt die Bridge die
+Fortschritts-Verfolgung für den gerade laufenden Auftrag verlieren (der
+Druck selbst läuft am Drucker unabhängig weiter) – der Auftrag bleibt
+dann in der „Aufträge"-Liste auf seinem letzten Stand hängen, bis
+entweder ein späterer MQTT-Report ihn doch noch abschließt oder die
+automatische Wartung ihn nach `BambuJobRepository::LOCK_TIMEOUT_MINUTES`
+(180 Minuten) wieder freigibt. Updates deshalb nach Möglichkeit
+zwischen zwei Aufträgen einspielen.
+
 ### Mehrere Bambu-Drucker
 
 Jeder Drucker bekommt eine eigene Drucker-ID und ein eigenes Token,

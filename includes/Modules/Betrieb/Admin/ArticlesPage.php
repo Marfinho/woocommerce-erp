@@ -1268,6 +1268,7 @@ class ArticlesPage {
 			foreach ( array(
 				__( 'Version', 'lindenweg16' ),
 				__( 'Material', 'lindenweg16' ),
+				__( 'Farbe', 'lindenweg16' ),
 				__( 'Gewicht', 'lindenweg16' ),
 				__( 'Teile je Platte', 'lindenweg16' ),
 				__( 'Druckzeit Platte', 'lindenweg16' ),
@@ -1284,6 +1285,7 @@ class ArticlesPage {
 				echo '<tr>';
 				printf( '<td><strong>%s</strong></td>', esc_html( $row['version'] ) );
 				printf( '<td>%s</td>', esc_html( (string) $row['material'] ) );
+				printf( '<td>%s</td>', esc_html( (string) $row['color'] ) );
 				printf( '<td>%s g</td>', esc_html( number_format_i18n( (float) $row['weight_g'], 1 ) ) );
 				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $row['parts_per_plate'], 0 ) ) );
 				printf( '<td>%s h</td>', esc_html( number_format_i18n( (float) $row['print_time_plate_h'], 2 ) ) );
@@ -1325,6 +1327,7 @@ class ArticlesPage {
 
 		$this->field( __( 'Version', 'lindenweg16' ), 'version', '', 'text', __( 'z. B. v1.0', 'lindenweg16' ) );
 		$this->select( __( 'Material', 'lindenweg16' ), 'material', array_combine( RevisionRepository::MATERIALS, RevisionRepository::MATERIALS ), 'PETG' );
+		$this->field( __( 'Farbe', 'lindenweg16' ), 'color', '', 'text', __( 'Freitext, muss zur Farbe eines hinterlegten Slicing-Profils passen (Betrieb → Bambu-Lab-Drucker → Slicing-Profile). Leer = das eine farblose Profil dieses Materials.', 'lindenweg16' ) );
 		$this->field( __( 'Bauteilgewicht (g)', 'lindenweg16' ), 'weight_g', '', 'text', __( 'Aus dem Slicer. Grundlage der Materialkosten.', 'lindenweg16' ) );
 		$this->field( __( 'Teile je Platte', 'lindenweg16' ), 'parts_per_plate', '1' );
 		$this->field( __( 'Druckzeit je Platte (h)', 'lindenweg16' ), 'print_time_plate_h', '', 'text', __( 'Die Druckzeit je Teil ergibt sich daraus automatisch.', 'lindenweg16' ) );
@@ -1403,7 +1406,7 @@ class ArticlesPage {
 
 		// Die Revision wird mit ihren eigenen Werten erneut gespeichert –
 		// so bleibt der Datensatz unverändert und nur die Datei kommt dazu.
-		foreach ( array( 'version', 'material', 'weight_g', 'parts_per_plate', 'print_time_plate_h', 'nozzle_mm', 'layer_mm', 'perimeters', 'infill_pct', 'infill_pattern', 'nozzle_temp', 'bed_temp', 'cooling_pct', 'orientation_note' ) as $keep ) {
+		foreach ( array( 'version', 'material', 'color', 'weight_g', 'parts_per_plate', 'print_time_plate_h', 'nozzle_mm', 'layer_mm', 'perimeters', 'infill_pct', 'infill_pattern', 'nozzle_temp', 'bed_temp', 'cooling_pct', 'orientation_note' ) as $keep ) {
 			printf( '<input type="hidden" name="%s" value="%s" />', esc_attr( $keep ), esc_attr( (string) $row[ $keep ] ) );
 		}
 		if ( ! empty( $row['supports'] ) ) {

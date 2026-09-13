@@ -67,9 +67,11 @@ class SlicingService {
 		}
 
 		$material = '';
+		$color    = '';
 		if ( $article_id ) {
 			$revision = RevisionRepository::active_for_article( $article_id );
 			$material = $revision ? strtoupper( (string) $revision['material'] ) : '';
+			$color    = $revision ? (string) $revision['color'] : '';
 		}
 
 		if ( '' === $material ) {
@@ -78,13 +80,14 @@ class SlicingService {
 		}
 
 		$printer_model = self::printer_model_for( (string) $plate->printer_id );
-		$profile       = $printer_model ? SlicingProfileRepository::find_for( $material, $printer_model ) : null;
+		$profile       = $printer_model ? SlicingProfileRepository::find_for( $material, $printer_model, $color ) : null;
 
 		if ( ! $profile ) {
 			$leer['error'] = sprintf(
-				/* translators: 1: Material, 2: Druckermodell. */
-				__( 'Kein Slicing-Profil für %1$s auf %2$s hinterlegt.', 'lindenweg16' ),
+				/* translators: 1: Material, 2: Farbe, 3: Druckermodell. */
+				__( 'Kein Slicing-Profil für %1$s%2$s auf %3$s hinterlegt.', 'lindenweg16' ),
 				$material,
+				'' !== $color ? ' (' . $color . ')' : '',
 				$printer_model ? $printer_model : __( 'unbekanntes Druckermodell', 'lindenweg16' )
 			);
 			return $leer;

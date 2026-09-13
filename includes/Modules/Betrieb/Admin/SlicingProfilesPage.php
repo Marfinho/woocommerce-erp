@@ -77,6 +77,7 @@ class SlicingProfilesPage {
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
 		$material      = isset( $_POST['material'] ) ? sanitize_text_field( wp_unslash( $_POST['material'] ) ) : '';
+		$color         = isset( $_POST['color'] ) ? sanitize_text_field( wp_unslash( $_POST['color'] ) ) : '';
 		$printer_model = isset( $_POST['printer_model'] ) ? sanitize_text_field( wp_unslash( $_POST['printer_model'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
@@ -95,6 +96,7 @@ class SlicingProfilesPage {
 		$id = SlicingProfileRepository::upsert(
 			array(
 				'material'              => $material,
+				'color'                 => $color,
 				'printer_model'         => $printer_model,
 				'printer_profile_path'  => $printer_path,
 				'filament_profile_path' => $filament_path,
@@ -182,6 +184,11 @@ class SlicingProfilesPage {
 		}
 		echo '</select></td></tr>';
 
+		echo '<tr><th scope="row">' . esc_html__( 'Farbe', 'lindenweg16' ) . '</th><td>';
+		echo '<input type="text" name="color" class="regular-text" placeholder="' . esc_attr__( 'z. B. Weiß - leer = das eine farblose Profil dieses Materials', 'lindenweg16' ) . '">';
+		echo '<p class="description">' . esc_html__( 'Muss zur Farbe passen, die bei der Artikelrevision hinterlegt ist (Betrieb → Artikel → Revision).', 'lindenweg16' ) . '</p>';
+		echo '</td></tr>';
+
 		echo '<tr><th scope="row">' . esc_html__( 'Druckermodell', 'lindenweg16' ) . '</th><td>';
 		echo '<input type="text" name="printer_model" class="regular-text" placeholder="P1S">';
 		echo '<p class="description">' . esc_html__( 'Muss zum von der Bridge gemeldeten Druckermodell passen (Teilstring-Vergleich, z. B. "P1S" trifft auf "Bambu Lab P1S").', 'lindenweg16' ) . '</p>';
@@ -202,10 +209,11 @@ class SlicingProfilesPage {
 			return;
 		}
 
-		echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Material', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Druckermodell', 'lindenweg16' ) . '</th><th></th></tr></thead><tbody>';
+		echo '<table class="widefat striped"><thead><tr><th>' . esc_html__( 'Material', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Farbe', 'lindenweg16' ) . '</th><th>' . esc_html__( 'Druckermodell', 'lindenweg16' ) . '</th><th></th></tr></thead><tbody>';
 		foreach ( $profiles as $profile ) {
 			echo '<tr>';
 			printf( '<td>%s</td>', esc_html( $profile->material ) );
+			printf( '<td>%s</td>', esc_html( $profile->color ? $profile->color : __( '(farblos)', 'lindenweg16' ) ) );
 			printf( '<td>%s</td>', esc_html( $profile->printer_model ) );
 			echo '<td>';
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'' . esc_js( __( 'Profil wirklich löschen?', 'lindenweg16' ) ) . '\')">';
