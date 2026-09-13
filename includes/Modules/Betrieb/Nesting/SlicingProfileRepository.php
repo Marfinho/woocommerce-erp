@@ -50,7 +50,7 @@ class SlicingProfileRepository {
 	 */
 	public static function all() {
 		global $wpdb;
-		return $wpdb->get_results( 'SELECT * FROM ' . self::table() . ' ORDER BY material ASC, printer_model ASC' ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return $wpdb->get_results( 'SELECT * FROM ' . self::table() . ' ORDER BY material ASC, color ASC, printer_model ASC' ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
@@ -65,18 +65,23 @@ class SlicingProfileRepository {
 	}
 
 	/**
-	 * Passendes Profil für Material + Druckermodell.
+	 * Passendes Profil für Material + Farbe + Druckermodell.
 	 *
 	 * @param string $material      z. B. PETG.
 	 * @param string $printer_model z. B. "Bambu Lab P1S" oder "P1S".
+	 * @param string $color         Farbe der Revision (siehe
+	 *                              RevisionRepository) - leer, wenn keine
+	 *                              hinterlegt ist; passt dann auf das eine
+	 *                              farblose Profil dieses Materials.
 	 * @return object|null
 	 */
-	public static function find_for( $material, $printer_model ) {
+	public static function find_for( $material, $printer_model, $color = '' ) {
 		global $wpdb;
 		return $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . self::table() . ' WHERE material = %s AND printer_model = %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT * FROM ' . self::table() . ' WHERE material = %s AND color = %s AND printer_model = %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				strtoupper( (string) $material ),
+				(string) $color,
 				(string) $printer_model
 			)
 		);
@@ -178,18 +183,21 @@ class SlicingProfileRepository {
 	}
 
 	/**
-	 * Profil anlegen oder (bei gleichem Material+Modell) ersetzen.
+	 * Profil anlegen oder (bei gleichem Material+Farbe+Modell) ersetzen.
 	 *
-	 * @param array $data {material, printer_model, printer_profile_path,
-	 *                      filament_profile_path, process_profile_path}
-	 *                      – die drei *_path-Felder sind bereits abgelegte
-	 *                      Dateinamen (siehe store_file()).
+	 * @param array $data {material, color, printer_model,
+	 *                      printer_profile_path, filament_profile_path,
+	 *                      process_profile_path} – die drei *_path-Felder
+	 *                      sind bereits abgelegte Dateinamen (siehe
+	 *                      store_file()); color ist optional, leer = ein
+	 *                      farbloses Profil dieses Materials.
 	 * @return int Neue oder bestehende ID, 0 bei Fehler.
 	 */
 	public static function upsert( array $data ) {
 		global $wpdb;
 
 		$material      = strtoupper( sanitize_text_field( (string) $data['material'] ) );
+		$color         = isset( $data['color'] ) ? sanitize_text_field( (string) $data['color'] ) : '';
 		$printer_model = sanitize_text_field( (string) $data['printer_model'] );
 
 		if ( '' === $material || '' === $printer_model ) {
@@ -199,9 +207,10 @@ class SlicingProfileRepository {
 			return 0;
 		}
 
-		$existing = self::find_for( $material, $printer_model );
+		$existing = self::find_for( $material, $printer_model, $color );
 		$row      = array(
 			'material'               => $material,
+			'color'                  => $color,
 			'printer_model'          => $printer_model,
 			'printer_profile_path'   => (string) $data['printer_profile_path'],
 			'filament_profile_path'  => (string) $data['filament_profile_path'],

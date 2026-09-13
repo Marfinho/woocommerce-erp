@@ -41,8 +41,17 @@ class Installer {
 	 *
 	 * DB_VERSION 31: bambu_jobs um ams_tray_id (gewähltes AMS-Fach für
 	 * den gesamten Druckauftrag) erweitert.
+	 *
+	 * DB_VERSION 32: article_revisions um color (Filamentfarbe) erweitert;
+	 * slicing_profiles ebenso, und der bisherige eindeutige Schlüssel
+	 * material+printer_model durch material+color+printer_model ersetzt -
+	 * vorher gab es systemweit nur EIN Profil (und damit eine Farbe) je
+	 * Material, unabhängig davon, welche Farbe ein Artikel tatsächlich
+	 * braucht. dbDelta legt die neue Spalte automatisch an, den alten
+	 * eindeutigen Schlüssel muss maybe_replace_slicing_profile_unique_key()
+	 * explizit entfernen (dbDelta löscht Indizes nicht selbst).
 	 */
-	const DB_VERSION = '31';
+	const DB_VERSION = '32';
 
 	/**
 	 * Aktivierungsroutine.
@@ -804,6 +813,37 @@ class Installer {
 
 		// Migration: DHL-Zugangsdaten auf getrennte Sandbox-/Live-Felder heben.
 		self::maybe_migrate_dhl_credentials();
+
+		// Migration: slicing_profiles von einem Profil je Material auf eines
+		// je Material+Farbe umstellen.
+		self::maybe_replace_slicing_profile_unique_key();
+	}
+
+	/**
+	 * DB_VERSION 32: slicing_profiles hatte bisher einen eindeutigen
+	 * Schlüssel material+printer_model - nur ein Profil (und damit eine
+	 * Farbe) je Material war möglich. dbDelta legt die neue Spalte "color"
+	 * zwar automatisch an, entfernt aber nie von sich aus einen
+	 * bestehenden Index; ohne diesen Schritt bliebe der alte, zu enge
+	 * Schlüssel bestehen und ein zweites Profil desselben Materials in
+	 * einer anderen Farbe ließe sich nicht anlegen.
+	 */
+	protected static function maybe_replace_slicing_profile_unique_key() {
+		global $wpdb;
+
+		$table = $wpdb->prefix . 'lw16_slicing_profiles';
+
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) !== $table ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			return;
+		}
+
+		$has_old_index = $wpdb->get_var(
+			$wpdb->prepare( "SHOW INDEX FROM {$table} WHERE Key_name = %s", 'material_printer' ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		if ( $has_old_index ) {
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX material_printer" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
 	}
 
 	/**
