@@ -228,4 +228,40 @@ class ComponentRepository {
 		BetriebAudit::record( 'update', 'components', (int) $id, $before, $data, $reason );
 		return true;
 	}
+
+	/**
+	 * Bestand um eine Menge ändern – Korrektur mit Begründung.
+	 *
+	 * Die Datenbank rechnet (siehe ComponentConsumption::subtract), und das
+	 * Änderungsprotokoll hält Stand vorher und nachher fest.
+	 *
+	 * @param int    $id     Datensatz.
+	 * @param float  $delta  Menge, positiv erhöht, negativ senkt.
+	 * @param string $reason Begründung.
+	 * @return bool
+	 */
+	public static function adjust_stock( $id, $delta, $reason = '' ) {
+		global $wpdb;
+
+		$before = self::find( $id );
+		if ( ! $before ) {
+			return false;
+		}
+
+		$table = self::table();
+		$now   = current_time( 'mysql', true );
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} SET stock_qty = stock_qty + %f, updated_at = %s WHERE id = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(float) $delta,
+				$now,
+				(int) $id
+			)
+		);
+
+		$after = self::find( $id );
+		BetriebAudit::record( 'update', 'components', (int) $id, $before, $after, $reason );
+		return true;
+	}
 }
