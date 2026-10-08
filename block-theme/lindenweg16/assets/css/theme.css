@@ -1,0 +1,3862 @@
+/**
+ * Lindenweg16 – theme.css
+ *
+ * Alles, was theme.json nicht kann: Glas, Farbflecken, Animationen,
+ * Block-Styles und der Feinschliff für die WooCommerce-Blöcke.
+ *
+ * Farben kommen ausschließlich aus den Paletten-Rollen
+ * (--wp--preset--color--*). Feste Farbwerte gibt es hier nicht – auch
+ * Schatten und Transparenzen werden per color-mix() aus den Rollen gemischt.
+ *
+ * Inhalt
+ *  0. Kurznamen und Dark Mode
+ *  1. Grundlagen: Farbflecken, Fokus, Auswahl
+ *  2. Typografie: Marker, Mono, Eyebrow
+ *  3. Header, Navigation, Mini-Cart-Knopf
+ *  4. Buttons (auch alle WooCommerce-Buttons)
+ *  5. Block-Styles: Karte, Glas, Sticker, Chip, Schwebend, Häkchen
+ *  6. Formulare
+ *  7. Bewegung: Einblenden beim Laden
+ *  8. Patterns
+ *  9. Produktkarten, Preise, Badges, Bewertungen
+ * 10. Produktseite
+ * 11. Kategorie-Seiten, Filter, Sortierung, Paginierung
+ * 12. Mini-Cart
+ * 13. Warenkorb und Kasse
+ * 14. Hinweise
+ * 15. Bestellbestätigung
+ * 16. Mein Konto
+ * 17. Germanized / German Market
+ * 18. Footer
+ * 19. Reduzierte Bewegung, Druck
+ */
+
+/* --------------------------------------------------------------------------
+ * 0. Kurznamen und Dark Mode
+ * ----------------------------------------------------------------------- */
+
+:root {
+	--lw-bg: var(--wp--preset--color--background);
+	--lw-surface: var(--wp--preset--color--surface);
+	--lw-surface-muted: var(--wp--preset--color--surface-muted);
+	--lw-text: var(--wp--preset--color--text);
+	--lw-text-muted: var(--wp--preset--color--text-muted);
+	--lw-line: var(--wp--preset--color--line);
+	--lw-primary: var(--wp--preset--color--primary);
+	--lw-on-primary: var(--wp--preset--color--on-primary);
+	--lw-accent-1: var(--wp--preset--color--accent-1);
+	--lw-accent-2: var(--wp--preset--color--accent-2);
+	--lw-accent-3: var(--wp--preset--color--accent-3);
+	--lw-accent-4: var(--wp--preset--color--accent-4);
+	--lw-on-accent: var(--wp--preset--color--on-accent);
+	--lw-sale: var(--wp--preset--color--sale);
+	--lw-success: var(--wp--preset--color--success);
+	--lw-warning: var(--wp--preset--color--warning);
+	--lw-error: var(--wp--preset--color--error);
+	--lw-ink: var(--wp--preset--color--ink);
+	--lw-on-ink: var(--wp--preset--color--on-ink);
+
+	--lw-r-field: var(--wp--custom--radius--field, 14px);
+	--lw-r-image: var(--wp--custom--radius--image, 20px);
+	--lw-r-card: var(--wp--custom--radius--card, 28px);
+	--lw-r-large: var(--wp--custom--radius--large, 32px);
+	--lw-r-xl: var(--wp--custom--radius--xl, 36px);
+	--lw-r-pill: var(--wp--custom--radius--pill, 999px);
+
+	--lw-spring: var(--wp--custom--motion--spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+	--lw-smooth: var(--wp--custom--motion--smooth, cubic-bezier(0.22, 1, 0.36, 1));
+	--lw-fast: var(--wp--custom--motion--fast, 180ms);
+	--lw-base: var(--wp--custom--motion--base, 320ms);
+	--lw-slow: var(--wp--custom--motion--slow, 600ms);
+
+	--lw-shadow-card: var(--wp--preset--shadow--card);
+	--lw-shadow-hover: var(--wp--preset--shadow--card-hover);
+	--lw-shadow-float: var(--wp--preset--shadow--float);
+	--lw-shadow-sticker: var(--wp--preset--shadow--sticker);
+
+	--lw-glass: color-mix(in srgb, var(--lw-surface) var(--wp--custom--glass--opacity, 72%), transparent);
+	--lw-glass-filter: var(--wp--custom--glass--blur, blur(20px) saturate(180%));
+	--lw-glass-edge: color-mix(in srgb, var(--lw-surface) 55%, color-mix(in srgb, var(--lw-line) 60%, transparent));
+
+	--lw-ring: 0 0 0 4px color-mix(in srgb, var(--lw-primary) 16%, transparent);
+	--lw-header-top: calc(var(--wp-admin--admin-bar--height, 0px) + var(--wp--custom--header--offset, 12px));
+	--lw-header-space: 96px;
+
+	--lw-font-mono: var(--wp--preset--font-family--mono);
+	--lw-font-heading: var(--wp--preset--font-family--heading);
+
+	/* Symbole als Masken: Sie übernehmen immer die Textfarbe (currentColor). */
+	--lw-icon-cart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 3.5h2.2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L20.5 8H6'/%3E%3Ccircle cx='10' cy='20' r='1.3'/%3E%3Ccircle cx='17' cy='20' r='1.3'/%3E%3C/svg%3E");
+	--lw-icon-plus: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
+	--lw-icon-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+	--lw-icon-truck: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.5h11v10h-11zM13.5 10h4l3 3.5v3h-7'/%3E%3Ccircle cx='6.5' cy='17.5' r='1.8'/%3E%3Ccircle cx='17' cy='17.5' r='1.8'/%3E%3C/svg%3E");
+	--lw-icon-return: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 14 4 9l5-5'/%3E%3Cpath d='M4 9h10.5a5.5 5.5 0 0 1 0 11H11'/%3E%3C/svg%3E");
+	--lw-icon-lock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4.5' y='10.5' width='15' height='10' rx='3'/%3E%3Cpath d='M8 10.5V7.5a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+	--lw-icon-chat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.5 12a8 8 0 0 1-11.6 7.2L3.5 20.5l1.3-4.6A8 8 0 1 1 20.5 12Z'/%3E%3C/svg%3E");
+	--lw-icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
+	--lw-icon-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z'/%3E%3C/svg%3E");
+	--lw-icon-filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M18 7h2M4 17h2M10 17h10'/%3E%3Ccircle cx='16' cy='7' r='2'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3C/svg%3E");
+	--lw-icon-quote: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Cpath d='M0 28V16C0 7 5 1.5 14 0l1.6 3.6C10.8 5 8.4 8 8 12h7v16zm20 0V16c0-9 5-14.5 14-16l1.6 3.6C30.8 5 28.4 8 28 12h7v16z'/%3E%3C/svg%3E");
+	--lw-icon-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='9' stroke-linejoin='round'%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z' stroke-width='0.5'/%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z' stroke-width='3.5'/%3E%3C/svg%3E");
+}
+
+/*
+ * Optional: Dark Mode.
+ * Zum Aktivieren den Kommentar um den folgenden Block entfernen und die
+ * Platzhalter-Graustufen durch deine dunklen Farben ersetzen. Die Rollen sind
+ * dieselben wie in theme.json – das ganze Theme passt sich automatisch an.
+ *
+@media (prefers-color-scheme: dark) {
+	:root body {
+		--wp--preset--color--background: #121212;
+		--wp--preset--color--surface: #1c1c1c;
+		--wp--preset--color--surface-muted: #262626;
+		--wp--preset--color--text: #f2f2f2;
+		--wp--preset--color--text-muted: #b3b3b3;
+		--wp--preset--color--line: #333333;
+		--wp--preset--color--primary: #e6e6e6;
+		--wp--preset--color--on-primary: #121212;
+		--wp--preset--color--accent-1: #4d4d4d;
+		--wp--preset--color--accent-2: #a6a6a6;
+		--wp--preset--color--accent-3: #404040;
+		--wp--preset--color--accent-4: #595959;
+		--wp--preset--color--on-accent: #f2f2f2;
+		--wp--preset--color--sale: #d9d9d9;
+		--wp--preset--color--success: #bfbfbf;
+		--wp--preset--color--warning: #cccccc;
+		--wp--preset--color--error: #e0e0e0;
+		--wp--preset--color--ink: #000000;
+		--wp--preset--color--on-ink: #f2f2f2;
+		color-scheme: dark;
+	}
+}
+ */
+
+/* --------------------------------------------------------------------------
+ * 1. Grundlagen
+ * ----------------------------------------------------------------------- */
+
+html {
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+	scroll-padding-top: calc(var(--lw-header-top) + var(--lw-header-space));
+}
+
+body {
+	overflow-x: clip;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	text-rendering: optimizeLegibility;
+	font-feature-settings: "cv11", "ss01";
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+img,
+svg,
+video {
+	max-width: 100%;
+	height: auto;
+}
+
+/* Zwei bis drei weiche Farbflecken hinter allem – sie folgen deinen Farben. */
+.wp-site-blocks {
+	position: relative;
+	isolation: isolate;
+	min-height: 100vh;
+	min-height: 100dvh;
+	display: flex;
+	flex-direction: column;
+}
+
+.wp-site-blocks > main,
+.wp-site-blocks > .wp-block-group:has(> main) {
+	flex: 1 0 auto;
+}
+
+.wp-site-blocks::before {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(42vmax 38vmax at 6% 4%, color-mix(in srgb, var(--lw-primary) 12%, transparent), transparent 70%),
+		radial-gradient(36vmax 34vmax at 96% 18%, color-mix(in srgb, var(--lw-accent-1) 15%, transparent), transparent 70%),
+		radial-gradient(46vmax 40vmax at 55% 104%, color-mix(in srgb, var(--lw-accent-3) 13%, transparent), transparent 72%);
+}
+
+::selection {
+	background: color-mix(in srgb, var(--lw-primary) 22%, transparent);
+	color: var(--lw-text);
+}
+
+/* Sichtbarer Fokusring für alles, was per Tastatur erreichbar ist. */
+:where(a, button, input, select, textarea, summary, [tabindex], .wp-element-button):focus-visible {
+	outline: 3px solid var(--lw-primary);
+	outline-offset: 3px;
+	box-shadow: var(--lw-ring);
+}
+
+:where(a, button, input, select, textarea, summary, [tabindex]):focus:not(:focus-visible) {
+	outline: none;
+}
+
+.skip-link.screen-reader-text:focus {
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	border-radius: var(--lw-r-pill);
+	box-shadow: var(--lw-shadow-float);
+	padding: 0.75rem 1.25rem;
+	z-index: 100000;
+}
+
+hr,
+.wp-block-separator {
+	border-color: var(--lw-line);
+}
+
+.wp-block-separator.is-style-dots::before {
+	color: var(--lw-text-muted);
+}
+
+/* Nichts darf seitlich überstehen – ab 360 px. */
+.wp-block-columns,
+.wp-block-group,
+.wp-block-cover,
+.wp-block-media-text {
+	min-width: 0;
+}
+
+.wp-block-table {
+	overflow-x: auto;
+}
+
+/* --------------------------------------------------------------------------
+ * 2. Typografie
+ * ----------------------------------------------------------------------- */
+
+h1,
+h2,
+.wp-block-post-title,
+.wp-block-query-title {
+	text-wrap: balance;
+}
+
+p {
+	text-wrap: pretty;
+}
+
+.has-hero-font-size {
+	font-weight: 800 !important;
+	letter-spacing: -0.045em !important;
+	line-height: 0.98 !important;
+}
+
+/*
+ * Marker: Das Format „Hervorheben“ (<mark>) in Überschriften wird ein
+ * Textmarker-Balken in accent-1, der unten auf der Schrift liegt.
+ */
+:is(h1, h2, h3, h4, .wp-block-heading, .wp-block-post-title) mark {
+	position: relative;
+	z-index: 0;
+	display: inline-block;
+	background: none !important;
+	color: inherit;
+	padding-inline: 0.06em;
+	white-space: nowrap;
+}
+
+:is(h1, h2, h3, h4, .wp-block-heading, .wp-block-post-title) mark::before {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	inset: 45% -0.1em 0.04em -0.08em;
+	background: var(--lw-accent-1);
+	border-radius: 12px;
+	transform: rotate(-1deg);
+	transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	:is(h1, h2, .wp-block-heading) mark::before {
+		animation: lw-marker var(--lw-slow) var(--lw-smooth) 300ms both;
+	}
+}
+
+@keyframes lw-marker {
+	from {
+		transform: rotate(-1deg) scaleX(0.2);
+		opacity: 0.4;
+	}
+
+	to {
+		transform: rotate(-1deg) scaleX(1);
+		opacity: 1;
+	}
+}
+
+/* Preise, Mengen, Artikelnummern, kleine Labels: DM Mono mit Tabellenziffern. */
+.lw-mono,
+.wp-block-woocommerce-product-price,
+.wc-block-components-product-price,
+.wc-block-formatted-money-amount,
+.woocommerce-Price-amount,
+.wc-block-components-totals-item__value,
+.wc-block-components-quantity-selector__input,
+.wc-block-mini-cart__badge,
+.wp-block-woocommerce-product-sku,
+.sku,
+.qty,
+.wc-block-components-product-rating__reviews_count,
+.wc-block-components-product-rating-counter,
+.woocommerce-review-link,
+.wc-block-order-confirmation-summary-list-item__value,
+.woocommerce-order-overview strong {
+	font-family: var(--lw-font-mono);
+	font-variant-numeric: tabular-nums;
+	font-feature-settings: "tnum";
+}
+
+/* Eyebrow: kleine Pille, DM Mono, 11 px, Großbuchstaben. */
+.is-style-eyebrow,
+p.is-style-eyebrow,
+.wp-block-post-terms.is-style-eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	width: fit-content;
+	max-width: 100%;
+	margin-block: 0;
+	padding: 0.45em 0.95em;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	border: 1px solid var(--lw-line);
+	font-family: var(--lw-font-mono);
+	font-size: 11px !important;
+	font-weight: 500;
+	line-height: 1.3;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
+.is-style-eyebrow.has-background {
+	border-color: transparent;
+}
+
+.wp-block-post-terms.is-style-eyebrow a {
+	color: inherit;
+	text-decoration: none;
+}
+
+.wp-block-post-terms.is-style-eyebrow .wp-block-post-terms__separator {
+	opacity: 0.5;
+}
+
+/* --------------------------------------------------------------------------
+ * 3. Header
+ * ----------------------------------------------------------------------- */
+
+.lw16-site-header {
+	position: sticky;
+	top: var(--lw-header-top);
+	z-index: 100;
+	margin: var(--wp--custom--header--offset, 12px) 0 0;
+	padding-inline: var(--wp--custom--header--offset, 12px);
+}
+
+@media (max-width: 600px) {
+	/* Die Admin-Leiste scrollt hier mit – der Header soll trotzdem kleben. */
+	.lw16-site-header {
+		top: var(--wp--custom--header--offset, 12px);
+	}
+}
+
+.lw16-header {
+	position: relative;
+	max-width: var(--wp--style--global--wide-size, 1280px);
+	margin-inline: auto;
+	padding: 8px 8px 8px 20px;
+	border-radius: var(--lw-r-pill);
+	box-shadow: var(--lw-shadow-float);
+	transition: box-shadow var(--lw-base) var(--lw-smooth), padding var(--lw-base) var(--lw-smooth);
+}
+
+/*
+ * Glas liegt auf einem Pseudo-Element. Ein backdrop-filter direkt am Header
+ * würde alle fixierten Kinder (Menü-Overlay, Mini-Cart-Drawer, Suche) in den
+ * Header einsperren.
+ */
+.lw16-header::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: -1;
+	border-radius: inherit;
+	background: var(--lw-glass);
+	border: 1px solid var(--lw-glass-edge);
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+}
+
+.lw16-header {
+	isolation: isolate;
+}
+
+body.lw16-is-scrolled .lw16-header {
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.lw16-header__brand {
+	min-width: 0;
+}
+
+.lw16-header .wp-block-site-logo img {
+	max-height: 44px;
+	width: auto;
+}
+
+/* Ohne Logo zeigt der Header den Seitentitel, mit Logo nur das Logo. */
+.lw16-header__brand:has(.wp-block-site-logo img) .wp-block-site-title {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.lw16-header .wp-block-site-title {
+	margin: 0;
+	white-space: nowrap;
+}
+
+/* Navigation als Pillen-Links */
+.lw16-header .wp-block-navigation {
+	gap: 4px;
+}
+
+.lw16-header .wp-block-navigation .wp-block-navigation-item__content {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.55em 1em;
+	border-radius: var(--lw-r-pill);
+	transition: background-color var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-header .wp-block-navigation .wp-block-navigation-item__content:hover {
+	background: color-mix(in srgb, var(--lw-surface-muted) 80%, transparent);
+}
+
+.lw16-header .wp-block-navigation .current-menu-item > .wp-block-navigation-item__content,
+.lw16-header .wp-block-navigation [aria-current="page"] {
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+	font-weight: 600;
+}
+
+.lw16-header .wp-block-navigation__submenu-container {
+	border: 1px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface) !important;
+	box-shadow: var(--lw-shadow-float);
+	padding: 6px;
+}
+
+/* Mobiles Menü: aufklappbar, als schwebende Glas-Karte */
+.wp-block-navigation__responsive-container-open,
+.wp-block-navigation__responsive-container-close {
+	width: 44px;
+	height: 44px;
+	display: inline-grid;
+	place-items: center;
+	border-radius: var(--lw-r-pill);
+	color: var(--lw-text);
+}
+
+.wp-block-navigation__responsive-container-open {
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-header .wp-block-navigation__responsive-container.is-menu-open {
+	inset: 12px;
+	padding: 20px;
+	border-radius: var(--lw-r-card);
+	background: color-mix(in srgb, var(--lw-surface) 90%, transparent) !important;
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	box-shadow: var(--lw-shadow-float);
+	color: var(--lw-text) !important;
+}
+
+.admin-bar .lw16-header .wp-block-navigation__responsive-container.is-menu-open {
+	top: calc(var(--wp-admin--admin-bar--height, 0px) + 12px);
+}
+
+.lw16-header .wp-block-navigation__responsive-container.is-menu-open .wp-block-navigation__responsive-container-content {
+	padding-top: 56px;
+	gap: 6px;
+}
+
+.lw16-header .is-menu-open .wp-block-navigation-item__content {
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--x-large);
+	font-weight: 700;
+	letter-spacing: -0.03em;
+	padding: 0.35em 0.6em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lw16-header .wp-block-navigation__responsive-container.is-menu-open {
+		animation: lw-pop var(--lw-base) var(--lw-spring) both;
+	}
+}
+
+/* Rechte Seite: Suche, Konto, Mini-Cart als runde Icon-Knöpfe */
+.lw16-header__actions {
+	gap: 4px !important;
+	flex-wrap: nowrap !important;
+}
+
+.lw16-header__actions > * {
+	margin: 0 !important;
+}
+
+.lw16-header .wp-block-search__button,
+.lw16-header .wc-block-customer-account__account-icon,
+.lw16-header .wp-block-woocommerce-customer-account a,
+.lw16-header .wc-block-mini-cart__button {
+	width: 44px;
+	height: 44px;
+	min-width: 44px;
+	padding: 0 !important;
+	display: inline-grid;
+	place-items: center;
+	border-radius: var(--lw-r-pill);
+	border: 0;
+	background: transparent;
+	color: var(--lw-text);
+	box-shadow: none;
+	transition: background-color var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-header .wp-block-search__button:hover,
+.lw16-header .wp-block-woocommerce-customer-account a:hover,
+.lw16-header .wc-block-mini-cart__button:hover {
+	background: var(--lw-surface);
+	transform: translateY(-1px);
+}
+
+.lw16-header .wp-block-search__button svg,
+.lw16-header .wc-block-mini-cart__icon,
+.lw16-header .wp-block-woocommerce-customer-account svg {
+	width: 22px;
+	height: 22px;
+	fill: currentColor;
+}
+
+.lw16-header .wp-block-search {
+	margin: 0;
+}
+
+.lw16-header .wp-block-search__inside-wrapper {
+	border: 0 !important;
+	padding: 0 !important;
+	background: transparent;
+	border-radius: var(--lw-r-pill);
+	gap: 4px;
+}
+
+.lw16-header .wp-block-search__input {
+	border-radius: var(--lw-r-pill) !important;
+	min-height: 44px;
+	padding-inline: 1em !important;
+}
+
+.lw16-header .wp-block-search.wp-block-search__searchfield-hidden .wp-block-search__input {
+	padding-inline: 0 !important;
+}
+
+.lw16-header .wp-block-search:not(.wp-block-search__searchfield-hidden) .wp-block-search__inside-wrapper {
+	min-width: min(260px, 60vw);
+}
+
+/* Mengen-Badge in accent-1 */
+.wc-block-mini-cart__badge {
+	background: var(--lw-accent-1) !important;
+	color: var(--lw-on-accent) !important;
+	font-size: 11px;
+	font-weight: 500;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 6px;
+	border: 2px solid var(--lw-surface);
+	box-shadow: var(--lw-shadow-sticker);
+	margin-left: -40%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.wc-block-mini-cart__badge:not([hidden]) {
+		animation: lw-pop var(--lw-base) var(--lw-spring) both;
+	}
+}
+
+.wc-block-mini-cart__amount {
+	font-family: var(--lw-font-mono);
+}
+
+@media (max-width: 781px) {
+	.lw16-header {
+		padding: 6px 6px 6px 16px;
+	}
+
+	.lw16-header__inner {
+		flex-wrap: nowrap !important;
+		gap: 4px !important;
+	}
+
+	/* Mobil: Logo links, rechts Icons und Menü-Knopf. */
+	.lw16-header .wp-block-navigation {
+		order: 3;
+	}
+
+	.lw16-header__actions {
+		order: 2;
+		margin-left: auto !important;
+	}
+
+	.lw16-header .wp-block-site-logo img {
+		max-height: 36px;
+	}
+}
+
+@media (max-width: 400px) {
+	.lw16-header .wp-block-search {
+		display: none;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 4. Buttons – gelten auch für alle WooCommerce-Buttons
+ * ----------------------------------------------------------------------- */
+
+:where(
+	.wp-element-button,
+	.wp-block-button__link,
+	.wc-block-components-button:not(.is-link),
+	.woocommerce .button,
+	.woocommerce button.button,
+	.woocommerce a.button,
+	.woocommerce input.button,
+	.woocommerce #respond input#submit,
+	.single_add_to_cart_button
+) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5em;
+	min-height: 48px;
+	border-radius: var(--lw-r-pill) !important;
+	font-family: var(--wp--preset--font-family--body);
+	font-weight: 600;
+	line-height: 1.2;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		transform var(--lw-base) var(--lw-spring),
+		box-shadow var(--lw-base) var(--lw-smooth),
+		background-color var(--lw-fast) ease,
+		color var(--lw-fast) ease,
+		border-color var(--lw-fast) ease;
+	will-change: transform;
+}
+
+/* Primär (Standard): Vollfläche primary */
+.woocommerce .button,
+.woocommerce button.button,
+.woocommerce a.button,
+.woocommerce input.button,
+.woocommerce #respond input#submit,
+.woocommerce .button.alt,
+.single_add_to_cart_button,
+.wc-block-components-button:not(.is-link):not(.outlined),
+.wp-block-button.is-style-primary .wp-block-button__link {
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+	border: 0;
+	padding: 0.8em 1.5em;
+	box-shadow: 0 8px 20px -10px color-mix(in srgb, var(--lw-primary) 60%, transparent);
+}
+
+/* Hover: 1 px nach oben. Klick: 97 %. */
+:is(
+	.wp-element-button,
+	.wp-block-button__link,
+	.wc-block-components-button:not(.is-link),
+	.woocommerce .button,
+	.single_add_to_cart_button
+):hover:not(:disabled):not([aria-disabled="true"]) {
+	transform: translateY(-1px);
+	box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--lw-primary) 55%, transparent);
+}
+
+:is(
+	.wp-element-button,
+	.wp-block-button__link,
+	.wc-block-components-button:not(.is-link),
+	.woocommerce .button,
+	.single_add_to_cart_button
+):active:not(:disabled):not([aria-disabled="true"]) {
+	transform: translateY(0) scale(0.97);
+	transition-duration: 90ms;
+}
+
+:is(.wp-element-button, .wp-block-button__link, .wc-block-components-button, .button):is(:disabled, [aria-disabled="true"], .disabled) {
+	opacity: 0.55;
+	cursor: not-allowed;
+	box-shadow: none;
+}
+
+/* Soft: Fläche mit Rand */
+.wp-block-button.is-style-soft .wp-block-button__link,
+.wp-block-button.is-style-outline .wp-block-button__link,
+.wc-block-components-button.outlined,
+.wc-block-mini-cart__footer-cart,
+.woocommerce .button.lw-soft {
+	background: var(--lw-surface) !important;
+	color: var(--lw-text) !important;
+	border: 1px solid var(--lw-line) !important;
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wp-block-button.is-style-soft .wp-block-button__link:hover,
+.wp-block-button.is-style-outline .wp-block-button__link:hover,
+.wc-block-components-button.outlined:hover,
+.wc-block-mini-cart__footer-cart:hover {
+	border-color: color-mix(in srgb, var(--lw-primary) 40%, var(--lw-line)) !important;
+	box-shadow: var(--lw-shadow-hover) !important;
+}
+
+/* Akzent */
+.wp-block-button.is-style-accent .wp-block-button__link {
+	background: var(--lw-accent-1);
+	color: var(--lw-on-accent);
+	border: 0;
+	box-shadow: 0 10px 24px -12px color-mix(in srgb, var(--lw-accent-1) 80%, var(--lw-ink));
+}
+
+.wp-block-button.is-style-accent .wp-block-button__link:hover {
+	box-shadow: 0 16px 30px -12px color-mix(in srgb, var(--lw-accent-1) 80%, var(--lw-ink));
+}
+
+/* Text-Links im Button-Look nur, wo WooCommerce „is-link“ setzt */
+.wc-block-components-button.is-link {
+	color: var(--lw-primary);
+}
+
+.wp-block-buttons {
+	gap: 0.75rem;
+}
+
+/* --------------------------------------------------------------------------
+ * 5. Block-Styles
+ * ----------------------------------------------------------------------- */
+
+/* Karte */
+.wp-block-group.is-style-card {
+	background-color: var(--lw-surface);
+	border-radius: var(--lw-r-card);
+	box-shadow: var(--lw-shadow-card);
+	padding: var(--wp--preset--spacing--40);
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.wp-block-group.is-style-card:not(.has-background) {
+	background-color: var(--lw-surface);
+}
+
+.wp-block-group.is-style-card:hover {
+	transform: translateY(-3px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+/* Glas */
+.wp-block-group.is-style-glass {
+	background: var(--lw-glass);
+	border: 1px solid var(--lw-glass-edge);
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	border-radius: var(--lw-r-card);
+	box-shadow: var(--lw-shadow-float);
+	padding: var(--wp--preset--spacing--40);
+}
+
+/* Sticker: kleine, leicht gedrehte Pille in Akzentfarben */
+.is-style-sticker,
+.lw16-sticker {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45em;
+	width: fit-content;
+	max-width: 100%;
+	margin-block: 0;
+	padding: 0.5em 1em;
+	border-radius: var(--lw-r-pill);
+	background-color: var(--lw-accent-1);
+	color: var(--lw-on-accent);
+	box-shadow: var(--lw-shadow-sticker);
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	line-height: 1.2;
+	letter-spacing: 0.02em;
+	transform: rotate(var(--lw-tilt, -4deg));
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.is-style-sticker:hover,
+.lw16-sticker:hover {
+	transform: rotate(0deg) scale(1.04);
+}
+
+.is-style-sticker:nth-of-type(2n),
+.lw16-sticker--b {
+	--lw-tilt: 3deg;
+}
+
+.is-style-sticker:nth-of-type(3n),
+.lw16-sticker--c {
+	--lw-tilt: -6deg;
+}
+
+.wp-block-group.is-style-sticker {
+	padding: 0.75em 1.25em;
+}
+
+/* Chip: neutrale Pille, optional mit Symbol (lw16-icon--*) */
+.is-style-chip,
+.lw16-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.55em;
+	width: fit-content;
+	max-width: 100%;
+	margin-block: 0;
+	padding: 0.6em 1.05em;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	border: 1px solid var(--lw-line);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+	line-height: 1.25;
+}
+
+.is-style-chip.has-background {
+	border-color: transparent;
+}
+
+.is-style-chip a,
+.lw16-chip a {
+	color: inherit;
+}
+
+/* Symbole für Chips und Listen: Klasse lw16-icon lw16-icon--truck usw. */
+.lw16-icon::before {
+	content: "";
+	flex: none;
+	width: 1.25em;
+	height: 1.25em;
+	background: currentColor;
+	-webkit-mask: var(--lw-icon, var(--lw-icon-check)) center / contain no-repeat;
+	mask: var(--lw-icon, var(--lw-icon-check)) center / contain no-repeat;
+}
+
+.lw16-icon--truck { --lw-icon: var(--lw-icon-truck); }
+.lw16-icon--return { --lw-icon: var(--lw-icon-return); }
+.lw16-icon--lock { --lw-icon: var(--lw-icon-lock); }
+.lw16-icon--chat { --lw-icon: var(--lw-icon-chat); }
+.lw16-icon--clock { --lw-icon: var(--lw-icon-clock); }
+.lw16-icon--heart { --lw-icon: var(--lw-icon-heart); }
+.lw16-icon--check { --lw-icon: var(--lw-icon-check); }
+.lw16-icon--cart { --lw-icon: var(--lw-icon-cart); }
+
+/* Schwebendes Bild */
+.wp-block-image.is-style-float img {
+	border-radius: var(--lw-r-xl);
+	box-shadow: var(--lw-shadow-float);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.wp-block-image.is-style-float img,
+	.lw16-float {
+		animation: lw-float 7s ease-in-out infinite;
+	}
+}
+
+/* Häkchen-Liste */
+.wp-block-list.is-style-check {
+	list-style: none;
+	padding-left: 0;
+}
+
+.wp-block-list.is-style-check li {
+	position: relative;
+	padding-left: 2em;
+	margin-block: 0.45em;
+}
+
+.wp-block-list.is-style-check li::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0.2em;
+	width: 1.35em;
+	height: 1.35em;
+	border-radius: 50%;
+	background: var(--lw-accent-1);
+}
+
+.wp-block-list.is-style-check li::after {
+	content: "";
+	position: absolute;
+	left: 0.25em;
+	top: 0.45em;
+	width: 0.85em;
+	height: 0.85em;
+	background: var(--lw-on-accent);
+	-webkit-mask: var(--lw-icon-check) center / contain no-repeat;
+	mask: var(--lw-icon-check) center / contain no-repeat;
+}
+
+/* --------------------------------------------------------------------------
+ * 6. Formulare
+ * ----------------------------------------------------------------------- */
+
+:where(
+	input[type="text"],
+	input[type="email"],
+	input[type="tel"],
+	input[type="url"],
+	input[type="password"],
+	input[type="search"],
+	input[type="number"],
+	input[type="date"],
+	select,
+	textarea
+):not(.wc-block-components-quantity-selector__input):not(.qty) {
+	min-height: 48px;
+	padding: 0.7em 1em;
+	border: 1.5px solid transparent;
+	border-radius: var(--lw-r-field);
+	background-color: var(--lw-surface-muted);
+	color: var(--lw-text);
+	font: inherit;
+	font-size: max(16px, 1em);
+	transition: border-color var(--lw-fast) ease, box-shadow var(--lw-fast) ease, background-color var(--lw-fast) ease;
+}
+
+:where(
+	input[type="text"],
+	input[type="email"],
+	input[type="tel"],
+	input[type="url"],
+	input[type="password"],
+	input[type="search"],
+	input[type="number"],
+	input[type="date"],
+	select,
+	textarea
+):focus {
+	outline: none;
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+	background-color: var(--lw-surface);
+}
+
+::placeholder {
+	color: var(--lw-text-muted);
+	opacity: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+	accent-color: var(--lw-primary);
+	width: 1.2em;
+	height: 1.2em;
+}
+
+label {
+	font-weight: 500;
+}
+
+.wp-block-search__input {
+	border-radius: var(--lw-r-pill) !important;
+}
+
+.wp-block-search__button {
+	margin-left: 6px;
+}
+
+/* --------------------------------------------------------------------------
+ * 7. Bewegung: sanftes Einblenden beim Laden
+ * Endzustand ist immer sichtbar (opacity: 1, kein transform).
+ * ----------------------------------------------------------------------- */
+
+@keyframes lw-rise {
+	from {
+		opacity: 0;
+		transform: translateY(16px) scale(0.985);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes lw-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.92);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes lw-float {
+	0%,
+	100% {
+		translate: 0 0;
+	}
+
+	50% {
+		translate: 0 -8px;
+	}
+}
+
+@keyframes lw-marquee {
+	to {
+		transform: translateX(-50%);
+	}
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	main > *:not(.lw16-no-reveal) {
+		animation: lw-rise var(--lw-slow) var(--lw-smooth) both;
+	}
+
+	main > *:nth-child(2) { animation-delay: 70ms; }
+	main > *:nth-child(3) { animation-delay: 140ms; }
+	main > *:nth-child(4) { animation-delay: 210ms; }
+	main > *:nth-child(n + 5) { animation-delay: 260ms; }
+
+	/* Abschnitte weiter unten blenden beim Hineinscrollen ein, wo der Browser es kann. */
+	@supports (animation-timeline: view()) {
+		main > .lw16-section:nth-child(n + 3) {
+			animation: lw-rise linear both;
+			animation-timeline: view();
+			animation-range: entry 0% entry 35%;
+			animation-delay: 0s;
+		}
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 8. Patterns
+ * ----------------------------------------------------------------------- */
+
+.lw16-section {
+	scroll-margin-top: calc(var(--lw-header-top) + var(--lw-header-space));
+}
+
+.lw16-section-head {
+	gap: var(--wp--preset--spacing--30);
+}
+
+/* 8.1 Hero */
+.lw16-hero__media {
+	position: relative;
+	border-radius: var(--lw-r-xl);
+	overflow: visible;
+	box-shadow: var(--lw-shadow-float);
+	isolation: isolate;
+}
+
+.lw16-hero__media .wp-block-image {
+	margin: 0;
+}
+
+.lw16-hero__media .wp-block-image img {
+	display: block;
+	width: 100%;
+	border-radius: var(--lw-r-xl);
+	aspect-ratio: 6 / 5;
+	object-fit: cover;
+}
+
+.lw16-hero__sticker {
+	position: absolute;
+	z-index: 2;
+	box-shadow: var(--lw-shadow-float);
+}
+
+.lw16-hero__sticker--top {
+	top: 8%;
+	left: -12px;
+	--lw-tilt: -6deg;
+}
+
+.lw16-hero__sticker--bottom {
+	bottom: 9%;
+	right: -10px;
+	--lw-tilt: 3deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lw16-hero__sticker {
+		animation: lw-float 6s ease-in-out infinite;
+	}
+
+	.lw16-hero__sticker--bottom {
+		animation-delay: -3s;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-hero__sticker--top {
+		left: 8px;
+	}
+
+	.lw16-hero__sticker--bottom {
+		right: 8px;
+	}
+}
+
+/* 8.2 Kategorien als Bento-Grid */
+.lw16-bento {
+	display: grid !important;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--wp--preset--spacing--30) !important;
+}
+
+.lw16-bento > * {
+	margin: 0 !important;
+}
+
+.lw16-bento__tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--20);
+	min-height: 220px;
+	padding: var(--wp--preset--spacing--40) !important;
+	border-radius: var(--lw-r-card);
+	overflow: hidden;
+	color: var(--lw-on-accent);
+	box-shadow: var(--lw-shadow-card);
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.lw16-bento__tile:hover,
+.lw16-bento__tile:focus-within {
+	transform: translateY(-4px) rotate(-0.5deg);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.lw16-bento__tile .wp-block-heading {
+	color: inherit;
+	margin: 0;
+}
+
+.lw16-bento__tile .wp-block-heading a {
+	color: inherit;
+	text-decoration: none;
+}
+
+/* Die ganze Kachel ist klickbar – über den Link in der Überschrift. */
+.lw16-bento__tile .wp-block-heading a::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: inherit;
+}
+
+.lw16-bento__tile .wp-block-heading a:focus-visible {
+	outline: none;
+	box-shadow: none;
+}
+
+.lw16-bento__tile .wp-block-heading a:focus-visible::after {
+	outline: 3px solid var(--lw-primary);
+	outline-offset: -3px;
+}
+
+.lw16-bento__tile p {
+	margin: 0;
+	max-width: 32ch;
+}
+
+.lw16-bento__tile .wp-block-image {
+	margin: 0;
+	align-self: flex-end;
+}
+
+.lw16-bento__tile .wp-block-image img {
+	width: clamp(88px, 22vw, 150px);
+	height: auto;
+	border-radius: var(--lw-r-image);
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-bento__tile:hover .wp-block-image img {
+	transform: rotate(-4deg) scale(1.05);
+}
+
+.lw16-bento__arrow {
+	display: inline-grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border-radius: var(--lw-r-pill);
+	background: color-mix(in srgb, var(--lw-surface) 70%, transparent);
+	font-family: var(--lw-font-mono);
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-bento__tile:hover .lw16-bento__arrow {
+	transform: translateX(4px);
+}
+
+@media (min-width: 782px) {
+	.lw16-bento {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-auto-rows: minmax(200px, auto);
+	}
+
+	.lw16-bento__tile--xl {
+		grid-column: span 2;
+		grid-row: span 2;
+	}
+
+	.lw16-bento__tile--wide {
+		grid-column: span 2;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-bento__tile--xl {
+		grid-column: 1 / -1;
+	}
+}
+
+@media (max-width: 420px) {
+	.lw16-bento {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* 8.3 Vertrauensleiste */
+.lw16-trust {
+	gap: 10px !important;
+}
+
+.lw16-trust .is-style-chip {
+	box-shadow: var(--lw-shadow-card);
+	padding: 0.75em 1.2em;
+}
+
+.lw16-trust .is-style-chip::before {
+	color: var(--lw-primary);
+}
+
+/* 8.4 So einfach geht’s */
+.lw16-steps {
+	position: relative;
+	counter-reset: lw-step;
+	gap: var(--wp--preset--spacing--40) !important;
+}
+
+.lw16-step {
+	position: relative;
+	z-index: 1;
+	text-align: left;
+}
+
+.lw16-step__number {
+	display: inline-grid !important;
+	place-items: center;
+	width: 64px;
+	height: 64px;
+	margin: 0 0 var(--wp--preset--spacing--20) !important;
+	border-radius: 50%;
+	color: var(--lw-on-accent);
+	font-family: var(--lw-font-mono);
+	font-size: 1.25rem;
+	font-weight: 500;
+	box-shadow: var(--lw-shadow-sticker);
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-step:hover .lw16-step__number {
+	transform: rotate(-8deg) scale(1.06);
+}
+
+@media (min-width: 782px) {
+	/* Gestrichelte Verbindungslinie auf Höhe der Nummern */
+	.lw16-steps::before {
+		content: "";
+		position: absolute;
+		z-index: 0;
+		top: 32px;
+		left: 10%;
+		right: 10%;
+		border-top: 2px dashed color-mix(in srgb, var(--lw-text-muted) 45%, transparent);
+	}
+
+	.lw16-step {
+		text-align: center;
+	}
+
+	.lw16-step .lw16-step__number {
+		margin-inline: auto !important;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-steps::before {
+		content: "";
+		position: absolute;
+		z-index: 0;
+		top: 32px;
+		bottom: 32px;
+		left: 31px;
+		border-left: 2px dashed color-mix(in srgb, var(--lw-text-muted) 45%, transparent);
+	}
+
+	.lw16-step {
+		padding-left: 84px;
+		min-height: 64px;
+	}
+
+	.lw16-step .lw16-step__number {
+		position: absolute;
+		left: 0;
+		top: 0;
+	}
+}
+
+/* 8.5 Kundenstimmen */
+.lw16-testimonial {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 100%;
+}
+
+.lw16-testimonial .wp-block-quote {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.lw16-testimonial .wp-block-quote p {
+	font-size: inherit;
+}
+
+/* Großes Anführungszeichen als Symbol über dem Zitat */
+.lw16-testimonial .wp-block-quote::before {
+	content: "";
+	display: block;
+	width: 36px;
+	height: 28px;
+	margin-bottom: 14px;
+	background: var(--lw-accent-2);
+	-webkit-mask: var(--lw-icon-quote) left center / contain no-repeat;
+	mask: var(--lw-icon-quote) left center / contain no-repeat;
+}
+
+.lw16-stars {
+	display: inline-flex;
+	gap: 2px;
+	margin: 0 !important;
+	color: var(--lw-accent-2);
+	font-size: 0;
+	line-height: 0;
+}
+
+.lw16-stars::before {
+	content: "";
+	width: calc(18px * 5 + 8px);
+	height: 18px;
+	background: currentColor;
+	-webkit-mask: var(--lw-icon-star) left center / 20px 18px repeat-x;
+	mask: var(--lw-icon-star) left center / 20px 18px repeat-x;
+}
+
+.lw16-testimonial__name {
+	margin: 0;
+	font-weight: 600;
+}
+
+.lw16-testimonial__meta {
+	margin: 0;
+	color: var(--lw-text-muted);
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--x-small);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+/* 8.6 Newsletter: Feld und Button in einer Pille */
+.lw16-newsletter__form {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	max-width: 520px;
+	padding: 6px;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	border: 1.5px solid transparent;
+	transition: border-color var(--lw-fast) ease, box-shadow var(--lw-fast) ease, background-color var(--lw-fast) ease;
+}
+
+.lw16-newsletter__form:focus-within {
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+	background: var(--lw-surface);
+}
+
+.lw16-newsletter__form input[type="email"] {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 44px;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	padding-inline: 1em;
+}
+
+.lw16-newsletter__form button {
+	flex: none;
+	min-height: 44px;
+	padding: 0.7em 1.3em;
+	border: 0;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-newsletter__form button:hover {
+	transform: translateY(-1px);
+}
+
+.lw16-newsletter__form button:active {
+	transform: scale(0.97);
+}
+
+.lw16-newsletter__hint {
+	color: var(--lw-text-muted);
+}
+
+@media (max-width: 420px) {
+	.lw16-newsletter__form {
+		flex-wrap: wrap;
+		border-radius: var(--lw-r-card);
+	}
+
+	.lw16-newsletter__form button {
+		width: 100%;
+	}
+}
+
+/* 8.7 Dunkler CTA mit zwei unscharfen Farbflecken */
+.lw16-cta {
+	position: relative;
+	overflow: hidden;
+	isolation: isolate;
+	border-radius: var(--lw-r-xl) !important;
+	background-color: var(--lw-ink);
+	color: var(--lw-on-ink);
+	box-shadow: var(--lw-shadow-float);
+}
+
+.lw16-cta::before,
+.lw16-cta::after {
+	content: "";
+	position: absolute;
+	z-index: -1;
+	width: min(60vw, 520px);
+	aspect-ratio: 1;
+	border-radius: 50%;
+	filter: blur(70px);
+	opacity: 0.45;
+	pointer-events: none;
+}
+
+.lw16-cta::before {
+	top: -35%;
+	left: -12%;
+	background: var(--lw-primary);
+}
+
+.lw16-cta::after {
+	bottom: -40%;
+	right: -10%;
+	background: var(--lw-accent-1);
+}
+
+.lw16-cta :is(h1, h2, h3, p) {
+	color: inherit;
+}
+
+.lw16-cta :focus-visible {
+	outline-color: var(--lw-on-ink);
+}
+
+.lw16-cta .is-style-eyebrow {
+	background: color-mix(in srgb, var(--lw-on-ink) 12%, transparent);
+	border-color: color-mix(in srgb, var(--lw-on-ink) 22%, transparent);
+	color: var(--lw-on-ink);
+}
+
+/* 8.8 Laufband */
+.lw16-marquee {
+	overflow: hidden;
+	-webkit-mask-image: linear-gradient(90deg, transparent, currentColor 12%, currentColor 88%, transparent);
+	mask-image: linear-gradient(90deg, transparent, currentColor 12%, currentColor 88%, transparent);
+}
+
+.lw16-marquee__track {
+	display: flex !important;
+	flex-wrap: nowrap !important;
+	gap: 12px !important;
+	width: max-content;
+	padding-block: 10px;
+}
+
+.lw16-marquee__track > * {
+	flex: none;
+	margin: 0 !important;
+}
+
+/* Ohne JavaScript bleibt es eine umbrechende Pillen-Reihe. */
+.lw16-marquee:not(.is-ready) .lw16-marquee__track {
+	flex-wrap: wrap !important;
+	width: auto;
+	justify-content: center;
+}
+
+.lw16-marquee:not(.is-ready) {
+	-webkit-mask-image: none;
+	mask-image: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lw16-marquee.is-ready .lw16-marquee__track {
+		animation: lw-marquee var(--lw16-marquee-duration, 36s) linear infinite;
+	}
+
+	.lw16-marquee.is-ready:hover .lw16-marquee__track,
+	.lw16-marquee.is-ready:focus-within .lw16-marquee__track {
+		animation-play-state: paused;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lw16-marquee.is-ready .lw16-marquee__track {
+		flex-wrap: wrap !important;
+		width: auto;
+		justify-content: center;
+	}
+
+	.lw16-marquee.is-ready .lw16-marquee__track > [aria-hidden="true"] {
+		display: none;
+	}
+
+	.lw16-marquee.is-ready {
+		-webkit-mask-image: none;
+		mask-image: none;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 9. Produktkarten, Preise, Badges, Bewertungen
+ * ----------------------------------------------------------------------- */
+
+/* Raster: 2 Spalten mobil, 3–4 auf dem Desktop */
+.lw16-products .wc-block-product-template,
+.wp-block-woocommerce-product-collection.lw16-products > ul {
+	display: grid !important;
+	grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+	gap: clamp(12px, 2.4vw, 28px) !important;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+@media (min-width: 782px) {
+	.lw16-products .wc-block-product-template,
+	.wp-block-woocommerce-product-collection.lw16-products > ul {
+		grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+	}
+}
+
+@media (min-width: 1200px) {
+	.lw16-products--4 .wc-block-product-template,
+	.wp-block-woocommerce-product-collection.lw16-products--4 > ul {
+		grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+	}
+}
+
+.lw16-products .wc-block-product,
+.wc-block-product-template .wc-block-product {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: auto !important;
+	margin: 0 !important;
+	padding: 8px 8px 16px;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+	text-align: left;
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.wc-block-product-template .wc-block-product:hover,
+.wc-block-product-template .wc-block-product:focus-within {
+	transform: translateY(-4px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.wc-block-product-template .wc-block-product > :not(.lw16-card-media) {
+	padding-inline: 8px;
+}
+
+.lw16-card-media {
+	position: relative;
+	margin: 0 0 8px !important;
+}
+
+.wc-block-product .wc-block-components-product-image,
+.wc-block-product .wp-block-woocommerce-product-image {
+	margin: 0 !important;
+	border-radius: var(--lw-r-image);
+	overflow: hidden;
+	background: var(--lw-surface-muted);
+}
+
+.wc-block-product .wc-block-components-product-image img,
+.wc-block-product .wp-block-woocommerce-product-image img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	border-radius: var(--lw-r-image);
+	transition: transform var(--lw-slow) var(--lw-smooth);
+}
+
+.wc-block-product:hover .wc-block-components-product-image img {
+	transform: scale(1.04);
+}
+
+.wc-block-product .wp-block-post-title {
+	margin: 4px 0 0 !important;
+	font-family: var(--wp--preset--font-family--body);
+	font-size: var(--wp--preset--font-size--medium) !important;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.3 !important;
+	text-align: left !important;
+}
+
+.wc-block-product .wp-block-post-title a {
+	color: var(--lw-text);
+	text-decoration: none;
+}
+
+/* Ganze Karte klickbar über den Produktnamen */
+.wc-block-product .wp-block-post-title a::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	border-radius: var(--lw-r-card);
+}
+
+.wc-block-product .wp-block-post-title a:focus-visible {
+	outline: none;
+	box-shadow: none;
+}
+
+.wc-block-product .wp-block-post-title a:focus-visible::after {
+	outline: 3px solid var(--lw-primary);
+	outline-offset: 2px;
+}
+
+.wc-block-product .wp-block-woocommerce-product-price {
+	margin: 0 !important;
+	text-align: left !important;
+	font-size: var(--wp--preset--font-size--medium) !important;
+}
+
+.wc-block-product .wc-block-components-product-image a {
+	position: relative;
+	z-index: 0;
+}
+
+/* Sale-Badge als gedrehter Sticker oben links auf dem Bild */
+.wc-block-components-product-sale-badge,
+.wp-block-woocommerce-product-sale-badge .wc-block-components-product-sale-badge,
+.woocommerce span.onsale {
+	position: absolute;
+	z-index: 3;
+	top: 12px;
+	left: 12px;
+	right: auto !important;
+	margin: 0 !important;
+	padding: 0.4em 0.85em;
+	border: 0 !important;
+	border-radius: var(--lw-r-pill) !important;
+	background: var(--lw-sale) !important;
+	color: var(--lw-on-primary) !important;
+	box-shadow: var(--lw-shadow-sticker);
+	font-family: var(--lw-font-mono);
+	font-size: 11px !important;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	line-height: 1.3;
+	min-height: 0;
+	min-width: 0;
+	text-transform: uppercase;
+	transform: rotate(-6deg);
+}
+
+.wc-block-components-product-image .wc-block-components-product-sale-badge {
+	inset: 12px auto auto 12px;
+}
+
+/* Runder „In den Warenkorb“-Knopf unten rechts auf dem Bild */
+.lw16-quick-add {
+	position: absolute !important;
+	z-index: 4;
+	right: 12px;
+	bottom: 12px;
+	margin: 0 !important;
+	width: auto !important;
+}
+
+.lw16-quick-add .wp-block-button__link,
+.lw16-quick-add .wc-block-components-product-button__button,
+.lw16-quick-add .button {
+	position: relative;
+	width: 48px;
+	height: 48px;
+	min-height: 48px;
+	padding: 0 !important;
+	border-radius: 50% !important;
+	font-size: 0 !important;
+	line-height: 0;
+	overflow: hidden;
+	background: var(--lw-primary) !important;
+	color: var(--lw-on-primary) !important;
+	box-shadow: var(--lw-shadow-float) !important;
+}
+
+.lw16-quick-add .wp-block-button__link::before,
+.lw16-quick-add .wc-block-components-product-button__button::before,
+.lw16-quick-add .button::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	width: 22px;
+	height: 22px;
+	background: currentColor;
+	-webkit-mask: var(--lw-icon-cart) center / contain no-repeat;
+	mask: var(--lw-icon-cart) center / contain no-repeat;
+}
+
+.lw16-quick-add .wp-block-button__link > span,
+.lw16-quick-add .wc-block-components-product-button__button > span {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
+.lw16-quick-add .wp-block-button__link:hover,
+.lw16-quick-add .wc-block-components-product-button__button:hover {
+	transform: translateY(-1px) scale(1.06) !important;
+}
+
+.lw16-quick-add :is(.loading, [aria-busy="true"])::before {
+	-webkit-mask-image: var(--lw-icon-clock);
+	mask-image: var(--lw-icon-clock);
+}
+
+.lw16-quick-add :is(.added, .is-added)::before {
+	-webkit-mask-image: var(--lw-icon-check);
+	mask-image: var(--lw-icon-check);
+}
+
+.lw16-quick-add .added_to_cart,
+.lw16-quick-add .wc-block-components-product-button__added-to-cart {
+	display: none !important;
+}
+
+/* Auf Geräten mit Maus erst beim Hover, auf Touch-Geräten immer sichtbar. */
+@media (hover: hover) and (pointer: fine) {
+	.lw16-quick-add {
+		opacity: 0;
+		transform: translateY(8px) scale(0.9);
+		transition: opacity var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+	}
+
+	.wc-block-product:hover .lw16-quick-add,
+	.wc-block-product:focus-within .lw16-quick-add,
+	.lw16-quick-add:has(.loading, .added) {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/* Preise */
+.wc-block-components-product-price,
+.price {
+	color: var(--lw-text);
+}
+
+.wc-block-components-product-price del,
+.price del,
+.wc-block-components-product-price__regular {
+	color: var(--lw-text-muted);
+	text-decoration: line-through;
+	text-decoration-thickness: 1.5px;
+	font-weight: 400;
+	opacity: 1;
+	margin-right: 0.35em;
+}
+
+.wc-block-components-product-price ins,
+.price ins,
+.wc-block-components-product-price__value.is-discounted {
+	color: var(--lw-sale);
+	text-decoration: none;
+	font-weight: 500;
+	background: none;
+}
+
+.lw16-price-note {
+	margin: 2px 0 0 !important;
+	color: var(--lw-text-muted);
+	font-family: var(--wp--preset--font-family--body);
+	font-size: var(--wp--preset--font-size--x-small) !important;
+	font-weight: 400;
+	line-height: 1.4;
+}
+
+.lw16-price-note a {
+	position: relative;
+	z-index: 2;
+	color: inherit;
+	text-underline-offset: 2px;
+}
+
+.wc-block-product .lw16-price-note {
+	padding-inline: 0;
+}
+
+/* Bewertungen: Sterne in accent-2, Anzahl in DM Mono */
+.wc-block-components-product-rating__stars,
+.wc-block-components-product-rating-stars__stars,
+.wc-block-grid__product-rating .star-rating,
+.star-rating,
+.wp-block-woocommerce-product-rating .wc-block-components-product-rating__stars span::before,
+.woocommerce p.stars a {
+	color: var(--lw-accent-2) !important;
+}
+
+.wc-block-components-product-rating__stars::before,
+.star-rating::before {
+	color: color-mix(in srgb, var(--lw-accent-2) 30%, transparent) !important;
+	opacity: 1 !important;
+}
+
+.wc-block-components-product-rating__reviews_count,
+.woocommerce-review-link {
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* --------------------------------------------------------------------------
+ * 10. Produktseite
+ * ----------------------------------------------------------------------- */
+
+.lw16-product {
+	gap: clamp(24px, 5vw, 72px) !important;
+}
+
+.lw16-product__summary {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.lw16-product__summary > * {
+	margin-block: 0 !important;
+}
+
+@media (min-width: 782px) {
+	.lw16-product__summary {
+		position: sticky;
+		top: calc(var(--lw-header-top) + var(--lw-header-space));
+		align-self: flex-start;
+	}
+}
+
+.lw16-product__summary .wp-block-post-title {
+	font-size: var(--wp--preset--font-size--xx-large);
+}
+
+.lw16-product__summary .wp-block-woocommerce-product-price {
+	font-size: var(--wp--preset--font-size--x-large) !important;
+}
+
+.lw16-product__summary .wp-block-post-excerpt {
+	color: var(--lw-text-muted);
+}
+
+.lw16-product__summary .wp-block-post-excerpt__excerpt {
+	margin: 0;
+}
+
+/* Galerie mit großen Rundungen */
+.woocommerce-product-gallery,
+.wp-block-woocommerce-product-image-gallery .woocommerce-product-gallery {
+	position: relative;
+	width: 100% !important;
+	float: none !important;
+	margin: 0 !important;
+}
+
+.woocommerce-product-gallery .flex-viewport,
+.woocommerce-product-gallery__wrapper > .woocommerce-product-gallery__image:only-child,
+.woocommerce-product-gallery:not(:has(.flex-viewport)) .woocommerce-product-gallery__image:first-child {
+	border-radius: var(--lw-r-large);
+	overflow: hidden;
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-float);
+}
+
+.woocommerce-product-gallery__image img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+/* Thumbnails als Pillen-Reihe */
+.woocommerce-product-gallery .flex-control-thumbs {
+	display: flex !important;
+	gap: 10px;
+	margin: 14px 0 0 !important;
+	padding: 4px 2px 10px !important;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	list-style: none;
+	scrollbar-width: thin;
+}
+
+.woocommerce-product-gallery .flex-control-thumbs li {
+	flex: 0 0 auto;
+	width: 84px !important;
+	margin: 0 !important;
+	float: none !important;
+	scroll-snap-align: start;
+}
+
+.woocommerce-product-gallery .flex-control-thumbs img {
+	display: block;
+	width: 84px;
+	height: 60px;
+	object-fit: cover;
+	border-radius: var(--lw-r-pill);
+	border: 2px solid transparent;
+	opacity: 0.7;
+	cursor: pointer;
+	transition: opacity var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring), border-color var(--lw-fast) ease;
+}
+
+.woocommerce-product-gallery .flex-control-thumbs img:hover {
+	opacity: 1;
+	transform: translateY(-2px);
+}
+
+.woocommerce-product-gallery .flex-control-thumbs img.flex-active {
+	opacity: 1;
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+}
+
+/* Lupe als Glas-Kreis */
+.woocommerce-product-gallery__trigger {
+	position: absolute !important;
+	z-index: 9;
+	top: 16px !important;
+	right: 16px !important;
+	width: 44px !important;
+	height: 44px !important;
+	display: grid !important;
+	place-items: center;
+	border-radius: 50% !important;
+	background: var(--lw-glass) !important;
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	box-shadow: var(--lw-shadow-card);
+	font-size: 0 !important;
+}
+
+/* Hinzufügen-Formular (Add to Cart + Optionen) */
+.wp-block-woocommerce-add-to-cart-with-options,
+.wp-block-woocommerce-add-to-cart-form {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+/* Varianten als Pillen */
+.wp-block-woocommerce-add-to-cart-with-options-variation-selector-attribute-name,
+.wc-block-add-to-cart-with-options-variation-selector-attribute-name {
+	font-family: var(--lw-font-mono);
+	font-size: 11px !important;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.wc-block-product-filter-chips__items {
+	gap: 8px !important;
+}
+
+.wc-block-product-filter-chips__item {
+	min-height: 44px;
+	padding: 0.55em 1.15em !important;
+	border-radius: var(--lw-r-pill) !important;
+	border: 1.5px solid var(--lw-line) !important;
+	background: var(--lw-surface) !important;
+	color: var(--lw-text) !important;
+	font-weight: 500;
+	transition: transform var(--lw-base) var(--lw-spring), border-color var(--lw-fast) ease, background-color var(--lw-fast) ease;
+}
+
+.wc-block-product-filter-chips__item:hover:not(:disabled) {
+	transform: translateY(-1px);
+	border-color: color-mix(in srgb, var(--lw-primary) 50%, var(--lw-line)) !important;
+}
+
+.wc-block-product-filter-chips__item:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+.wc-block-product-filter-chips__item[aria-checked="true"] {
+	background: var(--lw-primary) !important;
+	border-color: var(--lw-primary) !important;
+	color: var(--lw-on-primary) !important;
+}
+
+.wc-block-product-filter-chips__item:focus-visible {
+	outline: 3px solid var(--lw-primary) !important;
+	outline-offset: 2px;
+}
+
+/* Klassische Varianten-Auswahl (Fallback) – Dropdown als Pille */
+table.variations select {
+	border-radius: var(--lw-r-pill) !important;
+}
+
+/* Mengenwähler als Pille mit − / + */
+.wc-block-components-quantity-selector,
+.wc-block-add-to-cart-with-options__quantity-selector .quantity,
+.wp-block-woocommerce-add-to-cart-with-options .quantity {
+	display: inline-flex !important;
+	align-items: stretch;
+	min-height: 52px;
+	width: auto !important;
+	min-width: 140px;
+	border: 1.5px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-pill) !important;
+	background: var(--lw-surface) !important;
+	overflow: hidden;
+}
+
+.wc-block-components-quantity-selector::after {
+	display: none !important;
+}
+
+.wc-block-components-quantity-selector__button {
+	min-width: 44px !important;
+	border: 0 !important;
+	background: transparent !important;
+	color: var(--lw-text) !important;
+	font-family: var(--lw-font-mono);
+	font-size: 1.25rem !important;
+	opacity: 1 !important;
+	cursor: pointer;
+	transition: background-color var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+}
+
+.wc-block-components-quantity-selector__button:hover:not(:disabled) {
+	background: var(--lw-surface-muted) !important;
+}
+
+.wc-block-components-quantity-selector__button:active:not(:disabled) {
+	transform: scale(0.9);
+}
+
+.wc-block-components-quantity-selector__button:disabled {
+	opacity: 0.35 !important;
+}
+
+.wc-block-components-quantity-selector__input,
+.wp-block-woocommerce-add-to-cart-with-options .quantity .qty {
+	flex: 1 1 auto;
+	min-width: 2.5em;
+	width: 3em !important;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+	text-align: center;
+	font-size: 1rem !important;
+	font-weight: 500;
+	color: var(--lw-text);
+	-moz-appearance: textfield;
+	appearance: textfield;
+}
+
+.wc-block-components-quantity-selector__input::-webkit-outer-spin-button,
+.wc-block-components-quantity-selector__input::-webkit-inner-spin-button,
+.qty::-webkit-outer-spin-button,
+.qty::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
+.wc-block-components-quantity-selector:focus-within {
+	border-color: var(--lw-primary) !important;
+	box-shadow: var(--lw-ring);
+}
+
+/* Großer Primär-Button */
+.lw16-product__summary .wp-block-woocommerce-product-button,
+.lw16-product__summary .single_add_to_cart_button {
+	flex: 1 1 220px;
+}
+
+.lw16-product__summary .wp-block-woocommerce-product-button .wp-block-button__link,
+.lw16-product__summary .wp-block-woocommerce-product-button button,
+.lw16-product__summary .single_add_to_cart_button {
+	width: 100%;
+	min-height: 56px;
+	font-size: var(--wp--preset--font-size--large) !important;
+	padding-inline: 1.75em;
+}
+
+.wp-block-woocommerce-add-to-cart-with-options > .wp-block-group:last-child,
+.wp-block-woocommerce-add-to-cart-with-options form > .wp-block-group:last-child {
+	gap: 10px !important;
+	align-items: stretch;
+}
+
+.wp-block-woocommerce-product-stock-indicator,
+.stock {
+	margin: 0;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wp-block-woocommerce-product-stock-indicator.wc-block-components-product-stock-indicator--in-stock,
+.stock.in-stock {
+	color: var(--lw-text);
+}
+
+.wc-block-components-product-stock-indicator--in-stock::before,
+.stock.in-stock::before {
+	content: "";
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-right: 0.5em;
+	border-radius: 50%;
+	background: var(--lw-success);
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--lw-success) 20%, transparent);
+	vertical-align: middle;
+}
+
+.wc-block-components-product-stock-indicator--out-of-stock,
+.stock.out-of-stock {
+	color: var(--lw-error);
+}
+
+/* Lieferzeit und Vertrauens-Chips */
+.lw16-delivery {
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.lw16-delivery strong {
+	color: var(--lw-text);
+	font-weight: 600;
+}
+
+.lw16-trust-chips {
+	gap: 8px !important;
+}
+
+.lw16-trust-chips .is-style-chip {
+	font-size: var(--wp--preset--font-size--x-small);
+	background: color-mix(in srgb, var(--lw-surface) 70%, transparent);
+}
+
+.lw16-trust-chips .is-style-chip::before {
+	color: var(--lw-primary);
+}
+
+/* Produkt-Meta */
+.wp-block-woocommerce-product-meta {
+	padding-top: 14px;
+	border-top: 1px solid var(--lw-line);
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+/* Tabs als Pillen-Umschalter */
+.wp-block-woocommerce-product-details .woocommerce-tabs,
+.woocommerce-tabs {
+	margin-top: var(--wp--preset--spacing--50);
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs {
+	display: inline-flex !important;
+	flex-wrap: nowrap;
+	gap: 4px;
+	max-width: 100%;
+	margin: 0 0 var(--wp--preset--spacing--40) !important;
+	padding: 5px !important;
+	overflow-x: auto;
+	border: 0 !important;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	list-style: none;
+	scrollbar-width: none;
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs::-webkit-scrollbar {
+	display: none;
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs::before,
+.woocommerce-tabs ul.tabs.wc-tabs::after,
+.woocommerce-tabs ul.tabs.wc-tabs li::before,
+.woocommerce-tabs ul.tabs.wc-tabs li::after {
+	display: none !important;
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs li {
+	flex: none;
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: var(--lw-r-pill) !important;
+	background: transparent !important;
+	transition: background-color var(--lw-fast) ease, box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs li a {
+	display: block;
+	padding: 0.65em 1.25em !important;
+	border-radius: var(--lw-r-pill);
+	color: var(--lw-text-muted) !important;
+	font-weight: 600 !important;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs li.active {
+	background: var(--lw-surface) !important;
+	box-shadow: var(--lw-shadow-card);
+}
+
+.woocommerce-tabs ul.tabs.wc-tabs li.active a {
+	color: var(--lw-text) !important;
+}
+
+.woocommerce-tabs .woocommerce-Tabs-panel {
+	max-width: 760px;
+	padding: var(--wp--preset--spacing--40);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.woocommerce-tabs .woocommerce-Tabs-panel > :first-child {
+	margin-top: 0;
+}
+
+.woocommerce table.shop_attributes,
+.woocommerce-product-attributes {
+	width: 100%;
+	border: 0;
+	border-collapse: separate;
+	border-spacing: 0;
+}
+
+.woocommerce-product-attributes th,
+.woocommerce-product-attributes td {
+	padding: 0.8em 0;
+	border: 0 !important;
+	border-bottom: 1px solid var(--lw-line) !important;
+	background: none !important;
+	text-align: left;
+}
+
+.woocommerce-product-attributes th {
+	width: 38%;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+/* Bewertungen auf der Produktseite */
+#reviews .commentlist {
+	list-style: none;
+	padding: 0;
+}
+
+#reviews .commentlist li .comment_container {
+	padding: 1em;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+}
+
+#reviews .commentlist li img.avatar {
+	border-radius: 50%;
+	border: 0;
+	background: none;
+}
+
+#review_form #respond textarea {
+	border-radius: var(--lw-r-field);
+}
+
+/* Fixierter „In den Warenkorb“-Balken (mobil, per theme.js) */
+.lw16-sticky-atc {
+	position: fixed;
+	z-index: 90;
+	left: 10px;
+	right: 10px;
+	bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+	display: none;
+	align-items: center;
+	gap: 12px;
+	padding: 8px 8px 8px 18px;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-glass);
+	border: 1px solid var(--lw-glass-edge);
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	box-shadow: var(--lw-shadow-float);
+	transform: translateY(calc(100% + 24px));
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-sticky-atc__info {
+	flex: 1 1 auto;
+	min-width: 0;
+	line-height: 1.2;
+}
+
+.lw16-sticky-atc__title {
+	display: block;
+	overflow: hidden;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.lw16-sticky-atc__price {
+	display: block;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	color: var(--lw-text-muted);
+}
+
+.lw16-sticky-atc__price del {
+	display: none;
+}
+
+.lw16-sticky-atc__button {
+	flex: none;
+	min-height: 48px;
+	padding: 0.7em 1.3em;
+	border: 0;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-sticky-atc__button:active {
+	transform: scale(0.97);
+}
+
+@media (max-width: 781px) {
+	.lw16-sticky-atc {
+		display: flex;
+	}
+
+	.lw16-sticky-atc.is-visible {
+		transform: none;
+	}
+
+	body.lw16-has-sticky-atc .wp-site-blocks {
+		padding-bottom: 84px;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 11. Kategorie-Seiten
+ * ----------------------------------------------------------------------- */
+
+.lw16-archive-head {
+	padding: var(--wp--preset--spacing--50) var(--wp--preset--spacing--40) !important;
+	border-radius: var(--lw-r-xl);
+	background: color-mix(in srgb, var(--lw-surface) 70%, transparent);
+	border: 1px solid var(--lw-glass-edge);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-archive-head .wp-block-query-title {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--hero);
+	font-weight: 800;
+	letter-spacing: -0.045em;
+	line-height: 0.98;
+}
+
+.lw16-archive-head .wp-block-term-description {
+	max-width: 62ch;
+	margin: 0;
+	color: var(--lw-text-muted);
+}
+
+.lw16-archive-head .wp-block-term-description p {
+	margin: 0.5em 0 0;
+}
+
+.wp-block-woocommerce-breadcrumbs,
+.woocommerce-breadcrumb {
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.woocommerce-breadcrumb a {
+	color: var(--lw-text-muted);
+	text-decoration: none;
+}
+
+.woocommerce-breadcrumb a:hover {
+	color: var(--lw-text);
+	text-decoration: underline;
+}
+
+.lw16-shop-toolbar {
+	gap: 12px !important;
+}
+
+.lw16-shop-toolbar > * {
+	margin: 0 !important;
+}
+
+/* Sortierung als Pille */
+.woocommerce-ordering,
+.wp-block-woocommerce-catalog-sorting form {
+	margin: 0 !important;
+}
+
+.woocommerce-ordering select,
+.wp-block-woocommerce-catalog-sorting select {
+	min-height: 44px;
+	padding: 0.55em 2.6em 0.55em 1.2em !important;
+	border: 1px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-pill) !important;
+	background-color: var(--lw-surface) !important;
+	box-shadow: var(--lw-shadow-card);
+	font-size: var(--wp--preset--font-size--small) !important;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+/* Filter: Desktop in einer Seitenleiste, mobil als ausklappbares Panel */
+.lw16-shop-layout {
+	gap: clamp(20px, 3vw, 40px) !important;
+}
+
+.lw16-shop-sidebar .wc-block-product-filters {
+	gap: 18px;
+}
+
+@media (min-width: 782px) {
+	.lw16-shop-sidebar {
+		position: sticky;
+		top: calc(var(--lw-header-top) + var(--lw-header-space));
+		align-self: flex-start;
+	}
+
+	.lw16-shop-sidebar .wc-block-product-filters {
+		padding: var(--wp--preset--spacing--40);
+		border-radius: var(--lw-r-card);
+		background: var(--lw-surface);
+		box-shadow: var(--lw-shadow-card);
+	}
+}
+
+.wc-block-product-filters :is(h2, h3).wp-block-heading {
+	font-family: var(--lw-font-mono);
+	font-size: 11px !important;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.wc-block-product-filters > .wp-block-heading:first-child,
+.wc-block-product-filters__overlay-content > .wp-block-heading:first-child {
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	text-transform: none;
+	color: var(--lw-text);
+}
+
+.wc-block-product-filters__open-overlay {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	min-height: 44px;
+	padding: 0.55em 1.2em;
+	border: 1px solid var(--lw-line);
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	box-shadow: var(--lw-shadow-card);
+	font: inherit;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.wc-block-product-filters__open-overlay:hover {
+	transform: translateY(-1px);
+}
+
+.wc-block-product-filters__open-overlay svg {
+	fill: currentColor;
+}
+
+.wc-block-product-filters__overlay-dialog {
+	background: var(--lw-glass) !important;
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	color: var(--lw-text) !important;
+}
+
+@media (max-width: 781px) {
+	.wc-block-product-filters__overlay-dialog {
+		margin: 12px;
+		border-radius: var(--lw-r-card);
+		box-shadow: var(--lw-shadow-float);
+		max-height: calc(100% - 24px);
+	}
+}
+
+.wc-block-product-filters__overlay-footer .wc-block-product-filters__apply,
+.wc-block-product-filter-clear-button .wp-block-button__link {
+	width: 100%;
+}
+
+.wc-block-product-filter-checkbox-list__item,
+.wc-block-product-filter-checkbox-list__label {
+	min-height: 36px;
+	align-items: center;
+}
+
+.wc-block-product-filter-checkbox-list__input {
+	accent-color: var(--lw-primary);
+	border-radius: 6px !important;
+}
+
+.wc-block-product-filter-removable-chips__item {
+	border-radius: var(--lw-r-pill) !important;
+	background: var(--lw-surface-muted) !important;
+	border: 0 !important;
+}
+
+.wc-block-product-filter-price-slider input[type="range"] {
+	accent-color: var(--lw-primary);
+}
+
+.wc-block-product-filter-price-slider .text input {
+	border-radius: var(--lw-r-pill) !important;
+	text-align: center;
+	font-family: var(--lw-font-mono);
+}
+
+/* Paginierung als Pillen */
+.wp-block-query-pagination {
+	gap: 8px;
+	margin-top: var(--wp--preset--spacing--50) !important;
+}
+
+.wp-block-query-pagination-numbers {
+	display: inline-flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.wp-block-query-pagination .page-numbers,
+.wp-block-query-pagination-previous,
+.wp-block-query-pagination-next,
+.woocommerce-pagination .page-numbers li > * {
+	display: inline-grid;
+	place-items: center;
+	min-width: 44px;
+	min-height: 44px;
+	padding: 0 1em;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	box-shadow: var(--lw-shadow-card);
+	text-decoration: none;
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.wp-block-query-pagination a:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.wp-block-query-pagination .page-numbers.current,
+.woocommerce-pagination .page-numbers .current {
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+}
+
+.wp-block-query-pagination .page-numbers.dots {
+	background: transparent;
+	box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 12. Mini-Cart: Drawer von rechts mit Glas-Hintergrund
+ * ----------------------------------------------------------------------- */
+
+.wc-block-components-drawer__screen-overlay {
+	background-color: color-mix(in srgb, var(--lw-ink) 28%, transparent) !important;
+	-webkit-backdrop-filter: blur(4px);
+	backdrop-filter: blur(4px);
+}
+
+.wc-block-mini-cart__drawer .wc-block-components-drawer,
+.wc-block-components-drawer {
+	top: 12px !important;
+	right: 12px !important;
+	bottom: 12px !important;
+	height: auto !important;
+	max-height: calc(100% - 24px);
+	max-width: calc(100% - 24px) !important;
+	border-radius: var(--lw-r-card);
+	overflow: hidden;
+	background: var(--lw-glass) !important;
+	color: var(--lw-text) !important;
+	border: 1px solid var(--lw-glass-edge);
+	-webkit-backdrop-filter: var(--lw-glass-filter);
+	backdrop-filter: var(--lw-glass-filter);
+	box-shadow: var(--lw-shadow-float);
+}
+
+.admin-bar .wc-block-components-drawer {
+	top: calc(var(--wp-admin--admin-bar--height, 0px) + 12px) !important;
+	max-height: calc(100% - 24px - var(--wp-admin--admin-bar--height, 0px));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.wc-block-components-drawer__screen-overlay--with-slide-in .wc-block-components-drawer {
+		animation-timing-function: var(--lw-spring) !important;
+		animation-duration: 420ms !important;
+	}
+}
+
+.wc-block-components-drawer__close {
+	width: 40px !important;
+	height: 40px !important;
+	border-radius: 50% !important;
+	background: var(--lw-surface) !important;
+	box-shadow: var(--lw-shadow-card);
+	opacity: 1 !important;
+}
+
+.wc-block-mini-cart__title {
+	font-family: var(--lw-font-heading);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	mask-image: none !important;
+}
+
+.wc-block-mini-cart__items {
+	padding-inline: 16px !important;
+}
+
+.wc-block-mini-cart__products-table .wc-block-cart-items__row {
+	padding: 12px !important;
+	margin-bottom: 10px;
+	border: 0 !important;
+	border-radius: var(--lw-r-field);
+	background: color-mix(in srgb, var(--lw-surface) 85%, transparent);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wc-block-mini-cart__products-table .wc-block-cart-item__image img,
+.wc-block-cart-item__image img {
+	border-radius: var(--lw-r-field);
+	aspect-ratio: 1;
+	object-fit: cover;
+}
+
+.wc-block-components-product-name {
+	color: var(--lw-text) !important;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.wc-block-cart-item__remove-link {
+	color: var(--lw-text-muted) !important;
+	font-size: var(--wp--preset--font-size--x-small) !important;
+}
+
+.wc-block-mini-cart__footer {
+	padding: 16px !important;
+	border-top: 1px solid var(--lw-line);
+	background: color-mix(in srgb, var(--lw-surface) 70%, transparent);
+}
+
+.wc-block-mini-cart__footer::after {
+	display: none !important;
+}
+
+.wc-block-mini-cart__footer-subtotal {
+	font-weight: 600;
+}
+
+.wc-block-mini-cart__footer-actions {
+	display: grid !important;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px !important;
+}
+
+.wc-block-mini-cart__footer-actions .wc-block-components-button {
+	width: 100%;
+	margin: 0 !important;
+}
+
+.wc-block-mini-cart__empty-cart-wrapper {
+	text-align: center;
+	padding: var(--wp--preset--spacing--50) var(--wp--preset--spacing--30);
+}
+
+/* Fortschrittsbalken „Noch X € bis zum kostenlosen Versand“ (per theme.js) */
+.lw16-freeship {
+	margin: 0 0 12px;
+	padding: 12px 14px;
+	border-radius: var(--lw-r-field);
+	background: color-mix(in srgb, var(--lw-accent-1) 30%, var(--lw-surface));
+	color: var(--lw-text);
+}
+
+.lw16-freeship__text {
+	margin: 0 0 8px;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+}
+
+.lw16-freeship__text strong {
+	font-family: var(--lw-font-mono);
+	font-weight: 500;
+}
+
+.lw16-freeship__bar {
+	position: relative;
+	height: 8px;
+	border-radius: var(--lw-r-pill);
+	background: color-mix(in srgb, var(--lw-text) 10%, transparent);
+	overflow: hidden;
+}
+
+.lw16-freeship__bar span {
+	position: absolute;
+	inset: 0 auto 0 0;
+	width: var(--lw16-progress, 0%);
+	border-radius: inherit;
+	background: var(--lw-primary);
+	transition: width var(--lw-slow) var(--lw-spring);
+}
+
+.lw16-freeship.is-done .lw16-freeship__bar span {
+	background: var(--lw-success);
+}
+
+/* --------------------------------------------------------------------------
+ * 13. Warenkorb und Kasse
+ * ----------------------------------------------------------------------- */
+
+.lw16-checkout-main .wp-block-post-title,
+.lw16-cart-main .wp-block-post-title {
+	margin-bottom: var(--wp--preset--spacing--40);
+}
+
+.wc-block-cart,
+.wc-block-checkout {
+	margin-top: 0 !important;
+}
+
+.wc-block-components-sidebar-layout {
+	gap: clamp(16px, 3vw, 40px);
+	margin-inline: 0 !important;
+	flex-wrap: wrap;
+}
+
+.wc-block-components-sidebar-layout .wc-block-components-main,
+.wc-block-components-sidebar-layout .wc-block-components-sidebar {
+	padding: 0 !important;
+}
+
+/* In Karten gruppiert: Positionen, Schritte, Übersicht */
+.wc-block-cart .wc-block-cart-items,
+.wc-block-cart .wc-block-cart__totals-title + *,
+.wc-block-checkout__main .wc-block-components-checkout-step,
+.wc-block-components-sidebar .wp-block-woocommerce-cart-totals-block,
+.wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block,
+.wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content {
+	border-radius: var(--lw-r-card) !important;
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wc-block-cart .wc-block-cart-items {
+	border-collapse: separate;
+	border-spacing: 0;
+	overflow: hidden;
+	padding: 4px 16px;
+}
+
+.wc-block-cart .wc-block-cart-items th {
+	font-family: var(--lw-font-mono);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.wc-block-cart .wc-block-cart-items td {
+	border-color: var(--lw-line) !important;
+}
+
+.wc-block-components-sidebar .wp-block-woocommerce-cart-totals-block,
+.wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block {
+	padding: 8px 20px 20px;
+}
+
+.wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block {
+	border: 0 !important;
+}
+
+.wc-block-components-totals-wrapper {
+	border-color: var(--lw-line) !important;
+}
+
+.wc-block-components-totals-footer-item .wc-block-components-totals-item__label,
+.wc-block-components-totals-footer-item .wc-block-components-totals-item__value {
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 700;
+}
+
+.wc-block-components-totals-footer-item-tax,
+.wc-block-components-totals-item__description {
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--x-small);
+}
+
+/* Bestellübersicht auf dem Desktop sticky */
+@media (min-width: 782px) {
+	.wc-block-cart .wc-block-cart__sidebar,
+	.wc-block-checkout .wc-block-checkout__sidebar {
+		position: sticky !important;
+		top: calc(var(--lw-header-top) + var(--lw-header-space)) !important;
+		align-self: flex-start;
+	}
+}
+
+/* Kasse: jeder Schritt eine Karte */
+.wc-block-checkout__main .wc-block-components-checkout-step {
+	padding: clamp(16px, 3vw, 28px) !important;
+	margin-bottom: 16px !important;
+}
+
+.wc-block-components-checkout-step__container::after,
+.wc-block-components-checkout-step::after {
+	display: none !important;
+}
+
+.wc-block-components-checkout-step__heading {
+	margin-top: 0 !important;
+}
+
+.wc-block-components-checkout-step__title {
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 800 !important;
+	letter-spacing: -0.03em;
+}
+
+.wc-block-components-checkout-step__description {
+	color: var(--lw-text-muted);
+}
+
+/* Gefüllte Felder auch in den WooCommerce-Blöcken */
+.wc-block-components-text-input input,
+.wc-block-components-text-input textarea,
+.wc-block-components-textarea,
+.wc-blocks-components-select .wc-blocks-components-select__select,
+.wc-block-components-combobox .wc-block-components-combobox-control input.components-combobox-control__input,
+.wc-block-components-form .wc-block-components-text-input input {
+	min-height: 52px;
+	border: 1.5px solid transparent !important;
+	border-radius: var(--lw-r-field) !important;
+	background-color: var(--lw-surface-muted) !important;
+	color: var(--lw-text) !important;
+	font-size: 16px !important;
+	box-shadow: none !important;
+	transition: border-color var(--lw-fast) ease, box-shadow var(--lw-fast) ease, background-color var(--lw-fast) ease;
+}
+
+.wc-block-components-text-input input:focus,
+.wc-block-components-textarea:focus,
+.wc-blocks-components-select .wc-blocks-components-select__select:focus,
+.wc-block-components-combobox .wc-block-components-combobox-control input.components-combobox-control__input:focus {
+	border-color: var(--lw-primary) !important;
+	background-color: var(--lw-surface) !important;
+	box-shadow: var(--lw-ring) !important;
+	outline: none !important;
+}
+
+.wc-blocks-components-select .wc-blocks-components-select__container {
+	border-radius: var(--lw-r-field) !important;
+	background: transparent !important;
+}
+
+.wc-block-components-text-input label,
+.wc-blocks-components-select__label,
+.wc-block-components-combobox label {
+	color: var(--lw-text-muted) !important;
+}
+
+/* Klare Fehlermeldungen in error */
+.wc-block-components-text-input.has-error input,
+.wc-block-components-combobox.has-error input,
+.wc-blocks-components-select.has-error select,
+.has-error .wc-block-components-textarea,
+.woocommerce-invalid input.input-text {
+	border-color: var(--lw-error) !important;
+	background-color: color-mix(in srgb, var(--lw-error) 6%, var(--lw-surface)) !important;
+}
+
+.wc-block-components-validation-error,
+.wc-block-components-validation-error > p,
+.wc-block-components-text-input.has-error label,
+.has-error .wc-block-components-checkbox__label {
+	color: var(--lw-error) !important;
+	font-weight: 500;
+}
+
+.wc-block-components-validation-error svg {
+	fill: currentColor;
+}
+
+/* Versand- und Zahlarten als ruhige Karten */
+.wc-block-components-radio-control--highlight-checked,
+.wc-block-components-radio-control-accordion-option {
+	border-radius: var(--lw-r-field) !important;
+}
+
+.wc-block-components-radio-control--highlight-checked::after,
+.wc-block-components-radio-control-accordion-option--checked-option-highlighted::after,
+.wc-block-components-radio-control__option-checked::after {
+	border-radius: var(--lw-r-field) !important;
+	box-shadow: inset 0 0 0 2px var(--lw-primary) !important;
+}
+
+.wc-block-components-radio-control__option {
+	min-height: 52px;
+}
+
+.wc-block-components-radio-control__input {
+	accent-color: var(--lw-primary);
+	border-color: var(--lw-text-muted) !important;
+}
+
+.wc-block-components-radio-control__input:checked::before {
+	background: var(--lw-primary) !important;
+}
+
+/* Checkboxen (AGB/Widerruf, Newsletter …) groß und gut tippbar */
+.wc-block-components-checkbox {
+	margin-top: 12px;
+}
+
+.wc-block-components-checkbox label {
+	align-items: flex-start;
+	gap: 0.25em;
+	min-height: 32px;
+	line-height: 1.45;
+}
+
+.wc-block-components-checkbox .wc-block-components-checkbox__input[type="checkbox"] {
+	width: 22px !important;
+	height: 22px !important;
+	min-width: 22px;
+	border: 1.5px solid var(--lw-text-muted) !important;
+	border-radius: 7px !important;
+	background: var(--lw-surface) !important;
+	margin-top: 1px;
+}
+
+.wc-block-components-checkbox .wc-block-components-checkbox__input[type="checkbox"]:checked {
+	background: var(--lw-primary) !important;
+	border-color: var(--lw-primary) !important;
+}
+
+.wc-block-components-checkbox .wc-block-components-checkbox__mark {
+	fill: var(--lw-on-primary) !important;
+	margin-left: 2px;
+	margin-top: 1px;
+}
+
+.wc-block-checkout__terms {
+	margin: 20px 0 0 !important;
+	padding: 16px 18px !important;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wc-block-checkout__terms.wc-block-checkout__terms--with-separator {
+	border-top: 0 !important;
+}
+
+/* „Zahlungspflichtig bestellen“ */
+.wc-block-checkout__actions {
+	padding-top: 8px;
+}
+
+.wc-block-checkout__actions_row {
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.wc-block-components-checkout-place-order-button {
+	min-height: 60px !important;
+	font-size: var(--wp--preset--font-size--large) !important;
+	font-weight: 700 !important;
+	letter-spacing: -0.01em;
+}
+
+.wc-block-components-checkout-return-to-cart-button {
+	color: var(--lw-text-muted) !important;
+}
+
+/* Gutschein-Feld */
+.wc-block-components-totals-coupon__form {
+	gap: 8px;
+}
+
+.wc-block-components-totals-coupon__button {
+	min-height: 52px;
+}
+
+.wc-block-components-panel__button,
+.wc-block-components-totals-coupon-link {
+	color: var(--lw-text) !important;
+	font-weight: 600;
+}
+
+/* Mobil: besonders gut bedienbar */
+@media (max-width: 781px) {
+	.wc-block-components-sidebar-layout {
+		flex-direction: column;
+	}
+
+	.wc-block-components-sidebar-layout .wc-block-components-main,
+	.wc-block-components-sidebar-layout .wc-block-components-sidebar {
+		width: 100% !important;
+	}
+
+	.wc-block-checkout__main .wc-block-components-checkout-step {
+		padding: 18px 16px !important;
+		border-radius: var(--lw-r-card) !important;
+	}
+
+	.wc-block-components-address-form {
+		gap: 12px;
+	}
+
+	.wc-block-components-address-form > * {
+		flex-basis: 100% !important;
+		width: 100% !important;
+	}
+
+	.wc-block-checkout__actions_row {
+		flex-direction: column-reverse;
+		align-items: stretch !important;
+	}
+
+	.wc-block-checkout__actions_row .wc-block-components-checkout-place-order-button {
+		width: 100% !important;
+	}
+
+	.wc-block-checkout__actions_row .wc-block-components-checkout-return-to-cart-button {
+		align-self: center;
+		padding: 10px;
+	}
+
+	.wc-block-components-checkout-order-summary__title {
+		min-height: 56px;
+		padding-inline: 16px !important;
+		border-radius: var(--lw-r-card) !important;
+		background: var(--lw-surface);
+		box-shadow: var(--lw-shadow-card);
+	}
+
+	.wc-block-cart .wc-block-cart-items {
+		padding: 4px 12px;
+	}
+}
+
+.wc-block-components-error,
+.wc-block-components-notices__snackbar {
+	border-radius: var(--lw-r-card);
+}
+
+/* Fehler-Ziel nicht unter dem Header verstecken */
+.wc-block-components-validation-error,
+.has-error {
+	scroll-margin-top: calc(var(--lw-header-top) + var(--lw-header-space) + 24px);
+}
+
+/* --------------------------------------------------------------------------
+ * 14. Hinweise als Pillen-Banner in success, warning, error
+ * ----------------------------------------------------------------------- */
+
+.wc-block-components-notice-banner,
+.woocommerce-message,
+.woocommerce-info,
+.woocommerce-error,
+.woocommerce-notices-wrapper > .woocommerce-message {
+	--lw-status: var(--lw-success);
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 0 0 16px !important;
+	padding: 12px 18px 12px 12px !important;
+	border: 1px solid color-mix(in srgb, var(--lw-status) 40%, transparent) !important;
+	border-radius: var(--lw-r-card) !important;
+	background: color-mix(in srgb, var(--lw-status) 12%, var(--lw-surface)) !important;
+	color: var(--lw-text) !important;
+	box-shadow: var(--lw-shadow-card);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.45;
+	list-style: none;
+}
+
+.wc-block-components-notice-banner.is-error,
+.woocommerce-error {
+	--lw-status: var(--lw-error);
+}
+
+.wc-block-components-notice-banner.is-warning {
+	--lw-status: var(--lw-warning);
+}
+
+.wc-block-components-notice-banner.is-info,
+.woocommerce-info {
+	--lw-status: var(--lw-primary);
+}
+
+.wc-block-components-notice-banner > svg {
+	flex: none;
+	width: 28px;
+	height: 28px;
+	padding: 4px;
+	border-radius: 50%;
+	background: var(--lw-status) !important;
+	fill: var(--lw-surface) !important;
+}
+
+.woocommerce-message::before,
+.woocommerce-info::before,
+.woocommerce-error::before {
+	content: "";
+	position: static !important;
+	flex: none;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--lw-status);
+	-webkit-mask: none;
+	mask: none;
+}
+
+.wc-block-components-notice-banner__content {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.wc-block-components-notice-banner__content .wc-forward,
+.woocommerce-message .button,
+.woocommerce-info .button,
+.woocommerce-error .button {
+	order: 3;
+	margin-left: auto !important;
+	float: none !important;
+	min-height: 40px;
+	padding: 0.5em 1.1em !important;
+	background: var(--lw-surface) !important;
+	color: var(--lw-text) !important;
+	border: 1px solid var(--lw-line) !important;
+	box-shadow: none;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wc-block-components-notice-banner__dismiss {
+	border-radius: 50%;
+	opacity: 0.7;
+}
+
+.wc-block-components-notice-banner__dismiss svg {
+	fill: currentColor;
+}
+
+/* --------------------------------------------------------------------------
+ * 15. Bestellbestätigung
+ * ----------------------------------------------------------------------- */
+
+.lw16-thanks {
+	text-align: center;
+	overflow: visible;
+}
+
+.lw16-checkmark {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 96px;
+	height: 96px;
+	margin: calc(-1 * var(--wp--preset--spacing--60)) auto 0 !important;
+	border-radius: 50%;
+	background: var(--lw-success);
+	color: var(--lw-on-primary);
+	box-shadow: 0 0 0 10px color-mix(in srgb, var(--lw-success) 18%, transparent), var(--lw-shadow-float);
+}
+
+.lw16-checkmark::before {
+	content: "";
+	width: 48px;
+	height: 48px;
+	background: currentColor;
+	-webkit-mask: var(--lw-icon-check) center / contain no-repeat;
+	mask: var(--lw-icon-check) center / contain no-repeat;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lw16-checkmark {
+		animation: lw-pop var(--lw-slow) var(--lw-spring) 200ms both;
+	}
+}
+
+.wc-block-order-confirmation-status {
+	margin: 0 !important;
+}
+
+.wc-block-order-confirmation-status h1,
+.wc-block-order-confirmation-status > p:first-child {
+	font-family: var(--lw-font-heading);
+	font-weight: 800;
+	letter-spacing: -0.045em;
+	line-height: 1;
+}
+
+.wc-block-order-confirmation-summary {
+	margin-block: 0 !important;
+}
+
+.wc-block-order-confirmation-summary-list {
+	display: flex !important;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	list-style: none;
+}
+
+.wc-block-order-confirmation-summary-list-item {
+	display: inline-flex !important;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 16px !important;
+	border: 0 !important;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	text-align: left;
+}
+
+.wc-block-order-confirmation-summary-list-item__key {
+	font-family: var(--lw-font-mono);
+	font-size: 11px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.wc-block-order-confirmation-summary-list-item__value {
+	font-weight: 500;
+}
+
+.lw16-next-steps {
+	text-align: left;
+	counter-reset: lw-next;
+}
+
+.lw16-next-steps li {
+	counter-increment: lw-next;
+	position: relative;
+	padding-left: 2.6em;
+	margin-block: 0.75em;
+	list-style: none;
+}
+
+.lw16-next-steps li::before {
+	content: counter(lw-next);
+	position: absolute;
+	left: 0;
+	top: -0.1em;
+	display: grid;
+	place-items: center;
+	width: 1.8em;
+	height: 1.8em;
+	border-radius: 50%;
+	background: var(--lw-accent-1);
+	color: var(--lw-on-accent);
+	font-family: var(--lw-font-mono);
+	font-size: 0.9em;
+}
+
+.lw16-next-steps {
+	padding-left: 0;
+}
+
+.wp-block-woocommerce-order-confirmation-totals-wrapper,
+.wp-block-woocommerce-order-confirmation-downloads-wrapper,
+.wp-block-woocommerce-order-confirmation-shipping-wrapper,
+.wp-block-woocommerce-order-confirmation-billing-wrapper,
+.wp-block-woocommerce-order-confirmation-additional-fields-wrapper {
+	padding: var(--wp--preset--spacing--40);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wc-block-order-confirmation-totals__table,
+.wc-block-order-confirmation-totals table {
+	width: 100%;
+	border: 0 !important;
+}
+
+.wc-block-order-confirmation-totals table :is(th, td) {
+	padding: 0.75em 0 !important;
+	border: 0 !important;
+	border-bottom: 1px solid var(--lw-line) !important;
+}
+
+.wc-block-order-confirmation-totals tfoot tr:last-child :is(th, td) {
+	border-bottom: 0 !important;
+	font-size: var(--wp--preset--font-size--large);
+}
+
+.wc-block-order-confirmation-shipping-address,
+.wc-block-order-confirmation-billing-address {
+	border: 0 !important;
+	padding: 0 !important;
+	border-radius: 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+ * 16. Mein Konto
+ * ----------------------------------------------------------------------- */
+
+.woocommerce-account .woocommerce {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--40);
+}
+
+.woocommerce-MyAccount-navigation,
+.woocommerce-MyAccount-content {
+	float: none !important;
+	width: 100% !important;
+}
+
+/* Navigation als Pillen-Leiste */
+.woocommerce-MyAccount-navigation ul {
+	display: flex;
+	gap: 4px;
+	margin: 0;
+	padding: 5px;
+	overflow-x: auto;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	list-style: none;
+	scrollbar-width: none;
+}
+
+.woocommerce-MyAccount-navigation ul::-webkit-scrollbar {
+	display: none;
+}
+
+.woocommerce-MyAccount-navigation li {
+	flex: none;
+	margin: 0;
+	padding: 0;
+	border: 0 !important;
+}
+
+.woocommerce-MyAccount-navigation li a {
+	display: block;
+	padding: 0.65em 1.15em;
+	border-radius: var(--lw-r-pill);
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+	transition: background-color var(--lw-fast) ease, color var(--lw-fast) ease;
+}
+
+.woocommerce-MyAccount-navigation li a:hover {
+	color: var(--lw-text);
+}
+
+.woocommerce-MyAccount-navigation li.is-active a {
+	background: var(--lw-surface);
+	color: var(--lw-text);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.woocommerce-MyAccount-content {
+	padding: var(--wp--preset--spacing--40);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.woocommerce-account .woocommerce form .form-row input.input-text,
+.woocommerce-account .woocommerce form .form-row select {
+	border-radius: var(--lw-r-field);
+}
+
+.woocommerce table.shop_table {
+	border: 0;
+	border-collapse: separate;
+	border-spacing: 0;
+	border-radius: var(--lw-r-field);
+}
+
+.woocommerce table.shop_table :is(th, td) {
+	border-color: var(--lw-line);
+	padding: 0.85em 0.75em;
+}
+
+.woocommerce table.shop_table th {
+	font-family: var(--lw-font-mono);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+/* Bestellungen mobil als Karten statt nackter Tabelle */
+@media (max-width: 768px) {
+	.woocommerce-orders-table thead {
+		display: none;
+	}
+
+	.woocommerce-orders-table,
+	.woocommerce-orders-table tbody {
+		display: block;
+		width: 100%;
+	}
+
+	.woocommerce-orders-table tr.woocommerce-orders-table__row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 10px 16px;
+		margin-bottom: 12px;
+		padding: 16px;
+		border-radius: var(--lw-r-card);
+		background: var(--lw-surface);
+		box-shadow: var(--lw-shadow-card);
+	}
+
+	.woocommerce-orders-table tr.woocommerce-orders-table__row td {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 0 !important;
+		border: 0 !important;
+		text-align: left !important;
+		background: none !important;
+	}
+
+	.woocommerce-orders-table tr.woocommerce-orders-table__row td::before {
+		content: attr(data-title);
+		float: none !important;
+		font-family: var(--lw-font-mono);
+		font-size: 11px;
+		font-weight: 500;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--lw-text-muted);
+	}
+
+	.woocommerce-orders-table__cell-order-number a {
+		font-family: var(--lw-font-mono);
+		font-size: 1.1em;
+	}
+
+	.woocommerce-orders-table__cell-order-actions {
+		grid-column: 1 / -1;
+		flex-direction: row !important;
+		flex-wrap: wrap;
+		gap: 8px !important;
+	}
+
+	.woocommerce-orders-table__cell-order-actions::before {
+		display: none;
+	}
+
+	.woocommerce-orders-table__cell-order-actions .button {
+		flex: 1 1 auto;
+		margin: 0 !important;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 17. Germanized / German Market
+ * Deren Ausgaben bleiben sichtbar und bekommen nur die passende Optik.
+ * ----------------------------------------------------------------------- */
+
+.wc-gzd-additional-info,
+.wc-gzd-additional-info-loop,
+.wc-gzd-additional-info-placeholder,
+.wc-gzd-product-price-info,
+.price-unit,
+.wc-gzd-unit-price,
+.delivery-time-info,
+.shipping-costs-info,
+.tax-info,
+.units-info,
+.product-units,
+.wc-gzd-item-desc,
+.wgm-info,
+.woocommerce-de_price_taxrate,
+.woocommerce_de_versandkosten,
+.wgm-kleinunternehmerregelung,
+.price-per-unit,
+.shipping_de,
+.wgm-delivery-time,
+.wgm-extra-costs-eu {
+	display: block;
+	margin: 2px 0 0 !important;
+	color: var(--lw-text-muted) !important;
+	font-family: var(--wp--preset--font-family--body);
+	font-size: var(--wp--preset--font-size--x-small) !important;
+	font-weight: 400;
+	line-height: 1.45;
+}
+
+.price-unit,
+.wc-gzd-unit-price,
+.price-per-unit,
+.product-units {
+	font-family: var(--lw-font-mono) !important;
+	font-variant-numeric: tabular-nums;
+}
+
+:is(.wc-gzd-additional-info, .wgm-info, .shipping-costs-info, .tax-info) a {
+	position: relative;
+	z-index: 2;
+	color: inherit !important;
+	text-underline-offset: 2px;
+}
+
+/* Lieferzeit auf der Produktseite als Chip */
+.lw16-product__summary :is(.delivery-time-info, .wgm-delivery-time, .wc-gzd-additional-info.delivery-time-info) {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5em;
+	width: fit-content;
+	padding: 0.5em 1em;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	color: var(--lw-text) !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+}
+
+.lw16-product__summary :is(.delivery-time-info, .wgm-delivery-time)::before {
+	content: "";
+	width: 1.1em;
+	height: 1.1em;
+	background: currentColor;
+	-webkit-mask: var(--lw-icon-truck) center / contain no-repeat;
+	mask: var(--lw-icon-truck) center / contain no-repeat;
+}
+
+/* Rechtliche Checkboxen in der Kasse (Germanized / German Market) */
+.wc-gzd-checkbox-placeholder,
+.wc-gzd-legal-checkbox,
+.wc-block-checkout__gzd-checkboxes,
+.wgm-checkbox,
+.german-market-checkbox,
+.woocommerce-de_terms {
+	margin: 12px 0 0 !important;
+	padding: 14px 16px !important;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	font-size: var(--wp--preset--font-size--small);
+	line-height: 1.5;
+}
+
+:is(.wc-gzd-checkbox-placeholder, .wc-gzd-legal-checkbox, .wgm-checkbox) a {
+	color: var(--lw-primary);
+}
+
+/* Ist ein Rechtstexte-Plugin aktiv, fällt der Theme-Hinweis weg (PHP), hier nur Absicherung. */
+.lw16-legal-plugin .lw16-price-note {
+	display: none;
+}
+
+/* --------------------------------------------------------------------------
+ * 18. Footer
+ * ----------------------------------------------------------------------- */
+
+.lw16-footer {
+	margin-top: var(--wp--preset--spacing--70) !important;
+	border-top: 1px solid var(--lw-line);
+}
+
+.lw16-footer .wp-block-site-logo img {
+	max-height: 48px;
+	width: auto;
+}
+
+.lw16-footer__about {
+	max-width: 34ch;
+	color: var(--lw-text-muted);
+}
+
+.lw16-footer__heading {
+	margin: 0 0 0.5em !important;
+}
+
+.lw16-footer__links {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lw16-footer__links li {
+	margin: 0 0 0.35em;
+}
+
+.lw16-footer__links a,
+.lw16-footer .wp-block-navigation-item__content {
+	display: inline-block;
+	padding: 0.25em 0;
+	color: var(--lw-text-muted);
+	text-decoration: none;
+	transition: color var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-footer__links a:hover,
+.lw16-footer .wp-block-navigation-item__content:hover {
+	color: var(--lw-text);
+	transform: translateX(2px);
+}
+
+.lw16-payments {
+	gap: 8px !important;
+}
+
+.lw16-payments .is-style-chip {
+	padding: 0.4em 0.85em;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	color: var(--lw-text-muted);
+	background: var(--lw-surface);
+}
+
+.lw16-footer__bottom {
+	border-top: 1px solid var(--lw-line);
+	color: var(--lw-text-muted);
+}
+
+.lw16-footer__bottom p {
+	margin: 0;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--x-small);
+}
+
+/* --------------------------------------------------------------------------
+ * Blog
+ * ----------------------------------------------------------------------- */
+
+.lw16-post-grid .wp-block-post {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 8px 8px 20px;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.lw16-post-grid .wp-block-post:hover {
+	transform: translateY(-4px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.lw16-post-grid .wp-block-post > :not(.wp-block-post-featured-image) {
+	margin-inline: 12px;
+}
+
+.lw16-post-grid .wp-block-post-featured-image {
+	margin: 0;
+}
+
+.lw16-post-grid .wp-block-post-featured-image img {
+	border-radius: var(--lw-r-image);
+	aspect-ratio: 4 / 3;
+	object-fit: cover;
+}
+
+.lw16-post-grid .wp-block-post-title {
+	font-size: var(--wp--preset--font-size--large);
+	margin: 0;
+}
+
+.wp-block-post-content > .alignwide,
+.wp-block-post-content > .alignfull {
+	margin-block: var(--wp--preset--spacing--50);
+}
+
+/* --------------------------------------------------------------------------
+ * 19. Reduzierte Bewegung, Druck
+ * ----------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		animation-delay: 0s !important;
+		transition-duration: 0.001ms !important;
+		scroll-behavior: auto !important;
+	}
+
+	:is(
+		.wp-element-button,
+		.wp-block-button__link,
+		.wc-block-components-button,
+		.button,
+		.is-style-card,
+		.wc-block-product,
+		.lw16-bento__tile,
+		.is-style-sticker,
+		.lw16-sticker
+	):is(:hover, :active, :focus-within) {
+		transform: none !important;
+	}
+
+	.wp-block-image.is-style-float img,
+	.lw16-float,
+	.lw16-hero__sticker {
+		animation: none !important;
+	}
+}
+
+@media print {
+	.lw16-site-header,
+	.lw16-sticky-atc,
+	.lw16-footer,
+	.wp-site-blocks::before {
+		display: none !important;
+	}
+
+	main > * {
+		animation: none !important;
+	}
+}
