@@ -1,0 +1,46 @@
+<!-- wp:template-part {"slug":"header","tagName":"header","className":"lw16-site-header"} /-->
+
+<!-- wp:group {"tagName":"main","className":"lw16-main","layout":{"type":"constrained"}} -->
+<main class="wp-block-group lw16-main">
+<!-- wp:woocommerce/breadcrumbs {"align":"wide"} /-->
+<!-- wp:woocommerce/store-notices {"align":"wide"} /-->
+
+<!-- wp:columns {"align":"wide","className":"lw16-product"} -->
+<div class="wp-block-columns alignwide lw16-product">
+<!-- wp:column {"width":"55%","className":"lw16-product__gallery"} -->
+<div class="wp-block-column lw16-product__gallery" style="flex-basis:55%">
+<!-- wp:woocommerce/product-image-gallery /-->
+</div>
+<!-- /wp:column -->
+
+<!-- wp:column {"width":"45%","className":"lw16-product__summary"} -->
+<div class="wp-block-column lw16-product__summary" style="flex-basis:45%">
+<!-- wp:post-terms {"term":"product_cat","className":"is-style-eyebrow"} /-->
+<!-- wp:post-title {"level":1,"__woocommerceNamespace":"woocommerce/product-query/product-title"} /-->
+<!-- wp:woocommerce/product-rating {"isDescendentOfSingleProductTemplate":true} /-->
+<!-- wp:woocommerce/product-price {"isDescendentOfSingleProductTemplate":true} /-->
+<!-- wp:post-excerpt {"excerptLength":60,"__woocommerceNamespace":"woocommerce/product-query/product-summary"} /-->
+<!-- wp:woocommerce/add-to-cart-with-options /-->
+<!-- wp:pattern {"slug":"lindenweg16/hidden-product-trust"} /-->
+<!-- wp:woocommerce/product-meta -->
+<div class="wp-block-woocommerce-product-meta">
+<!-- wp:group {"layout":{"type":"flex","flexWrap":"wrap"}} -->
+<div class="wp-block-group">
+<!-- wp:woocommerce/product-sku /-->
+<!-- wp:post-terms {"term":"product_tag"} /-->
+</div>
+<!-- /wp:group -->
+</div>
+<!-- /wp:woocommerce/product-meta -->
+</div>
+<!-- /wp:column -->
+</div>
+<!-- /wp:columns -->
+
+<!-- wp:woocommerce/product-details {"align":"wide","hideTabTitle":true} /-->
+
+<!-- wp:pattern {"slug":"lindenweg16/hidden-related-products"} /-->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->
