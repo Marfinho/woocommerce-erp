@@ -4246,3 +4246,50 @@ table.variations select {
 		padding-inline: var(--wp--preset--spacing--30) !important;
 	}
 }
+
+/* --------------------------------------------------------------------------
+ * Gesetzliche Gewährleistung (EU): zweite Blase unter der Produktbeschreibung.
+ * Die Mitteilung ist eine feste EU-Vorlage – keine Rundung, kein Zuschnitt,
+ * keine Effekte am Bild.
+ * ----------------------------------------------------------------------- */
+
+.lw16-legal-guarantee {
+	margin-top: var(--wp--preset--spacing--40) !important;
+}
+
+.lw16-bubble {
+	max-width: 760px;
+	gap: 14px;
+	padding: var(--wp--preset--spacing--40);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-bubble > * {
+	margin-block: 0 !important;
+}
+
+.lw16-legal-guarantee__image {
+	width: 100%;
+	margin: 0 !important;
+}
+
+.lw16-legal-guarantee__image a {
+	display: block;
+}
+
+.lw16-legal-guarantee__image img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	filter: none !important;
+	transform: none !important;
+	object-fit: contain;
+}
+
+.lw16-legal-guarantee__links {
+	color: var(--lw-text-muted);
+}

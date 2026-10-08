@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T15:54:59+00:00\n"
+"POT-Creation-Date: 2026-10-08T16:23:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: lindenweg16\n"
@@ -513,6 +513,36 @@ msgstr ""
 
 #: patterns/hidden-blog-head.php:26
 msgid "Geschichten vom Hobeln und Drucken, Tipps für dein Rad und alles Neue rund um den Haster Haken."
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php
+msgctxt "Pattern title"
+msgid "Produktseite – Gesetzliche Gewährleistung (EU)"
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php
+msgctxt "Pattern description"
+msgid "Harmonisierte Mitteilung zur gesetzlichen Gewährleistung nach der Durchführungsverordnung (EU) 2025/1960 – auf jeder Produktseite unter der Beschreibung."
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php:22
+msgid "Durchführungsverordnung (EU) 2025/1960"
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php:26
+msgid "Gesetzliche Gewährleistung"
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php:30
+msgid "Harmonisierte EU-Mitteilung „Gesetzliche Gewährleistung“: Mindestens zwei Jahre gesetzliche Gewährleistung der Vertragsmäßigkeit für Waren, die in der Europäischen Union verkauft werden. Entsprechen Waren nicht der Beschreibung oder funktionieren nicht bestimmungsgemäß, haften Verkäufer für jede Vertragswidrigkeit, die bei Lieferung bestand und innerhalb der Gewährleistungsfrist erkennbar wird; sie müssen kostenlose Nachbesserung oder Ersatzlieferung und in bestimmten Fällen eine Preisminderung oder die Erstattung des Kaufpreises anbieten. Was zu tun ist: das Problem so bald wie möglich dem Verkäufer melden und einen Kaufnachweis vorlegen. Mehr unter europa.eu/youreurope/garantien."
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php:34
+msgid "Mitteilung als PDF öffnen"
+msgstr ""
+
+#: patterns/hidden-legal-guarantee.php:34
+msgid "Mehr zu deinen Rechten auf europa.eu"
 msgstr ""
 
 #: patterns/hidden-no-results.php
