@@ -1,0 +1,221 @@
+=== Lindenweg16 ===
+Contributors: lindenweg16
+Requires at least: 6.6
+Tested up to: 7.1
+Requires PHP: 8.1
+Stable tag: 1.0.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+WC requires at least: 10.0
+WC tested up to: 11.2
+
+Freundliches, schlankes Block-Theme (Full Site Editing) für den WooCommerce-Shop von Lindenweg16 – Heimat des Haster Haken.
+
+== Beschreibung ==
+
+Lindenweg16 ist ein Block-Theme für Fahrradorganisation aus Haste: große
+Rundungen, weiche Schatten, schwebende Glas-Elemente und leicht federnde
+Animationen. Die Texte duzen, die Preise stehen in Euro inkl. MwSt.
+
+* Reines Block-Theme mit theme.json (Version 3), ohne Page-Builder und ohne jQuery
+* Nur WooCommerce-Blöcke: Product Collection, Produktfilter, Add to Cart mit Optionen, Mini-Cart, Warenkorb, Kasse, Bestellbestätigung. Keine überschriebenen PHP-Templates aus woocommerce/.
+* Keine Pflicht-Plugins außer WooCommerce selbst
+* Farben nur als Rollen – du trägst deine Farben selbst ein
+* Schriften lokal (Bricolage Grotesque, Inter, DM Mono), keine Anfragen an Google
+* Barrierearm: sichtbarer Fokusring, Kontraste nach WCAG AA, reduzierte Bewegung wird respektiert
+* Responsiv ab 360 px ohne seitliches Scrollen, Kasse mobil mit großen Feldern
+* Kompatibel mit Germanized und German Market
+* Newsletter-Anmeldung mit Double-Opt-in ohne Plugin
+
+== Installation ==
+
+1. Im WordPress-Backend: Design → Themes → Theme hinzufügen → Theme hochladen.
+2. lindenweg16.zip auswählen, „Jetzt installieren“, dann „Aktivieren“.
+3. WooCommerce muss installiert und aktiv sein (ab Version 10.0).
+4. Unter Einstellungen → Permalinks einmal „Änderungen speichern“ klicken.
+
+Die Startseite (front-page) wird automatisch verwendet. Du brauchst dafür
+keine eigene Seite anzulegen.
+
+== Farben eintragen ==
+
+Website-Editor → Stile → Farben → Palette.
+
+Dort stehen genau diese Rollen. Im Theme stehen nur neutrale
+Graustufen als Platzhalter. Ersetze sie durch deine Farben – das ganze
+Theme verwendet ausschließlich diese Rollen, nirgends feste Farbwerte.
+
+* background – Seitenhintergrund
+* surface – Karten, Felder
+* surface-muted – gefüllte Felder, Chips
+* text – Text
+* text-muted – gedämpfter Text
+* line – Ränder und Trennlinien
+* primary – Buttons, Links, Fokusring
+* on-primary – Schrift auf primary (und auf dem Angebots-Badge)
+* accent-1 bis accent-4 – Sticker, Kacheln, Badges (accent-1 auch: Textmarker und Mengen-Badge im Warenkorb, accent-2 auch: Bewertungssterne)
+* on-accent – Schrift auf den Akzentfarben
+* sale – Angebots-Badge und Angebotspreis
+* success, warning, error – Hinweise, Fehlermeldungen, Häkchen
+* ink – dunkle Fläche für den CTA-Block
+* on-ink – Schrift auf ink
+
+Die großen, weichen Farbflecken im Hintergrund mischt das Theme per
+color-mix() aus primary, accent-1 und accent-3 mit 12–15 % Deckkraft.
+Sie passen sich automatisch an.
+
+Kontraste (WCAG AA): Achte darauf, dass diese Paare mindestens 4,5:1
+erreichen – text, text-muted und primary auf background, surface und
+surface-muted; on-primary auf primary; on-accent auf accent-1 bis
+accent-4; sale auf surface; on-primary auf sale; error auf surface;
+on-ink auf ink. accent-2 (Sterne) auf surface braucht mindestens 3:1.
+Die Platzhalter-Graustufen erfüllen das alle.
+
+Dark Mode (optional): In assets/css/theme.css steht unter
+„0. Kurznamen und Dark Mode“ ein auskommentierter Block mit
+@media (prefers-color-scheme: dark). Kommentar entfernen und die
+Platzhalter durch deine dunklen Farben ersetzen.
+
+== Schriften ==
+
+* Bricolage Grotesque 200–800 (Überschriften)
+* Inter 100–900 (Fließtext und Bedienelemente)
+* DM Mono 400/500 (Preise, Mengen, Artikelnummern, kleine Labels)
+
+Quelle: Google Fonts, als woff2 im Theme unter assets/fonts/ (Liste und
+Herkunft in assets/fonts/README.md). Lizenz: SIL Open Font License 1.1,
+die Lizenztexte liegen bei. Es werden keine Anfragen an Google gestellt.
+
+== Block-Styles ==
+
+Im Editor unter „Stile“ am jeweiligen Block:
+
+* Button: Primär (Standard), Soft (Fläche mit Rand), Akzent – gelten auch für alle WooCommerce-Buttons
+* Gruppe: Karte (Fläche, Radius 28 px, Schatten, Hover-Anhebung), Glas (halbtransparent mit Weichzeichner), Sticker
+* Absatz: Eyebrow (kleine Pille, DM Mono, Großbuchstaben), Sticker (leicht gedrehte Pille in Akzentfarbe), Chip (neutrale Pille)
+* Beitrags-Begriffe: Eyebrow
+* Bild: Schwebend (große Rundung, Schatten, sanftes Schweben)
+* Liste: Häkchen
+
+Textmarker: Markiere in einer Überschrift ein Wort und wähle in der
+Werkzeugleiste „Hervorheben“. Es wird ein gedrehter Textmarker-Balken in
+accent-1.
+
+Symbole für Chips: Die Zusatzklasse „lw16-icon lw16-icon--truck“ (oder
+--return, --lock, --chat, --clock, --heart, --check, --cart) unter
+Block → Erweitert → Zusätzliche CSS-Klasse setzt ein Symbol davor.
+
+== Patterns ==
+
+Kategorie „Lindenweg16“ im Block-Inserter:
+
+1. Hero mit Stickern – Eyebrow-Sticker, große Headline mit Marker, zwei Buttons, großes Bild mit zwei schwebenden Stickern
+2. Kategorien als Bento-Grid – Kacheln in Akzentfarben mit Bild, unterschiedlich groß
+3. Produkt-Highlights (Neuheiten) – Product Collection als Karten-Raster mit „Alle ansehen“
+4. Vertrauensleiste – vier Chips mit Symbol
+5. So einfach geht’s – drei nummerierte Schritte mit gestrichelter Verbindungslinie
+6. Kundenstimmen – drei Karten mit Zitat, Name und Sternen
+7. Newsletter – Karte mit Eingabefeld und Button in einer Pille
+8. Dunkler CTA – Fläche ink mit zwei unscharfen Farbflecken
+9. Stichwort-Laufband – Pillen in Endlos-Animation, an den Rändern ausgeblendet
+
+Die Startseite nutzt Hero, Vertrauensleiste, Kategorien,
+Produkt-Highlights, So einfach geht’s, Kundenstimmen, Newsletter und CTA.
+Ändern: Website-Editor → Templates → Startseite.
+
+Die Bilder in Hero und Kacheln sind Strichzeichnungen als Platzhalter.
+Ersetze sie im Editor durch deine Produktfotos (Hero-Bild am besten im
+Format 6:5).
+
+== Templates ==
+
+index, front-page, home, single, page, page-landing (Landingpage ohne
+Seitentitel), archive, search, 404, archive-product,
+taxonomy-product_cat, taxonomy-product_tag, product-search-results,
+single-product, page-cart, page-checkout, order-confirmation.
+
+Template-Parts: header, footer, mini-cart.
+
+== WooCommerce ==
+
+* Produktkarte: Bild mit Sale-Sticker oben links und rundem „In den Warenkorb“-Knopf unten rechts (auf Touch-Geräten immer sichtbar)
+* Produktseite: Galerie mit Zoom, Lightbox und Slider, Thumbnails als Pillen-Reihe; Varianten als Pillen; Mengenwähler mit − / +; Lieferzeit und drei Vertrauens-Chips; Tabs als Pillen-Umschalter; mobil ein fixierter „In den Warenkorb“-Balken
+* Kategorie-Seiten: Filter (WooCommerce-Produktfilter) auf dem Desktop in der Seitenleiste, mobil als ausklappbares Panel
+* Mini-Cart: Drawer von rechts mit Glas-Hintergrund und Fortschrittsbalken „Noch X € bis zum kostenlosen Versand“
+* Kasse: Bestell-Button „Zahlungspflichtig bestellen“, Checkbox für AGB und Datenschutz, Bestellübersicht auf dem Desktop sticky
+
+Fortschrittsbalken kostenloser Versand: Der Betrag kommt automatisch aus
+deiner Versandart „Kostenloser Versand“ (Mindestbestellwert). Gibt es
+keine, steht dort der Platzhalter 50 €. Ändern oder ausblenden:
+add_filter( 'lindenweg16_free_shipping_threshold', fn() => 0 );
+
+Lieferzeit: Ohne Germanized/German Market zeigt die Produktseite
+„Lieferzeit: 2–4 Werktage“. Ändern:
+add_filter( 'lindenweg16_delivery_time', fn() => '1–3 Werktage' );
+
+Preis-Hinweis: Ohne Germanized/German Market steht unter jedem Preis
+„inkl. MwSt., zzgl. Versand“ mit Link auf die Seite
+„versand-und-zahlung“. Andere Seite:
+add_filter( 'lindenweg16_shipping_page_url', fn() => home_url( '/versand/' ) );
+
+== Germanized und German Market ==
+
+Ist eines der beiden Plugins aktiv, blendet das Theme seine eigenen
+Hinweise (Preis-Hinweis, Lieferzeit) aus und überlässt das dem Plugin.
+
+* Germanized: Das Theme setzt dessen Blöcke für Grundpreis, Steuer- und Versandhinweis (und auf der Produktseite die Lieferzeit) automatisch unter jeden Preis. Die Inhalte stellst du in Germanized ein.
+* German Market: gibt seine Hinweise selbst am Preis aus.
+
+Die Ausgaben beider Plugins werden nicht versteckt, sondern im Stil des
+Themes dargestellt. Beide Plugins setzen auch einen eigenen Text für den
+Bestell-Button (bei Germanized z. B. „Jetzt kaufen“), einstellbar im Plugin.
+
+== Newsletter ==
+
+Das Pattern „Newsletter“ funktioniert ohne Plugin, mit Double-Opt-in:
+Nach der Anmeldung verschickt WordPress eine Bestätigungsmail; erst der
+Klick auf den Link trägt die Adresse ein. Die Liste findest du unter
+Werkzeuge → Newsletter, mit CSV-Export (inklusive Abmeldelink je Adresse)
+für dein Versand-Tool. Auskunft und Löschung laufen über
+Werkzeuge → Personenbezogene Daten exportieren/löschen.
+
+Damit Mails ankommen, sollte deine Website Mails zuverlässig versenden
+können (beim Hoster nachfragen).
+
+Abschalten: add_filter( 'lindenweg16_newsletter_enabled', '__return_false' );
+
+== Barrierefreiheit ==
+
+* Sichtbarer Fokusring in primary an allen bedienbaren Elementen
+* Skip-Link zum Inhalt (von WordPress)
+* Bei „Bewegung reduzieren“ im Betriebssystem sind alle Animationen aus, das Laufband steht still
+* Inhalte blenden beim Laden ein, der Endzustand ist immer voll sichtbar
+* Bedienflächen mindestens 44 × 44 px
+
+== Übersetzung ==
+
+Alle Texte sind übersetzbar (Textdomain lindenweg16). Die Vorlage liegt
+in languages/lindenweg16.pot.
+
+== Für Entwickler ==
+
+Filter: lindenweg16_free_shipping_threshold, lindenweg16_delivery_time,
+lindenweg16_shipping_page_url, lindenweg16_has_legal_plugin,
+lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
+Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
+
+== Changelog ==
+
+= 1.0.0 =
+* Erste Version.
+
+== Copyright ==
+
+Lindenweg16, (C) 2026 Lindenweg16. Lizenz: GPLv2 oder später.
+
+Schriften: Bricolage Grotesque (C) The Bricolage Grotesque Project
+Authors, Inter (C) The Inter Project Authors, DM Mono (C) The DM Mono
+Project Authors – jeweils SIL Open Font License 1.1.
+
+Illustrationen und Symbole in assets/images und assets/css: eigene Arbeit,
+GPLv2 oder später.

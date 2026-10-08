@@ -74,9 +74,13 @@ function lindenweg16_free_shipping_threshold(): float {
  *
  * @param string $content Gerenderter Preis-Block.
  */
-function lindenweg16_price_note( string $content ): string {
-	if ( '' === trim( $content ) || is_admin() || lindenweg16_has_legal_plugin() ) {
+function lindenweg16_price_note( string $content, array $parsed_block = array(), $instance = null ): string {
+	if ( '' === trim( $content ) || is_admin() ) {
 		return $content;
+	}
+
+	if ( lindenweg16_has_legal_plugin() ) {
+		return $content . lindenweg16_germanized_price_info( $instance );
 	}
 
 	$shipping_url = (string) apply_filters( 'lindenweg16_shipping_page_url', lindenweg16_page_url( 'versand-und-zahlung' ) );
@@ -100,7 +104,76 @@ function lindenweg16_price_note( string $content ): string {
 		sprintf( esc_html( $text ), $link )
 	);
 }
-add_filter( 'render_block_woocommerce/product-price', 'lindenweg16_price_note' );
+add_filter( 'render_block_woocommerce/product-price', 'lindenweg16_price_note', 10, 3 );
+
+/**
+ * Germanized bringt für Block-Themes eigene Blöcke für Grundpreis, Steuer-
+ * und Versandhinweis sowie Lieferzeit mit, hängt sie aber nicht von selbst an
+ * den Preis. Das Theme rendert sie direkt unter jedem Preis – mit demselben
+ * Produktkontext wie der Preis-Block. Die Inhalte und Einstellungen kommen
+ * vollständig aus Germanized.
+ *
+ * German Market gibt seine Hinweise über den Preis-HTML-Filter aus; dort ist
+ * nichts zu tun.
+ *
+ * @param WP_Block|null $instance Gerenderter Preis-Block.
+ */
+function lindenweg16_germanized_price_info( $instance ): string {
+	if ( ! class_exists( 'WooCommerce_Germanized' ) || ! $instance instanceof WP_Block ) {
+		return '';
+	}
+
+	$blocks = array(
+		'woocommerce-germanized/product-unit-price',
+		'woocommerce-germanized/product-tax-info',
+		'woocommerce-germanized/product-shipping-costs-info',
+	);
+
+	// Die Lieferzeit gehört auf die Produktseite, nicht in jede Karte.
+	if ( empty( $instance->context['query'] ) && is_singular( 'product' ) ) {
+		$blocks[] = 'woocommerce-germanized/product-delivery-time';
+	}
+
+	/**
+	 * Filtert die Germanized-Blöcke, die unter dem Preis erscheinen.
+	 *
+	 * @param string[] $blocks   Blocknamen.
+	 * @param WP_Block $instance Preis-Block.
+	 */
+	$blocks   = (array) apply_filters( 'lindenweg16_germanized_price_blocks', $blocks, $instance );
+	$registry = WP_Block_Type_Registry::get_instance();
+	$html     = '';
+
+	// Auf der Produktseite reicht WooCommerce keine postId durch – dann gilt das aktuelle Produkt.
+	$context = $instance->context;
+	if ( empty( $context['postId'] ) ) {
+		$context['postId']   = get_the_ID();
+		$context['postType'] = 'product';
+	}
+
+	foreach ( $blocks as $name ) {
+		if ( ! $registry->is_registered( $name ) ) {
+			continue;
+		}
+
+		$block = new WP_Block(
+			array(
+				'blockName'    => $name,
+				'attrs'        => array(
+					'isDescendentOfQueryLoop' => ! empty( $instance->context['query'] ),
+				),
+				'innerBlocks'  => array(),
+				'innerHTML'    => '',
+				'innerContent' => array(),
+			),
+			$context
+		);
+
+		$html .= $block->render();
+	}
+
+	return '' === trim( $html ) ? '' : '<div class="lw16-legal-info">' . $html . '</div>';
+}
 
 /**
  * Der Bestell-Button heißt „Zahlungspflichtig bestellen“ (§ 312j Abs. 3 BGB).
@@ -162,3 +235,17 @@ function lindenweg16_woocommerce_body_class( array $classes ): array {
 	return $classes;
 }
 add_filter( 'body_class', 'lindenweg16_woocommerce_body_class' );
+
+/**
+ * Der Header bringt Konto- und Mini-Cart-Block selbst mit. WooCommerce soll
+ * sie nicht ein zweites Mal hinter die Navigation hängen (Block Hooks).
+ *
+ * @param string[] $patterns Ausgeschlossene Pattern-Slugs.
+ * @return string[]
+ */
+function lindenweg16_exclude_header_from_block_hooks( array $patterns ): array {
+	$patterns[] = 'lindenweg16/header';
+
+	return $patterns;
+}
+add_filter( 'woocommerce_hooked_blocks_pattern_exclude_list', 'lindenweg16_exclude_header_from_block_hooks' );

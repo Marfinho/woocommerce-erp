@@ -200,6 +200,22 @@ function lindenweg16_page_url( string $path ): string {
 }
 
 /**
+ * Link zu einer Produktkategorie anhand ihres Slugs – passend zu den
+ * Permalink-Einstellungen. Gibt es die Kategorie (noch) nicht, führt der
+ * Link in den Shop.
+ */
+function lindenweg16_category_url( string $slug ): string {
+	if ( taxonomy_exists( 'product_cat' ) ) {
+		$link = get_term_link( $slug, 'product_cat' );
+		if ( is_string( $link ) ) {
+			return $link;
+		}
+	}
+
+	return function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/' );
+}
+
+/**
  * Ist Germanized oder German Market aktiv? Dann kommen Grundpreis,
  * Lieferzeit, Steuer- und Versandhinweis von dort, nicht vom Theme.
  */
@@ -228,6 +244,31 @@ function lindenweg16_body_class( array $classes ): array {
 	return $classes;
 }
 add_filter( 'body_class', 'lindenweg16_body_class' );
+
+/**
+ * Blockvorlage einer Produktkarte für die Product Collection: Bild mit
+ * Sale-Sticker und rundem Warenkorb-Knopf, darunter Name und Preis.
+ *
+ * Steht hier statt in einem eigenen Pattern, weil ein verschachteltes
+ * Pattern den Abfrage-Kontext der Collection verlieren würde. Dieselbe
+ * Vorlage steht wörtlich in den Shop-Templates.
+ */
+function lindenweg16_product_card_markup(): string {
+	return '<!-- wp:woocommerce/product-template -->
+<!-- wp:group {"className":"lw16-card-media","layout":{"type":"default"}} -->
+<div class="wp-block-group lw16-card-media">
+<!-- wp:woocommerce/product-image {"showSaleBadge":false,"isDescendentOfQueryLoop":true} -->
+<!-- wp:woocommerce/product-sale-badge {"isDescendentOfQueryLoop":true,"align":"left"} /-->
+<!-- /wp:woocommerce/product-image -->
+<!-- wp:woocommerce/product-button {"isDescendentOfQueryLoop":true,"className":"lw16-quick-add"} /-->
+</div>
+<!-- /wp:group -->
+<!-- wp:post-title {"level":3,"isLink":true,"__woocommerceNamespace":"woocommerce/product-collection/product-title"} /-->
+<!-- wp:woocommerce/product-price {"isDescendentOfQueryLoop":true} /-->
+<!-- /wp:woocommerce/product-template -->';
+}
+
+require_once get_template_directory() . '/inc/newsletter.php';
 
 if ( class_exists( 'WooCommerce' ) ) {
 	require_once get_template_directory() . '/inc/woocommerce.php';

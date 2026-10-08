@@ -1297,6 +1297,8 @@ label {
 
 .lw16-step__number {
 	display: inline-grid !important;
+	padding: 0 !important;
+	white-space: nowrap;
 	place-items: center;
 	width: 64px;
 	height: 64px;
@@ -1769,9 +1771,10 @@ label {
 .lw16-quick-add .wc-block-components-product-button__button,
 .lw16-quick-add .button {
 	position: relative;
-	width: 48px;
-	height: 48px;
-	min-height: 48px;
+	width: 48px !important;
+	min-width: 48px !important;
+	height: 48px !important;
+	min-height: 48px !important;
 	padding: 0 !important;
 	border-radius: 50% !important;
 	font-size: 0 !important;
@@ -1952,6 +1955,11 @@ label {
 }
 
 /* Galerie mit großen Rundungen */
+.wp-block-woocommerce-product-image-gallery {
+	max-width: none !important;
+	width: 100%;
+}
+
 .woocommerce-product-gallery,
 .wp-block-woocommerce-product-image-gallery .woocommerce-product-gallery {
 	position: relative;
@@ -2168,9 +2176,18 @@ table.variations select {
 }
 
 /* Großer Primär-Button */
-.lw16-product__summary .wp-block-woocommerce-product-button,
-.lw16-product__summary .single_add_to_cart_button {
-	flex: 1 1 220px;
+.lw16-product__summary .wp-block-woocommerce-product-button {
+	flex: 1 1 auto;
+	min-width: min(100%, 200px);
+	margin: 0 !important;
+}
+
+/* WooCommerce rahmt den Mengenwähler zusätzlich ein – der Rahmen sitzt bei uns innen. */
+.wp-block-woocommerce-add-to-cart-with-options-quantity-selector {
+	border: 0 !important;
+	padding: 0 !important;
+	background: none !important;
+	height: auto !important;
 }
 
 .lw16-product__summary .wp-block-woocommerce-product-button .wp-block-button__link,
@@ -2185,7 +2202,12 @@ table.variations select {
 .wp-block-woocommerce-add-to-cart-with-options > .wp-block-group:last-child,
 .wp-block-woocommerce-add-to-cart-with-options form > .wp-block-group:last-child {
 	gap: 10px !important;
-	align-items: stretch;
+	align-items: center !important;
+}
+
+.wc-block-components-quantity-selector {
+	height: 56px;
+	min-height: 56px !important;
 }
 
 .wp-block-woocommerce-product-stock-indicator,
@@ -2200,8 +2222,8 @@ table.variations select {
 	color: var(--lw-text);
 }
 
-.wc-block-components-product-stock-indicator--in-stock::before,
-.stock.in-stock::before {
+.wc-block-components-product-stock-indicator--in-stock:not(:empty)::before,
+.stock.in-stock:not(:empty)::before {
 	content: "";
 	display: inline-block;
 	width: 8px;
@@ -2393,6 +2415,10 @@ table.variations select {
 	transition: transform var(--lw-base) var(--lw-spring);
 }
 
+.lw16-sticky-atc[hidden] {
+	display: none !important;
+}
+
 .lw16-sticky-atc__info {
 	flex: 1 1 auto;
 	min-width: 0;
@@ -2410,6 +2436,9 @@ table.variations select {
 
 .lw16-sticky-atc__price {
 	display: block;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
 	font-family: var(--lw-font-mono);
 	font-size: var(--wp--preset--font-size--small);
 	color: var(--lw-text-muted);
@@ -2884,7 +2913,29 @@ table.variations select {
 	border-collapse: separate;
 	border-spacing: 0;
 	overflow: hidden;
-	padding: 4px 16px;
+}
+
+@media (min-width: 782px) {
+	.wc-block-cart .wc-block-cart-items :is(th, td):first-child {
+		padding-left: 20px !important;
+	}
+
+	.wc-block-cart .wc-block-cart-items :is(th, td):last-child {
+		padding-right: 20px !important;
+	}
+}
+
+/* Mobil: Karte mit Innenabstand, Tabelle bleibt in der Spalte. */
+@media (max-width: 781px) {
+	.wc-block-cart .wc-block-cart-items {
+		table-layout: fixed;
+		max-width: 100%;
+	}
+
+	.wc-block-cart .wc-block-cart-items__row {
+		padding: 16px 12px !important;
+		max-width: 100%;
+	}
 }
 
 .wc-block-cart .wc-block-cart-items th {
@@ -3176,7 +3227,7 @@ table.variations select {
 	}
 
 	.wc-block-cart .wc-block-cart-items {
-		padding: 4px 12px;
+		width: 100% !important;
 	}
 }
 
@@ -3557,7 +3608,7 @@ table.variations select {
 		box-shadow: var(--lw-shadow-card);
 	}
 
-	.woocommerce-orders-table tr.woocommerce-orders-table__row td {
+	.woocommerce-orders-table tr.woocommerce-orders-table__row :is(td, th) {
 		display: flex;
 		flex-direction: column;
 		gap: 2px;
@@ -3567,7 +3618,7 @@ table.variations select {
 		background: none !important;
 	}
 
-	.woocommerce-orders-table tr.woocommerce-orders-table__row td::before {
+	.woocommerce-orders-table tr.woocommerce-orders-table__row :is(td, th)::before {
 		content: attr(data-title);
 		float: none !important;
 		font-family: var(--lw-font-mono);
@@ -3858,5 +3909,340 @@ table.variations select {
 
 	main > * {
 		animation: none !important;
+	}
+}
+
+/* --------------------------------------------------------------------------
+ * 20. Seitengerüst und Ergänzungen
+ * ----------------------------------------------------------------------- */
+
+.lw16-main {
+	padding-top: var(--wp--preset--spacing--50);
+	padding-bottom: var(--wp--preset--spacing--60);
+}
+
+.lw16-main > * + * {
+	margin-block-start: var(--wp--preset--spacing--50);
+}
+
+.lw16-main--front > .lw16-section + .lw16-section {
+	margin-block-start: var(--wp--preset--spacing--70);
+}
+
+/* Text auf farbigen Flächen bekommt automatisch die passende Rolle. */
+:where([class*="has-accent-"][class*="-background-color"].has-background):not(.has-text-color) {
+	color: var(--lw-on-accent);
+}
+
+:where(.has-primary-background-color.has-background):not(.has-text-color) {
+	color: var(--lw-on-primary);
+}
+
+:where(.has-ink-background-color.has-background):not(.has-text-color) {
+	color: var(--lw-on-ink);
+}
+
+/* Hero: Illustrationen (SVG) werden eingepasst, Fotos füllen die Fläche. */
+.lw16-hero__media .wp-block-image img[src$=".svg"] {
+	object-fit: contain;
+	padding: 6% 8%;
+}
+
+.lw16-hero__columns {
+	gap: clamp(28px, 5vw, 72px) !important;
+}
+
+/* Leere Zustände: 404, keine Treffer */
+.lw16-empty {
+	gap: var(--wp--preset--spacing--30);
+	padding: var(--wp--preset--spacing--60) var(--wp--preset--spacing--40) !important;
+	text-align: center;
+}
+
+.lw16-empty .wp-block-search {
+	width: min(100%, 440px);
+}
+
+/* CTA und Newsletter: großzügige Innenabstände */
+.lw16-cta {
+	gap: var(--wp--preset--spacing--30);
+	padding: var(--wp--preset--spacing--70) var(--wp--preset--spacing--40) !important;
+	text-align: center;
+}
+
+.lw16-newsletter {
+	gap: var(--wp--preset--spacing--30);
+	padding: var(--wp--preset--spacing--60) var(--wp--preset--spacing--40) !important;
+	text-align: center;
+}
+
+.lw16-newsletter .wp-block-html {
+	width: 100%;
+	display: flex;
+	justify-content: center;
+}
+
+.lw16-newsletter__hp {
+	position: absolute !important;
+	left: -9999px;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+}
+
+.lw16-newsletter__status {
+	--lw-status: var(--lw-success);
+	width: fit-content;
+	max-width: 100%;
+	margin: 12px auto 0;
+	padding: 0.6em 1.2em;
+	border-radius: var(--lw-r-card);
+	border: 1px solid color-mix(in srgb, var(--lw-status) 40%, transparent);
+	background: color-mix(in srgb, var(--lw-status) 12%, var(--lw-surface));
+	color: var(--lw-text);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 500;
+}
+
+.lw16-newsletter__status.is-error {
+	--lw-status: var(--lw-error);
+}
+
+/* Footer */
+.lw16-footer {
+	padding-top: var(--wp--preset--spacing--60);
+}
+
+.lw16-footer__columns {
+	gap: var(--wp--preset--spacing--50) !important;
+}
+
+.lw16-footer .wp-block-navigation {
+	gap: 2px;
+}
+
+.lw16-footer .wp-block-site-title {
+	margin: 0;
+}
+
+.lw16-footer .wp-block-site-logo + .wp-block-site-title {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+}
+
+.lw16-footer__bottom {
+	margin-top: var(--wp--preset--spacing--40);
+	padding-block: var(--wp--preset--spacing--40);
+}
+
+@media (max-width: 781px) {
+	.lw16-footer__columns {
+		display: grid !important;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.lw16-footer__columns > .wp-block-column:first-child {
+		grid-column: 1 / -1;
+	}
+}
+
+/* Beiträge */
+.lw16-article {
+	gap: var(--wp--preset--spacing--40);
+}
+
+.lw16-article .wp-block-post-navigation-link {
+	display: inline-block;
+}
+
+/* Bestellbestätigung: Platz für das große Häkchen über der Karte */
+.lw16-order-main {
+	padding-top: var(--wp--preset--spacing--80);
+}
+
+.lw16-thanks {
+	gap: var(--wp--preset--spacing--30);
+	padding-inline: clamp(18px, 5vw, 56px) !important;
+}
+
+/* Produktformular: WooCommerce-Abstände der Unterblöcke auf das Raster des Themes bringen. */
+.wp-block-woocommerce-add-to-cart-with-options :is(
+	.wp-block-woocommerce-add-to-cart-with-options-variation-selector,
+	.wp-block-woocommerce-add-to-cart-with-options-variation-description,
+	.wp-block-woocommerce-product-stock-indicator,
+	.wp-block-group
+) {
+	margin-block: 0 !important;
+}
+
+.wp-block-woocommerce-add-to-cart-with-options :is(
+	.wp-block-woocommerce-add-to-cart-with-options-variation-description,
+	.wp-block-woocommerce-product-stock-indicator
+):empty {
+	display: none;
+}
+
+.wp-block-woocommerce-add-to-cart-with-options form {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.wp-block-woocommerce-add-to-cart-with-options-variation-selector-attribute > .wp-block-group {
+	margin-block: 0 !important;
+}
+
+.wp-block-woocommerce-product-details .woocommerce-Tabs-panel,
+.woocommerce-tabs .woocommerce-Tabs-panel {
+	padding: var(--wp--preset--spacing--40) !important;
+	margin: 0 !important;
+}
+
+/* Mini-Cart: Der Drawer schwebt mit Abstand – der Inhalt füllt genau ihn, nicht die ganze Fensterhöhe. */
+.wc-block-components-drawer .wc-block-components-drawer__content {
+	height: 100% !important;
+	min-height: 0 !important;
+}
+
+.wc-block-mini-cart__title {
+	margin: 18px 64px 6px 16px !important;
+	font-size: var(--wp--preset--font-size--large) !important;
+}
+
+.wc-block-mini-cart__items {
+	padding-top: 6px !important;
+}
+
+.wc-block-components-drawer__close svg {
+	width: 22px !important;
+	height: 22px !important;
+	fill: currentColor;
+}
+
+.wc-block-components-drawer__close-wrapper .wc-block-components-drawer__close {
+	top: 14px !important;
+	right: 14px !important;
+	color: var(--lw-text) !important;
+}
+
+.wc-block-mini-cart__footer-actions .wc-block-components-button {
+	min-height: 48px;
+	padding-inline: 0.8em !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+	white-space: nowrap;
+}
+
+@media (max-width: 380px) {
+	.wc-block-mini-cart__footer-actions {
+		grid-template-columns: 1fr;
+	}
+}
+
+.wc-block-order-confirmation-status h1 {
+	font-size: var(--wp--preset--font-size--xx-large);
+}
+
+.wc-block-order-confirmation-status p {
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--large);
+}
+
+/* WooCommerce schiebt den Drawer per transform herein – 12 px Luft zum rechten Rand. */
+.wc-block-components-drawer__screen-overlay .wc-block-components-drawer {
+	margin-left: -12px;
+}
+
+.wc-block-components-drawer__close-wrapper .wc-block-components-drawer__close {
+	width: 40px !important;
+	min-width: 40px !important;
+	height: 40px !important;
+	min-height: 40px !important;
+	padding: 0 !important;
+	background: var(--lw-surface) !important;
+	box-shadow: var(--lw-shadow-card) !important;
+}
+
+.wc-block-mini-cart__footer-actions .wc-block-components-button__text {
+	white-space: nowrap;
+}
+
+.wc-block-mini-cart__products-table {
+	table-layout: fixed;
+	width: 100% !important;
+	max-width: 100%;
+}
+
+.wc-block-mini-cart__products-table .wc-block-cart-items__row {
+	max-width: 100%;
+}
+
+.wc-block-mini-cart__footer-actions .wc-block-components-button__text {
+	white-space: nowrap !important;
+}
+
+/* Feste WooCommerce-Spalten (80/132 px) passen nicht in den schwebenden Drawer – flexibel machen. */
+.wc-block-mini-cart__products-table .wc-block-cart-items__row {
+	grid-template-columns: 64px minmax(0, 1fr) auto auto !important;
+}
+
+.wc-block-mini-cart__items {
+	padding-inline: 12px !important;
+}
+
+/* Bestellungen als Karten: gegen die mobile Tabellen-CSS von WooCommerce (blendet th aus, richtet rechts aus). */
+@media (max-width: 768px) {
+	.woocommerce-account .woocommerce table.shop_table_responsive.woocommerce-orders-table tr.woocommerce-orders-table__row :is(td, th) {
+		display: flex !important;
+		flex-direction: column;
+		align-items: flex-start;
+		text-align: left !important;
+	}
+
+	.woocommerce-account .woocommerce table.shop_table_responsive.woocommerce-orders-table tr.woocommerce-orders-table__row {
+		display: grid !important;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 12px 16px;
+	}
+
+	.woocommerce-account .woocommerce table.shop_table_responsive.woocommerce-orders-table tr.woocommerce-orders-table__row th.woocommerce-orders-table__cell-order-number {
+		grid-column: 1 / -1;
+	}
+
+	.woocommerce-account .woocommerce table.shop_table_responsive.woocommerce-orders-table tr.woocommerce-orders-table__row td.woocommerce-orders-table__cell-order-actions {
+		flex-direction: row !important;
+	}
+}
+
+/* Kopfbereiche: lange Wörter („Suchergebnisse“) dürfen bei 360 px nicht überstehen. */
+.lw16-archive-head > * {
+	max-width: 100%;
+	min-width: 0;
+}
+
+.lw16-archive-head .wp-block-query-title,
+.has-hero-font-size {
+	overflow-wrap: break-word;
+	hyphens: auto;
+}
+
+.lw16-archive-head .wp-block-search {
+	width: 100%;
+	max-width: 480px;
+}
+
+.lw16-archive-head .wp-block-search__inside-wrapper {
+	min-width: 0;
+}
+
+.wp-block-search__input {
+	min-width: 0;
+}
+
+@media (max-width: 420px) {
+	.lw16-archive-head {
+		padding-inline: var(--wp--preset--spacing--30) !important;
 	}
 }

@@ -1,0 +1,1081 @@
+# Copyright (C) 2026 Lindenweg16
+# This file is distributed under the GNU General Public License v2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: Lindenweg16 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/theme/lindenweg16\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-10-08T15:54:59+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: lindenweg16\n"
+
+#. Theme Name of the theme
+#. Author of the theme
+#: style.css
+#: functions.php:185
+msgid "Lindenweg16"
+msgstr ""
+
+#. Theme URI of the theme
+#. Author URI of the theme
+#: style.css
+msgid "https://lindenweg16.de"
+msgstr ""
+
+#. Description of the theme
+#: style.css
+msgid "Freundliches, schlankes Block-Theme (Full Site Editing) für den WooCommerce-Shop von Lindenweg16 – Heimat des Haster Haken. Große Rundungen, weiche Schatten, schwebende Glas-Elemente und federnde Animationen. Farben als Rollen, die du im Website-Editor selbst belegst."
+msgstr ""
+
+#. translators: %s: Restbetrag bis zum kostenlosen Versand, z. B. „12,50 €“.
+#: functions.php:105
+#, php-format
+msgid "Noch %s bis zum kostenlosen Versand"
+msgstr ""
+
+#: functions.php:106
+msgid "Juhu – dein Versand ist kostenlos!"
+msgstr ""
+
+#: functions.php:107
+msgid "In den Warenkorb"
+msgstr ""
+
+#: functions.php:108
+msgid "Ausführung wählen"
+msgstr ""
+
+#: functions.php:137
+msgid "Primär"
+msgstr ""
+
+#: functions.php:138
+msgid "Soft"
+msgstr ""
+
+#: functions.php:139
+msgid "Akzent"
+msgstr ""
+
+#: functions.php:142
+msgid "Karte"
+msgstr ""
+
+#: functions.php:143
+msgid "Glas"
+msgstr ""
+
+#: functions.php:144
+#: functions.php:148
+msgid "Sticker"
+msgstr ""
+
+#: functions.php:147
+#: functions.php:152
+msgid "Eyebrow"
+msgstr ""
+
+#: functions.php:149
+msgid "Chip"
+msgstr ""
+
+#: functions.php:155
+msgid "Schwebend"
+msgstr ""
+
+#: functions.php:158
+msgid "Häkchen"
+msgstr ""
+
+#: functions.php:186
+msgid "Abschnitte für den Shop von Lindenweg16."
+msgstr ""
+
+#. translators: %s: Name der Website.
+#: inc/newsletter.php:125
+#, php-format
+msgid "Bitte bestätige deine Anmeldung bei %s"
+msgstr ""
+
+#. translators: 1: Name der Website, 2: Bestätigungslink.
+#: inc/newsletter.php:129
+#, php-format
+msgid ""
+"Hallo,\n"
+"\n"
+"schön, dass du Post aus der Werkstatt von %1$s bekommen möchtest!\n"
+"\n"
+"Bitte bestätige deine Anmeldung mit einem Klick auf diesen Link:\n"
+"%2$s\n"
+"\n"
+"Der Link ist sieben Tage gültig. Wenn du dich nicht angemeldet hast, ignoriere diese Mail einfach – dann passiert nichts.\n"
+"\n"
+"Liebe Grüße aus Haste"
+msgstr ""
+
+#: inc/newsletter.php:235
+msgid "Fast geschafft! Schau in dein Postfach und bestätige deine Anmeldung."
+msgstr ""
+
+#: inc/newsletter.php:236
+msgid "Danke! Deine Anmeldung ist bestätigt."
+msgstr ""
+
+#: inc/newsletter.php:237
+msgid "Du bist abgemeldet. Schade – aber danke, dass du dabei warst."
+msgstr ""
+
+#: inc/newsletter.php:238
+msgid "Das sieht nicht nach einer gültigen E-Mail-Adresse aus. Magst du sie noch einmal prüfen?"
+msgstr ""
+
+#: inc/newsletter.php:239
+msgid "Der Bestätigungslink ist abgelaufen oder ungültig. Melde dich einfach noch einmal an."
+msgstr ""
+
+#: inc/newsletter.php:240
+msgid "Das hat gerade nicht geklappt. Bitte versuch es später noch einmal."
+msgstr ""
+
+#: inc/newsletter.php:268
+#: inc/newsletter.php:318
+msgid "Newsletter-Anmeldungen"
+msgstr ""
+
+#: inc/newsletter.php:269
+#: inc/newsletter.php:367
+msgid "Newsletter"
+msgstr ""
+
+#: inc/newsletter.php:319
+msgid "Hier stehen alle Adressen, die ihre Anmeldung per Link bestätigt haben (Double-Opt-in). Den Newsletter selbst verschickst du mit deinem Versand-Tool – exportiere die Liste dafür als CSV."
+msgstr ""
+
+#: inc/newsletter.php:322
+msgid "Eintrag gelöscht."
+msgstr ""
+
+#: inc/newsletter.php:328
+msgid "Als CSV exportieren"
+msgstr ""
+
+#. translators: %d: Anzahl der Anmeldungen.
+#: inc/newsletter.php:330
+#, php-format
+msgid "%d Anmeldung"
+msgid_plural "%d Anmeldungen"
+msgstr[0] ""
+msgstr[1] ""
+
+#: inc/newsletter.php:333
+#: inc/newsletter.php:371
+msgid "E-Mail"
+msgstr ""
+
+#: inc/newsletter.php:333
+#: inc/newsletter.php:375
+msgid "Bestätigt am"
+msgstr ""
+
+#: inc/newsletter.php:336
+msgid "Noch keine bestätigten Anmeldungen."
+msgstr ""
+
+#: inc/newsletter.php:347
+msgid "Löschen"
+msgstr ""
+
+#: inc/newsletter.php:359
+#: inc/newsletter.php:398
+msgid "Newsletter (Lindenweg16)"
+msgstr ""
+
+#. translators: %s: Link „Versand“.
+#: inc/woocommerce.php:90
+#, php-format
+msgid "inkl. MwSt., zzgl. %s"
+msgstr ""
+
+#. translators: %s: Link „Versand“.
+#: inc/woocommerce.php:93
+#, php-format
+msgid "zzgl. %s"
+msgstr ""
+
+#: inc/woocommerce.php:99
+msgid "Versand"
+msgstr ""
+
+#: inc/woocommerce.php:193
+#: inc/woocommerce.php:204
+msgid "Zahlungspflichtig bestellen"
+msgstr ""
+
+#: inc/woocommerce.php:216
+msgid "Details"
+msgstr ""
+
+#: patterns/category-bento.php
+msgctxt "Pattern title"
+msgid "Kategorien als Bento-Grid"
+msgstr ""
+
+#: patterns/category-bento.php
+msgctxt "Pattern description"
+msgid "Kacheln in den Akzentfarben mit Bild, in unterschiedlichen Größen. Beim Hover heben sie sich an und drehen sich leicht."
+msgstr ""
+
+#: patterns/category-bento.php:18
+#: patterns/footer.php:18
+msgid "Haster-Haken-Sets"
+msgstr ""
+
+#: patterns/category-bento.php:19
+msgid "Fertig zusammengestellt für Helm, Schloss und Kleinkram – auspacken, anschrauben, losfahren."
+msgstr ""
+
+#: patterns/category-bento.php:26
+#: patterns/footer.php:19
+#: patterns/header.php:28
+msgid "Module"
+msgstr ""
+
+#: patterns/category-bento.php:27
+msgid "Einzeln nachrüsten, wann du willst."
+msgstr ""
+
+#: patterns/category-bento.php:34
+msgid "Helmhalter"
+msgstr ""
+
+#: patterns/category-bento.php:35
+msgid "Luftig aufgehängt, trocknet schneller."
+msgstr ""
+
+#: patterns/category-bento.php:42
+msgid "Schloss & Zubehör"
+msgstr ""
+
+#: patterns/category-bento.php:43
+msgid "Bügelschloss, Kette, Licht – alles griffbereit an der Tür."
+msgstr ""
+
+#: patterns/category-bento.php:53
+msgid "Sortiment"
+msgstr ""
+
+#: patterns/category-bento.php:56
+msgid "Was suchst du?"
+msgstr ""
+
+#: patterns/cta-dark.php
+msgctxt "Pattern title"
+msgid "Dunkler CTA"
+msgstr ""
+
+#: patterns/cta-dark.php
+msgctxt "Pattern description"
+msgid "Dunkle Fläche (ink) mit großen Rundungen, zwei unscharfen Farbflecken, großer Headline und Akzent-Button."
+msgstr ""
+
+#: patterns/cta-dark.php:18
+msgid "Bereit für Ordnung?"
+msgstr ""
+
+#: patterns/cta-dark.php:22
+msgid "Dein Rad verdient einen festen Platz."
+msgstr ""
+
+#: patterns/cta-dark.php:26
+msgid "Starte mit dem Haster-Haken-Set und erweitere es Modul für Modul."
+msgstr ""
+
+#: patterns/cta-dark.php:32
+msgid "Jetzt Haster Haken holen"
+msgstr ""
+
+#: patterns/footer.php
+msgctxt "Pattern title"
+msgid "Footer"
+msgstr ""
+
+#: patterns/footer.php
+msgctxt "Pattern description"
+msgid "Logo mit einem Satz über den Shop, drei Link-Spalten, Zahlungsarten und Copyright."
+msgstr ""
+
+#: patterns/footer.php:15
+#: patterns/header.php:26
+msgid "Shop"
+msgstr ""
+
+#: patterns/footer.php:17
+msgid "Alle Produkte"
+msgstr ""
+
+#: patterns/footer.php:20
+msgid "Neuheiten"
+msgstr ""
+
+#: patterns/footer.php:24
+msgid "Service"
+msgstr ""
+
+#: patterns/footer.php:26
+#: patterns/header.php:30
+msgid "Kontakt"
+msgstr ""
+
+#: patterns/footer.php:27
+msgid "Mein Konto"
+msgstr ""
+
+#: patterns/footer.php:28
+#: patterns/footer.php:39
+msgid "Versand und Zahlung"
+msgstr ""
+
+#: patterns/footer.php:29
+#: patterns/header.php:29
+msgid "Über uns"
+msgstr ""
+
+#: patterns/footer.php:33
+msgid "Rechtliches"
+msgstr ""
+
+#: patterns/footer.php:35
+msgid "Impressum"
+msgstr ""
+
+#: patterns/footer.php:36
+msgid "Datenschutz"
+msgstr ""
+
+#: patterns/footer.php:37
+msgid "AGB"
+msgstr ""
+
+#: patterns/footer.php:38
+msgid "Widerruf"
+msgstr ""
+
+#: patterns/footer.php:44
+msgid "Vorkasse"
+msgstr ""
+
+#: patterns/footer.php:55
+msgid "Handgemachte Fahrrad-Organisation aus Haste: Mit dem Haster Haken bekommen Helm, Schloss und Werkzeug endlich ihren festen Platz."
+msgstr ""
+
+#. translators: %s: Jahreszahl.
+#: patterns/footer.php:89
+#, php-format
+msgid "© %s Lindenweg16 · Alle Preise inkl. MwSt."
+msgstr ""
+
+#: patterns/footer.php:92
+msgid "Mit Liebe in Haste gebaut"
+msgstr ""
+
+#: patterns/header.php
+msgctxt "Pattern title"
+msgid "Header (schwebende Glas-Pille)"
+msgstr ""
+
+#: patterns/header.php
+msgctxt "Pattern description"
+msgid "Logo links, Navigation in der Mitte, rechts Suche, Kundenkonto und Mini-Cart."
+msgstr ""
+
+#: patterns/header.php:25
+msgid "Hauptmenü"
+msgstr ""
+
+#: patterns/header.php:27
+#: patterns/hero.php:30
+msgid "Haster Haken"
+msgstr ""
+
+#: patterns/header.php:35
+#: patterns/hidden-404.php:29
+#: patterns/hidden-no-results.php:19
+msgid "Suche"
+msgstr ""
+
+#: patterns/header.php:35
+#: patterns/hidden-404.php:29
+#: patterns/hidden-no-results.php:19
+msgid "Wonach suchst du?"
+msgstr ""
+
+#: patterns/header.php:35
+#: patterns/hidden-404.php:29
+#: patterns/hidden-no-results.php:19
+msgid "Suchen"
+msgstr ""
+
+#: patterns/hero.php
+msgctxt "Pattern title"
+msgid "Hero mit Stickern"
+msgstr ""
+
+#: patterns/hero.php
+msgctxt "Pattern description"
+msgid "Eyebrow-Sticker, große Headline mit Marker, Unterzeile, zwei Buttons und ein großes Bild mit zwei schwebenden Stickern."
+msgstr ""
+
+#: patterns/hero.php:22
+msgid "Handgemacht in Haste"
+msgstr ""
+
+#. translators: %s: hervorgehobenes Wort (Produktname).
+#: patterns/hero.php:29
+#, php-format
+msgid "Ordnung für dein Rad – mit dem %s"
+msgstr ""
+
+#: patterns/hero.php:36
+msgid "Eine Holzschiene, viele Module: Helm, Schloss, Handschuhe und Werkzeug bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour."
+msgstr ""
+
+#: patterns/hero.php:42
+#: patterns/hidden-404.php:33
+msgid "Zum Shop"
+msgstr ""
+
+#: patterns/hero.php:46
+msgid "Sets entdecken"
+msgstr ""
+
+#: patterns/hero.php:58
+msgid "Der Haster Haken an der Wand: Holzschiene mit Helm, Bügelschloss und Handschuhen"
+msgstr ""
+
+#: patterns/hero.php:62
+msgid "Handgemacht"
+msgstr ""
+
+#: patterns/hero.php:66
+msgid "Versand in 48 h"
+msgstr ""
+
+#: patterns/hidden-404.php
+msgctxt "Pattern title"
+msgid "404 – Seite nicht gefunden"
+msgstr ""
+
+#: patterns/hidden-404.php:15
+msgid "Fehler 404"
+msgstr ""
+
+#. translators: %s: hervorgehobenes Wort.
+#: patterns/hidden-404.php:21
+#, php-format
+msgid "Hier hängt %s."
+msgstr ""
+
+#: patterns/hidden-404.php:22
+msgid "nichts"
+msgstr ""
+
+#: patterns/hidden-404.php:27
+msgid "Die Seite gibt es nicht (mehr). Vielleicht findest du über die Suche, was du brauchst – oder du schaust direkt im Shop vorbei."
+msgstr ""
+
+#: patterns/hidden-404.php:36
+msgid "Zur Startseite"
+msgstr ""
+
+#: patterns/hidden-blog-head.php
+msgctxt "Pattern title"
+msgid "Blog-Kopf"
+msgstr ""
+
+#: patterns/hidden-blog-head.php:14
+msgid "Journal"
+msgstr ""
+
+#. translators: %s: hervorgehobenes Wort.
+#: patterns/hidden-blog-head.php:20
+#, php-format
+msgid "Aus der %s"
+msgstr ""
+
+#: patterns/hidden-blog-head.php:21
+msgid "Werkstatt"
+msgstr ""
+
+#: patterns/hidden-blog-head.php:26
+msgid "Geschichten vom Hobeln und Drucken, Tipps für dein Rad und alles Neue rund um den Haster Haken."
+msgstr ""
+
+#: patterns/hidden-no-results.php
+msgctxt "Pattern title"
+msgid "Keine Ergebnisse"
+msgstr ""
+
+#: patterns/hidden-no-results.php:14
+msgid "Dazu haben wir leider nichts gefunden."
+msgstr ""
+
+#: patterns/hidden-no-results.php:17
+msgid "Probier es mit einem anderen Suchbegriff – zum Beispiel „Helm“, „Schloss“ oder „Set“."
+msgstr ""
+
+#: patterns/hidden-order-thanks.php
+msgctxt "Pattern title"
+msgid "Bestellbestätigung – Dankeschön und nächste Schritte"
+msgstr ""
+
+#: patterns/hidden-order-thanks.php:12
+msgid "Wie geht’s jetzt weiter?"
+msgstr ""
+
+#: patterns/hidden-order-thanks.php:17
+msgid "Du bekommst gleich eine Bestellbestätigung per E-Mail. Schau zur Not auch im Spam-Ordner nach."
+msgstr ""
+
+#: patterns/hidden-order-thanks.php:18
+msgid "Wir bauen deinen Haster Haken in unserer Werkstatt zusammen und prüfen jedes Teil."
+msgstr ""
+
+#: patterns/hidden-order-thanks.php:19
+msgid "Sobald dein Paket unterwegs ist, schicken wir dir die Sendungsverfolgung."
+msgstr ""
+
+#. translators: %s: Link „schreib uns“.
+#: patterns/hidden-order-thanks.php:27
+#, php-format
+msgid "Fragen zu deiner Bestellung? %s – wir antworten persönlich."
+msgstr ""
+
+#: patterns/hidden-order-thanks.php:28
+msgid "Schreib uns"
+msgstr ""
+
+#: patterns/hidden-product-trust.php
+msgctxt "Pattern title"
+msgid "Produktseite – Lieferzeit und Vertrauens-Chips"
+msgstr ""
+
+#. translators: %s: Lieferzeit, z. B. „2–4 Werktage“.
+#: patterns/hidden-product-trust.php:21
+#, php-format
+msgid "Lieferzeit: %s"
+msgstr ""
+
+#: patterns/hidden-product-trust.php:22
+msgid "2–4 Werktage"
+msgstr ""
+
+#: patterns/hidden-product-trust.php:30
+msgid "Versand aus Haste"
+msgstr ""
+
+#: patterns/hidden-product-trust.php:33
+#: patterns/trust-bar.php:15
+msgid "30 Tage Rückgabe"
+msgstr ""
+
+#: patterns/hidden-product-trust.php:36
+msgid "Sichere Zahlung"
+msgstr ""
+
+#: patterns/hidden-related-products.php
+msgctxt "Pattern title"
+msgid "Produktseite – Das passt dazu"
+msgstr ""
+
+#: patterns/hidden-related-products.php:16
+msgid "Das passt dazu"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php
+msgctxt "Pattern title"
+msgid "Shop – Filter"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php:17
+msgid "Filter"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php:30
+msgid "Filter zurücksetzen"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php:41
+msgid "Kategorie"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php:52
+msgid "Preis"
+msgstr ""
+
+#: patterns/hidden-shop-filters.php:63
+msgid "Verfügbarkeit"
+msgstr ""
+
+#: patterns/how-it-works.php
+msgctxt "Pattern title"
+msgid "So einfach geht’s"
+msgstr ""
+
+#: patterns/how-it-works.php
+msgctxt "Pattern description"
+msgid "Drei nummerierte Schritte (Aussuchen, Bestellen, Auspacken) mit farbigen runden Nummern und gestrichelter Verbindungslinie."
+msgstr ""
+
+#: patterns/how-it-works.php:16
+msgid "Aussuchen"
+msgstr ""
+
+#: patterns/how-it-works.php:17
+msgid "Starter-Set oder einzelne Module – du stellst deinen Haken so zusammen, wie dein Alltag mit dem Rad aussieht."
+msgstr ""
+
+#: patterns/how-it-works.php:21
+msgid "Bestellen"
+msgstr ""
+
+#: patterns/how-it-works.php:22
+msgid "Sicher bezahlen, und wir bauen dein Set in unserer Werkstatt in Haste zusammen."
+msgstr ""
+
+#: patterns/how-it-works.php:26
+msgid "Auspacken"
+msgstr ""
+
+#: patterns/how-it-works.php:27
+msgid "Zwei Schrauben, zehn Minuten – und dein Rad-Gear hat endlich ein Zuhause."
+msgstr ""
+
+#: patterns/how-it-works.php:36
+msgid "So einfach geht’s"
+msgstr ""
+
+#: patterns/how-it-works.php:39
+msgid "In drei Schritten zur aufgeräumten Wand"
+msgstr ""
+
+#: patterns/marquee.php
+msgctxt "Pattern title"
+msgid "Stichwort-Laufband"
+msgstr ""
+
+#: patterns/marquee.php
+msgctxt "Pattern description"
+msgid "Pillen in einer Endlos-Animation, an den Rändern ausgeblendet. Ohne JavaScript oder bei reduzierter Bewegung eine ruhige Pillen-Reihe."
+msgstr ""
+
+#: patterns/marquee.php:14
+msgid "Helm"
+msgstr ""
+
+#: patterns/marquee.php:15
+msgid "Bügelschloss"
+msgstr ""
+
+#: patterns/marquee.php:16
+msgid "Handschuhe"
+msgstr ""
+
+#: patterns/marquee.php:17
+msgid "Multitool"
+msgstr ""
+
+#: patterns/marquee.php:18
+msgid "Rücklicht"
+msgstr ""
+
+#: patterns/marquee.php:19
+msgid "Pumpe"
+msgstr ""
+
+#: patterns/marquee.php:20
+msgid "Regenjacke"
+msgstr ""
+
+#: patterns/marquee.php:21
+msgid "Trinkflasche"
+msgstr ""
+
+#: patterns/marquee.php:22
+msgid "Schlüssel"
+msgstr ""
+
+#: patterns/newsletter.php
+msgctxt "Pattern title"
+msgid "Newsletter"
+msgstr ""
+
+#: patterns/newsletter.php
+msgctxt "Pattern description"
+msgid "Karte mit E-Mail-Feld und Button in einer Pille und einem Hinweis auf den Datenschutz. Die Anmeldung läuft mit Double-Opt-in über das Theme, ohne Plugin."
+msgstr ""
+
+#: patterns/newsletter.php:20
+msgid "Post aus der Werkstatt"
+msgstr ""
+
+#: patterns/newsletter.php:24
+msgid "Neue Module zuerst erfahren"
+msgstr ""
+
+#: patterns/newsletter.php:28
+msgid "Ein bis zwei Mails im Monat mit Neuheiten, Werkstatt-Einblicken und Tipps für dein Rad. Kein Spam, versprochen."
+msgstr ""
+
+#: patterns/newsletter.php:34
+msgid "Deine E-Mail-Adresse"
+msgstr ""
+
+#: patterns/newsletter.php:35
+msgid "deine@mail.de"
+msgstr ""
+
+#: patterns/newsletter.php:37
+msgid "Anmelden"
+msgstr ""
+
+#. translators: %s: Link „Datenschutzerklärung“.
+#: patterns/newsletter.php:45
+#, php-format
+msgid "Du bekommst erst eine Mail zum Bestätigen. Abmelden geht jederzeit. Mehr dazu in der %s."
+msgstr ""
+
+#: patterns/newsletter.php:46
+msgid "Datenschutzerklärung"
+msgstr ""
+
+#: patterns/product-highlights.php
+msgctxt "Pattern title"
+msgid "Produkt-Highlights (Neuheiten)"
+msgstr ""
+
+#: patterns/product-highlights.php
+msgctxt "Pattern description"
+msgid "Product Collection mit den neuesten Produkten als Karten-Raster und „Alle ansehen“-Link. In den Block-Einstellungen lässt sich die Sammlung z. B. auf Bestseller umstellen."
+msgstr ""
+
+#: patterns/product-highlights.php:22
+msgid "Neu aus der Werkstatt"
+msgstr ""
+
+#: patterns/product-highlights.php:25
+msgid "Frisch vom Hobel"
+msgstr ""
+
+#: patterns/product-highlights.php:31
+msgid "Alle ansehen →"
+msgstr ""
+
+#: patterns/testimonials.php
+msgctxt "Pattern title"
+msgid "Kundenstimmen"
+msgstr ""
+
+#: patterns/testimonials.php
+msgctxt "Pattern description"
+msgid "Drei Karten mit Zitat, Name und Sternen."
+msgstr ""
+
+#: patterns/testimonials.php:15
+msgid "Endlich fliegt der Helm nicht mehr im Flur herum. Und der Haken sieht an der Wand sogar richtig schön aus."
+msgstr ""
+
+#: patterns/testimonials.php:16
+msgid "Jana"
+msgstr ""
+
+#: patterns/testimonials.php:17
+msgid "Pendelt mit dem Gravelbike"
+msgstr ""
+
+#: patterns/testimonials.php:20
+msgid "Erst das Starter-Set, zwei Wochen später das Schlossmodul nachgekauft. Passt perfekt, ohne neu zu bohren."
+msgstr ""
+
+#: patterns/testimonials.php:21
+msgid "Malte"
+msgstr ""
+
+#: patterns/testimonials.php:22
+msgid "Lastenrad, Familie mit drei Kids"
+msgstr ""
+
+#: patterns/testimonials.php:25
+msgid "Super Holzqualität und eine handgeschriebene Karte im Paket. So macht Bestellen Spaß."
+msgstr ""
+
+#: patterns/testimonials.php:26
+msgid "Aylin"
+msgstr ""
+
+#: patterns/testimonials.php:27
+msgid "Rennrad am Wochenende"
+msgstr ""
+
+#: patterns/testimonials.php:36
+msgid "Kundenstimmen"
+msgstr ""
+
+#: patterns/testimonials.php:39
+msgid "Das sagen andere Radfahrer"
+msgstr ""
+
+#: patterns/testimonials.php:62
+msgid "5 von 5 Sternen"
+msgstr ""
+
+#: patterns/trust-bar.php
+msgctxt "Pattern title"
+msgid "Vertrauensleiste"
+msgstr ""
+
+#: patterns/trust-bar.php
+msgctxt "Pattern description"
+msgid "Vier Chips mit Symbol: Versand, Rückgabe, sichere Zahlung, persönlicher Kontakt."
+msgstr ""
+
+#: patterns/trust-bar.php:14
+msgid "Versand in 48 h, ab 50 € kostenlos"
+msgstr ""
+
+#: patterns/trust-bar.php:16
+msgid "Sicher bezahlen"
+msgstr ""
+
+#: patterns/trust-bar.php:17
+msgid "Echte Menschen am Telefon"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Seitenhintergrund"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Fläche (Karten, Felder)"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Fläche gedämpft (Felder, Chips)"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Text"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Text gedämpft"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Linie"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Primär"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Schrift auf Primär"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Akzent 1"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Akzent 2"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Akzent 3"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Akzent 4"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Schrift auf Akzent"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Angebot"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Erfolg"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Warnung"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Fehler"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Tinte (dunkle Fläche)"
+msgstr ""
+
+#: theme.json
+msgctxt "Color name"
+msgid "Schrift auf Tinte"
+msgstr ""
+
+#: theme.json
+msgctxt "Shadow name"
+msgid "Karte"
+msgstr ""
+
+#: theme.json
+msgctxt "Shadow name"
+msgid "Karte (Hover)"
+msgstr ""
+
+#: theme.json
+msgctxt "Shadow name"
+msgid "Schwebend"
+msgstr ""
+
+#: theme.json
+msgctxt "Shadow name"
+msgid "Sticker"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "2XS"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "XS"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "S"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "M"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "L"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "XL"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "2XL"
+msgstr ""
+
+#: theme.json
+msgctxt "Space size name"
+msgid "3XL"
+msgstr ""
+
+#: theme.json
+msgctxt "Font family name"
+msgid "Bricolage Grotesque"
+msgstr ""
+
+#: theme.json
+msgctxt "Font family name"
+msgid "Inter"
+msgstr ""
+
+#: theme.json
+msgctxt "Font family name"
+msgid "DM Mono"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "XS"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "S"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "M"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "L"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "XL"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "2XL"
+msgstr ""
+
+#: theme.json
+msgctxt "Font size name"
+msgid "Hero"
+msgstr ""
+
+#: theme.json
+msgctxt "Template part name"
+msgid "Header"
+msgstr ""
+
+#: theme.json
+msgctxt "Template part name"
+msgid "Footer"
+msgstr ""
+
+#: theme.json
+msgctxt "Template part name"
+msgid "Mini-Cart"
+msgstr ""
+
+#: theme.json
+msgctxt "Custom template name"
+msgid "Landingpage (ohne Seitentitel)"
+msgstr ""
