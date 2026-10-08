@@ -4293,3 +4293,44 @@ table.variations select {
 .lw16-legal-guarantee__links {
 	color: var(--lw-text-muted);
 }
+
+/*
+ * Mini-Cart mit Admin-Leiste: WooCommerce schiebt den Drawer-Inhalt um die
+ * Höhe der Admin-Leiste nach unten. Der schwebende Drawer sitzt aber schon
+ * darunter – sonst fehlt unten Platz und „Zur Kasse“ wird abgeschnitten.
+ */
+.admin-bar .wc-block-components-drawer .wc-block-components-drawer__content {
+	height: 100% !important;
+	margin-top: 0 !important;
+}
+
+/*
+ * Germanized setzt seine Hinweise (MwSt./Kleinunternehmer, Versandkosten) in
+ * die Button-Zeile des Mini-Carts. Sie bekommen eine eigene, volle Zeile über
+ * den beiden Buttons.
+ */
+.wc-block-mini-cart__footer-actions > .wc-gzd-block-mini-cart-notices {
+	grid-column: 1 / -1;
+	display: flex !important;
+	flex-wrap: wrap;
+	justify-content: flex-start !important;
+	gap: 2px 0.5em;
+	margin: -4px 0 4px !important;
+	color: var(--lw-text-muted) !important;
+	font-size: var(--wp--preset--font-size--x-small) !important;
+	line-height: 1.45;
+	text-align: left !important;
+}
+
+.wc-gzd-block-mini-cart-notices .wc-gzd-block-mini-cart-notices__notice-wrap {
+	display: flex !important;
+	flex-wrap: wrap;
+	justify-content: flex-start !important;
+	gap: 0 0.4em;
+	text-align: left !important;
+}
+
+.wc-gzd-block-mini-cart-notices a {
+	color: inherit;
+	text-underline-offset: 2px;
+}
