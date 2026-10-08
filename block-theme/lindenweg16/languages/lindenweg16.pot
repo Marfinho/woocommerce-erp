@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T16:23:51+00:00\n"
+"POT-Creation-Date: 2026-10-08T16:37:53+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: lindenweg16\n"
@@ -17,7 +17,8 @@ msgstr ""
 #. Theme Name of the theme
 #. Author of the theme
 #: style.css
-#: functions.php:185
+#: functions.php:196
+#: inc/admin.php:25
 msgid "Lindenweg16"
 msgstr ""
 
@@ -32,68 +33,199 @@ msgstr ""
 msgid "Freundliches, schlankes Block-Theme (Full Site Editing) für den WooCommerce-Shop von Lindenweg16 – Heimat des Haster Haken. Große Rundungen, weiche Schatten, schwebende Glas-Elemente und federnde Animationen. Farben als Rollen, die du im Website-Editor selbst belegst."
 msgstr ""
 
+#: functions.php:62
+msgid "Hauptmenü (Header)"
+msgstr ""
+
+#: functions.php:63
+msgid "Footer: Spalte 1 (Shop)"
+msgstr ""
+
+#: functions.php:64
+msgid "Footer: Spalte 2 (Service)"
+msgstr ""
+
+#: functions.php:65
+msgid "Footer: Spalte 3 (Rechtliches)"
+msgstr ""
+
 #. translators: %s: Restbetrag bis zum kostenlosen Versand, z. B. „12,50 €“.
-#: functions.php:105
+#: functions.php:116
 #, php-format
 msgid "Noch %s bis zum kostenlosen Versand"
 msgstr ""
 
-#: functions.php:106
+#: functions.php:117
 msgid "Juhu – dein Versand ist kostenlos!"
 msgstr ""
 
-#: functions.php:107
+#: functions.php:118
 msgid "In den Warenkorb"
 msgstr ""
 
-#: functions.php:108
+#: functions.php:119
 msgid "Ausführung wählen"
 msgstr ""
 
-#: functions.php:137
+#: functions.php:148
 msgid "Primär"
 msgstr ""
 
-#: functions.php:138
+#: functions.php:149
 msgid "Soft"
 msgstr ""
 
-#: functions.php:139
+#: functions.php:150
 msgid "Akzent"
 msgstr ""
 
-#: functions.php:142
+#: functions.php:153
 msgid "Karte"
 msgstr ""
 
-#: functions.php:143
+#: functions.php:154
 msgid "Glas"
 msgstr ""
 
-#: functions.php:144
-#: functions.php:148
+#: functions.php:155
+#: functions.php:159
 msgid "Sticker"
 msgstr ""
 
-#: functions.php:147
-#: functions.php:152
+#: functions.php:158
+#: functions.php:163
 msgid "Eyebrow"
 msgstr ""
 
-#: functions.php:149
+#: functions.php:160
 msgid "Chip"
 msgstr ""
 
-#: functions.php:155
+#: functions.php:166
 msgid "Schwebend"
 msgstr ""
 
-#: functions.php:158
+#: functions.php:169
 msgid "Häkchen"
 msgstr ""
 
-#: functions.php:186
+#: functions.php:197
 msgid "Abschnitte für den Shop von Lindenweg16."
+msgstr ""
+
+#: inc/admin.php:24
+#: inc/admin.php:109
+msgid "Lindenweg16 – Inhalte bearbeiten"
+msgstr ""
+
+#: inc/admin.php:38
+msgid "Dazu fehlt dir die Berechtigung."
+msgstr ""
+
+#: inc/admin.php:57
+#: inc/admin.php:119
+msgid "Startseite"
+msgstr ""
+
+#: inc/admin.php:87
+msgid "Menüs"
+msgstr ""
+
+#: inc/admin.php:88
+msgid "Hauptmenü im Header und die drei Spalten im Footer. Unter „Positionen verwalten“ ordnest du deine Menüs den Plätzen zu."
+msgstr ""
+
+#: inc/admin.php:92
+#: inc/kundenstimmen.php:94
+#: inc/kundenstimmen.php:120
+#: assets/js/kundenstimmen-block.js:18
+msgid "Kundenstimmen"
+msgstr ""
+
+#: inc/admin.php:93
+msgid "Kommen automatisch aus freigegebenen Produktbewertungen mit 4 oder 5 Sternen. Hier moderierst du sie."
+msgstr ""
+
+#: inc/admin.php:97
+#: inc/newsletter.php:269
+#: inc/newsletter.php:367
+msgid "Newsletter"
+msgstr ""
+
+#: inc/admin.php:98
+msgid "Bestätigte Anmeldungen und CSV-Export."
+msgstr ""
+
+#: inc/admin.php:102
+msgid "Logo und Website-Titel"
+msgstr ""
+
+#: inc/admin.php:103
+msgid "Website-Logo, Titel und Website-Icon."
+msgstr ""
+
+#: inc/admin.php:110
+msgid "Alles Wichtige lässt sich auch ohne den Website-Editor pflegen."
+msgstr ""
+
+#: inc/admin.php:113
+msgid "Die Startseite ist angelegt und als Startseite eingestellt."
+msgstr ""
+
+#: inc/admin.php:115
+msgid "Die Startseite konnte nicht angelegt werden."
+msgstr ""
+
+#: inc/admin.php:122
+msgid "Deine Startseite ist eine normale Seite. Texte, Bilder, FAQ und die Reihenfolge der Abschnitte änderst du im Seiten-Editor."
+msgstr ""
+
+#: inc/admin.php:126
+msgid "Startseite bearbeiten"
+msgstr ""
+
+#: inc/admin.php:128
+msgid "Ansehen"
+msgstr ""
+
+#: inc/admin.php:131
+msgid "Lege die Startseite als normale Seite an: Sie bekommt alle Abschnitte des Themes (Hero, Vertrauensleiste, Sets und Module, Neuheiten, So einfach geht’s, Kundenstimmen, FAQ, Newsletter, CTA) und wird unter Einstellungen → Lesen als Startseite eingestellt. Danach bearbeitest du sie wie jede andere Seite."
+msgstr ""
+
+#: inc/admin.php:133
+msgid "Hinweis: Deine bisherige Startseite bleibt erhalten, ist danach aber nicht mehr als Startseite eingestellt."
+msgstr ""
+
+#: inc/admin.php:139
+msgid "Startseite als Seite anlegen"
+msgstr ""
+
+#: inc/admin.php:144
+msgid "Weitere Bereiche"
+msgstr ""
+
+#: inc/admin.php:156
+msgid "Farben und Schriften stellst du unter Design → Editor → Stile ein. Lädt der Website-Editor bei dir nicht (weiße Seite, 503-Fehler in der Konsole), bremst dein Hoster die vielen gleichzeitigen Anfragen – frag dort nach einem höheren Limit für gleichzeitige Anfragen bzw. PHP-Prozesse."
+msgstr ""
+
+#. translators: %d: Anzahl der Sterne (1–5).
+#: inc/kundenstimmen.php:82
+#, php-format
+msgid "%d von 5 Sternen"
+msgstr ""
+
+#. translators: %s: Produktname mit Link.
+#: inc/kundenstimmen.php:86
+#, php-format
+msgid "über %s"
+msgstr ""
+
+#: inc/kundenstimmen.php:95
+msgid "Das sagen andere Radfahrer"
+msgstr ""
+
+#: inc/kundenstimmen.php:121
+msgid "Zeigt die neuesten freigegebenen Produktbewertungen als Karten."
 msgstr ""
 
 #. translators: %s: Name der Website.
@@ -145,11 +277,6 @@ msgstr ""
 #: inc/newsletter.php:268
 #: inc/newsletter.php:318
 msgid "Newsletter-Anmeldungen"
-msgstr ""
-
-#: inc/newsletter.php:269
-#: inc/newsletter.php:367
-msgid "Newsletter"
 msgstr ""
 
 #: inc/newsletter.php:319
@@ -211,66 +338,50 @@ msgstr ""
 msgid "Versand"
 msgstr ""
 
-#: inc/woocommerce.php:193
-#: inc/woocommerce.php:204
+#: inc/woocommerce.php:201
+#: inc/woocommerce.php:212
 msgid "Zahlungspflichtig bestellen"
 msgstr ""
 
-#: inc/woocommerce.php:216
+#: inc/woocommerce.php:224
 msgid "Details"
 msgstr ""
 
 #: patterns/category-bento.php
 msgctxt "Pattern title"
-msgid "Kategorien als Bento-Grid"
+msgid "Kategorien: Sets und Module"
 msgstr ""
 
 #: patterns/category-bento.php
 msgctxt "Pattern description"
-msgid "Kacheln in den Akzentfarben mit Bild, in unterschiedlichen Größen. Beim Hover heben sie sich an und drehen sich leicht."
+msgid "Zwei große Kacheln in den Akzentfarben mit Bild – Sets und Module. Beim Hover heben sie sich an und drehen sich leicht."
 msgstr ""
 
 #: patterns/category-bento.php:18
-#: patterns/footer.php:18
-msgid "Haster-Haken-Sets"
+#: patterns/header.php:32
+msgid "Sets"
 msgstr ""
 
 #: patterns/category-bento.php:19
-msgid "Fertig zusammengestellt für Helm, Schloss und Kleinkram – auspacken, anschrauben, losfahren."
+msgid "Fertig zusammengestellt: Schiene und passende Module in einem Paket. Auspacken, anschrauben, losfahren."
 msgstr ""
 
 #: patterns/category-bento.php:26
 #: patterns/footer.php:19
-#: patterns/header.php:28
+#: patterns/header.php:33
 msgid "Module"
 msgstr ""
 
 #: patterns/category-bento.php:27
-msgid "Einzeln nachrüsten, wann du willst."
+msgid "Einzeln nachrüsten, wann du willst – jedes Modul passt auf jede Haster-Haken-Schiene."
 msgstr ""
 
-#: patterns/category-bento.php:34
-msgid "Helmhalter"
-msgstr ""
-
-#: patterns/category-bento.php:35
-msgid "Luftig aufgehängt, trocknet schneller."
-msgstr ""
-
-#: patterns/category-bento.php:42
-msgid "Schloss & Zubehör"
-msgstr ""
-
-#: patterns/category-bento.php:43
-msgid "Bügelschloss, Kette, Licht – alles griffbereit an der Tür."
-msgstr ""
-
-#: patterns/category-bento.php:53
+#: patterns/category-bento.php:37
 msgid "Sortiment"
 msgstr ""
 
-#: patterns/category-bento.php:56
-msgid "Was suchst du?"
+#: patterns/category-bento.php:40
+msgid "Set oder einzeln – du entscheidest"
 msgstr ""
 
 #: patterns/cta-dark.php
@@ -299,6 +410,80 @@ msgstr ""
 msgid "Jetzt Haster Haken holen"
 msgstr ""
 
+#: patterns/faq.php
+msgctxt "Pattern title"
+msgid "Häufige Fragen (FAQ)"
+msgstr ""
+
+#: patterns/faq.php
+msgctxt "Pattern description"
+msgid "Aufklappbare Fragen und Antworten (Details-Block, ohne JavaScript). Fragen lassen sich im Editor ergänzen, ändern und umsortieren."
+msgstr ""
+
+#: patterns/faq.php:15
+msgid "Was ist der Unterschied zwischen Sets und Modulen?"
+msgstr ""
+
+#: patterns/faq.php:16
+msgid "Ein Set enthält die Holzschiene und eine Auswahl an Modulen – damit kannst du sofort loslegen. Module kaufst du einzeln, wenn du deinen Haster Haken erweitern oder umbauen willst."
+msgstr ""
+
+#: patterns/faq.php:19
+msgid "Kann ich später weitere Module nachkaufen?"
+msgstr ""
+
+#: patterns/faq.php:20
+msgid "Ja. Der Haster Haken ist modular aufgebaut: Du startest mit dem, was du gerade brauchst, und ergänzt Module, wenn neues Rad-Gear dazukommt."
+msgstr ""
+
+#: patterns/faq.php:23
+msgid "Wie wird der Haster Haken montiert?"
+msgstr ""
+
+#: patterns/faq.php:24
+msgid "Die Holzschiene wird an der Wand verschraubt, die Module hängst du anschließend einfach ein. Eine kurze Anleitung liegt jedem Paket bei."
+msgstr ""
+
+#: patterns/faq.php:27
+msgid "Welche Dübel brauche ich für meine Wand?"
+msgstr ""
+
+#: patterns/faq.php:28
+msgid "Das hängt von deiner Wand ab: Für Beton und Mauerwerk passen Universaldübel, für Gipskarton brauchst du Hohlraumdübel. Im Zweifel hilft dir der Baumarkt um die Ecke – oder du schreibst uns."
+msgstr ""
+
+#: patterns/faq.php:31
+msgid "Wie lange dauert der Versand?"
+msgstr ""
+
+#: patterns/faq.php:32
+msgid "Die Lieferzeit steht auf jeder Produktseite direkt unter dem Preis. Sobald dein Paket unterwegs ist, bekommst du eine Sendungsverfolgung per E-Mail."
+msgstr ""
+
+#: patterns/faq.php:35
+msgid "Kann ich meine Bestellung zurückgeben?"
+msgstr ""
+
+#: patterns/faq.php:36
+msgid "Ja, du hast ein gesetzliches Widerrufsrecht von 14 Tagen. Alle Details findest du in unserer Widerrufsbelehrung."
+msgstr ""
+
+#: patterns/faq.php:39
+msgid "Wie pflege ich das Holz?"
+msgstr ""
+
+#: patterns/faq.php:40
+msgid "Ein trockenes oder leicht feuchtes Tuch genügt. Bitte keine scharfen Reiniger verwenden."
+msgstr ""
+
+#: patterns/faq.php:49
+msgid "FAQ"
+msgstr ""
+
+#: patterns/faq.php:52
+msgid "Häufige Fragen"
+msgstr ""
+
 #: patterns/footer.php
 msgctxt "Pattern title"
 msgid "Footer"
@@ -310,12 +495,16 @@ msgid "Logo mit einem Satz über den Shop, drei Link-Spalten, Zahlungsarten und 
 msgstr ""
 
 #: patterns/footer.php:15
-#: patterns/header.php:26
+#: patterns/header.php:31
 msgid "Shop"
 msgstr ""
 
 #: patterns/footer.php:17
 msgid "Alle Produkte"
+msgstr ""
+
+#: patterns/footer.php:18
+msgid "Haster-Haken-Sets"
 msgstr ""
 
 #: patterns/footer.php:20
@@ -327,7 +516,7 @@ msgid "Service"
 msgstr ""
 
 #: patterns/footer.php:26
-#: patterns/header.php:30
+#: patterns/header.php:35
 msgid "Kontakt"
 msgstr ""
 
@@ -341,7 +530,7 @@ msgid "Versand und Zahlung"
 msgstr ""
 
 #: patterns/footer.php:29
-#: patterns/header.php:29
+#: patterns/header.php:34
 msgid "Über uns"
 msgstr ""
 
@@ -374,12 +563,12 @@ msgid "Handgemachte Fahrrad-Organisation aus Haste: Mit dem Haster Haken bekomme
 msgstr ""
 
 #. translators: %s: Jahreszahl.
-#: patterns/footer.php:89
+#: patterns/footer.php:87
 #, php-format
 msgid "© %s Lindenweg16 · Alle Preise inkl. MwSt."
 msgstr ""
 
-#: patterns/footer.php:92
+#: patterns/footer.php:90
 msgid "Mit Liebe in Haste gebaut"
 msgstr ""
 
@@ -397,24 +586,19 @@ msgstr ""
 msgid "Hauptmenü"
 msgstr ""
 
-#: patterns/header.php:27
-#: patterns/hero.php:30
-msgid "Haster Haken"
-msgstr ""
-
-#: patterns/header.php:35
+#: patterns/header.php:43
 #: patterns/hidden-404.php:29
 #: patterns/hidden-no-results.php:19
 msgid "Suche"
 msgstr ""
 
-#: patterns/header.php:35
+#: patterns/header.php:43
 #: patterns/hidden-404.php:29
 #: patterns/hidden-no-results.php:19
 msgid "Wonach suchst du?"
 msgstr ""
 
-#: patterns/header.php:35
+#: patterns/header.php:43
 #: patterns/hidden-404.php:29
 #: patterns/hidden-no-results.php:19
 msgid "Suchen"
@@ -438,6 +622,10 @@ msgstr ""
 #: patterns/hero.php:29
 #, php-format
 msgid "Ordnung für dein Rad – mit dem %s"
+msgstr ""
+
+#: patterns/hero.php:30
+msgid "Haster Haken"
 msgstr ""
 
 #: patterns/hero.php:36
@@ -513,6 +701,11 @@ msgstr ""
 
 #: patterns/hidden-blog-head.php:26
 msgid "Geschichten vom Hobeln und Drucken, Tipps für dein Rad und alles Neue rund um den Haster Haken."
+msgstr ""
+
+#: patterns/hidden-front-page.php
+msgctxt "Pattern title"
+msgid "Startseite (Inhalt)"
 msgstr ""
 
 #: patterns/hidden-legal-guarantee.php
@@ -807,60 +1000,12 @@ msgstr ""
 
 #: patterns/testimonials.php
 msgctxt "Pattern title"
-msgid "Kundenstimmen"
+msgid "Kundenstimmen (aus Produktbewertungen)"
 msgstr ""
 
 #: patterns/testimonials.php
 msgctxt "Pattern description"
-msgid "Drei Karten mit Zitat, Name und Sternen."
-msgstr ""
-
-#: patterns/testimonials.php:15
-msgid "Endlich fliegt der Helm nicht mehr im Flur herum. Und der Haken sieht an der Wand sogar richtig schön aus."
-msgstr ""
-
-#: patterns/testimonials.php:16
-msgid "Jana"
-msgstr ""
-
-#: patterns/testimonials.php:17
-msgid "Pendelt mit dem Gravelbike"
-msgstr ""
-
-#: patterns/testimonials.php:20
-msgid "Erst das Starter-Set, zwei Wochen später das Schlossmodul nachgekauft. Passt perfekt, ohne neu zu bohren."
-msgstr ""
-
-#: patterns/testimonials.php:21
-msgid "Malte"
-msgstr ""
-
-#: patterns/testimonials.php:22
-msgid "Lastenrad, Familie mit drei Kids"
-msgstr ""
-
-#: patterns/testimonials.php:25
-msgid "Super Holzqualität und eine handgeschriebene Karte im Paket. So macht Bestellen Spaß."
-msgstr ""
-
-#: patterns/testimonials.php:26
-msgid "Aylin"
-msgstr ""
-
-#: patterns/testimonials.php:27
-msgid "Rennrad am Wochenende"
-msgstr ""
-
-#: patterns/testimonials.php:36
-msgid "Kundenstimmen"
-msgstr ""
-
-#: patterns/testimonials.php:39
-msgid "Das sagen andere Radfahrer"
-msgstr ""
-
-#: patterns/testimonials.php:62
-msgid "5 von 5 Sternen"
+msgid "Karten mit Zitat, Name und Sternen – automatisch aus den freigegebenen WooCommerce-Produktbewertungen (Produkte → Bewertungen). Ohne Bewertungen bleibt der Abschnitt unsichtbar."
 msgstr ""
 
 #: patterns/trust-bar.php
@@ -883,6 +1028,22 @@ msgstr ""
 
 #: patterns/trust-bar.php:17
 msgid "Echte Menschen am Telefon"
+msgstr ""
+
+#: assets/js/kundenstimmen-block.js:32
+msgid "Einstellungen"
+msgstr ""
+
+#: assets/js/kundenstimmen-block.js:34
+msgid "Anzahl"
+msgstr ""
+
+#: assets/js/kundenstimmen-block.js:43
+msgid "Mindestens Sterne"
+msgstr ""
+
+#: assets/js/kundenstimmen-block.js:60
+msgid "Kundenstimmen: Noch keine freigegebenen Bewertungen mit genug Sternen – der Abschnitt bleibt auf der Website unsichtbar, bis es welche gibt (Produkte → Bewertungen)."
 msgstr ""
 
 #: theme.json

@@ -1,47 +1,31 @@
 <?php
 /**
- * Title: Kategorien als Bento-Grid
+ * Title: Kategorien: Sets und Module
  * Slug: lindenweg16/category-bento
  * Categories: lindenweg16
  * Keywords: kategorien, bento, kacheln, sortiment
  * Viewport Width: 1400
- * Description: Kacheln in den Akzentfarben mit Bild, in unterschiedlichen Größen. Beim Hover heben sie sich an und drehen sich leicht.
+ * Description: Zwei große Kacheln in den Akzentfarben mit Bild – Sets und Module. Beim Hover heben sie sich an und drehen sich leicht.
  *
  * @package Lindenweg16
  */
 
 $lindenweg16_tiles = array(
 	array(
-		'size'  => 'xl',
+		'size'  => 'half',
 		'color' => 'accent-1',
 		'image' => 'kachel-sets.svg',
-		'title' => __( 'Haster-Haken-Sets', 'lindenweg16' ),
-		'text'  => __( 'Fertig zusammengestellt für Helm, Schloss und Kleinkram – auspacken, anschrauben, losfahren.', 'lindenweg16' ),
+		'title' => __( 'Sets', 'lindenweg16' ),
+		'text'  => __( 'Fertig zusammengestellt: Schiene und passende Module in einem Paket. Auspacken, anschrauben, losfahren.', 'lindenweg16' ),
 		'url'   => lindenweg16_category_url( 'sets' ),
 	),
 	array(
-		'size'  => '',
+		'size'  => 'half',
 		'color' => 'accent-3',
 		'image' => 'kachel-module.svg',
 		'title' => __( 'Module', 'lindenweg16' ),
-		'text'  => __( 'Einzeln nachrüsten, wann du willst.', 'lindenweg16' ),
+		'text'  => __( 'Einzeln nachrüsten, wann du willst – jedes Modul passt auf jede Haster-Haken-Schiene.', 'lindenweg16' ),
 		'url'   => lindenweg16_category_url( 'module' ),
-	),
-	array(
-		'size'  => '',
-		'color' => 'accent-4',
-		'image' => 'kachel-helm.svg',
-		'title' => __( 'Helmhalter', 'lindenweg16' ),
-		'text'  => __( 'Luftig aufgehängt, trocknet schneller.', 'lindenweg16' ),
-		'url'   => lindenweg16_category_url( 'module' ),
-	),
-	array(
-		'size'  => 'wide',
-		'color' => 'accent-2',
-		'image' => 'kachel-schloss.svg',
-		'title' => __( 'Schloss & Zubehör', 'lindenweg16' ),
-		'text'  => __( 'Bügelschloss, Kette, Licht – alles griffbereit an der Tür.', 'lindenweg16' ),
-		'url'   => lindenweg16_category_url( 'zubehoer' ),
 	),
 );
 ?>
@@ -53,7 +37,7 @@ $lindenweg16_tiles = array(
 		<p class="is-style-eyebrow"><?php esc_html_e( 'Sortiment', 'lindenweg16' ); ?></p>
 		<!-- /wp:paragraph -->
 		<!-- wp:heading -->
-		<h2 class="wp-block-heading"><?php esc_html_e( 'Was suchst du?', 'lindenweg16' ); ?></h2>
+		<h2 class="wp-block-heading"><?php esc_html_e( 'Set oder einzeln – du entscheidest', 'lindenweg16' ); ?></h2>
 		<!-- /wp:heading -->
 	</div>
 	<!-- /wp:group -->
