@@ -13,8 +13,10 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
+use Lindenweg16\Modules\Betrieb\SupplyRepository;
 
 /**
  * Rendert die Lagerseite.
@@ -32,6 +34,7 @@ class StockPage {
 		add_action( 'admin_post_lw16_betrieb_stock_move', array( $this, 'handle_move' ) );
 		add_action( 'admin_post_lw16_betrieb_stock_void', array( $this, 'handle_void' ) );
 		add_action( 'admin_post_lw16_betrieb_stock_target', array( $this, 'handle_target' ) );
+		add_action( 'admin_post_lw16_betrieb_stock_part', array( $this, 'handle_part' ) );
 	}
 
 	/**
@@ -79,6 +82,41 @@ class StockPage {
 		);
 
 		$this->redirect( __( 'Korrektur gebucht.', 'lindenweg16' ), 'success' );
+	}
+
+	/**
+	 * Bestand einer Komponente oder eines Kartons korrigieren.
+	 *
+	 * Diese Bestände sind ein Feld, kein Bewegungskonto. Die Korrektur
+	 * landet deshalb mit Begründung, Stand vorher und nachher im
+	 * Änderungsprotokoll.
+	 */
+	public function handle_part() {
+		$this->require_cap( 'lw16_capture' );
+		check_admin_referer( self::NONCE );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$type = isset( $_POST['part_type'] ) && 'supply' === $_POST['part_type'] ? 'supply' : 'component';
+		$id   = isset( $_POST['part_id'] ) ? (int) $_POST['part_id'] : 0;
+		$qty  = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', sanitize_text_field( wp_unslash( $_POST['qty'] ) ) ) : 0.0;
+		$note = isset( $_POST['note'] ) ? sanitize_text_field( wp_unslash( $_POST['note'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		if ( ! $id || 0.0 === $qty ) {
+			$this->redirect( __( 'Bitte Position und eine Menge ungleich 0 angeben.', 'lindenweg16' ), 'error' );
+		}
+		if ( '' === $note ) {
+			$this->redirect( __( 'Eine Korrekturbuchung braucht eine Begründung.', 'lindenweg16' ), 'error' );
+		}
+
+		$ok = 'supply' === $type
+			? SupplyRepository::adjust_stock( $id, $qty, $note )
+			: ComponentRepository::adjust_stock( $id, $qty, $note );
+
+		$this->redirect(
+			$ok ? __( 'Bestand korrigiert.', 'lindenweg16' ) : __( 'Diese Position gibt es nicht mehr.', 'lindenweg16' ),
+			$ok ? 'success' : 'error'
+		);
 	}
 
 	/**
@@ -171,6 +209,18 @@ class StockPage {
 
 		$this->render_balances();
 		$this->render_unresolved();
+		$this->render_parts(
+			'component',
+			__( 'Komponenten', 'lindenweg16' ),
+			__( 'Schrauben, Dübel, Gewindeeinsätze und andere Kleinteile. Der Bestand ist ein Feld: Wareneingang und Verbrauch schreiben es fort, Korrekturen hier landen mit Begründung im Änderungsprotokoll.', 'lindenweg16' ),
+			ComponentRepository::all()
+		);
+		$this->render_parts(
+			'supply',
+			__( 'Kartons & Verbrauchsmaterial', 'lindenweg16' ),
+			__( 'Kartons, Füllmaterial, Klebeband – wird je Bestellung pauschal abgebucht. Stammdaten und Verbrauch je Bestellung unter Material.', 'lindenweg16' ),
+			SupplyRepository::all()
+		);
 		$this->render_form();
 		$this->render_movements();
 
@@ -299,6 +349,66 @@ class StockPage {
 
 				echo '</tr>';
 			}
+		}
+
+		echo '</tbody></table>';
+	}
+
+	/**
+	 * Bestand von Komponenten bzw. Kartons mit Korrekturformular.
+	 *
+	 * @param string $type  component oder supply.
+	 * @param string $title Überschrift.
+	 * @param string $hint  Erklärung.
+	 * @param array  $rows  Datensätze.
+	 */
+	protected function render_parts( $type, $title, $hint, array $rows ) {
+		$is_supply = 'supply' === $type;
+		$labels    = ComponentRepository::category_labels();
+
+		echo '<h2>' . esc_html( $title ) . '</h2>';
+		echo '<p>' . esc_html( $hint ) . '</p>';
+
+		if ( ! $rows ) {
+			echo '<p>' . esc_html__( 'Noch nichts angelegt.', 'lindenweg16' ) . '</p>';
+			return;
+		}
+
+		echo '<table class="widefat striped"><thead><tr>';
+		foreach ( array(
+			$is_supply ? __( 'Bezeichnung', 'lindenweg16' ) : __( 'Code', 'lindenweg16' ),
+			$is_supply ? __( 'Einheit', 'lindenweg16' ) : __( 'Bezeichnung', 'lindenweg16' ),
+			$is_supply ? __( 'je Bestellung', 'lindenweg16' ) : __( 'Kategorie', 'lindenweg16' ),
+			__( 'Bestand', 'lindenweg16' ),
+			__( 'Korrektur', 'lindenweg16' ),
+		) as $head ) {
+			echo '<th>' . esc_html( $head ) . '</th>';
+		}
+		echo '</tr></thead><tbody>';
+
+		foreach ( $rows as $row ) {
+			echo '<tr>';
+			if ( $is_supply ) {
+				printf( '<td><strong>%s</strong></td>', esc_html( $row['name'] ) );
+				printf( '<td>%s</td>', esc_html( $row['unit'] ) );
+				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $row['consumption_per_order'], 2 ) ) );
+			} else {
+				printf( '<td><strong>%s</strong></td>', esc_html( $row['code'] ) );
+				printf( '<td>%s</td>', esc_html( $row['name'] ) );
+				printf( '<td>%s</td>', esc_html( isset( $labels[ $row['category'] ] ) ? $labels[ $row['category'] ] : $row['category'] ) );
+			}
+			printf( '<td><strong>%s</strong></td>', esc_html( number_format_i18n( (float) $row['stock_qty'], 1 ) ) );
+
+			echo '<td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( self::NONCE );
+			echo '<input type="hidden" name="action" value="lw16_betrieb_stock_part" />';
+			printf( '<input type="hidden" name="part_type" value="%s" />', esc_attr( $type ) );
+			printf( '<input type="hidden" name="part_id" value="%d" />', (int) $row['id'] );
+			printf( '<input type="text" name="qty" size="5" placeholder="%s" /> ', esc_attr__( '± Menge', 'lindenweg16' ) );
+			printf( '<input type="text" name="note" size="18" placeholder="%s" /> ', esc_attr__( 'Begründung', 'lindenweg16' ) );
+			printf( '<button class="button button-small">%s</button>', esc_html__( 'Buchen', 'lindenweg16' ) );
+			echo '</form></td>';
+			echo '</tr>';
 		}
 
 		echo '</tbody></table>';
