@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -245,6 +245,13 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.1.0 =
+* Fotos der Startseite (Hero, Kacheln) unter Design → Lindenweg16 wählbar
+* E-Mails im Look der Website
+* LiteSpeed: Vorgaben gegen JavaScript-Fehler und ungestylte Seiten, schnellere Bilder
+* Optik-Korrekturen in Shop, Warenkorb, Kasse, Konto und Handy-Menü
+* CSS und JS bekommen nach jedem Update eine neue Adresse (kein veralteter Browser-Cache)
 
 = 1.0.0 =
 * Erste Version.

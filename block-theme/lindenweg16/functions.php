@@ -75,6 +75,19 @@ function lindenweg16_setup(): void {
 add_action( 'after_setup_theme', 'lindenweg16_setup' );
 
 /**
+ * Versionsangabe für Theme-Dateien: Theme-Version plus Änderungszeit der
+ * Datei. Nach jedem Theme-Update ändert sich die Adresse, Browser und
+ * LiteSpeed laden die neue Fassung statt einer zwischengespeicherten.
+ *
+ * @param string $path Pfad relativ zum Theme.
+ */
+function lindenweg16_asset_version( string $path ): string {
+	$mtime = @filemtime( get_theme_file_path( $path ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- fehlt die Datei, gilt die Theme-Version.
+
+	return $mtime ? LINDENWEG16_VERSION . '.' . $mtime : LINDENWEG16_VERSION;
+}
+
+/**
  * Stylesheet und das kleine Skript (ohne jQuery) für das Frontend.
  */
 function lindenweg16_enqueue_assets(): void {
@@ -82,14 +95,14 @@ function lindenweg16_enqueue_assets(): void {
 		'lindenweg16-theme',
 		get_theme_file_uri( 'assets/css/theme.css' ),
 		array(),
-		LINDENWEG16_VERSION
+		lindenweg16_asset_version( 'assets/css/theme.css' )
 	);
 
 	wp_enqueue_script(
 		'lindenweg16-theme',
 		get_theme_file_uri( 'assets/js/theme.js' ),
 		array(),
-		LINDENWEG16_VERSION,
+		lindenweg16_asset_version( 'assets/js/theme.js' ),
 		array(
 			'in_footer' => true,
 			'strategy'  => 'defer',
