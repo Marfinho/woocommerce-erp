@@ -37,13 +37,17 @@ Animationen. Die Texte duzen, die Preise stehen in Euro inkl. MwSt.
 Die Startseite (front-page) wird automatisch verwendet. Du brauchst dafür
 keine eigene Seite anzulegen.
 
-== Farben eintragen ==
+== Farben ==
 
-Website-Editor → Stile → Farben → Palette.
+Design → Lindenweg16 → Farben. Ohne Website-Editor; das Theme warnt dort,
+wenn eine Kombination schlecht lesbar wird, und „Standardschema
+wiederherstellen“ setzt alles zurück. (Im Website-Editor unter Stile →
+Farben → Palette gesetzte Farben gehen vor.)
 
-Dort stehen genau diese Rollen. Im Theme stehen nur neutrale
-Graustufen als Platzhalter. Ersetze sie durch deine Farben – das ganze
-Theme verwendet ausschließlich diese Rollen, nirgends feste Farbwerte.
+Das Standardschema passt zum Logo: Schiefergrau #3a424c als Hauptfarbe,
+warmes Papierweiß, Akzente in Eichenhonig, Nussbaum, hellem Schiefer und
+Ton. Das ganze Theme verwendet ausschließlich diese Rollen, nirgends feste
+Farbwerte – auch die E-Mails.
 
 * background – Seitenhintergrund
 * surface – Karten, Felder
@@ -69,7 +73,7 @@ erreichen – text, text-muted und primary auf background, surface und
 surface-muted; on-primary auf primary; on-accent auf accent-1 bis
 accent-4; sale auf surface; on-primary auf sale; error auf surface;
 on-ink auf ink. accent-2 (Sterne) auf surface braucht mindestens 3:1.
-Die Platzhalter-Graustufen erfüllen das alle.
+Das Standardschema erfüllt das alle.
 
 Dark Mode (optional): In assets/css/theme.css steht unter
 „0. Kurznamen und Dark Mode“ ein auskommentierter Block mit
@@ -124,9 +128,9 @@ Die Startseite nutzt Hero, Vertrauensleiste, Kategorien,
 Produkt-Highlights, So einfach geht’s, Kundenstimmen, FAQ, Newsletter und CTA.
 Ändern: Website-Editor → Templates → Startseite.
 
-Die Bilder in Hero und Kacheln sind Strichzeichnungen als Platzhalter.
-Ersetze sie im Editor durch deine Produktfotos (Hero-Bild am besten im
-Format 6:5).
+Die Bilder in Hero und Kacheln sind Strichzeichnungen, bis du unter
+Design → Lindenweg16 → Fotos der Startseite eigene Fotos wählst (Hero am
+besten quadratisch oder hochkant).
 
 == Templates ==
 
@@ -247,6 +251,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.1.0 =
+* Farbschema passend zum Logo; alle Farben unter Design → Lindenweg16 anpassbar (mit Kontrastprüfung)
 * Fotos der Startseite (Hero, Kacheln) unter Design → Lindenweg16 wählbar
 * E-Mails im Look der Website
 * LiteSpeed: Vorgaben gegen JavaScript-Fehler und ungestylte Seiten, schnellere Bilder

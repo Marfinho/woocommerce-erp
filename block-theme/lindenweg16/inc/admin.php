@@ -104,6 +104,39 @@ function lindenweg16_save_front_images(): void {
 add_action( 'admin_post_lindenweg16_save_front_images', 'lindenweg16_save_front_images' );
 
 /**
+ * Farben speichern oder auf das Standardschema zurücksetzen.
+ */
+function lindenweg16_save_colors(): void {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+	}
+
+	check_admin_referer( 'lindenweg16_save_colors' );
+
+	if ( isset( $_POST['lw16_reset_colors'] ) ) {
+		remove_theme_mod( 'lindenweg16_colors' );
+	} else {
+		$colors = array();
+		foreach ( array_keys( lindenweg16_default_palette() ) as $slug ) {
+			$color = isset( $_POST['lw16_color'][ $slug ] ) ? sanitize_hex_color( wp_unslash( (string) $_POST['lw16_color'][ $slug ] ) ) : '';
+			if ( $color ) {
+				$colors[ $slug ] = strtolower( $color );
+			}
+		}
+		set_theme_mod( 'lindenweg16_colors', $colors );
+	}
+
+	if ( function_exists( 'wp_clean_theme_json_cache' ) ) {
+		wp_clean_theme_json_cache();
+	}
+	do_action( 'litespeed_purge_all' );
+
+	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16', 'lw16-colors' => 'saved' ), admin_url( 'themes.php' ) ) . '#lw16-farben' );
+	exit;
+}
+add_action( 'admin_post_lindenweg16_save_colors', 'lindenweg16_save_colors' );
+
+/**
  * Mediathek-Auswahl nur auf der Theme-Seite laden.
  *
  * @param string $hook Aktuelle Admin-Seite.
@@ -215,6 +248,71 @@ function lindenweg16_admin_page(): void {
 	}
 	echo '</div>';
 	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Fotos speichern', 'lindenweg16' ) . '</button></p></form>';
+	echo '</div>';
+
+
+	$groups = array(
+		__( 'Grundflächen und Text', 'lindenweg16' ) => array( 'background', 'surface', 'surface-muted', 'text', 'text-muted', 'line' ),
+		__( 'Marke', 'lindenweg16' )                  => array( 'primary', 'on-primary', 'ink', 'on-ink' ),
+		__( 'Akzente (Sticker, Kacheln, Sterne)', 'lindenweg16' ) => array( 'accent-1', 'accent-2', 'accent-3', 'accent-4', 'on-accent' ),
+		__( 'Hinweise', 'lindenweg16' )               => array( 'sale', 'success', 'warning', 'error' ),
+	);
+	$palette = lindenweg16_default_palette();
+
+	echo '<div class="card" id="lw16-farben" style="max-width:760px">';
+	echo '<h2>' . esc_html__( 'Farben', 'lindenweg16' ) . '</h2>';
+	if ( 'saved' === ( isset( $_GET['lw16-colors'] ) ? sanitize_key( wp_unslash( (string) $_GET['lw16-colors'] ) ) : '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nur Anzeige.
+		echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Farben gespeichert. Website, Editor und E-Mails nutzen jetzt die neuen Farben.', 'lindenweg16' ) . '</p></div>';
+	}
+	echo '<p>' . esc_html__( 'Das Standardschema passt zum Logo: Schiefergrau als Hauptfarbe, warmes Papierweiß, Akzente in Eichenhonig, Nussbaum, hellem Schiefer und Ton. Jede Farbe hat eine feste Aufgabe – änderst du sie hier, ändert sie sich überall.', 'lindenweg16' ) . '</p>';
+
+	$warnings = array();
+	foreach ( lindenweg16_contrast_pairs() as $pair ) {
+		$ratio = lindenweg16_contrast( lindenweg16_color( $pair[0] ), lindenweg16_color( $pair[1] ) );
+		if ( $ratio < $pair[2] ) {
+			$warnings[] = sprintf(
+				/* translators: 1: Schriftfarbe, 2: Fläche, 3: Kontrast, 4: Mindestwert. */
+				__( '„%1$s“ auf „%2$s“: Kontrast %3$s:1 (mindestens %4$s:1)', 'lindenweg16' ),
+				$palette[ $pair[0] ]['name'] ?? $pair[0],
+				$palette[ $pair[1] ]['name'] ?? $pair[1],
+				number_format_i18n( $ratio, 1 ),
+				number_format_i18n( $pair[2], 1 )
+			);
+		}
+	}
+	if ( $warnings ) {
+		echo '<div class="notice notice-warning inline"><p><strong>' . esc_html__( 'Schlecht lesbar:', 'lindenweg16' ) . '</strong></p><ul style="list-style:disc;margin-left:1.5em">';
+		foreach ( $warnings as $warning ) {
+			echo '<li>' . esc_html( $warning ) . '</li>';
+		}
+		echo '</ul></div>';
+	}
+
+	printf( '<form method="post" action="%s"><input type="hidden" name="action" value="lindenweg16_save_colors">', esc_url( admin_url( 'admin-post.php' ) ) );
+	wp_nonce_field( 'lindenweg16_save_colors' );
+	foreach ( $groups as $title => $slugs ) {
+		echo '<h3>' . esc_html( $title ) . '</h3><table class="form-table" role="presentation"><tbody>';
+		foreach ( $slugs as $slug ) {
+			if ( ! isset( $palette[ $slug ] ) ) {
+				continue;
+			}
+			printf(
+				'<tr><th scope="row"><label for="lw16-color-%1$s">%2$s</label></th><td><input type="color" class="lw16-color" id="lw16-color-%1$s" name="lw16_color[%1$s]" value="%3$s" style="width:64px;height:36px;padding:2px;vertical-align:middle"> <code>%3$s</code> <span class="description">%5$s</span></td></tr>',
+				esc_attr( $slug ),
+				esc_html( $palette[ $slug ]['name'] ),
+				esc_attr( lindenweg16_color( $slug ) ),
+				esc_attr( $palette[ $slug ]['color'] ),
+				lindenweg16_color( $slug ) !== $palette[ $slug ]['color']
+					/* translators: %s: Standardfarbe. */
+					? esc_html( sprintf( __( 'Standard: %s', 'lindenweg16' ), $palette[ $slug ]['color'] ) )
+					: ''
+			);
+		}
+		echo '</tbody></table>';
+	}
+	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Farben speichern', 'lindenweg16' ) . '</button> ';
+	echo '<button type="submit" name="lw16_reset_colors" value="1" class="button" onclick="return confirm(\'' . esc_js( __( 'Alle Farben auf das Standardschema zurücksetzen?', 'lindenweg16' ) ) . '\')">' . esc_html__( 'Standardschema wiederherstellen', 'lindenweg16' ) . '</button></p></form>';
+	echo '<p class="description">' . esc_html__( 'Hast du im Website-Editor unter Stile eigene Farben gesetzt, gehen diese vor.', 'lindenweg16' ) . '</p>';
 	echo '</div>';
 
 	echo '<h2 style="margin-top:2em">' . esc_html__( 'Weitere Bereiche', 'lindenweg16' ) . '</h2>';
