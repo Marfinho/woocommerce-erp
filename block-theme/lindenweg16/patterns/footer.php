@@ -41,7 +41,7 @@ $lindenweg16_links = array(
 	),
 );
 
-$lindenweg16_payments = array( 'PayPal', 'Klarna', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'Vorkasse', 'lindenweg16' ) );
+$lindenweg16_payments = array( 'PayPal', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'SEPA-Lastschrift', 'lindenweg16' ) );
 ?>
 <!-- wp:group {"tagName":"div","className":"lw16-footer","layout":{"type":"constrained"}} -->
 <div class="wp-block-group lw16-footer">
