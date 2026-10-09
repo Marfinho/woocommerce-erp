@@ -354,8 +354,15 @@ p.is-style-eyebrow,
 	text-decoration: none;
 }
 
+/* Statt „MODULE , SETS“ (der Flex-Abstand rückt das Komma ab): ein Mittelpunkt. */
 .wp-block-post-terms.is-style-eyebrow .wp-block-post-terms__separator {
+	font-size: 0;
 	opacity: 0.5;
+}
+
+.wp-block-post-terms.is-style-eyebrow .wp-block-post-terms__separator::before {
+	content: "·";
+	font-size: 11px;
 }
 
 /* --------------------------------------------------------------------------
@@ -511,6 +518,20 @@ body.lw16-is-scrolled .lw16-header {
 	font-weight: 700;
 	letter-spacing: -0.03em;
 	padding: 0.35em 0.6em;
+}
+
+/* Untermenüs im mobilen Menü: eingerückt als Liste, nicht als Dropdown-Karte. */
+.lw16-header .is-menu-open .wp-block-navigation__submenu-container {
+	padding: 0 !important;
+	border: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+.lw16-header .is-menu-open .wp-block-navigation__submenu-container .wp-block-navigation-item__content {
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 600;
+	color: var(--lw-text-muted);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1052,8 +1073,14 @@ label {
 }
 
 @media (prefers-reduced-motion: no-preference) {
+	/*
+	 * „backwards“ statt „both“: Nach dem Einblenden bleibt kein transform
+	 * stehen. Sonst würde jeder Abschnitt zum Bezugsrahmen für position:fixed,
+	 * und Overlays darin (z. B. der mobile Shop-Filter) säßen im Abschnitt
+	 * statt über dem Fenster.
+	 */
 	main > *:not(.lw16-no-reveal) {
-		animation: lw-rise var(--lw-slow) var(--lw-smooth) both;
+		animation: lw-rise var(--lw-slow) var(--lw-smooth) backwards;
 	}
 
 	main > *:nth-child(2) { animation-delay: 70ms; }
@@ -1064,7 +1091,7 @@ label {
 	/* Abschnitte weiter unten blenden beim Hineinscrollen ein, wo der Browser es kann. */
 	@supports (animation-timeline: view()) {
 		main > .lw16-section:nth-child(n + 3) {
-			animation: lw-rise linear both;
+			animation: lw-rise linear backwards;
 			animation-timeline: view();
 			animation-range: entry 0% entry 35%;
 			animation-delay: 0s;
@@ -2629,11 +2656,30 @@ table.variations select {
 }
 
 @media (max-width: 781px) {
+	/* Schwebt mit 12px Abstand zu allen Rändern – nicht 100% breit plus Rand. */
 	.wc-block-product-filters__overlay-dialog {
-		margin: 12px;
+		inset: 12px !important;
+		width: auto !important;
+		height: auto !important;
+		max-height: none;
+		margin: 0 !important;
+		overflow: hidden;
 		border-radius: var(--lw-r-card);
 		box-shadow: var(--lw-shadow-float);
-		max-height: calc(100% - 24px);
+	}
+
+	.wc-block-product-filters__overlay-header,
+	.wc-block-product-filters__overlay-content,
+	.wc-block-product-filters__overlay-footer {
+		padding-inline: 20px !important;
+	}
+
+	.wc-block-product-filters__overlay-header {
+		padding-top: 16px !important;
+	}
+
+	.wc-block-product-filters__overlay-footer {
+		padding-bottom: 20px !important;
 	}
 }
 
@@ -2932,9 +2978,16 @@ table.variations select {
 		max-width: 100%;
 	}
 
-	.wc-block-cart .wc-block-cart-items__row {
+	/* Bild | Produkt (füllt) | Summe – sonst rutscht die Summe rechts aus der Karte. */
+	.wc-block-cart table.wc-block-cart-items .wc-block-cart-items__row {
+		grid-template-columns: 64px minmax(0, 1fr) auto !important;
+		column-gap: 12px !important;
 		padding: 16px 12px !important;
 		max-width: 100%;
+	}
+
+	.wc-block-cart table.wc-block-cart-items .wc-block-cart-item__image {
+		padding-right: 0 !important;
 	}
 }
 
@@ -4250,6 +4303,13 @@ table.variations select {
 	hyphens: auto;
 }
 
+/* Ohne Silbentrennung im Browser bricht „Suchergebnisse“ sonst mitten im Wort. */
+@media (max-width: 600px) {
+	.lw16-archive-head .wp-block-query-title {
+		font-size: clamp(1.75rem, 9vw, 2.5rem) !important;
+	}
+}
+
 .lw16-archive-head .wp-block-search {
 	width: 100%;
 	max-width: 480px;
@@ -4595,4 +4655,364 @@ table.variations select {
 		overflow: visible;
 		border-radius: var(--lw-r-card);
 	}
+}
+
+/*
+ * Express-Checkout-Container (WooPayments, PayPal) stehen auch leer im
+ * Warenkorb-Formular, wenn auf der Produktseite kein Express-Button kommt –
+ * ihre Außenabstände rissen eine große Lücke unter „In den Warenkorb“.
+ */
+.wc-block-add-to-cart-with-options :is(.wcpay-express-checkout-wrapper, .ppc-button-wrapper) {
+	margin-block: 0 !important;
+}
+
+/* Warteliste des Lindenweg16-ERP („Zurzeit nicht auf Lager“) als ruhige Karte. */
+.lw16-waitlist {
+	padding: var(--wp--preset--spacing--30);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-waitlist h4 {
+	margin: 0 0 12px;
+	font-size: var(--wp--preset--font-size--medium);
+}
+
+.lw16-waitlist form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: 0;
+}
+
+.lw16-waitlist input[type="email"] {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.lw16-waitlist .button {
+	flex: 0 1 auto;
+}
+
+.lw16-waitlist .lw16-privacy {
+	flex-basis: 100%;
+	margin: 4px 0 0;
+	color: var(--lw-text-muted);
+	line-height: 1.45;
+}
+
+/*
+ * Leerer Warenkorb: „Neu im Shop“ nutzt das ältere Produktraster von
+ * WooCommerce. Gleiche Karten wie im Shop, Button immer unten.
+ */
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__products {
+	display: grid !important; /* WooCommerce schaltet unter 480px auf block. */
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: clamp(12px, 2vw, 20px);
+	margin: 0 !important;
+	padding: 0;
+	list-style: none;
+}
+
+@media (min-width: 782px) {
+	.wp-block-woocommerce-empty-cart-block .wc-block-grid__products {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: auto !important;
+	max-width: none !important;
+	margin: 0 !important;
+	padding: 8px 8px 16px !important;
+	border: 0 !important;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+	text-align: left !important;
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product:hover,
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product:focus-within {
+	transform: translateY(-4px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product > :not(.wc-block-grid__product-link),
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-title {
+	padding-inline: 8px;
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-link {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-image {
+	margin: 0 0 8px !important;
+	overflow: hidden;
+	border-radius: var(--lw-r-image);
+	background: var(--lw-surface-muted);
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-image img {
+	display: block;
+	width: 100%;
+	height: auto;
+	aspect-ratio: 1;
+	object-fit: cover;
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-title {
+	margin: 4px 0 0 !important;
+	font-size: var(--wp--preset--font-size--medium);
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-price {
+	margin: 0 !important;
+}
+
+.wp-block-woocommerce-empty-cart-block .wc-block-grid__product-add-to-cart {
+	margin: auto 0 0 !important;
+	padding-top: 10px;
+}
+
+/* WPForms (klassisches Markup): Felder und Button wie im übrigen Shop. */
+body div.wpforms-container-full .wpforms-form :is(input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="number"], select, textarea) {
+	min-height: 48px;
+	height: auto;
+	padding: 0.7em 1em;
+	border: 1.5px solid transparent;
+	border-radius: var(--lw-r-field);
+	background-color: var(--lw-surface-muted);
+	box-shadow: none;
+	color: var(--lw-text);
+	font: inherit;
+	font-size: max(16px, 1em);
+}
+
+body div.wpforms-container-full .wpforms-form :is(input, select, textarea):focus {
+	outline: none;
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+	background-color: var(--lw-surface);
+}
+
+body div.wpforms-container-full .wpforms-form .wpforms-field-label {
+	font-weight: 600;
+}
+
+body div.wpforms-container-full .wpforms-form :is(button[type="submit"], .wpforms-page-button) {
+	min-height: 48px;
+	padding: 0.7em 1.6em;
+	border: 0;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+body div.wpforms-container-full .wpforms-form :is(button[type="submit"], .wpforms-page-button):hover {
+	border: 0;
+	background: var(--lw-primary);
+	transform: translateY(-1px);
+	box-shadow: var(--lw-shadow-card);
+}
+
+/*
+ * Mein Konto (abgemeldet): Anmelden und Registrieren als Karten im Shop-Stil
+ * statt der eckigen Kästen von WooCommerce.
+ */
+.woocommerce-account :is(form.woocommerce-form-login, form.woocommerce-form-register, form.lost_reset_password) {
+	margin: 0 !important;
+	padding: var(--wp--preset--spacing--40) !important;
+	border: 0 !important;
+	border-radius: var(--lw-r-card) !important;
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.woocommerce-account .u-columns.col2-set {
+	display: grid;
+	gap: var(--wp--preset--spacing--40);
+	width: 100%;
+}
+
+@media (min-width: 782px) {
+	.woocommerce-account .u-columns.col2-set {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.woocommerce-account .u-columns.col2-set::before,
+.woocommerce-account .u-columns.col2-set::after {
+	content: none !important;
+}
+
+.woocommerce-account .u-columns.col2-set > .u-column1,
+.woocommerce-account .u-columns.col2-set > .u-column2 {
+	float: none !important;
+	width: auto !important;
+	max-width: none !important;
+}
+
+.woocommerce-account .u-columns.col2-set h2 {
+	margin: 0 0 var(--wp--preset--spacing--30);
+	font-size: var(--wp--preset--font-size--x-large);
+}
+
+.woocommerce form .form-row :is(input.input-text, textarea, select) {
+	min-height: 48px;
+	padding: 0.7em 1em;
+	border: 1.5px solid transparent;
+	border-radius: var(--lw-r-field);
+	background-color: var(--lw-surface-muted);
+	box-shadow: none;
+	color: var(--lw-text);
+	font-size: max(16px, 1em);
+}
+
+.woocommerce form .form-row :is(input.input-text, textarea, select):focus {
+	outline: none;
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+	background-color: var(--lw-surface);
+}
+
+.woocommerce form .form-row .password-input {
+	display: block;
+	position: relative;
+}
+
+.woocommerce form .form-row .show-password-input {
+	top: 50% !important;
+	transform: translateY(-50%);
+}
+
+/*
+ * Konfigurator des Lindenweg16-ERP: Farben über seine Eigenschaften,
+ * Bedienelemente im Stil des Themes.
+ */
+.lw16-haken {
+	--lw16-rand: var(--lw-line);
+	--lw16-flaeche: var(--lw-surface-muted);
+	--lw16-text: var(--lw-text);
+	--lw16-gedaempft: var(--lw-text-muted);
+	--lw16-akzent: var(--lw-primary);
+}
+
+.lw16-haken .lw16-haken__titel {
+	margin: 0 0 8px;
+	font-family: var(--lw-font-mono);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.lw16-haken .lw16-haken__knopf {
+	min-height: 36px;
+	padding: 0.4em 1em;
+	border: 1px solid var(--lw-line);
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface);
+	font-size: var(--wp--preset--font-size--small);
+	cursor: pointer;
+}
+
+.lw16-haken .lw16-haken__modulknopf {
+	border-radius: var(--lw-r-field);
+}
+
+.lw16-haken .lw16-haken__preis {
+	font-family: var(--lw-font-mono);
+}
+
+.lw16-haken .lw16-haken__kaufen {
+	min-height: 52px;
+	padding: 0.8em 2em;
+	border: 0;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-primary);
+	color: var(--lw-on-primary);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: var(--lw-shadow-card);
+	transition: transform var(--lw-base) var(--lw-spring), box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.lw16-haken .lw16-haken__kaufen:hover {
+	transform: translateY(-2px);
+	box-shadow: var(--lw-shadow-hover);
+}
+
+/*
+ * Mein Konto: WooCommerce macht Titel und Konto-Bereich 1000px breit, der
+ * Seiteninhalt drumherum ist aber nur 720px – Titel und Inhalt standen
+ * versetzt. Beides gleich breit.
+ */
+.woocommerce-account .lw16-main > .wp-block-post-content {
+	max-width: 1000px !important;
+}
+
+.woocommerce-account .wp-block-post-content > .woocommerce {
+	max-width: none;
+}
+
+/* Länderauswahl (selectWoo) wie die übrigen Felder */
+.woocommerce .select2-container .select2-selection--single {
+	height: 48px;
+	border: 1.5px solid transparent;
+	border-radius: var(--lw-r-field);
+	background-color: var(--lw-surface-muted);
+}
+
+.woocommerce .select2-container .select2-selection--single .select2-selection__rendered {
+	padding-inline: 1em 2.5em;
+	line-height: 45px;
+	color: var(--lw-text);
+}
+
+.woocommerce .select2-container .select2-selection--single .select2-selection__arrow {
+	top: 50%;
+	right: 0.8em;
+	height: auto;
+	transform: translateY(-50%);
+}
+
+.woocommerce .select2-container--focus .select2-selection--single,
+.woocommerce .select2-container--open .select2-selection--single {
+	border-color: var(--lw-primary);
+	box-shadow: var(--lw-ring);
+}
+
+.select2-dropdown {
+	overflow: hidden;
+	border: 1px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-field) !important;
+	box-shadow: var(--lw-shadow-float);
+}
+
+/* Adressen in der Bestellansicht: ruhige Karten statt eckiger Rahmen */
+.woocommerce .woocommerce-customer-details address {
+	padding: var(--wp--preset--spacing--30);
+	border: 0 !important;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	font-style: normal;
 }

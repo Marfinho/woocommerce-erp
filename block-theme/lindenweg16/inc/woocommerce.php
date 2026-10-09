@@ -259,30 +259,6 @@ function lindenweg16_exclude_header_from_block_hooks( array $patterns ): array {
 add_filter( 'woocommerce_hooked_blocks_pattern_exclude_list', 'lindenweg16_exclude_header_from_block_hooks' );
 
 /**
- * LiteSpeed Cache: keine Seitenoptimierung (JS zusammenfassen/verzögern,
- * Unique CSS …) auf Warenkorb, Kasse und Mein Konto. Die Cart-/Checkout-Blöcke
- * von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge –
- * verzögertes JS lässt sie im Ladezustand hängen („wp is not defined“).
- *
- * Wirkt nur, wenn LiteSpeed Cache aktiv ist; sonst wird der Filter nie gefragt.
- *
- * @param bool $can Darf LiteSpeed optimieren?
- */
-function lindenweg16_litespeed_skip_shop_pages( $can ) {
-	// Vor der Abfrage (z. B. beim init) kennt WordPress die Seite noch nicht.
-	if ( ! did_action( 'wp' ) || ! function_exists( 'is_cart' ) ) {
-		return $can;
-	}
-
-	if ( is_cart() || is_checkout() || is_account_page() ) {
-		return false;
-	}
-
-	return $can;
-}
-add_filter( 'litespeed_can_optm', 'lindenweg16_litespeed_skip_shop_pages' );
-
-/**
  * WooCommerce braucht für seine Interactivity-Stores die REST-Basis-URL.
  * Auf Seiten ohne Mini-Cart- oder Produkt-Button-Block (z. B. dem Warenkorb,
  * wo der Mini-Cart ausgeblendet ist) fehlt sie, und der Warenkorb wird unter

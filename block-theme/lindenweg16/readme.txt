@@ -210,7 +210,11 @@ Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
 
 == Caching (LiteSpeed Cache) ==
 
-Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimierung von LiteSpeed Cache aus (JS zusammenfassen/verzögern, Unique CSS). Die Cart- und Checkout-Blöcke von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge und bleiben sonst im Ladezustand hängen. Alle anderen Seiten werden weiter optimiert. Nach einem Theme-Update in LiteSpeed Cache einmal „Alles leeren“.
+Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimierung von LiteSpeed Cache aus (JS zusammenfassen/verzögern, Unique CSS). Die Cart- und Checkout-Blöcke von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge und bleiben sonst im Ladezustand hängen. Alle anderen Seiten werden weiter optimiert.
+
+„Unique CSS“ (UCSS) von QUIC.cloud schaltet das Theme überall ab: UCSS behält nur die CSS-Regeln, die beim Erzeugen auf der Seite zu sehen waren. Handy-Menü, Mini-Cart, Filter und Hinweise fehlen dann, und eine veraltete UCSS-Datei lässt die ganze Seite ungestylt aussehen – besonders beim ersten Besuch, weil die „Gast-Optimierung“ UCSS dort erzwingt. LiteSpeed liefert stattdessen die normal zusammengefasste CSS-Datei aus. Wer UCSS trotzdem will: add_filter( 'lindenweg16_litespeed_ucss', '__return_true' );
+
+Nach einem Theme-Update in LiteSpeed Cache einmal „Alles leeren“ (Toolbox → Leeren → Alles leeren), sonst liefert der Cache noch die alten Seiten aus.
 
 == Barrierefreiheit ==
 
