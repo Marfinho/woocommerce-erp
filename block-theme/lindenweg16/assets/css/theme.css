@@ -4568,3 +4568,31 @@ table.variations select {
 .lw16-main--front .wp-block-post-content > .lw16-section + .lw16-section {
 	margin-block-start: var(--wp--preset--spacing--70);
 }
+
+/* Mein Konto: WooCommerce gibt den Menüpunkten 1em Innenabstand (beim ersten
+   oben nicht) und unterstreicht den aktiven – das versetzt die Pillen-Leiste. */
+.woocommerce-account .woocommerce-MyAccount-navigation ul {
+	align-items: center;
+	margin: 0 !important;
+	padding: 5px !important;
+}
+
+.woocommerce-account .woocommerce-MyAccount-navigation li,
+.woocommerce-account .woocommerce-MyAccount-navigation li:first-child {
+	padding: 0 !important;
+}
+
+.woocommerce-account .woocommerce-MyAccount-navigation li a,
+.woocommerce-account .woocommerce-MyAccount-navigation li.is-active a,
+.woocommerce-account .woocommerce-MyAccount-navigation li a:hover {
+	text-decoration: none !important;
+}
+
+/* Desktop: alle Konto-Punkte sichtbar (Umbruch statt seitlichem Scrollen) */
+@media (min-width: 782px) {
+	.woocommerce-account .woocommerce-MyAccount-navigation ul {
+		flex-wrap: wrap;
+		overflow: visible;
+		border-radius: var(--lw-r-card);
+	}
+}
