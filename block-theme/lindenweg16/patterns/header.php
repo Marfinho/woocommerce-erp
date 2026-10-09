@@ -23,11 +23,19 @@
 		<!-- /wp:group -->
 
 		<!-- wp:navigation {"overlayMenu":"mobile","layout":{"type":"flex","justifyContent":"center"},"ariaLabel":"<?php echo esc_attr__( 'Hauptmenü', 'lindenweg16' ); ?>"} -->
-			<!-- wp:navigation-link {"label":"<?php echo esc_attr__( 'Shop', 'lindenweg16' ); ?>","url":"<?php echo esc_url( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' ) ); ?>","kind":"custom","isTopLevelLink":true} /-->
-			<!-- wp:navigation-link {"label":"<?php echo esc_attr__( 'Haster Haken', 'lindenweg16' ); ?>","url":"<?php echo esc_url( lindenweg16_category_url( 'sets' ) ); ?>","kind":"custom","isTopLevelLink":true} /-->
-			<!-- wp:navigation-link {"label":"<?php echo esc_attr__( 'Module', 'lindenweg16' ); ?>","url":"<?php echo esc_url( lindenweg16_category_url( 'module' ) ); ?>","kind":"custom","isTopLevelLink":true} /-->
-			<!-- wp:navigation-link {"label":"<?php echo esc_attr__( 'Über uns', 'lindenweg16' ); ?>","url":"<?php echo esc_url( home_url( '/ueber-uns/' ) ); ?>","kind":"custom","isTopLevelLink":true} /-->
-			<!-- wp:navigation-link {"label":"<?php echo esc_attr__( 'Kontakt', 'lindenweg16' ); ?>","url":"<?php echo esc_url( home_url( '/kontakt/' ) ); ?>","kind":"custom","isTopLevelLink":true} /-->
+<?php
+		// Menü aus Design → Menüs (Ort „Hauptmenü“), sonst diese Standard-Links.
+		echo lindenweg16_menu_link_blocks( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Blockmarkup, Werte per wp_json_encode kodiert.
+			'primary',
+			array(
+				__( 'Shop', 'lindenweg16' )     => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' ),
+				__( 'Sets', 'lindenweg16' )     => lindenweg16_category_url( 'sets' ),
+				__( 'Module', 'lindenweg16' )   => lindenweg16_category_url( 'module' ),
+				__( 'Über uns', 'lindenweg16' ) => lindenweg16_page_url( 'ueber-uns' ),
+				__( 'Kontakt', 'lindenweg16' )  => lindenweg16_page_url( 'kontakt' ),
+			)
+		);
+		?>
 		<!-- /wp:navigation -->
 
 		<!-- wp:group {"className":"lw16-header__actions","layout":{"type":"flex","flexWrap":"nowrap","justifyContent":"right"}} -->

@@ -4246,3 +4246,303 @@ table.variations select {
 		padding-inline: var(--wp--preset--spacing--30) !important;
 	}
 }
+
+/* --------------------------------------------------------------------------
+ * Gesetzliche Gewährleistung (EU): zweite Blase unter der Produktbeschreibung.
+ * Die Mitteilung ist eine feste EU-Vorlage – keine Rundung, kein Zuschnitt,
+ * keine Effekte am Bild.
+ * ----------------------------------------------------------------------- */
+
+.lw16-legal-guarantee {
+	margin-top: var(--wp--preset--spacing--40) !important;
+}
+
+.lw16-bubble {
+	max-width: 760px;
+	gap: 14px;
+	padding: var(--wp--preset--spacing--40);
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-bubble > * {
+	margin-block: 0 !important;
+}
+
+.lw16-legal-guarantee__image {
+	width: 100%;
+	margin: 0 !important;
+}
+
+.lw16-legal-guarantee__image a {
+	display: block;
+}
+
+.lw16-legal-guarantee__image img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+	filter: none !important;
+	transform: none !important;
+	object-fit: contain;
+}
+
+.lw16-legal-guarantee__links {
+	color: var(--lw-text-muted);
+}
+
+/*
+ * Mini-Cart mit Admin-Leiste: WooCommerce schiebt den Drawer-Inhalt um die
+ * Höhe der Admin-Leiste nach unten. Der schwebende Drawer sitzt aber schon
+ * darunter – sonst fehlt unten Platz und „Zur Kasse“ wird abgeschnitten.
+ */
+.admin-bar .wc-block-components-drawer .wc-block-components-drawer__content {
+	height: 100% !important;
+	margin-top: 0 !important;
+}
+
+/*
+ * Germanized setzt seine Hinweise (MwSt./Kleinunternehmer, Versandkosten) in
+ * die Button-Zeile des Mini-Carts. Sie bekommen eine eigene, volle Zeile über
+ * den beiden Buttons.
+ */
+.wc-block-mini-cart__footer-actions > .wc-gzd-block-mini-cart-notices {
+	grid-column: 1 / -1;
+	display: flex !important;
+	flex-wrap: wrap;
+	justify-content: flex-start !important;
+	gap: 2px 0.5em;
+	margin: -4px 0 4px !important;
+	color: var(--lw-text-muted) !important;
+	font-size: var(--wp--preset--font-size--x-small) !important;
+	line-height: 1.45;
+	text-align: left !important;
+}
+
+.wc-gzd-block-mini-cart-notices .wc-gzd-block-mini-cart-notices__notice-wrap {
+	display: flex !important;
+	flex-wrap: wrap;
+	justify-content: flex-start !important;
+	gap: 0 0.4em;
+	text-align: left !important;
+}
+
+.wc-gzd-block-mini-cart-notices a {
+	color: inherit;
+	text-underline-offset: 2px;
+}
+
+/*
+ * Germanized gibt seine Hinweise in Produktkarten zweimal aus: als Blöcke
+ * unter dem Preis (vom Theme gesetzt, inkl. Grundpreis) und zusätzlich über
+ * die klassische Listen-Vorlage. Steht der vollständige Block schon in der
+ * Karte, entfällt die klassische Wiederholung – jeder Hinweis bleibt einmal
+ * sichtbar.
+ */
+.wc-block-product:has(.lw16-legal-info) .wc-gzd-additional-info-loop {
+	display: none !important;
+}
+
+.lw16-legal-info {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin-top: 2px;
+}
+
+.lw16-legal-info > *,
+.lw16-legal-info p {
+	margin: 0 !important;
+}
+
+/* Merkliste (WooCommerce, nur für eingeloggte Kunden): dezente Pille statt Vollflächen-Button */
+.wc-block-add-to-wishlist-button__toggle {
+	display: inline-flex !important;
+	align-items: center;
+	gap: 0.45em;
+	width: auto !important;
+	min-height: 40px !important;
+	padding: 0.45em 1em !important;
+	border: 1px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-pill) !important;
+	background: var(--lw-surface) !important;
+	color: var(--lw-text) !important;
+	box-shadow: none !important;
+	font-size: var(--wp--preset--font-size--small) !important;
+	font-weight: 500 !important;
+}
+
+.wc-block-add-to-wishlist-button__toggle:hover {
+	border-color: color-mix(in srgb, var(--lw-primary) 45%, var(--lw-line)) !important;
+	transform: translateY(-1px);
+}
+
+.wc-block-add-to-wishlist-button__icon svg {
+	width: 18px;
+	height: 18px;
+	fill: currentColor;
+}
+
+.wc-block-product .wp-block-woocommerce-add-to-wishlist-button {
+	position: relative;
+	z-index: 2;
+	align-self: flex-start;
+	margin: 4px 8px 0 !important;
+}
+
+/* Zwei gleich große Kacheln (Sets, Module) */
+@media (min-width: 782px) {
+	.lw16-bento__tile--half {
+		grid-column: span 2;
+		min-height: 300px;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-bento__tile--half {
+		grid-column: 1 / -1;
+	}
+}
+
+.lw16-bento__tile--half .wp-block-image img {
+	width: clamp(110px, 24vw, 190px);
+}
+
+/* Kundenstimmen aus Produktbewertungen */
+.lw16-kundenstimmen__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+	gap: var(--wp--preset--spacing--40);
+	margin-top: var(--wp--preset--spacing--40);
+}
+
+.lw16-kundenstimmen .lw16-section-head {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--wp--preset--spacing--30);
+}
+
+.lw16-kundenstimmen .lw16-section-head > * {
+	margin: 0;
+}
+
+.lw16-testimonial {
+	gap: var(--wp--preset--spacing--30);
+}
+
+.lw16-testimonial__footer {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.lw16-testimonial__footer > * {
+	margin: 0;
+}
+
+.lw16-testimonial__meta a {
+	color: inherit;
+}
+
+/* Echte Sternzahl: volle Sterne in accent-2, Rest gedämpft */
+.lw16-stars[style*="--lw16-stars"]::before {
+	background: linear-gradient(90deg, currentColor calc(var(--lw16-stars) * 20%), color-mix(in srgb, currentColor 25%, transparent) 0);
+}
+
+/* FAQ: aufklappbare Pillen-Karten */
+.lw16-faq__list {
+	gap: 10px !important;
+}
+
+.lw16-faq__item {
+	width: 100%;
+	margin: 0 !important;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+	transition: box-shadow var(--lw-base) var(--lw-smooth);
+}
+
+.lw16-faq__item[open] {
+	box-shadow: var(--lw-shadow-hover);
+}
+
+.lw16-faq__item > summary {
+	position: relative;
+	display: block;
+	padding: 1.1em 3.5em 1.1em 1.4em;
+	border-radius: inherit;
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.3;
+	cursor: pointer;
+	list-style: none;
+}
+
+.lw16-faq__item > summary::-webkit-details-marker {
+	display: none;
+}
+
+/* Plus-Symbol, das sich beim Öffnen zum Kreuz dreht */
+.lw16-faq__item > summary::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	right: 1.1em;
+	width: 32px;
+	height: 32px;
+	margin-top: -16px;
+	border-radius: 50%;
+	background: var(--lw-surface-muted);
+	-webkit-mask: none;
+	mask: none;
+	transition: transform var(--lw-base) var(--lw-spring), background-color var(--lw-fast) ease;
+}
+
+.lw16-faq__item > summary::before {
+	content: "";
+	position: absolute;
+	z-index: 1;
+	top: 50%;
+	right: calc(1.1em + 8px);
+	width: 16px;
+	height: 16px;
+	margin-top: -8px;
+	background: var(--lw-text);
+	-webkit-mask: var(--lw-icon-plus) center / contain no-repeat;
+	mask: var(--lw-icon-plus) center / contain no-repeat;
+	transition: transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-faq__item[open] > summary::before {
+	transform: rotate(45deg);
+}
+
+.lw16-faq__item[open] > summary::after {
+	background: var(--lw-accent-1);
+}
+
+.lw16-faq__item > summary:focus-visible {
+	outline-offset: -3px;
+}
+
+.lw16-faq__item > :not(summary) {
+	margin: 0 !important;
+	padding: 0 1.4em 1.2em;
+	color: var(--lw-text-muted);
+}
+
+/* Startseite als bearbeitbare Seite: gleiche Abstände wie im Template */
+.lw16-main--front > .wp-block-post-content {
+	margin-block-start: 0;
+}
+
+.lw16-main--front .wp-block-post-content > .lw16-section + .lw16-section {
+	margin-block-start: var(--wp--preset--spacing--70);
+}

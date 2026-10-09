@@ -80,7 +80,7 @@ function lindenweg16_price_note( string $content, array $parsed_block = array(),
 	}
 
 	if ( lindenweg16_has_legal_plugin() ) {
-		return $content . lindenweg16_germanized_price_info( $instance );
+		return $content . lindenweg16_germanized_price_info( $instance, $content );
 	}
 
 	$shipping_url = (string) apply_filters( 'lindenweg16_shipping_page_url', lindenweg16_page_url( 'versand-und-zahlung' ) );
@@ -104,7 +104,8 @@ function lindenweg16_price_note( string $content, array $parsed_block = array(),
 		sprintf( esc_html( $text ), $link )
 	);
 }
-add_filter( 'render_block_woocommerce/product-price', 'lindenweg16_price_note', 10, 3 );
+// Spät, damit Ausgaben von Germanized & Co. schon im Inhalt stehen und nichts doppelt erscheint.
+add_filter( 'render_block_woocommerce/product-price', 'lindenweg16_price_note', PHP_INT_MAX - 10, 3 );
 
 /**
  * Germanized bringt für Block-Themes eigene Blöcke für Grundpreis, Steuer-
@@ -117,9 +118,16 @@ add_filter( 'render_block_woocommerce/product-price', 'lindenweg16_price_note', 
  * nichts zu tun.
  *
  * @param WP_Block|null $instance Gerenderter Preis-Block.
+ * @param string        $content  Bereits gerenderter Preis.
  */
-function lindenweg16_germanized_price_info( $instance ): string {
+function lindenweg16_germanized_price_info( $instance, string $content = '' ): string {
 	if ( ! class_exists( 'WooCommerce_Germanized' ) || ! $instance instanceof WP_Block ) {
+		return '';
+	}
+
+	// Hat Germanized seine Hinweise schon in den Preis geschrieben (z. B. im
+	// Kleinunternehmer-Modus), nichts doppelt ausgeben.
+	if ( false !== strpos( $content, 'wc-gzd-additional-info' ) || false !== strpos( $content, 'wc-gzd-block-components' ) ) {
 		return '';
 	}
 

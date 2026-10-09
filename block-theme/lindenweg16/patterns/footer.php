@@ -11,7 +11,7 @@
  */
 
 $lindenweg16_links = array(
-	'shop'    => array(
+	'footer-shop'    => array(
 		'title' => __( 'Shop', 'lindenweg16' ),
 		'items' => array(
 			__( 'Alle Produkte', 'lindenweg16' )   => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' ),
@@ -20,7 +20,7 @@ $lindenweg16_links = array(
 			__( 'Neuheiten', 'lindenweg16' )       => add_query_arg( 'orderby', 'date', function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' ) ),
 		),
 	),
-	'service' => array(
+	'footer-service' => array(
 		'title' => __( 'Service', 'lindenweg16' ),
 		'items' => array(
 			__( 'Kontakt', 'lindenweg16' )            => lindenweg16_page_url( 'kontakt' ),
@@ -29,7 +29,7 @@ $lindenweg16_links = array(
 			__( 'Über uns', 'lindenweg16' )           => lindenweg16_page_url( 'ueber-uns' ),
 		),
 	),
-	'legal'   => array(
+	'footer-legal'   => array(
 		'title' => __( 'Rechtliches', 'lindenweg16' ),
 		'items' => array(
 			__( 'Impressum', 'lindenweg16' )           => lindenweg16_page_url( 'impressum' ),
@@ -60,12 +60,10 @@ $lindenweg16_payments = array( 'PayPal', 'Klarna', 'Visa', 'Mastercard', 'Apple 
 		<!-- wp:column -->
 		<div class="wp-block-column">
 			<!-- wp:heading {"level":2,"className":"lw16-footer__heading","fontSize":"medium"} -->
-			<h2 class="wp-block-heading lw16-footer__heading has-medium-font-size"><?php echo esc_html( $lindenweg16_column['title'] ); ?></h2>
+			<h2 class="wp-block-heading lw16-footer__heading has-medium-font-size"><?php echo esc_html( lindenweg16_menu_name( $lindenweg16_key, $lindenweg16_column['title'] ) ); ?></h2>
 			<!-- /wp:heading -->
-			<!-- wp:navigation {"overlayMenu":"never","className":"lw16-footer__links","layout":{"type":"flex","orientation":"vertical"},"ariaLabel":"<?php echo esc_attr( $lindenweg16_column['title'] ); ?>"} -->
-<?php foreach ( $lindenweg16_column['items'] as $lindenweg16_label => $lindenweg16_url ) : ?>
-				<!-- wp:navigation-link {"label":"<?php echo esc_attr( $lindenweg16_label ); ?>","url":"<?php echo esc_url( $lindenweg16_url ); ?>","kind":"custom","isTopLevelLink":true} /-->
-<?php endforeach; ?>
+			<!-- wp:navigation {"overlayMenu":"never","className":"lw16-footer__links","layout":{"type":"flex","orientation":"vertical"},"ariaLabel":"<?php echo esc_attr( lindenweg16_menu_name( $lindenweg16_key, $lindenweg16_column['title'] ) ); ?>"} -->
+<?php echo lindenweg16_menu_link_blocks( $lindenweg16_key, $lindenweg16_column['items'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Blockmarkup, Werte per wp_json_encode kodiert. ?>
 			<!-- /wp:navigation -->
 		</div>
 		<!-- /wp:column -->

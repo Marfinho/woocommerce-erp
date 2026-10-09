@@ -55,6 +55,17 @@ function lindenweg16_setup(): void {
 	add_theme_support( 'wc-product-gallery-lightbox' );
 	add_theme_support( 'wc-product-gallery-slider' );
 
+	// Klassische Menüs: Design → Menüs (und Customizer → Menüs) funktionieren
+	// damit auch ohne Website-Editor. Header und Footer übernehmen die Menüs.
+	register_nav_menus(
+		array(
+			'primary'        => __( 'Hauptmenü (Header)', 'lindenweg16' ),
+			'footer-shop'    => __( 'Footer: Spalte 1 (Shop)', 'lindenweg16' ),
+			'footer-service' => __( 'Footer: Spalte 2 (Service)', 'lindenweg16' ),
+			'footer-legal'   => __( 'Footer: Spalte 3 (Rechtliches)', 'lindenweg16' ),
+		)
+	);
+
 	// Die WordPress-eigenen Beispiel-Patterns verdrängen sonst die eigenen im Inserter.
 	remove_theme_support( 'core-block-patterns' );
 
@@ -216,6 +227,138 @@ function lindenweg16_category_url( string $slug ): string {
 }
 
 /**
+ * Blockmarkup für die Links einer Navigation – aus dem klassischen Menü am
+ * Menü-Ort, sonst aus den Standard-Links des Themes.
+ *
+ * So lassen sich Header und Footer unter Design → Menüs pflegen, ohne den
+ * Website-Editor zu öffnen. Untermenüs (eine Ebene) werden übernommen.
+ *
+ * @param string                $location Menü-Ort.
+ * @param array<string, string> $fallback Standard-Links: Beschriftung => URL.
+ */
+function lindenweg16_menu_link_blocks( string $location, array $fallback ): string {
+	$items     = array();
+	$locations = get_nav_menu_locations();
+
+	if ( ! empty( $locations[ $location ] ) ) {
+		$menu_items = wp_get_nav_menu_items( (int) $locations[ $location ], array( 'update_post_term_cache' => false ) );
+		if ( is_array( $menu_items ) ) {
+			$items = $menu_items;
+		}
+	}
+
+	$link = static function ( string $label, string $url ): string {
+		$attrs = array(
+			'label'          => $label,
+			'url'            => $url,
+			'kind'           => 'custom',
+			'isTopLevelLink' => true,
+		);
+
+		return '<!-- wp:navigation-link ' . wp_json_encode( $attrs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP ) . ' /-->';
+	};
+
+	if ( ! $items ) {
+		$html = '';
+		foreach ( $fallback as $label => $url ) {
+			$html .= $link( (string) $label, (string) $url ) . "\n";
+		}
+
+		return $html;
+	}
+
+	$children = array();
+	foreach ( $items as $item ) {
+		$children[ (int) $item->menu_item_parent ][] = $item;
+	}
+
+	$html = '';
+	foreach ( $children[0] ?? array() as $item ) {
+		$label = wp_strip_all_tags( (string) $item->title );
+		$url   = (string) $item->url;
+
+		if ( empty( $children[ (int) $item->ID ] ) ) {
+			$html .= $link( $label, $url ) . "\n";
+			continue;
+		}
+
+		$attrs = wp_json_encode(
+			array(
+				'label' => $label,
+				'url'   => $url,
+				'kind'  => 'custom',
+			),
+			JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP
+		);
+
+		$html .= '<!-- wp:navigation-submenu ' . $attrs . ' -->' . "\n";
+		foreach ( $children[ (int) $item->ID ] as $child ) {
+			$html .= $link( wp_strip_all_tags( (string) $child->title ), (string) $child->url ) . "\n";
+		}
+		$html .= '<!-- /wp:navigation-submenu -->' . "\n";
+	}
+
+	return $html;
+}
+
+/**
+ * Name des Menüs an einem Menü-Ort – für die Spaltenüberschriften im Footer.
+ */
+function lindenweg16_menu_name( string $location, string $fallback ): string {
+	$locations = get_nav_menu_locations();
+
+	if ( ! empty( $locations[ $location ] ) ) {
+		$menu = wp_get_nav_menu_object( (int) $locations[ $location ] );
+		if ( $menu && '' !== trim( (string) $menu->name ) ) {
+			return (string) $menu->name;
+		}
+	}
+
+	return $fallback;
+}
+
+/**
+ * Abschnitte der Startseite, in dieser Reihenfolge.
+ *
+ * @return string[] Pattern-Slugs.
+ */
+function lindenweg16_front_page_sections(): array {
+	return (array) apply_filters(
+		'lindenweg16_front_page_sections',
+		array(
+			'lindenweg16/hero',
+			'lindenweg16/trust-bar',
+			'lindenweg16/category-bento',
+			'lindenweg16/product-highlights',
+			'lindenweg16/how-it-works',
+			'lindenweg16/testimonials',
+			'lindenweg16/faq',
+			'lindenweg16/newsletter',
+			'lindenweg16/cta-dark',
+		)
+	);
+}
+
+/**
+ * ID der statischen Startseite, wenn sie mit den Lindenweg16-Abschnitten
+ * gebaut ist – dann zeigt die Startseite deren Inhalt. Eine ältere
+ * Startseite (z. B. aus einem früheren Theme) wird nicht übernommen.
+ */
+function lindenweg16_editable_front_page_id(): int {
+	if ( 'page' !== get_option( 'show_on_front' ) ) {
+		return 0;
+	}
+
+	$page = get_post( (int) get_option( 'page_on_front' ) );
+
+	if ( ! $page instanceof WP_Post || 'publish' !== $page->post_status ) {
+		return 0;
+	}
+
+	return false !== strpos( (string) $page->post_content, 'lw16-' ) ? (int) $page->ID : 0;
+}
+
+/**
  * Ist Germanized oder German Market aktiv? Dann kommen Grundpreis,
  * Lieferzeit, Steuer- und Versandhinweis von dort, nicht vom Theme.
  */
@@ -269,6 +412,11 @@ function lindenweg16_product_card_markup(): string {
 }
 
 require_once get_template_directory() . '/inc/newsletter.php';
+require_once get_template_directory() . '/inc/kundenstimmen.php';
+
+if ( is_admin() ) {
+	require_once get_template_directory() . '/inc/admin.php';
+}
 
 if ( class_exists( 'WooCommerce' ) ) {
 	require_once get_template_directory() . '/inc/woocommerce.php';

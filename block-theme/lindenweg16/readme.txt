@@ -110,17 +110,18 @@ Block → Erweitert → Zusätzliche CSS-Klasse setzt ein Symbol davor.
 Kategorie „Lindenweg16“ im Block-Inserter:
 
 1. Hero mit Stickern – Eyebrow-Sticker, große Headline mit Marker, zwei Buttons, großes Bild mit zwei schwebenden Stickern
-2. Kategorien als Bento-Grid – Kacheln in Akzentfarben mit Bild, unterschiedlich groß
+2. Kategorien: Sets und Module – zwei große Kacheln in Akzentfarben mit Bild
 3. Produkt-Highlights (Neuheiten) – Product Collection als Karten-Raster mit „Alle ansehen“
 4. Vertrauensleiste – vier Chips mit Symbol
 5. So einfach geht’s – drei nummerierte Schritte mit gestrichelter Verbindungslinie
-6. Kundenstimmen – drei Karten mit Zitat, Name und Sternen
+6. Kundenstimmen – Karten aus echten Produktbewertungen
 7. Newsletter – Karte mit Eingabefeld und Button in einer Pille
 8. Dunkler CTA – Fläche ink mit zwei unscharfen Farbflecken
 9. Stichwort-Laufband – Pillen in Endlos-Animation, an den Rändern ausgeblendet
+10. Häufige Fragen (FAQ) – aufklappbare Fragen und Antworten
 
 Die Startseite nutzt Hero, Vertrauensleiste, Kategorien,
-Produkt-Highlights, So einfach geht’s, Kundenstimmen, Newsletter und CTA.
+Produkt-Highlights, So einfach geht’s, Kundenstimmen, FAQ, Newsletter und CTA.
 Ändern: Website-Editor → Templates → Startseite.
 
 Die Bilder in Hero und Kacheln sind Strichzeichnungen als Platzhalter.
@@ -157,6 +158,15 @@ Preis-Hinweis: Ohne Germanized/German Market steht unter jedem Preis
 „inkl. MwSt., zzgl. Versand“ mit Link auf die Seite
 „versand-und-zahlung“. Andere Seite:
 add_filter( 'lindenweg16_shipping_page_url', fn() => home_url( '/versand/' ) );
+
+== Bearbeiten ohne Website-Editor ==
+
+Unter Design → Lindenweg16 findest du alle Wege an einem Ort.
+
+* Startseite: „Startseite als Seite anlegen“ legt eine normale Seite mit allen Abschnitten an und stellt sie als Startseite ein. Danach bearbeitest du Texte, Bilder, FAQ und die Reihenfolge unter Seiten → Startseite. Ohne diese Seite zeigt das Theme seine Standard-Startseite.
+* Menüs: Design → Menüs. Menü-Positionen: Hauptmenü (Header), Footer Spalte 1–3. Der Name des Menüs wird zur Spaltenüberschrift im Footer. Ohne zugeordnetes Menü erscheinen die Standard-Links.
+* Kundenstimmen: kommen automatisch aus freigegebenen Produktbewertungen (Produkte → Bewertungen) mit mindestens 4 Sternen. Ohne Bewertungen bleibt der Abschnitt unsichtbar. Im Editor gibt es dafür den Block „Kundenstimmen“ (Anzahl, Mindest-Sterne), außerdem den Shortcode [lindenweg16_kundenstimmen anzahl="3" min_sterne="4"].
+* FAQ: Pattern „Häufige Fragen (FAQ)“ mit aufklappbaren Fragen (Details-Block). Auf der Startseite unter #faq verlinkbar.
 
 == Germanized und German Market ==
 
