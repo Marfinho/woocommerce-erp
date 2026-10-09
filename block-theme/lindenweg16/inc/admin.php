@@ -76,6 +76,52 @@ function lindenweg16_create_front_page(): void {
 add_action( 'admin_post_lindenweg16_create_front_page', 'lindenweg16_create_front_page' );
 
 /**
+ * Fotos der Startseite speichern (Formular auf der Theme-Seite).
+ */
+function lindenweg16_save_front_images(): void {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+	}
+
+	check_admin_referer( 'lindenweg16_save_front_images' );
+
+	foreach ( array_keys( lindenweg16_front_image_slots() ) as $slot ) {
+		$id = isset( $_POST[ 'lw16_image_' . $slot ] ) ? absint( wp_unslash( $_POST[ 'lw16_image_' . $slot ] ) ) : 0;
+
+		if ( $id && wp_attachment_is_image( $id ) ) {
+			set_theme_mod( 'lindenweg16_image_' . $slot, $id );
+		} else {
+			remove_theme_mod( 'lindenweg16_image_' . $slot );
+		}
+	}
+
+	// Gecachte Seiten zeigen sonst noch die alten Bilder.
+	do_action( 'litespeed_purge_all' );
+
+	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16', 'lw16-images' => 'saved' ), admin_url( 'themes.php' ) ) );
+	exit;
+}
+add_action( 'admin_post_lindenweg16_save_front_images', 'lindenweg16_save_front_images' );
+
+/**
+ * Mediathek-Auswahl nur auf der Theme-Seite laden.
+ *
+ * @param string $hook Aktuelle Admin-Seite.
+ */
+function lindenweg16_admin_assets( string $hook ): void {
+	if ( 'appearance_page_lindenweg16' !== $hook ) {
+		return;
+	}
+
+	wp_enqueue_media();
+	wp_add_inline_script(
+		'media-editor',
+		"document.addEventListener('click',function(e){var b=e.target.closest('[data-lw16-pick],[data-lw16-clear]');if(!b)return;e.preventDefault();var box=b.closest('.lw16-slot'),input=box.querySelector('input'),img=box.querySelector('img');if(b.hasAttribute('data-lw16-clear')){input.value='';img.removeAttribute('src');img.hidden=true;return;}var f=wp.media({title:b.dataset.title,library:{type:'image'},multiple:false,button:{text:b.dataset.button}});f.on('select',function(){var a=f.state().get('selection').first().toJSON();input.value=a.id;img.src=(a.sizes&&(a.sizes.medium||a.sizes.full)||a).url;img.hidden=false;});f.open();});"
+	);
+}
+add_action( 'admin_enqueue_scripts', 'lindenweg16_admin_assets' );
+
+/**
  * Die Seite unter Design → Lindenweg16.
  */
 function lindenweg16_admin_page(): void {
@@ -139,6 +185,36 @@ function lindenweg16_admin_page(): void {
 			esc_html__( 'Startseite als Seite anlegen', 'lindenweg16' )
 		);
 	}
+	echo '</div>';
+
+
+	echo '<div class="card" style="max-width:760px">';
+	echo '<h2>' . esc_html__( 'Fotos der Startseite', 'lindenweg16' ) . '</h2>';
+	if ( 'saved' === ( isset( $_GET['lw16-images'] ) ? sanitize_key( wp_unslash( (string) $_GET['lw16-images'] ) ) : '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nur Anzeige.
+		echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Gespeichert. Die Startseite zeigt jetzt deine Fotos.', 'lindenweg16' ) . '</p></div>';
+	}
+	echo '<p>' . esc_html__( 'Ohne eigenes Foto zeigt die Startseite die Zeichnungen des Themes. Am besten wirken helle Produktfotos; für das große Bild oben eignet sich ein Hochformat oder Quadrat.', 'lindenweg16' ) . '</p>';
+	if ( $front_id ) {
+		echo '<p><em>' . esc_html__( 'Deine Startseite ist eine eigene Seite – die Fotos dort tauschst du im Seiten-Editor. Diese Auswahl gilt für die Theme-Startseite und neu angelegte Startseiten.', 'lindenweg16' ) . '</em></p>';
+	}
+	printf( '<form method="post" action="%s"><input type="hidden" name="action" value="lindenweg16_save_front_images">', esc_url( admin_url( 'admin-post.php' ) ) );
+	wp_nonce_field( 'lindenweg16_save_front_images' );
+	echo '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">';
+	foreach ( lindenweg16_front_image_slots() as $slot => $label ) {
+		$current = lindenweg16_front_image( $slot );
+		printf(
+			'<div class="lw16-slot"><p><strong>%1$s</strong></p><img alt="" style="display:block;width:100%%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#f0f0f1;margin-bottom:8px" %2$s><input type="hidden" name="lw16_image_%3$s" value="%4$s"><button type="button" class="button" data-lw16-pick data-title="%1$s" data-button="%5$s">%6$s</button> <button type="button" class="button-link" data-lw16-clear>%7$s</button></div>',
+			esc_html( $label ),
+			$current ? 'src="' . esc_url( (string) wp_get_attachment_image_url( $current['id'], 'medium' ) ) . '"' : 'hidden',
+			esc_attr( $slot ),
+			esc_attr( $current ? (string) $current['id'] : '' ),
+			esc_attr__( 'Dieses Foto verwenden', 'lindenweg16' ),
+			esc_html__( 'Foto wählen', 'lindenweg16' ),
+			esc_html__( 'Zeichnung verwenden', 'lindenweg16' )
+		);
+	}
+	echo '</div>';
+	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Fotos speichern', 'lindenweg16' ) . '</button></p></form>';
 	echo '</div>';
 
 	echo '<h2 style="margin-top:2em">' . esc_html__( 'Weitere Bereiche', 'lindenweg16' ) . '</h2>';

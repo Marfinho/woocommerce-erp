@@ -411,6 +411,45 @@ function lindenweg16_product_card_markup(): string {
 <!-- /wp:woocommerce/product-template -->';
 }
 
+/**
+ * Bildplätze der Startseite, die unter Design → Lindenweg16 belegt werden.
+ *
+ * @return array<string, string> Platz => Bezeichnung.
+ */
+function lindenweg16_front_image_slots(): array {
+	return array(
+		'hero'   => __( 'Großes Bild oben (Hero)', 'lindenweg16' ),
+		'sets'   => __( 'Kachel „Sets“', 'lindenweg16' ),
+		'module' => __( 'Kachel „Module“', 'lindenweg16' ),
+	);
+}
+
+/**
+ * Gewähltes Foto für einen Bildplatz der Startseite.
+ *
+ * @param string $slot hero, sets oder module.
+ * @return array{id:int,url:string,alt:string}|null Null, solange keins gewählt ist – dann bleibt die Illustration.
+ */
+function lindenweg16_front_image( string $slot ): ?array {
+	$id = (int) get_theme_mod( 'lindenweg16_image_' . $slot, 0 );
+
+	if ( ! $id || ! wp_attachment_is_image( $id ) ) {
+		return null;
+	}
+
+	$url = wp_get_attachment_image_url( $id, 'large' );
+
+	if ( ! $url ) {
+		return null;
+	}
+
+	return array(
+		'id'  => $id,
+		'url' => $url,
+		'alt' => trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
+	);
+}
+
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/kundenstimmen.php';
 require_once get_template_directory() . '/inc/emails.php';
