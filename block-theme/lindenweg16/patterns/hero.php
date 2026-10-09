@@ -33,7 +33,7 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 			<!-- /wp:heading -->
 
 			<!-- wp:paragraph {"textColor":"text-muted","fontSize":"large"} -->
-			<p class="has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Eine Holzschiene, viele Module: Helm, Schloss, Handschuhe und Werkzeug bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour.', 'lindenweg16' ); ?></p>
+			<p class="has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Eine Holzschiene, viele Module: Sonnenbrille, Gels und Riegel, Trinkflasche und Co. bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour.', 'lindenweg16' ); ?></p>
 			<!-- /wp:paragraph -->
 
 			<!-- wp:buttons -->
