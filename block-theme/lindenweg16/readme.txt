@@ -208,6 +208,10 @@ Den Fußtext (z. B. Adresse) stellst du unter WooCommerce → Einstellungen → 
 
 Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
 
+== Caching (LiteSpeed Cache) ==
+
+Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimierung von LiteSpeed Cache aus (JS zusammenfassen/verzögern, Unique CSS). Die Cart- und Checkout-Blöcke von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge und bleiben sonst im Ladezustand hängen. Alle anderen Seiten werden weiter optimiert. Nach einem Theme-Update in LiteSpeed Cache einmal „Alles leeren“.
+
 == Barrierefreiheit ==
 
 * Sichtbarer Fokusring in primary an allen bedienbaren Elementen
