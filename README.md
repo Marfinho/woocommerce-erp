@@ -72,11 +72,17 @@ includes/Modules/Betrieb/Dhl/ DhlProduct, DhlAddress, DhlRequest, DhlResponse,
 includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, ConfigCodec,
                              Catalog, ShopLink, ColorHex, WebModel, CartIntegration, Frontend,
                              ConfiguratorModule, Admin/ConfiguratorPage
+includes/Modules/ArView/     Options, Schema, Stats, UploadTypes, ProductMeta, Banner, Viewer,
+                             RestApi, ArViewModule, Admin/ArViewPage (AR-Ansicht „An deiner Wand“)
 assets/css/                  admin.css, betrieb.css, betrieb-mobile.css, frontend.css
 assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.js,
                              betrieb-staffel.js, loyalty.js, wishlist.js
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
+assets/vendor/model-viewer/  model-viewer (Apache-2.0), lokal, nur auf der AR-Seite (ES-Modul)
+assets/vendor/nunito/        Nunito (OFL), lokal, für Banner und AR-Seite
+assets/js/                   (zusätzlich) ar-hint.js, ar-viewer.js, ar-admin.js
+assets/css/                  (zusätzlich) ar-view.css
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
 docs/betriebsanleitung.html  Betriebsanleitung in vier Teilen (Produktion, Versand, Personal, Administration)
 docs/ba.css                  gemeinsames Aussehen der Anleitungen
@@ -485,6 +491,15 @@ vorhanden ist – nicht, was geplant war.
   für die Wandbefestigung, Prüfung des Aufbaus auf dem Server, echte
   Bestellpositionen je Teil, teilbare Konfigurationslinks, vollständig
   bedienbar ohne WebGL.
+- **AR-Ansicht:** Produkte mit 3D-Modell (GLB/USDZ aus der Mediathek, nur für
+  Administratoren hochladbar) lassen sich auf dem Handy in Originalgröße an der
+  eigenen Wand ansehen (`<model-viewer>`, lokal ausgeliefert, kein CDN). Ein
+  dezenter Banner auf Produktseiten lädt dazu ein – entschieden wird komplett im
+  Browser (AR-fähiges iOS/Android), damit Seiten-Caches nicht stören; „Nein“ sperrt
+  ihn per Zeitstempel für einstellbare Tage. Die AR-Seite hängt am Shortcode
+  `[l16_ar_ansicht]`. Anonyme Tageszähler (gezeigt/Ja/Nein/AR gestartet) und die
+  Einstellungen stehen unter Verwaltung → AR-Ansicht. Siehe `CHANGELOG.md` und
+  `docs/ar-ansicht-testcheckliste.md`.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
 - **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und

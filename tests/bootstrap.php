@@ -316,3 +316,33 @@ foreach ( array(
 ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Configurator/' . $lw16_class . '.php';
 }
+
+// Seiteneffektfreie Klassen des Moduls AR-Ansicht. Bereinigen, Zählen,
+// Dateiprüfung und Skript-Tag sind ohne Datenbank prüfbar.
+if ( ! function_exists( 'sanitize_text_field' ) ) {
+	/**
+	 * Vereinfachte Bereinigung: Tags entfernen, Whitespace kürzen.
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	function sanitize_text_field( $text ) {
+		return trim( preg_replace( '/\s+/', ' ', strip_tags( (string) $text ) ) );
+	}
+}
+
+if ( ! function_exists( 'current_user_can' ) ) {
+	/**
+	 * Berechtigung aus $GLOBALS['lw16_test_caps'] (Liste erlaubter Rechte).
+	 *
+	 * @param string $cap Recht.
+	 * @return bool
+	 */
+	function current_user_can( $cap ) {
+		return in_array( $cap, isset( $GLOBALS['lw16_test_caps'] ) ? (array) $GLOBALS['lw16_test_caps'] : array(), true );
+	}
+}
+
+foreach ( array( 'Options', 'Stats', 'UploadTypes', 'Viewer' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/ArView/' . $lw16_class . '.php';
+}
