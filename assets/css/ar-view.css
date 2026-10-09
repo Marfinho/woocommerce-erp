@@ -1,0 +1,385 @@
+/**
+ * AR-Ansicht: Hinweis-Banner (Produktseiten) und AR-Seite.
+ *
+ * Schrift: Nunito, lokal ausgeliefert (kein Google-Fonts-Aufruf).
+ * Markenfarbe: #3A424C.
+ */
+
+@font-face {
+	font-family: "Nunito";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("../vendor/nunito/nunito-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Nunito";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("../vendor/nunito/nunito-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Nunito";
+	font-style: normal;
+	font-weight: 700;
+	font-display: swap;
+	src: url("../vendor/nunito/nunito-latin-700-normal.woff2") format("woff2");
+}
+
+.lw16-ar,
+.lw16-arv {
+	--lw16-ar-brand: #3a424c;
+	--lw16-ar-brand-dark: #272d34;
+	--lw16-ar-ink: #1f2429;
+	--lw16-ar-muted: #5b646e;
+	--lw16-ar-line: #d9dde1;
+	--lw16-ar-bg: #ffffff;
+	--lw16-ar-soft: #f2f4f5;
+	font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+	color: var(--lw16-ar-ink);
+	box-sizing: border-box;
+}
+
+.lw16-ar *,
+.lw16-arv * {
+	box-sizing: border-box;
+}
+
+[hidden].lw16-ar,
+.lw16-ar[hidden],
+.lw16-arv [hidden] {
+	display: none !important;
+}
+
+/* ---- Buttons (Banner und Seite teilen sich den Stil) -------------------- */
+
+.lw16-ar__btn,
+.lw16-arv__btn,
+.lw16-arv__start {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 44px;
+	padding: 10px 20px;
+	border: 2px solid var(--lw16-ar-brand);
+	border-radius: 12px;
+	font: inherit;
+	font-weight: 700;
+	font-size: 1rem;
+	line-height: 1.2;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.lw16-ar__btn--primary,
+.lw16-arv__btn--primary,
+.lw16-arv__start {
+	background: var(--lw16-ar-brand);
+	color: #fff;
+}
+
+.lw16-ar__btn--primary:hover,
+.lw16-arv__btn--primary:hover,
+.lw16-arv__start:hover {
+	background: var(--lw16-ar-brand-dark);
+	color: #fff;
+}
+
+.lw16-ar__btn--ghost,
+.lw16-arv__btn--ghost {
+	background: transparent;
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-ar__btn--ghost:hover,
+.lw16-arv__btn--ghost:hover {
+	background: var(--lw16-ar-soft);
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-ar__btn:focus-visible,
+.lw16-arv__btn:focus-visible,
+.lw16-arv__start:focus-visible,
+.lw16-ar__x:focus-visible {
+	outline: 3px solid #8aa4bd;
+	outline-offset: 2px;
+}
+
+/* ---- Banner: dezentes Bottom-Sheet ------------------------------------- */
+
+.lw16-ar {
+	position: fixed;
+	left: 12px;
+	right: 12px;
+	bottom: 12px;
+	z-index: 9990;
+	max-width: 460px;
+	margin: 0 auto;
+	padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+	background: var(--lw16-ar-bg);
+	border: 1px solid var(--lw16-ar-line);
+	border-radius: 18px;
+	box-shadow: 0 10px 30px rgba(31, 36, 41, 0.22);
+	transform: translateY(calc(100% + 24px));
+	opacity: 0;
+	transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.lw16-ar.is-visible {
+	transform: translateY(0);
+	opacity: 1;
+}
+
+.lw16-ar__x {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	padding: 0;
+	border: 0;
+	border-radius: 50%;
+	background: transparent;
+	color: var(--lw16-ar-muted);
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.lw16-ar__x:hover {
+	background: var(--lw16-ar-soft);
+	color: var(--lw16-ar-ink);
+}
+
+.lw16-ar__title {
+	margin: 0 44px 6px 0;
+	font-size: 1.15rem;
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-ar__text {
+	margin: 0 0 14px;
+	font-size: 1rem;
+	line-height: 1.45;
+	color: var(--lw16-ar-ink);
+}
+
+.lw16-ar__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.lw16-ar__actions .lw16-ar__btn {
+	flex: 1 1 140px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lw16-ar {
+		transition: none;
+	}
+}
+
+/* ---- AR-Seite ---------------------------------------------------------- */
+
+.lw16-arv {
+	max-width: 760px;
+	margin: 0 auto;
+}
+
+.lw16-arv__buehne {
+	position: relative;
+	overflow: hidden;
+	border: 1px solid var(--lw16-ar-line);
+	border-radius: 18px;
+	background: var(--lw16-ar-soft);
+}
+
+.lw16-arv model-viewer {
+	display: block;
+	width: 100%;
+	height: min(68vh, 520px);
+	min-height: 320px;
+	--poster-color: transparent;
+	--progress-bar-color: var(--lw16-ar-brand);
+}
+
+/* Großer eigener AR-Knopf, unten mittig im Viewer. */
+.lw16-arv__start {
+	position: absolute;
+	left: 16px;
+	right: 16px;
+	bottom: 16px;
+	min-height: 56px;
+	font-size: 1.1rem;
+	box-shadow: 0 6px 18px rgba(31, 36, 41, 0.25);
+}
+
+@media (min-width: 560px) {
+	.lw16-arv__start {
+		left: 50%;
+		right: auto;
+		transform: translateX(-50%);
+		min-width: 320px;
+	}
+}
+
+.lw16-arv__fehler {
+	margin: 0;
+	padding: 14px 16px;
+	background: #fdecea;
+	color: #8a1f17;
+	font-weight: 600;
+}
+
+.lw16-arv__desktop {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-top: 16px;
+	padding: 16px;
+	border: 2px dashed var(--lw16-ar-brand);
+	border-radius: 14px;
+	background: #fff;
+}
+
+.lw16-arv__desktop p {
+	margin: 0 0 6px;
+	line-height: 1.45;
+}
+
+.lw16-arv__desktop-titel {
+	font-size: 1.15rem;
+	font-weight: 700;
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-arv__qr svg {
+	display: block;
+	width: 140px;
+	height: 140px;
+}
+
+@media (max-width: 520px) {
+	.lw16-arv__desktop {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}
+
+.lw16-arv__anleitung {
+	margin-top: 20px;
+	padding: 16px 18px;
+	border-radius: 14px;
+	background: var(--lw16-ar-soft);
+}
+
+.lw16-arv__ueberschrift {
+	margin: 0 0 8px;
+	font-weight: 700;
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-arv__anleitung ol {
+	margin: 0;
+	padding-left: 1.3em;
+}
+
+.lw16-arv__anleitung li {
+	margin: 4px 0;
+	line-height: 1.45;
+}
+
+.lw16-arv__produkt {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 14px;
+	margin-top: 20px;
+	padding-top: 18px;
+	border-top: 1px solid var(--lw16-ar-line);
+}
+
+.lw16-arv__name {
+	margin: 0;
+	font-size: 1.2rem;
+	font-weight: 700;
+	color: var(--lw16-ar-brand);
+}
+
+.lw16-arv__preis {
+	margin: 2px 0 0;
+	font-weight: 600;
+}
+
+.lw16-arv__aktionen {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+@media (max-width: 520px) {
+	.lw16-arv__aktionen,
+	.lw16-arv__aktionen .lw16-arv__btn {
+		width: 100%;
+	}
+}
+
+/* ---- Auswahl und Leerzustand ------------------------------------------- */
+
+.lw16-arv__hinweis {
+	margin: 0 0 14px;
+	font-weight: 600;
+	line-height: 1.45;
+}
+
+.lw16-arv__liste {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lw16-arv__karte {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100%;
+	padding: 12px;
+	border: 1px solid var(--lw16-ar-line);
+	border-radius: 14px;
+	background: #fff;
+	color: var(--lw16-ar-brand);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.lw16-arv__karte:hover {
+	border-color: var(--lw16-ar-brand);
+}
+
+.lw16-arv__karte img {
+	display: block;
+	width: 100%;
+	height: auto;
+	border-radius: 10px;
+}
+
+.lw16-arv--leer {
+	padding: 14px 16px;
+	border-radius: 12px;
+	background: var(--lw16-ar-soft);
+}

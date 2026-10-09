@@ -13,10 +13,10 @@
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version 0.14.0</div>
+	<div class="marke">Lindenweg16 ERP · Version 0.15.0</div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Alle Bilder sind echte Bildschirmfotos aus dem Plugin, nicht nachgezeichnet. Stand: Plugin-Version 0.14.0.</div>
+	<div class="meta">Alle Bilder sind echte Bildschirmfotos aus dem Plugin, nicht nachgezeichnet. Stand: Plugin-Version 0.15.0.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -1552,7 +1552,7 @@
 <tr><td><strong>Fertigung</strong> (Hammer)</td><td>Artikel &amp; Revisionen, Konfigurator, Kapazität, Qualität, Druckjournal, 3D-Drucker &amp; Wartung, Bambu-Lab-Drucker, Druckfarm, Produktion</td></tr>
 <tr><td><strong>Lager</strong> (Archiv)</td><td>Lager, Lagerplätze/Fertigung/Picklisten, Material, Bedarf</td></tr>
 <tr><td><strong>Finanzen</strong> (Balkendiagramm)</td><td>Dashboard: Finanzen, Buchhaltung, Reporting, Berichte</td></tr>
-<tr><td><strong>Verwaltung</strong> (Zahnrad)</td><td>Benutzer &amp; Rechte, Einstellungen (mit Reiter „Plugin“ für Firma/DHL/E-Mail), Import &amp; Doku, Zeiterfassung, Etikettendrucker, Support, Anleitungen, Livegang</td></tr>
+<tr><td><strong>Verwaltung</strong> (Zahnrad)</td><td>Benutzer &amp; Rechte, Einstellungen (mit Reiter „Plugin“ für Firma/DHL/E-Mail), Import &amp; Doku, Zeiterfassung, Etikettendrucker, AR-Ansicht, Support, Anleitungen, Livegang</td></tr>
 </tbody>
 </table>
 </div>
@@ -1881,6 +1881,95 @@
 </figure>
 
 <p>Was ein Kunde konfiguriert, landet als codierte Konfiguration im Warenkorb und wird beim Bestellen wieder in echte Artikel aufgelöst – Lagerabgang und Kalkulation funktionieren also genauso wie bei einem normalen Artikel.</p>
+<h3 id="adm-ar">AR-Ansicht „An deiner Wand ansehen“</h3>
+
+<p><span class="weg">Verwaltung → AR-Ansicht</span> und <span class="weg">Produkte → Produkt bearbeiten → 3D-Modell (AR)</span></p>
+
+<p>Besucher mit dem Handy können ein Produkt mit der Kamera in <strong>Originalgröße an ihrer eigenen Wand</strong> ansehen – ohne App. Das Ganze besteht aus drei Teilen: einem 3D-Modell am Produkt, einem unaufdringlichen Hinweis auf der Produktseite („Passt der Haster Haken an deine Wand?“) und einer eigenen Seite, auf der die Ansicht startet. Auf dem Rechner sieht man den Hinweis nie; dort zeigt die Seite nur das drehbare Modell und einen QR-Code zum Öffnen am Handy.</p>
+
+<h4>1. Das Modell vorbereiten – und den Maßstab prüfen</h4>
+
+<p>Das Modell ist eine <strong>GLB-Datei</strong> (ein 3D-Format für das Web). Sie entsteht in deiner Konstruktionssoftware oder in Blender und muss zwei Bedingungen erfüllen:</p>
+
+<ul>
+	<li><strong>Maßstab: 1 Einheit = 1 Meter.</strong> Die AR-Ansicht zeigt das Modell in genau der Größe, die in der Datei steht, und lässt es nicht skalieren. Eine Leiste, die 100&nbsp;cm lang ist, muss in der Datei <strong>1,00 lang</strong> sein (nicht 100 und nicht 1000). Stimmt der Maßstab nicht, zeigt das Handy die Leiste winzig oder riesig – und der ganze Zweck der Funktion ist verfehlt.</li>
+	<li><strong>Unkomprimiert exportieren.</strong> Beim Export <em>keine</em> Draco-, Meshopt- oder KTX2-Kompression einschalten. Diese Verfahren brauchen Hilfsdateien, die Google oder ein CDN ausliefern würden; das Plugin lädt bewusst nichts von Dritten nach (Datenschutz), ein komprimiertes Modell zeigt deshalb nur eine Fehlermeldung.</li>
+</ul>
+
+<div class="kasten merke">
+	<span class="titel">So prüfst du den Maßstab, bevor du hochlädst</span>
+	<p>In Blender: Szeneneinheiten auf <em>Meter</em>, Einheitenmaßstab 1,0, am Objekt <em>Skalierung anwenden</em> (Strg+A), dann in den Eigenschaften die Abmessung ablesen: Länge der Leiste = <strong>1,00&nbsp;m</strong>. Export als <em>glTF Binär (.glb)</em>, Kompression aus. Die endgültige Probe machst du später am Handy: Leiste an der Wand platzieren und mit einem Zollstock gegenprüfen (Kapitel unten, „Testen“).</p>
+</div>
+
+<p>Die Größe der Datei sollte einige Megabyte nicht überschreiten – sonst dauert das Laden am Handy zu lange. Optional kannst du zusätzlich eine <strong>USDZ-Datei</strong> für das iPhone bereitstellen; ohne sie erzeugt der Viewer sie dort selbst aus der GLB. Ein <strong>Posterbild</strong> wird gezeigt, bis das Modell geladen ist.</p>
+
+<h4>2. Hochladen und am Produkt hinterlegen</h4>
+
+<ol>
+	<li><span class="weg">Produkte → Produkt bearbeiten</span>, rechts die Box <strong>3D-Modell (AR)</strong>.</li>
+	<li>Bei <strong>GLB-Datei</strong> auf <em>Auswählen</em> klicken, die Datei in die Mediathek hochladen (oder eine vorhandene wählen) und <em>Diese Datei verwenden</em>. Die GLB ist Pflicht – ohne sie passiert nirgends etwas.</li>
+	<li>Optional <strong>USDZ-Datei</strong> und <strong>Posterbild</strong> ebenso.</li>
+	<li>Haken bei <strong>AR-Hinweis auf dieser Produktseite anzeigen</strong> setzen, wenn auf der Produktseite der Hinweis erscheinen soll. Ohne Haken bleibt die Produktseite unverändert; das Modell steht trotzdem auf der AR-Seite zur Auswahl.</li>
+	<li><em>Aktualisieren</em> klicken.</li>
+</ol>
+
+<div class="kasten info">
+	<span class="titel">Wer darf hochladen?</span>
+	<p>Nur <strong>Administratoren</strong> können GLB- und USDZ-Dateien in die Mediathek laden. Das Plugin prüft außerdem, ob der Inhalt wirklich zur Endung passt – eine umbenannte Datei wird abgewiesen. Die Metabox am Produkt sehen alle, die das Produkt bearbeiten dürfen; sie können vorhandene Dateien zuordnen.</p>
+</div>
+
+<h4>3. Die AR-Seite anlegen</h4>
+
+<ol>
+	<li><span class="weg">Seiten → Erstellen</span>: Titel zum Beispiel <em>An deiner Wand</em>, Adresse (Permalink) <em>an-deiner-wand</em>.</li>
+	<li>In den Inhalt den Shortcode <code>[l16_ar_ansicht]</code> einfügen (Block „Shortcode“ oder einfach als Text). Mehr gehört nicht auf die Seite.</li>
+	<li>Veröffentlichen.</li>
+	<li><span class="weg">Verwaltung → AR-Ansicht</span>: bei <strong>Ziel-Seite</strong> diese Seite wählen und speichern. Ohne Ziel-Seite erscheint der Hinweis auf keiner Produktseite; die Einstellungsseite warnt dann.</li>
+</ol>
+
+<p>Die Seite liest <code>?produkt=123</code> aus der Adresse, prüft Produkt und Modell und zeigt den Viewer mit dem Knopf <strong>An meiner Wand platzieren</strong>, einer kurzen Anleitung, Produktname, Preis, <em>In den Warenkorb</em> und <em>Zurück zum Produkt</em>. Ohne oder mit ungültiger Produktnummer zeigt sie stattdessen eine Auswahl aller Produkte mit Modell.</p>
+
+<h4>4. Einstellungen und Auswertung</h4>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Einstellung</th><th>Bedeutung</th></tr></thead>
+<tbody>
+<tr><td><strong>Funktion</strong></td><td>Schaltet Hinweis und AR-Seite insgesamt ein oder aus.</td></tr>
+<tr><td><strong>Ziel-Seite</strong></td><td>Die Seite mit dem Shortcode, auf die <em>Ja, zeig mal</em> führt.</td></tr>
+<tr><td><strong>Titel, Text, Knöpfe</strong></td><td>Die Texte des Hinweises. Leer gelassene Felder fallen auf die Standardtexte zurück.</td></tr>
+<tr><td><strong>Sperrdauer</strong></td><td>Tage, die der Hinweis nach <em>Nein, danke</em> oder dem Schließen-X auf <em>keiner</em> Produktseite mehr erscheint (Standard 7).</td></tr>
+<tr><td><strong>Verzögerung</strong></td><td>Sekunden bis zum Erscheinen – oder früher, sobald der Besucher scrollt (Standard 3).</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Darunter zeigt die Seite je Produkt, wie oft der Hinweis <strong>gezeigt</strong> wurde, wie oft <strong>Ja</strong> und <strong>Nein</strong> gewählt wurde, wie oft <strong>AR gestartet</strong> wurde (Antippen von <em>An meiner Wand platzieren</em>) und die <strong>Ja-Quote</strong> (Ja geteilt durch gezeigt). Die Zähler sind Tageszähler ohne IP-Adresse, Benutzer- oder Gerätedaten.</p>
+
+<div class="kasten merke">
+	<span class="titel">Wie der Hinweis sich merkt, dass jemand „Nein“ gesagt hat</span>
+	<p>Im Browser des Besuchers wird <strong>nur ein Zeitstempel</strong> gespeichert (<code>l16_ar_hint_dismissed</code> im lokalen Speicher), kein Cookie und keine Kennung. Nach <em>Ja</em> merkt sich der Browser nur für die laufende Sitzung, dass nicht noch einmal gefragt wird. Lässt der Browser das Speichern nicht zu, erscheint der Hinweis höchstens einmal pro Seitenaufruf.</p>
+</div>
+
+<h4>5. Testen</h4>
+
+<p>Probiere es vor dem Livegang einmal selbst am Handy aus:</p>
+
+<ol>
+	<li>Die AR-Seite mit <code>?produkt=</code> und der Nummer deines Produkts öffnen (die Nummer steht in der Adresszeile beim Bearbeiten des Produkts).</li>
+	<li><em>An meiner Wand platzieren</em> tippen, Kamera erlauben, die Leiste an der Wand platzieren und <strong>mit dem Zollstock nachmessen</strong>: 1,00&nbsp;m muss 1,00&nbsp;m sein. Zeigt die Vorderseite nicht in den Raum, das Modell in der Konstruktion um 180° um die senkrechte Achse drehen und neu exportieren.</li>
+	<li>Die Produktseite öffnen und etwa drei Sekunden warten: Der Hinweis fährt von unten ein. <em>Nein, danke</em> tippen, Seite neu laden – er bleibt weg.</li>
+</ol>
+
+<p>Eine ausführliche Testliste (iPhone, Android, Rechner, Sperrfrist, Seiten-Cache, Produkt ohne Modell) steht in <code>docs/ar-ansicht-testcheckliste.md</code>.</p>
+
+<div class="kasten achtung">
+	<span class="titel">Drei Dinge, die auf dem Server stimmen müssen</span>
+	<p><strong>Dateitypen:</strong> Der Webserver sollte <code>.glb</code> als <code>model/gltf-binary</code> und <code>.usdz</code> als <code>model/vnd.usdz+zip</code> ausliefern. Fehlt das (bei nginx und Apache häufig), erkennt das iPhone die USDZ-Datei unter Umständen nicht.<br>
+	<strong>Seiten-Cache:</strong> Der Hinweis selbst ist cache-sicher; die Entscheidung trifft der Browser. Die <em>AR-Seite</em> aber zeigt je nach <code>?produkt=…</code> etwas anderes. Der Cache muss die Adresse samt Parameter unterscheiden – oder die Seite vom Caching ausnehmen.<br>
+	<strong>Datenschutz:</strong> Model-viewer und die Schrift Nunito liegen lokal im Plugin; beim Aufruf geht nichts an Dritte. Beim Start von AR übernehmen allerdings Betriebssystem-Funktionen: auf dem iPhone Apples AR Quick Look, auf manchen Android-Geräten Googles Scene Viewer (dann wird die Adresse des Modells an Google übergeben). Das gehört in die Datenschutzerklärung; die rechtliche Einordnung prüfst du selbst oder mit deiner Datenschutzberatung.</p>
+</div>
+
 <h2 id="adm-preise"><span class="nr">D.9</span> Kalkulation und Preise</h2>
 
 <h3>Die Kalkulation eines Artikels ansehen</h3>
@@ -2381,6 +2470,9 @@
 <tr><td>QR-Links führen auf „Seite nicht gefunden“</td><td>Die Adressen sind nach einem Update nicht neu registriert</td><td>Auf der Druckerseite <strong>Adressen neu registrieren</strong>, oder Permalinks einmal speichern</td></tr>
 <tr><td>Automatische Mails kommen nicht an</td><td>Der Action Scheduler arbeitet nicht, oder der Mailversand des Hosters</td><td>WooCommerce → Status → Geplante Aktionen prüfen</td></tr>
 <tr><td>Ein Beleg lässt sich nicht ändern</td><td>Er ist festgeschrieben</td><td>Stornieren und neu erfassen (Kapitel D.10)</td></tr>
+<tr><td>Der AR-Hinweis erscheint auf keiner Produktseite</td><td>Funktion aus, keine Ziel-Seite gewählt, kein Modell am Produkt, Haken am Produkt fehlt – oder der Hinweis wurde am Gerät gesperrt oder das Gerät kann kein AR (Rechner zeigt ihn nie)</td><td>Kapitel D.8 „AR-Ansicht“; zum Testen den Zeitstempel <code>l16_ar_hint_dismissed</code> im Browser löschen</td></tr>
+<tr><td>Die AR-Seite zeigt „Das 3D-Modell konnte nicht geladen werden“</td><td>Die GLB ist komprimiert (Draco/Meshopt/KTX2), beschädigt oder zu groß</td><td>Unkomprimiert neu exportieren (Kapitel D.8 „AR-Ansicht“)</td></tr>
+<tr><td>In AR ist das Modell viel zu klein oder zu groß</td><td>Der Maßstab der GLB stimmt nicht (1 Einheit muss 1 m sein)</td><td>In der Konstruktion Maßstab korrigieren, neu exportieren, neu hochladen</td></tr>
 <tr><td>Ein Bambu-Drucker steht auf <em>Offline</em></td><td>Die Bridge auf dem Pi meldet sich nicht</td><td>Pi und Dienst prüfen (Kapitel D.15)</td></tr>
 <tr><td>„Drucker nicht erreichbar“ bei Bridge <em>Online</em></td><td>Der Pi findet den Drucker im lokalen Netz nicht</td><td>Drucker an? IP-Reservierung im Router? Zugangscode richtig?</td></tr>
 <tr><td>Eine Platte steht auf <em>Fehlgeschlagen</em></td><td>Der Slicer hat abgebrochen; der Grund steht unter dem Status</td><td>Ursache beheben, dann <strong>Erneut slicen</strong> (Kapitel D.15)</td></tr>
@@ -2395,7 +2487,7 @@
 </div>
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.14.0 ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.15.0 ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

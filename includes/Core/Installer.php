@@ -57,8 +57,11 @@ class Installer {
 	 * hochgeladen wurden. Die freie Farb-Texteingabe aus DB_VERSION 32
 	 * wird dadurch zu einer Auswahl aus diesem Katalog (siehe
 	 * BambuFilamentCatalogRepository).
+	 *
+	 * DB_VERSION 34: neue Tabelle ar_stats - anonyme Tageszähler der
+	 * AR-Ansicht (Banner gezeigt, Ja, Nein, AR gestartet je Produkt).
 	 */
-	const DB_VERSION = '33';
+	const DB_VERSION = '34';
 
 	/**
 	 * Aktivierungsroutine.
@@ -795,6 +798,9 @@ class Installer {
 
 		// --- Modul Konfigurator -------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Configurator\Schema::tables( $p, $charset_collate ) );
+
+		// --- Modul AR-Ansicht ---------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\ArView\Schema::tables( $p, $charset_collate ) );
 
 		// Migration: Die Druck-Warteschlange hiess zunächst DHL-spezifisch.
 		// Muss vor dbDelta laufen – sonst legt dbDelta die neuen, leeren
