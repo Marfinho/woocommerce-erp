@@ -147,7 +147,7 @@ class MailTemplate {
 		$subject = strtr( $subject, $placeholders );
 		$body    = strtr( $body, $placeholders );
 
-		$html = self::wrap_html( $body );
+		$html = self::wrap_html( $body, $subject );
 
 		$absender   = Settings::get( 'email_absender_name', get_bloginfo( 'name' ) );
 		$from_email = Settings::get( 'firma_email', get_bloginfo( 'admin_email' ) );
@@ -165,10 +165,27 @@ class MailTemplate {
 	 * Design: Lindenweg16 CI — zentriertes Logo, Cognac-Akzente,
 	 * heller Hintergrund, Footer mit Adresse.
 	 *
-	 * @param string $text Klartext-Inhalt.
+	 * Ein Theme kann das Layout über den Filter `lindenweg16_mail_html`
+	 * übernehmen (das Lindenweg16-Block-Theme tut das, damit alle Mails wie die
+	 * Website aussehen). Ohne Rückgabe bleibt dieses Layout.
+	 *
+	 * @param string $text    Klartext-Inhalt.
+	 * @param string $subject Betreff (für die Überschrift im Theme-Layout).
 	 * @return string Vollständiges HTML-Dokument.
 	 */
-	public static function wrap_html( $text ) {
+	public static function wrap_html( $text, $subject = '' ) {
+		/**
+		 * Erlaubt einem Theme, das komplette HTML der Mail zu liefern.
+		 *
+		 * @param string|null $html    null = Layout des Plugins verwenden.
+		 * @param string      $text    Klartext-Inhalt.
+		 * @param string      $subject Betreff.
+		 */
+		$custom = apply_filters( 'lindenweg16_mail_html', null, (string) $text, (string) $subject );
+		if ( is_string( $custom ) && '' !== $custom ) {
+			return $custom;
+		}
+
 		$firma     = esc_html( (string) Settings::get( 'firma_name' ) );
 		$farbe     = self::sanitize_color( Settings::get( 'ci_farbe', '#8B6914' ) );
 		$footer_txt = esc_html( (string) Settings::get( 'email_footer', '' ) );

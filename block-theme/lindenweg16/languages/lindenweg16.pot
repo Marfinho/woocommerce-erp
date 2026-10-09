@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-08T16:37:53+00:00\n"
+"POT-Creation-Date: 2026-10-09T06:10:28+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: lindenweg16\n"
@@ -206,6 +206,22 @@ msgstr ""
 
 #: inc/admin.php:156
 msgid "Farben und Schriften stellst du unter Design → Editor → Stile ein. Lädt der Website-Editor bei dir nicht (weiße Seite, 503-Fehler in der Konsole), bremst dein Hoster die vielen gleichzeitigen Anfragen – frag dort nach einem höheren Limit für gleichzeitige Anfragen bzw. PHP-Prozesse."
+msgstr ""
+
+#: inc/emails.php:337
+msgid "Anmeldung bestätigen"
+msgstr ""
+
+#: inc/emails.php:341
+msgid "Neues Passwort festlegen"
+msgstr ""
+
+#: inc/emails.php:345
+msgid "Zum Login"
+msgstr ""
+
+#: inc/emails.php:348
+msgid "Link öffnen"
 msgstr ""
 
 #. translators: %d: Anzahl der Sterne (1–5).

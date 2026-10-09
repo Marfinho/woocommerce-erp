@@ -413,6 +413,7 @@ function lindenweg16_product_card_markup(): string {
 
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/kundenstimmen.php';
+require_once get_template_directory() . '/inc/emails.php';
 
 if ( is_admin() ) {
 	require_once get_template_directory() . '/inc/admin.php';

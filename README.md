@@ -776,6 +776,16 @@ Stil und Skript lädt `EventsModule::braucht_assets()` nur, wo Events
 vorkommen: auf Eventseiten, auf der Startseite, wo das Widget aktiv ist oder
 der Shortcode im Inhalt steht.
 
+### E-Mail-Layout: das Theme gibt den Ton an
+
+Alle Mails des Plugins laufen über `MailTemplate::send()`. Das Layout baut
+`MailTemplate::wrap_html()` – außer ein Theme liefert es über den Filter
+`lindenweg16_mail_html` (Argumente: `null`, Klartext, Betreff). Das
+Lindenweg16-Block-Theme tut das: Dann sehen Plugin-Mails genauso aus wie die
+WooCommerce-Mails und die Website (Farben aus dem Website-Editor, Links
+klickbar, ein Link allein in einer Zeile wird zum Button). Ohne Theme bleibt
+das bisherige CI-Layout aus den Plugin-Einstellungen.
+
 ### Zwei Lagerverwaltungen, eine zuständig
 
 `includes/Modules/Inventory/` ist der ältere Bestand (Tabellen `lw16_produkte`,

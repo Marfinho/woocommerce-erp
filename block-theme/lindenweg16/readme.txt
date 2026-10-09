@@ -194,6 +194,20 @@ können (beim Hoster nachfragen).
 
 Abschalten: add_filter( 'lindenweg16_newsletter_enabled', '__return_false' );
 
+== E-Mails ==
+
+Alle E-Mails sehen aus wie die Website – ohne Plugin:
+
+* WooCommerce- und Germanized-Mails (Bestellbestätigung, Rechnung, Konto …): Farben kommen aus deiner Palette (Website-Editor → Stile → Farben), Rundungen, Pillen-Buttons, Bestellübersicht und Adressen als Karten, Preise in DM Mono. Die Farbeinstellungen unter WooCommerce → Einstellungen → E-Mails werden dabei vom Theme überschrieben. Im Kopf steht dein Website-Logo, solange dort kein eigenes Kopfbild gesetzt ist.
+* Reine Text-Mails (WordPress, z. B. Passwort zurücksetzen, die Newsletter-Bestätigung, andere Plugins) werden ins selbe Layout verpackt. Links werden klickbar, ein Link allein in einer Zeile wird zum Button.
+* Mails des Lindenweg16-ERP-Plugins übernehmen das Layout ebenfalls.
+
+Schriften: Mailprogramme zeigen Webfonts nur teilweise (z. B. Apple Mail). Sonst greift eine Systemschrift; Farben und Formen bleiben gleich. In Outlook für Windows erscheinen Rundungen eckig.
+
+Den Fußtext (z. B. Adresse) stellst du unter WooCommerce → Einstellungen → E-Mails → „Fußzeilentext“ ein.
+
+Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
+
 == Barrierefreiheit ==
 
 * Sichtbarer Fokusring in primary an allen bedienbaren Elementen
