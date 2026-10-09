@@ -212,7 +212,15 @@ Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
 
 Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimierung von LiteSpeed Cache aus (JS zusammenfassen/verzögern, Unique CSS). Die Cart- und Checkout-Blöcke von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge und bleiben sonst im Ladezustand hängen. Alle anderen Seiten werden weiter optimiert.
 
-„Unique CSS“ (UCSS) von QUIC.cloud schaltet das Theme überall ab: UCSS behält nur die CSS-Regeln, die beim Erzeugen auf der Seite zu sehen waren. Handy-Menü, Mini-Cart, Filter und Hinweise fehlen dann, und eine veraltete UCSS-Datei lässt die ganze Seite ungestylt aussehen – besonders beim ersten Besuch, weil die „Gast-Optimierung“ UCSS dort erzwingt. LiteSpeed liefert stattdessen die normal zusammengefasste CSS-Datei aus. Wer UCSS trotzdem will: add_filter( 'lindenweg16_litespeed_ucss', '__return_true' );
+Einige LiteSpeed-Einstellungen gibt das Theme über LiteSpeeds eigene Filter vor; LiteSpeed zeigt sie in seinen Einstellungen als „per Filter festgelegt“ an:
+
+* Gast-Optimierung aus (der Gastmodus selbst bleibt an). Sie erzwang beim ersten Besuch JS verzögern und UCSS – mit JavaScript-Fehlern und ungestylter Seite.
+* Kein „Unique CSS“ (UCSS) und kein asynchrones CSS: UCSS behält nur das CSS, das beim Erzeugen sichtbar war; Handy-Menü, Mini-Cart und Filter fehlen dann.
+* JS nicht zusammenfassen, höchstens aufschieben (defer) statt verzögern.
+* Kein Lazy Load per JavaScript (auch nicht von Smush): WordPress lädt Bilder nativ nach und gibt dem Produktfoto Vorrang.
+* Emoji-Skript entfernt; Jetpacks WooCommerce-Analytics wird nicht minimiert (sonst „Loading chunk failed“).
+
+Alles andere – Cache, CSS/JS minimieren, Bildoptimierung, CDN – bleibt, wie es in LiteSpeed eingestellt ist. Anpassen oder abschalten über den Filter lindenweg16_litespeed_settings (siehe inc/litespeed.php).
 
 Nach einem Theme-Update in LiteSpeed Cache einmal „Alles leeren“ (Toolbox → Leeren → Alles leeren), sonst liefert der Cache noch die alten Seiten aus.
 
