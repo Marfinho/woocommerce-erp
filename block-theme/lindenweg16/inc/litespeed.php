@@ -31,6 +31,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  *   bleibt an.
  * - Kein UCSS: behält nur CSS, das beim Erzeugen sichtbar war – Handy-Menü,
  *   Mini-Cart, Filter und Hinweise fehlen dann.
+ * - CSS zusammenfassen: statt rund 30 einzelner Dateien eine, die das
+ *   Rendern blockiert – auf dem Handy spürbar früher sichtbar.
  * - Kein CSS asynchron: ohne fertiges Critical CSS blitzt die Seite ungestylt.
  * - JS nicht zusammenfassen und höchstens „aufschieben“ (defer), nicht
  *   „verzögern“: Die Interactivity-Module von WooCommerce und Inline-Skripte
@@ -50,6 +52,7 @@ function lindenweg16_litespeed_settings(): array {
 		'lindenweg16_litespeed_settings',
 		array(
 			'guest_optm'     => false,
+			'optm-css_comb'  => true,
 			'optm-ucss'      => false,
 			'optm-css_async' => false,
 			'optm-js_comb'   => false,

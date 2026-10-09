@@ -218,6 +218,7 @@ Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimi
 
 Einige LiteSpeed-Einstellungen gibt das Theme über LiteSpeeds eigene Filter vor; LiteSpeed zeigt sie in seinen Einstellungen als „per Filter festgelegt“ an:
 
+* CSS zusammenfassen an: eine Datei statt rund 30 blockiert das erste Bild kürzer.
 * Gast-Optimierung aus (der Gastmodus selbst bleibt an). Sie erzwang beim ersten Besuch JS verzögern und UCSS – mit JavaScript-Fehlern und ungestylter Seite.
 * Kein „Unique CSS“ (UCSS) und kein asynchrones CSS: UCSS behält nur das CSS, das beim Erzeugen sichtbar war; Handy-Menü, Mini-Cart und Filter fehlen dann.
 * JS nicht zusammenfassen, höchstens aufschieben (defer) statt verzögern.
@@ -251,6 +252,8 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.1.0 =
+* Meta-Beschreibung für Startseite, Shop, Produkte, Seiten und Kategorien (ohne SEO-Plugin); Text der Startseite unter Design → Lindenweg16
+* Schneller sichtbar: Einblend-Animation ohne Ausblenden (LCP), CSS zusammengefasst
 * Zahlungsarten im Footer unter Design → Lindenweg16 pflegbar
 * Farbschema passend zum Logo; alle Farben unter Design → Lindenweg16 anpassbar (mit Kontrastprüfung)
 * Fotos der Startseite (Hero, Kacheln) unter Design → Lindenweg16 wählbar

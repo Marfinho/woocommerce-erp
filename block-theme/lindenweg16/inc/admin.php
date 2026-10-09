@@ -162,6 +162,32 @@ function lindenweg16_save_payments(): void {
 add_action( 'admin_post_lindenweg16_save_payments', 'lindenweg16_save_payments' );
 
 /**
+ * Beschreibung für Google (Startseite) speichern.
+ */
+function lindenweg16_save_meta_description(): void {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+	}
+
+	check_admin_referer( 'lindenweg16_save_meta_description' );
+
+	$text = isset( $_POST['lw16_meta_description'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['lw16_meta_description'] ) ) : '';
+	$text = trim( preg_replace( '/\s+/u', ' ', $text ) );
+
+	if ( '' === $text || lindenweg16_default_front_description() === $text ) {
+		remove_theme_mod( 'lindenweg16_meta_description' );
+	} else {
+		set_theme_mod( 'lindenweg16_meta_description', $text );
+	}
+
+	do_action( 'litespeed_purge_all' );
+
+	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16', 'lw16-seo' => 'saved' ), admin_url( 'themes.php' ) ) . '#lw16-google' );
+	exit;
+}
+add_action( 'admin_post_lindenweg16_save_meta_description', 'lindenweg16_save_meta_description' );
+
+/**
  * Mediathek-Auswahl nur auf der Theme-Seite laden.
  *
  * @param string $hook Aktuelle Admin-Seite.
@@ -355,6 +381,28 @@ function lindenweg16_admin_page(): void {
 	);
 	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Zahlungsarten speichern', 'lindenweg16' ) . '</button> ';
 	echo '<button type="submit" name="lw16_reset_payments" value="1" class="button">' . esc_html__( 'Standard wiederherstellen', 'lindenweg16' ) . '</button></p></form>';
+	echo '</div>';
+
+
+	echo '<div class="card" id="lw16-google" style="max-width:760px">';
+	echo '<h2>' . esc_html__( 'Beschreibung für Google (Startseite)', 'lindenweg16' ) . '</h2>';
+	if ( 'saved' === ( isset( $_GET['lw16-seo'] ) ? sanitize_key( wp_unslash( (string) $_GET['lw16-seo'] ) ) : '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nur Anzeige.
+		echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Gespeichert.', 'lindenweg16' ) . '</p></div>';
+	}
+	if ( lindenweg16_has_seo_plugin() ) {
+		echo '<p>' . esc_html__( 'Ein SEO-Plugin ist aktiv – die Beschreibung pflegst du dort.', 'lindenweg16' ) . '</p>';
+	} else {
+		echo '<p>' . esc_html__( 'Dieser Text erscheint in Suchergebnissen unter dem Titel deiner Startseite. Ideal sind 120 bis 155 Zeichen. Produkte und Seiten bekommen automatisch ihre Kurzbeschreibung bzw. ihren Textanfang.', 'lindenweg16' ) . '</p>';
+		printf( '<form method="post" action="%s"><input type="hidden" name="action" value="lindenweg16_save_meta_description">', esc_url( admin_url( 'admin-post.php' ) ) );
+		wp_nonce_field( 'lindenweg16_save_meta_description' );
+		$current = (string) get_theme_mod( 'lindenweg16_meta_description', '' );
+		printf(
+			'<textarea name="lw16_meta_description" rows="3" class="large-text" maxlength="300" oninput="this.nextElementSibling.textContent=this.value.length+\' Zeichen\'">%1$s</textarea><p class="description">%2$s</p>',
+			esc_textarea( '' !== $current ? $current : lindenweg16_default_front_description() ),
+			esc_html( mb_strlen( '' !== $current ? $current : lindenweg16_default_front_description() ) . ' ' . __( 'Zeichen', 'lindenweg16' ) )
+		);
+		echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Beschreibung speichern', 'lindenweg16' ) . '</button></p></form>';
+	}
 	echo '</div>';
 
 	echo '<h2 style="margin-top:2em">' . esc_html__( 'Weitere Bereiche', 'lindenweg16' ) . '</h2>';

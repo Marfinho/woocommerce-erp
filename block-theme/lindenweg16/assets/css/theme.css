@@ -1031,6 +1031,12 @@ label {
  * Endzustand ist immer sichtbar (opacity: 1, kein transform).
  * ----------------------------------------------------------------------- */
 
+@keyframes lw-settle {
+	from {
+		transform: translateY(12px);
+	}
+}
+
 @keyframes lw-rise {
 	from {
 		opacity: 0;
@@ -1079,8 +1085,13 @@ label {
 	 * und Overlays darin (z. B. der mobile Shop-Filter) säßen im Abschnitt
 	 * statt über dem Fenster.
 	 */
+	/*
+	 * Beim Laden nur eine kleine Bewegung, keine Ausblendung: Inhalte mit
+	 * Deckkraft 0 zählen für Google nicht als sichtbar – das Hero-Foto (LCP)
+	 * erschien sonst erst nach der Animation.
+	 */
 	main > *:not(.lw16-no-reveal) {
-		animation: lw-rise var(--lw-slow) var(--lw-smooth) backwards;
+		animation: lw-settle var(--lw-slow) var(--lw-smooth) backwards;
 	}
 
 	main > *:nth-child(2) { animation-delay: 70ms; }
