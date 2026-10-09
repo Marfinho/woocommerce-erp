@@ -94,7 +94,7 @@
 						{
 							"fontFamily": "Bricolage Grotesque",
 							"fontStyle": "normal",
-							"fontWeight": "200 800",
+							"fontWeight": "600 800",
 							"fontDisplay": "swap",
 							"src": [ "file:./assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" ]
 						}
@@ -108,7 +108,7 @@
 						{
 							"fontFamily": "Inter",
 							"fontStyle": "normal",
-							"fontWeight": "100 900",
+							"fontWeight": "400 700",
 							"fontDisplay": "swap",
 							"src": [ "file:./assets/fonts/inter-latin-wght-normal.woff2" ]
 						}
