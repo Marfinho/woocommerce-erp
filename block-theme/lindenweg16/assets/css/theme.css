@@ -5122,3 +5122,46 @@ body div.wpforms-container-full .wpforms-form :is(button[type="submit"], .wpform
 	gap: 14px !important;
 	align-items: center;
 }
+
+/*
+ * Mein Konto: Formulare von Plugins (z. B. „Problem melden“ des ERP) setzen
+ * Felder ohne Breitenangabe in ihre Labels – jedes Feld war anders breit.
+ * Einheitlich: volle Breite bis 640px, Label darüber.
+ */
+.woocommerce-MyAccount-content form:not(.woocommerce-EditAccountForm):not(.woocommerce-address-fields) :is(input[type="text"], input[type="email"], input[type="tel"], input[type="url"], input[type="number"], input[type="password"], input[type="date"], select, textarea) {
+	display: block;
+	width: 100%;
+	max-width: 640px;
+	margin-top: 6px;
+	box-sizing: border-box;
+}
+
+.woocommerce-MyAccount-content form:not(.woocommerce-EditAccountForm):not(.woocommerce-address-fields) label {
+	display: block;
+	font-weight: 600;
+}
+
+.woocommerce-MyAccount-content form:not(.woocommerce-EditAccountForm):not(.woocommerce-address-fields) label > br {
+	display: none;
+}
+
+.woocommerce-MyAccount-content form textarea {
+	min-height: 160px;
+	resize: vertical;
+}
+
+/* Prämien (ERP): Guthaben und Punkte als runde Kacheln, Zahlen in Mono */
+.woocommerce-MyAccount-content .lw16-balance {
+	border: 0 !important;
+	border-radius: var(--lw-r-field) !important;
+	background: var(--lw-surface-muted) !important;
+}
+
+.woocommerce-MyAccount-content .lw16-balance-label {
+	color: var(--lw-text-muted);
+}
+
+.woocommerce-MyAccount-content .lw16-balance-value {
+	font-family: var(--lw-font-mono);
+	color: var(--lw-text);
+}
