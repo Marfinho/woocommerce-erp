@@ -137,6 +137,31 @@ function lindenweg16_save_colors(): void {
 add_action( 'admin_post_lindenweg16_save_colors', 'lindenweg16_save_colors' );
 
 /**
+ * Zahlungsarten im Footer speichern.
+ */
+function lindenweg16_save_payments(): void {
+	if ( ! current_user_can( 'edit_theme_options' ) ) {
+		wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+	}
+
+	check_admin_referer( 'lindenweg16_save_payments' );
+
+	if ( isset( $_POST['lw16_reset_payments'] ) ) {
+		remove_theme_mod( 'lindenweg16_payments' );
+	} else {
+		$raw   = isset( $_POST['lw16_payments'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['lw16_payments'] ) ) : '';
+		$items = array_values( array_filter( array_map( 'trim', explode( "\n", $raw ) ) ) );
+		set_theme_mod( 'lindenweg16_payments', array_slice( $items, 0, 20 ) );
+	}
+
+	do_action( 'litespeed_purge_all' );
+
+	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16', 'lw16-payments' => 'saved' ), admin_url( 'themes.php' ) ) . '#lw16-zahlungsarten' );
+	exit;
+}
+add_action( 'admin_post_lindenweg16_save_payments', 'lindenweg16_save_payments' );
+
+/**
  * Mediathek-Auswahl nur auf der Theme-Seite laden.
  *
  * @param string $hook Aktuelle Admin-Seite.
@@ -313,6 +338,23 @@ function lindenweg16_admin_page(): void {
 	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Farben speichern', 'lindenweg16' ) . '</button> ';
 	echo '<button type="submit" name="lw16_reset_colors" value="1" class="button" onclick="return confirm(\'' . esc_js( __( 'Alle Farben auf das Standardschema zurücksetzen?', 'lindenweg16' ) ) . '\')">' . esc_html__( 'Standardschema wiederherstellen', 'lindenweg16' ) . '</button></p></form>';
 	echo '<p class="description">' . esc_html__( 'Hast du im Website-Editor unter Stile eigene Farben gesetzt, gehen diese vor.', 'lindenweg16' ) . '</p>';
+	echo '</div>';
+
+
+	echo '<div class="card" id="lw16-zahlungsarten" style="max-width:760px">';
+	echo '<h2>' . esc_html__( 'Zahlungsarten im Footer', 'lindenweg16' ) . '</h2>';
+	if ( 'saved' === ( isset( $_GET['lw16-payments'] ) ? sanitize_key( wp_unslash( (string) $_GET['lw16-payments'] ) ) : '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nur Anzeige.
+		echo '<div class="notice notice-success inline"><p>' . esc_html__( 'Gespeichert. Der Footer zeigt jetzt diese Zahlungsarten.', 'lindenweg16' ) . '</p></div>';
+	}
+	echo '<p>' . esc_html__( 'Eine Zahlungsart pro Zeile, in der gewünschten Reihenfolge. Leer lassen blendet die Pillen aus. Nenne nur, was im Shop wirklich angeboten wird.', 'lindenweg16' ) . '</p>';
+	printf( '<form method="post" action="%s"><input type="hidden" name="action" value="lindenweg16_save_payments">', esc_url( admin_url( 'admin-post.php' ) ) );
+	wp_nonce_field( 'lindenweg16_save_payments' );
+	printf(
+		'<textarea name="lw16_payments" rows="8" class="large-text code" style="max-width:360px">%s</textarea>',
+		esc_textarea( implode( "\n", lindenweg16_payment_methods() ) )
+	);
+	echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Zahlungsarten speichern', 'lindenweg16' ) . '</button> ';
+	echo '<button type="submit" name="lw16_reset_payments" value="1" class="button">' . esc_html__( 'Standard wiederherstellen', 'lindenweg16' ) . '</button></p></form>';
 	echo '</div>';
 
 	echo '<h2 style="margin-top:2em">' . esc_html__( 'Weitere Bereiche', 'lindenweg16' ) . '</h2>';

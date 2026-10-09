@@ -463,6 +463,30 @@ function lindenweg16_front_image( string $slot ): ?array {
 	);
 }
 
+/**
+ * Zahlungsarten für die Pillen im Footer – unter Design → Lindenweg16 pflegbar.
+ *
+ * @return string[]
+ */
+function lindenweg16_default_payment_methods(): array {
+	return array( 'PayPal', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'SEPA-Lastschrift', 'lindenweg16' ) );
+}
+
+/**
+ * Aktuelle Zahlungsarten (leer = keine Pillen).
+ *
+ * @return string[]
+ */
+function lindenweg16_payment_methods(): array {
+	$saved = get_theme_mod( 'lindenweg16_payments', null );
+
+	if ( ! is_array( $saved ) ) {
+		return lindenweg16_default_payment_methods();
+	}
+
+	return array_values( array_filter( array_map( 'sanitize_text_field', $saved ) ) );
+}
+
 require_once get_template_directory() . '/inc/colors.php';
 require_once get_template_directory() . '/inc/haster-logo.php';
 require_once get_template_directory() . '/inc/newsletter.php';

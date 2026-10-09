@@ -251,6 +251,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.1.0 =
+* Zahlungsarten im Footer unter Design → Lindenweg16 pflegbar
 * Farbschema passend zum Logo; alle Farben unter Design → Lindenweg16 anpassbar (mit Kontrastprüfung)
 * Fotos der Startseite (Hero, Kacheln) unter Design → Lindenweg16 wählbar
 * E-Mails im Look der Website
