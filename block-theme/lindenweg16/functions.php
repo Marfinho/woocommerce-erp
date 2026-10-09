@@ -464,6 +464,7 @@ function lindenweg16_front_image( string $slot ): ?array {
 }
 
 require_once get_template_directory() . '/inc/colors.php';
+require_once get_template_directory() . '/inc/haster-logo.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/kundenstimmen.php';
 require_once get_template_directory() . '/inc/emails.php';

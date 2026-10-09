@@ -19,9 +19,17 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 	<div class="wp-block-columns are-vertically-aligned-center lw16-hero__columns">
 		<!-- wp:column {"verticalAlignment":"center","width":"52%","layout":{"type":"flex","orientation":"vertical"}} -->
 		<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:52%">
-			<!-- wp:paragraph {"className":"is-style-sticker"} -->
-			<p class="is-style-sticker"><?php esc_html_e( 'Handgemacht in Haste', 'lindenweg16' ); ?></p>
-			<!-- /wp:paragraph -->
+			<!-- wp:group {"className":"lw16-hero__brand","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
+			<div class="wp-block-group lw16-hero__brand">
+				<!-- wp:html -->
+				<?php echo lindenweg16_haster_logo_svg( false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- festes SVG, Attribute escaped. ?>
+				<!-- /wp:html -->
+
+				<!-- wp:paragraph {"className":"is-style-sticker"} -->
+				<p class="is-style-sticker"><?php esc_html_e( 'Handgemacht in Haste', 'lindenweg16' ); ?></p>
+				<!-- /wp:paragraph -->
+			</div>
+			<!-- /wp:group -->
 
 			<!-- wp:heading {"level":1,"fontSize":"hero"} -->
 			<h1 class="wp-block-heading has-hero-font-size"><?php

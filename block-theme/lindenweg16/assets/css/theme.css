@@ -5047,3 +5047,78 @@ body div.wpforms-container-full .wpforms-form :is(button[type="submit"], .wpform
 .lw16-bento__tile:hover .lw16-photo img {
 	transform: rotate(-2deg) scale(1.04);
 }
+
+/*
+ * Haster-Haken-Logo (inc/haster-logo.php): Farben aus der Palette,
+ * Animation beim Laden – Achse wächst, Module rasten federnd ein,
+ * Schriftzug blendet auf. „backwards“: danach bleibt kein transform stehen.
+ */
+.lw16-hh {
+	display: block;
+	overflow: visible;
+}
+
+.lw16-hh__axis,
+.lw16-hh__word {
+	fill: var(--wp--preset--color--primary);
+}
+
+.lw16-hh__mod {
+	fill: var(--wp--preset--color--accent-1);
+}
+
+.lw16-hh--mark {
+	width: 56px;
+	height: 56px;
+	flex: none;
+}
+
+.lw16-hh--logo {
+	width: min(100%, 300px);
+	height: auto;
+	margin-inline: auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lw16-hh__axis {
+		transform-box: fill-box;
+		transform-origin: 50% 0;
+		animation: lw-hh-axis 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+	}
+
+	.lw16-hh__mod {
+		animation: lw-hh-mod 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+	}
+
+	.lw16-hh__mod--1 { animation-delay: 0.45s; --lw-hh-from: -44px; }
+	.lw16-hh__mod--2 { animation-delay: 0.65s; --lw-hh-from: 44px; }
+	.lw16-hh__mod--3 { animation-delay: 0.85s; --lw-hh-from: -44px; }
+
+	.lw16-hh__word {
+		animation: lw-hh-word 0.5s cubic-bezier(0.22, 1, 0.36, 1) 1.45s backwards;
+	}
+}
+
+@keyframes lw-hh-axis {
+	from { transform: scaleY(0); }
+}
+
+@keyframes lw-hh-mod {
+	from {
+		opacity: 0;
+		transform: translateX(var(--lw-hh-from, -44px));
+	}
+}
+
+@keyframes lw-hh-word {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+}
+
+/* Hero: Marke neben dem Sticker „Handgemacht in Haste“ */
+.lw16-hero__brand {
+	gap: 14px !important;
+	align-items: center;
+}
