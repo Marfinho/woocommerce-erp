@@ -10,6 +10,7 @@
  * @package Lindenweg16
  */
 
+$lindenweg16_photo = lindenweg16_front_image( 'hero' );
 $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
 ?>
 <!-- wp:group {"tagName":"section","align":"wide","className":"lw16-section lw16-hero","layout":{"type":"default"}} -->
@@ -18,9 +19,17 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 	<div class="wp-block-columns are-vertically-aligned-center lw16-hero__columns">
 		<!-- wp:column {"verticalAlignment":"center","width":"52%","layout":{"type":"flex","orientation":"vertical"}} -->
 		<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:52%">
-			<!-- wp:paragraph {"className":"is-style-sticker"} -->
-			<p class="is-style-sticker"><?php esc_html_e( 'Handgemacht in Haste', 'lindenweg16' ); ?></p>
-			<!-- /wp:paragraph -->
+			<!-- wp:group {"className":"lw16-hero__brand","layout":{"type":"flex","flexWrap":"nowrap","verticalAlignment":"center"}} -->
+			<div class="wp-block-group lw16-hero__brand">
+				<!-- wp:html -->
+				<?php echo lindenweg16_haster_logo_svg( false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- festes SVG, Attribute escaped. ?>
+				<!-- /wp:html -->
+
+				<!-- wp:paragraph {"className":"is-style-sticker"} -->
+				<p class="is-style-sticker"><?php esc_html_e( 'Handgemacht in Haste', 'lindenweg16' ); ?></p>
+				<!-- /wp:paragraph -->
+			</div>
+			<!-- /wp:group -->
 
 			<!-- wp:heading {"level":1,"fontSize":"hero"} -->
 			<h1 class="wp-block-heading has-hero-font-size"><?php
@@ -54,9 +63,15 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 		<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:48%">
 			<!-- wp:group {"className":"lw16-hero__media","backgroundColor":"accent-3","layout":{"type":"default"}} -->
 			<div class="wp-block-group lw16-hero__media has-accent-3-background-color has-background">
+<?php if ( $lindenweg16_photo ) : ?>
+				<!-- wp:image {"id":<?php echo (int) $lindenweg16_photo['id']; ?>,"sizeSlug":"large","linkDestination":"none","className":"lw16-hero__image lw16-photo"} -->
+				<figure class="wp-block-image size-large lw16-hero__image lw16-photo"><img src="<?php echo esc_url( $lindenweg16_photo['url'] ); ?>" alt="<?php echo esc_attr( '' !== $lindenweg16_photo['alt'] ? $lindenweg16_photo['alt'] : __( 'Der Haster Haken an der Wand', 'lindenweg16' ) ); ?>" class="wp-image-<?php echo (int) $lindenweg16_photo['id']; ?>" fetchpriority="high" decoding="async" sizes="(max-width: 781px) 92vw, 620px"/></figure>
+				<!-- /wp:image -->
+<?php else : ?>
 				<!-- wp:image {"sizeSlug":"full","linkDestination":"none","className":"lw16-hero__image"} -->
 				<figure class="wp-block-image size-full lw16-hero__image"><img width="1400" height="933" fetchpriority="high" src="<?php echo esc_url( get_theme_file_uri( 'assets/images/haster-haken-startseite.jpg' ) ); ?>" alt="<?php esc_attr_e( 'Der Haster Haken: Holzschiene mit Sonnenbrille, Ablage für Gels und Riegel sowie Trinkflasche', 'lindenweg16' ); ?>"/></figure>
 				<!-- /wp:image -->
+<?php endif; ?>
 
 				<!-- wp:paragraph {"className":"is-style-sticker lw16-hero__sticker lw16-hero__sticker--top lw16-icon lw16-icon--heart","backgroundColor":"accent-1"} -->
 				<p class="is-style-sticker lw16-hero__sticker lw16-hero__sticker--top lw16-icon lw16-icon--heart has-accent-1-background-color has-background"><?php esc_html_e( 'Handgemacht', 'lindenweg16' ); ?></p>

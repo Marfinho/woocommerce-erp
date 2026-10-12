@@ -75,6 +75,19 @@ function lindenweg16_setup(): void {
 add_action( 'after_setup_theme', 'lindenweg16_setup' );
 
 /**
+ * Versionsangabe für Theme-Dateien: Theme-Version plus Änderungszeit der
+ * Datei. Nach jedem Theme-Update ändert sich die Adresse, Browser und
+ * LiteSpeed laden die neue Fassung statt einer zwischengespeicherten.
+ *
+ * @param string $path Pfad relativ zum Theme.
+ */
+function lindenweg16_asset_version( string $path ): string {
+	$mtime = @filemtime( get_theme_file_path( $path ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- fehlt die Datei, gilt die Theme-Version.
+
+	return $mtime ? LINDENWEG16_VERSION . '.' . $mtime : LINDENWEG16_VERSION;
+}
+
+/**
  * Stylesheet und das kleine Skript (ohne jQuery) für das Frontend.
  */
 function lindenweg16_enqueue_assets(): void {
@@ -82,14 +95,14 @@ function lindenweg16_enqueue_assets(): void {
 		'lindenweg16-theme',
 		get_theme_file_uri( 'assets/css/theme.css' ),
 		array(),
-		LINDENWEG16_VERSION
+		lindenweg16_asset_version( 'assets/css/theme.css' )
 	);
 
 	wp_enqueue_script(
 		'lindenweg16-theme',
 		get_theme_file_uri( 'assets/js/theme.js' ),
 		array(),
-		LINDENWEG16_VERSION,
+		lindenweg16_asset_version( 'assets/js/theme.js' ),
 		array(
 			'in_footer' => true,
 			'strategy'  => 'defer',
@@ -411,8 +424,77 @@ function lindenweg16_product_card_markup(): string {
 <!-- /wp:woocommerce/product-template -->';
 }
 
+/**
+ * Bildplätze der Startseite, die unter Design → Lindenweg16 belegt werden.
+ *
+ * @return array<string, string> Platz => Bezeichnung.
+ */
+function lindenweg16_front_image_slots(): array {
+	return array(
+		'hero'   => __( 'Großes Bild oben (Hero)', 'lindenweg16' ),
+		'sets'   => __( 'Kachel „Sets“', 'lindenweg16' ),
+		'module' => __( 'Kachel „Module“', 'lindenweg16' ),
+	);
+}
+
+/**
+ * Gewähltes Foto für einen Bildplatz der Startseite.
+ *
+ * @param string $slot hero, sets oder module.
+ * @return array{id:int,url:string,alt:string}|null Null, solange keins gewählt ist – dann bleibt die Illustration.
+ */
+function lindenweg16_front_image( string $slot ): ?array {
+	$id = (int) get_theme_mod( 'lindenweg16_image_' . $slot, 0 );
+
+	if ( ! $id || ! wp_attachment_is_image( $id ) ) {
+		return null;
+	}
+
+	$url = wp_get_attachment_image_url( $id, 'large' );
+
+	if ( ! $url ) {
+		return null;
+	}
+
+	return array(
+		'id'  => $id,
+		'url' => $url,
+		'alt' => trim( (string) get_post_meta( $id, '_wp_attachment_image_alt', true ) ),
+	);
+}
+
+/**
+ * Zahlungsarten für die Pillen im Footer – unter Design → Lindenweg16 pflegbar.
+ *
+ * @return string[]
+ */
+function lindenweg16_default_payment_methods(): array {
+	return array( 'PayPal', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'SEPA-Lastschrift', 'lindenweg16' ) );
+}
+
+/**
+ * Aktuelle Zahlungsarten (leer = keine Pillen).
+ *
+ * @return string[]
+ */
+function lindenweg16_payment_methods(): array {
+	$saved = get_theme_mod( 'lindenweg16_payments', null );
+
+	if ( ! is_array( $saved ) ) {
+		return lindenweg16_default_payment_methods();
+	}
+
+	return array_values( array_filter( array_map( 'sanitize_text_field', $saved ) ) );
+}
+
+require_once get_template_directory() . '/inc/colors.php';
+require_once get_template_directory() . '/inc/haster-logo.php';
 require_once get_template_directory() . '/inc/newsletter.php';
 require_once get_template_directory() . '/inc/kundenstimmen.php';
+require_once get_template_directory() . '/inc/emails.php';
+require_once get_template_directory() . '/inc/litespeed.php';
+require_once get_template_directory() . '/inc/performance.php';
+require_once get_template_directory() . '/inc/seo.php';
 
 if ( is_admin() ) {
 	require_once get_template_directory() . '/inc/admin.php';

@@ -34,3 +34,11 @@ Die Lizenztexte liegen daneben:
 
 Die OFL erlaubt Nutzung, Einbettung und Weitergabe mit dem Theme, auch
 kommerziell.
+
+
+## Zugeschnitten (Ladezeit)
+
+Inter auf die Gewichte 400–700 und Bricolage Grotesque auf 600–800 begrenzt
+(mehr nutzt das Theme nicht) und auf westeuropäische Zeichen reduziert
+(Latin-1 + Latin Extended-A, €, typografische Anführungszeichen, Pfeile).
+Zusammen 55 statt 87 KB. Erzeugt mit fontTools (instancer + subset).

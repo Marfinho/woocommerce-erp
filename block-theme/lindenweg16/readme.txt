@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -37,13 +37,17 @@ Animationen. Die Texte duzen, die Preise stehen in Euro inkl. MwSt.
 Die Startseite (front-page) wird automatisch verwendet. Du brauchst dafür
 keine eigene Seite anzulegen.
 
-== Farben eintragen ==
+== Farben ==
 
-Website-Editor → Stile → Farben → Palette.
+Design → Lindenweg16 → Farben. Ohne Website-Editor; das Theme warnt dort,
+wenn eine Kombination schlecht lesbar wird, und „Standardschema
+wiederherstellen“ setzt alles zurück. (Im Website-Editor unter Stile →
+Farben → Palette gesetzte Farben gehen vor.)
 
-Dort stehen genau diese Rollen. Im Theme stehen nur neutrale
-Graustufen als Platzhalter. Ersetze sie durch deine Farben – das ganze
-Theme verwendet ausschließlich diese Rollen, nirgends feste Farbwerte.
+Das Standardschema passt zum Logo: Schiefergrau #3a424c als Hauptfarbe,
+warmes Papierweiß, Akzente in Eichenhonig, Nussbaum, hellem Schiefer und
+Ton. Das ganze Theme verwendet ausschließlich diese Rollen, nirgends feste
+Farbwerte – auch die E-Mails.
 
 * background – Seitenhintergrund
 * surface – Karten, Felder
@@ -69,7 +73,7 @@ erreichen – text, text-muted und primary auf background, surface und
 surface-muted; on-primary auf primary; on-accent auf accent-1 bis
 accent-4; sale auf surface; on-primary auf sale; error auf surface;
 on-ink auf ink. accent-2 (Sterne) auf surface braucht mindestens 3:1.
-Die Platzhalter-Graustufen erfüllen das alle.
+Das Standardschema erfüllt das alle.
 
 Dark Mode (optional): In assets/css/theme.css steht unter
 „0. Kurznamen und Dark Mode“ ein auskommentierter Block mit
@@ -124,9 +128,9 @@ Die Startseite nutzt Hero, Vertrauensleiste, Kategorien,
 Produkt-Highlights, So einfach geht’s, Kundenstimmen, FAQ, Newsletter und CTA.
 Ändern: Website-Editor → Templates → Startseite.
 
-Die Bilder in Hero und Kacheln sind Strichzeichnungen als Platzhalter.
-Ersetze sie im Editor durch deine Produktfotos (Hero-Bild am besten im
-Format 6:5).
+Die Bilder in Hero und Kacheln sind Strichzeichnungen, bis du unter
+Design → Lindenweg16 → Fotos der Startseite eigene Fotos wählst (Hero am
+besten quadratisch oder hochkant).
 
 == Templates ==
 
@@ -194,6 +198,39 @@ können (beim Hoster nachfragen).
 
 Abschalten: add_filter( 'lindenweg16_newsletter_enabled', '__return_false' );
 
+== E-Mails ==
+
+Alle E-Mails sehen aus wie die Website – ohne Plugin:
+
+* WooCommerce- und Germanized-Mails (Bestellbestätigung, Rechnung, Konto …): Farben kommen aus deiner Palette (Design → Lindenweg16 → Farben), Rundungen, Pillen-Buttons, Bestellübersicht und Adressen als Karten, Preise in DM Mono. Die Farbeinstellungen unter WooCommerce → Einstellungen → E-Mails werden dabei vom Theme überschrieben. Im Kopf steht dein Website-Logo, solange dort kein eigenes Kopfbild gesetzt ist.
+* Reine Text-Mails (WordPress, z. B. Passwort zurücksetzen, die Newsletter-Bestätigung, andere Plugins) werden ins selbe Layout verpackt. Links werden klickbar, ein Link allein in einer Zeile wird zum Button.
+* Mails des Lindenweg16-ERP-Plugins übernehmen das Layout ebenfalls.
+* HTML-Mails anderer Plugins (Complianz, Formular-Plugins …): Das Theme nimmt nur den Inhalt und setzt ihn in den Lindenweg16-Rahmen – fremde Farben, Breiten und Hintergründe fallen weg. WPForms wird dafür auf seine Klartext-Vorlage gestellt.
+* Unverändert bleiben nur multipart-Mails (z. B. Newsletter-Dienste mit Text- und HTML-Teil). Belege, die PayPal oder Stripe selbst verschicken, kommen von deren Servern und lassen sich nicht gestalten.
+
+Schriften: Mailprogramme zeigen Webfonts nur teilweise (z. B. Apple Mail). Sonst greift eine Systemschrift; Farben und Formen bleiben gleich. In Outlook für Windows erscheinen Rundungen eckig.
+
+Den Fußtext (z. B. Adresse) stellst du unter WooCommerce → Einstellungen → E-Mails → „Fußzeilentext“ ein.
+
+Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
+
+== Caching (LiteSpeed Cache) ==
+
+Warenkorb, Kasse und Mein Konto nimmt das Theme automatisch von der Seitenoptimierung von LiteSpeed Cache aus (JS zusammenfassen/verzögern, Unique CSS). Die Cart- und Checkout-Blöcke von WooCommerce brauchen ihre Skripte in der richtigen Reihenfolge und bleiben sonst im Ladezustand hängen. Alle anderen Seiten werden weiter optimiert.
+
+Einige LiteSpeed-Einstellungen gibt das Theme über LiteSpeeds eigene Filter vor; LiteSpeed zeigt sie in seinen Einstellungen als „per Filter festgelegt“ an:
+
+* CSS zusammenfassen an: eine Datei statt rund 30 blockiert das erste Bild kürzer.
+* Gast-Optimierung aus (der Gastmodus selbst bleibt an). Sie erzwang beim ersten Besuch JS verzögern und UCSS – mit JavaScript-Fehlern und ungestylter Seite.
+* Kein „Unique CSS“ (UCSS) und kein asynchrones CSS: UCSS behält nur das CSS, das beim Erzeugen sichtbar war; Handy-Menü, Mini-Cart und Filter fehlen dann.
+* JS nicht zusammenfassen, höchstens aufschieben (defer) statt verzögern.
+* Kein Lazy Load per JavaScript (auch nicht von Smush): WordPress lädt Bilder nativ nach und gibt dem Produktfoto Vorrang.
+* Emoji-Skript entfernt; Jetpacks WooCommerce-Analytics wird nicht minimiert (sonst „Loading chunk failed“).
+
+Alles andere – Cache, CSS/JS minimieren, Bildoptimierung, CDN – bleibt, wie es in LiteSpeed eingestellt ist. Anpassen oder abschalten über den Filter lindenweg16_litespeed_settings (siehe inc/litespeed.php).
+
+Nach einem Theme-Update in LiteSpeed Cache einmal „Alles leeren“ (Toolbox → Leeren → Alles leeren), sonst liefert der Cache noch die alten Seiten aus.
+
 == Barrierefreiheit ==
 
 * Sichtbarer Fokusring in primary an allen bedienbaren Elementen
@@ -215,6 +252,18 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.1.0 =
+* Alle Mails im CI: auch HTML-Mails anderer Plugins bekommen den Lindenweg16-Rahmen
+* Meta-Beschreibung für Startseite, Shop, Produkte, Seiten und Kategorien (ohne SEO-Plugin); Text der Startseite unter Design → Lindenweg16
+* Schneller sichtbar: Einblend-Animation ohne Ausblenden (LCP), CSS zusammengefasst
+* Zahlungsarten im Footer unter Design → Lindenweg16 pflegbar
+* Farbschema passend zum Logo; alle Farben unter Design → Lindenweg16 anpassbar (mit Kontrastprüfung)
+* Fotos der Startseite (Hero, Kacheln) unter Design → Lindenweg16 wählbar
+* E-Mails im Look der Website
+* LiteSpeed: Vorgaben gegen JavaScript-Fehler und ungestylte Seiten, schnellere Bilder
+* Optik-Korrekturen in Shop, Warenkorb, Kasse, Konto und Handy-Menü
+* CSS und JS bekommen nach jedem Update eine neue Adresse (kein veralteter Browser-Cache)
 
 = 1.0.0 =
 * Erste Version.

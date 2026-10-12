@@ -17,25 +17,25 @@
 			"defaultDuotone": false,
 			"link": true,
 			"palette": [
-				{ "slug": "background", "name": "Seitenhintergrund", "color": "#f4f4f4" },
+				{ "slug": "background", "name": "Seitenhintergrund", "color": "#f4f2ee" },
 				{ "slug": "surface", "name": "Fläche (Karten, Felder)", "color": "#ffffff" },
-				{ "slug": "surface-muted", "name": "Fläche gedämpft (Felder, Chips)", "color": "#ebebeb" },
-				{ "slug": "text", "name": "Text", "color": "#1c1c1c" },
-				{ "slug": "text-muted", "name": "Text gedämpft", "color": "#595959" },
-				{ "slug": "line", "name": "Linie", "color": "#d6d6d6" },
-				{ "slug": "primary", "name": "Primär", "color": "#2e2e2e" },
+				{ "slug": "surface-muted", "name": "Fläche gedämpft (Felder, Chips)", "color": "#eae6df" },
+				{ "slug": "text", "name": "Text", "color": "#22282f" },
+				{ "slug": "text-muted", "name": "Text gedämpft", "color": "#59626c" },
+				{ "slug": "line", "name": "Linie", "color": "#d9d4cb" },
+				{ "slug": "primary", "name": "Primär", "color": "#3a424c" },
 				{ "slug": "on-primary", "name": "Schrift auf Primär", "color": "#ffffff" },
-				{ "slug": "accent-1", "name": "Akzent 1", "color": "#dedede" },
-				{ "slug": "accent-2", "name": "Akzent 2", "color": "#8a8a8a" },
-				{ "slug": "accent-3", "name": "Akzent 3", "color": "#c9c9c9" },
-				{ "slug": "accent-4", "name": "Akzent 4", "color": "#e8e8e8" },
-				{ "slug": "on-accent", "name": "Schrift auf Akzent", "color": "#1c1c1c" },
-				{ "slug": "sale", "name": "Angebot", "color": "#3b3b3b" },
-				{ "slug": "success", "name": "Erfolg", "color": "#4d4d4d" },
-				{ "slug": "warning", "name": "Warnung", "color": "#6e6e6e" },
-				{ "slug": "error", "name": "Fehler", "color": "#262626" },
-				{ "slug": "ink", "name": "Tinte (dunkle Fläche)", "color": "#1f1f1f" },
-				{ "slug": "on-ink", "name": "Schrift auf Tinte", "color": "#f7f7f7" }
+				{ "slug": "accent-1", "name": "Akzent 1", "color": "#e7c78f" },
+				{ "slug": "accent-2", "name": "Akzent 2", "color": "#a86f38" },
+				{ "slug": "accent-3", "name": "Akzent 3", "color": "#c8d2d7" },
+				{ "slug": "accent-4", "name": "Akzent 4", "color": "#e8b9a1" },
+				{ "slug": "on-accent", "name": "Schrift auf Akzent", "color": "#22282f" },
+				{ "slug": "sale", "name": "Angebot", "color": "#b0452e" },
+				{ "slug": "success", "name": "Erfolg", "color": "#2f7550" },
+				{ "slug": "warning", "name": "Warnung", "color": "#94590a" },
+				{ "slug": "error", "name": "Fehler", "color": "#b3261e" },
+				{ "slug": "ink", "name": "Tinte (dunkle Fläche)", "color": "#2b323a" },
+				{ "slug": "on-ink", "name": "Schrift auf Tinte", "color": "#f4f2ee" }
 			]
 		},
 		"shadow": {
@@ -94,7 +94,7 @@
 						{
 							"fontFamily": "Bricolage Grotesque",
 							"fontStyle": "normal",
-							"fontWeight": "200 800",
+							"fontWeight": "600 800",
 							"fontDisplay": "swap",
 							"src": [ "file:./assets/fonts/bricolage-grotesque-latin-wght-normal.woff2" ]
 						}
@@ -108,7 +108,7 @@
 						{
 							"fontFamily": "Inter",
 							"fontStyle": "normal",
-							"fontWeight": "100 900",
+							"fontWeight": "400 700",
 							"fontDisplay": "swap",
 							"src": [ "file:./assets/fonts/inter-latin-wght-normal.woff2" ]
 						}

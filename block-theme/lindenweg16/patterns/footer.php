@@ -41,7 +41,7 @@ $lindenweg16_links = array(
 	),
 );
 
-$lindenweg16_payments = array( 'PayPal', 'Klarna', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'Vorkasse', 'lindenweg16' ) );
+$lindenweg16_payments = lindenweg16_payment_methods(); // Design → Lindenweg16 → Zahlungsarten.
 ?>
 <!-- wp:group {"tagName":"div","className":"lw16-footer","layout":{"type":"constrained"}} -->
 <div class="wp-block-group lw16-footer">
@@ -71,6 +71,7 @@ $lindenweg16_payments = array( 'PayPal', 'Klarna', 'Visa', 'Mastercard', 'Apple 
 	</div>
 	<!-- /wp:columns -->
 
+<?php if ( $lindenweg16_payments ) : ?>
 	<!-- wp:group {"align":"wide","className":"lw16-payments","layout":{"type":"flex","flexWrap":"wrap"}} -->
 	<div class="wp-block-group alignwide lw16-payments">
 <?php foreach ( $lindenweg16_payments as $lindenweg16_payment ) : ?>
@@ -80,6 +81,7 @@ $lindenweg16_payments = array( 'PayPal', 'Klarna', 'Visa', 'Mastercard', 'Apple 
 <?php endforeach; ?>
 	</div>
 	<!-- /wp:group -->
+<?php endif; ?>
 
 	<!-- wp:group {"align":"wide","className":"lw16-footer__bottom","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
 	<div class="wp-block-group alignwide lw16-footer__bottom">

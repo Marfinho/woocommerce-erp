@@ -257,3 +257,16 @@ function lindenweg16_exclude_header_from_block_hooks( array $patterns ): array {
 	return $patterns;
 }
 add_filter( 'woocommerce_hooked_blocks_pattern_exclude_list', 'lindenweg16_exclude_header_from_block_hooks' );
+
+/**
+ * WooCommerce braucht für seine Interactivity-Stores die REST-Basis-URL.
+ * Auf Seiten ohne Mini-Cart- oder Produkt-Button-Block (z. B. dem Warenkorb,
+ * wo der Mini-Cart ausgeblendet ist) fehlt sie, und der Warenkorb wird unter
+ * „undefinedwc/store/v1/cart“ abgefragt (404). Gleicher Wert wie bei WooCommerce.
+ */
+function lindenweg16_wc_interactivity_rest_url(): void {
+	if ( function_exists( 'wp_interactivity_state' ) ) {
+		wp_interactivity_state( 'woocommerce', array( 'restUrl' => get_rest_url() ) );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'lindenweg16_wc_interactivity_rest_url' );

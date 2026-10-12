@@ -15,6 +15,7 @@ $lindenweg16_tiles = array(
 		'size'  => 'half',
 		'color' => 'accent-1',
 		'image' => 'kachel-sets.svg',
+		'slot'  => 'sets',
 		'title' => __( 'Sets', 'lindenweg16' ),
 		'text'  => __( 'Fertig zusammengestellt: Schiene und passende Module in einem Paket. Auspacken, anschrauben, losfahren.', 'lindenweg16' ),
 		'url'   => lindenweg16_category_url( 'sets' ),
@@ -23,6 +24,7 @@ $lindenweg16_tiles = array(
 		'size'  => 'half',
 		'color' => 'accent-3',
 		'image' => 'kachel-module.svg',
+		'slot'  => 'module',
 		'title' => __( 'Module', 'lindenweg16' ),
 		'text'  => __( 'Einzeln nachrüsten, wann du willst – jedes Modul passt auf jede Haster-Haken-Schiene.', 'lindenweg16' ),
 		'url'   => lindenweg16_category_url( 'module' ),
@@ -46,6 +48,7 @@ $lindenweg16_tiles = array(
 	<div class="wp-block-group lw16-bento">
 <?php foreach ( $lindenweg16_tiles as $lindenweg16_tile ) : ?>
 <?php
+	$lindenweg16_photo = lindenweg16_front_image( $lindenweg16_tile['slot'] );
 	$lindenweg16_class = 'lw16-bento__tile' . ( $lindenweg16_tile['size'] ? ' lw16-bento__tile--' . $lindenweg16_tile['size'] : '' );
 ?>
 		<!-- wp:group {"className":"<?php echo esc_attr( $lindenweg16_class ); ?>","backgroundColor":"<?php echo esc_attr( $lindenweg16_tile['color'] ); ?>","layout":{"type":"default"}} -->
@@ -61,9 +64,15 @@ $lindenweg16_tiles = array(
 			</div>
 			<!-- /wp:group -->
 
+<?php if ( $lindenweg16_photo ) : ?>
+			<!-- wp:image {"id":<?php echo (int) $lindenweg16_photo['id']; ?>,"sizeSlug":"large","linkDestination":"none","className":"lw16-photo"} -->
+			<figure class="wp-block-image size-large lw16-photo"><img src="<?php echo esc_url( $lindenweg16_photo['url'] ); ?>" alt="" class="wp-image-<?php echo (int) $lindenweg16_photo['id']; ?>" loading="lazy" decoding="async" sizes="(max-width: 781px) 40vw, 240px"/></figure>
+			<!-- /wp:image -->
+<?php else : ?>
 			<!-- wp:image {"sizeSlug":"full","linkDestination":"none"} -->
 			<figure class="wp-block-image size-full"><img src="<?php echo esc_url( get_theme_file_uri( 'assets/images/' . $lindenweg16_tile['image'] ) ); ?>" alt=""/></figure>
 			<!-- /wp:image -->
+<?php endif; ?>
 		</div>
 		<!-- /wp:group -->
 <?php endforeach; ?>
