@@ -202,9 +202,11 @@ Abschalten: add_filter( 'lindenweg16_newsletter_enabled', '__return_false' );
 
 Alle E-Mails sehen aus wie die Website – ohne Plugin:
 
-* WooCommerce- und Germanized-Mails (Bestellbestätigung, Rechnung, Konto …): Farben kommen aus deiner Palette (Website-Editor → Stile → Farben), Rundungen, Pillen-Buttons, Bestellübersicht und Adressen als Karten, Preise in DM Mono. Die Farbeinstellungen unter WooCommerce → Einstellungen → E-Mails werden dabei vom Theme überschrieben. Im Kopf steht dein Website-Logo, solange dort kein eigenes Kopfbild gesetzt ist.
+* WooCommerce- und Germanized-Mails (Bestellbestätigung, Rechnung, Konto …): Farben kommen aus deiner Palette (Design → Lindenweg16 → Farben), Rundungen, Pillen-Buttons, Bestellübersicht und Adressen als Karten, Preise in DM Mono. Die Farbeinstellungen unter WooCommerce → Einstellungen → E-Mails werden dabei vom Theme überschrieben. Im Kopf steht dein Website-Logo, solange dort kein eigenes Kopfbild gesetzt ist.
 * Reine Text-Mails (WordPress, z. B. Passwort zurücksetzen, die Newsletter-Bestätigung, andere Plugins) werden ins selbe Layout verpackt. Links werden klickbar, ein Link allein in einer Zeile wird zum Button.
 * Mails des Lindenweg16-ERP-Plugins übernehmen das Layout ebenfalls.
+* HTML-Mails anderer Plugins (Complianz, Formular-Plugins …): Das Theme nimmt nur den Inhalt und setzt ihn in den Lindenweg16-Rahmen – fremde Farben, Breiten und Hintergründe fallen weg. WPForms wird dafür auf seine Klartext-Vorlage gestellt.
+* Unverändert bleiben nur multipart-Mails (z. B. Newsletter-Dienste mit Text- und HTML-Teil). Belege, die PayPal oder Stripe selbst verschicken, kommen von deren Servern und lassen sich nicht gestalten.
 
 Schriften: Mailprogramme zeigen Webfonts nur teilweise (z. B. Apple Mail). Sonst greift eine Systemschrift; Farben und Formen bleiben gleich. In Outlook für Windows erscheinen Rundungen eckig.
 
@@ -252,6 +254,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.1.0 =
+* Alle Mails im CI: auch HTML-Mails anderer Plugins bekommen den Lindenweg16-Rahmen
 * Meta-Beschreibung für Startseite, Shop, Produkte, Seiten und Kategorien (ohne SEO-Plugin); Text der Startseite unter Design → Lindenweg16
 * Schneller sichtbar: Einblend-Animation ohne Ausblenden (LCP), CSS zusammengefasst
 * Zahlungsarten im Footer unter Design → Lindenweg16 pflegbar

@@ -364,28 +364,74 @@ function lindenweg16_email_wrap( string $heading, string $body_html ): string {
 }
 
 /**
- * Ist die Mail schon HTML (oder ausdrücklich Text)? Dann bleibt sie, wie sie ist.
+ * Was für eine Mail ist das?
+ *
+ * - skip: schon im Lindenweg16-/WooCommerce-Layout, oder multipart (z. B.
+ *   Newsletter mit Text- und HTML-Teil) – bleibt, wie sie ist
+ * - html: HTML eines anderen Plugins – Inhalt wird neu verpackt
+ * - text: Klartext (auch wenn ausdrücklich als text/plain markiert)
  *
  * @param string|string[] $headers Header der Mail.
  * @param string          $message Inhalt.
  */
-function lindenweg16_email_has_explicit_type( $headers, string $message ): bool {
-	$headers = is_array( $headers ) ? implode( "\n", $headers ) : (string) $headers;
+function lindenweg16_email_kind( $headers, string $message ): string {
+	$header_text = is_array( $headers ) ? implode( "\n", $headers ) : (string) $headers;
 
-	if ( preg_match( '/content-type:\s*(text\/html|multipart\/|text\/plain)/i', $headers ) ) {
-		return true;
+	if ( preg_match( '/content-type:\s*multipart\//i', $header_text ) ) {
+		return 'skip';
 	}
 
-	if ( 'text/plain' !== apply_filters( 'wp_mail_content_type', 'text/plain' ) ) {
-		return true;
+	// WooCommerce-Mails (auch Germanized, Shiptastic, ERP) tragen dieses Gerüst.
+	if ( false !== strpos( $message, 'template_container' ) || false !== strpos( $message, 'lw16-mail' ) ) {
+		return 'skip';
 	}
 
-	return (bool) preg_match( '/<(html|body|table|p|div|br)[\s>\/]/i', $message );
+	$is_html = preg_match( '/content-type:\s*text\/html/i', $header_text )
+		|| 'text/html' === apply_filters( 'wp_mail_content_type', 'text/plain' )
+		|| preg_match( '/<(html|body|table|p|div|br|h[1-6]|ul|strong|a)[\s>\/]/i', $message );
+
+	return $is_html ? 'html' : 'text';
 }
 
 /**
- * Reine Text-Mails (WordPress, Newsletter-Bestätigung, andere Plugins) im
- * selben Design verschicken.
+ * Nutzbaren Inhalt aus der HTML-Mail eines anderen Plugins holen: nur den
+ * <body>, ohne Kopf, Stile, Skripte und ohne äußere Layout-Tabellen mit
+ * fester Breite und Hintergrund.
+ *
+ * @param string $html HTML der Mail.
+ */
+function lindenweg16_email_foreign_content( string $html ): string {
+	if ( preg_match( '#<body[^>]*>(.*)</body>#is', $html, $m ) ) {
+		$html = $m[1];
+	}
+
+	$html = preg_replace( '#<(head|style|script|title|meta)[^>]*>.*?</\1>#is', '', $html );
+	$html = preg_replace( '#<(meta|link)[^>]*>#i', '', (string) $html );
+	// Fremde Hintergründe, Breiten und Schriften raus – das Lindenweg16-Layout bestimmt.
+	$html = preg_replace( '#\s(bgcolor|background|width|align)="[^"]*"#i', '', (string) $html );
+	$html = preg_replace_callback(
+		'#\sstyle="([^"]*)"#i',
+		static function ( array $m ): string {
+			$keep = array();
+			foreach ( explode( ';', $m[1] ) as $rule ) {
+				$prop = strtolower( trim( (string) strtok( $rule, ':' ) ) );
+				if ( in_array( $prop, array( 'font-weight', 'font-style', 'text-decoration', 'text-align', 'vertical-align', 'white-space' ), true ) ) {
+					$keep[] = trim( $rule );
+				}
+			}
+			return $keep ? ' style="' . esc_attr( implode( ';', $keep ) ) . '"' : '';
+		},
+		(string) $html
+	);
+
+	return trim( (string) $html );
+}
+
+/**
+ * Alle Mails, die über wp_mail() gehen, im Lindenweg16-Design verschicken:
+ * Klartext (WordPress, ERP, andere Plugins) wird gestaltet, HTML anderer
+ * Plugins bekommt den Lindenweg16-Rahmen. Mails im WooCommerce-Layout
+ * bleiben unverändert.
  *
  * @param array<string, mixed> $args Argumente von wp_mail().
  * @return array<string, mixed>
@@ -398,25 +444,40 @@ function lindenweg16_email_wrap_plain( array $args ): array {
 	$message = (string) ( $args['message'] ?? '' );
 	$headers = $args['headers'] ?? array();
 
-	if ( '' === trim( $message ) || lindenweg16_email_has_explicit_type( $headers, $message ) ) {
+	if ( '' === trim( $message ) ) {
 		return $args;
 	}
 
+	$kind = lindenweg16_email_kind( $headers, $message );
+
 	/**
-	 * Filtert, ob eine Text-Mail ins E-Mail-Design verpackt wird.
+	 * Filtert, ob eine Mail ins E-Mail-Design verpackt wird.
 	 *
 	 * @param bool                 $wrap Verpacken?
 	 * @param array<string, mixed> $args Argumente von wp_mail().
+	 * @param string               $kind text, html oder skip.
 	 */
-	if ( ! apply_filters( 'lindenweg16_email_wrap_plain', true, $args ) ) {
+	if ( 'skip' === $kind || ! apply_filters( 'lindenweg16_email_wrap_plain', true, $args, $kind ) ) {
 		return $args;
 	}
 
-	$args['message'] = lindenweg16_email_wrap( (string) ( $args['subject'] ?? '' ), lindenweg16_email_text_to_html( $message ) );
+	$body = 'html' === $kind ? lindenweg16_email_foreign_content( $message ) : lindenweg16_email_text_to_html( $message );
 
+	if ( '' === trim( wp_strip_all_tags( $body ) ) ) {
+		return $args;
+	}
+
+	// „[Lindenweg16] Passwort zurücksetzen“ → Überschrift „Passwort zurücksetzen“ (der Betreff bleibt).
+	$heading = (string) preg_replace( '/^\s*\[[^\]]+\]\s*/u', '', (string) ( $args['subject'] ?? '' ) );
+
+	$args['message'] = lindenweg16_email_wrap( $heading, $body );
+
+	// Vorhandene Content-Type-Angaben ersetzen.
 	if ( is_array( $headers ) ) {
+		$headers = array_values( array_filter( $headers, static fn( $h ) => ! preg_match( '/^\s*content-type:/i', (string) $h ) ) );
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
 	} else {
+		$headers = preg_replace( '/^\s*content-type:.*$/im', '', (string) $headers );
 		$headers = trim( (string) $headers . "\nContent-Type: text/html; charset=UTF-8" );
 	}
 	$args['headers'] = $headers;
@@ -424,6 +485,23 @@ function lindenweg16_email_wrap_plain( array $args ): array {
 	return $args;
 }
 add_filter( 'wp_mail', 'lindenweg16_email_wrap_plain', 20 );
+
+/**
+ * WPForms: Benachrichtigungen als Klartext erzeugen lassen – das Theme
+ * verpackt sie dann im Lindenweg16-Design (statt WPForms' eigenem Layout).
+ *
+ * @param mixed  $value Einstellung.
+ * @param string $key   Name der Einstellung.
+ * @return mixed
+ */
+function lindenweg16_email_wpforms_template( $value, $key = '' ) {
+	if ( 'email-template' === $key && lindenweg16_email_design_enabled() ) {
+		return 'none';
+	}
+
+	return $value;
+}
+add_filter( 'wpforms_setting', 'lindenweg16_email_wpforms_template', 10, 2 );
 
 /**
  * Layout für die Mails des Lindenweg16-ERP-Plugins (MailTemplate).
