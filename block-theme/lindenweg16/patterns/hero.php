@@ -42,7 +42,7 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 			<!-- /wp:heading -->
 
 			<!-- wp:paragraph {"textColor":"text-muted","fontSize":"large"} -->
-			<p class="has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Eine Holzschiene, viele Module: Helm, Schloss, Handschuhe und Werkzeug bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour.', 'lindenweg16' ); ?></p>
+			<p class="has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Eine Holzschiene, viele Module: Sonnenbrille, Gels und Riegel, Trinkflasche und Co. bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour.', 'lindenweg16' ); ?></p>
 			<!-- /wp:paragraph -->
 
 			<!-- wp:buttons -->
@@ -69,7 +69,7 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 				<!-- /wp:image -->
 <?php else : ?>
 				<!-- wp:image {"sizeSlug":"full","linkDestination":"none","className":"lw16-hero__image"} -->
-				<figure class="wp-block-image size-full lw16-hero__image"><img src="<?php echo esc_url( get_theme_file_uri( 'assets/images/haster-haken-wand.svg' ) ); ?>" alt="<?php esc_attr_e( 'Der Haster Haken an der Wand: Holzschiene mit Helm, Bügelschloss und Handschuhen', 'lindenweg16' ); ?>"/></figure>
+				<figure class="wp-block-image size-full lw16-hero__image"><img width="1400" height="933" fetchpriority="high" src="<?php echo esc_url( get_theme_file_uri( 'assets/images/haster-haken-startseite.jpg' ) ); ?>" alt="<?php esc_attr_e( 'Der Haster Haken: Holzschiene mit Sonnenbrille, Ablage für Gels und Riegel sowie Trinkflasche', 'lindenweg16' ); ?>"/></figure>
 				<!-- /wp:image -->
 <?php endif; ?>
 

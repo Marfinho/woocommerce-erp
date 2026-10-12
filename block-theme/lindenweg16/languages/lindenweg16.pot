@@ -645,7 +645,7 @@ msgid "Haster Haken"
 msgstr ""
 
 #: patterns/hero.php:36
-msgid "Eine Holzschiene, viele Module: Helm, Schloss, Handschuhe und Werkzeug bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour."
+msgid "Eine Holzschiene, viele Module: Sonnenbrille, Gels und Riegel, Trinkflasche und Co. bekommen ihren festen Platz – direkt neben deinem Fahrrad. Kein Suchen mehr vor der Tour."
 msgstr ""
 
 #: patterns/hero.php:42
