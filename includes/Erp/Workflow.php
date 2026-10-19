@@ -412,7 +412,7 @@ class Workflow {
 	 * @param string $bambu_id Bambu-Drucker.
 	 * @return int
 	 */
-	protected static function device_for( $bambu_id ) {
+	public static function device_for( $bambu_id ) {
 		$bambu = BambuPrinterRepository::find_by_printer_id( $bambu_id );
 
 		if ( $bambu && (int) $bambu->geraet_id && PrinterRepository::find( (int) $bambu->geraet_id ) ) {

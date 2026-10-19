@@ -58,6 +58,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/drucker/(?P<id>[A-Za-z0-9_\-]+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'drucker_akte' ),
+				'permission_callback' => $this->needs( array( 'fertigung.druckfarm' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/dashboard',
 			array(
 				'methods'             => 'GET',
@@ -798,6 +808,24 @@ class RestApi {
 	protected function hpos_enabled() {
 		return class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' )
 			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+	}
+
+	/**
+	 * Akte eines Druckers.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function drucker_akte( WP_REST_Request $request ) {
+		$file = Screens::printer_file( (string) $request['id'] );
+
+		if ( null === $file ) {
+			return new WP_REST_Response( array( 'message' => __( 'Diesen Drucker gibt es nicht (mehr).', 'lindenweg16' ) ), 404 );
+		}
+
+		$file['now'] = time();
+
+		return new WP_REST_Response( $file );
 	}
 
 	/**

@@ -24,7 +24,10 @@ use Lindenweg16\Modules\Betrieb\Dhl\DhlClient;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlLabelRepository;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlProduct;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlShipping;
+use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
+use Lindenweg16\Modules\Betrieb\PrinterRepository;
+use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Production\DhlTracking;
 
 /**
@@ -132,10 +135,108 @@ class Screens {
 				'queue'     => (int) BambuJobRepository::count_queued( $printer->printer_id ),
 				'seen'      => $printer->last_seen_at ? strtotime( $printer->last_seen_at . ' UTC' ) : 0,
 				'snapshot'  => $snapshot,
+				'service'   => self::service_reasons( $printer->printer_id ),
 			);
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Fällige Wartung zu einem Bambu-Drucker (über das verknüpfte Gerät).
+	 *
+	 * @param string $bambu_id Bambu-Drucker.
+	 * @return string[]
+	 */
+	protected static function service_reasons( $bambu_id ) {
+		$device = Workflow::device_for( $bambu_id );
+		$row    = $device ? PrinterRepository::find( $device ) : null;
+
+		return $row ? MaintenanceRepository::reasons_for( $row ) : array();
+	}
+
+	/**
+	 * Die Akte eines Druckers: Live-Stand, aktuelle Platte, Verlauf, Wartung.
+	 *
+	 * @param string $bambu_id Bambu-Drucker.
+	 * @return array|null
+	 */
+	public static function printer_file( $bambu_id ) {
+		$printer = BambuPrinterRepository::find_by_printer_id( sanitize_key( (string) $bambu_id ) );
+
+		if ( ! $printer ) {
+			return null;
+		}
+
+		$live = array();
+		foreach ( self::printer_farm() as $row ) {
+			if ( $row['id'] === $printer->printer_id ) {
+				$live = $row;
+			}
+		}
+
+		$device   = Workflow::device_for( $printer->printer_id );
+		$row      = $device ? PrinterRepository::find( $device ) : null;
+		$history  = array();
+		$current  = null;
+		$week_min = 0.0;
+		$since    = gmdate( 'Y-m-d H:i:s', time() - 7 * DAY_IN_SECONDS );
+
+		foreach ( RunRepository::for_printer( $printer->printer_id, 25 ) as $run ) {
+			$lines = array();
+			foreach ( $run['items'] as $item ) {
+				$lines[] = (int) $item['qty'] . '× ' . ( isset( $item['name'] ) ? $item['name'] : '' );
+			}
+
+			if ( in_array( $run['status'], array( RunFlow::RUESTEN, RunFlow::DRUCKT, RunFlow::ZU_MELDEN ), true ) && ! $current ) {
+				$current = array( 'id' => (int) $run['id'], 'status' => $run['status'], 'text' => implode( ', ', $lines ) );
+			}
+
+			$minutes = Variance::run_minutes( $run );
+
+			if ( $minutes && (string) $run['reported_at'] >= $since ) {
+				$week_min += $minutes['print'];
+			}
+
+			$history[] = array(
+				'id'     => (int) $run['id'],
+				'status' => $run['status'],
+				'text'   => implode( ', ', $lines ),
+				'when'   => $run['reported_at'] ? strtotime( $run['reported_at'] . ' UTC' ) : ( $run['released_at'] ? strtotime( $run['released_at'] . ' UTC' ) : 0 ),
+				'plan'   => (int) $run['est_minutes'],
+				'actual' => $minutes ? (int) round( $minutes['print'] ) : null,
+			);
+		}
+
+		$log = array();
+		if ( $device ) {
+			foreach ( array_slice( MaintenanceRepository::for_printer( $device ), 0, 6 ) as $entry ) {
+				$log[] = array(
+					'on'   => $entry['performed_on'],
+					'type' => (string) $entry['interval_type'],
+					'part' => (string) $entry['part_replaced'],
+					'note' => (string) $entry['note'],
+				);
+			}
+		}
+
+		return array(
+			'id'       => $printer->printer_id,
+			'name'     => $printer->name,
+			'model'    => (string) $printer->printer_model,
+			'live'     => $live,
+			'current'  => $current,
+			'week_h'   => round( $week_min / 60, 1 ),
+			'service'  => $live ? $live['service'] : array(),
+			'log'      => $log,
+			'history'  => $history,
+			'device'   => $row ? array(
+				'code'   => (string) $row['code'],
+				'status' => (string) $row['status'],
+				'hours'  => round( PrintJobRepository::operating_hours( $device ), 1 ),
+			) : null,
+			'linked'   => (bool) $device,
+		);
 	}
 
 	/**

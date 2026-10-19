@@ -638,3 +638,18 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 .task-cta { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; color: var(--text-muted); white-space: nowrap; }
 .task-cta .ico { width: 16px; height: 16px; }
 .today-side .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ---------- Druckerakte ---------- */
+
+.back { margin-bottom: 4px; }
+.back .flip { transform: rotate(180deg); }
+.file { display: grid; gap: 14px; }
+@media (min-width: 1000px) { .file { grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); align-items: start; } }
+.file-col { display: grid; gap: 14px; align-content: start; }
+.bullets { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 4px; }
+.bullets.warn { color: var(--warning); }
+.svc { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--warning); margin-top: 8px; }
+.svc .ico { width: 15px; height: 15px; }
+.more-link { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; font-size: 13px; text-decoration: none; margin-left: auto; }
+.more-link .ico { width: 14px; height: 14px; }
+.more-link:hover { text-decoration: underline; }

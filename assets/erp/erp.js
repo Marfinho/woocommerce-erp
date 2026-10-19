@@ -464,6 +464,7 @@
 			var f = findItem(r.id);
 			activeArea = f ? f.area.id : '';
 		}
+		if (r.name === 'drucker') { activeArea = 'produktion'; }
 
 		Array.prototype.forEach.call(el.app.querySelectorAll('[data-r]'), function (a) {
 			a.classList.toggle('active', a.getAttribute('data-r') === r.name);
@@ -556,6 +557,7 @@
 		}
 		if (r.name === 'seite') { return viewPage(r.id); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
+		if (r.name === 'drucker') { return viewPrinterFile(r.id); }
 		if (r.name === 'bestellung') { return viewShipOrder(parseInt(r.id, 10) || 0); }
 		return viewStart();
 	}
@@ -1367,9 +1369,44 @@
 		return 'vor ' + Math.round(s / 3600) + ' h';
 	}
 
+	function farmCard(p, now, withLink) {
+		var card = h('article', { class: 'printer st-' + p.status },
+			h('header', null, h('h3', null, p.name), h('span', { class: 'pill st-' + p.status }, p.text)),
+			p.model ? h('div', { class: 'muted', style: 'font-size:12.5px' }, p.model) : null
+		);
+
+		if (p.progress !== null) {
+			card.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt ' + p.name }, h('i', { style: 'width:' + p.progress + '%' })));
+			card.appendChild(h('div', { class: 'bar-txt' }, h('b', null, p.progress + ' %'), p.remaining !== null ? h('span', { class: 'muted' }, 'noch ' + p.remaining + ' min') : null));
+		}
+
+		if (p.nozzle !== null || p.bed !== null) {
+			card.appendChild(h('div', { class: 'temps' }, 'Düse ' + (p.nozzle !== null ? Math.round(p.nozzle) : '–') + ' °C · Bett ' + (p.bed !== null ? Math.round(p.bed) : '–') + ' °C'));
+		}
+
+		if (p.trays.length) {
+			card.appendChild(h('div', { class: 'trays' }, p.trays.map(function (tr) {
+				return h('span', { class: 'tray', title: tr.material + (tr.remain !== null ? ' · ' + tr.remain + ' %' : '') },
+					h('i', { style: 'background:' + tr.color }), tr.material, tr.remain !== null ? h('small', null, tr.remain + ' %') : null);
+			})));
+		}
+
+		if (p.snapshot) { card.appendChild(h('img', { class: 'snap', src: p.snapshot, alt: 'Kamera-Standbild ' + p.name, loading: 'lazy' })); }
+		if (p.error) { card.appendChild(h('div', { class: 'err' }, p.error)); }
+		if (p.service && p.service.length) { card.appendChild(h('div', { class: 'svc' }, ico('refresh'), p.service.length === 1 ? p.service[0] : p.service.length + ' Wartungen fällig')); }
+
+		card.appendChild(h('footer', null,
+			h('span', null, p.queue + ' wartend'),
+			h('span', { class: 'muted' }, 'Kontakt ' + ago(p.seen, now)),
+			withLink ? h('a', { class: 'more-link', href: '#/drucker/' + encodeURIComponent(p.id) }, 'Akte', ico('chev')) : null
+		));
+
+		return card;
+	}
+
 	function viewFarm(item) {
 		var kiosk = h('button', { class: 'btn', type: 'button', onclick: function () { el.app.classList.add('kiosk'); } }, 'Vollbild-Anzeige');
-		pageHead('Druckfarm', 'Live-Stand aller Bambu-Drucker – aktualisiert sich alle 5 Sekunden.', [kiosk, classicBtn(item)]);
+		pageHead('Drucker', 'Live-Stand aller Bambu-Drucker. Ein Klick auf „Akte“ zeigt Verlauf, Wartung und Verbindung.', [kiosk, classicBtn(item)]);
 
 		var grid = h('div', { class: 'farm' });
 		el.view.appendChild(grid);
@@ -1378,40 +1415,93 @@
 		function paint(d) {
 			grid.textContent = '';
 			if (!d.printers.length) { grid.appendChild(h('div', { class: 'notice' }, 'Noch kein Bambu-Drucker angelegt.')); return; }
-
-			d.printers.forEach(function (p) {
-				var card = h('article', { class: 'printer st-' + p.status },
-					h('header', null, h('h3', null, p.name), h('span', { class: 'pill st-' + p.status }, p.text)),
-					p.model ? h('div', { class: 'muted', style: 'font-size:12.5px' }, p.model) : null
-				);
-
-				if (p.progress !== null) {
-					card.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt ' + p.name }, h('i', { style: 'width:' + p.progress + '%' })));
-					card.appendChild(h('div', { class: 'bar-txt' }, h('b', null, p.progress + ' %'), p.remaining !== null ? h('span', { class: 'muted' }, 'noch ' + p.remaining + ' min') : null));
-				}
-
-				if (p.nozzle !== null || p.bed !== null) {
-					card.appendChild(h('div', { class: 'temps' }, 'Düse ' + (p.nozzle !== null ? Math.round(p.nozzle) : '–') + ' °C · Bett ' + (p.bed !== null ? Math.round(p.bed) : '–') + ' °C'));
-				}
-
-				if (p.trays.length) {
-					card.appendChild(h('div', { class: 'trays' }, p.trays.map(function (t) {
-						return h('span', { class: 'tray', title: t.material + (t.remain !== null ? ' · ' + t.remain + ' %' : '') },
-							h('i', { style: 'background:' + t.color }), t.material, t.remain !== null ? h('small', null, t.remain + ' %') : null);
-					})));
-				}
-
-				if (p.snapshot) { card.appendChild(h('img', { class: 'snap', src: p.snapshot, alt: 'Kamera-Standbild ' + p.name, loading: 'lazy' })); }
-				if (p.error) { card.appendChild(h('div', { class: 'err' }, p.error)); }
-
-				card.appendChild(h('footer', null, h('span', null, p.queue + ' wartend'), h('span', { class: 'muted' }, 'Kontakt ' + ago(p.seen, d.now))));
-				grid.appendChild(card);
-			});
+			d.printers.forEach(function (p) { grid.appendChild(farmCard(p, d.now, true)); });
 		}
 
 		function load() { return api('druckfarm').then(paint); }
 		load().catch(function (e) { grid.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 5000));
+	}
+
+	var RUN_TEXT = { freigegeben: 'bereit', ruesten: 'rüsten', druckt: 'im Druck', zu_melden: 'zu melden', erledigt: 'erledigt', abgebrochen: 'abgebrochen' };
+
+	function viewPrinterFile(id) {
+		var f = findItem('druckfarm');
+		setHead('Drucker', 'Produktion');
+		if (f) { renderSub(f); }
+
+		var box = h('div');
+		el.view.appendChild(h('a', { class: 'btn back', href: '#/seite/druckfarm' }, ico('chev', 'flip'), 'Alle Drucker'));
+		el.view.appendChild(box);
+
+		function load() {
+			return api('drucker/' + encodeURIComponent(id)).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function stat(label, value, sub) {
+			return h('div', { class: 'tile' }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, value), sub ? h('div', { class: 'muted', style: 'font-size:12px' }, sub) : null);
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			setHead(d.name, 'Drucker');
+
+			var stats = h('div', { class: 'grid tiles', style: 'margin:14px 0' },
+				stat('Diese Woche', d.week_h + ' h', 'Druckzeit gestempelt'),
+				stat('Aktuell', d.current ? 'Platte ' + d.current.id : 'frei', d.current ? d.current.text : 'nichts eingeplant'),
+				stat('Betriebsstunden', d.device ? d.device.hours + ' h' : '–', d.device ? 'Gerät ' + d.device.code : 'kein Gerät verknüpft'),
+				stat('Wartung', d.service.length ? d.service.length + ' fällig' : 'in Ordnung', d.service.length ? '' : 'nichts überfällig')
+			);
+
+			var left = h('div', { class: 'file-col' });
+			if (d.live && d.live.id) { left.appendChild(farmCard(d.live, d.now, false)); }
+			if (d.current) { left.appendChild(h('a', { class: 'btn primary', href: '#/platte/' + d.current.id }, 'Platte ' + d.current.id + ' öffnen')); }
+
+			var right = h('div', { class: 'file-col' });
+
+			var service = h('div', { class: 'card' }, h('h3', null, 'Wartung'));
+			if (d.service.length) {
+				service.appendChild(h('ul', { class: 'bullets warn' }, d.service.map(function (s) { return h('li', null, s); })));
+			} else {
+				service.appendChild(h('p', { class: 'muted' }, 'Nichts überfällig.'));
+			}
+			if (d.log.length) {
+				service.appendChild(h('table', { class: 'list' }, h('tbody', null, d.log.map(function (l) {
+					return h('tr', null, h('td', null, l.on), h('td', null, l.type), h('td', null, l.part || l.note || ''));
+				}))));
+			}
+			if (findItem('drucker')) { service.appendChild(h('a', { class: 'btn', href: '#/seite/drucker', style: 'margin-top:10px' }, 'Wartung erfassen')); }
+			right.appendChild(service);
+
+			var hist = h('div', { class: 'card' }, h('h3', null, 'Verlauf'));
+			if (!d.history.length) { hist.appendChild(h('p', { class: 'muted' }, 'Noch keine Platte auf diesem Drucker.')); }
+			else {
+				hist.appendChild(h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Platte'), h('th', null, 'Inhalt'), h('th', { class: 'num' }, 'Soll'), h('th', { class: 'num' }, 'Ist'), h('th', null, ''))),
+					h('tbody', null, d.history.map(function (r) {
+						return h('tr', null,
+							h('td', null, h('a', { href: '#/platte/' + r.id }, '#' + r.id), h('div', { class: 'muted', style: 'font-size:12px' }, r.when ? when(r.when) : '')),
+							h('td', null, r.text),
+							h('td', { class: 'num' }, r.plan ? minTxt(r.plan) : '–'),
+							h('td', { class: 'num' }, r.actual !== null ? minTxt(r.actual) : '–'),
+							h('td', null, h('span', { class: 'tag' + (r.status === 'erledigt' ? ' now' : '') }, RUN_TEXT[r.status] || r.status))
+						);
+					}))
+				));
+			}
+			right.appendChild(hist);
+
+			var conn = h('div', { class: 'card' }, h('h3', null, 'Verbindung'));
+			conn.appendChild(h('p', { class: d.linked ? 'muted' : '' }, d.linked ? 'Mit Gerät ' + d.device.code + ' verknüpft: Druckzeiten und Meldungen landen im Druckjournal.' : 'Mit keinem Gerät verknüpft. Ohne Verknüpfung lässt sich nichts ins Druckjournal buchen.'));
+			if (findItem('bambu')) { conn.appendChild(h('a', { class: 'btn', href: '#/seite/bambu' }, 'Verbindung bearbeiten')); }
+			right.appendChild(conn);
+
+			box.appendChild(stats);
+			box.appendChild(h('div', { class: 'file' }, left, right));
+		}
+
+		load();
+		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 10000));
 	}
 
 	var ORDER_FILTERS = [['', 'Alle'], ['entwurf', 'Entwürfe'], ['bestaetigt', 'Bestätigt'], ['storniert', 'Storniert']];
