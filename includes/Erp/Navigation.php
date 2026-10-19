@@ -204,15 +204,15 @@ class Navigation {
 	 */
 	public static function items() {
 		$list = array(
-			self::item( 'shop-bestellungen', 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), 'verkauf.shop_orders', 'admin.php?page=wc-orders', 'legacy', 'edit_shop_orders' ),
+			self::item( 'shop-bestellungen', 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), 'verkauf.shop_orders', '', 'native', 'edit_shop_orders', 'admin.php?page=wc-orders' ),
 			self::item( 'auftraege', 'verkauf', __( 'Aufträge', 'lindenweg16' ), 'verkauf.orders', '', 'native', '', 'lw16-betrieb-bestellungen' ),
 			self::item( 'picken', 'verkauf', __( 'Picklisten', 'lindenweg16' ), 'verkauf.picken', '', 'native' ),
 			self::item( 'versand', 'verkauf', __( 'Versand', 'lindenweg16' ), 'verkauf.versand', '', 'native', '', 'lw16-betrieb-versand' ),
-			self::item( 'kontakte', 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), 'verkauf.kontakte', 'lw16-betrieb-kontakte' ),
+			self::item( 'kontakte', 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), 'verkauf.kontakte', '', 'native', '', 'lw16-betrieb-kontakte' ),
 			self::item( 'shop-produkte', 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), 'verkauf.shop_products', 'edit.php?post_type=product', 'legacy', 'edit_products' ),
-			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', 'lw16-loyalty' ),
+			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', '', 'native', '', 'lw16-loyalty' ),
 			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', 'lw16-kasse' ),
-			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', 'lw16-marketing' ),
+			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', '', 'native', '', 'lw16-marketing' ),
 
 			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
