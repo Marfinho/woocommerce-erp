@@ -490,6 +490,7 @@ class Schema {
 			description VARCHAR(255) NULL,
 			hours DECIMAL(8,3) NOT NULL DEFAULT 0,
 			work_order_id BIGINT UNSIGNED NULL,
+			run_id BIGINT UNSIGNED NULL,
 			phase_block VARCHAR(2) NULL,
 			note TEXT NULL,
 			created_at DATETIME NOT NULL,
@@ -499,7 +500,8 @@ class Schema {
 			KEY entry_date (entry_date),
 			KEY iso (iso_year, iso_week),
 			KEY category (category),
-			KEY work_order_id (work_order_id)
+			KEY work_order_id (work_order_id),
+			KEY run_id (run_id)
 		) {$charset_collate};";
 
 		// Nachbestellungen bei Lieferanten. Bewusst eine eigene Tabelle und

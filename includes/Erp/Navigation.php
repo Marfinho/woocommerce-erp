@@ -86,6 +86,7 @@ class Navigation {
 			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', 'lw16-kasse' ),
 			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', 'lw16-marketing' ),
 
+			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
 			self::item( 'druckjournal', 'fertigung', __( 'Druckjournal', 'lindenweg16' ), 'fertigung.druckjournal', 'lw16-betrieb-druckjournal' ),
 			self::item( 'artikel', 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), 'fertigung.artikel', 'lw16-betrieb-artikel' ),

@@ -64,8 +64,11 @@ class Installer {
 	 * DB_VERSION 35: Mailbox - sechs neue Tabellen (mail_accounts,
 	 * mail_shares, mail_folders, mail_messages, mail_attachments,
 	 * mail_notes), siehe Modules\Mailbox\Schema.
+	 *
+	 * DB_VERSION 36: ERP-Workflow - neue Tabelle runs (Platten) und
+	 * time_entries.run_id, siehe Erp\Schema.
 	 */
-	const DB_VERSION = '35';
+	const DB_VERSION = '36';
 
 	/**
 	 * Aktivierungsroutine.
@@ -822,6 +825,9 @@ class Installer {
 
 		// --- Modul Mailbox ------------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Mailbox\Schema::tables( $p, $charset_collate ) );
+
+		// ERP-Oberfläche: Platten (Arbeitseinheiten der Werkstatt).
+		$tables = array_merge( $tables, \Lindenweg16\Erp\Schema::tables( $p, $charset_collate ) );
 
 		// Migration: Die Druck-Warteschlange hiess zunächst DHL-spezifisch.
 		// Muss vor dbDelta laufen – sonst legt dbDelta die neuen, leeren

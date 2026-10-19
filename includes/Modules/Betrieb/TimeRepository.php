@@ -19,7 +19,7 @@ class TimeRepository {
 	/**
 	 * Erlaubte Kategorien.
 	 */
-	const CATEGORIES = array( 'produktion', 'versand', 'konstruktion', 'marketing', 'vertrieb', 'verwaltung', 'wartung', 'sonstiges' );
+	const CATEGORIES = array( 'produktion', 'ruestzeit', 'druckzeit', 'versand', 'konstruktion', 'marketing', 'vertrieb', 'verwaltung', 'wartung', 'sonstiges' );
 
 	/**
 	 * Bezeichnungen der Kategorien.
@@ -29,6 +29,8 @@ class TimeRepository {
 	public static function category_labels() {
 		return array(
 			'produktion'   => __( 'Produktion', 'lindenweg16' ),
+			'ruestzeit'    => __( 'Rüstzeit', 'lindenweg16' ),
+			'druckzeit'    => __( 'Druckzeit', 'lindenweg16' ),
 			'versand'      => __( 'Versand', 'lindenweg16' ),
 			'konstruktion' => __( 'Konstruktion', 'lindenweg16' ),
 			'marketing'    => __( 'Marketing', 'lindenweg16' ),
@@ -175,6 +177,8 @@ class TimeRepository {
 				// erhalten – erst dadurch sind Ist-Lohnkosten je Auftrag
 				// überhaupt zu rechnen.
 				'work_order_id' => self::int_or( $input, 'work_order_id', 0 ) ? self::int_or( $input, 'work_order_id', 0 ) : null,
+				// Zeit aus dem Workflow bleibt mit ihrer Platte verbunden.
+				'run_id'      => self::int_or( $input, 'run_id', 0 ) ? self::int_or( $input, 'run_id', 0 ) : null,
 				'hours'       => $hours,
 				'phase_block' => self::text( $input, 'phase_block' ),
 				'note'        => isset( $input['note'] ) ? sanitize_textarea_field( $input['note'] ) : null,
