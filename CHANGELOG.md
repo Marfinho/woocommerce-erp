@@ -7,6 +7,51 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.24.0] – 2026-10-19
+
+### Soll gegen Ist
+- Neue Seite „Soll gegen Ist“ im Bereich Fertigung: Die im Workflow gestempelte Druckzeit der
+  erledigten Platten (letzte 90 Tage) wird je Artikel gegen die Planzeit gestellt. Bei Platten
+  mit mehreren Artikeln wird die gemessene Zeit im Verhältnis der geplanten verteilt. Zusätzlich
+  die mittlere Rüstzeit.
+- Ab drei gemessenen Platten und 10 % Abweichung wird eine Korrektur angeboten. „Planzeit
+  übernehmen“ schreibt die gemessene Plattenzeit in die aktive Revision (mit Eintrag im Protokoll);
+  Planung, Etikett-Schätzung und Kalkulation rechnen danach damit.
+- Mit dem Recht „Preise, Kosten und Löhne sehen“ wird die Marge nachgerechnet: Warnung, wenn der
+  Deckungsbeitrag II mit gemessener Zeit um 5 Prozentpunkte oder mehr sinkt oder negativ wird.
+- Neues Recht `fertigung.sollist`; Übernehmen braucht zusätzlich „Stammdaten ändern“.
+
+## [0.23.0] – 2026-10-19
+
+### Einkaufs-Workflow: Nachbestellen und Wareneingang
+- Neue Seite „Einkauf“ im Bereich Lager mit drei Spalten: **Bestellen**, **Unterwegs**,
+  **Eingegangen (14 Tage)**. Die Karten unter „Bestellen“ kommen aus dem Beschaffungsalarm
+  (Zukaufartikel, Kleinteile, Verbrauchsmaterial, Filament), die dringendsten zuerst. Lieferant
+  und Preis werden aus der letzten Bestellung vorbelegt.
+- „Bestellt ✓“ legt die Bestellung an; die Karte wandert nach „Unterwegs“ und verschwindet aus
+  „Bestellen“. Überfällige Bestellungen sind markiert.
+- „Eingegangen ✓“ bucht den Bestand: Zukaufartikel als Bewegung im Lagerjournal, Kleinteile und
+  Verbrauchsmaterial als Aufschlag, **Filament als neue Charge** (Rolle) mit Chargencode, Material
+  und Preis je kg. Die Menge darf von der bestellten abweichen.
+- Bestellungen gibt es jetzt auch für Zukaufartikel und Filament (neue Spalte `purchases.item_ref`,
+  DB-Version 37; Filament wird über die Farbe erkannt).
+- Neues Recht `lager.einkauf` (Wareneingang braucht zusätzlich `lager.buchen`); in den Presets
+  Fertigung und Leitung enthalten, wo auch Bedarf enthalten war.
+
+## [0.22.0] – 2026-10-19
+
+### Versand-Workflow mit Lagerabgang beim Versand
+- Der Versand ist ein Board mit drei Spalten: **Zu packen**, **Label da – zu versenden**,
+  **Heute versendet**. Die Stufe ergibt sich aus den Tatsachen (Label vorhanden, Bestellung
+  abgeschlossen), nicht aus einem eigenen Merker.
+- „Versendet ✓“ bucht den Lagerabgang (vorhandene, idempotente Regel der WooCommerce-Anbindung)
+  und schließt danach die Bestellung ab. Der Abgang passiert damit beim Versand, nicht erst,
+  wenn jemand im Shop abschließt; der Abschluss im Shop bleibt als gleichwertiger Weg erhalten
+  und bucht nichts doppelt.
+- Neue Packseite fürs Handy unter `#/bestellung/<id>`: Anschrift, Packliste zum Abhaken,
+  Label erzeugen/öffnen, Lieferschein, große Taste „Versendet ✓“.
+- Neue REST-Routen `erp/versand/<id>` und `erp/versand/<id>/versendet`; Recht `verkauf.versand`.
+
 ## [0.21.1] – 2026-10-19
 
 ### Workflow: Filament wird aus dem Bestand abgezogen

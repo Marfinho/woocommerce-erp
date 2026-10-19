@@ -466,6 +466,9 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
 @media (max-width: 1100px) { .board { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .board { grid-template-columns: 1fr; } }
+.board.ship-board { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .board.ship-board { grid-template-columns: 1fr; } }
+.col .row-card.ship { margin-top: 10px; display: grid; gap: 8px; }
 .col { background: var(--surface-muted); border-radius: 16px; padding: 12px; }
 .col > header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 10px; }
 .col h3 { margin: 0; font-size: 16px; }

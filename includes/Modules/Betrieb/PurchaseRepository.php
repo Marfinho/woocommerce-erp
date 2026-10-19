@@ -122,9 +122,10 @@ class PurchaseRepository {
 	 * @param int    $id    Bestellung.
 	 * @param float  $qty   Gelieferte Menge.
 	 * @param string $datum Lieferdatum.
+	 * @param array  $extra Bei Filament: lot_code, material (für die neue Charge).
 	 * @return array {success, message}
 	 */
-	public static function receive( $id, $qty, $datum = '' ) {
+	public static function receive( $id, $qty, $datum = '', array $extra = array() ) {
 		global $wpdb;
 
 		$purchase = self::find( $id );
@@ -148,6 +149,27 @@ class PurchaseRepository {
 
 		$datum = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $datum ) ? $datum : gmdate( 'Y-m-d' );
 
+		// Filament kommt als Charge ins Lager. Geprüft wird vor dem Buchen,
+		// damit eine abgelehnte Charge die Bestellung nicht schon schließt.
+		$lot = null;
+		if ( 'filament' === $purchase['item_type'] ) {
+			$lot = FilamentRepository::validate(
+				array(
+					'lot_code'     => isset( $extra['lot_code'] ) && '' !== trim( (string) $extra['lot_code'] ) ? $extra['lot_code'] : 'B' . (int) $id . '-' . str_replace( '-', '', $datum ),
+					'received_on'  => $datum,
+					'material'     => isset( $extra['material'] ) && '' !== trim( (string) $extra['material'] ) ? $extra['material'] : 'PETG',
+					'color'        => (string) $purchase['item_ref'],
+					'kg_received'  => $qty,
+					'price_per_kg' => (float) $purchase['unit_price_net'],
+					'notes'        => sprintf( /* translators: 1: Bestellung, 2: Lieferant. */ __( 'Wareneingang zu Bestellung %1$d (%2$s)', 'lindenweg16' ), (int) $id, (string) $purchase['supplier'] ),
+				)
+			);
+
+			if ( $lot['errors'] ) {
+				return array( 'success' => false, 'message' => implode( ' ', $lot['errors'] ) );
+			}
+		}
+
 		$data = array(
 			'status'       => 'geliefert',
 			'received_on'  => $datum,
@@ -161,14 +183,29 @@ class PurchaseRepository {
 
 		BetriebAudit::record( 'update', 'purchases', (int) $id, $purchase, $data, __( 'Wareneingang gebucht.', 'lindenweg16' ) );
 
-		self::add_stock( $purchase['item_type'], (int) $purchase['item_id'], $qty );
+		if ( $lot ) {
+			FilamentRepository::insert( $lot['data'] );
+		} elseif ( 'article' === $purchase['item_type'] ) {
+			StockRepository::book(
+				array(
+					'article_id'    => (int) $purchase['item_id'],
+					'qty'           => $qty,
+					'movement_type' => 'wareneingang',
+					'ref_type'      => 'purchase',
+					'ref_id'        => (int) $id,
+					'note'          => __( 'Wareneingang zur Bestellung', 'lindenweg16' ) . ' #' . (int) $id,
+				)
+			);
+		} else {
+			self::add_stock( $purchase['item_type'], (int) $purchase['item_id'], $qty );
+		}
 
 		return array(
 			'success' => true,
 			'message' => sprintf(
 				/* translators: %s: Menge. */
-				__( 'Wareneingang gebucht: %s Stück im Bestand.', 'lindenweg16' ),
-				number_format_i18n( $qty, 0 )
+				'filament' === $purchase['item_type'] ? __( 'Wareneingang gebucht: %s kg als neue Charge im Lager.', 'lindenweg16' ) : __( 'Wareneingang gebucht: %s Stück im Bestand.', 'lindenweg16' ),
+				number_format_i18n( $qty, 'filament' === $purchase['item_type'] ? 2 : 0 )
 			),
 		);
 	}
@@ -224,6 +261,31 @@ class PurchaseRepository {
 				(float) $qty,
 				(int) $item_id
 			)
+		);
+	}
+
+	/**
+	 * Die letzte Bestellung zu einem Teil: Lieferant und Preis zum Vorbelegen.
+	 *
+	 * @param string $type    Art.
+	 * @param int    $item_id Teil (bei Filament 0).
+	 * @param string $ref     Bei Filament die Farbe.
+	 * @return array|null
+	 */
+	public static function last_for( $type, $item_id, $ref = '' ) {
+		global $wpdb;
+		$table = self::table();
+
+		if ( '' !== $ref ) {
+			return $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$table} WHERE item_type = %s AND item_ref = %s AND status <> 'storniert' ORDER BY ordered_on DESC, id DESC LIMIT 1", (string) $type, (string) $ref ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				ARRAY_A
+			);
+		}
+
+		return $wpdb->get_row(
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE item_type = %s AND item_id = %d AND status <> 'storniert' ORDER BY ordered_on DESC, id DESC LIMIT 1", (string) $type, (int) $item_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
 		);
 	}
 

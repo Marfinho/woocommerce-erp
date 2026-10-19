@@ -94,7 +94,26 @@ class RestApi {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'versand' ),
 				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
-				'args'                => array( 'filter' => array( 'type' => 'string', 'required' => false ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'versand_order' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/versendet',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_versendet' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
 			)
 		);
 
@@ -115,6 +134,56 @@ class RestApi {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'versand_storno' ),
 				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.etikett' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/einkauf',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'einkauf' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/einkauf/bestellt',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'einkauf_bestellt' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/einkauf/(?P<id>\d+)/eingang',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'einkauf_eingang' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf', 'lager.buchen' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/sollist',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'sollist' ),
+				'permission_callback' => $this->needs( array( 'fertigung.sollist' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/sollist/(?P<id>\d+)/uebernehmen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'sollist_uebernehmen' ),
+				'permission_callback' => $this->needs( array( 'fertigung.sollist', 'fertigung.stammdaten.edit' ) ),
 			)
 		);
 
@@ -284,10 +353,40 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function versand( WP_REST_Request $request ) {
-		$data           = Screens::shipping( sanitize_key( (string) $request->get_param( 'filter' ) ) );
-		$data['label']  = Access::can( 'verkauf.versand.etikett' );
+		$data          = Screens::shipping();
+		$data['label'] = Access::can( 'verkauf.versand.etikett' );
 
 		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Eine Bestellung für die Packseite.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_order( WP_REST_Request $request ) {
+		$data = Screens::ship_order( (int) $request['id'] );
+
+		if ( null === $data ) {
+			return new WP_REST_Response( array( 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) ), 404 );
+		}
+
+		$data['can_label'] = Access::can( 'verkauf.versand.etikett' );
+
+		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Als versendet melden (Lagerabgang inklusive).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_versendet( WP_REST_Request $request ) {
+		$result = Screens::mark_shipped( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
 
 	/**
@@ -319,6 +418,81 @@ class RestApi {
 		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
+	}
+
+	/**
+	 * Einkaufs-Board.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function einkauf() {
+		return new WP_REST_Response( Procurement::board() );
+	}
+
+	/**
+	 * Als bestellt vermerken.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function einkauf_bestellt( WP_REST_Request $request ) {
+		$result = Procurement::place(
+			array(
+				'item_type'      => sanitize_key( (string) $request->get_param( 'type' ) ),
+				'item_id'        => (int) $request->get_param( 'item_id' ),
+				'item_ref'       => sanitize_key( (string) $request->get_param( 'item_ref' ) ),
+				'qty'            => (string) $request->get_param( 'qty' ),
+				'unit_price_net' => (string) $request->get_param( 'price' ),
+				'supplier'       => sanitize_text_field( (string) $request->get_param( 'supplier' ) ),
+				'order_ref'      => sanitize_text_field( (string) $request->get_param( 'order_ref' ) ),
+				'expected_on'    => sanitize_text_field( (string) $request->get_param( 'expected_on' ) ),
+			)
+		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
+	}
+
+	/**
+	 * Wareneingang buchen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function einkauf_eingang( WP_REST_Request $request ) {
+		$result = Procurement::receive(
+			(int) $request['id'],
+			(string) $request->get_param( 'qty' ),
+			array(
+				'lot_code' => sanitize_text_field( (string) $request->get_param( 'lot_code' ) ),
+				'material' => sanitize_text_field( (string) $request->get_param( 'material' ) ),
+			)
+		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Soll gegen Ist.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function sollist() {
+		$data         = SollIst::report( Access::can( 'finanzen.kosten' ) );
+		$data['edit'] = Access::can( 'fertigung.stammdaten.edit' );
+
+		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Gemessene Planzeit übernehmen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function sollist_uebernehmen( WP_REST_Request $request ) {
+		$result = SollIst::adopt( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
 
 	/**

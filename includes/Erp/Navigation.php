@@ -88,6 +88,7 @@ class Navigation {
 
 			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
+			self::item( 'sollist', 'fertigung', __( 'Soll gegen Ist', 'lindenweg16' ), 'fertigung.sollist', '', 'native' ),
 			self::item( 'druckjournal', 'fertigung', __( 'Druckjournal', 'lindenweg16' ), 'fertigung.druckjournal', 'lw16-betrieb-druckjournal' ),
 			self::item( 'artikel', 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), 'fertigung.artikel', 'lw16-betrieb-artikel' ),
 			self::item( 'konfigurator', 'fertigung', __( 'Konfigurator', 'lindenweg16' ), 'fertigung.konfigurator', 'lw16-betrieb-konfigurator' ),
@@ -101,6 +102,7 @@ class Navigation {
 			self::item( 'lager', 'lager', __( 'Lager', 'lindenweg16' ), 'lager.bestand', 'lw16-betrieb-lager' ),
 			self::item( 'lagerplaetze', 'lager', __( 'Lagerplätze & Picklisten', 'lindenweg16' ), 'lager.lagerplaetze', 'lw16-betrieb-lagerplaetze' ),
 			self::item( 'material', 'lager', __( 'Material', 'lindenweg16' ), 'lager.material', 'lw16-betrieb-material' ),
+			self::item( 'einkauf', 'lager', __( 'Einkauf', 'lindenweg16' ), 'lager.einkauf', '', 'native' ),
 			self::item( 'bedarf', 'lager', __( 'Bedarf', 'lindenweg16' ), 'lager.bedarf', 'lw16-betrieb-bedarf' ),
 
 			self::item( 'berichte', 'finanzen', __( 'Berichte', 'lindenweg16' ), 'finanzen.berichte', 'lw16-betrieb-berichte' ),

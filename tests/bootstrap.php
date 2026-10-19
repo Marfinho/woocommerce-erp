@@ -362,6 +362,8 @@ require $lw16_root . '/includes/Erp/Subdomain.php';
 require $lw16_root . '/includes/Erp/RunFlow.php';
 require $lw16_root . '/includes/Erp/Forecast.php';
 require $lw16_root . '/includes/Erp/Material.php';
+require $lw16_root . '/includes/Erp/Procurement.php';
+require $lw16_root . '/includes/Erp/Variance.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

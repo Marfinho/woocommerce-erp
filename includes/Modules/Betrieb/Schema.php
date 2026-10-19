@@ -511,6 +511,7 @@ class Schema {
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			item_type VARCHAR(20) NOT NULL DEFAULT 'component',
 			item_id BIGINT UNSIGNED NOT NULL,
+			item_ref VARCHAR(40) NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'bestellt',
 			qty DECIMAL(10,3) NOT NULL DEFAULT 0,
 			unit_price_net DECIMAL(10,4) NOT NULL DEFAULT 0,
