@@ -694,3 +694,7 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 
 .clock-pill.on { border-color: var(--success); }
 .clock-pill.on span { font-variant-numeric: tabular-nums; font-weight: 700; }
+.task.t-wartung { border-left-color: var(--warning); }
+.task.t-lieferung { border-left-color: var(--a-lager); }
+.task.t-rechnung { border-left-color: var(--error); }
+.task.t-nachfassen { border-left-color: var(--a-verkauf); }

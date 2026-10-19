@@ -14,6 +14,9 @@ namespace Lindenweg16\Erp;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
+use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Mailbox\MailboxAccess;
 use Lindenweg16\Modules\Mailbox\MailRepository;
 
@@ -32,11 +35,15 @@ class Tasks {
 	 */
 	public static function ranks() {
 		return array(
-			'melden'   => 1,
-			'ruesten'  => 2,
-			'packen'   => 3,
-			'bestellen' => 4,
-			'mail'     => 5,
+			'melden'    => 1,
+			'ruesten'   => 2,
+			'packen'    => 3,
+			'wartung'   => 4,
+			'bestellen' => 5,
+			'lieferung' => 6,
+			'rechnung'  => 7,
+			'nachfassen' => 8,
+			'mail'      => 9,
 		);
 	}
 
@@ -118,9 +125,11 @@ class Tasks {
 			}
 		}
 
+		// Das Board ist teuer (Alarm für alle Teile): einmal berechnen, zweimal nutzen.
+		$board = Access::can( 'lager.einkauf' ) ? Procurement::board() : array( 'order' => array(), 'open' => array() );
+
 		if ( Access::can( 'lager.einkauf' ) ) {
-			$board = Procurement::board();
-			$n     = count( $board['order'] );
+			$n = count( $board['order'] );
 
 			if ( $n > 0 ) {
 				$names = array();
@@ -134,6 +143,83 @@ class Tasks {
 					'sub'   => implode( ', ', $names ),
 					'cta'   => __( 'Zum Einkauf', 'lindenweg16' ),
 					'href'  => '#/seite/einkauf',
+				);
+			}
+		}
+
+		if ( Access::can( 'fertigung.drucker' ) ) {
+			$n = 0;
+
+			foreach ( MaintenanceRepository::due() as $row ) {
+				if ( $row['reasons'] ) {
+					++$n;
+				}
+			}
+
+			if ( $n > 0 ) {
+				$tasks[] = array(
+					'kind'  => 'wartung',
+					'title' => self::count_text( $n, __( '%d Drucker braucht Wartung', 'lindenweg16' ), __( '%d Drucker brauchen Wartung', 'lindenweg16' ) ),
+					'sub'   => __( 'Wartung fällig oder noch nie erfasst', 'lindenweg16' ),
+					'cta'   => __( 'Zur Wartung', 'lindenweg16' ),
+					'href'  => '#/seite/drucker',
+				);
+			}
+		}
+
+		if ( Access::can( 'lager.einkauf' ) ) {
+			$late = array();
+
+			foreach ( $board['open'] as $purchase ) {
+				if ( $purchase['late'] > 0 ) {
+					$late[] = $purchase['label'];
+				}
+			}
+
+			if ( $late ) {
+				$tasks[] = array(
+					'kind'  => 'lieferung',
+					'title' => self::count_text( count( $late ), __( '%d Lieferung überfällig', 'lindenweg16' ), __( '%d Lieferungen überfällig', 'lindenweg16' ) ),
+					'sub'   => implode( ', ', array_slice( $late, 0, 2 ) ),
+					'cta'   => __( 'Zum Einkauf', 'lindenweg16' ),
+					'href'  => '#/seite/einkauf',
+				);
+			}
+		}
+
+		if ( Access::can( 'verkauf.kontakte' ) ) {
+			$overdue = 0;
+
+			foreach ( OrderOpsRepository::open_invoices() as $order ) {
+				if ( OrderOpsRepository::is_overdue( $order ) ) {
+					++$overdue;
+				}
+			}
+
+			if ( $overdue > 0 ) {
+				$tasks[] = array(
+					'kind'  => 'rechnung',
+					'title' => self::count_text( $overdue, __( '%d Rechnung überfällig', 'lindenweg16' ), __( '%d Rechnungen überfällig', 'lindenweg16' ) ),
+					'sub'   => __( 'Zahlungserinnerung in der Kundenakte', 'lindenweg16' ),
+					'cta'   => __( 'Zu den Kunden', 'lindenweg16' ),
+					'href'  => '#/seite/kontakte',
+				);
+			}
+
+			$follow = ContactRepository::due_follow_ups();
+
+			if ( $follow ) {
+				$names = array();
+				foreach ( array_slice( $follow, 0, 2 ) as $c ) {
+					$names[] = (string) $c['company'];
+				}
+
+				$tasks[] = array(
+					'kind'  => 'nachfassen',
+					'title' => self::count_text( count( $follow ), __( '%d Wiedervorlage fällig', 'lindenweg16' ), __( '%d Wiedervorlagen fällig', 'lindenweg16' ) ),
+					'sub'   => implode( ', ', $names ),
+					'cta'   => __( 'Nachfassen', 'lindenweg16' ),
+					'href'  => 1 === count( $follow ) ? '#/kontakt/' . (int) $follow[0]['id'] : '#/seite/kontakte',
 				);
 			}
 		}
