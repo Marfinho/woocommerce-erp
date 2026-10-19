@@ -254,6 +254,9 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.1.1 =
+* E-Mails offensiver im Website-Look: Sticker „Handgemacht in Haste“ über der Überschrift, letztes Wort mit Textmarker, größere Überschrift in Bricolage, Spaltenköpfe in DM Mono, Gesamtsumme markiert, dunkler Footer
+* Warenkorb-Erinnerung (ERP-Plugin ab 0.15.1): Artikel als Karte mit Bild, Menge und Preis
+* E-Mails: Zeilen wie „Jetzt bestellen: https://…“ werden ein Knopf „Jetzt bestellen“ (Warenkorb-Erinnerung, Warteliste …)
 * Warenkorb: „Warenkorb-Summe“ wieder als eine Karte (Überschrift, Gutschein, Summe); das Gutschein-Feld ist keine eigene weiße Pille mehr
 
 = 1.1.0 =

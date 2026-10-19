@@ -123,9 +123,10 @@ class CartTracking {
 		$snapshot = array();
 		foreach ( WC()->cart->get_cart() as $item ) {
 			$snapshot[] = array(
-				'product_id' => $item['product_id'],
-				'name'       => isset( $item['data'] ) ? $item['data']->get_name() : '',
-				'qty'        => $item['quantity'],
+				'product_id'   => $item['product_id'],
+				'variation_id' => (int) ( $item['variation_id'] ?? 0 ),
+				'name'         => isset( $item['data'] ) ? $item['data']->get_name() : '',
+				'qty'          => $item['quantity'],
 			);
 		}
 
@@ -239,14 +240,64 @@ class CartTracking {
 		if ( empty( $items ) ) {
 			return;
 		}
-		$liste = '';
+		$liste   = '';
+		$artikel = array();
 		foreach ( $items as $it ) {
 			$liste .= '- ' . $it['name'] . ' x' . $it['qty'] . "\n";
+			$artikel[] = self::item_details( $it );
 		}
 		$template_key = 1 === $stufe ? 'cart_erinnerung_1' : 'cart_erinnerung_2';
-		MailTemplate::send( $row->email, $template_key, array(
-			'{artikelliste}' => $liste,
-			'{shop_url}'     => wc_get_cart_url(),
-		) );
+		MailTemplate::send(
+			$row->email,
+			$template_key,
+			array(
+				'{artikelliste}' => $liste,
+				'{shop_url}'     => wc_get_cart_url(),
+			),
+			array(),
+			array(
+				'items' => array(
+					'text' => $liste,
+					'list' => $artikel,
+				),
+			)
+		);
+	}
+
+	/**
+	 * Bild, Link und aktueller Preis eines Artikels aus dem Snapshot – damit das
+	 * Theme die Liste als Karte wie in der Bestellübersicht zeigen kann.
+	 *
+	 * @param array $it Snapshot-Eintrag (product_id, name, qty).
+	 * @return array{name:string,qty:int,url:string,image:string,price:float|null}
+	 */
+	protected static function item_details( array $it ) {
+		$qty     = max( 1, (int) ( $it['qty'] ?? 1 ) );
+		$details = array(
+			'name'  => (string) ( $it['name'] ?? '' ),
+			'qty'   => $qty,
+			'url'   => '',
+			'image' => '',
+			'price' => null,
+		);
+
+		// Variante (Farbe …) für Bild und Preis, sonst das Produkt; ältere Snapshots haben keine Varianten-ID.
+		$id      = ! empty( $it['variation_id'] ) ? (int) $it['variation_id'] : (int) ( $it['product_id'] ?? 0 );
+		$product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
+		if ( ! $product ) {
+			return $details;
+		}
+
+		$details['url'] = (string) $product->get_permalink();
+		$image_id       = (int) $product->get_image_id();
+		if ( $image_id ) {
+			$details['image'] = (string) wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' );
+		}
+		$preis = wc_get_price_to_display( $product );
+		if ( is_numeric( $preis ) && (float) $preis > 0 ) {
+			$details['price'] = (float) $preis * $qty;
+		}
+
+		return $details;
 	}
 }
