@@ -7,6 +7,24 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.27.0] – 2026-10-19
+
+### B2B: Kundenakte ausgebaut
+- **Kommission buchen** in der Akte: Ausliefern, Abrechnen (ein Rechnungsposten über alle Positionen, damit die
+  Rabattstaffel auf den Gesamtwert greift) und Zurücknehmen, mit Mengenliste je Artikel und Farbe. Hinweis, wenn laut
+  Profil keine Kommission vereinbart ist; Doppelbuchungssperre.
+- **Bestellung ↔ Kontakt:** Auf der Bestellseite wird ein Kontakt mit gleicher E-Mail oder Firma vorgeschlagen und mit
+  einem Klick zugeordnet (oder gelöst); die Bestellung zählt dann in der Akte und in den B2B-Kennzahlen. Von der
+  Bestellung führt ein Link zur Akte.
+- **Händlerprofil** in der Akte: USt-IdNr., Rechnungs- und Lieferadresse, Lieferhinweise, Entscheider, Wareneingang,
+  Kanal, Bestellrhythmus, nächste erwartete Bestellung, Verpackung, Kreditlimit (Warnung bei Überschreitung durch
+  offene Posten), Kommission vereinbart, Display. Beim Speichern bleiben nicht geänderte Felder erhalten.
+- **Preisliste je Händler:** Händlerpreise netto, Mengenrabatt-Staffel und Zahlungsziel des Kunden, druckbar und als
+  PDF speicherbar.
+- **Zahlungserinnerung** bei überfälligen Posten: vorbereiteter, änderbarer Mailtext; nach dem Senden steht eine
+  Aktivität mit Wiedervorlage in einer Woche in der Akte.
+- Kontaktliste lädt nur noch Bestellungen, die einem Kontakt zugeordnet sind (schneller bei vielen Shop-Bestellungen).
+
 ## [0.26.0] – 2026-10-19
 
 ### Fast alle Seiten nativ im ERP
