@@ -78,6 +78,10 @@ class Plugin {
 		// aber ueber Filter an, die frueh gesetzt sein muessen.
 		( new Privacy() )->register();
 
+		// Updates für Plugin und Theme aus GitHub über die WordPress-Update-Funktion.
+		// Auch außerhalb des Adminbereichs: WordPress prüft per Cron.
+		( new Updater() )->register();
+
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
 			( new MenuGroups() )->register();

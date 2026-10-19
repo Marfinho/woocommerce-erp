@@ -30,6 +30,16 @@ dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
    Capability automatisch).
 4. Unter **Lindenweg16 → Einstellungen** Firmendaten und Parameter pflegen.
 
+### Updates
+
+Plugin und Theme aktualisieren sich über die normale WordPress-Update-Funktion aus
+dem Branch `main` dieses Repos (`Core\Updater`). Sobald die Versionsnummer in
+`lindenweg16.php` bzw. `block-theme/lindenweg16/style.css` steigt, erscheint unter
+Plugins, Design → Themes und Dashboard → Aktualisierungen „Jetzt aktualisieren“.
+WordPress fragt alle zwölf Stunden nach; sofort geht es mit „Jetzt nach Updates suchen“
+in der Plugin-Liste. Für ein Update also: Versionsnummer erhöhen, Theme-ZIP neu bauen,
+nach `main` mergen.
+
 ## Architektur
 
 - Reines PHP-Plugin nach WordPress-Konventionen, **HPOS-kompatibel**, kein Build-Tooling.
