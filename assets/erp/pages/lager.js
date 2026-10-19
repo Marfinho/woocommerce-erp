@@ -313,6 +313,23 @@
 			return box;
 		}
 
+		// Kommission vom Lager aus: erst den Händler wählen, dann die Liste (dieselbe wie in der Kundenakte).
+		function commissionPicker(done) {
+			var body = h('div', { class: 'lg-dlg' }, h('p', { class: 'muted' }, 'Wird geladen …'));
+			var dlg = ui.dlg('Kommission', body);
+			ui.api('kontakte').then(function (d) {
+				var sel = h('select', { class: 'field', 'aria-label': 'Händler' }, d.contacts.map(function (c) { return h('option', { value: c.id }, c.company + (c.city ? ' · ' + c.city : '')); }));
+				body.textContent = '';
+				if (!d.contacts.length) { body.appendChild(h('p', { class: 'muted' }, 'Es gibt noch keinen Kontakt. Lege ihn unter Verkauf → Kunden an.')); return; }
+				body.appendChild(h('label', { class: 'lg-field' }, h('span', null, 'Händler'), sel));
+				var row = h('div', { class: 'lg-btns', style: 'margin-top:12px;flex-wrap:wrap' });
+				[['kommission_raus', 'Ausliefern', true], ['kommission_abgerechnet', 'Abrechnen', false], ['kommission_retour', 'Zurücknehmen', false]].forEach(function (a) {
+					row.appendChild(h('button', { class: 'btn' + (a[2] ? ' primary' : ''), type: 'button', onclick: function () { dlg.close(); UI.commissionDialog(parseInt(sel.value, 10), a[0], a[1], done); } }, a[1]));
+				});
+				body.appendChild(row);
+			}).catch(function (e) { body.textContent = ''; body.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
 		function pageLager(item) {
 			var state = { tab: 'bestand', f: 'alle', q: '' };
 			var head = h('div');
@@ -338,7 +355,9 @@
 				}
 				var bar = h('div', { class: 'lg-top' },
 					pills([['bestand', 'Bestand'], ['teile', 'Kleinteile & Kartons'], ['journal', 'Journal']], state.tab, function (t) { state.tab = t; paint(); }),
-					d.can_book ? h('button', { class: 'btn primary', type: 'button', onclick: function () { bookDialog(d, {}, load); } }, 'Neue Buchung') : null);
+					h('div', { class: 'lg-btns' },
+						d.can_book && ui.can('verkauf.kontakte') && UI.commissionDialog ? h('button', { class: 'btn', type: 'button', onclick: function () { commissionPicker(load); } }, 'Kommission') : null,
+						d.can_book ? h('button', { class: 'btn primary', type: 'button', onclick: function () { bookDialog(d, {}, load); } }, 'Neue Buchung') : null));
 				head.appendChild(bar);
 				body.textContent = '';
 				if (state.tab === 'bestand') { body.appendChild(stockList(d, state, load)); }

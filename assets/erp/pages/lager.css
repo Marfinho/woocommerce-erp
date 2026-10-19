@@ -34,3 +34,5 @@
 	.lg-row .lg-btns .btn { flex: 1 1 120px; }
 	.lg-top .btn { width: 100%; }
 }
+.lg-field { display: grid; gap: 4px; font-size: 14px; }
+.lg-field span { color: var(--text-muted); font-size: 13px; }
