@@ -233,10 +233,10 @@ class Navigation {
 			self::item( 'einkauf', 'lager', __( 'Einkauf', 'lindenweg16' ), 'lager.einkauf', '', 'native' ),
 			self::item( 'bedarf', 'lager', __( 'Bedarf', 'lindenweg16' ), 'lager.bedarf', 'lw16-betrieb-bedarf' ),
 
-			self::item( 'berichte', 'finanzen', __( 'Berichte', 'lindenweg16' ), 'finanzen.berichte', 'lw16-betrieb-berichte' ),
-			self::item( 'buchhaltung', 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), 'finanzen.buchhaltung', 'lw16-buchhaltung' ),
-			self::item( 'reporting', 'finanzen', __( 'Reporting', 'lindenweg16' ), 'finanzen.reporting', 'lw16-reporting' ),
-			self::item( 'finanz-dashboard', 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), 'finanzen.dashboard', 'lindenweg16' ),
+			self::item( 'berichte', 'finanzen', __( 'Berichte', 'lindenweg16' ), 'finanzen.berichte', '', 'native', '', 'lw16-betrieb-berichte' ),
+			self::item( 'buchhaltung', 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), 'finanzen.buchhaltung', '', 'native', '', 'lw16-buchhaltung' ),
+			self::item( 'reporting', 'finanzen', __( 'Reporting', 'lindenweg16' ), 'finanzen.reporting', '', 'native', '', 'lw16-reporting' ),
+			self::item( 'finanz-dashboard', 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), 'finanzen.dashboard', '', 'native', '', 'lindenweg16' ),
 
 			self::item( 'zeit', 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), 'verwaltung.zeit', '', 'native', '', 'lw16-betrieb-zeit' ),
 			self::item( 'mailbox', 'verwaltung', __( 'Mailbox', 'lindenweg16' ), 'verwaltung.mailbox', 'lw16-mailbox' ),

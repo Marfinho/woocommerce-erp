@@ -123,7 +123,7 @@ class Dashboard {
 	 *
 	 * @return array
 	 */
-	protected function calculate_kpis() {
+	public function calculate_kpis() {
 		global $wpdb;
 
 		$jahr       = (int) gmdate( 'Y' );

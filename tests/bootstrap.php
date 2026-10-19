@@ -370,6 +370,7 @@ require $lw16_root . '/includes/Erp/ProductFile.php';
 require $lw16_root . '/includes/Modules/Betrieb/ContactRepository.php';
 require $lw16_root . '/includes/Erp/Pages/Verkauf.php';
 require $lw16_root . '/includes/Erp/Pages/Verwaltung.php';
+require $lw16_root . '/includes/Erp/Pages/Zahlen.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

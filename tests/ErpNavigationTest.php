@@ -145,6 +145,7 @@ class ErpNavigationTest extends TestCase {
 		$linked = array();
 		foreach ( Navigation::items() as $item ) {
 			$linked[] = $item['target'];
+			// Native Seiten bleiben über ihre alte Seite (alt) erreichbar.
 			$linked[] = $item['alt'];
 		}
 
