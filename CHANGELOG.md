@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.24.0] – 2026-10-19
+
+### Soll gegen Ist
+- Neue Seite „Soll gegen Ist“ im Bereich Fertigung: Die im Workflow gestempelte Druckzeit der
+  erledigten Platten (letzte 90 Tage) wird je Artikel gegen die Planzeit gestellt. Bei Platten
+  mit mehreren Artikeln wird die gemessene Zeit im Verhältnis der geplanten verteilt. Zusätzlich
+  die mittlere Rüstzeit.
+- Ab drei gemessenen Platten und 10 % Abweichung wird eine Korrektur angeboten. „Planzeit
+  übernehmen“ schreibt die gemessene Plattenzeit in die aktive Revision (mit Eintrag im Protokoll);
+  Planung, Etikett-Schätzung und Kalkulation rechnen danach damit.
+- Mit dem Recht „Preise, Kosten und Löhne sehen“ wird die Marge nachgerechnet: Warnung, wenn der
+  Deckungsbeitrag II mit gemessener Zeit um 5 Prozentpunkte oder mehr sinkt oder negativ wird.
+- Neues Recht `fertigung.sollist`; Übernehmen braucht zusätzlich „Stammdaten ändern“.
+
 ## [0.23.0] – 2026-10-19
 
 ### Einkaufs-Workflow: Nachbestellen und Wareneingang

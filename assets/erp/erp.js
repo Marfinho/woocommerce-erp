@@ -586,6 +586,7 @@
 			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
 			if (f.item.id === 'einkauf') { return viewProcurement(); }
+			if (f.item.id === 'sollist') { return viewVariance(); }
 		}
 
 		if (f.item.locked) {
@@ -1568,6 +1569,64 @@
 				board.appendChild(col);
 			});
 			box.appendChild(board);
+		}
+
+		load();
+	}
+
+	function viewVariance() {
+		pageHead('Soll gegen Ist', 'Gestempelte Druckzeit gegen die Planzeit – damit Plan und Kalkulation der Wirklichkeit folgen.', null);
+		el.view.classList.add('wide');
+		var box = h('div');
+		el.view.appendChild(box);
+
+		function load() {
+			return api('sollist').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function pct(f) { var p = Math.round((f - 1) * 100); return (p > 0 ? '+' : '') + p + ' %'; }
+		function pc(x) { return Math.round(x * 100) + ' %'; }
+
+		function paint(d) {
+			box.textContent = '';
+
+			if (!d.articles.length) {
+				box.appendChild(h('div', { class: 'notice' }, 'Noch keine Messwerte: Sobald Platten mit Druckstart und Meldung erledigt sind, erscheinen sie hier (letzte ' + d.days + ' Tage).'));
+				return;
+			}
+
+			var worse = d.articles.filter(function (a) { return a.adjust && a.factor > 1; }).length;
+			var risky = d.articles.filter(function (a) { return a.margin && a.margin.state; }).length;
+			box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' },
+				h('b', null, d.runs + ' Platten gemessen'),
+				h('small', { class: 'muted' }, ' · Rüsten im Schnitt ' + minTxt(d.setup_avg) + ' · ' + worse + ' Artikel brauchen deutlich länger als geplant' + (d.money ? ' · ' + risky + ' mit kritischer Marge' : ''))
+			));
+
+			var rows = h('div', { class: 'rows' });
+			d.articles.forEach(function (a) {
+				var m = a.margin;
+				var tags = h('div', { class: 'row-tags' });
+				tags.appendChild(h('span', { class: 'tag' + (a.adjust && a.factor > 1 ? ' later' : '') }, pct(a.factor) + ' · ' + a.runs + ' Platten'));
+				if (m && m.state === 'verlust') { tags.appendChild(h('span', { class: 'tag later' }, 'Verlust: DB II ' + m.actual_db2.toFixed(2).replace('.', ',') + ' €')); }
+				else if (m && m.state === 'sinkt') { tags.appendChild(h('span', { class: 'tag later' }, 'Marge ' + pc(m.plan_pct) + ' → ' + pc(m.actual_pct))); }
+
+				rows.appendChild(h('div', { class: 'row-card' },
+					h('div', { class: 'row-main' },
+						h('b', null, a.sku + ' – ' + a.name),
+						h('small', null, 'Soll ' + minTxt(a.plan_min) + ' · Ist ' + minTxt(a.actual_min) + ' · Plattenzeit ' + String(a.plate_h).replace('.', ',') + ' h' + (a.adjust ? ' → ' + String(a.new_h).replace('.', ',') + ' h' : ''))
+					),
+					tags,
+					a.adjust && d.edit ? h('button', {
+						class: 'btn primary', type: 'button',
+						onclick: function (e) {
+							if (!window.confirm('Plattenzeit auf ' + a.new_h + ' h setzen? Planung und Kalkulation rechnen danach damit.')) { return; }
+							e.target.disabled = true;
+							api('sollist/' + a.article_id + '/uebernehmen', { method: 'POST' }).then(function (r) { toast(r.message); load(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+						}
+					}, 'Planzeit übernehmen') : null
+				));
+			});
+			box.appendChild(rows);
 		}
 
 		load();

@@ -169,6 +169,26 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/sollist',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'sollist' ),
+				'permission_callback' => $this->needs( array( 'fertigung.sollist' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/sollist/(?P<id>\d+)/uebernehmen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'sollist_uebernehmen' ),
+				'permission_callback' => $this->needs( array( 'fertigung.sollist', 'fertigung.stammdaten.edit' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/workflow',
 			array(
 				'methods'             => 'GET',
@@ -447,6 +467,30 @@ class RestApi {
 				'material' => sanitize_text_field( (string) $request->get_param( 'material' ) ),
 			)
 		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Soll gegen Ist.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function sollist() {
+		$data         = SollIst::report( Access::can( 'finanzen.kosten' ) );
+		$data['edit'] = Access::can( 'fertigung.stammdaten.edit' );
+
+		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Gemessene Planzeit übernehmen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function sollist_uebernehmen( WP_REST_Request $request ) {
+		$result = SollIst::adopt( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
