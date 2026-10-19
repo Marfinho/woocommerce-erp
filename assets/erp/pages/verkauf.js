@@ -244,9 +244,49 @@
 		load();
 	};
 
+	// Preisliste für einen Händler: druckbar, als PDF speicherbar (Druckdialog des Browsers).
+	function priceList(ui, id) {
+		var h = ui.h;
+		ui.section('kontakte');
+		ui.setHead('Preisliste', 'Verkauf');
+		var box = h('div');
+		ui.view().appendChild(h('div', { class: 'no-print' }, backLink(ui, '#/kontakt/' + id, 'Zur Akte')));
+		ui.view().appendChild(box);
+		box.appendChild(loading(ui));
+
+		ui.api('kontakte/' + id + '/preisliste').then(function (d) {
+			var c = d.contact;
+			box.textContent = '';
+			box.appendChild(h('div', { class: 'no-print vk-actions', style: 'margin-bottom:12px' },
+				h('button', { class: 'btn primary', type: 'button', onclick: function () { window.print(); } }, 'Drucken oder als PDF speichern')));
+
+			var sheet = h('article', { class: 'card vk-sheet' },
+				h('header', { class: 'vk-sheet-head' },
+					h('div', null, h('h2', null, 'Preisliste'), h('p', { class: 'muted', style: 'margin:2px 0 0' }, d.shop + ' · Stand ' + ymd(d.date))),
+					h('div', { class: 'vk-sheet-to' }, h('b', null, c.company), c.person ? h('div', null, c.person) : null, c.address ? h('div', null, c.address) : null, c.vat_id ? h('div', null, 'USt-IdNr. ' + c.vat_id) : null)),
+				h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Nr.'), h('th', null, 'Artikel'), h('th', { class: 'num' }, 'Empf. VK brutto'), h('th', { class: 'num' }, 'Ihr Preis netto'))),
+					h('tbody', null, d.rows.map(function (r) {
+						return h('tr', null, h('td', null, r.sku), h('td', null, r.name), h('td', { class: 'num' }, r.uvp === null ? '–' : ui.money(r.uvp, 'EUR')), h('td', { class: 'num' }, h('b', null, ui.money(r.dealer_net, 'EUR'))));
+					}))));
+
+			if (!d.rows.length) { sheet.appendChild(h('p', { class: 'muted' }, 'Es gibt noch keine Artikel mit Händlerpreis. Trage ihn in der Produktakte unter Stammdaten ein.')); }
+
+			var terms = h('div', { class: 'vk-sheet-terms' });
+			if (d.tiers.length) {
+				terms.appendChild(h('b', null, 'Mengenrabatt auf den Bestellwert'));
+				terms.appendChild(h('ul', { class: 'bullets' }, d.tiers.map(function (t) { return h('li', null, 'ab ' + ui.money(t.min, 'EUR') + ' netto: ' + pct(t.pct) + ' Rabatt'); })));
+			}
+			terms.appendChild(h('p', null, 'Zahlungsziel: ' + (d.days ? d.days + ' Tage netto' : 'nach Vereinbarung') + '. Alle Preise netto zuzüglich ' + pct(d.vat * 100) + ' Umsatzsteuer.'));
+			sheet.appendChild(terms);
+			box.appendChild(sheet);
+		}).catch(function (e) { errBox(ui, box, e); });
+	}
+
 	UI.routes['kontakt'] = function (r, ui) {
 		var h = ui.h;
 		var id = parseInt(r.id, 10) || 0;
+		if (r.sub === 'preisliste') { return priceList(ui, id); }
 		ui.section('kontakte');
 		ui.setHead('Kontakt', 'Verkauf');
 
@@ -272,6 +312,7 @@
 			box.appendChild(h('div', { class: 'page-head' },
 				h('div', null, h('h2', null, c.company), h('p', { class: 'muted', style: 'margin:4px 0 0' }, [d.types[c.type] || c.type, d.status[c.status] || c.status].join(' · '))),
 				h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
+					h('a', { class: 'btn', href: '#/kontakt/' + id + '/preisliste' }, 'Preisliste'),
 					h('button', { class: 'btn primary', type: 'button', onclick: function () {
 						formDialog(ui, 'Stammdaten ändern', contactFields(ui, c, d.types, d.status), 'Speichern', function (body) { return post('', body); }, load);
 					} }, 'Stammdaten ändern'))));

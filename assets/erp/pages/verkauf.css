@@ -43,3 +43,14 @@
 	.vk-fresh, .vk-fresh * { visibility: visible; }
 	.vk-fresh { position: absolute; left: 0; top: 0; }
 }
+
+/* Preisliste */
+.vk-sheet { max-width: 860px; }
+.vk-sheet-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.vk-sheet-to { text-align: right; font-size: 14px; }
+.vk-sheet-terms { margin-top: 16px; font-size: 14px; }
+@media print {
+	.no-print { display: none !important; }
+	.vk-sheet { border: 0; box-shadow: none; max-width: none; padding: 0; }
+	.view { padding: 0; max-width: none; }
+}

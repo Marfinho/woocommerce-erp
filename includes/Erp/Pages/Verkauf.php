@@ -218,6 +218,47 @@ class Verkauf {
 	}
 
 	/**
+	 * Zeilen der Preisliste für einen Händler – reine Regel.
+	 *
+	 * Aufgenommen wird, was verkäuflich und nicht ausgelaufen ist und einen
+	 * Händlerpreis hat. Der Händlerpreis steht im Artikel brutto (die
+	 * Kalkulation rechnet ebenso); gezeigt wird er netto, denn Händler
+	 * kaufen netto ein.
+	 *
+	 * @param array $articles Artikel mit sku, name, sellable, status, price_gross, dealer_price.
+	 * @param float $vat      Umsatzsteuersatz als Anteil (0,19).
+	 * @param array $inactive Status, die nicht auf die Liste gehören.
+	 * @return array Liste aus sku, name, uvp, dealer_net.
+	 */
+	public static function price_list_rows( array $articles, $vat, array $inactive = array( 'gesperrt', 'ausgelaufen' ) ) {
+		$out = array();
+
+		foreach ( $articles as $a ) {
+			$dealer = isset( $a['dealer_price'] ) && null !== $a['dealer_price'] ? (float) $a['dealer_price'] : 0.0;
+
+			if ( empty( $a['sellable'] ) || $dealer <= 0 || in_array( (string) $a['status'], $inactive, true ) ) {
+				continue;
+			}
+
+			$out[] = array(
+				'sku'        => (string) $a['sku'],
+				'name'       => (string) $a['name'],
+				'uvp'        => isset( $a['price_gross'] ) && null !== $a['price_gross'] ? round( (float) $a['price_gross'], 2 ) : null,
+				'dealer_net' => round( $vat > -1 ? $dealer / ( 1 + (float) $vat ) : $dealer, 2 ),
+			);
+		}
+
+		usort(
+			$out,
+			static function ( $a, $b ) {
+				return strcmp( $a['sku'], $b['sku'] );
+			}
+		);
+
+		return $out;
+	}
+
+	/**
 	 * Zahl aus einer Eingabe lesen, auch mit deutschem Komma.
 	 *
 	 * @param mixed $raw Eingabe.
@@ -732,6 +773,11 @@ class Verkauf {
 			'callback'            => array( __CLASS__, 'contact_term' ),
 			'permission_callback' => $kontakte,
 		) );
+		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/preisliste', array(
+			'methods'             => 'GET',
+			'callback'            => array( __CLASS__, 'contact_price_list' ),
+			'permission_callback' => $kontakte,
+		) );
 		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/profil', array(
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'contact_profile' ),
@@ -1213,6 +1259,50 @@ class Verkauf {
 		$out['exists']             = (bool) $row;
 
 		return $out;
+	}
+
+	/**
+	 * Preisliste für einen Händler: Händlerpreise netto, Staffel, Zahlungsziel.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function contact_price_list( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$contact = ContactRepository::find( $id );
+
+		if ( ! $contact ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$settings = \Lindenweg16\Modules\Betrieb\CalculationContext::settings();
+		$vat      = isset( $settings['vat_rate'] ) ? (float) $settings['vat_rate'] : 0.19;
+		$resolved = DiscountResolver::tiers_for_contact( $id, gmdate( 'Y-m-d' ) );
+		$tiers    = array();
+
+		foreach ( $resolved['tiers'] as $tier ) {
+			$tiers[] = array( 'min' => (float) $tier['min_order_value'], 'pct' => (float) $tier['discount_pct'] );
+		}
+
+		$profile = ContactRepository::profile( $id );
+
+		return new WP_REST_Response(
+			array(
+				'date'    => gmdate( 'Y-m-d' ),
+				'vat'     => $vat,
+				'shop'    => get_bloginfo( 'name' ),
+				'contact' => array(
+					'company' => (string) $contact['company'],
+					'person'  => (string) $contact['contact_person'],
+					'address' => trim( (string) $contact['street'] . ', ' . trim( $contact['zip'] . ' ' . $contact['city'] ), ' ,' ),
+					'vat_id'  => $profile ? (string) $profile['vat_id'] : '',
+				),
+				'tiers'   => $tiers,
+				'days'    => (int) $resolved['payment_terms_days'],
+				'source'  => (string) $resolved['source'],
+				'rows'    => self::price_list_rows( ArticleRepository::all(), $vat ),
+			)
+		);
 	}
 
 	/**

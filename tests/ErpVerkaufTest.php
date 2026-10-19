@@ -254,4 +254,22 @@ class ErpVerkaufTest extends TestCase {
 
 		$this->assertSame( 0, $out['display_provided'] );
 	}
+
+	public function test_preisliste_nimmt_nur_verkaufbares_mit_haendlerpreis() {
+		$rows = Verkauf::price_list_rows(
+			array(
+				array( 'sku' => 'B', 'name' => 'Beta', 'sellable' => 1, 'status' => 'aktiv', 'price_gross' => '11.90', 'dealer_price' => '8.33' ),
+				array( 'sku' => 'A', 'name' => 'Alpha', 'sellable' => 1, 'status' => 'aktiv', 'price_gross' => '23.80', 'dealer_price' => '11.90' ),
+				array( 'sku' => 'C', 'name' => 'Ohne Preis', 'sellable' => 1, 'status' => 'aktiv', 'price_gross' => '5', 'dealer_price' => null ),
+				array( 'sku' => 'D', 'name' => 'Nicht verkäuflich', 'sellable' => 0, 'status' => 'aktiv', 'price_gross' => '5', 'dealer_price' => '3' ),
+				array( 'sku' => 'E', 'name' => 'Ausgelaufen', 'sellable' => 1, 'status' => 'ausgelaufen', 'price_gross' => '5', 'dealer_price' => '3' ),
+			),
+			0.19
+		);
+
+		$this->assertSame( array( 'A', 'B' ), array_column( $rows, 'sku' ) );
+		$this->assertSame( 10.0, $rows[0]['dealer_net'] );
+		$this->assertSame( 7.0, $rows[1]['dealer_net'] );
+		$this->assertSame( 23.8, $rows[0]['uvp'] );
+	}
 }
