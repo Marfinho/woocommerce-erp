@@ -1,0 +1,36 @@
+/* Lager-Seiten (lager, lagerplaetze, bedarf): Ergänzungen zu den Bausteinen in erp.css. */
+
+.lg .btn, .lg .chip, .lg .pill { min-height: 44px; }
+.lg .chip { padding: 0 14px; }
+.lg .field { min-height: 44px; width: 100%; }
+.lg .field.lg-small { width: 90px; }
+.lg-bar { margin-bottom: 4px; }
+.lg-top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-top: 14px; }
+.lg-top .pills { padding: 0; }
+.lg-gap { margin-top: 14px; }
+.lg-gap0 { margin-bottom: 4px; }
+.lg-h { margin: 22px 0 6px; font-size: 18px; }
+
+.lg-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+.lg-num { display: grid; justify-items: end; text-align: right; min-width: 64px; }
+.lg-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.lg-dim { opacity: .65; }
+.lg-det summary { cursor: pointer; min-height: 32px; display: flex; align-items: center; color: var(--text-muted); font-size: 13px; }
+.lg-content { margin: 4px 0 0; padding-left: 18px; font-size: 14px; }
+
+.lg-form { display: grid; gap: 12px; }
+.lg-f { display: grid; gap: 4px; }
+.lg-f[hidden] { display: none; }
+.lg-l { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+.lg-art { display: grid; gap: 6px; }
+.lg-chk { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+.lg-chk input { width: 22px; height: 22px; }
+.lg-hint { margin: 0; font-size: 13px; }
+.lg-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+@media (max-width: 760px) {
+	.lg-row { grid-template-columns: minmax(0, 1fr) auto; }
+	.lg-row .lg-btns { grid-column: 1 / -1; justify-content: stretch; }
+	.lg-row .lg-btns .btn { flex: 1 1 120px; }
+	.lg-top .btn { width: 100%; }
+}
