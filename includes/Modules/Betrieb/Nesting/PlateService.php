@@ -81,14 +81,15 @@ class PlateService {
 				continue;
 			}
 
-			$article = ArticleRepository::find( $article_id );
+			$article  = ArticleRepository::find( $article_id );
 			$revision = RevisionRepository::active_for_article( $article_id );
+			$label    = $article ? trim( $article['sku'] . ' – ' . $article['name'], ' –' ) : '#' . $article_id;
 
 			if ( ! $revision || empty( $revision['model_file'] ) ) {
 				$warnings[] = sprintf(
-					/* translators: %s: Artikelname. */
-					__( '%s: keine Projekt-3MF hinterlegt – übersprungen.', 'lindenweg16' ),
-					$article ? $article['name'] : '#' . $article_id
+					/* translators: %s: Artikel (Nummer – Name). */
+					__( '%s: Es ist keine Projekt-3MF hinterlegt, deshalb kann der Artikel nicht geplant werden. Bitte beim Artikel in der aktiven Revision die ungeslicte Projektdatei hochladen.', 'lindenweg16' ),
+					$label
 				);
 				continue;
 			}
@@ -100,9 +101,9 @@ class PlateService {
 			// direkt drucken", siehe BambuService::dispatch_from_demand()).
 			if ( 'modell' !== $revision['model_kind'] ) {
 				$warnings[] = sprintf(
-					/* translators: %s: Artikelname. */
-					__( '%s: die hinterlegte Datei ist bereits geslict (keine Projektdatei) – für die Plattenanordnung wird die ungeslicte Projekt-3MF benötigt.', 'lindenweg16' ),
-					$article ? $article['name'] : '#' . $article_id
+					/* translators: %s: Artikel (Nummer – Name). */
+					__( '%s: Die hinterlegte Datei ist schon geslict. Zum Anordnen der Platten wird die ungeslicte Projekt-3MF gebraucht – bitte beim Artikel in der aktiven Revision hochladen.', 'lindenweg16' ),
+					$label
 				);
 				continue;
 			}
@@ -110,9 +111,9 @@ class PlateService {
 			$path = ModelFile::safe_path( $revision['model_file'] );
 			if ( '' === $path ) {
 				$warnings[] = sprintf(
-					/* translators: %s: Artikelname. */
-					__( '%s: hinterlegte Datei nicht mehr auffindbar – übersprungen.', 'lindenweg16' ),
-					$article ? $article['name'] : '#' . $article_id
+					/* translators: %s: Artikel (Nummer – Name). */
+					__( '%s: Die hinterlegte 3MF-Datei liegt nicht mehr auf dem Server. Bitte beim Artikel erneut hochladen.', 'lindenweg16' ),
+					$label
 				);
 				continue;
 			}
@@ -127,9 +128,9 @@ class PlateService {
 
 			if ( ! $hull || count( $hull ) < 3 ) {
 				$warnings[] = sprintf(
-					/* translators: %s: Artikelname. */
-					__( '%s: keine auswertbare Geometrie in der 3MF gefunden – übersprungen.', 'lindenweg16' ),
-					$article ? $article['name'] : '#' . $article_id
+					/* translators: %s: Artikel (Nummer – Name). */
+					__( '%s: In der 3MF ist keine auswertbare Form zu finden. Bitte die Projektdatei neu aus dem Slicer exportieren und hochladen.', 'lindenweg16' ),
+					$label
 				);
 				continue;
 			}

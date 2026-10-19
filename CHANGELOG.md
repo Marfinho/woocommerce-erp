@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.24.1] – 2026-10-19
+
+### Verständliche Fehlermeldungen im ERP
+- Beim Anordnen und Freigeben eines Plans erschien nur „Fehler 422“, weil die Oberfläche das
+  Feld `error` der Antwort nicht las. Jetzt steht dort der Grund im Klartext.
+- Für Antworten ohne Text gibt es Beschreibungen statt Nummern (keine Berechtigung, nicht mehr
+  angemeldet, Eingaben unvollständig, Serverfehler …).
+- Hinweise zur Plattenanordnung nennen den Artikel mit Nummer und Name (z. B. „HZ-BSM – Modul BSM“)
+  und sagen, was zu tun ist (ungeslicte Projekt-3MF in der aktiven Revision hochladen).
+- Scheitert die Anordnung, werden die Gründe der einzelnen Artikel mit angezeigt.
+
 ## [0.24.0] – 2026-10-19
 
 ### Soll gegen Ist

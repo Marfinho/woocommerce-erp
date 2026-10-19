@@ -119,6 +119,18 @@
 		return (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 	}
 
+	// Eine Beschreibung statt einer Nummer, falls der Server keine mitgibt.
+	function httpText(status) {
+		if (status === 401) { return 'Du bist nicht mehr angemeldet – bitte neu anmelden.'; }
+		if (status === 403) { return 'Dafür fehlt dir die Berechtigung.'; }
+		if (status === 404) { return 'Das gibt es nicht (mehr) – bitte die Seite neu laden.'; }
+		if (status === 409) { return 'Das geht gerade nicht, weil sich der Stand inzwischen geändert hat.'; }
+		if (status === 413) { return 'Die Datei ist zu groß.'; }
+		if (status === 422) { return 'Die Eingaben sind unvollständig oder passen nicht zusammen.'; }
+		if (status >= 500) { return 'Auf dem Server ist etwas schiefgegangen. Bitte gleich noch einmal versuchen.'; }
+		return 'Das hat nicht geklappt.';
+	}
+
 	function request(path, opts) {
 		opts = opts || {};
 		var headers = { 'X-WP-Nonce': C.nonce };
@@ -134,7 +146,7 @@
 				if (!res.ok) {
 					var msg = json && json.code === 'rest_cookie_invalid_nonce'
 						? 'Die Sitzung ist abgelaufen – bitte die Seite neu laden.'
-						: (json && json.message) || ('Fehler ' + res.status);
+						: (json && (json.message || json.error)) || httpText(res.status);
 					var err = new Error(msg);
 					err.status = res.status;
 					err.code = json && json.code;
