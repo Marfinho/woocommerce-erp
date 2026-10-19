@@ -380,6 +380,7 @@ require $lw16_root . '/includes/Erp/Pages/Hilfe.php';
 require $lw16_root . '/includes/Erp/Pages/ArAnsicht.php';
 require $lw16_root . '/includes/Erp/Pages/Produktion.php';
 require $lw16_root . '/includes/Erp/Pages/Lager.php';
+require $lw16_root . '/includes/Erp/Pages/Konfigurator.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
