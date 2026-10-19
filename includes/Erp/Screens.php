@@ -219,14 +219,11 @@ class Screens {
 	}
 
 	/**
-	 * Versandliste.
+	 * Die DHL-Angaben, die die Oberfläche braucht.
 	 *
-	 * @param string $filter offen, versendet oder alle.
-	 * @return array {orders, dhl}
+	 * @return array {configured, sandbox, products}
 	 */
-	public static function shipping( $filter = 'offen' ) {
-		global $wpdb;
-
+	protected static function dhl_info() {
 		$dhl = array(
 			'configured' => (bool) DhlClient::configured(),
 			'sandbox'    => (bool) ( DhlClient::configured() && DhlClient::sandbox() ),
@@ -237,58 +234,166 @@ class Screens {
 			$dhl['products'][] = array( 'id' => $key, 'label' => $product );
 		}
 
+		return $dhl;
+	}
+
+	/**
+	 * Eine Bestellung als Karte des Versand-Workflows.
+	 *
+	 * Die Stufe ergibt sich aus den Tatsachen, nicht aus einem Merker: Ohne
+	 * Label ist die Bestellung zu packen, mit Label zu versenden, im Status
+	 * „abgeschlossen“ versendet. So kann der Stand nie von der Wirklichkeit
+	 * abweichen, auch wenn jemand im Shop etwas anders macht.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @param array     $dhl   Angaben aus dhl_info().
+	 * @return array
+	 */
+	protected static function ship_entry( $order, array $dhl ) {
+		global $wpdb;
+
+		$id    = $order->get_id();
+		$lines = array();
+
+		foreach ( $order->get_items() as $item ) {
+			$lines[] = array( 'qty' => $item->get_quantity(), 'name' => $item->get_name() );
+		}
+
+		$land  = $order->get_shipping_country() ? $order->get_shipping_country() : $order->get_billing_country();
+		$label = DhlLabelRepository::for_order( $id );
+		$row   = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id = %d', $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$done  = 'completed' === $order->get_status();
+
+		$entry = array(
+			'id'        => $id,
+			'number'    => $order->get_order_number(),
+			'ts'        => $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0,
+			'status'    => wc_get_order_status_name( $order->get_status() ),
+			'stage'     => $done ? 'done' : ( $label ? 'send' : 'pack' ),
+			'name'      => $order->get_formatted_shipping_full_name() ? $order->get_formatted_shipping_full_name() : $order->get_formatted_billing_full_name(),
+			'place'     => trim( $order->get_shipping_postcode() . ' ' . $order->get_shipping_city() . ' ' . $land ),
+			'content'   => self::summarize_items( $lines ),
+			'tracking'  => $row ? (string) $row->tracking_nummer : (string) DhlTracking::extract_tracking_number( $order ),
+			'tstatus'   => $row ? (string) $row->aktueller_status : '',
+			'slip'      => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
+			'edit'      => $order->get_edit_order_url(),
+			'label'     => null,
+			'suggested' => null,
+		);
+
+		if ( $label ) {
+			$entry['label'] = array(
+				'id'      => (int) $label->id,
+				'product' => DhlProduct::label( $label->product ),
+				'weight'  => (int) $label->weight_g,
+				'pdf'     => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
+			);
+		} elseif ( $dhl['configured'] && ! $done ) {
+			$weight             = DhlShipping::weight_g( $order );
+			$entry['suggested'] = array(
+				'weight'  => (int) $weight,
+				'product' => DhlProduct::for_destination( $land, $weight, 1 === (int) \Lindenweg16\Core\Settings::get( 'dhl_versand_warenpost', 0 ) ),
+			);
+		}
+
+		return $entry;
+	}
+
+	/**
+	 * Versand-Workflow: offene Bestellungen und heute Versendetes.
+	 *
+	 * @return array {orders, dhl}
+	 */
+	public static function shipping() {
+		$dhl = self::dhl_info();
+
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return array( 'orders' => array(), 'dhl' => $dhl );
 		}
 
 		$orders = array();
+		$since  = ( new \DateTimeImmutable( 'today', wp_timezone() ) )->getTimestamp();
 
-		foreach ( wc_get_orders( array( 'status' => ShippingPage::statuses_for( $filter ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ) as $order ) {
-			$id    = $order->get_id();
-			$lines = array();
+		// Älteste zuerst: Wer am längsten wartet, steht oben.
+		foreach ( wc_get_orders( array( 'status' => array( 'wc-processing', 'wc-on-hold' ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ) as $order ) {
+			$orders[] = self::ship_entry( $order, $dhl );
+		}
 
-			foreach ( $order->get_items() as $item ) {
-				$lines[] = array( 'qty' => $item->get_quantity(), 'name' => $item->get_name() );
-			}
-
-			$land  = $order->get_shipping_country() ? $order->get_shipping_country() : $order->get_billing_country();
-			$label = DhlLabelRepository::for_order( $id );
-			$row   = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id = %d', $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-
-			$entry = array(
-				'id'        => $id,
-				'number'    => $order->get_order_number(),
-				'ts'        => $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0,
-				'status'    => wc_get_order_status_name( $order->get_status() ),
-				'name'      => $order->get_formatted_shipping_full_name() ? $order->get_formatted_shipping_full_name() : $order->get_formatted_billing_full_name(),
-				'place'     => trim( $order->get_shipping_postcode() . ' ' . $order->get_shipping_city() . ' ' . $land ),
-				'content'   => self::summarize_items( $lines ),
-				'tracking'  => $row ? (string) $row->tracking_nummer : (string) DhlTracking::extract_tracking_number( $order ),
-				'tstatus'   => $row ? (string) $row->aktueller_status : '',
-				'slip'      => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
-				'edit'      => $order->get_edit_order_url(),
-				'label'     => null,
-				'suggested' => null,
-			);
-
-			if ( $label ) {
-				$entry['label'] = array(
-					'id'      => (int) $label->id,
-					'product' => DhlProduct::label( $label->product ),
-					'weight'  => (int) $label->weight_g,
-					'pdf'     => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
-				);
-			} elseif ( $dhl['configured'] ) {
-				$weight             = DhlShipping::weight_g( $order );
-				$entry['suggested'] = array(
-					'weight'  => (int) $weight,
-					'product' => DhlProduct::for_destination( $land, $weight, 1 === (int) \Lindenweg16\Core\Settings::get( 'dhl_versand_warenpost', 0 ) ),
-				);
-			}
-
-			$orders[] = $entry;
+		foreach ( wc_get_orders( array( 'status' => array( 'wc-completed' ), 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC', 'date_completed' => '>=' . $since ) ) as $order ) {
+			$orders[] = self::ship_entry( $order, $dhl );
 		}
 
 		return array( 'orders' => $orders, 'dhl' => $dhl );
+	}
+
+	/**
+	 * Eine Bestellung für die Packseite: Karte, Anschrift, Positionen.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return array|null
+	 */
+	public static function ship_order( $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return null;
+		}
+
+		$dhl   = self::dhl_info();
+		$entry = self::ship_entry( $order, $dhl );
+		$items = array();
+
+		foreach ( $order->get_items() as $item ) {
+			$product = $item->get_product();
+			$items[] = array(
+				'name' => $item->get_name(),
+				'qty'  => (int) $item->get_quantity(),
+				'sku'  => $product ? (string) $product->get_sku() : '',
+			);
+		}
+
+		$entry['items']   = $items;
+		$entry['address'] = array_values( array_filter( array_map( 'trim', explode( '<br/>', (string) $order->get_formatted_shipping_address( $order->get_formatted_billing_address() ) ) ) ) );
+		$entry['address'] = array_map( 'wp_strip_all_tags', $entry['address'] );
+		$entry['note']    = (string) $order->get_customer_note();
+		$entry['dhl']     = $dhl;
+
+		return $entry;
+	}
+
+	/**
+	 * Als versendet melden: Lagerabgang buchen, Bestellung abschließen.
+	 *
+	 * Der Lagerabgang passiert hier, beim Versand – nicht erst, wenn jemand
+	 * die Bestellung im Shop abschließt. Gebucht wird über die vorhandene
+	 * Regel der WooCommerce-Anbindung (einmal je Bestellung, mit Sperre);
+	 * der Statuswechsel danach löst sie noch einmal aus und findet nichts
+	 * mehr zu tun.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return array {ok, message}
+	 */
+	public static function mark_shipped( $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( 'completed' === $order->get_status() ) {
+			return array( 'ok' => true, 'message' => __( 'Schon als versendet gemeldet.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diese Bestellung ist nicht versandbereit (Status: ', 'lindenweg16' ) . wc_get_order_status_name( $order->get_status() ) . ').' );
+		}
+
+		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->book_stock( (int) $order_id );
+
+		$order->update_status( 'completed', __( 'Versendet über das ERP.', 'lindenweg16' ) );
+
+		\Lindenweg16\Core\AuditLog::record( 'erp_versendet', 'order', (int) $order_id, array() );
+
+		return array( 'ok' => true, 'message' => __( 'Versendet. Der Lagerabgang ist gebucht.', 'lindenweg16' ) );
 	}
 }

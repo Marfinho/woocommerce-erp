@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.22.0] – 2026-10-19
+
+### Versand-Workflow mit Lagerabgang beim Versand
+- Der Versand ist ein Board mit drei Spalten: **Zu packen**, **Label da – zu versenden**,
+  **Heute versendet**. Die Stufe ergibt sich aus den Tatsachen (Label vorhanden, Bestellung
+  abgeschlossen), nicht aus einem eigenen Merker.
+- „Versendet ✓“ bucht den Lagerabgang (vorhandene, idempotente Regel der WooCommerce-Anbindung)
+  und schließt danach die Bestellung ab. Der Abgang passiert damit beim Versand, nicht erst,
+  wenn jemand im Shop abschließt; der Abschluss im Shop bleibt als gleichwertiger Weg erhalten
+  und bucht nichts doppelt.
+- Neue Packseite fürs Handy unter `#/bestellung/<id>`: Anschrift, Packliste zum Abhaken,
+  Label erzeugen/öffnen, Lieferschein, große Taste „Versendet ✓“.
+- Neue REST-Routen `erp/versand/<id>` und `erp/versand/<id>/versendet`; Recht `verkauf.versand`.
+
 ## [0.21.1] – 2026-10-19
 
 ### Workflow: Filament wird aus dem Bestand abgezogen

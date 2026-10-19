@@ -447,6 +447,7 @@
 		if (r.name === 'bereich' && areaOf(r.id)) { return viewArea(areaOf(r.id)); }
 		if (r.name === 'seite') { return viewPage(r.id); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
+		if (r.name === 'bestellung') { return viewShipOrder(parseInt(r.id, 10) || 0); }
 		return viewStart();
 	}
 
@@ -1346,91 +1347,144 @@
 		load();
 	}
 
-	var SHIP_FILTERS = [['offen', 'Zu versenden'], ['versendet', 'Versendet'], ['alle', 'Alle']];
+	function shipDone(o, d, reload, btn) {
+		if (!window.confirm('Als versendet melden? Dabei wird der Lagerabgang gebucht.')) { return; }
+		if (btn) { btn.disabled = true; }
+		api('versand/' + o.id + '/versendet', { method: 'POST' })
+			.then(function (r) { toast(r.message); reload(); })
+			.catch(function (er) { if (btn) { btn.disabled = false; } toast(er.message, true); });
+	}
+
+	function shipLabelForm(o, dhl, canLabel, reload) {
+		if (!dhl.configured) { return null; }
+		if (!canLabel) { return h('small', { class: 'muted' }, 'Label erzeugen darfst du nicht.'); }
+		if (!o.suggested) { return null; }
+
+		var product = h('select', { class: 'field', 'aria-label': 'Produkt' }, dhl.products.map(function (p) { return h('option', { value: p.id, selected: p.id === o.suggested.product }, p.label); }));
+		var weight = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: String(o.suggested.weight || ''), 'aria-label': 'Gewicht in Gramm', style: 'max-width:110px' });
+		var bulky = h('input', { type: 'checkbox', id: 'bulky-' + o.id });
+
+		return h('form', {
+			class: 'label-area', onsubmit: function (e) {
+				e.preventDefault();
+				var btn = e.target.querySelector('button[type=submit]');
+				btn.disabled = true;
+				api('versand/' + o.id + '/label', { method: 'POST', body: { product: product.value, weight_g: parseFloat(weight.value) || 0, bulky: bulky.checked } })
+					.then(function (r) { toast(r.message); reload(); })
+					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+			}
+		}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id }, bulky, ' sperrig'), h('button', { class: 'btn primary', type: 'submit' }, 'Label erzeugen'));
+	}
+
+	function shipVoid(o, reload) {
+		return h('button', {
+			class: 'btn', type: 'button', style: 'color:var(--error)',
+			onclick: function (e) {
+				if (!window.confirm('Label stornieren? Die Frankierung wird dann nicht berechnet.')) { return; }
+				e.target.disabled = true;
+				api('versand/label/' + o.label.id + '/storno', { method: 'POST' }).then(function (r) { toast(r.message); reload(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+			}
+		}, 'Stornieren');
+	}
+
+	var SHIP_COLS = [['pack', 'Zu packen'], ['send', 'Label da – zu versenden'], ['done', 'Heute versendet']];
 
 	function viewShipping(item) {
-		pageHead('Versand', 'Älteste zuerst – wer am längsten wartet, steht oben.', classicBtn(item));
-		var filter = S.shipFilter || 'offen';
-		var chips = h('div', { class: 'presets' });
+		pageHead('Versand', 'Packen, Label, Versendet – beim Versenden geht der Bestand ab.', classicBtn(item));
+		el.view.classList.add('wide');
 		var box = h('div');
-		el.view.appendChild(chips);
 		el.view.appendChild(box);
 
-		function drawChips() {
-			chips.textContent = '';
-			SHIP_FILTERS.forEach(function (f) {
-				chips.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; S.shipFilter = f[0]; drawChips(); load(); } }, f[1]));
-			});
-		}
-
 		function load() {
-			box.textContent = '';
-			box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
-			return api('versand?filter=' + filter).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+			return api('versand').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		}
 
-		function labelArea(o, d) {
-			if (o.label) {
-				return h('div', { class: 'label-area' },
-					h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'),
-					h('small', { class: 'muted' }, o.label.product + ' · ' + qty(o.label.weight) + ' g'),
-					d.label ? h('button', {
-						class: 'btn', type: 'button', style: 'color:var(--error)',
-						onclick: function (e) {
-							if (!window.confirm('Label stornieren? Die Frankierung wird dann nicht berechnet.')) { return; }
-							e.target.disabled = true;
-							api('versand/label/' + o.label.id + '/storno', { method: 'POST' }).then(function (r) { toast(r.message); load(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
-						}
-					}, 'Stornieren') : null
-				);
+		function card(o, d) {
+			var actions = h('div', { class: 'ship-actions' });
+
+			if (o.stage === 'pack') {
+				var form = shipLabelForm(o, d.dhl, d.label, load);
+				if (form) { actions.appendChild(form); }
+				if (!d.dhl.configured) {
+					actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
+				}
+			} else if (o.stage === 'send') {
+				actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
+				actions.appendChild(h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'));
+				if (d.label) { actions.appendChild(shipVoid(o, load)); }
 			}
 
-			if (!d.dhl.configured) { return h('small', { class: 'muted' }, 'kein DHL-Zugang'); }
-			if (!d.label) { return h('small', { class: 'muted' }, 'Label erzeugen darfst du nicht.'); }
+			if (o.stage !== 'done') { actions.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein')); }
 
-			var product = h('select', { class: 'field', 'aria-label': 'Produkt' }, d.dhl.products.map(function (p) { return h('option', { value: p.id, selected: p.id === o.suggested.product }, p.label); }));
-			var weight = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: String(o.suggested.weight || ''), 'aria-label': 'Gewicht in Gramm', style: 'max-width:120px' });
-			var bulky = h('input', { type: 'checkbox', id: 'bulky-' + o.id });
-
-			return h('form', {
-				class: 'label-area', onsubmit: function (e) {
-					e.preventDefault();
-					var btn = e.target.querySelector('button[type=submit]');
-					btn.disabled = true;
-					api('versand/' + o.id + '/label', { method: 'POST', body: { product: product.value, weight_g: parseFloat(weight.value) || 0, bulky: bulky.checked } })
-						.then(function (r) { toast(r.message); load(); })
-						.catch(function (er) { btn.disabled = false; toast(er.message, true); });
-				}
-			}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id }, bulky, ' sperrig'), h('button', { class: 'btn primary', type: 'submit' }, 'Label erzeugen'));
+			return h('div', { class: 'row-card ship' },
+				h('a', { class: 'row-main', href: '#/bestellung/' + o.id, style: 'color:inherit;text-decoration:none' },
+					h('b', null, '#' + o.number + ' · ' + o.name),
+					h('small', null, o.place + (o.ts ? ' · ' + new Date(o.ts * 1000).toLocaleDateString('de-DE') : '')),
+					h('small', null, o.content)
+				),
+				o.tracking ? h('div', { class: 'ship-track' }, h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, o.tracking), o.tstatus ? h('small', { class: 'muted' }, ' ' + o.tstatus) : null) : null,
+				actions
+			);
 		}
 
 		function paint(d) {
 			box.textContent = '';
 			if (d.dhl.sandbox) { box.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:12px' }, 'DHL-Sandbox aktiv: Die Labels sehen echt aus, sind aber keine gültige Frankierung.')); }
-			if (!d.orders.length) { box.appendChild(h('div', { class: 'notice' }, 'Keine Bestellung in dieser Ansicht.')); return; }
 
-			var list = h('div', { class: 'rows' });
-			d.orders.forEach(function (o) {
-				list.appendChild(h('div', { class: 'row-card ship' },
-					h('div', { class: 'row-main' },
-						h('b', null, '#' + o.number + ' · ' + o.name),
-						h('small', null, o.place + ' · ' + o.status + (o.ts ? ' · ' + new Date(o.ts * 1000).toLocaleDateString('de-DE') : '')),
-						h('small', null, o.content)
-					),
-					h('div', { class: 'ship-track' },
-						o.tracking ? h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, o.tracking) : h('span', { class: 'muted' }, 'keine Sendungsnummer'),
-						o.tstatus ? h('small', { class: 'muted' }, o.tstatus) : null
-					),
-					h('div', { class: 'ship-actions' },
-						labelArea(o, d),
-						h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein')
-					)
-				));
+			var board = h('div', { class: 'board ship-board' });
+			SHIP_COLS.forEach(function (c) {
+				var list = d.orders.filter(function (o) { return o.stage === c[0]; });
+				var col = h('section', { class: 'col' }, h('h3', null, c[1], ' ', h('span', { class: 'count' }, String(list.length))));
+				if (!list.length) { col.appendChild(h('div', { class: 'muted', style: 'padding:8px 2px' }, c[0] === 'done' ? 'Noch nichts versendet.' : 'Nichts offen.')); }
+				list.forEach(function (o) { col.appendChild(card(o, d)); });
+				board.appendChild(col);
 			});
-			box.appendChild(list);
+			box.appendChild(board);
 		}
 
-		drawChips();
+		load();
+	}
+
+	function viewShipOrder(id) {
+		setHead('Bestellung', 'Packen und versenden');
+		var box = h('div', { class: 'run' });
+		el.view.appendChild(box);
+
+		function load() {
+			return api('versand/' + id).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function paint(o) {
+			box.textContent = '';
+			box.appendChild(h('div', { class: 'card' },
+				h('h2', null, '#' + o.number + ' · ' + o.name),
+				h('div', null, o.address.map(function (l) { return h('div', null, l); })),
+				o.note ? h('div', { class: 'notice', style: 'margin-top:10px' }, 'Kundenhinweis: ' + o.note) : null
+			));
+
+			var list = h('div', { class: 'card' }, h('h3', null, 'Packliste'));
+			o.items.forEach(function (it, i) {
+				var cb = h('input', { type: 'checkbox', id: 'pk-' + i, style: 'width:22px;height:22px' });
+				list.appendChild(h('label', { class: 'chk', for: 'pk-' + i, style: 'display:flex;gap:12px;align-items:center;padding:10px 0;font-size:17px' }, cb, h('b', null, it.qty + '×'), ' ' + it.name, it.sku ? h('small', { class: 'muted' }, ' ' + it.sku) : null));
+			});
+			box.appendChild(list);
+
+			var act = h('div', { class: 'card ship-actions' });
+			if (o.stage === 'pack') {
+				var form = shipLabelForm(o, o.dhl, o.can_label, load);
+				if (form) { act.appendChild(form); }
+				if (!o.dhl.configured) { act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓')); }
+			} else if (o.stage === 'send') {
+				act.appendChild(h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'));
+				act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓'));
+			} else {
+				act.appendChild(h('div', { class: 'notice' }, 'Versendet. Der Lagerabgang ist gebucht.'));
+			}
+			act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
+			box.appendChild(act);
+			box.appendChild(h('a', { class: 'btn', href: '#/seite/versand' }, '← Zurück zum Versand'));
+		}
+
 		load();
 	}
 

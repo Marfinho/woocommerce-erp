@@ -94,7 +94,26 @@ class RestApi {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'versand' ),
 				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
-				'args'                => array( 'filter' => array( 'type' => 'string', 'required' => false ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'versand_order' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/versendet',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_versendet' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
 			)
 		);
 
@@ -284,10 +303,40 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function versand( WP_REST_Request $request ) {
-		$data           = Screens::shipping( sanitize_key( (string) $request->get_param( 'filter' ) ) );
-		$data['label']  = Access::can( 'verkauf.versand.etikett' );
+		$data          = Screens::shipping();
+		$data['label'] = Access::can( 'verkauf.versand.etikett' );
 
 		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Eine Bestellung für die Packseite.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_order( WP_REST_Request $request ) {
+		$data = Screens::ship_order( (int) $request['id'] );
+
+		if ( null === $data ) {
+			return new WP_REST_Response( array( 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) ), 404 );
+		}
+
+		$data['can_label'] = Access::can( 'verkauf.versand.etikett' );
+
+		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Als versendet melden (Lagerabgang inklusive).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_versendet( WP_REST_Request $request ) {
+		$result = Screens::mark_shipped( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
 
 	/**
