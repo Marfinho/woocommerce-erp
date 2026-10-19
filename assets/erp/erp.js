@@ -317,7 +317,7 @@
 		timers.forEach(function (t) { clearInterval(t); });
 		timers = [];
 		stopCamera();
-		el.app.classList.remove('drawer-open');
+		el.app.classList.remove('drawer-open', 'kiosk');
 		syncNav();
 
 		var r = route();
@@ -455,6 +455,9 @@
 			if (f.item.id === 'rechte') { return viewRights(); }
 			if (f.item.id === 'scannen') { return viewScan(); }
 			if (f.item.id === 'picken') { return viewPick(); }
+			if (f.item.id === 'druckfarm') { return viewFarm(f.item); }
+			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
+			if (f.item.id === 'versand') { return viewShipping(f.item); }
 		}
 
 		if (f.item.locked) {
@@ -1076,6 +1079,219 @@
 		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 30000));
 	}
 
+	/* ---------- Druckfarm, Aufträge, Versand ---------- */
+
+	function classicBtn(item) {
+		return item.path ? h('a', { class: 'btn', href: C.adminUrl + item.path, target: '_blank', rel: 'noopener' }, ico('ext'), 'Klassische Ansicht') : null;
+	}
+
+	function pageHead(title, sub, right) {
+		el.view.appendChild(h('div', { class: 'page-head' },
+			h('div', null, h('h2', null, title), h('p', { class: 'muted', style: 'margin:4px 0 0' }, sub)),
+			h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, right)
+		));
+	}
+
+	function ago(ts, now) {
+		if (!ts) { return 'nie'; }
+		var s = Math.max(0, (now || Math.floor(Date.now() / 1000)) - ts);
+		if (s < 90) { return 'vor ' + s + ' s'; }
+		if (s < 5400) { return 'vor ' + Math.round(s / 60) + ' min'; }
+		return 'vor ' + Math.round(s / 3600) + ' h';
+	}
+
+	function viewFarm(item) {
+		var kiosk = h('button', { class: 'btn', type: 'button', onclick: function () { el.app.classList.add('kiosk'); } }, 'Vollbild-Anzeige');
+		pageHead('Druckfarm', 'Live-Stand aller Bambu-Drucker – aktualisiert sich alle 5 Sekunden.', [kiosk, classicBtn(item)]);
+
+		var grid = h('div', { class: 'farm' });
+		el.view.appendChild(grid);
+		el.view.appendChild(h('button', { class: 'kiosk-exit btn', type: 'button', onclick: function () { el.app.classList.remove('kiosk'); } }, 'Anzeige beenden (Esc)'));
+
+		function paint(d) {
+			grid.textContent = '';
+			if (!d.printers.length) { grid.appendChild(h('div', { class: 'notice' }, 'Noch kein Bambu-Drucker angelegt.')); return; }
+
+			d.printers.forEach(function (p) {
+				var card = h('article', { class: 'printer st-' + p.status },
+					h('header', null, h('h3', null, p.name), h('span', { class: 'pill st-' + p.status }, p.text)),
+					p.model ? h('div', { class: 'muted', style: 'font-size:12.5px' }, p.model) : null
+				);
+
+				if (p.progress !== null) {
+					card.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt ' + p.name }, h('i', { style: 'width:' + p.progress + '%' })));
+					card.appendChild(h('div', { class: 'bar-txt' }, h('b', null, p.progress + ' %'), p.remaining !== null ? h('span', { class: 'muted' }, 'noch ' + p.remaining + ' min') : null));
+				}
+
+				if (p.nozzle !== null || p.bed !== null) {
+					card.appendChild(h('div', { class: 'temps' }, 'Düse ' + (p.nozzle !== null ? Math.round(p.nozzle) : '–') + ' °C · Bett ' + (p.bed !== null ? Math.round(p.bed) : '–') + ' °C'));
+				}
+
+				if (p.trays.length) {
+					card.appendChild(h('div', { class: 'trays' }, p.trays.map(function (t) {
+						return h('span', { class: 'tray', title: t.material + (t.remain !== null ? ' · ' + t.remain + ' %' : '') },
+							h('i', { style: 'background:' + t.color }), t.material, t.remain !== null ? h('small', null, t.remain + ' %') : null);
+					})));
+				}
+
+				if (p.snapshot) { card.appendChild(h('img', { class: 'snap', src: p.snapshot, alt: 'Kamera-Standbild ' + p.name, loading: 'lazy' })); }
+				if (p.error) { card.appendChild(h('div', { class: 'err' }, p.error)); }
+
+				card.appendChild(h('footer', null, h('span', null, p.queue + ' wartend'), h('span', { class: 'muted' }, 'Kontakt ' + ago(p.seen, d.now))));
+				grid.appendChild(card);
+			});
+		}
+
+		function load() { return api('druckfarm').then(paint); }
+		load().catch(function (e) { grid.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 5000));
+	}
+
+	var ORDER_FILTERS = [['', 'Alle'], ['entwurf', 'Entwürfe'], ['bestaetigt', 'Bestätigt'], ['storniert', 'Storniert']];
+
+	function viewOrders(item) {
+		pageHead('Aufträge', 'Bestellungen im Betrieb – aus dem Shop und von Hand.', classicBtn(item));
+		var filter = S.orderFilter || '';
+		var chips = h('div', { class: 'presets' });
+		var box = h('div');
+		el.view.appendChild(chips);
+		el.view.appendChild(box);
+
+		function drawChips() {
+			chips.textContent = '';
+			ORDER_FILTERS.forEach(function (f) {
+				chips.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; S.orderFilter = f[0]; drawChips(); load(); } }, f[1]));
+			});
+		}
+
+		function load() {
+			box.textContent = '';
+			box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+			return api('auftraege' + (filter ? '?status=' + filter : '')).then(function (d) { paint(d); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			if (!d.orders.length) { box.appendChild(h('div', { class: 'notice' }, 'Keine Aufträge in dieser Ansicht.')); return; }
+
+			var list = h('div', { class: 'rows' });
+			d.orders.forEach(function (o) {
+				var chip = o.status === 'entwurf' ? 'later' : (o.status === 'storniert' ? '' : 'now');
+				list.appendChild(h('div', { class: 'row-card' },
+					h('div', { class: 'row-main' },
+						h('b', null, o.contact || (o.wc ? 'Shop-Bestellung #' + o.wc : 'Auftrag #' + o.id)),
+						h('small', null, '#' + o.id + (o.wc ? ' · Shop #' + o.wc : ' · manuell') + ' · ' + o.date)
+					),
+					h('div', { class: 'row-num' }, money(o.value, 'EUR')),
+					h('div', { class: 'row-tags' },
+						h('span', { class: 'tag ' + chip }, o.status),
+						h('span', { class: 'tag' + (o.overdue ? ' later' : '') }, o.overdue ? 'Rechnung überfällig' : 'Rechnung ' + o.invoice)
+					),
+					o.status === 'entwurf' && d.confirm ? h('button', {
+						class: 'btn primary', type: 'button',
+						onclick: function (e) {
+							if (!window.confirm('Entwurf bestätigen? Erst dadurch entstehen Lagerabgang und offener Posten.')) { return; }
+							e.target.disabled = true;
+							api('auftraege/' + o.id + '/bestaetigen', { method: 'POST' }).then(function (r) { toast(r.message); load(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+						}
+					}, 'Bestätigen') : null
+				));
+			});
+			box.appendChild(list);
+		}
+
+		drawChips();
+		load();
+	}
+
+	var SHIP_FILTERS = [['offen', 'Zu versenden'], ['versendet', 'Versendet'], ['alle', 'Alle']];
+
+	function viewShipping(item) {
+		pageHead('Versand', 'Älteste zuerst – wer am längsten wartet, steht oben.', classicBtn(item));
+		var filter = S.shipFilter || 'offen';
+		var chips = h('div', { class: 'presets' });
+		var box = h('div');
+		el.view.appendChild(chips);
+		el.view.appendChild(box);
+
+		function drawChips() {
+			chips.textContent = '';
+			SHIP_FILTERS.forEach(function (f) {
+				chips.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; S.shipFilter = f[0]; drawChips(); load(); } }, f[1]));
+			});
+		}
+
+		function load() {
+			box.textContent = '';
+			box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+			return api('versand?filter=' + filter).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function labelArea(o, d) {
+			if (o.label) {
+				return h('div', { class: 'label-area' },
+					h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'),
+					h('small', { class: 'muted' }, o.label.product + ' · ' + qty(o.label.weight) + ' g'),
+					d.label ? h('button', {
+						class: 'btn', type: 'button', style: 'color:var(--error)',
+						onclick: function (e) {
+							if (!window.confirm('Label stornieren? Die Frankierung wird dann nicht berechnet.')) { return; }
+							e.target.disabled = true;
+							api('versand/label/' + o.label.id + '/storno', { method: 'POST' }).then(function (r) { toast(r.message); load(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+						}
+					}, 'Stornieren') : null
+				);
+			}
+
+			if (!d.dhl.configured) { return h('small', { class: 'muted' }, 'kein DHL-Zugang'); }
+			if (!d.label) { return h('small', { class: 'muted' }, 'Label erzeugen darfst du nicht.'); }
+
+			var product = h('select', { class: 'field', 'aria-label': 'Produkt' }, d.dhl.products.map(function (p) { return h('option', { value: p.id, selected: p.id === o.suggested.product }, p.label); }));
+			var weight = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: String(o.suggested.weight || ''), 'aria-label': 'Gewicht in Gramm', style: 'max-width:120px' });
+			var bulky = h('input', { type: 'checkbox', id: 'bulky-' + o.id });
+
+			return h('form', {
+				class: 'label-area', onsubmit: function (e) {
+					e.preventDefault();
+					var btn = e.target.querySelector('button[type=submit]');
+					btn.disabled = true;
+					api('versand/' + o.id + '/label', { method: 'POST', body: { product: product.value, weight_g: parseFloat(weight.value) || 0, bulky: bulky.checked } })
+						.then(function (r) { toast(r.message); load(); })
+						.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+				}
+			}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id }, bulky, ' sperrig'), h('button', { class: 'btn primary', type: 'submit' }, 'Label erzeugen'));
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			if (d.dhl.sandbox) { box.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:12px' }, 'DHL-Sandbox aktiv: Die Labels sehen echt aus, sind aber keine gültige Frankierung.')); }
+			if (!d.orders.length) { box.appendChild(h('div', { class: 'notice' }, 'Keine Bestellung in dieser Ansicht.')); return; }
+
+			var list = h('div', { class: 'rows' });
+			d.orders.forEach(function (o) {
+				list.appendChild(h('div', { class: 'row-card ship' },
+					h('div', { class: 'row-main' },
+						h('b', null, '#' + o.number + ' · ' + o.name),
+						h('small', null, o.place + ' · ' + o.status + (o.ts ? ' · ' + new Date(o.ts * 1000).toLocaleDateString('de-DE') : '')),
+						h('small', null, o.content)
+					),
+					h('div', { class: 'ship-track' },
+						o.tracking ? h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, o.tracking) : h('span', { class: 'muted' }, 'keine Sendungsnummer'),
+						o.tstatus ? h('small', { class: 'muted' }, o.tstatus) : null
+					),
+					h('div', { class: 'ship-actions' },
+						labelArea(o, d),
+						h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein')
+					)
+				));
+			});
+			box.appendChild(list);
+		}
+
+		drawChips();
+		load();
+	}
+
 	/* ---------- Suche ---------- */
 
 	function openPalette() {
@@ -1126,7 +1342,7 @@
 		if (!S.boot) { return; }
 		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); if (!document.querySelector('dialog[open]')) { openPalette(); } }
 		else if (e.key === '/' && !typing && !document.querySelector('dialog[open]')) { e.preventDefault(); openPalette(); }
-		else if (e.key === 'Escape' && el.app) { el.app.classList.remove('drawer-open'); }
+		else if (e.key === 'Escape' && el.app) { el.app.classList.remove('drawer-open', 'kiosk'); }
 	});
 
 	window.addEventListener('beforeunload', function (e) {

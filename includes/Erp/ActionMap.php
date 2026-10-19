@@ -99,7 +99,7 @@ class ActionMap {
 			'lw16_betrieb_stock_move'     => array( 'lager.bestand', 'lager.buchen' ),
 			'lw16_betrieb_stock_void'     => array( 'lager.bestand', 'lager.buchen' ),
 			'lw16_betrieb_stock_target'   => array( 'lager.bestand', 'fertigung.stammdaten.edit' ),
-			'lw16_betrieb_stock_part'     => array( 'lager.bestand', 'fertigung.stammdaten.edit' ),
+			'lw16_betrieb_stock_part'     => array( 'lager.bestand', 'lager.buchen' ),
 			'lw16_betrieb_demand_order'   => array( 'lager.bedarf' ),
 			'lw16_betrieb_demand_bambu_print' => array( 'lager.bedarf' ),
 			'lw16_betrieb_save_lot'       => array( 'lager.material' ),

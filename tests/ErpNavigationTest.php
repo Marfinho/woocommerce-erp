@@ -53,12 +53,13 @@ class ErpNavigationTest extends TestCase {
 	public function test_permission_covers_the_cap_the_old_page_requires() {
 		foreach ( Navigation::items() as $id => $item ) {
 			$pages = BetriebModule::pages();
+			$slug  = '' !== $item['alt'] ? $item['alt'] : $item['target'];
 
-			if ( ! isset( $pages[ $item['target'] ] ) ) {
+			if ( ! isset( $pages[ $slug ] ) ) {
 				continue;
 			}
 
-			$required = $pages[ $item['target'] ][1];
+			$required = $pages[ $slug ][1];
 			$caps     = Permissions::catalog()[ $item['perm'] ]['caps'];
 
 			$this->assertContains( $required, $caps, "$id: Seite verlangt $required, das Recht {$item['perm']} setzt es nicht voraus" );
@@ -69,6 +70,7 @@ class ErpNavigationTest extends TestCase {
 		$linked = array();
 		foreach ( Navigation::items() as $item ) {
 			$linked[] = $item['target'];
+			$linked[] = $item['alt'];
 		}
 
 		// Das Dashboard ist die Startseite; die Etikett-Jobs ein Reiter.
@@ -97,6 +99,11 @@ class ErpNavigationTest extends TestCase {
 		$this->assertSame( 'admin.php?page=lw16-betrieb-lager', Navigation::legacy_path( Navigation::find( 'lager' ) ) );
 		$this->assertSame( 'edit.php?post_type=product', Navigation::legacy_path( Navigation::find( 'shop-produkte' ) ) );
 		$this->assertSame( '', Navigation::legacy_path( Navigation::find( 'rechte' ) ) );
+	}
+
+	public function test_native_page_keeps_its_classic_page_gated_and_reachable() {
+		$this->assertSame( 'versand', Navigation::find_by_page( 'lw16-betrieb-versand' )['id'] );
+		$this->assertSame( 'admin.php?page=lw16-betrieb-druckfarm', Navigation::legacy_path( Navigation::find( 'druckfarm' ) ) );
 	}
 
 	public function test_find_by_page_ignores_shop_pages() {

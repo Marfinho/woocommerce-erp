@@ -53,10 +53,12 @@ class Navigation {
 	 * @param string $target Bei legacy: Seitenkennung oder Pfad im wp-admin; bei native: leer.
 	 * @param string $kind   legacy oder native.
 	 * @param string $wp_cap Zusätzlich verlangtes WordPress-Recht (Shop).
+	 * @param string $alt    Bei native: Kennung der klassischen wp-admin-Seite, die weiter besteht.
 	 * @return array
 	 */
-	protected static function item( $id, $area, $title, $perm, $target = '', $kind = 'legacy', $wp_cap = '' ) {
+	protected static function item( $id, $area, $title, $perm, $target = '', $kind = 'legacy', $wp_cap = '', $alt = '' ) {
 		return array(
+			'alt'    => $alt,
 			'id'     => $id,
 			'area'   => $area,
 			'title'  => $title,
@@ -75,16 +77,16 @@ class Navigation {
 	public static function items() {
 		$list = array(
 			self::item( 'shop-bestellungen', 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), 'verkauf.shop_orders', 'admin.php?page=wc-orders', 'legacy', 'edit_shop_orders' ),
-			self::item( 'auftraege', 'verkauf', __( 'Aufträge', 'lindenweg16' ), 'verkauf.orders', 'lw16-betrieb-bestellungen' ),
+			self::item( 'auftraege', 'verkauf', __( 'Aufträge', 'lindenweg16' ), 'verkauf.orders', '', 'native', '', 'lw16-betrieb-bestellungen' ),
 			self::item( 'picken', 'verkauf', __( 'Picklisten', 'lindenweg16' ), 'verkauf.picken', '', 'native' ),
-			self::item( 'versand', 'verkauf', __( 'Versand', 'lindenweg16' ), 'verkauf.versand', 'lw16-betrieb-versand' ),
+			self::item( 'versand', 'verkauf', __( 'Versand', 'lindenweg16' ), 'verkauf.versand', '', 'native', '', 'lw16-betrieb-versand' ),
 			self::item( 'kontakte', 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), 'verkauf.kontakte', 'lw16-betrieb-kontakte' ),
 			self::item( 'shop-produkte', 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), 'verkauf.shop_products', 'edit.php?post_type=product', 'legacy', 'edit_products' ),
 			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', 'lw16-loyalty' ),
 			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', 'lw16-kasse' ),
 			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', 'lw16-marketing' ),
 
-			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', 'lw16-betrieb-druckfarm' ),
+			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
 			self::item( 'druckjournal', 'fertigung', __( 'Druckjournal', 'lindenweg16' ), 'fertigung.druckjournal', 'lw16-betrieb-druckjournal' ),
 			self::item( 'artikel', 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), 'fertigung.artikel', 'lw16-betrieb-artikel' ),
 			self::item( 'konfigurator', 'fertigung', __( 'Konfigurator', 'lindenweg16' ), 'fertigung.konfigurator', 'lw16-betrieb-konfigurator' ),
@@ -156,7 +158,9 @@ class Navigation {
 		}
 
 		foreach ( self::items() as $item ) {
-			if ( 'legacy' === $item['kind'] && $item['target'] === $page ) {
+			// Native Seiten behalten ihre klassische Seite im wp-admin; sie
+			// bleibt erreichbar und deshalb auch gesperrt.
+			if ( ( 'legacy' === $item['kind'] && $item['target'] === $page ) || ( '' !== $item['alt'] && $item['alt'] === $page ) ) {
 				return $item;
 			}
 		}
@@ -171,13 +175,15 @@ class Navigation {
 	 * @return string
 	 */
 	public static function legacy_path( array $item ) {
-		if ( 'legacy' !== $item['kind'] ) {
+		$target = 'legacy' === $item['kind'] ? $item['target'] : $item['alt'];
+
+		if ( '' === $target ) {
 			return '';
 		}
 
 		// Ein Pfad (mit Punkt) bleibt, wie er ist; eine reine Kennung
 		// ist eine Plugin-Seite unter admin.php.
-		return false !== strpos( $item['target'], '.php' ) ? $item['target'] : 'admin.php?page=' . $item['target'];
+		return false !== strpos( $target, '.php' ) ? $target : 'admin.php?page=' . $target;
 	}
 
 	/**

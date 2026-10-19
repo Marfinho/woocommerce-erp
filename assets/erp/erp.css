@@ -390,6 +390,57 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 	.pick-qty, .pick .btn, .pick .tag { grid-column: 2; justify-self: start; }
 }
 
+/* ---------- Druckfarm, Aufträge, Versand ---------- */
+
+.farm { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); }
+.printer { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); display: grid; gap: 8px; align-content: start; }
+.printer.st-running, .printer.st-prepare { border-top-color: var(--success); }
+.printer.st-pause { border-top-color: var(--warning); }
+.printer.st-failed, .printer.st-mqtt_getrennt { border-top-color: var(--error); }
+.printer.st-offline { opacity: .7; }
+.printer header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.printer h3 { font-size: 17px; margin: 0; }
+.pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--surface-muted); white-space: nowrap; }
+.pill.st-running, .pill.st-prepare, .pill.st-finish { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.pill.st-pause { background: color-mix(in srgb, var(--warning) 18%, var(--surface)); color: var(--warning); }
+.pill.st-failed, .pill.st-mqtt_getrennt { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); }
+.bar { height: 12px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--success); border-radius: 999px; transition: width .6s; }
+.bar-txt { display: flex; justify-content: space-between; font-size: 14px; }
+.temps { font-size: 13.5px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.trays { display: flex; flex-wrap: wrap; gap: 6px; }
+.tray { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 9px 3px 5px; border: 1px solid var(--line); border-radius: 999px; }
+.tray i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgb(0 0 0 / 25%); }
+.tray small { color: var(--text-muted); }
+.snap { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.printer .err { font-size: 13px; color: var(--error); }
+.printer footer { display: flex; justify-content: space-between; font-size: 13px; padding-top: 6px; border-top: 1px solid var(--line); }
+.kiosk-exit { display: none; position: fixed; top: 12px; right: 12px; z-index: 50; opacity: .8; }
+.erp.kiosk .kiosk-exit { display: inline-flex; }
+.erp.kiosk .side, .erp.kiosk .tabbar, .erp.kiosk .top, .erp.kiosk .scrim, .erp.kiosk .page-head { display: none !important; }
+.erp.kiosk .main { margin: 0; padding: 0; }
+.erp.kiosk .view { max-width: none; padding: 16px; }
+.erp.kiosk .farm { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+.erp.kiosk .printer h3 { font-size: 22px; }
+.erp.kiosk .bar { height: 18px; }
+.erp.kiosk .bar-txt { font-size: 18px; }
+
+.rows { display: grid; gap: 8px; }
+.row-card { display: grid; gap: 10px 16px; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.row-main b { display: block; }
+.row-main small { display: block; color: var(--text-muted); font-size: 12.5px; }
+.row-num { font: 700 17px var(--font-head); font-variant-numeric: tabular-nums; }
+.row-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.row-card.ship { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; }
+.ship-track { display: grid; gap: 2px; }
+.ship-actions { display: grid; gap: 8px; justify-items: start; }
+.label-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.label-area .field { min-height: 40px; width: auto; }
+.chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+@media (max-width: 760px) {
+	.row-card, .row-card.ship { grid-template-columns: 1fr; }
+}
+
 /* ---------- Suche, Hinweise ---------- */
 
 dialog.palette {

@@ -58,6 +58,68 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/druckfarm',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'druckfarm' ),
+				'permission_callback' => $this->needs( array( 'fertigung.druckfarm' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/auftraege',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'auftraege' ),
+				'permission_callback' => $this->needs( array( 'verkauf.orders' ) ),
+				'args'                => array( 'status' => array( 'type' => 'string', 'required' => false ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/auftraege/(?P<id>\d+)/bestaetigen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'auftrag_bestaetigen' ),
+				'permission_callback' => $this->needs( array( 'verkauf.orders', 'verkauf.orders.status' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'versand' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+				'args'                => array( 'filter' => array( 'type' => 'string', 'required' => false ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/label',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_label' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.etikett' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/label/(?P<id>\d+)/storno',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_storno' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.etikett' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/users',
 			array(
 				'methods'             => 'GET',
@@ -82,6 +144,104 @@ class RestApi {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Berechtigungsprüfung für eine Route: alle genannten Rechte nötig.
+	 *
+	 * @param string[] $perms Rechte.
+	 * @return callable
+	 */
+	protected function needs( array $perms ) {
+		return function () use ( $perms ) {
+			foreach ( $perms as $perm ) {
+				if ( ! Access::can( $perm ) ) {
+					return false;
+				}
+			}
+
+			return true;
+		};
+	}
+
+	/**
+	 * Druckfarm: Live-Stand der Drucker.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function druckfarm() {
+		return new WP_REST_Response( array( 'printers' => Screens::printer_farm(), 'now' => time() ) );
+	}
+
+	/**
+	 * Aufträge.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function auftraege( WP_REST_Request $request ) {
+		return new WP_REST_Response(
+			array(
+				'orders'  => Screens::orders( sanitize_key( (string) $request->get_param( 'status' ) ) ),
+				'confirm' => Access::can( 'verkauf.orders.status' ),
+			)
+		);
+	}
+
+	/**
+	 * Entwurf bestätigen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function auftrag_bestaetigen( WP_REST_Request $request ) {
+		$result = Screens::confirm_order( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 409 );
+	}
+
+	/**
+	 * Versandliste.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand( WP_REST_Request $request ) {
+		$data           = Screens::shipping( sanitize_key( (string) $request->get_param( 'filter' ) ) );
+		$data['label']  = Access::can( 'verkauf.versand.etikett' );
+
+		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * DHL-Label erzeugen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_label( WP_REST_Request $request ) {
+		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::create_label(
+			(int) $request['id'],
+			array(
+				'product'  => sanitize_text_field( (string) $request->get_param( 'product' ) ),
+				'weight_g' => (float) $request->get_param( 'weight_g' ),
+				'bulky'    => (bool) $request->get_param( 'bulky' ),
+			)
+		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
+	}
+
+	/**
+	 * DHL-Label stornieren.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_storno( WP_REST_Request $request ) {
+		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
 	}
 
 	/**
@@ -125,7 +285,8 @@ class RestApi {
 					'hint'  => Permissions::catalog()[ $item['perm'] ]['hint'],
 				);
 
-				if ( 'legacy' === $item['kind'] ) {
+				// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
+				if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
 					$row['path'] = $this->legacy_path( $item );
 				}
 
