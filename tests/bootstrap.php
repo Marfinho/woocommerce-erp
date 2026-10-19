@@ -377,6 +377,7 @@ require $lw16_root . '/includes/Erp/Pages/Postfach.php';
 require $lw16_root . '/includes/Erp/Pages/Support.php';
 require $lw16_root . '/includes/Erp/Pages/Hilfe.php';
 require $lw16_root . '/includes/Erp/Pages/ArAnsicht.php';
+require $lw16_root . '/includes/Erp/Pages/Produktion.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
