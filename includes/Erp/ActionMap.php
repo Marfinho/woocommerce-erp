@@ -80,6 +80,9 @@ class ActionMap {
 			'lw16_haken_delete_part'      => array( 'fertigung.konfigurator', 'fertigung.stammdaten.edit' ),
 			'lw16_haken_save_part'        => array( 'fertigung.konfigurator', 'fertigung.stammdaten.edit' ),
 
+			// Workflow: Plattendatei herunterladen.
+			'lw16_erp_run_file'           => array( 'fertigung.workflow' ),
+
 			// Druckjournal, Produktion.
 			'lw16_betrieb_save_printjob'  => array( 'fertigung.druckjournal' ),
 			'lw16_betrieb_void_printjob'  => array( 'fertigung.druckjournal' ),

@@ -114,6 +114,8 @@ class Permissions {
 			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array( 'lw16_mod_marketing' ), $page ),
 
 			// Fertigung.
+			'fertigung.workflow'      => self::def( 'fertigung', __( 'Workflow: Platten abarbeiten', 'lindenweg16' ), __( 'Den Auftragsablauf sehen, Platten rüsten, drucken, per QR-Code am Handy bearbeiten und die Ist-Menge melden.', 'lindenweg16' ), array( $capture ), $page ),
+			'fertigung.workflow.plan' => self::def( 'fertigung', __( 'Workflow: Plan freigeben', 'lindenweg16' ), __( 'Aus dem Bedarf Platten und Dateien erzeugen, Etiketten drucken, Platten abbrechen, Etikett und Hochrechnung einstellen.', 'lindenweg16' ), array( $production ), $cap, array( 'fertigung.workflow' ) ),
 			'fertigung.artikel'       => self::def( 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), __( 'Artikel, Revisionen und Stücklisten.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.konfigurator'  => self::def( 'fertigung', __( 'Konfigurator', 'lindenweg16' ), __( 'Produktkonfigurator pflegen.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.kapazitaet'    => self::def( 'fertigung', __( 'Kapazität', 'lindenweg16' ), __( 'Auslastung und Planung.', 'lindenweg16' ), array( $production ), $page ),
@@ -310,7 +312,7 @@ class Permissions {
 			'werkstatt'   => array(
 				'label' => __( 'Werkstatt', 'lindenweg16' ),
 				'hint'  => __( 'Drucke protokollieren, Zeit erfassen, Lager einsehen. Keine Stammdaten, kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.druckjournal', 'fertigung.qualitaet', 'fertigung.druckfarm', 'fertigung.bambu', 'fertigung.auftraege.start', 'lager.bestand', 'lager.scannen', 'lager.buchen', 'lager.lagerplaetze', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.workflow', 'fertigung.druckjournal', 'fertigung.qualitaet', 'fertigung.druckfarm', 'fertigung.bambu', 'fertigung.auftraege.start', 'lager.bestand', 'lager.scannen', 'lager.buchen', 'lager.lagerplaetze', 'verwaltung.zeit' ),
 			),
 			'packtisch'   => array(
 				'label' => __( 'Packtisch', 'lindenweg16' ),
@@ -320,7 +322,7 @@ class Permissions {
 			'fertigung'   => array(
 				'label' => __( 'Fertigung', 'lindenweg16' ),
 				'hint'  => __( 'Wie Werkstatt, dazu Stammdaten, Material, Bedarf und Berichte – aber kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
 			),
 			'leitung'     => array(
 				'label' => __( 'Betriebsleitung', 'lindenweg16' ),
@@ -328,7 +330,7 @@ class Permissions {
 				'keys'  => array_merge(
 					$shop,
 					array( 'verkauf.orders', 'verkauf.orders.status', 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.picken', 'verkauf.kontakte' ),
-					array( 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
+					array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
 					array( 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen' ),
 					array( 'finanzen.berichte', 'finanzen.kosten', 'finanzen.export' ),
 					array( 'verwaltung.zeit', 'verwaltung.etiketten' )

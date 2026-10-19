@@ -7,6 +7,38 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.21.0] – 2026-10-19
+
+### Der Auftragsablauf: vom Bedarf bis zum Bestand (Workflow)
+
+Ein Ablauf statt vieler Seiten. Alle bisherigen Menüpunkte bleiben; „Workflow“ steht als
+erster Eintrag oben (Verwaltung → Benutzer & Rechte: Recht „Workflow: Platten abarbeiten“,
+für Freigabe, Etikett- und Hochrechnungs-Einstellungen „Workflow: Plan freigeben“).
+
+- **Bedarf** aus Bestellungen, Merklisten, Sollbestand **und Hochrechnung**: Aus dem
+  Verkauf der letzten 8 Wochen (einstellbar) wird ein Wochenmittel gebildet; der Bestand
+  soll für 2 Wochen (einstellbar) reichen. Offene Bestellungen werden abgezogen. Jede Karte
+  nennt ihren Grund; Platten, die schon laufen, zählen als „in Arbeit“.
+- **Plan freigeben:** Positionen wählen, Platten werden angeordnet (ungeslicte Projekt-3MF,
+  geslict wird in der Werkstatt), Dauer geschätzt, mit der Freigabe entstehen die
+  **Etiketten** – ein Etikett je Platte auf dem Etikettendrucker des Lagers. Rolle/Größe
+  (z. B. DK-11201), Drucker, Inhalt, Kopien und Auto-Druck sind einstellbar. Der QR-Code
+  öffnet `…/erp/p/<Nummer>`; nach der Anmeldung landet man genau dort.
+- **Platte am Handy:** Datei laden → Rüsten starten → Druck (automatisch erkannt, wenn der
+  Bambu-Drucker verbunden ist, sonst per Taste; Live-Fortschritt) → Ist-Menge melden mit
+  Ausschuss und Fehlerursache → „Dein Nächstes“. Funktioniert ohne Verbindung (vorgemerkt).
+- **Folgen statt Eingaben:** Die Taste bucht Rüst- und Druckzeit (neue Zeitarten
+  „Rüstzeit“ und „Druckzeit“, an die Platte gebunden), schreibt das Druckjournal (damit den
+  Lagerzugang der guten Teile, Kleinteile laut Stückliste, Charge) und lässt Fehlmengen als
+  Bedarf in den Plan zurückkehren. Alles über die vorhandenen Fachklassen, keine zweite
+  Buchungslogik. Zeiten über 24 Stunden werden in mehrere Einträge geteilt.
+- **Scannen** erkennt Plattenetiketten und springt zur Platte.
+- **WordPress-Admin aufräumen:** Einstellung „ERP-Menüs im wp-admin ausblenden“ – das
+  wp-admin zeigt dann nur noch die Website; die Seiten bleiben erreichbar und werden im ERP
+  weiter eingebettet.
+- Neu: `Erp\Workflow`, `RunFlow` (Zustandsmaschine), `RunRepository`, `Forecast`,
+  Tabelle `lw16_runs`, `time_entries.run_id`, Datenbankversion 36.
+
 ## [0.20.0] – 2026-10-19
 
 ### ERP-Oberfläche: alle Module fein berechtigt, native Seiten, Offline, Subdomain

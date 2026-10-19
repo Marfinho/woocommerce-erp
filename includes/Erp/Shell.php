@@ -49,8 +49,10 @@ class Shell {
 
 		if ( is_admin() ) {
 			add_action( 'admin_init', array( $this, 'gate_plugin_pages' ) );
+			add_action( 'admin_menu', array( $this, 'maybe_hide_menus' ), 9999 );
 			add_action( 'admin_init', array( $this, 'gate_actions' ), 2 );
 			add_action( 'admin_head', array( $this, 'embed_styles' ) );
+			add_action( 'admin_post_lw16_erp_run_file', array( $this, 'serve_run_file' ) );
 		}
 
 		( new RestApi() )->register();
@@ -137,7 +139,7 @@ class Shell {
 		$path    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$on_host = Subdomain::is_request( isset( $_SERVER['HTTP_HOST'] ) ? (string) wp_unslash( $_SERVER['HTTP_HOST'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$route   = (bool) get_query_var( self::QUERY_VAR );
-		$root    = '/' === $path || '/index.php' === $path;
+		$root    = '/' === $path || '/index.php' === $path || (bool) preg_match( '#^/p/\d+/?$#', $path );
 
 		// Auf der Subdomain gibt es nur die Oberfläche, nicht den Shop.
 		if ( $on_host && ! $route && ! $root ) {
@@ -178,7 +180,10 @@ class Shell {
 		header( 'Content-Type: text/html; charset=' . get_bloginfo( 'charset' ) );
 
 		if ( ! is_user_logged_in() ) {
-			wp_safe_redirect( wp_login_url( self::url() ) );
+			// Zurück auf genau diese Seite: Der QR-Code an der Platte führt
+			// auf /p/<nummer>, und wer sich dafür anmelden muss, soll danach
+			// dort landen – nicht auf der Startseite.
+			wp_safe_redirect( wp_login_url( self::current_url() ) );
 			exit;
 		}
 
@@ -190,6 +195,27 @@ class Shell {
 
 		$this->render_app();
 		exit;
+	}
+
+	/**
+	 * Adresse der aktuellen Anfrage.
+	 *
+	 * @return string
+	 */
+	protected static function current_url() {
+		$host = isset( $_SERVER['HTTP_HOST'] ) ? (string) wp_unslash( $_SERVER['HTTP_HOST'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '/'; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		// Nur Adressen der eigenen Website; alles andere fällt auf die Startseite zurück.
+		$wanted = ( is_ssl() ? 'https://' : 'http://' ) . $host . $uri;
+		$home   = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$this_h = (string) wp_parse_url( $wanted, PHP_URL_HOST );
+
+		if ( $this_h === $home || ( Subdomain::host() && Subdomain::is_request( $this_h ) ) ) {
+			return $wanted;
+		}
+
+		return self::url();
 	}
 
 	/**
@@ -292,6 +318,7 @@ class Shell {
 			'jsqr'     => $this->asset_url( 'assets/vendor/jsqr/jsQR.js' ),
 			'sw'       => self::url() . 'sw.js',
 			'swScope'  => (string) wp_parse_url( self::url(), PHP_URL_PATH ),
+			'erpPath'  => (string) wp_parse_url( self::url(), PHP_URL_PATH ),
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
 			'erpUrl'   => self::url(),
 			'adminUrl' => admin_url( '/' ),
@@ -374,6 +401,62 @@ class Shell {
 			. '#wpbody-content{padding-bottom:24px}'
 			. 'body.wp-admin{background:#f4f2ee}'
 			. '</style>';
+	}
+
+	/**
+	 * ERP-Menüs aus der wp-admin-Seitenleiste nehmen (Einstellung).
+	 *
+	 * Gedacht für den Tag, an dem das ERP die Arbeit übernommen hat: Das
+	 * wp-admin zeigt dann nur noch die Website. Die Seiten bleiben unter
+	 * ihrer Adresse erreichbar – die eingebetteten Ansichten im ERP laden
+	 * sie weiterhin –, es verschwindet nur der Menüeintrag.
+	 */
+	public function maybe_hide_menus() {
+		if ( ! Workflow::settings()['hide_wpadmin'] ) {
+			return;
+		}
+
+		foreach ( array(
+			\Lindenweg16\Admin\MenuGroups::VERKAUF,
+			\Lindenweg16\Admin\MenuGroups::FERTIGUNG,
+			\Lindenweg16\Admin\MenuGroups::LAGER,
+			\Lindenweg16\Admin\MenuGroups::FINANZEN,
+			\Lindenweg16\Admin\MenuGroups::VERWALTUNG,
+			\Lindenweg16\Modules\Mailbox\MailboxModule::PAGE,
+		) as $slug ) {
+			remove_menu_page( $slug );
+		}
+	}
+
+	/**
+	 * Projekt-3MF einer Platte herunterladen.
+	 *
+	 * Aus dem Workflow und von der mobilen Seite; die Datei liegt im
+	 * geschützten Verzeichnis, deshalb der Umweg über diese Anfrage.
+	 */
+	public function serve_run_file() {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$run_id = isset( $_GET['run'] ) ? (int) $_GET['run'] : 0;
+
+		check_admin_referer( 'lw16_erp_run_file_' . $run_id );
+
+		if ( ! \Lindenweg16\Core\Roles::current_user_can_betrieb( 'lw16_capture' ) || ! Access::can( 'fertigung.workflow' ) ) {
+			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+		}
+
+		$run   = RunRepository::find( $run_id );
+		$plate = $run && $run['plate_job_id'] ? \Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository::find( (int) $run['plate_job_id'] ) : null;
+
+		if ( ! $plate || ! is_file( $plate->file_path ) ) {
+			wp_die( esc_html__( 'Datei nicht gefunden.', 'lindenweg16' ), '', array( 'response' => 404 ) );
+		}
+
+		nocache_headers();
+		header( 'Content-Type: model/3mf' );
+		header( 'Content-Disposition: attachment; filename="platte-' . $run_id . '.3mf"' );
+		header( 'Content-Length: ' . filesize( $plate->file_path ) );
+		readfile( $plate->file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		exit;
 	}
 
 	/**

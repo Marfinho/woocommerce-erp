@@ -120,6 +120,83 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/workflow',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'workflow' ),
+				'permission_callback' => array( $this, 'can_workflow' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/workflow/bedarf',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'workflow_demand' ),
+				'permission_callback' => array( $this, 'can_plan' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/workflow/vorschau',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'workflow_preview' ),
+				'permission_callback' => array( $this, 'can_plan' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/workflow/freigeben',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'workflow_release' ),
+				'permission_callback' => array( $this, 'can_plan' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/workflow/einstellungen',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'workflow_settings' ),
+					'permission_callback' => array( $this, 'can_plan' ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'workflow_settings_save' ),
+					'permission_callback' => array( $this, 'can_plan' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/runs/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'run_get' ),
+				'permission_callback' => array( $this, 'can_workflow' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|druckstart|druckende|melden|abbrechen|etikett)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'run_act' ),
+				'permission_callback' => array( $this, 'can_workflow' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/users',
 			array(
 				'methods'             => 'GET',
@@ -245,6 +322,170 @@ class RestApi {
 	}
 
 	/**
+	 * Darf die Person im Workflow arbeiten?
+	 *
+	 * @return bool
+	 */
+	public function can_workflow() {
+		return Access::can( 'fertigung.workflow' );
+	}
+
+	/**
+	 * Darf die Person den Plan freigeben?
+	 *
+	 * @return bool
+	 */
+	public function can_plan() {
+		return Access::can( 'fertigung.workflow.plan' );
+	}
+
+	/**
+	 * Der Workflow: Platten in ihren Spalten, dazu Einstellungen.
+	 *
+	 * Der Bedarf kommt getrennt (workflow/bedarf): Er rechnet über alle
+	 * Stücklistenstufen und gehört nur denen, die den Plan freigeben.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function workflow() {
+		$plan = Access::can( 'fertigung.workflow.plan' );
+
+		return new WP_REST_Response(
+			array(
+				'columns'  => Workflow::columns(),
+				'plan'     => $plan,
+				'printers' => $plan ? Workflow::printers() : array(),
+				'now'      => time(),
+			)
+		);
+	}
+
+	/**
+	 * Bedarf als Karten.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function workflow_demand() {
+		return new WP_REST_Response( Workflow::demand() );
+	}
+
+	/**
+	 * Platten anordnen (Vorschau).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function workflow_preview( WP_REST_Request $request ) {
+		$result = Workflow::preview( (array) $request->get_param( 'items' ), sanitize_key( (string) $request->get_param( 'printer' ) ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Vorschau freigeben.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function workflow_release( WP_REST_Request $request ) {
+		$labels = null === $request->get_param( 'labels' ) ? (bool) Workflow::settings()['label_auto'] : (bool) $request->get_param( 'labels' );
+		$result = Workflow::release( array_map( 'intval', (array) $request->get_param( 'plate_ids' ) ), $labels );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
+	}
+
+	/**
+	 * Einstellungen lesen: Etikett, Hochrechnung, Auswahllisten.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function workflow_settings() {
+		$rolls = array();
+
+		foreach ( \Lindenweg16\Modules\Betrieb\LabelSheet::rolls() as $key => $roll ) {
+			$rolls[] = array( 'id' => $key, 'label' => $roll['label'], 'hint' => $roll['hint'] );
+		}
+
+		$fields = array();
+		foreach ( Workflow::label_field_options() as $key => $label ) {
+			$fields[] = array( 'id' => $key, 'label' => $label );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'settings'       => Workflow::settings(),
+				'rolls'          => $rolls,
+				'fields'         => $fields,
+				'queue_printers' => Workflow::queue_printers(),
+			)
+		);
+	}
+
+	/**
+	 * Einstellungen speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function workflow_settings_save( WP_REST_Request $request ) {
+		$saved = Workflow::save_settings( (array) $request->get_json_params() );
+
+		AuditLog::record( 'erp_workflow_einstellungen', 'settings', 0, $saved );
+
+		return new WP_REST_Response( array( 'settings' => $saved ) );
+	}
+
+	/**
+	 * Eine Platte (für die mobile Seite).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function run_get( WP_REST_Request $request ) {
+		Workflow::sync_printers();
+
+		$view = Workflow::view_by_id( (int) $request['id'] );
+
+		if ( ! $view ) {
+			return new WP_Error( 'lw16_erp_run', __( 'Platte nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'run'          => $view,
+				'plan'         => Access::can( 'fertigung.workflow.plan' ),
+				'reasons'      => Workflow::failure_reasons(),
+			)
+		);
+	}
+
+	/**
+	 * Aktion auf einer Platte.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function run_act( WP_REST_Request $request ) {
+		$id     = (int) $request['id'];
+		$action = (string) $request['action'];
+
+		if ( 'etikett' === $action ) {
+			$result = Workflow::print_labels( array( $id ) );
+
+			return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+		}
+
+		// Abbrechen vernichtet Arbeit: nur, wer auch den Plan freigibt.
+		if ( 'abbrechen' === $action && ! Access::can( 'fertigung.workflow.plan' ) ) {
+			return new WP_Error( 'lw16_forbidden', __( 'Abbrechen darf nur, wer Pläne freigeben darf.', 'lindenweg16' ), array( 'status' => 403 ) );
+		}
+
+		$result = Workflow::act( $id, $action, (array) $request->get_json_params() );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
+	}
+
+	/**
 	 * Darf die Person das ERP nutzen?
 	 *
 	 * @return bool
@@ -286,6 +527,11 @@ class RestApi {
 				);
 
 				// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
+				// Der Workflow steht als erster Eintrag oben, nicht in seinem Bereich.
+				if ( 'workflow' === $item['id'] ) {
+					$row['top'] = true;
+				}
+
 				if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
 					$row['path'] = $this->legacy_path( $item );
 				}

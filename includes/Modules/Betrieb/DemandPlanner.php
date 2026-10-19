@@ -50,6 +50,7 @@ class DemandPlanner {
 			'bestellung'  => __( 'Bestellung', 'lindenweg16' ),
 			'sollbestand' => __( 'Sollbestand', 'lindenweg16' ),
 			'wunschliste' => __( 'Wunschliste', 'lindenweg16' ),
+			'hochrechnung' => __( 'Hochrechnung', 'lindenweg16' ),
 			'warteliste'  => __( 'Warteliste', 'lindenweg16' ),
 			'stueckliste' => __( 'aus Stückliste', 'lindenweg16' ),
 		);
@@ -515,6 +516,11 @@ class DemandPlanner {
 				$out[ $id ] = 0.0;
 			}
 			$out[ $id ] += (float) $order['qty_planned'];
+		}
+
+		// Platten aus dem ERP-Workflow stecken ebenfalls schon in Arbeit.
+		foreach ( \Lindenweg16\Erp\RunRepository::in_work() as $id => $qty ) {
+			$out[ (int) $id ] = ( isset( $out[ (int) $id ] ) ? $out[ (int) $id ] : 0.0 ) + (float) $qty;
 		}
 
 		return $out;

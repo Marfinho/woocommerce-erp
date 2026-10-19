@@ -73,6 +73,8 @@
 		users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6.5 6.5 0 0 1 3.5 6"/>',
 		refresh: '<path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/>',
 		logout: '<path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9"/>',
+		flow: '<circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/><path d="M7 6h6a4 4 0 0 1 4 4M7 18h6a4 4 0 0 0 4-4"/>',
+		download: '<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>',
 		shop: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9v11H4z"/>'
 	};
 
@@ -271,6 +273,14 @@
 		el.nav.appendChild(h('a', { class: 'nav-link', href: '#/start', 'data-r': 'start' }, ico('home'), 'Start'));
 
 		boot.nav.forEach(function (area) {
+			area.items.forEach(function (item) {
+				if (item.top) {
+					el.nav.appendChild(h('a', { class: 'nav-link nav-top', href: '#/seite/' + item.id, 'data-item': item.id }, ico('flow'), item.title));
+				}
+			});
+		});
+
+		boot.nav.forEach(function (area) {
 			var btn = h('div', { class: 'nav-row' },
 				h('a', { class: 'nav-area area-' + area.id, href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), area.title),
 				h('button', {
@@ -280,6 +290,7 @@
 			);
 			var list = h('ul', { class: 'nav-sub', 'data-sub': area.id });
 			area.items.forEach(function (item) {
+				if (item.top) { return; }
 				list.appendChild(h('li', null,
 					h('a', { class: 'nav-link', href: '#/seite/' + item.id, 'data-item': item.id }, item.title, item.locked ? ico('lock', 'nav-lock') : null)
 				));
@@ -435,6 +446,7 @@
 
 		if (r.name === 'bereich' && areaOf(r.id)) { return viewArea(areaOf(r.id)); }
 		if (r.name === 'seite') { return viewPage(r.id); }
+		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
 		return viewStart();
 	}
 
@@ -455,6 +467,12 @@
 		el.view.appendChild(tiles);
 
 		var areas = h('div', { class: 'grid cards', style: 'margin-top:18px' });
+		if (findItem('workflow')) {
+			areas.appendChild(h('a', { class: 'link-card area-fertigung', href: '#/seite/workflow' },
+				h('div', { class: 'badge-ico' }, ico('flow')),
+				h('div', null, h('b', null, 'Workflow'), h('span', { class: 'sub' }, 'Vom Bedarf zum Bestand – Platten rüsten, drucken, melden'))
+			));
+		}
 		boot.nav.forEach(function (area) {
 			areas.appendChild(h('a', { class: 'link-card area-' + area.id, href: '#/bereich/' + area.id },
 				h('div', { class: 'badge-ico' }, ico(area.icon)),
@@ -562,6 +580,7 @@
 			if (f.item.id === 'rechte') { return viewRights(); }
 			if (f.item.id === 'scannen') { return viewScan(); }
 			if (f.item.id === 'picken') { return viewPick(); }
+			if (f.item.id === 'workflow') { return viewWorkflow(); }
 			if (f.item.id === 'druckfarm') { return viewFarm(f.item); }
 			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
@@ -994,6 +1013,10 @@
 			if (!code) { return; }
 			input.value = '';
 			out.textContent = '';
+
+			// Etikett einer Platte: direkt zur Platte.
+			var plate = code.match(/\/p\/(\d+)\/?$/) || code.match(/^LW16P:(\d+)$/i);
+			if (plate) { location.hash = '#/platte/' + plate[1]; return; }
 			out.appendChild(h('div', { class: 'card' }, 'Suche nach „' + code + '“ …'));
 
 			api('scan?code=' + encodeURIComponent(code), { root: true, cache: true }).then(function (r) {
@@ -1411,6 +1434,524 @@
 		load();
 	}
 
+	/* ---------- Workflow ---------- */
+
+	function dlg(title, body, wide) {
+		var d = h('dialog', { class: 'sheet' + (wide ? ' wide' : ''), 'aria-label': title });
+		var close = function () { d.close(); };
+		d.appendChild(h('header', null, h('h3', null, title), h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Schließen', onclick: close }, ico('x'))));
+		d.appendChild(body);
+		d.addEventListener('close', function () { d.remove(); });
+		d.addEventListener('click', function (e) { if (e.target === d) { d.close(); } });
+		document.body.appendChild(d);
+		d.showModal();
+		return d;
+	}
+
+	function minTxt(m) {
+		m = Math.max(0, Math.round(m));
+		return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2);
+	}
+
+	function clock(sec) {
+		sec = Math.max(0, Math.floor(sec));
+		var hh = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60);
+		return hh + ':' + ('0' + mm).slice(-2);
+	}
+
+	function itemsLine(run) {
+		return run.items.map(function (i) { return qty(i.qty) + '× ' + i.name; }).join(', ');
+	}
+
+	var PRIMARY = {
+		freigegeben: { action: 'ruesten', label: 'Rüsten starten' },
+		ruesten: { action: 'druckstart', label: 'Druck gestartet' },
+		druckt: { action: 'druckende', label: 'Druck fertig' },
+		zu_melden: { action: 'melden', label: 'Ist-Menge melden' }
+	};
+
+	// Ohne Verbindung geht die Platte lokal weiter, damit die Werkstatt nicht stehen bleibt.
+	function localAdvance(run, action) {
+		var now = Math.floor(Date.now() / 1000);
+		var next = { ruesten: 'ruesten', druckstart: 'druckt', druckende: 'zu_melden', melden: 'erledigt' }[action];
+		if (!next) { return; }
+		if (action === 'ruesten') { run.setup = now; }
+		if (action === 'druckstart') { run.setup = run.setup || now; run.print = now; }
+		if (action === 'druckende') { run.print_end = now; }
+		run.status = next;
+		run.primary = PRIMARY[next] || {};
+	}
+
+	function runAct(id, action, body) {
+		return api('runs/' + id + '/' + action, { method: 'POST', queue: true, body: body || {} });
+	}
+
+	function runCard(run, reload, plan) {
+		var live = run.live;
+		var progress = null;
+
+		if (run.status === 'druckt') {
+			progress = live && live.progress !== null ? live.progress : (run.print && run.est_minutes ? Math.min(99, Math.round((((Date.now() / 1000 + (S.skew || 0)) - run.print) / 60) / run.est_minutes * 100)) : null);
+		}
+
+		var meta = [run.printer, run.est_minutes ? 'ca. ' + minTxt(run.est_minutes) : ''].filter(Boolean).join(' · ');
+		// Serverzeit: Die Uhr eines Handys geht selten genau.
+		var nowSec = Date.now() / 1000 + (S.skew || 0);
+		var line = run.status === 'ruesten' ? 'Rüstzeit ' + clock(nowSec - run.setup) : (run.status === 'druckt' ? 'Druckzeit ' + clock(nowSec - run.print) : itemsLine(run));
+
+		var chips = [];
+		if (run.batch) { chips.push('Plan ' + run.batch); }
+		if (run.file) { chips.push('3MF bereit'); }
+		if (live && run.status === 'druckt' && live.remaining !== null) { chips.push('noch ' + minTxt(live.remaining)); }
+		if (run.status === 'zu_melden') { chips.push('wartet auf Meldung'); }
+
+		var primary = run.primary && run.primary.action ? h('button', {
+			class: 'btn primary wide', type: 'button',
+			onclick: function (e) {
+				if (run.primary.action === 'melden') { location.hash = '#/platte/' + run.id; return; }
+				e.target.disabled = true;
+				runAct(run.id, run.primary.action).then(function (r) {
+					if (r && r.queued) { toast('Offline vorgemerkt'); }
+					reload();
+				}).catch(function (err) { e.target.disabled = false; toast(err.message, true); });
+			}
+		}, run.primary.label) : null;
+
+		return h('article', { class: 'run-card st-' + run.status },
+			h('div', { class: 'row-top' },
+				h('a', { class: 'run-title', href: '#/platte/' + run.id }, 'Platte ' + run.id),
+				h('span', { class: 'muted small' }, meta)
+			),
+			h('div', { class: 'muted', style: 'font-size:13px;margin-top:3px' }, line),
+			run.status === 'ruesten' || run.status === 'druckt' ? h('div', { class: 'muted small', style: 'margin-top:2px' }, itemsLine(run)) : null,
+			progress !== null ? h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt Platte ' + run.id, style: 'margin-top:9px;height:9px' }, h('i', { style: 'width:' + progress + '%' })) : null,
+			chips.length ? h('div', { class: 'chips' }, chips.map(function (c) { return h('span', { class: 'chip' }, c); })) : null,
+			h('div', { style: 'display:flex;gap:8px;margin-top:11px;flex-wrap:wrap' },
+				primary,
+				run.file && run.status === 'freigegeben' ? h('a', { class: 'btn', href: run.file.url }, ico('download'), '3MF') : null
+			)
+		);
+	}
+
+	function viewWorkflow() {
+		var data = null;
+		var demand = null;
+		var selected = {};
+
+		var plan = can('fertigung.workflow.plan');
+
+		var actions = [];
+		if (plan) {
+			actions.push(h('button', { class: 'btn', type: 'button', onclick: openSettings }, ico('cog'), 'Einstellungen'));
+			actions.push(h('button', { class: 'btn primary', type: 'button', onclick: function () { openPlan(demand, selected, load); } }, 'Plan freigeben ▸'));
+		}
+		pageHead('Workflow', 'Vom Bedarf zum Bestand. Jede Karte hat einen nächsten Schritt.', actions);
+
+		var steps = h('ol', { class: 'steps' });
+		var board = h('div', { class: 'board' });
+		var done = h('section', { class: 'done-strip' });
+		el.view.appendChild(steps);
+		el.view.appendChild(board);
+		el.view.appendChild(done);
+
+		function column(title, count, cards, empty) {
+			return h('section', { class: 'col' },
+				h('header', null, h('h3', null, title), h('span', { class: 'count' }, String(count))),
+				h('div', { class: 'col-cards' }, cards.length ? cards : h('div', { class: 'empty muted' }, empty))
+			);
+		}
+
+		function demandCard(c) {
+			var on = !!selected[c.article_id];
+			return h('article', { class: 'run-card demand' + (on ? ' on' : '') },
+				h('div', { class: 'row-top' }, h('b', { class: 'run-title' }, c.name), h('span', { class: 'muted small' }, qty(c.qty) + ' Stk')),
+				h('div', { class: 'muted', style: 'font-size:13px;margin-top:3px' }, c.sku + ' · Lager ' + qty(c.stock)),
+				h('div', { class: 'chips' }, c.chips.map(function (x) { return h('span', { class: 'chip' }, x); }).concat(c.has_model ? [] : [h('span', { class: 'chip warn', title: 'Für diesen Artikel ist keine ungeslicte Projekt-3MF hinterlegt.' }, 'keine 3MF')])),
+				plan ? h('button', { class: 'btn' + (on ? ' primary' : ''), type: 'button', style: 'margin-top:11px;width:100%', 'aria-pressed': on ? 'true' : 'false', onclick: function () { if (on) { delete selected[c.article_id]; } else { selected[c.article_id] = c.qty; } paint(); } }, on ? 'Im Plan ✓' : 'In Plan aufnehmen') : null
+			);
+		}
+
+		function paint() {
+			if (!data) { return; }
+			var cols = data.columns;
+			var dc = demand ? demand.cards : [];
+
+			steps.textContent = '';
+			[['1', 'Bedarf', dc.length], ['2', 'Freigegeben', cols.freigegeben.length], ['3', 'Im Druck', cols.im_druck.length], ['4', 'Ist melden', cols.zu_melden.length], ['5', 'Eingelagert', cols.erledigt.length]].forEach(function (s) {
+				steps.appendChild(h('li', null, h('small', null, s[0]), h('b', null, s[1]), h('span', null, plan || s[0] !== '1' ? String(s[2]) : '–')));
+			});
+
+			board.textContent = '';
+			board.appendChild(column('Bedarf', plan ? dc.length : 0, dc.map(demandCard), plan ? (demand ? 'Alles gedeckt.' : 'Wird berechnet …') : 'Den Bedarf sieht, wer Pläne freigeben darf.'));
+			var reload = function () { load(); };
+			board.appendChild(column('Freigegeben', cols.freigegeben.length, cols.freigegeben.map(function (r) { return runCard(r, reload, plan); }), 'Keine Platte wartet.'));
+			board.appendChild(column('Im Druck', cols.im_druck.length, cols.im_druck.map(function (r) { return runCard(r, reload, plan); }), 'Nichts im Druck.'));
+			board.appendChild(column('Ist melden', cols.zu_melden.length, cols.zu_melden.map(function (r) { return runCard(r, reload, plan); }), 'Nichts zu melden.'));
+
+			done.textContent = '';
+			done.appendChild(h('b', null, 'Heute eingelagert'));
+			if (!cols.erledigt.length) { done.appendChild(h('span', { class: 'muted' }, 'noch nichts')); }
+			cols.erledigt.forEach(function (r) {
+				done.appendChild(h('a', { class: 'muted', href: '#/platte/' + r.id }, 'Platte ' + r.id + ' · ' + itemsLine(r)));
+			});
+		}
+
+		function load() {
+			return api('workflow', { cache: true }).then(function (d) { data = d; S.wf = d; S.skew = d.now - Date.now() / 1000; paint(); }).catch(function (e) { board.textContent = ''; board.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function loadDemand() {
+			if (!plan) { return; }
+			api('workflow/bedarf').then(function (d) { demand = d; paint(); }).catch(function (e) { toast(e.message, true); });
+		}
+
+		paintSkeleton(board);
+		load();
+		loadDemand();
+		timers.push(setInterval(function () { if (!document.hidden) { load(); } }, 15000));
+	}
+
+	function paintSkeleton(box) {
+		box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+	}
+
+	function openPlan(demand, selected, reload) {
+		var cards = demand ? demand.cards : [];
+		var body = h('div', { class: 'sheet-body' });
+		var d;
+
+		if (!cards.length) {
+			body.appendChild(h('p', null, 'Es gibt gerade keinen Bedarf, der gedruckt werden müsste.'));
+			dlg('Plan freigeben', body);
+			return;
+		}
+
+		var picks = {};
+		var chosen = Object.keys(selected).length ? selected : null;
+		cards.forEach(function (c) { picks[c.article_id] = { on: chosen ? !!chosen[c.article_id] : c.has_model, qty: chosen && chosen[c.article_id] ? chosen[c.article_id] : c.qty }; });
+
+		var list = h('div', { class: 'pick-list' });
+		cards.forEach(function (c) {
+			var cb = h('input', { type: 'checkbox', id: 'pl-' + c.article_id, checked: picks[c.article_id].on, disabled: !c.has_model, onchange: function (e) { picks[c.article_id].on = e.target.checked; } });
+			var num = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: String(picks[c.article_id].qty), 'aria-label': 'Menge ' + c.name, style: 'width:90px', oninput: function (e) { picks[c.article_id].qty = parseInt(e.target.value, 10) || 0; } });
+			list.appendChild(h('div', { class: 'pick-line' },
+				cb,
+				h('label', { for: 'pl-' + c.article_id }, h('b', null, c.name), h('small', { class: 'muted' }, ' ' + c.sku + (c.has_model ? '' : ' · keine 3MF hinterlegt'))),
+				num
+			));
+		});
+
+		var printers = (S.wf && S.wf.printers) || [];
+		var printerSel = h('select', { class: 'field', id: 'pl-printer', 'aria-label': 'Drucker' }, printers.map(function (p) { return h('option', { value: p.id }, p.name + (p.online ? '' : ' (offline)')); }));
+		var out = h('div', { 'aria-live': 'polite', style: 'margin-top:14px' });
+
+		var previewBtn = h('button', { class: 'btn primary', type: 'button' }, 'Platten berechnen');
+		previewBtn.addEventListener('click', function () {
+			var items = cards.filter(function (c) { return picks[c.article_id].on && picks[c.article_id].qty > 0; }).map(function (c) { return { article_id: c.article_id, qty: picks[c.article_id].qty }; });
+			if (!items.length) { toast('Bitte mindestens eine Position wählen.', true); return; }
+			if (!printerSel.value) { toast('Kein Bambu-Drucker angelegt.', true); return; }
+			previewBtn.disabled = true;
+			out.textContent = 'Platten werden angeordnet …';
+			api('workflow/vorschau', { method: 'POST', body: { items: items, printer: printerSel.value } }).then(function (r) {
+				previewBtn.disabled = false;
+				showPreview(out, r, d, reload);
+			}).catch(function (e) {
+				previewBtn.disabled = false;
+				out.textContent = '';
+				out.appendChild(h('div', { class: 'notice warn' }, e.message));
+			});
+		});
+
+		body.appendChild(h('p', { class: 'muted', style: 'margin-top:0' }, 'Wähle, was gebaut werden soll. Die Platten werden angeordnet, die Projekt-3MF entsteht ungeslict – geslict wird in der Werkstatt.'));
+		body.appendChild(list);
+		body.appendChild(h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px' }, h('label', { for: 'pl-printer', class: 'muted' }, 'Drucker'), printerSel, previewBtn));
+		body.appendChild(out);
+		d = dlg('Plan freigeben', body, true);
+	}
+
+	function showPreview(out, r, d, reload) {
+		out.textContent = '';
+		(r.warnings || []).forEach(function (w) { out.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:8px' }, w)); });
+
+		var total = 0;
+		var rows = h('tbody');
+		r.plates.forEach(function (p, i) {
+			total += p.est_minutes;
+			rows.appendChild(h('tr', null,
+				h('td', null, h('b', null, 'Platte ' + (i + 1))),
+				h('td', null, p.printer),
+				h('td', null, p.items.map(function (x) { return qty(x.qty) + '× ' + x.name; }).join(', ')),
+				h('td', { class: 'num' }, p.est_minutes ? 'ca. ' + minTxt(p.est_minutes) : '–'),
+				h('td', null, h('span', { class: 'tag now' }, '3MF erzeugt'))
+			));
+		});
+
+		out.appendChild(h('div', { class: 'card', style: 'padding:0;overflow:auto' }, h('table', { class: 'list' },
+			h('thead', null, h('tr', null, h('th', null, 'Platte'), h('th', null, 'Drucker'), h('th', null, 'Inhalt'), h('th', { class: 'num' }, 'Dauer'), h('th', null, 'Datei'))),
+			rows
+		)));
+
+		var lbl = h('input', { type: 'checkbox', id: 'pl-label', checked: true });
+		var release = h('button', { class: 'btn primary', type: 'button' }, 'Freigeben und Etiketten drucken');
+		release.addEventListener('click', function () {
+			release.disabled = true;
+			api('workflow/freigeben', { method: 'POST', body: { plate_ids: r.plates.map(function (p) { return p.plate_id; }), labels: lbl.checked } }).then(function (res) {
+				var msg = res.runs.length + (res.runs.length === 1 ? ' Platte freigegeben' : ' Platten freigegeben');
+				if (res.label) { msg += ' · ' + res.label.message; }
+				toast(msg, !!(res.label && !res.label.ok));
+				d.close();
+				reload();
+			}).catch(function (e) { release.disabled = false; toast(e.message, true); });
+		});
+
+		out.appendChild(h('div', { style: 'display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px' },
+			h('span', { class: 'muted' }, r.plates.length + ' Platten · Druckzeit gesamt ca. ' + minTxt(total)),
+			h('label', { class: 'chk', for: 'pl-label' }, lbl, ' Etiketten drucken'),
+			release
+		));
+	}
+
+	function openSettings() {
+		var body = h('div', { class: 'sheet-body' }, 'Wird geladen …');
+		var d = dlg('Workflow-Einstellungen', body, true);
+
+		api('workflow/einstellungen').then(function (r) {
+			var s = r.settings;
+			body.textContent = '';
+
+			var printer = h('select', { class: 'field', id: 'ws-printer' }, [h('option', { value: '' }, '– keiner –')].concat(r.queue_printers.map(function (p) { return h('option', { value: p.id, selected: p.id === s.label_printer }, p.name + (p.online ? '' : ' (offline)')); })));
+			var roll = h('select', { class: 'field', id: 'ws-roll' }, r.rolls.map(function (x) { return h('option', { value: x.id, selected: x.id === s.label_roll }, x.label); }));
+			var rollHint = h('small', { class: 'muted' }, '');
+			function hint() { var cur = r.rolls.filter(function (x) { return x.id === roll.value; })[0]; rollHint.textContent = cur ? cur.hint : ''; }
+			roll.addEventListener('change', hint); hint();
+			var copies = h('select', { class: 'field', id: 'ws-copies' }, [1, 2, 3].map(function (n) { return h('option', { value: String(n), selected: n === s.label_copies }, String(n)); }));
+			var auto = h('input', { type: 'checkbox', id: 'ws-auto', checked: !!s.label_auto });
+			var hide = h('input', { type: 'checkbox', id: 'ws-hide', checked: !!s.hide_wpadmin });
+			var weeks = h('input', { class: 'field', type: 'number', id: 'ws-weeks', min: '1', max: '26', value: String(s.weeks) });
+			var cover = h('input', { class: 'field', type: 'number', id: 'ws-cover', min: '0', max: '12', step: '0.5', value: String(s.cover_weeks) });
+
+			var fields = h('fieldset', { class: 'fieldset' }, h('legend', null, 'Was auf dem Etikett steht'));
+			var boxes = {};
+			r.fields.forEach(function (f) {
+				boxes[f.id] = h('input', { type: 'checkbox', id: 'ws-f-' + f.id, checked: s.label_fields.indexOf(f.id) > -1 });
+				fields.appendChild(h('label', { class: 'chk', for: 'ws-f-' + f.id }, boxes[f.id], ' ' + f.label));
+			});
+
+			body.appendChild(h('h4', { class: 'sec' }, 'Etikett'));
+			body.appendChild(h('div', { class: 'form-grid' },
+				h('div', null, h('label', { for: 'ws-printer' }, 'Etikettendrucker'), printer, r.queue_printers.length ? null : h('small', { class: 'muted' }, 'Noch keiner angelegt: unter Verwaltung → Etikettendrucker.')),
+				h('div', null, h('label', { for: 'ws-roll' }, 'Rolle / Größe'), roll, rollHint),
+				h('div', null, h('label', { for: 'ws-copies' }, 'Kopien je Platte'), copies)
+			));
+			body.appendChild(fields);
+			body.appendChild(h('label', { class: 'chk', for: 'ws-auto', style: 'margin-top:10px' }, auto, ' Beim Freigeben des Plans automatisch drucken'));
+			body.appendChild(h('h4', { class: 'sec' }, 'Hochrechnung'));
+			body.appendChild(h('div', { class: 'form-grid' },
+				h('div', null, h('label', { for: 'ws-weeks' }, 'Verkaufsverlauf (Wochen)'), weeks),
+				h('div', null, h('label', { for: 'ws-cover' }, 'Bestand soll reichen für (Wochen)'), cover)
+			));
+
+			body.appendChild(h('h4', { class: 'sec' }, 'WordPress-Admin'));
+			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' ERP-Menüs im wp-admin ausblenden'));
+			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das wp-admin zeigt dann nur noch die Website. Die Seiten bleiben erreichbar und werden im ERP weiter eingebettet angezeigt.'));
+
+			var save = h('button', { class: 'btn primary', type: 'button', style: 'margin-top:16px' }, 'Speichern');
+			save.addEventListener('click', function () {
+				save.disabled = true;
+				api('workflow/einstellungen', { method: 'POST', body: {
+					label_printer: printer.value, label_roll: roll.value, label_copies: parseInt(copies.value, 10), label_auto: auto.checked ? 1 : 0,
+					label_fields: Object.keys(boxes).filter(function (k) { return boxes[k].checked; }),
+					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0
+				} }).then(function () { toast('Gespeichert'); d.close(); }).catch(function (e) { save.disabled = false; toast(e.message, true); });
+			});
+			body.appendChild(save);
+		}).catch(function (e) { body.textContent = ''; body.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+	}
+
+	/* ---------- Platte (mobile Seite hinter dem QR-Code) ---------- */
+
+	function viewRun(id) {
+		var box = h('div', { class: 'runpage' });
+		el.view.appendChild(box);
+		setHead('Platte ' + id, 'Workflow');
+
+		var run = null;
+		var reasons = [];
+		var canPlan = false;
+		var report = null;
+
+		function reloadFromServer() {
+			return api('runs/' + id, { cache: true }).then(function (r) {
+				run = r.run; run.fetched = Math.floor(Date.now() / 1000);
+				reasons = r.reasons; canPlan = r.plan;
+				paint();
+			}).catch(function (e) {
+				box.textContent = '';
+				box.appendChild(h('div', { class: 'notice warn' }, e.message));
+			});
+		}
+
+		function act(action) {
+			return runAct(id, action).then(function (r) {
+				if (r && r.queued) { localAdvance(run, action); toast('Offline vorgemerkt'); paint(); return; }
+				run = r.run; run.fetched = Math.floor(Date.now() / 1000); paint();
+			}).catch(function (e) { toast(e.message, true); });
+		}
+
+		function nowTs() { return run.now + (Date.now() / 1000 - run.fetched); }
+
+		function bigButton(label, onClick, kind) {
+			return h('button', { class: 'bigbtn' + (kind ? ' ' + kind : ''), type: 'button', onclick: function (e) { e.target.disabled = true; onClick(); } }, label);
+		}
+
+		function paint() {
+			box.textContent = '';
+			if (!run) { return; }
+			setHead('Platte ' + run.id, run.printer || 'Workflow');
+
+			box.appendChild(h('div', { class: 'run-head' },
+				h('div', { class: 'eyebrow' }, [run.printer, RUN_STATUS[run.status] || run.status].filter(Boolean).join(' · ')),
+				h('h2', null, 'Platte ' + run.id),
+				h('div', { class: 'run-items' }, itemsLine(run)),
+				h('div', { class: 'muted' }, [run.est_minutes ? 'ca. ' + minTxt(run.est_minutes) : '', run.batch ? 'Plan ' + run.batch : ''].filter(Boolean).join(' · '))
+			));
+
+			if (run.status === 'freigegeben') {
+				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno' }, '1'), h('div', null, h('b', null, 'Datei laden'), h('div', { class: 'muted small' }, run.file ? 'Projekt-3MF – im Slicer öffnen und slicen' : 'Keine Datei hinterlegt'))));
+				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px;min-height:52px' }, ico('download'), '3MF herunterladen')); }
+				var colors = run.items.map(function (i) { return i.color; }).filter(Boolean);
+				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno alt' }, '2'), h('div', null, h('b', null, 'Material bereit?'), h('div', { class: 'muted small' }, colors.length ? colors.join(', ') : 'Material laut Auftrag'))));
+				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
+			} else if (run.status === 'ruesten') {
+				box.appendChild(timeCard([['Rüstzeit', clock(nowTs() - run.setup), 'läuft']]));
+				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck gestartet ▶', function () { act('druckstart'); }), h('div', { class: 'muted small center' }, 'Wird automatisch erkannt, wenn der Drucker verbunden ist')));
+			} else if (run.status === 'druckt') {
+				var live = run.live;
+				var est = run.est_minutes ? Math.min(99, Math.round(((nowTs() - run.print) / 60) / run.est_minutes * 100)) : null;
+				var pct = live && live.progress !== null ? live.progress : est;
+
+				box.appendChild(h('div', { class: 'card' },
+					h('div', { class: 'row-top' }, h('b', null, 'druckt'), h('span', { class: 'muted' }, live && live.remaining !== null ? 'noch ' + minTxt(live.remaining) : '')),
+					pct !== null ? h('div', { class: 'bar big', role: 'progressbar', 'aria-valuenow': pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt' }, h('i', { style: 'width:' + pct + '%' })) : null,
+					h('div', { class: 'row-top muted small', style: 'margin-top:8px' }, h('span', null, pct !== null ? pct + ' %' : ''), live && live.nozzle !== null ? h('span', null, 'Düse ' + Math.round(live.nozzle) + ' °C · Bett ' + Math.round(live.bed) + ' °C') : null),
+					h('div', { class: 'muted small' }, live ? 'Live vom Drucker (Bambu)' : 'Schätzung nach Zeit – der Drucker meldet nichts')
+				));
+				box.appendChild(timeCard([['Rüstzeit', clock(run.print - run.setup), 'beendet'], ['Druckzeit', clock(nowTs() - run.print), 'läuft']]));
+				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck fertig ▶', function () { act('druckende'); }), h('button', { class: 'btn wide', type: 'button', onclick: function () { report = true; run.status = 'zu_melden'; paint(); } }, 'Direkt Ist-Menge melden')));
+			} else if (run.status === 'zu_melden') {
+				box.appendChild(timeCard([['Rüstzeit', clock((run.print || run.print_end || nowTs()) - (run.setup || run.print || nowTs())), 'beendet'], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), 'beendet']]));
+				box.appendChild(reportForm());
+			} else if (run.status === 'erledigt') {
+				box.appendChild(doneCard());
+			} else {
+				box.appendChild(h('div', { class: 'notice warn' }, 'Diese Platte wurde abgebrochen.'));
+			}
+
+			if (canPlan && (run.status === 'freigegeben' || run.status === 'ruesten' || run.status === 'druckt' || run.status === 'zu_melden')) {
+				box.appendChild(h('div', { class: 'run-more' },
+					h('button', { class: 'btn', type: 'button', onclick: function () { api('runs/' + id + '/etikett', { method: 'POST' }).then(function (r) { toast(r.message); }).catch(function (e) { toast(e.message, true); }); } }, 'Etikett nochmal drucken'),
+					h('button', { class: 'btn', type: 'button', style: 'color:var(--error)', onclick: function () { if (window.confirm('Platte abbrechen? Es wird nichts gebucht.')) { act('abbrechen'); } } }, 'Abbrechen')
+				));
+			}
+		}
+
+		function timeCard(rows) {
+			return h('div', { class: 'timegrid' }, rows.map(function (r) {
+				return h('div', { class: 'card time' }, h('div', { class: 'eyebrow' }, r[0]), h('div', { class: 'tnum' }, r[1]), h('div', { class: 'muted small' }, r[2]));
+			}));
+		}
+
+		function reportForm() {
+			var ok = {};
+			run.items.forEach(function (i) { ok[i.article_id + '|' + i.color] = i.qty; });
+			var form = h('form', { class: 'card reportform' });
+			var reasonWrap = h('div', { hidden: true }, h('label', { for: 'rf-reason' }, 'Fehlerursache'));
+			var reason = h('select', { class: 'field', id: 'rf-reason' }, [h('option', { value: '' }, '– bitte wählen –')].concat(reasons.map(function (r) { return h('option', { value: r.id }, r.label); })));
+			reasonWrap.appendChild(reason);
+			var counters = [];
+
+			function sync() {
+				var any = false;
+				counters.forEach(function (c) {
+					var key = c.item.article_id + '|' + c.item.color;
+					c.good.textContent = qty(ok[key]);
+					c.scrap.textContent = qty(c.item.qty - ok[key]);
+					if (ok[key] < c.item.qty) { any = true; }
+				});
+				reasonWrap.hidden = !any;
+			}
+
+			run.items.forEach(function (item) {
+				var key = item.article_id + '|' + item.color;
+				var good = h('div', { class: 'big-n' }, '');
+				var scrap = h('div', { class: 'big-n' }, '');
+				counters.push({ item: item, good: good, scrap: scrap });
+				var step = function (d) { ok[key] = Math.max(0, Math.min(item.qty, ok[key] + d)); sync(); };
+				var stepper = function (label, node, minus, plus) {
+					return h('div', null, h('div', { class: 'eyebrow' }, label), h('div', { class: 'stepper' },
+						h('button', { type: 'button', 'aria-label': 'Eins weniger (' + label + ')', onclick: minus }, '−'), node,
+						h('button', { type: 'button', 'aria-label': 'Eins mehr (' + label + ')', onclick: plus }, '+')));
+				};
+				form.appendChild(h('div', { class: 'rf-item' },
+					h('div', { class: 'row-top' }, h('b', null, item.name), h('span', { class: 'muted' }, 'Soll ' + qty(item.qty))),
+					stepper('Gut', good, function () { step(-1); }, function () { step(1); }),
+					stepper('Ausschuss', scrap, function () { step(1); }, function () { step(-1); })
+				));
+			});
+			sync();
+
+			form.appendChild(reasonWrap);
+			var submit = h('button', { class: 'bigbtn go', type: 'submit' }, 'Melden und einlagern ✓');
+			form.appendChild(submit);
+			form.appendChild(h('div', { class: 'muted small center' }, 'Fehlmengen gehen als Bedarf zurück in den Plan.'));
+
+			form.addEventListener('submit', function (e) {
+				e.preventDefault();
+				var items = run.items.map(function (i) { return { article_id: i.article_id, color: i.color, ok: ok[i.article_id + '|' + i.color] }; });
+				var short = run.items.some(function (i) { return ok[i.article_id + '|' + i.color] < i.qty; });
+				if (short && !reason.value) { toast('Bitte die Fehlerursache wählen.', true); return; }
+				submit.disabled = true;
+				runAct(id, 'melden', { items: items, failure_reason: short ? reason.value : 'keine' }).then(function (r) {
+					if (r && r.queued) { localAdvance(run, 'melden'); run.items = run.items.map(function (i) { return Object.assign({}, i, { ok: ok[i.article_id + '|' + i.color], scrap: i.qty - ok[i.article_id + '|' + i.color] }); }); toast('Offline vorgemerkt – wird gebucht, sobald die Verbindung zurück ist.'); paint(); return; }
+					run = r.run; run.fetched = Math.floor(Date.now() / 1000); run.summary = r.summary; paint();
+				}).catch(function (er) { submit.disabled = false; toast(er.message, true); });
+			});
+
+			return form;
+		}
+
+		function doneCard() {
+			var wrap = h('div');
+			var rows = h('div', { class: 'card summary' }, run.items.map(function (i) {
+				var good = i.ok !== undefined ? i.ok : i.qty;
+				return h('div', { class: 'row-top' }, h('span', null, i.name), h('b', null, '+' + qty(good) + (i.scrap ? ' · Ausschuss ' + qty(i.scrap) : '')));
+			}));
+			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock((run.print || run.setup || 0) - (run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
+
+			wrap.appendChild(h('div', { class: 'okmark' }, ico('check'), h('div', null, h('b', null, 'Platte ' + run.id + ' erledigt'), h('div', { class: 'muted' }, 'Im Lager eingebucht'))));
+			wrap.appendChild(rows);
+			wrap.appendChild(times);
+
+			var next = h('div', { style: 'margin-top:14px' });
+			wrap.appendChild(next);
+			api('workflow', { cache: true }).then(function (d) {
+				var n = d.columns.freigegeben.filter(function (r) { return r.id !== run.id; })[0];
+				if (!n) { return; }
+				next.appendChild(h('div', { class: 'card dark' }, h('div', { class: 'eyebrow' }, 'Dein Nächstes'), h('div', { class: 'big-title' }, 'Platte ' + n.id), h('div', null, itemsLine(n))));
+				next.appendChild(h('a', { class: 'bigbtn', href: '#/platte/' + n.id, style: 'text-decoration:none;display:block;text-align:center;margin-top:12px' }, 'Platte ' + n.id + ' vorbereiten ▶'));
+			}).catch(function () { /* ohne Liste kein Vorschlag */ });
+			return wrap;
+		}
+
+		reloadFromServer();
+		timers.push(setInterval(function () {
+			if (document.hidden || !run) { return; }
+			if (run.status === 'ruesten' || run.status === 'druckt') { reloadFromServer(); } else if (run.status === 'zu_melden' && report) { /* Eingabe nicht überschreiben */ } else { paint(); }
+		}, 10000));
+	}
+
+	var RUN_STATUS = { freigegeben: 'bereit', ruesten: 'rüstet', druckt: 'druckt', zu_melden: 'Ist melden', erledigt: 'erledigt', abgebrochen: 'abgebrochen' };
+
 	/* ---------- Suche ---------- */
 
 	function openPalette() {
@@ -1467,6 +2008,15 @@
 	window.addEventListener('beforeunload', function (e) {
 		if (S.draft && S.rights && isDirty()) { e.preventDefault(); e.returnValue = ''; }
 	});
+
+	// QR-Code am Drucker: /erp/p/<nummer>. Der Server liefert dafür die
+	// Oberfläche; hier wird daraus die Platten-Seite.
+	(function () {
+		var base = C.erpPath || '/';
+		var rest = location.pathname.indexOf(base) === 0 ? location.pathname.slice(base.length) : location.pathname.replace(/^\//, '');
+		var m = rest.match(/^p\/(\d+)\/?$/);
+		if (m) { history.replaceState(null, '', base + '#/platte/' + m[1]); }
+	})();
 
 	api('bootstrap', { cache: true }).then(function (boot) {
 		S.boot = boot;
