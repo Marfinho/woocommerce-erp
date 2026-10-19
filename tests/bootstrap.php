@@ -347,3 +347,7 @@ if ( ! function_exists( 'current_user_can' ) ) {
 foreach ( array( 'Options', 'Stats', 'UploadTypes', 'Viewer' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/ArView/' . $lw16_class . '.php';
 }
+
+// ERP-Oberfläche: Rechtekatalog und Navigation sind reine Zuordnungen.
+require $lw16_root . '/includes/Erp/Permissions.php';
+require $lw16_root . '/includes/Erp/Navigation.php';
