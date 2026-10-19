@@ -1,0 +1,38 @@
+/* Konfigurator (assets/erp/pages/konfigurator.js). Nur Klassen mit Präfix kf-. */
+.kf-intro summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.kf-tools { display: grid; gap: 8px; }
+.kf-search { display: flex; gap: 8px; flex-wrap: wrap; }
+.kf-search .field { flex: 1 1 220px; min-width: 0; }
+.kf-search .btn { min-height: 44px; }
+.kf-list { margin-top: 12px; }
+.kf-row { display: flex; width: 100%; text-align: left; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; font: inherit; color: inherit; cursor: pointer; }
+.kf-warn { color: var(--warning); font-size: 13px; font-weight: 600; margin-top: 4px; }
+.kf-sheet { display: grid; gap: 12px; }
+.kf-kvs { display: grid; gap: 6px; }
+.kf-kv { display: grid; grid-template-columns: minmax(110px, 36%) minmax(0, 1fr); gap: 10px; font-size: 14px; overflow-wrap: anywhere; }
+.kf-form { display: grid; gap: 12px; }
+.kf-set { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px 12px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+.kf-set legend { font-weight: 700; padding: 0 6px; }
+.kf-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 520px) { .kf-grid { grid-template-columns: 1fr 1fr; } }
+.kf-field { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.kf-field[hidden] { display: none; }
+.kf-lab { font-size: 13px; font-weight: 600; }
+.kf-hint { font-size: 12px; color: var(--text-muted); font-weight: 400; margin: 0; }
+.kf-radios { display: grid; gap: 4px; }
+.kf-radio, .kf-check { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; font-size: 14px; }
+.kf-radio input, .kf-check input { width: 22px; height: 22px; margin-top: 2px; flex: none; }
+.kf-file { max-width: 100%; min-height: 44px; }
+.kf-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.kf-actions .btn { min-height: 44px; }
+.kf-danger { color: var(--error); border-color: var(--error); }
+.kf-msg { padding: 10px 12px; border-radius: 12px; font-size: 14px; border: 1px solid var(--line); }
+.kf-msg.ok { border-color: var(--success); color: var(--success); }
+.kf-msg.err { border-color: var(--error); color: var(--error); background: color-mix(in srgb, var(--error) 8%, var(--surface)); }
+.kf-msg[hidden] { display: none; }
+.kf-blocks { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 8px; }
+.kf-blocks h4 { margin: 0; font-size: 16px; }
+.kf-block { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.kf-block .btn { min-height: 44px; }
+.kf-blockform { margin-top: 4px; }
+.kf-blockform .btn { min-height: 44px; }

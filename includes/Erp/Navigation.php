@@ -219,7 +219,7 @@ class Navigation {
 			self::item( 'sollist', 'fertigung', __( 'Soll gegen Ist', 'lindenweg16' ), 'fertigung.sollist', '', 'native' ),
 			self::item( 'druckjournal', 'fertigung', __( 'Druckjournal', 'lindenweg16' ), 'fertigung.druckjournal', '', 'native', '', 'lw16-betrieb-druckjournal' ),
 			self::item( 'artikel', 'fertigung', __( 'Alle Produkte', 'lindenweg16' ), 'fertigung.artikel', '', 'native', '', 'lw16-betrieb-artikel' ),
-			self::item( 'konfigurator', 'fertigung', __( 'Konfigurator', 'lindenweg16' ), 'fertigung.konfigurator', 'lw16-betrieb-konfigurator' ),
+			self::item( 'konfigurator', 'fertigung', __( 'Konfigurator', 'lindenweg16' ), 'fertigung.konfigurator', '', 'native', '', 'lw16-betrieb-konfigurator' ),
 			self::item( 'kapazitaet', 'fertigung', __( 'Kapazität', 'lindenweg16' ), 'fertigung.kapazitaet', '', 'native', '', 'lw16-betrieb-kapazitaet' ),
 			self::item( 'qualitaet', 'fertigung', __( 'Qualität', 'lindenweg16' ), 'fertigung.qualitaet', '', 'native', '', 'lw16-betrieb-qualitaet' ),
 			self::item( 'drucker', 'fertigung', __( '3D-Drucker & Wartung', 'lindenweg16' ), 'fertigung.drucker', '', 'native', '', 'lw16-betrieb-drucker' ),
