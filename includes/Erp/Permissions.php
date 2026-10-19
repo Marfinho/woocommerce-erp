@@ -107,7 +107,8 @@ class Permissions {
 			'verkauf.orders'          => self::def( 'verkauf', __( 'Aufträge', 'lindenweg16' ), __( 'Betriebsaufträge zu Bestellungen: offene Aufträge, Positionen, Status.', 'lindenweg16' ), array( $production ), $page ),
 			'verkauf.orders.status'   => self::def( 'verkauf', __( 'Auftragsstatus ändern', 'lindenweg16' ), __( 'Aufträge bestätigen, stornieren oder fertigmelden.', 'lindenweg16' ), array( $production ), $later, array( 'verkauf.orders' ) ),
 			'verkauf.versand'         => self::def( 'verkauf', __( 'Versand', 'lindenweg16' ), __( 'Picken, packen, Versandstatus.', 'lindenweg16' ), array( $capture ), $page ),
-			'verkauf.versand.etikett' => self::def( 'verkauf', __( 'Versandetiketten erzeugen', 'lindenweg16' ), __( 'DHL-Etiketten kaufen und drucken – kostet Geld.', 'lindenweg16' ), array( $capture ), $later, array( 'verkauf.versand' ) ),
+			'verkauf.picken'          => self::def( 'verkauf', __( 'Picklisten abarbeiten', 'lindenweg16' ), __( 'Native Seite: offene Picklisten ansehen, Positionen entnehmen und abhaken.', 'lindenweg16' ), array( $capture ), $page ),
+			'verkauf.versand.etikett' => self::def( 'verkauf', __( 'Versandetiketten erzeugen', 'lindenweg16' ), __( 'DHL-Etiketten kaufen und drucken – kostet Geld.', 'lindenweg16' ), array( $capture ), $cap, array( 'verkauf.versand' ) ),
 			'verkauf.kontakte'        => self::def( 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), __( 'Geschäftskunden, Lieferanten, Konditionen.', 'lindenweg16' ), array( $production ), $page ),
 			'verkauf.loyalty'         => self::def( 'verkauf', __( 'Loyalty', 'lindenweg16' ), __( 'Kundenbindung und Guthaben.', 'lindenweg16' ), array(), $full ),
 			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array(), $full ),
@@ -128,10 +129,11 @@ class Permissions {
 
 			// Lager.
 			'lager.bestand'           => self::def( 'lager', __( 'Lager', 'lindenweg16' ), __( 'Bestände ansehen.', 'lindenweg16' ), array( $capture ), $page ),
+			'lager.scannen'           => self::def( 'lager', __( 'Scannen', 'lindenweg16' ), __( 'Native Seite: Codes scannen (Kamera oder Handscanner) und sehen, was dort liegt.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.lagerplaetze'      => self::def( 'lager', __( 'Lagerplätze & Picklisten', 'lindenweg16' ), __( 'Fächer, Fertigung und Picklisten.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.material'          => self::def( 'lager', __( 'Material', 'lindenweg16' ), __( 'Filament und Zukaufteile.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.bedarf'            => self::def( 'lager', __( 'Bedarf', 'lindenweg16' ), __( 'Bedarfsplanung und Nachbestellung.', 'lindenweg16' ), array( $production ), $page ),
-			'lager.buchen'            => self::def( 'lager', __( 'Bestand buchen und korrigieren', 'lindenweg16' ), __( 'Zu- und Abgänge buchen, Inventurdifferenzen korrigieren.', 'lindenweg16' ), array( $capture ), $later, array( 'lager.bestand' ) ),
+			'lager.buchen'            => self::def( 'lager', __( 'Bestand buchen und korrigieren', 'lindenweg16' ), __( 'Zu- und Abgänge buchen, Inventurdifferenzen korrigieren – auch beim Scannen und in der mobilen Erfassung.', 'lindenweg16' ), array( $capture ), $cap, array( 'lager.bestand' ) ),
 
 			// Finanzen.
 			'finanzen.berichte'       => self::def( 'finanzen', __( 'Berichte', 'lindenweg16' ), __( 'Kennzahlen und Auswertungen.', 'lindenweg16' ), array( $reports ), $page ),
@@ -288,26 +290,26 @@ class Permissions {
 			'werkstatt'   => array(
 				'label' => __( 'Werkstatt', 'lindenweg16' ),
 				'hint'  => __( 'Drucke protokollieren, Zeit erfassen, Lager einsehen. Keine Stammdaten, kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.druckjournal', 'fertigung.qualitaet', 'fertigung.druckfarm', 'fertigung.bambu', 'fertigung.auftraege.start', 'lager.bestand', 'lager.lagerplaetze', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.druckjournal', 'fertigung.qualitaet', 'fertigung.druckfarm', 'fertigung.bambu', 'fertigung.auftraege.start', 'lager.bestand', 'lager.scannen', 'lager.buchen', 'lager.lagerplaetze', 'verwaltung.zeit' ),
 			),
 			'packtisch'   => array(
 				'label' => __( 'Packtisch', 'lindenweg16' ),
 				'hint'  => __( 'Picken, packen, versenden und Etiketten drucken.', 'lindenweg16' ),
-				'keys'  => array( 'verkauf.versand', 'verkauf.versand.etikett', 'lager.bestand', 'lager.lagerplaetze', 'verwaltung.etiketten', 'verwaltung.zeit' ),
+				'keys'  => array( 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.picken', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'verwaltung.etiketten', 'verwaltung.zeit' ),
 			),
 			'fertigung'   => array(
 				'label' => __( 'Fertigung', 'lindenweg16' ),
 				'hint'  => __( 'Wie Werkstatt, dazu Stammdaten, Material, Bedarf und Berichte – aber kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
 			),
 			'leitung'     => array(
 				'label' => __( 'Betriebsleitung', 'lindenweg16' ),
 				'hint'  => __( 'Alles Fachliche samt Shop, Kosten und Berichten. Keine Grundeinstellungen, keine Rechtevergabe.', 'lindenweg16' ),
 				'keys'  => array_merge(
 					$shop,
-					array( 'verkauf.orders', 'verkauf.orders.status', 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.kontakte' ),
+					array( 'verkauf.orders', 'verkauf.orders.status', 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.picken', 'verkauf.kontakte' ),
 					array( 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
-					array( 'lager.bestand', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen' ),
+					array( 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen' ),
 					array( 'finanzen.berichte', 'finanzen.kosten', 'finanzen.export' ),
 					array( 'verwaltung.zeit', 'verwaltung.etiketten' )
 				),

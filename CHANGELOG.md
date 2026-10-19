@@ -7,6 +7,25 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.19.0] – 2026-10-19
+
+### ERP-Oberfläche: native Werkstatt-Seiten und durchgesetzte Rechte
+
+- **Scannen (neu, nativ):** Code per Kamera (BarcodeDetector, sonst jsQR) oder Handscanner
+  lesen; zeigt Lagerplatz-Inhalt bzw. Artikelbestand je Platz und Farbe. Darunter „Bestand
+  buchen“ (Zugang/Abgang, Grund, Platz) über die bestehende Schnittstelle `lager/bewegung`.
+- **Picklisten (neu, nativ):** offene Listen, Positionen entnehmen oder Artikel scannen (eigene
+  Etiketten und fremde Barcodes); Stand frischt alle 30 Sekunden auf.
+- **Rechte durchgesetzt:** `lager.buchen` wird jetzt in der Schnittstelle `lager/bewegung`
+  geprüft, `verkauf.versand.etikett` beim Erzeugen eines DHL-Etiketts. Neue Rechte
+  `lager.scannen` und `verkauf.picken`. Wer vorher nicht in der ERP-Oberfläche eingerichtet
+  wurde, behält sein Verhalten (Ableitung aus den alten Betrieb-Rechten); die Vorlage
+  „Werkstatt“ enthält Scannen und Buchen, „Packtisch“ Picklisten und Etiketten, aber kein Buchen.
+- **Startseite:** Kennzahlen aktualisieren sich jede Minute (nicht im Hintergrund-Tab).
+- **App:** Web-App-Manifest unter `/erp/manifest.webmanifest`; mit gesetztem Website-Symbol
+  lässt sich die Oberfläche auf Handy und Tablet auf den Startbildschirm legen.
+- Tests: Rechte im Code gegen den Katalog geprüft, jede native Seite hat ihren Bildschirm.
+
 ## [0.17.0] – 2026-10-19
 
 ### Neu: ERP-Oberfläche unter /erp (Prototyp, zweiter Zugang neben wp-admin)

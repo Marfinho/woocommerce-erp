@@ -28,6 +28,8 @@
 	};
 
 	var el = {}; // Gerüst-Elemente
+	var timers = [];
+	var camera = null;
 
 	/* ---------- Hilfen ---------- */
 
@@ -96,7 +98,7 @@
 		var headers = { 'X-WP-Nonce': C.nonce };
 		if (opts.body) { headers['Content-Type'] = 'application/json'; }
 
-		return fetch(C.rest + path, {
+		return fetch((opts.root ? C.api : C.rest) + path, {
 			method: opts.method || 'GET',
 			credentials: 'same-origin',
 			headers: headers,
@@ -312,6 +314,9 @@
 		}
 
 		S.lastHash = location.hash || '#/start';
+		timers.forEach(function (t) { clearInterval(t); });
+		timers = [];
+		stopCamera();
 		el.app.classList.remove('drawer-open');
 		syncNav();
 
@@ -354,7 +359,11 @@
 		var skel = ['a', 'b', 'c', 'd'].map(function () { return h('div', { class: 'tile skeleton' }, h('div', { class: 'lab' }, ' '), h('div', { class: 'val' })); });
 		skel.forEach(function (s) { tiles.appendChild(s); });
 
-		(S.dash ? Promise.resolve(S.dash) : api('dashboard')).then(function (d) {
+		function load() {
+			return api('dashboard').then(paint);
+		}
+
+		function paint(d) {
 			S.dash = d;
 			tiles.textContent = '';
 			d.tiles.forEach(function (t) {
@@ -383,10 +392,21 @@
 				));
 			});
 			ordersCard.appendChild(h('table', { class: 'list' }, tb));
-		}).catch(function (e) {
+		}
+
+		function fail(e) {
 			tiles.textContent = '';
 			tiles.appendChild(h('div', { class: 'notice warn' }, e.message));
-		});
+		}
+
+		// Erst die zuletzt bekannten Zahlen zeigen, dann frisch laden und
+		// danach jede Minute – ein Monitor in der Werkstatt soll nicht
+		// veralten. Im Hintergrund-Tab wird nicht nachgeladen.
+		if (S.dash) { paint(S.dash); }
+		load().catch(fail);
+		timers.push(setInterval(function () {
+			if (!document.hidden) { load().catch(function () {}); }
+		}, 60000));
 	}
 
 	function phasesCard() {
@@ -394,10 +414,11 @@
 			[true, 'Gerüst, Anmeldung mit dem WordPress-Konto, Menü aus den Rechten'],
 			[true, 'Rechte pro Person, fein einstellbar, mit Vorlagen'],
 			[true, 'Alle bestehenden Seiten eingebettet – voller Funktionsumfang'],
-			[false, 'Werkstatt nativ: Scannen, Packtisch, Druckfarm-Anzeige für Tablet und Monitor'],
-			[false, 'Native Listen und Formulare statt eingebetteter Seiten, Live-Aktualisierung'],
-			[false, 'Module hinter „Nur Vollzugriff“ auf feine Rechte umstellen; „folgt“-Rechte durchsetzen'],
-			[false, 'Subdomain, installierbare App, Offline-Erfassung in der Werkstatt']
+			[true, 'Werkstatt nativ: Scannen mit Kamera oder Handscanner, Bestand buchen, Picklisten'],
+			[true, 'Live-Aktualisierung der Startseite; als App auf den Startbildschirm legbar'],
+			[false, 'Weitere native Seiten: Druckfarm-Anzeige, Aufträge, Versand – dann entfallen die eingebetteten'],
+			[false, 'Module hinter „Nur Vollzugriff“ (Buchhaltung u. a.) auf feine Rechte umstellen'],
+			[false, 'Subdomain und Offline-Erfassung in der Werkstatt']
 		];
 		var list = h('ol', { class: 'phases' });
 		steps.forEach(function (s, i) {
@@ -430,7 +451,11 @@
 
 		setHead(f.item.title, f.area.title);
 
-		if (f.item.kind === 'native' && f.item.id === 'rechte') { return viewRights(); }
+		if (f.item.kind === 'native') {
+			if (f.item.id === 'rechte') { return viewRights(); }
+			if (f.item.id === 'scannen') { return viewScan(); }
+			if (f.item.id === 'picken') { return viewPick(); }
+		}
 
 		if (f.item.locked) {
 			el.view.appendChild(h('div', { class: 'notice warn' }, h('b', null, f.item.title), h('p', { style: 'margin:6px 0 0' }, f.item.locked)));
@@ -763,6 +788,292 @@
 			btn.disabled = false;
 			toast(e.message, true);
 		});
+	}
+
+	/* ---------- Scannen ---------- */
+
+	var TYPES = { bin: 'Lagerplatz', article: 'Artikel', batch: 'Charge', component: 'Komponente' };
+
+	function can(key) {
+		return S.boot.user.full || S.boot.perms.indexOf(key) > -1;
+	}
+
+	function stopCamera() {
+		if (!camera) { return; }
+		camera.stop = true;
+		if (camera.stream) { camera.stream.getTracks().forEach(function (t) { t.stop(); }); }
+		if (camera.box) { camera.box.remove(); }
+		camera = null;
+	}
+
+	function loadScript(src) {
+		return new Promise(function (resolve, reject) {
+			if (window.jsQR) { return resolve(); }
+			var s = document.createElement('script');
+			s.src = src;
+			s.onload = resolve;
+			s.onerror = function () { reject(new Error('Scanner konnte nicht geladen werden.')); };
+			document.head.appendChild(s);
+		});
+	}
+
+	// Kamera starten; ruft onCode genau einmal mit dem gelesenen Code auf.
+	function startCamera(host, onCode) {
+		stopCamera();
+
+		if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+			toast('Die Kamera ist hier nicht verfügbar (nur über https und mit Erlaubnis).', true);
+			return;
+		}
+
+		var video = h('video', { class: 'cam', playsinline: '', muted: '' });
+		var box = h('div', { class: 'cam-box' }, video,
+			h('button', { class: 'btn', type: 'button', onclick: stopCamera }, 'Kamera aus'));
+		host.appendChild(box);
+		camera = { box: box, stop: false, stream: null };
+		var mine = camera;
+
+		var detector = 'BarcodeDetector' in window ? new window.BarcodeDetector() : null;
+		var canvas = document.createElement('canvas');
+		var ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+		navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }).then(function (stream) {
+			if (mine.stop) { stream.getTracks().forEach(function (t) { t.stop(); }); return null; }
+			mine.stream = stream;
+			video.srcObject = stream;
+			return video.play().then(function () { return detector ? null : loadScript(C.jsqr); });
+		}).then(function () {
+			function tick() {
+				if (mine.stop || camera !== mine) { return; }
+				if (video.readyState < 2) { return requestAnimationFrame(tick); }
+
+				var done = function (code) { stopCamera(); onCode(code); };
+
+				if (detector) {
+					detector.detect(video).then(function (found) {
+						if (found.length) { done(found[0].rawValue); } else { requestAnimationFrame(tick); }
+					}).catch(function () { requestAnimationFrame(tick); });
+					return;
+				}
+
+				canvas.width = video.videoWidth;
+				canvas.height = video.videoHeight;
+				ctx.drawImage(video, 0, 0);
+				var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+				var hit = window.jsQR(img.data, img.width, img.height);
+				if (hit && hit.data) { done(hit.data); } else { requestAnimationFrame(tick); }
+			}
+			tick();
+		}).catch(function (e) {
+			stopCamera();
+			toast(e && e.name === 'NotAllowedError' ? 'Kamerazugriff wurde nicht erlaubt.' : (e.message || 'Kamera nicht startbar.'), true);
+		});
+	}
+
+	function viewScan() {
+		el.view.appendChild(h('div', { class: 'page-head' }, h('div', null,
+			h('h2', null, 'Scannen'),
+			h('p', { class: 'muted', style: 'margin:4px 0 0' }, 'Etikett scannen oder Nummer eintippen – ein Handscanner schreibt direkt ins Feld.'))));
+
+		var out = h('div', { 'aria-live': 'polite' });
+		var camHost = h('div');
+		var input = h('input', { class: 'field scan-input', type: 'text', placeholder: 'Code scannen oder eintippen …', 'aria-label': 'Code', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+
+		function scan(code) {
+			code = String(code || '').trim();
+			if (!code) { return; }
+			input.value = '';
+			out.textContent = '';
+			out.appendChild(h('div', { class: 'card' }, 'Suche nach „' + code + '“ …'));
+
+			api('scan?code=' + encodeURIComponent(code), { root: true }).then(function (r) {
+				showScan(out, r, scan);
+			}).catch(function (e) {
+				out.textContent = '';
+				out.appendChild(h('div', { class: 'notice warn' }, e.status === 404 ? 'Zu „' + code + '“ gibt es nichts – weder Lagerplatz noch Artikel, Charge oder Komponente.' : e.message));
+			}).then(function () { input.focus(); });
+		}
+
+		var form = h('form', { class: 'scan-form', onsubmit: function (e) { e.preventDefault(); scan(input.value); } },
+			input,
+			h('button', { class: 'btn primary', type: 'submit' }, 'Suchen'),
+			h('button', { class: 'btn', type: 'button', onclick: function () { startCamera(camHost, scan); } }, 'Kamera')
+		);
+
+		el.view.appendChild(h('div', { class: 'card' }, form, camHost));
+		el.view.appendChild(h('div', { style: 'margin-top:14px' }, out));
+		input.focus();
+	}
+
+	function qty(n) {
+		return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 3 }).format(n);
+	}
+
+	function showScan(out, r, rescan) {
+		out.textContent = '';
+		var card = h('div', { class: 'card result' },
+			h('span', { class: 'tag now' }, TYPES[r.type] || r.type),
+			h('h3', { style: 'margin:6px 0 2px;font-size:20px' }, r.label || r.code),
+			h('div', { class: 'muted', style: 'font-family:var(--font-mono);font-size:13px' }, r.code)
+		);
+		out.appendChild(card);
+
+		var st = r.stock;
+		var articleId = r.type === 'article' ? r.id : (r.type === 'batch' && r.extra ? r.extra.article_id : 0);
+
+		if (r.type === 'bin' && st) {
+			card.appendChild(st.length ? h('table', { class: 'list', style: 'margin-top:12px' },
+				h('thead', null, h('tr', null, h('th', null, 'Artikel'), h('th', null, 'Farbe'), h('th', { class: 'num' }, 'Menge'))),
+				h('tbody', null, st.map(function (x) { return h('tr', null, h('td', null, h('b', null, x.sku), h('div', { class: 'muted', style: 'font-size:12px' }, x.name)), h('td', null, x.color || '–'), h('td', { class: 'num' }, qty(x.qty))); }))
+			) : h('p', { class: 'muted' }, 'Dieser Platz ist leer.'));
+		}
+
+		if (articleId && st) {
+			card.appendChild(h('p', { style: 'margin:12px 0 4px' }, 'Gesamtbestand: ', h('b', null, qty(st.gesamt)), st.ohne_platz ? h('span', { class: 'muted' }, ' · davon ohne Platz: ' + qty(st.ohne_platz)) : null));
+			if (st.bins.length) {
+				card.appendChild(h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Platz'), h('th', null, 'Farbe'), h('th', { class: 'num' }, 'Menge'))),
+					h('tbody', null, st.bins.map(function (x) { return h('tr', null, h('td', null, x.bin || '–'), h('td', null, x.color || '–'), h('td', { class: 'num' }, qty(x.qty))); }))
+				));
+			}
+			card.appendChild(bookForm(articleId, st, r.code, rescan));
+		}
+
+		if (r.type === 'component') { card.appendChild(h('p', { class: 'muted' }, 'Komponenten werden unter „Material“ gepflegt.')); }
+	}
+
+	function bookForm(articleId, st, code, rescan) {
+		if (!can('lager.buchen')) {
+			return h('p', { class: 'muted', style: 'font-size:13px;margin-top:12px' }, h('span', { class: 'tag' }, 'Nur ansehen'), ' Bestand buchen darfst du nicht.');
+		}
+
+		var amount = h('input', { class: 'field', type: 'number', step: 'any', inputmode: 'decimal', required: '', placeholder: 'z. B. 5 oder -2', 'aria-label': 'Menge' });
+		var kind = h('select', { class: 'field', 'aria-label': 'Grund' },
+			[['korrektur', 'Korrektur'], ['produktion', 'Produktion'], ['ausschuss', 'Ausschuss'], ['muster', 'Muster abgegeben'], ['retoure', 'Retoure']].map(function (o) { return h('option', { value: o[0] }, o[1]); }));
+		var where = h('select', { class: 'field', 'aria-label': 'Platz' },
+			st.bins.map(function (b) { return h('option', { value: b.bin_id + '|' + b.color }, (b.bin || 'Platz') + (b.color ? ' · ' + b.color : '') + ' (' + qty(b.qty) + ')'); }),
+			h('option', { value: '0|' }, 'ohne Platz'));
+		var note = h('input', { class: 'field', type: 'text', placeholder: 'Notiz (optional)', 'aria-label': 'Notiz' });
+
+		return h('form', {
+			class: 'book', onsubmit: function (e) {
+				e.preventDefault();
+				var q = parseFloat(String(amount.value).replace(',', '.'));
+				if (!q) { toast('Bitte eine Menge ungleich 0 eintragen.', true); return; }
+				var w = where.value.split('|');
+				var btn = e.target.querySelector('button');
+				btn.disabled = true;
+				api('lager/bewegung', { root: true, method: 'POST', body: { article_id: articleId, qty: q, movement_type: kind.value, bin_id: parseInt(w[0], 10) || 0, color: w[1] || '', note: note.value } }).then(function () {
+					toast('Gebucht');
+					rescan(code);
+				}).catch(function (err) {
+					btn.disabled = false;
+					toast(err.message, true);
+				});
+			}
+		},
+		h('h4', { style: 'margin:16px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)' }, 'Bestand buchen'),
+		h('div', { class: 'book-grid' }, amount, kind, where, note, h('button', { class: 'btn primary', type: 'submit' }, 'Buchen')),
+		h('p', { class: 'muted', style: 'font-size:12.5px;margin:6px 0 0' }, 'Plus = Zugang, Minus = Abgang. Jede Buchung steht einzeln im Lagerjournal.'));
+	}
+
+	/* ---------- Picklisten ---------- */
+
+	function viewPick() {
+		el.view.appendChild(h('div', { class: 'page-head' }, h('div', null,
+			h('h2', null, 'Picklisten'),
+			h('p', { class: 'muted', style: 'margin:4px 0 0' }, 'Offene Listen abarbeiten: Position entnehmen oder den Artikel scannen.'))));
+
+		var box = h('div');
+		el.view.appendChild(box);
+		var open = S.pickOpen || 0;
+
+		function load() {
+			return api('picklisten', { root: true }).then(function (lists) { paint(lists); });
+		}
+
+		function pick(item, scanned) {
+			return api('picklisten/position', { root: true, method: 'POST', body: { item_id: item.id, qty: 0, scanned: scanned || '' } }).then(function (r) {
+				toast(r.done ? 'Position vollständig' : 'Entnommen');
+				return load();
+			}).catch(function (e) { toast(e.message, true); });
+		}
+
+		function paint(lists) {
+			box.textContent = '';
+
+			if (!lists.length) {
+				box.appendChild(h('div', { class: 'notice' }, 'Keine offenen Picklisten. Neue entstehen aus Bestellungen und Fertigungsaufträgen.'));
+				return;
+			}
+
+			var list = lists.filter(function (l) { return l.id === open; })[0];
+
+			if (!list) {
+				var grid = h('div', { class: 'grid cards' });
+				lists.forEach(function (l) {
+					grid.appendChild(h('button', { class: 'link-card area-verkauf', type: 'button', style: 'text-align:left;font:inherit;color:inherit;width:100%', onclick: function () { open = l.id; S.pickOpen = l.id; paint(lists); } },
+						h('div', { class: 'badge-ico' }, ico('box')),
+						h('div', null, h('b', null, l.code), h('span', { class: 'sub' }, l.open + ' von ' + l.items.length + ' Positionen offen' + (l.note ? ' · ' + l.note : '')))
+					));
+				});
+				box.appendChild(grid);
+				return;
+			}
+
+			var scanIn = h('input', { class: 'field scan-input', type: 'text', placeholder: 'Artikel scannen …', 'aria-label': 'Artikel scannen', autocomplete: 'off' });
+			var camHost = h('div');
+
+			function byScan(code) {
+				code = String(code || '').trim();
+				if (!code) { return; }
+				scanIn.value = '';
+				var value = code.replace(/^LW16A:/i, '').toUpperCase();
+				var todo = list.items.filter(function (i) { return !i.done; });
+				var hit = todo.filter(function (i) { return i.sku.toUpperCase() === value; })[0];
+
+				if (hit) { return pick(hit, code); }
+
+				// Fremde Barcodes (EAN) kennt nur der Server: Artikel auflösen.
+				api('scan?code=' + encodeURIComponent(code), { root: true }).then(function (r) {
+					var match = todo.filter(function (i) { return i.item_type !== 'komponente' && r.type === 'article' && i.article_id === r.id; })[0];
+					if (match) { return pick(match, code); }
+					toast('„' + (r.label || code) + '“ gehört zu keiner offenen Position dieser Liste.', true);
+				}).catch(function () { toast('Code nicht erkannt.', true); });
+			}
+
+			box.appendChild(h('div', { class: 'card' },
+				h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px' },
+					h('button', { class: 'btn', type: 'button', onclick: function () { open = 0; S.pickOpen = 0; paint(lists); } }, '← Alle Listen'),
+					h('h3', { style: 'margin:0' }, list.code),
+					h('span', { class: 'muted' }, list.open + ' offen')
+				),
+				h('form', { class: 'scan-form', onsubmit: function (e) { e.preventDefault(); byScan(scanIn.value); } },
+					scanIn,
+					h('button', { class: 'btn primary', type: 'submit' }, 'Abhaken'),
+					h('button', { class: 'btn', type: 'button', onclick: function () { startCamera(camHost, byScan); } }, 'Kamera')
+				),
+				camHost
+			));
+
+			var items = list.items.slice().sort(function (a, b) { return (a.done - b.done) || a.bin.localeCompare(b.bin); });
+			var rows = h('div', { class: 'picks' });
+			items.forEach(function (i) {
+				rows.appendChild(h('div', { class: 'pick' + (i.done ? ' done' : '') },
+					h('div', { class: 'pick-bin' }, i.bin || '–'),
+					h('div', { class: 'pick-txt' }, h('b', null, i.name || i.sku), h('small', null, i.sku + (i.color ? ' · ' + i.color : '') + (i.wc_order_id ? ' · Bestellung #' + i.wc_order_id : ''))),
+					h('div', { class: 'pick-qty' }, qty(i.qty_picked) + ' / ' + qty(i.qty_required)),
+					i.done ? h('span', { class: 'tag now' }, 'erledigt') : h('button', { class: 'btn primary', type: 'button', onclick: function (e) { e.target.disabled = true; pick(i, ''); } }, 'Entnommen')
+				));
+			});
+			box.appendChild(rows);
+		}
+
+		box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+		load().catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+
+		// Mehrere Personen packen gleichzeitig: Stand alle 30 Sekunden auffrischen.
+		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 30000));
 	}
 
 	/* ---------- Suche ---------- */

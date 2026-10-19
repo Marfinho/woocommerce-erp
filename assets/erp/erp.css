@@ -367,6 +367,29 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .savebar .btn { border-color: rgb(255 255 255 / 25%); background: none; color: inherit; }
 .savebar .btn.primary { background: var(--accent-soft); color: #22282f; border-color: transparent; }
 
+/* ---------- Scannen, Picklisten ---------- */
+
+.scan-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.scan-input { flex: 1; min-width: 200px; min-height: 52px; font-size: 18px; font-family: var(--font-mono); }
+.scan-form .btn { min-height: 52px; }
+.cam-box { margin-top: 12px; display: grid; gap: 8px; justify-items: start; }
+.cam { width: 100%; max-width: 480px; border-radius: var(--radius); background: #000; aspect-ratio: 4 / 3; object-fit: cover; }
+.result .tag { font-size: 12px; }
+.book-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.book-grid .btn { min-height: 42px; }
+.picks { display: grid; gap: 8px; margin-top: 12px; }
+.pick { display: grid; grid-template-columns: 76px 1fr auto auto; gap: 12px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.pick.done { opacity: .55; }
+.pick.done b { text-decoration: line-through; }
+.pick-bin { font: 600 15px var(--font-mono); background: var(--surface-muted); border-radius: 10px; padding: 8px 6px; text-align: center; }
+.pick-txt small { display: block; color: var(--text-muted); font-size: 12.5px; }
+.pick-qty { font: 600 16px var(--font-head); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pick .btn { min-height: 44px; }
+@media (max-width: 560px) {
+	.pick { grid-template-columns: 64px 1fr; }
+	.pick-qty, .pick .btn, .pick .tag { grid-column: 2; justify-self: start; }
+}
+
 /* ---------- Suche, Hinweise ---------- */
 
 dialog.palette {

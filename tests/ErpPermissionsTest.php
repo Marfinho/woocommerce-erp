@@ -97,4 +97,57 @@ class ErpPermissionsTest extends TestCase {
 	public function test_match_preset_is_empty_when_nothing_fits() {
 		$this->assertSame( '', Permissions::match_preset( array( 'verkauf.versand', 'finanzen.kosten' ) ) );
 	}
+
+	public function test_werkstatt_and_packtisch_get_their_native_pages() {
+		$presets = Permissions::presets();
+
+		$this->assertContains( 'lager.scannen', $presets['werkstatt']['keys'] );
+		$this->assertContains( 'lager.buchen', $presets['werkstatt']['keys'] );
+		$this->assertContains( 'verkauf.picken', $presets['packtisch']['keys'] );
+		$this->assertNotContains( 'lager.buchen', $presets['packtisch']['keys'], 'Packtisch bucht keinen Bestand' );
+	}
+
+	public function test_every_permission_checked_in_code_exists_in_the_catalog() {
+		$root  = dirname( __DIR__ ) . '/includes';
+		$found = array();
+
+		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ) );
+		foreach ( $iterator as $file ) {
+			if ( 'php' !== $file->getExtension() ) {
+				continue;
+			}
+			if ( preg_match_all( "/Access::can\(\s*'([\w.]+)'/", file_get_contents( $file->getPathname() ), $m ) ) {
+				foreach ( $m[1] as $key ) {
+					$found[ $key ] = $file->getFilename();
+				}
+			}
+		}
+
+		$this->assertNotEmpty( $found );
+		foreach ( $found as $key => $where ) {
+			$this->assertTrue( Permissions::exists( $key ), "$where prüft $key, das es nicht gibt" );
+		}
+	}
+
+	public function test_rights_marked_as_enforced_in_code_are_really_checked() {
+		// Geltungsbereich „cap“ ohne eigene Entsprechung im alten Backend
+		// verspricht eine Prüfung im Code. Die Rechte hier sind die, für die
+		// das Versprechen über Access::can() eingelöst wird.
+		$enforced = array(
+			'lager.buchen'            => 'Modules/Betrieb/RestApi.php',
+			'verkauf.versand.etikett' => 'Modules/Betrieb/Admin/ShippingPage.php',
+		);
+
+		foreach ( $enforced as $key => $file ) {
+			$this->assertSame( Permissions::SCOPE_CAP, Permissions::catalog()[ $key ]['scope'], $key );
+			$this->assertStringContainsString( "Access::can( '$key' )", file_get_contents( dirname( __DIR__ ) . '/includes/' . $file ), "$key wird in $file nicht geprüft" );
+		}
+
+		// Umgekehrt darf kein Recht „Folgt“ tragen, das schon geprüft wird.
+		foreach ( Permissions::catalog() as $key => $def ) {
+			if ( Permissions::SCOPE_PHASE2 === $def['scope'] ) {
+				$this->assertArrayNotHasKey( $key, $enforced, $key );
+			}
+		}
+	}
 }

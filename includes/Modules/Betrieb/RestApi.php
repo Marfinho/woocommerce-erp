@@ -238,6 +238,13 @@ class RestApi {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function create_movement( $request ) {
+		// Feines ERP-Recht: Erfassen darf jeder mit lw16_capture, Bestand
+		// buchen nur, wem es die ERP-Rechteverwaltung gibt (ohne eigene
+		// Einrichtung gilt, was die alten Rechte hergeben).
+		if ( ! \Lindenweg16\Erp\Access::can( 'lager.buchen' ) ) {
+			return new WP_Error( 'lw16_forbidden', __( 'Dir fehlt das Recht, Bestand zu buchen.', 'lindenweg16' ), array( 'status' => 403 ) );
+		}
+
 		$article_id = (int) $request->get_param( 'article_id' );
 		$qty        = (float) $request->get_param( 'qty' );
 		$type       = sanitize_key( (string) $request->get_param( 'movement_type' ) );

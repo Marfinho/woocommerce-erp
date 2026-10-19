@@ -104,4 +104,14 @@ class ErpNavigationTest extends TestCase {
 		$this->assertNull( Navigation::find_by_page( 'wc-orders' ) );
 		$this->assertNull( Navigation::find_by_page( '' ) );
 	}
+
+	public function test_every_native_item_has_a_screen_in_the_app() {
+		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/erp.js' );
+
+		foreach ( Navigation::items() as $id => $item ) {
+			if ( 'native' === $item['kind'] ) {
+				$this->assertStringContainsString( "f.item.id === '$id'", $js, "$id hat keine native Seite in erp.js" );
+			}
+		}
+	}
 }

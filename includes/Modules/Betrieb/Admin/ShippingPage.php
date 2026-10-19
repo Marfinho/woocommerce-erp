@@ -57,6 +57,12 @@ class ShippingPage {
 	 */
 	public function handle_label() {
 		$this->require_cap();
+
+		// Ein Etikett kostet Geld: feines ERP-Recht zusätzlich zum Erfassen.
+		if ( ! \Lindenweg16\Erp\Access::can( 'verkauf.versand.etikett' ) ) {
+			wp_die( esc_html__( 'Dir fehlt das Recht, Versandetiketten zu erzeugen.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+		}
+
 		check_admin_referer( self::NONCE );
 
 		$order_id = isset( $_POST['order_id'] ) ? (int) $_POST['order_id'] : 0;
