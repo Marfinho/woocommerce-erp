@@ -1,0 +1,64 @@
+/* ERP-Bereich „Zahlen“ (Dashboard Finanzen, Berichte, Reporting, Buchhaltung) */
+.zt-h { margin: 22px 0 10px; font-size: 17px; }
+.zt-scroll { overflow-x: auto; }
+.zt-scroll table.list { min-width: 420px; }
+.tile.zt { border-left: 4px solid var(--line); }
+.tile.zt.ok { border-left-color: var(--success); }
+.tile.zt.bad { border-left-color: var(--error); }
+.tile.zt.warn { border-left-color: var(--warning); }
+.zt-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.zt-chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
+.zt-range { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.zt-range .field { width: auto; min-width: 150px; min-height: 44px; flex: 1 1 150px; }
+.zt-pager { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin-top: 12px; }
+.zt-pager .btn, .zt-actions .btn, .zt-range .btn, .zt-form .btn { min-height: 44px; }
+.zt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.zt-sum td { font-weight: 700; border-top: 2px solid var(--text); }
+.zt-storno td { opacity: .55; }
+.zt-bars { display: flex; flex-direction: column; gap: 2px; min-width: 90px; }
+.zt-bars i { display: block; height: 7px; border-radius: 3px; }
+.zt-bars .in { background: var(--success); }
+.zt-bars .out { background: var(--error); }
+.zt-detail { font-family: var(--font-mono); font-size: 11.5px; word-break: break-all; display: block; max-width: 340px; max-height: 3.6em; overflow: hidden; }
+.zt-gobd { margin-bottom: 8px; font-size: 14px; }
+.zt-form .label-area { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.zt-form label, .zt-goals label { display: grid; gap: 4px; font-size: 13px; }
+
+.zt-kpi { padding: 12px 0; border-top: 1px solid var(--line); }
+.zt-kpi-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 6px; }
+.zt-kpi-head b { flex: 1 1 160px; }
+.zt-val { font: 700 18px var(--font-head); font-variant-numeric: tabular-nums; }
+.zt-lv { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); }
+.zt-lv.lv-gruen { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.zt-lv.lv-gelb { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.zt-lv.lv-rot { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); }
+.zt-lim { font-size: 13px; margin-top: 4px; }
+.zt-goals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 8px; }
+.zt-goals .field { min-height: 44px; }
+
+.zt-meter { position: relative; height: 12px; border-radius: 999px; background: var(--surface-muted); }
+.zt-meter i { display: block; height: 100%; border-radius: 999px; background: var(--text-muted); }
+.zt-meter.lv-gruen i { background: var(--success); }
+.zt-meter.lv-gelb i { background: var(--warning); }
+.zt-meter.lv-rot i { background: var(--error); }
+.zt-meter .mk { position: absolute; top: -3px; width: 2px; height: 18px; background: var(--text); }
+.zt-meter .mk.a { background: var(--error); }
+
+.zt-chartbox { margin-top: 10px; overflow-x: auto; }
+.zt-chart { width: 100%; min-width: 420px; height: auto; display: block; }
+.zt-chart .grid { stroke: var(--line); stroke-width: 1; }
+.zt-chart .ax { fill: var(--text-muted); font-size: 11px; }
+.zt-chart .ln { stroke-width: 2; stroke-linejoin: round; }
+.zt-chart .ln.value { stroke: var(--accent); }
+.zt-chart .ln.target { stroke: var(--success); stroke-dasharray: 5 4; }
+.zt-chart .ln.alarm { stroke: var(--error); stroke-dasharray: 2 4; }
+.zt-chart .pt { fill: var(--accent); stroke: var(--surface); stroke-width: 1.5; }
+.zt-chart .pt.lv-gruen { fill: var(--success); }
+.zt-chart .pt.lv-gelb { fill: var(--warning); }
+.zt-chart .pt.lv-rot { fill: var(--error); }
+.zt-legend { display: flex; gap: 14px; font-size: 12.5px; margin-top: 6px; }
+.zt-legend .k::before { content: ""; display: inline-block; width: 18px; border-top: 3px solid var(--accent); margin-right: 6px; vertical-align: middle; }
+.zt-legend .k.target::before { border-top: 3px dashed var(--success); }
+.zt-legend .k.alarm::before { border-top: 3px dotted var(--error); }
+.zt-details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+@media (max-width: 520px) { .zt-detail { max-width: 200px; } }
