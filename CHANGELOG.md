@@ -7,6 +7,24 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.16.0] – 2026-10-19
+
+### Neu: Updates per Knopfdruck aus GitHub
+
+- **WordPress-Update-Funktion:** Plugin und Theme „Lindenweg16“ melden neue Versionen
+  aus dem Branch `main` wie jedes andere Plugin – unter Plugins, Design → Themes und
+  Dashboard → Aktualisierungen erscheint „Jetzt aktualisieren“. WordPress lädt, entpackt
+  und ersetzt selbst; automatische Updates lassen sich wie gewohnt einschalten.
+- **Woher:** Version aus `lindenweg16.php` bzw. `block-theme/lindenweg16/style.css` in
+  `main`; Paket ist das ZIP des Branches bzw. `block-theme/dist/lindenweg16.zip`. Ein Update
+  erscheint nur bei höherer Versionsnummer.
+- **Ordnername bleibt:** Der entpackte Ordner wird auf den installierten Namen umbenannt
+  (z. B. `woocommerce-erp-main`), damit kein zweites Plugin entsteht.
+- **„Jetzt nach Updates suchen“** in der Plugin-Liste fragt GitHub sofort ab (sonst alle
+  sechs Stunden); „Erneut prüfen“ unter Dashboard → Aktualisierungen ebenso.
+- **„Details ansehen“** zeigt die letzten Einträge dieses Changelogs.
+- Klasse `Core\Updater`, Tests in `tests/UpdaterTest.php`.
+
 ## [0.15.1] – 2026-10-19
 
 ### Geändert
