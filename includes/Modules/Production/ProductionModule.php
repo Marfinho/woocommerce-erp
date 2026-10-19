@@ -70,7 +70,7 @@ class ProductionModule {
 	 * Packliste ausliefern (bei Bedarf neu generieren).
 	 */
 	public function serve_or_generate_packing_slip() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$order_id = (int) ( $_GET['order_id'] ?? 0 );
@@ -266,7 +266,7 @@ class ProductionModule {
 	 * Druckauftrag-Status weiterschalten oder neuen Auftrag anlegen.
 	 */
 	public function handle_job_status() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 
@@ -293,7 +293,7 @@ class ProductionModule {
 	 * Druckauftrag abschließen: Ist-Zeit loggen, Bestand als Produktion buchen.
 	 */
 	public function handle_job_complete() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$job_id = (int) ( $_POST['job_id'] ?? 0 );
@@ -362,7 +362,7 @@ class ProductionModule {
 	 * Ausgeschlossene Wochen speichern.
 	 */
 	public function handle_save_excluded_weeks() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( 'lw16_save_excluded_weeks' );

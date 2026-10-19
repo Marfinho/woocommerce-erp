@@ -369,7 +369,7 @@ class DhlTracking {
 	 * Tracking-Nummer manuell speichern.
 	 */
 	public function handle_save_tracking() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$order_id = (int) ( $_POST['order_id'] ?? 0 );
@@ -412,7 +412,7 @@ class DhlTracking {
 	 * Tracking manuell sofort abrufen.
 	 */
 	public function handle_refresh_tracking() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_produktion' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$order_id = (int) ( $_GET['order_id'] ?? 0 );

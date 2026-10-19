@@ -84,6 +84,9 @@ class Plugin {
 		// Auch außerhalb des Adminbereichs: WordPress prüft per Cron.
 		( new Updater() )->register();
 
+		// Vollzugriff schließt die Modulrechte ein (siehe Roles::MODULE_CAPS).
+		add_filter( 'user_has_cap', array( Roles::class, 'grant_module_caps' ) );
+
 		// Eigene ERP-Oberfläche unter /erp (zweiter Zugang neben wp-admin).
 		( new ErpShell() )->register();
 

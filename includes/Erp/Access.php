@@ -19,8 +19,6 @@ namespace Lindenweg16\Erp;
 
 defined( 'ABSPATH' ) || exit;
 
-use Lindenweg16\Core\Roles;
-
 /**
  * Rechteprüfung und Speichern.
  */
@@ -70,7 +68,25 @@ class Access {
 			return Permissions::normalize( $stored );
 		}
 
-		return Permissions::derive_from_caps( Roles::betrieb_caps( $user_id ) );
+		return Permissions::derive_from_caps( self::legacy_caps( $user_id ) );
+	}
+
+	/**
+	 * Welche der alten Rechte (Betrieb, Module, Mailbox) die Person hat.
+	 *
+	 * @param int $user_id Nutzer.
+	 * @return string[]
+	 */
+	public static function legacy_caps( $user_id ) {
+		$caps = array();
+
+		foreach ( Permissions::all_caps() as $cap ) {
+			if ( user_can( (int) $user_id, $cap ) ) {
+				$caps[] = $cap;
+			}
+		}
+
+		return $caps;
 	}
 
 	/**
@@ -127,7 +143,7 @@ class Access {
 		$keys = Permissions::normalize( $keys );
 		$caps = Permissions::caps_for( $keys );
 
-		foreach ( Roles::BETRIEB_CAPS as $cap ) {
+		foreach ( Permissions::all_caps() as $cap ) {
 			if ( in_array( $cap, $caps, true ) ) {
 				$user->add_cap( $cap );
 			} else {

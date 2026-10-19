@@ -496,7 +496,7 @@ class MarketingModule {
 	 * Zuordnung lösen.
 	 */
 	public function handle_loesen() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_marketing' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id       = (int) ( $_GET['id'] ?? 0 );
@@ -690,7 +690,7 @@ class MarketingModule {
 	 * @param string $nonce Nonce-Aktion.
 	 */
 	protected function guard( $nonce ) {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_marketing' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( $nonce );

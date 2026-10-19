@@ -22,8 +22,8 @@
  *              (z. B. Kosten ausblenden).
  * - `phase2` – wird gespeichert und angezeigt, aber erst von nativen
  *              ERP-Seiten durchgesetzt.
- * - `full`   – das Modul prüft noch das Sammelrecht manage_lw16; nur
- *              Vollzugriff, nicht einzeln vergebbar.
+ * - `full`   – Reserve für Module, die nur Vollzugriff kennen; zurzeit
+ *              ungenutzt, seit jedes Modul ein eigenes Recht hat.
  *
  * Die Klasse ist frei von Datenbank und WordPress, damit die Zuordnung
  * prüfbar ist.
@@ -98,21 +98,20 @@ class Permissions {
 		$page  = self::SCOPE_PAGE;
 		$cap   = self::SCOPE_CAP;
 		$later = self::SCOPE_PHASE2;
-		$full  = self::SCOPE_FULL;
 
 		return array(
 			// Verkauf.
 			'verkauf.shop_orders'     => self::def( 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), __( 'WooCommerce-Bestellungen ansehen und bearbeiten. Braucht zusätzlich die WordPress-Rolle „Shop-Manager“.', 'lindenweg16' ), array(), $page ),
 			'verkauf.shop_products'   => self::def( 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), __( 'Produkte im Shop pflegen. Braucht zusätzlich die WordPress-Rolle „Shop-Manager“.', 'lindenweg16' ), array(), $page ),
 			'verkauf.orders'          => self::def( 'verkauf', __( 'Aufträge', 'lindenweg16' ), __( 'Betriebsaufträge zu Bestellungen: offene Aufträge, Positionen, Status.', 'lindenweg16' ), array( $production ), $page ),
-			'verkauf.orders.status'   => self::def( 'verkauf', __( 'Auftragsstatus ändern', 'lindenweg16' ), __( 'Aufträge bestätigen, stornieren oder fertigmelden.', 'lindenweg16' ), array( $production ), $later, array( 'verkauf.orders' ) ),
+			'verkauf.orders.status'   => self::def( 'verkauf', __( 'Auftragsstatus ändern', 'lindenweg16' ), __( 'Aufträge bestätigen, stornieren oder fertigmelden.', 'lindenweg16' ), array( $production ), $cap, array( 'verkauf.orders' ) ),
 			'verkauf.versand'         => self::def( 'verkauf', __( 'Versand', 'lindenweg16' ), __( 'Picken, packen, Versandstatus.', 'lindenweg16' ), array( $capture ), $page ),
 			'verkauf.picken'          => self::def( 'verkauf', __( 'Picklisten abarbeiten', 'lindenweg16' ), __( 'Native Seite: offene Picklisten ansehen, Positionen entnehmen und abhaken.', 'lindenweg16' ), array( $capture ), $page ),
 			'verkauf.versand.etikett' => self::def( 'verkauf', __( 'Versandetiketten erzeugen', 'lindenweg16' ), __( 'DHL-Etiketten kaufen und drucken – kostet Geld.', 'lindenweg16' ), array( $capture ), $cap, array( 'verkauf.versand' ) ),
 			'verkauf.kontakte'        => self::def( 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), __( 'Geschäftskunden, Lieferanten, Konditionen.', 'lindenweg16' ), array( $production ), $page ),
-			'verkauf.loyalty'         => self::def( 'verkauf', __( 'Loyalty', 'lindenweg16' ), __( 'Kundenbindung und Guthaben.', 'lindenweg16' ), array(), $full ),
-			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array(), $full ),
-			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array(), $full ),
+			'verkauf.loyalty'         => self::def( 'verkauf', __( 'Loyalty', 'lindenweg16' ), __( 'Kundenbindung und Guthaben.', 'lindenweg16' ), array( 'lw16_mod_loyalty' ), $page ),
+			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array( 'lw16_mod_kasse' ), $page ),
+			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array( 'lw16_mod_marketing' ), $page ),
 
 			// Fertigung.
 			'fertigung.artikel'       => self::def( 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), __( 'Artikel, Revisionen und Stücklisten.', 'lindenweg16' ), array( $production ), $page ),
@@ -123,9 +122,9 @@ class Permissions {
 			'fertigung.drucker'       => self::def( 'fertigung', __( '3D-Drucker & Wartung', 'lindenweg16' ), __( 'Geräte, Stundensätze, Wartung.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.bambu'         => self::def( 'fertigung', __( 'Bambu-Lab-Drucker', 'lindenweg16' ), __( 'Live-Anbindung der Drucker.', 'lindenweg16' ), array( $capture ), $page ),
 			'fertigung.druckfarm'     => self::def( 'fertigung', __( 'Druckfarm', 'lindenweg16' ), __( 'Live-Status für die Werkstatt-Anzeige.', 'lindenweg16' ), array( $capture ), $page ),
-			'fertigung.produktion'    => self::def( 'fertigung', __( 'Produktion', 'lindenweg16' ), __( 'Produktionsmodul.', 'lindenweg16' ), array(), $full ),
-			'fertigung.auftraege.start' => self::def( 'fertigung', __( 'Aufträge starten und fertigmelden', 'lindenweg16' ), __( 'Druck- und Fertigungsaufträge buchen.', 'lindenweg16' ), array( $capture ), $later ),
-			'fertigung.stammdaten.edit' => self::def( 'fertigung', __( 'Stammdaten ändern', 'lindenweg16' ), __( 'Artikel, Stücklisten und Drucker anlegen und ändern – nicht nur ansehen.', 'lindenweg16' ), array( $production ), $later, array( 'fertigung.artikel' ) ),
+			'fertigung.produktion'    => self::def( 'fertigung', __( 'Produktion', 'lindenweg16' ), __( 'Produktionsmodul.', 'lindenweg16' ), array( 'lw16_mod_produktion' ), $page ),
+			'fertigung.auftraege.start' => self::def( 'fertigung', __( 'Aufträge starten und fertigmelden', 'lindenweg16' ), __( 'Druck- und Fertigungsaufträge buchen.', 'lindenweg16' ), array( $capture ), $cap ),
+			'fertigung.stammdaten.edit' => self::def( 'fertigung', __( 'Stammdaten ändern', 'lindenweg16' ), __( 'Artikel, Stücklisten und Drucker anlegen und ändern – nicht nur ansehen.', 'lindenweg16' ), array( $production ), $cap, array( 'fertigung.artikel' ) ),
 
 			// Lager.
 			'lager.bestand'           => self::def( 'lager', __( 'Lager', 'lindenweg16' ), __( 'Bestände ansehen.', 'lindenweg16' ), array( $capture ), $page ),
@@ -137,19 +136,22 @@ class Permissions {
 
 			// Finanzen.
 			'finanzen.berichte'       => self::def( 'finanzen', __( 'Berichte', 'lindenweg16' ), __( 'Kennzahlen und Auswertungen.', 'lindenweg16' ), array( $reports ), $page ),
-			'finanzen.buchhaltung'    => self::def( 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), __( 'Belege, Buchungen, EÜR, GoBD.', 'lindenweg16' ), array(), $full ),
-			'finanzen.reporting'      => self::def( 'finanzen', __( 'Reporting', 'lindenweg16' ), __( 'Berichte des Buchhaltungsmoduls.', 'lindenweg16' ), array(), $full ),
-			'finanzen.dashboard'      => self::def( 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), __( 'Steuer-Rücklage und Übersicht.', 'lindenweg16' ), array(), $full ),
+			'finanzen.buchhaltung'    => self::def( 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), __( 'Belege, Buchungen, EÜR, GoBD.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
+			'finanzen.reporting'      => self::def( 'finanzen', __( 'Reporting', 'lindenweg16' ), __( 'Berichte des Buchhaltungsmoduls.', 'lindenweg16' ), array( 'lw16_mod_reporting' ), $page ),
+			'finanzen.dashboard'      => self::def( 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), __( 'Steuer-Rücklage und Übersicht.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 			'finanzen.kosten'         => self::def( 'finanzen', __( 'Preise, Kosten und Löhne sehen', 'lindenweg16' ), __( 'Kalkulation, Herstellkosten, Verkaufspreise. Ohne dieses Recht bleiben die Spalten leer.', 'lindenweg16' ), array( $costs ), $cap ),
-			'finanzen.export'         => self::def( 'finanzen', __( 'Daten exportieren', 'lindenweg16' ), __( 'Auswertungen als Datei herunterladen.', 'lindenweg16' ), array( $reports ), $later, array( 'finanzen.berichte' ) ),
+			'finanzen.export'         => self::def( 'finanzen', __( 'Daten exportieren', 'lindenweg16' ), __( 'Auswertungen als Datei herunterladen.', 'lindenweg16' ), array( $reports ), $cap, array( 'finanzen.berichte' ) ),
 
 			// Verwaltung.
 			'verwaltung.zeit'         => self::def( 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), __( 'Eigene Arbeitszeit erfassen.', 'lindenweg16' ), array( $capture ), $page ),
 			'verwaltung.etiketten'    => self::def( 'verwaltung', __( 'Etikettendrucker', 'lindenweg16' ), __( 'Etiketten drucken, Warteschlange.', 'lindenweg16' ), array( $capture ), $page ),
 			'verwaltung.einstellungen' => self::def( 'verwaltung', __( 'Einstellungen', 'lindenweg16' ), __( 'Kalkulationsgrundlagen, Ziele, Plugin- und DHL-Einstellungen.', 'lindenweg16' ), array( $settings ), $page ),
 			'verwaltung.import'       => self::def( 'verwaltung', __( 'Import & Doku', 'lindenweg16' ), __( 'Datenimport und Verfahrensdokumentation.', 'lindenweg16' ), array( $settings ), $page ),
-			'verwaltung.support'      => self::def( 'verwaltung', __( 'Support', 'lindenweg16' ), __( 'Kundenanfragen.', 'lindenweg16' ), array(), $full ),
-			'verwaltung.anleitungen'  => self::def( 'verwaltung', __( 'Anleitungen', 'lindenweg16' ), __( 'Betriebsanleitungen.', 'lindenweg16' ), array(), $full ),
+			'verwaltung.support'      => self::def( 'verwaltung', __( 'Support', 'lindenweg16' ), __( 'Kundenanfragen.', 'lindenweg16' ), array( 'lw16_mod_support' ), $page ),
+			'verwaltung.anleitungen'  => self::def( 'verwaltung', __( 'Anleitungen', 'lindenweg16' ), __( 'Betriebsanleitungen.', 'lindenweg16' ), array( 'lw16_mod_anleitungen' ), $page ),
+			'verwaltung.arview'       => self::def( 'verwaltung', __( 'AR-Ansicht', 'lindenweg16' ), __( '3D-/AR-Ansicht der Produkte im Shop einrichten.', 'lindenweg16' ), array( 'lw16_mod_arview' ), $page ),
+			'verwaltung.mailbox'      => self::def( 'verwaltung', __( 'Mailbox', 'lindenweg16' ), __( 'Eigene und freigegebene Postfächer öffnen. Was je Postfach erlaubt ist, steht in der Mailbox selbst.', 'lindenweg16' ), array( 'lw16_mail_use' ), $page ),
+			'verwaltung.mailbox_konten' => self::def( 'verwaltung', __( 'Postfächer verwalten', 'lindenweg16' ), __( 'Postfächer anlegen, Zugangsdaten und Freigaben ändern.', 'lindenweg16' ), array( 'lw16_mail_manage' ), $page, array( 'verwaltung.mailbox' ) ),
 			'verwaltung.rechte'       => self::def( 'verwaltung', __( 'Rechte vergeben', 'lindenweg16' ), __( 'ERP-Rechte anderer Personen ändern – nur solche, die man selbst hat.', 'lindenweg16' ), array( $users ), $page ),
 			'verwaltung.loehne'       => self::def( 'verwaltung', __( 'Löhne & Protokoll', 'lindenweg16' ), __( 'Stundenlöhne pflegen, Protokoll aller Nutzer einsehen.', 'lindenweg16' ), array( $users ), $page ),
 		);
@@ -235,7 +237,17 @@ class Permissions {
 			}
 		}
 
-		$order = array(
+		return array_values( array_intersect( self::all_caps(), array_keys( $caps ) ) );
+	}
+
+	/**
+	 * Alle alten Rechte, die ein feines Recht voraussetzt – die sechs
+	 * Betrieb-Rechte zuerst, dann die Modul- und Mailbox-Rechte.
+	 *
+	 * @return string[]
+	 */
+	public static function all_caps() {
+		$caps = array(
 			'lw16_capture',
 			'lw16_manage_production',
 			'lw16_view_reports',
@@ -244,7 +256,15 @@ class Permissions {
 			'lw16_manage_users',
 		);
 
-		return array_values( array_intersect( $order, array_keys( $caps ) ) );
+		foreach ( self::catalog() as $def ) {
+			foreach ( $def['caps'] as $cap ) {
+				if ( ! in_array( $cap, $caps, true ) ) {
+					$caps[] = $cap;
+				}
+			}
+		}
+
+		return $caps;
 	}
 
 	/**
@@ -315,8 +335,8 @@ class Permissions {
 				),
 			),
 			'vollzugriff' => array(
-				'label' => __( 'Alles vergebbare', 'lindenweg16' ),
-				'hint'  => __( 'Jedes einzeln vergebbare Recht. Die Module hinter „Nur Vollzugriff“ bleiben Administratoren vorbehalten.', 'lindenweg16' ),
+				'label' => __( 'Alles einzeln vergebbare', 'lindenweg16' ),
+				'hint'  => __( 'Jedes einzeln vergebbare Recht – bis auf Rechte und Einstellungen sollte das nur die Leitung bekommen.', 'lindenweg16' ),
 				'keys'  => self::grantable_keys(),
 			),
 		);

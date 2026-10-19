@@ -47,7 +47,22 @@ Das Menü richtet sich nach den Rechten der Person; die bestehenden Seiten sind 
 Rechte werden pro Person unter **Verwaltung → Benutzer & Rechte** vergeben (Einzelrechte und
 Vorlagen, gespeichert im Nutzermerker `lw16_erp_perms`; die sechs Betrieb-Rechte werden
 nachgeführt). Code: `includes/Erp/`, Oberfläche: `assets/erp/`, Schnittstelle: `lw16/v1/erp/*`.
-Die Adresse lässt sich über den Filter `lw16_erp_url` ändern (z. B. Subdomain).
+Die Adresse lässt sich über den Filter `lw16_erp_url` ändern.
+
+**Eigene Subdomain (optional):** In `wp-config.php` `define( 'LW16_ERP_HOST', 'erp.lindenweg16.de' );`
+setzen und die Subdomain im Hosting auf dieselbe WordPress-Installation zeigen lassen (TLS-Zertifikat
+nicht vergessen). Danach ist die Oberfläche unter `https://erp.lindenweg16.de/` erreichbar, der Shop
+bleibt auf der Hauptadresse; auf der Subdomain gibt es sonst nichts. Die Anmeldung gilt dort für die
+Subdomain – soll sie für beide Adressen gelten, zusätzlich `define( 'COOKIE_DOMAIN', '.lindenweg16.de' );`
+(meldet alle einmal ab). Beim ersten Aufruf werden die Adressregeln neu geschrieben.
+
+**Ohne Verbindung:** Die Oberfläche öffnet sich offline (Service Worker) und merkt Buchungen und
+Entnahmen vor, bis die Verbindung zurück ist. Voraussetzung ist https; der Browser muss die Seite einmal
+online geöffnet haben.
+
+**Rechte:** Jedes Modul hat ein eigenes Recht (`lw16_mod_*`), Formular-Aktionen sind über
+`includes/Erp/ActionMap.php` an die feinen Rechte gebunden. Neue Aktionen dort eintragen – ein Test
+erinnert daran.
 
 ## Architektur
 

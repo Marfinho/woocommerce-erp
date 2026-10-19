@@ -232,6 +232,35 @@ class RestApi {
 	}
 
 	/**
+	 * Wurde dieser Vorgang schon verbucht?
+	 *
+	 * Die ERP-Oberfläche merkt Buchungen ohne Verbindung vor und sendet sie
+	 * später mit einer Kennung (client_ref). Kam die erste Antwort nicht
+	 * mehr an, die Buchung aber schon, würde das Nachsenden doppelt buchen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return bool
+	 */
+	protected function already_done( $request ) {
+		$ref = preg_replace( '/[^A-Za-z0-9\-]/', '', (string) $request->get_param( 'client_ref' ) );
+
+		return '' !== $ref && false !== get_transient( 'lw16_cref_' . md5( get_current_user_id() . '|' . $ref ) );
+	}
+
+	/**
+	 * Vorgang als verbucht merken (einen Tag lang).
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 */
+	protected function remember_done( $request ) {
+		$ref = preg_replace( '/[^A-Za-z0-9\-]/', '', (string) $request->get_param( 'client_ref' ) );
+
+		if ( '' !== $ref ) {
+			set_transient( 'lw16_cref_' . md5( get_current_user_id() . '|' . $ref ), 1, DAY_IN_SECONDS );
+		}
+	}
+
+	/**
 	 * Lagerbewegung vom Handy buchen.
 	 *
 	 * @param \WP_REST_Request $request Anfrage.
@@ -243,6 +272,10 @@ class RestApi {
 		// Einrichtung gilt, was die alten Rechte hergeben).
 		if ( ! \Lindenweg16\Erp\Access::can( 'lager.buchen' ) ) {
 			return new WP_Error( 'lw16_forbidden', __( 'Dir fehlt das Recht, Bestand zu buchen.', 'lindenweg16' ), array( 'status' => 403 ) );
+		}
+
+		if ( $this->already_done( $request ) ) {
+			return new WP_REST_Response( array( 'ok' => true, 'duplicate' => true ), 200 );
 		}
 
 		$article_id = (int) $request->get_param( 'article_id' );
@@ -285,6 +318,8 @@ class RestApi {
 				array_merge( $common, array( 'movement_type' => 'umlagerung' ) )
 			);
 
+			$this->remember_done( $request );
+
 			return new WP_REST_Response( array( 'ok' => true, 'ids' => $ids ), 201 );
 		}
 
@@ -293,6 +328,8 @@ class RestApi {
 		if ( ! $id ) {
 			return new WP_Error( 'lw16_book_failed', __( 'Buchung fehlgeschlagen.', 'lindenweg16' ), array( 'status' => 500 ) );
 		}
+
+		$this->remember_done( $request );
 
 		return new WP_REST_Response( array( 'ok' => true, 'ids' => array( $id ) ), 201 );
 	}
@@ -313,6 +350,10 @@ class RestApi {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function pick_item( $request ) {
+		if ( $this->already_done( $request ) ) {
+			return new WP_REST_Response( array( 'success' => true, 'duplicate' => true, 'done' => true ), 200 );
+		}
+
 		$result = PicklistRepository::pick(
 			(int) $request->get_param( 'item_id' ),
 			(float) $request->get_param( 'qty' ),
@@ -322,6 +363,8 @@ class RestApi {
 		if ( ! $result['success'] ) {
 			return new WP_Error( 'lw16_pick_failed', $result['message'], array( 'status' => 400 ) );
 		}
+
+		$this->remember_done( $request );
 
 		return new WP_REST_Response( $result, 200 );
 	}

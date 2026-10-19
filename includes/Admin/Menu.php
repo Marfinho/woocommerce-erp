@@ -29,6 +29,26 @@ class Menu {
 	}
 
 	/**
+	 * Recht je Seite. Vollzugriff (manage_lw16) schließt alle ein, siehe
+	 * Roles::grant_module_caps().
+	 *
+	 * @return array Seitenkennung => Recht.
+	 */
+	public static function page_caps() {
+		return array(
+			LW16_MENU_SLUG       => 'lw16_mod_finanzen',
+			'lw16-buchhaltung'   => 'lw16_mod_finanzen',
+			'lw16-reporting'     => 'lw16_mod_reporting',
+			'lw16-loyalty'       => 'lw16_mod_loyalty',
+			'lw16-kasse'         => 'lw16_mod_kasse',
+			'lw16-marketing'     => 'lw16_mod_marketing',
+			'lw16-produktion'    => 'lw16_mod_produktion',
+			'lw16-support'       => 'lw16_mod_support',
+			'lw16-anleitungen'   => 'lw16_mod_anleitungen',
+		);
+	}
+
+	/**
 	 * Menüstruktur aufbauen.
 	 *
 	 * Jeder Eintrag: Slug => [Titel, Elternmenü aus MenuGroups].
@@ -42,7 +62,7 @@ class Menu {
 			MenuGroups::FINANZEN,
 			__( 'Dashboard: Finanzen', 'lindenweg16' ),
 			__( 'Dashboard: Finanzen', 'lindenweg16' ),
-			LW16_CAPABILITY,
+			'lw16_mod_finanzen',
 			LW16_MENU_SLUG,
 			array( $this, 'render_dashboard' )
 		);
@@ -67,7 +87,7 @@ class Menu {
 				$config[1],
 				$config[0],
 				$config[0],
-				LW16_CAPABILITY,
+				self::page_caps()[ $slug ],
 				$slug,
 				array( $this, 'render_page' )
 			);
@@ -118,7 +138,7 @@ class Menu {
 	 * Dashboard-Seite (Übersicht + Steuer-Rücklage).
 	 */
 	public function render_dashboard() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		do_action( 'lw16_render_dashboard' );
@@ -128,10 +148,15 @@ class Menu {
 	 * Untermenüseiten an das jeweilige Modul delegieren.
 	 */
 	public function render_page() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$caps = self::page_caps();
+
+		// Das Zurücksetzen vor dem Livegang bleibt bei den Seitenverwaltern.
+		$needed = isset( $caps[ $page ] ) ? $caps[ $page ] : ( 'lw16-livegang' === $page ? 'manage_options' : LW16_CAPABILITY );
+
+		if ( ! current_user_can( $needed ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
-		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 		do_action( 'lw16_render_page_' . str_replace( '-', '_', $page ) );
 	}
 }

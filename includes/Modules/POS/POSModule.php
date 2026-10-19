@@ -997,7 +997,7 @@ class POSModule {
 	}
 
 	public function handle_storno() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_kasse' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1111,7 +1111,7 @@ class POSModule {
 
 	public function ajax_produkt_suche() {
 		check_ajax_referer( 'lw16_admin' );
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_kasse' ) ) {
 			wp_send_json_error();
 		}
 		$q = isset( $_POST['q'] ) ? sanitize_text_field( wp_unslash( $_POST['q'] ) ) : '';
@@ -1134,7 +1134,7 @@ class POSModule {
 	 * ---------------------------------------------------------------- */
 
 	protected function guard( $nonce ) {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_kasse' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( $nonce );
