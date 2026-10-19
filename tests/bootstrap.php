@@ -210,6 +210,7 @@ require $lw16_root . '/includes/Modules/Accounting/BelegOcr.php';
 require $lw16_root . '/includes/Modules/Accounting/FeeExtractor.php';
 require $lw16_root . '/includes/Modules/Accounting/Kontenrahmen.php';
 require $lw16_root . '/includes/Modules/Marketing/Kampagnenrechnung.php';
+require $lw16_root . '/includes/Modules/Marketing/KampagnenRepository.php';
 require $lw16_root . '/includes/Modules/Events/RsvpRechnung.php';
 require $lw16_root . '/includes/Modules/Events/EventFields.php';
 require $lw16_root . '/includes/Modules/Events/EventsWidget.php';
@@ -381,6 +382,7 @@ require $lw16_root . '/includes/Erp/Pages/ArAnsicht.php';
 require $lw16_root . '/includes/Erp/Pages/Produktion.php';
 require $lw16_root . '/includes/Erp/Pages/Lager.php';
 require $lw16_root . '/includes/Erp/Pages/Konfigurator.php';
+require $lw16_root . '/includes/Erp/Pages/Marketing.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
