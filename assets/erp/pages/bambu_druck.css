@@ -1,0 +1,8 @@
+/* Bambu: Aufträge, Platten, Slicing-Profile (bambu_druck.js). */
+.bd-plate { display: block; width: 100%; max-height: 70vh; height: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.bd-bed { fill: none; stroke: var(--text-muted); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.bd-profile-form input[type=file] { min-height: 44px; padding: 8px; }
+.row-card .label-area .btn { min-height: 44px; }
+@media (max-width: 760px) {
+	.bd-plate { max-height: 55vh; }
+}
