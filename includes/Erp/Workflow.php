@@ -305,7 +305,11 @@ class Workflow {
 		$result = PlateService::build_plates( $bambu_id, $clean );
 
 		if ( empty( $result['ok'] ) ) {
-			return array( 'ok' => false, 'plates' => array(), 'warnings' => (array) $result['warnings'], 'error' => (string) $result['error'] );
+			// Die Hinweise zu einzelnen Artikeln sind die eigentliche Ursache;
+			// ohne sie bliebe nur „Keine Platte konnte angeordnet werden“.
+			$why = trim( (string) $result['error'] . ' ' . ( (string) $result['error'] === implode( ' ', (array) $result['warnings'] ) ? '' : implode( ' ', (array) $result['warnings'] ) ) );
+
+			return array( 'ok' => false, 'plates' => array(), 'warnings' => (array) $result['warnings'], 'error' => $why );
 		}
 
 		$plates   = array();
