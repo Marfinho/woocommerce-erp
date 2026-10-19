@@ -1,0 +1,27 @@
+/* Fertigungsseiten: Druckjournal, Drucker, Bambu, Qualität, Kapazität, Produktion. */
+.row-card.pj { grid-template-columns: minmax(0, 1.6fr) auto auto; align-items: center; }
+.pf { display: grid; gap: 4px; min-width: 0; }
+.pf label { font-size: 12px; color: var(--text-muted); font-weight: 700; }
+.pf small { font-size: 12px; }
+.pf textarea.field, .pf-qline input { font: inherit; }
+.pf-scroll { overflow-x: auto; }
+.pf-dim { opacity: .55; }
+.pf-list { margin: 6px 0 0; padding-left: 18px; }
+.pf-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.pf-card { display: grid; gap: 8px; }
+.pf-snap { max-width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+.pf-swatch { display: inline-block; width: 12px; height: 12px; border: 1px solid var(--text-muted); border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.tag.pf-tag-gruen { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.tag.pf-tag-gelb { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.tag.pf-tag-rot { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); }
+.val.pf-gruen { color: var(--success); }
+.val.pf-gelb { color: var(--warning); }
+.val.pf-rot { color: var(--error); }
+.pf-qty { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.pf-qline { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; }
+.pf-qline input { width: 90px; min-height: 44px; }
+@media (max-width: 760px) {
+	.row-card.pj { grid-template-columns: 1fr; }
+	.row-card.pj .btn, .pf-card .btn { min-height: 44px; }
+	.pf-list { padding-left: 14px; }
+}
