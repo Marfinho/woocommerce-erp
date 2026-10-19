@@ -602,3 +602,39 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 @media print { .side, .top, .subnav, .tabbar { display: none; } .main { margin: 0; } }
+
+/* ---------- Heute ---------- */
+
+.today { display: grid; gap: 16px; }
+@media (min-width: 1000px) { .today { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
+.today-main { display: grid; gap: 14px; }
+.today-side { display: grid; gap: 14px; }
+.next {
+	background: var(--ink); color: var(--on-ink); border-radius: 22px; padding: 20px; display: grid; gap: 6px; box-shadow: var(--shadow);
+}
+.next small { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; opacity: .7; font-weight: 700; }
+.next b { font: 700 clamp(24px, 4vw, 30px) var(--font-head); }
+.next span { opacity: .85; }
+.next-go {
+	margin-top: 10px; display: block; text-align: center; background: #e8a33a; color: #22282f; border-radius: 16px;
+	padding: 16px; font: 700 19px var(--font-head); text-decoration: none;
+}
+.next-go:hover { filter: brightness(1.05); }
+.next.calm { background: var(--surface); color: var(--text); border: 1px solid var(--line); }
+.tasks { display: grid; gap: 10px; }
+.task {
+	display: flex; align-items: center; gap: 14px; text-decoration: none; padding: 14px 16px; background: var(--surface);
+	border: 1px solid var(--line); border-left: 5px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.task:hover { border-color: var(--accent); }
+.task.t-melden { border-left-color: var(--warning); }
+.task.t-ruesten { border-left-color: var(--accent); }
+.task.t-packen { border-left-color: var(--a-fertigung); }
+.task.t-bestellen { border-left-color: var(--a-lager); }
+.task.t-mail { border-left-color: var(--a-finanzen); }
+.task-main { flex: 1; min-width: 0; }
+.task-main b { display: block; font-family: var(--font-head); font-size: 16px; }
+.task-main small { color: var(--text-muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-cta { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.task-cta .ico { width: 16px; height: 16px; }
+.today-side .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }

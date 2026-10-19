@@ -48,6 +48,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/aufgaben',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'aufgaben' ),
+				'permission_callback' => array( $this, 'can_use' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/dashboard',
 			array(
 				'methods'             => 'GET',
@@ -788,6 +798,20 @@ class RestApi {
 	protected function hpos_enabled() {
 		return class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' )
 			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+	}
+
+	/**
+	 * Aufgaben dieser Person für „Heute“.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function aufgaben() {
+		return new WP_REST_Response(
+			array(
+				'tasks' => Tasks::collect(),
+				'mail'  => Tasks::unread_mail(),
+			)
+		);
 	}
 
 	/**

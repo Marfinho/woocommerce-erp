@@ -564,40 +564,68 @@
 		var boot = S.boot;
 		var hour = new Date().getHours();
 		var hello = hour < 11 ? 'Guten Morgen' : (hour < 18 ? 'Guten Tag' : 'Guten Abend');
-		setHead('Start', boot.shop.name);
+		setHead('Heute', boot.shop.name);
 
+		el.view.appendChild(h('div', { class: 'page-head today-head' },
+			h('div', null,
+				h('p', { class: 'muted', style: 'margin:0' }, new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })),
+				h('h2', null, hello + ', ' + boot.user.name.split(' ')[0]))
+		));
+
+		var next = h('div');
+		var list = h('div', { class: 'tasks' });
 		var tiles = h('div', { class: 'grid tiles' });
 		var ordersCard = h('div', { class: 'card' }, h('h3', null, 'Letzte Bestellungen'), h('p', { class: 'muted' }, 'Wird geladen …'));
 
-		el.view.appendChild(h('div', { class: 'page-head' },
-			h('div', null, h('h2', null, hello + ', ' + boot.user.name.split(' ')[0]),
-				h('p', { class: 'muted', style: 'margin:4px 0 0' }, new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })))
+		el.view.appendChild(h('div', { class: 'today' },
+			h('div', { class: 'today-main' }, next, list),
+			h('div', { class: 'today-side' }, tiles, ordersCard)
 		));
 
-		el.view.appendChild(tiles);
+		function paintTasks(d) {
+			next.textContent = '';
+			list.textContent = '';
+			var tasks = d.tasks || [];
 
-		var areas = h('div', { class: 'grid cards', style: 'margin-top:18px' });
-		if (findItem('workflow')) {
-			areas.appendChild(h('a', { class: 'link-card area-fertigung', href: '#/seite/workflow' },
-				h('div', { class: 'badge-ico' }, ico('flow')),
-				h('div', null, h('b', null, 'Workflow'), h('span', { class: 'sub' }, 'Vom Bedarf zum Bestand – Platten rüsten, drucken, melden'))
+			if (el.mailBtn) {
+				var badge = el.mailBtn.querySelector('.badge');
+				badge.textContent = String(d.mail || 0);
+				badge.hidden = !d.mail;
+			}
+
+			if (!tasks.length) {
+				next.appendChild(h('div', { class: 'next calm' },
+					h('small', null, 'Heute'),
+					h('b', null, 'Alles erledigt'),
+					h('span', null, 'Gerade wartet nichts auf dich.')
+				));
+				return;
+			}
+
+			var first = tasks[0];
+			next.appendChild(h('div', { class: 'next' },
+				h('small', null, 'Dein Nächstes'),
+				h('b', null, first.title),
+				h('span', null, first.sub),
+				h('a', { class: 'next-go', href: first.href }, first.cta)
 			));
+
+			tasks.slice(1).forEach(function (t) {
+				list.appendChild(h('a', { class: 'task t-' + t.kind, href: t.href },
+					h('div', { class: 'task-main' }, h('b', null, t.title), h('small', null, t.sub)),
+					h('span', { class: 'task-cta' }, t.cta, ico('chev'))
+				));
+			});
 		}
-		boot.nav.forEach(function (area) {
-			areas.appendChild(h('a', { class: 'link-card area-' + area.id, href: '#/bereich/' + area.id },
-				h('div', { class: 'badge-ico' }, ico(area.icon)),
-				h('div', null, h('b', null, area.title), h('span', { class: 'sub' }, area.items.length + (area.items.length === 1 ? ' Seite' : ' Seiten') + ' · ' + area.hint))
-			));
-		});
-		el.view.appendChild(areas);
 
-		el.view.appendChild(h('div', { class: 'two', style: 'margin-top:18px' }, ordersCard, phasesCard()));
-
-		var skel = ['a', 'b', 'c', 'd'].map(function () { return h('div', { class: 'tile skeleton' }, h('div', { class: 'lab' }, ' '), h('div', { class: 'val' })); });
+		var skel = ['a', 'b', 'c', 'd'].map(function () { return h('div', { class: 'tile skeleton' }, h('div', { class: 'lab' }, ' '), h('div', { class: 'val' })); });
 		skel.forEach(function (s) { tiles.appendChild(s); });
 
 		function load() {
-			return api('dashboard').then(paint);
+			return Promise.all([
+				api('aufgaben').then(paintTasks).catch(function (e) { next.textContent = ''; next.appendChild(h('div', { class: 'notice warn' }, e.message)); }),
+				api('dashboard').then(paint)
+			]);
 		}
 
 		function paint(d) {
@@ -644,22 +672,6 @@
 		timers.push(setInterval(function () {
 			if (!document.hidden) { load().catch(function () {}); }
 		}, 60000));
-	}
-
-	function phasesCard() {
-		var steps = [
-			[true, 'Gerüst, Anmeldung mit dem WordPress-Konto, Menü aus den Rechten'],
-			[true, 'Rechte pro Person, fein einstellbar – auch für Formulare und alle Module'],
-			[true, 'Native Seiten: Scannen, Picklisten, Druckfarm (mit Vollbild), Aufträge, Versand'],
-			[true, 'Ohne Verbindung arbeiten: Oberfläche öffnet offline, Buchungen werden vorgemerkt'],
-			[true, 'Als App auf den Startbildschirm; optional eigene Subdomain'],
-			[false, 'Weitere native Seiten (Artikel, Material, Berichte …) – bis dahin eingebettet']
-		];
-		var list = h('ol', { class: 'phases' });
-		steps.forEach(function (s, i) {
-			list.appendChild(h('li', { class: s[0] ? 'done' : '' }, h('span', { class: 'dot' }, s[0] ? ico('check') : String(i + 1)), h('span', null, s[1])));
-		});
-		return h('div', { class: 'card' }, h('h3', null, 'Ausbaustufen'), h('p', { class: 'muted', style: 'margin-top:-4px;font-size:13px' }, 'Prototyp – so weit ist die Oberfläche.'), list);
 	}
 
 	function viewArea(area) {
@@ -2389,9 +2401,21 @@
 		if (m) { history.replaceState(null, '', base + '#/platte/' + m[1]); }
 	})();
 
+	// Ungelesene Mails als Zähler an der Mailbox, auf jeder Seite.
+	function mailBadge() {
+		if (!el.mailBtn) { return; }
+		api('aufgaben').then(function (d) {
+			var badge = el.mailBtn.querySelector('.badge');
+			badge.textContent = String(d.mail || 0);
+			badge.hidden = !d.mail;
+		}).catch(function () {});
+	}
+
 	api('bootstrap', { cache: true }).then(function (boot) {
 		S.boot = boot;
 		buildShell();
+		mailBadge();
+		setInterval(function () { if (!document.hidden) { mailBadge(); } }, 120000);
 		window.addEventListener('hashchange', render);
 		window.addEventListener('online', function () { stale = false; syncNet(); flush(); });
 		window.addEventListener('offline', syncNet);
