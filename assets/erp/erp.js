@@ -195,7 +195,7 @@
 			}
 
 			if (method === 'POST' && opts.queue) {
-				var body = Object.assign({}, opts.body, { client_ref: uid() });
+				var body = Object.assign({}, opts.body, { client_ref: (opts.body && opts.body.client_ref) || uid() });
 				var list = queue();
 				list.push({ id: body.client_ref, path: path, root: !!opts.root, body: body, ts: Date.now() });
 				writeJson(QUEUE_KEY, list);
@@ -1688,6 +1688,29 @@
 			return api('versand/' + id).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		}
 
+		// Geschäftskunde: zur Akte springen, zuordnen oder lösen.
+		function contactLink(cu) {
+			if (!can('verkauf.kontakte')) { return null; }
+			var box = h('div', { style: 'margin-top:10px;display:grid;gap:8px' });
+			function link(contactId) {
+				return api('versand/' + id + '/kontakt', { method: 'POST', body: { contact_id: contactId } })
+					.then(function (r) { toast(r.message); load(); })
+					.catch(function (er) { toast(er.message, true); });
+			}
+			if (cu.contact) {
+				box.appendChild(h('div', { class: 'label-area' },
+					h('a', { class: 'btn primary', href: '#/kontakt/' + cu.contact.id }, 'Zur Akte: ' + cu.contact.company),
+					h('button', { class: 'btn', type: 'button', onclick: function () { if (window.confirm('Zuordnung lösen? Die Bestellung zählt dann nicht mehr in der Akte.')) { link(0); } } }, 'Zuordnung lösen')));
+				return box;
+			}
+			(cu.suggest || []).forEach(function (s) {
+				box.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (e) { e.target.disabled = true; link(s.id); } },
+					'Zu „' + s.company + '“ zuordnen (' + (s.why === 'email' ? 'gleiche E-Mail' : 'gleiche Firma') + ')'));
+			});
+			if (!(cu.suggest || []).length) { box.appendChild(h('small', { class: 'muted' }, 'Kein Kontakt mit dieser E-Mail oder Firma gefunden. Lege den Kontakt unter Verkauf → Kunden an, danach lässt sich die Bestellung zuordnen.')); }
+			return box;
+		}
+
 		function paint(o) {
 			box.textContent = '';
 			box.appendChild(h('div', { class: 'card' },
@@ -1724,7 +1747,9 @@
 						h('span', null, 'Name'), h('b', null, cu.name || o.name),
 						cu.email ? h('span', null, 'E-Mail') : null, cu.email ? h('b', null, cu.email) : null,
 						cu.phone ? h('span', null, 'Telefon') : null, cu.phone ? h('b', null, cu.phone) : null,
-						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–'))));
+						cu.company ? h('span', null, 'Firma') : null, cu.company ? h('b', null, cu.company) : null,
+						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–')),
+					contactLink(cu)));
 			}
 
 			if (o.timeline && o.timeline.length) {
@@ -1953,7 +1978,7 @@
 	var PRODUCT_FILTERS = [['alle', 'Alle'], ['ohne_3mf', 'Ohne 3MF'], ['marge', 'Marge kritisch'], ['nicht_im_shop', 'Nicht im Shop'], ['kein_preis', 'Ohne Preis']];
 
 	function viewProducts(item) {
-		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', classicBtn(item));
+		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', [can('fertigung.stammdaten.edit') ? h('a', { class: 'btn primary', href: '#/produkt-neu' }, 'Neues Produkt') : null, classicBtn(item)]);
 		var filter = S.prodFilter || 'alle';
 		var q = '';
 		var chips = h('div', { class: 'presets' });
@@ -2002,7 +2027,7 @@
 		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 	}
 
-	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['shop', 'Shop']];
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['shop', 'Shop']];
 
 	function viewProduct(id, sub) {
 		var f = findItem('artikel');
@@ -2028,6 +2053,7 @@
 			var pills = h('div', { class: 'pills', style: 'padding-top:0' });
 			PRODUCT_TABS.forEach(function (t) {
 				if (t[0] === 'shop' && !d.shop_edit) { return; }
+				if (t[0] === 'beschaffung' && ['zukauf', 'hybrid'].indexOf(d.sourcing) < 0) { return; }
 				if (t[0] === 'stamm' && !d.edit) { return; }
 				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
 			});

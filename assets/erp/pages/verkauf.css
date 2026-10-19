@@ -1,0 +1,56 @@
+/* Verkauf: Kontakte-Akte, Shop-Bestellungen, Loyalty, Marketing (mobil zuerst) */
+
+.vk-filter { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; }
+.vk-filter .field { width: 100%; min-height: 44px; }
+@media (min-width: 720px) {
+	.vk-filter { grid-template-columns: 2fr 1fr 1fr; }
+}
+
+.vk-count { margin: 4px 0 8px; font-size: 13px; }
+.vk-gap { margin-top: 14px; }
+.vk-back { display: inline-block; min-height: 44px; line-height: 44px; text-decoration: none; color: var(--text-muted); font-weight: 600; }
+
+.vk-row { text-decoration: none; color: inherit; }
+.vk-btnrow { width: 100%; text-align: left; font: inherit; cursor: pointer; }
+
+.vk-tiers { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+
+.vk-kv { display: grid; grid-template-columns: minmax(96px, 30%) 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.vk-kv:last-child { border-bottom: 0; }
+
+.vk-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.vk-actions .btn { min-height: 44px; }
+.vk-pager { justify-content: space-between; margin-top: 12px; }
+.vk-shop { flex-wrap: wrap; }
+.vk-shop .vk-actions { flex-basis: 100%; }
+
+.vk-dlg { padding: 4px 16px 16px; max-width: 100%; }
+.vk-form { display: grid; gap: 10px; }
+.vk-field { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.vk-field .field { width: 100%; min-height: 44px; color: var(--text); font-size: 16px; }
+.vk-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 440px) {
+	.vk-two { grid-template-columns: 1fr; }
+}
+
+.vk-fresh { display: grid; gap: 8px; }
+.vk-card { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.vk-qr svg { display: block; width: 150px; height: 150px; background: #fff; }
+.vk-url { display: block; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 13px; }
+
+@media print {
+	body * { visibility: hidden; }
+	.vk-fresh, .vk-fresh * { visibility: visible; }
+	.vk-fresh { position: absolute; left: 0; top: 0; }
+}
+
+/* Preisliste */
+.vk-sheet { max-width: 860px; }
+.vk-sheet-head { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.vk-sheet-to { text-align: right; font-size: 14px; }
+.vk-sheet-terms { margin-top: 16px; font-size: 14px; }
+@media print {
+	.no-print { display: none !important; }
+	.vk-sheet { border: 0; box-shadow: none; max-width: none; padding: 0; }
+	.view { padding: 0; max-width: none; }
+}

@@ -64,6 +64,11 @@ class OrderOpsRepository {
 			$where[]  = 'contact_id = %d';
 			$params[] = (int) $args['contact_id'];
 		}
+		// Nur Bestellungen, die einem Kontakt zugeordnet sind (Händler-Kennzahlen):
+		// Die Shop-Bestellungen ohne Kontakt müssen dafür nicht geladen werden.
+		if ( ! empty( $args['with_contact'] ) ) {
+			$where[] = 'contact_id IS NOT NULL AND contact_id > 0';
+		}
 		if ( ! empty( $args['invoice_status'] ) ) {
 			$where[]  = 'invoice_status = %s';
 			$params[] = (string) $args['invoice_status'];

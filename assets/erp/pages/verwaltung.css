@@ -1,0 +1,48 @@
+/* Verwaltung: Zeit, Löhne, Etikettendrucker, Einstellungen */
+.vw { display: grid; gap: 14px; max-width: 980px; }
+.vw .card { margin: 0; }
+.vw-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.vw-small { font-size: 12.5px; }
+.vw-err { color: var(--error); font-size: 13px; margin-top: 4px; overflow-wrap: anywhere; }
+.vw-big { min-height: 56px; width: 100%; font-size: 18px; }
+.vw-run { border-color: var(--success); }
+.vw-clock { font: 700 clamp(40px, 12vw, 64px)/1.1 var(--font-head); font-variant-numeric: tabular-nums; margin: 6px 0; }
+.vw-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.vw-actions .btn { min-height: 44px; }
+.vw-weekhead { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.vw-weekhead > div { min-width: 0; }
+.vw-weekhead .btn { min-width: 44px; min-height: 44px; }
+
+.vw-form { display: grid; gap: 12px; }
+.vw-form.inline { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: end; }
+.vw-f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+.vw-f small { font-weight: 400; }
+.vw-f .field { min-height: 44px; }
+.vw-area { padding: 8px 12px; min-height: 80px; font-family: inherit; }
+.vw-color { padding: 2px; max-width: 80px; }
+.vw-check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; min-height: 44px; }
+.vw-check input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+.vw-form .btn { min-height: 44px; justify-self: start; }
+
+.vw-person { text-align: left; width: 100%; cursor: pointer; color: inherit; font: inherit; grid-template-columns: minmax(0, 1.4fr) auto auto minmax(0, 1fr) auto; }
+.vw-person:hover { border-color: var(--accent); }
+.vw-job { grid-template-columns: minmax(0, 1fr) auto auto; }
+.vw-hist { margin: 10px 0 0; padding-left: 18px; font-size: 13px; }
+.vw-tiers { display: grid; gap: 8px; }
+.vw-tier { display: grid; gap: 8px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
+.vw-token { display: block; padding: 12px; border-radius: 12px; background: var(--surface-muted); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; user-select: all; }
+
+.vw-group > summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.vw-group[open] > summary { margin-bottom: 8px; }
+.vw-sub { border: 1px solid var(--line); border-radius: 12px; padding: 0 12px 12px; }
+.vw-sub > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+
+.tag.vw-gruen { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.tag.vw-gelb { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.tag.vw-rot { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); }
+
+@media (max-width: 760px) {
+	.vw-person, .vw-job { grid-template-columns: 1fr; }
+	.vw-tier { grid-template-columns: 1fr 1fr; }
+	.vw-tier input:first-child { grid-column: 1 / -1; }
+}

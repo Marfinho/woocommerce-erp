@@ -106,7 +106,7 @@ class Screens {
 
 			$snapshot = '';
 			if ( $printer->snapshot_at ) {
-				$snapshot = wp_nonce_url(
+				$snapshot = Shell::nonce_url(
 					add_query_arg(
 						array(
 							'action'     => 'lw16_bambu_snapshot',
@@ -376,7 +376,7 @@ class Screens {
 			'content'   => self::summarize_items( $lines ),
 			'tracking'  => $row ? (string) $row->tracking_nummer : (string) DhlTracking::extract_tracking_number( $order ),
 			'tstatus'   => $row ? (string) $row->aktueller_status : '',
-			'slip'      => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
+			'slip'      => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
 			'edit'      => $order->get_edit_order_url(),
 			'label'     => null,
 			'suggested' => null,
@@ -387,7 +387,7 @@ class Screens {
 				'id'      => (int) $label->id,
 				'product' => DhlProduct::label( $label->product ),
 				'weight'  => (int) $label->weight_g,
-				'pdf'     => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
+				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
 			);
 		} elseif ( $dhl['configured'] && ! $done ) {
 			$weight             = DhlShipping::weight_g( $order );
@@ -523,12 +523,24 @@ class Screens {
 			$count = count( wc_get_orders( array( 'billing_email' => $email, 'limit' => 100, 'return' => 'ids', 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-completed' ) ) ) );
 		}
 
+		$company = (string) $order->get_billing_company();
+		$row     = OrderOpsRepository::find_by_order( $order->get_id() );
+		$linked  = null;
+
+		if ( $row && (int) $row['contact_id'] ) {
+			$contact = ContactRepository::find( (int) $row['contact_id'] );
+			$linked  = $contact ? array( 'id' => (int) $contact['id'], 'company' => (string) $contact['company'] ) : null;
+		}
+
 		return array(
-			'name'   => trim( $order->get_formatted_billing_full_name() ),
-			'email'  => $email,
-			'phone'  => (string) $order->get_billing_phone(),
-			'orders' => $count,
-			'edit'   => $order->get_edit_order_url(),
+			'name'    => trim( $order->get_formatted_billing_full_name() ),
+			'company' => $company,
+			'email'   => $email,
+			'phone'   => (string) $order->get_billing_phone(),
+			'orders'  => $count,
+			'edit'    => $order->get_edit_order_url(),
+			'contact' => $linked,
+			'suggest' => $linked ? array() : OrderContact::suggest( ContactRepository::all(), $email, $company ),
 		);
 	}
 
@@ -566,5 +578,57 @@ class Screens {
 		\Lindenweg16\Core\AuditLog::record( 'erp_versendet', 'order', (int) $order_id, array() );
 
 		return array( 'ok' => true, 'message' => __( 'Versendet. Der Lagerabgang ist gebucht.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Eine Shop-Bestellung einem Kontakt zuordnen (oder die Zuordnung lösen).
+	 *
+	 * Schreibt über OrderOpsRepository::update_fields mit allen bisherigen
+	 * Werten der Betriebszeile, damit nichts anderes verloren geht. Mit
+	 * Kontakt wird die Kundenart zur Geschäftskundenart, ohne Kontakt wieder
+	 * B2C – so verlangt es die Prüfung dort.
+	 *
+	 * @param int $wc_order_id Shop-Bestellung.
+	 * @param int $contact_id  Kontakt oder 0 zum Lösen.
+	 * @return array {ok, message}
+	 */
+	public static function link_contact( $wc_order_id, $contact_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $wc_order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		$contact = null;
+
+		if ( (int) $contact_id > 0 ) {
+			$contact = ContactRepository::find( (int) $contact_id );
+
+			if ( ! $contact ) {
+				return array( 'ok' => false, 'message' => __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ) );
+			}
+		}
+
+		$id = OrderOpsRepository::ensure_for_order( (int) $wc_order_id );
+		$op = $id ? OrderOpsRepository::find( $id ) : null;
+
+		if ( ! $op ) {
+			return array( 'ok' => false, 'message' => __( 'Die Betriebszeile zur Bestellung ließ sich nicht anlegen.', 'lindenweg16' ) );
+		}
+
+		$input                  = $op;
+		$input['contact_id']    = $contact ? (int) $contact['id'] : 0;
+		$input['customer_type'] = $contact ? OrderContact::customer_type( (string) $contact['type'] ) : 'B2C';
+
+		if ( ! OrderOpsRepository::update_fields( $id, $input, $contact ? __( 'Kontakt aus dem ERP zugeordnet', 'lindenweg16' ) : __( 'Kontakt-Zuordnung aus dem ERP gelöst', 'lindenweg16' ) ) ) {
+			return array( 'ok' => false, 'message' => __( 'Die Zuordnung ließ sich nicht speichern.', 'lindenweg16' ) );
+		}
+
+		return array(
+			'ok'      => true,
+			'message' => $contact
+				? sprintf( /* translators: %s: Firma. */ __( 'Der Bestellung ist %s zugeordnet. Sie zählt jetzt in der Akte mit.', 'lindenweg16' ), $contact['company'] )
+				: __( 'Die Zuordnung ist gelöst.', 'lindenweg16' ),
+		);
 	}
 }

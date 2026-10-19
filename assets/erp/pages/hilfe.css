@@ -1,0 +1,4 @@
+/* ERP-Seite „Anleitungen“ */
+.hl-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.hl-tabs .chip { min-height: 44px; padding: 4px 14px; font-size: 14px; }
+.hl-frame { width: 100%; height: calc(100dvh - 330px); min-height: 420px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }

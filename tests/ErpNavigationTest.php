@@ -145,6 +145,8 @@ class ErpNavigationTest extends TestCase {
 		$linked = array();
 		foreach ( Navigation::items() as $item ) {
 			$linked[] = $item['target'];
+			// Native Seiten bleiben über ihre alte Seite (alt) erreichbar.
+			$linked[] = $item['alt'];
 		}
 
 		foreach ( array_keys( \Lindenweg16\Admin\Menu::page_caps() ) as $slug ) {
@@ -214,5 +216,12 @@ class ErpNavigationTest extends TestCase {
 
 		$this->assertSame( array_unique( $labels ), $labels, 'Jeder Reiter nur einmal' );
 		$this->assertContains( 'Bestellungen', $labels );
+	}
+
+	public function test_keine_seite_ist_doppelt_eingetragen() {
+		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Navigation.php' );
+		preg_match_all( "/self::item\( '([a-z0-9-]+)'/", $src, $m );
+
+		$this->assertSame( array_unique( $m[1] ), $m[1], 'Eine Seite steht mehrfach in Navigation::items()' );
 	}
 }

@@ -7,6 +7,46 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.27.0] – 2026-10-19
+
+### B2B: Kundenakte ausgebaut
+- **Kommission buchen** in der Akte: Ausliefern, Abrechnen (ein Rechnungsposten über alle Positionen, damit die
+  Rabattstaffel auf den Gesamtwert greift) und Zurücknehmen, mit Mengenliste je Artikel und Farbe. Hinweis, wenn laut
+  Profil keine Kommission vereinbart ist; Doppelbuchungssperre.
+- **Bestellung ↔ Kontakt:** Auf der Bestellseite wird ein Kontakt mit gleicher E-Mail oder Firma vorgeschlagen und mit
+  einem Klick zugeordnet (oder gelöst); die Bestellung zählt dann in der Akte und in den B2B-Kennzahlen. Von der
+  Bestellung führt ein Link zur Akte.
+- **Händlerprofil** in der Akte: USt-IdNr., Rechnungs- und Lieferadresse, Lieferhinweise, Entscheider, Wareneingang,
+  Kanal, Bestellrhythmus, nächste erwartete Bestellung, Verpackung, Kreditlimit (Warnung bei Überschreitung durch
+  offene Posten), Kommission vereinbart, Display. Beim Speichern bleiben nicht geänderte Felder erhalten.
+- **Preisliste je Händler:** Händlerpreise netto, Mengenrabatt-Staffel und Zahlungsziel des Kunden, druckbar und als
+  PDF speicherbar.
+- **Zahlungserinnerung** bei überfälligen Posten: vorbereiteter, änderbarer Mailtext; nach dem Senden steht eine
+  Aktivität mit Wiedervorlage in einer Woche in der Akte.
+- Kontaktliste lädt nur noch Bestellungen, die einem Kontakt zugeordnet sind (schneller bei vielen Shop-Bestellungen).
+
+## [0.26.0] – 2026-10-19
+
+### Fast alle Seiten nativ im ERP
+Die eingebetteten alten wp-admin-Seiten sind durch eigene Seiten ersetzt (jede mit „Klassische Ansicht“ als
+Rückfall und denselben Prüfungen, Rechten und Protokolleinträgen wie vorher). Neu: Seiten leben in eigenen Dateien
+(`includes/Erp/Pages/`, `assets/erp/pages/`, Anleitung in `includes/Erp/Pages/README.md`).
+- **Produktakte:** Revisionen mit 3MF-Upload, Stammdaten (auch neu anlegen, stilllegen), Stückliste mit
+  Tiefenprüfung, Kalkulation mit „Preis übernehmen“, Beschaffung.
+- **Lager:** Bestand (buchen, umlagern, Kommission, Journal mit Storno, Sollbestand), Lagerplätze mit
+  Fertigungsaufträgen, Bedarf als Ansicht auf den Plan.
+- **Produktion:** Druckjournal, Drucker & Wartung, Bambu (Status, Verbindung, Geräteverknüpfung), Qualität,
+  Kapazität, Produktionsaufträge.
+- **Verkauf:** Kontakte mit Akte (Konditionen, Bestellungen, offene Posten, Nachbestell-Link), Shop-Bestellungen,
+  Loyalty-Prüfung, Marketing (lesend).
+- **Zahlen:** Finanz-Dashboard, Berichte (Verlauf, Ziele, Export), Reporting, Buchhaltung (nur lesend, GoBD).
+- **Verwaltung:** Zeiterfassung mit Stempeluhr, Löhne, Etikettendrucker (mit „Erneut senden“/„Abbrechen“),
+  Einstellungen (Geheimnisse nie im Klartext).
+- **Mailbox** (lesen, antworten, weiterleiten, Entwürfe), Support, Anleitungen, AR-Ansicht.
+- **Bleibt eingebettet:** Kasse, Konfigurator, Postfächer verwalten, Import & Doku, Shop-Produkte, Buchhaltung
+  (Erfassen/Storno), Marketing (Anlegen), Bambu (Einreihen, Platten, Slicing-Profile).
+- Warteschlange offline: eine mitgegebene `client_ref` bleibt erhalten (keine Doppelbuchung beim Nachsenden).
+
 ## [0.25.0] – 2026-10-19
 
 ### Neue Menüführung und Optik im ERP
@@ -29,6 +69,10 @@ und im Abschnitt „Umsetzungsstand“ der README.
   Druckdaten und Soll gegen Ist; Stammdaten, 3MF und Revisionen, Stückliste, Kalkulation und Shop öffnen
   als Reiter in der Akte. Im Workflow führt „keine 3MF“ direkt zum Hochladen.
 - **Bestellung:** Packseite mit Kunde und Verlauf (Eingang, Zahlung, Notizen, Versand).
+- **Behoben: Lieferschein, Label, Live-Bild und 3MF-Download öffneten oft nicht.** Die Adressen enthielten
+  „&#038;“ statt „&“ (wp_nonce_url liefert HTML), dadurch fehlten Prüfzahl und Nummer. Außerdem sperrte das ERP
+  den Lieferschein für den Packtisch (verlangte das Produktionsrecht) und das Live-Bild für die Druckfarm (verlangte
+  das Bambu-Recht).
 - Neue Schnittstellen `erp/aufgaben`, `erp/drucker/<id>`, `erp/material`, `erp/produkte`, `erp/produkte/<id>`.
 
 ## [0.24.1] – 2026-10-19

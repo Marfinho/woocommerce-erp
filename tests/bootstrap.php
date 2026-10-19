@@ -366,6 +366,20 @@ require $lw16_root . '/includes/Erp/Procurement.php';
 require $lw16_root . '/includes/Erp/Variance.php';
 require $lw16_root . '/includes/Erp/Tasks.php';
 require $lw16_root . '/includes/Erp/Catalog.php';
+require $lw16_root . '/includes/Erp/OrderContact.php';
+require $lw16_root . '/includes/Erp/ProductFile.php';
+require $lw16_root . '/includes/Modules/Betrieb/ContactRepository.php';
+require $lw16_root . '/includes/Erp/Pages/Verkauf.php';
+require $lw16_root . '/includes/Erp/Pages/Verwaltung.php';
+require $lw16_root . '/includes/Erp/Pages/Zahlen.php';
+require $lw16_root . '/includes/Modules/Mailbox/MailRepository.php';
+require $lw16_root . '/includes/Modules/Mailbox/MailboxView.php';
+require $lw16_root . '/includes/Erp/Pages/Postfach.php';
+require $lw16_root . '/includes/Erp/Pages/Support.php';
+require $lw16_root . '/includes/Erp/Pages/Hilfe.php';
+require $lw16_root . '/includes/Erp/Pages/ArAnsicht.php';
+require $lw16_root . '/includes/Erp/Pages/Produktion.php';
+require $lw16_root . '/includes/Erp/Pages/Lager.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

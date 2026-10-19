@@ -470,6 +470,21 @@ class Shell {
 	}
 
 	/**
+	 * Adresse mit Prüfzahl für einen Download.
+	 *
+	 * Anders als wp_nonce_url() bleibt das „&“ ein „&“: wp_nonce_url() gibt
+	 * HTML zurück („&#038;“), und in ein href gesetzt zerlegt das die Adresse –
+	 * die Prüfzahl und die Nummer kamen nie an („Der Link ist abgelaufen“).
+	 *
+	 * @param string $url    Adresse.
+	 * @param string $action Name der Prüfzahl.
+	 * @return string
+	 */
+	public static function nonce_url( $url, $action ) {
+		return add_query_arg( '_wpnonce', wp_create_nonce( $action ), $url );
+	}
+
+	/**
 	 * Formular- und Ajax-Vorgänge nur ausführen, wenn die feinen Rechte
 	 * dafür da sind (siehe ActionMap). Gilt für admin-post.php und
 	 * admin-ajax.php; Vollzugriff ist ausgenommen.
