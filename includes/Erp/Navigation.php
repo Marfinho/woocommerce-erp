@@ -76,6 +76,7 @@ class Navigation {
 		$list = array(
 			self::item( 'shop-bestellungen', 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), 'verkauf.shop_orders', 'admin.php?page=wc-orders', 'legacy', 'edit_shop_orders' ),
 			self::item( 'auftraege', 'verkauf', __( 'Aufträge', 'lindenweg16' ), 'verkauf.orders', 'lw16-betrieb-bestellungen' ),
+			self::item( 'picken', 'verkauf', __( 'Picklisten', 'lindenweg16' ), 'verkauf.picken', '', 'native' ),
 			self::item( 'versand', 'verkauf', __( 'Versand', 'lindenweg16' ), 'verkauf.versand', 'lw16-betrieb-versand' ),
 			self::item( 'kontakte', 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), 'verkauf.kontakte', 'lw16-betrieb-kontakte' ),
 			self::item( 'shop-produkte', 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), 'verkauf.shop_products', 'edit.php?post_type=product', 'legacy', 'edit_products' ),
@@ -93,6 +94,7 @@ class Navigation {
 			self::item( 'bambu', 'fertigung', __( 'Bambu-Lab-Drucker', 'lindenweg16' ), 'fertigung.bambu', 'lw16-betrieb-bambu' ),
 			self::item( 'produktion', 'fertigung', __( 'Produktion', 'lindenweg16' ), 'fertigung.produktion', 'lw16-produktion' ),
 
+			self::item( 'scannen', 'lager', __( 'Scannen', 'lindenweg16' ), 'lager.scannen', '', 'native' ),
 			self::item( 'lager', 'lager', __( 'Lager', 'lindenweg16' ), 'lager.bestand', 'lw16-betrieb-lager' ),
 			self::item( 'lagerplaetze', 'lager', __( 'Lagerplätze & Picklisten', 'lindenweg16' ), 'lager.lagerplaetze', 'lw16-betrieb-lagerplaetze' ),
 			self::item( 'material', 'lager', __( 'Material', 'lindenweg16' ), 'lager.material', 'lw16-betrieb-material' ),
@@ -136,8 +138,9 @@ class Navigation {
 	/**
 	 * Gehört ein wp-admin-Seitenname zu einer Plugin-Seite der Navigation?
 	 *
-	 * Nur Seiten dieses Plugins (Präfix lw16 oder die Finanz-Übersicht):
-	 * Shop-Seiten prüft WooCommerce selbst, daran soll nichts rütteln.
+	 * Nur Plugin-Seiten, die über eine Seitenkennung laufen: Shop-Seiten
+	 * stehen als Pfad im Eintrag und passen nie auf einen ?page=-Wert, die
+	 * prüft WooCommerce selbst, daran soll nichts rütteln.
 	 *
 	 * @param string $page Wert von ?page=.
 	 * @return array|null

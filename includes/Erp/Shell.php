@@ -123,6 +123,13 @@ class Shell {
 			return;
 		}
 
+		// Das App-Manifest enthält nichts Persönliches und wird vom Browser
+		// ohne Anmeldung abgerufen – es muss vor der Anmeldeprüfung kommen.
+		if ( self::is_manifest_request() ) {
+			$this->render_manifest();
+			exit;
+		}
+
 		// Nie zwischenspeichern: Die Seite zeigt je Person etwas anderes.
 		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
 			define( 'DONOTCACHEPAGE', true );
@@ -148,11 +155,64 @@ class Shell {
 	}
 
 	/**
+	 * Fragt der Browser das App-Manifest ab?
+	 *
+	 * @return bool
+	 */
+	protected static function is_manifest_request() {
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '';
+
+		return 'manifest.webmanifest' === basename( $path );
+	}
+
+	/**
+	 * Manifest, damit sich die Oberfläche auf Handy und Tablet wie eine App
+	 * auf den Startbildschirm legen lässt. Symbole kommen aus dem
+	 * Website-Symbol von WordPress; ohne eines bietet der Browser das
+	 * Installieren meist nicht an.
+	 */
+	protected function render_manifest() {
+		$icons = array();
+
+		foreach ( array( 192, 512 ) as $size ) {
+			$url = get_site_icon_url( $size );
+			if ( $url ) {
+				$icons[] = array(
+					'src'   => $url,
+					'sizes' => $size . 'x' . $size,
+					'type'  => 'image/png',
+				);
+			}
+		}
+
+		$path = (string) wp_parse_url( self::url(), PHP_URL_PATH );
+
+		header( 'Content-Type: application/manifest+json; charset=utf-8' );
+		header( 'Cache-Control: public, max-age=3600' );
+
+		echo wp_json_encode(
+			array(
+				'name'             => 'ERP · ' . get_bloginfo( 'name' ),
+				'short_name'       => 'ERP',
+				'start_url'        => self::url(),
+				'scope'            => '' !== $path ? $path : '/',
+				'display'          => 'standalone',
+				'background_color' => '#f4f2ee',
+				'theme_color'      => '#2b323a',
+				'lang'             => 'de',
+				'icons'            => $icons,
+			)
+		);
+	}
+
+	/**
 	 * Rahmen der Anwendung.
 	 */
 	protected function render_app() {
 		$config = array(
 			'rest'     => esc_url_raw( rest_url( 'lw16/v1/erp/' ) ),
+			'api'      => esc_url_raw( rest_url( 'lw16/v1/' ) ),
+			'jsqr'     => LW16_PLUGIN_URL . 'assets/vendor/jsqr/jsQR.js',
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
 			'erpUrl'   => self::url(),
 			'adminUrl' => admin_url( '/' ),
@@ -172,6 +232,7 @@ class Shell {
 		echo '<meta name="robots" content="noindex, nofollow">';
 		echo '<meta name="color-scheme" content="light dark">';
 		echo '<meta name="theme-color" content="#2b323a">';
+		echo '<link rel="manifest" href="' . esc_url( self::url() . 'manifest.webmanifest' ) . '">';
 		echo '<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">';
 		echo '<title>' . esc_html( 'ERP · ' . $config['siteName'] ) . '</title>';
 		if ( $ico ) {
