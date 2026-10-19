@@ -119,7 +119,7 @@ class VerfahrensDoku {
 		self::section( $pdf, '5. Archivierung und Aufbewahrung' );
 		self::para( $pdf, 'Beleg-Fotos und PDF-Rechnungen werden in geschützten Verzeichnissen gespeichert '
 			. '(außerhalb des öffentlichen Uploads-Ordners). Der Zugriff erfolgt ausschließlich über '
-			. 'authentifizierte Endpunkte mit Berechtigungsprüfung (Capability manage_lw16).' );
+			. 'authentifizierte Endpunkte mit Berechtigungsprüfung (Capability lw16_mod_finanzen).' );
 		self::para( $pdf, '.htaccess-Schutz verhindert den direkten Zugriff auf Belegdateien über den Webserver.' );
 		self::para( $pdf, 'Aufbewahrungsfristen: Rechnungen 10 Jahre (§14b UStG), '
 			. 'sonstige Buchungsbelege 8 Jahre (§147 AO n.F.). '
@@ -131,9 +131,10 @@ class VerfahrensDoku {
 
 		// 6. Zugriffsrechte.
 		self::section( $pdf, '6. Zugriffsrechte' );
-		self::para( $pdf, 'Rollenbasierte Berechtigungen: Das Plugin definiert die Capability „manage_lw16" '
-			. 'und die Rolle „lw16_manager". Nur Nutzer mit dieser Berechtigung haben Zugriff auf '
-			. 'Buchhaltungsfunktionen. Administratoren haben die Berechtigung automatisch.' );
+		self::para( $pdf, 'Rollenbasierte Berechtigungen: Das Plugin definiert die Capability „lw16_mod_finanzen" '
+			. 'für die Buchhaltungsfunktionen. Sie wird pro Person in der Rechteverwaltung der '
+			. 'ERP-Oberfläche vergeben (jede Änderung steht im Audit-Log). Die Sammel-Capability '
+			. '„manage_lw16" (Rolle „lw16_manager", Administratoren) schließt sie ein.' );
 		self::para( $pdf, 'Authentifizierung: WordPress-Benutzeranmeldung (keine geteilten Logins). '
 			. 'Alle Aktionen werden mit der Benutzer-ID im Audit-Log protokolliert.' );
 		self::para( $pdf, 'Nonce-Prüfung: Alle schreibenden Aktionen sind durch WordPress-Nonces '
