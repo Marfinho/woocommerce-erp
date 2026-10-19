@@ -38,6 +38,7 @@
 	var UI = window.LW16ERP_UI = window.LW16ERP_UI || {};
 	UI.pages = UI.pages || {};
 	UI.routes = UI.routes || {};
+	UI.productTabs = UI.productTabs || {};
 	var timers = [];
 	var camera = null;
 
@@ -2031,6 +2032,12 @@
 				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
 			});
 			box.appendChild(pills);
+
+			// Reiter, die in assets/erp/pages/ nativ gebaut sind, haben Vorrang vor der eingebetteten Seite.
+			if (sub && UI.productTabs && UI.productTabs[sub]) {
+				UI.productTabs[sub](d, box, UI);
+				return;
+			}
 
 			if (sub && d.paths[sub] || sub === 'shop' && d.shop) {
 				var path = sub === 'shop' ? d.shop.path : d.paths[sub];

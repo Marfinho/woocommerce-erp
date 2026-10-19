@@ -59,7 +59,7 @@ class Lager {
 })();
 ```
 
-Geladen werden alle Dateien aus `assets/erp/pages/` automatisch vor `erp.js`; sie laufen erst, wenn ihre Seite
+Geladen werden alle `*.js` und `*.css` aus `assets/erp/pages/` automatisch vor `erp.js` (eigene Stile gehören in `assets/erp/pages/<name>.css`, nicht in `erp.css`); sie laufen erst, wenn ihre Seite
 gebraucht wird. Kein Build-Schritt, kein Modulsystem, klassisches ES5-JavaScript (`var`, `function`).
 
 **Hilfen in `ui`:** `h(tag, attrs, …kinder)` (baut DOM-Elemente; **nie `innerHTML` mit Daten**), `api(pfad, {method, body})`
@@ -97,3 +97,9 @@ self::item( 'lager', 'lager', __( 'Lager', 'lindenweg16' ), 'lager.bestand', '',
 * `vendor/bin/phpunit` muss grün bleiben. Neue reine Regeln bekommen Tests in `tests/Erp<Name>Test.php`; die
   Klasse in `tests/bootstrap.php` mit `require` eintragen (dort stehen die Erp-Klassen untereinander).
 * JavaScript prüfen mit `node --check assets/erp/pages/<datei>.js`.
+
+## Produktakte: Reiter ersetzen
+
+Die Reiter der Produktakte (`stamm`, `rev`, `bom`, `calc`, `shop`) öffnen noch die alten Formulare. Ein nativer Reiter
+meldet sich mit `UI.productTabs['rev'] = function (d, box, ui) { … };` (`d` = Antwort von `erp/produkte/<id>`, `box` =
+Inhaltselement unter den Reitern). Fehlt der Eintrag, bleibt die eingebettete Seite.
