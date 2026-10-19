@@ -254,7 +254,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.2.0 =
-* E-Mails: persönliche Mails aus der Mailbox des ERP-Plugins (ab 0.17.0) im Website-Look – Text, Signatur in einer eigenen Zeile unter einer feinen Linie, darunter das Zitat der Ursprungsmail
+* E-Mails: persönliche Mails aus der Mailbox des ERP-Plugins (ab 0.18.0) im Website-Look – Text, Signatur in einer eigenen Zeile unter einer feinen Linie, darunter das Zitat der Ursprungsmail
 * E-Mails: Zeilen, die mit „>“ beginnen, werden als Zitatblock mit Randlinie dargestellt
 
 = 1.1.1 =

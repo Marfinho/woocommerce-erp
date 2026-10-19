@@ -16,6 +16,7 @@ use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
 use Lindenweg16\Admin\HandbuchPage;
+use Lindenweg16\Erp\Shell as ErpShell;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
@@ -82,6 +83,9 @@ class Plugin {
 		// Updates für Plugin und Theme aus GitHub über die WordPress-Update-Funktion.
 		// Auch außerhalb des Adminbereichs: WordPress prüft per Cron.
 		( new Updater() )->register();
+
+		// Eigene ERP-Oberfläche unter /erp (zweiter Zugang neben wp-admin).
+		( new ErpShell() )->register();
 
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
