@@ -458,8 +458,78 @@ class Screens {
 		$entry['address'] = array_map( 'wp_strip_all_tags', $entry['address'] );
 		$entry['note']    = (string) $order->get_customer_note();
 		$entry['dhl']     = $dhl;
+		$entry['timeline'] = self::order_timeline( $order, $entry );
+		$entry['customer'] = self::order_customer( $order );
 
 		return $entry;
+	}
+
+	/**
+	 * Der Weg einer Bestellung: Eingang, Notizen, Label, Versand.
+	 *
+	 * Aus den Bestellnotizen von WooCommerce und den Daten, die der Versand
+	 * ohnehin kennt – nichts wird zusätzlich gespeichert.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @param array     $entry Karte aus ship_entry().
+	 * @return array Liste aus ts, text, kind – älteste zuerst.
+	 */
+	protected static function order_timeline( $order, array $entry ) {
+		$events = array();
+
+		if ( $order->get_date_created() ) {
+			$events[] = array( 'ts' => $order->get_date_created()->getTimestamp(), 'text' => __( 'Bestellung eingegangen', 'lindenweg16' ), 'kind' => 'start' );
+		}
+
+		if ( $order->get_date_paid() ) {
+			$events[] = array( 'ts' => $order->get_date_paid()->getTimestamp(), 'text' => __( 'Bezahlt', 'lindenweg16' ), 'kind' => 'paid' );
+		}
+
+		if ( function_exists( 'wc_get_order_notes' ) ) {
+			foreach ( wc_get_order_notes( array( 'order_id' => $order->get_id(), 'limit' => 30 ) ) as $note ) {
+				$events[] = array(
+					'ts'   => $note->date_created ? $note->date_created->getTimestamp() : 0,
+					'text' => wp_strip_all_tags( (string) $note->content ),
+					'kind' => $note->customer_note ? 'customer' : 'note',
+				);
+			}
+		}
+
+		if ( $order->get_date_completed() ) {
+			$events[] = array( 'ts' => $order->get_date_completed()->getTimestamp(), 'text' => __( 'Versendet, Lagerabgang gebucht', 'lindenweg16' ), 'kind' => 'done' );
+		}
+
+		usort(
+			$events,
+			function ( $a, $b ) {
+				return $a['ts'] <=> $b['ts'];
+			}
+		);
+
+		return $events;
+	}
+
+	/**
+	 * Wer hat bestellt, und wie oft schon?
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @return array
+	 */
+	protected static function order_customer( $order ) {
+		$email = (string) $order->get_billing_email();
+		$count = 0;
+
+		if ( '' !== $email && function_exists( 'wc_get_orders' ) ) {
+			$count = count( wc_get_orders( array( 'billing_email' => $email, 'limit' => 100, 'return' => 'ids', 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-completed' ) ) ) );
+		}
+
+		return array(
+			'name'   => trim( $order->get_formatted_billing_full_name() ),
+			'email'  => $email,
+			'phone'  => (string) $order->get_billing_phone(),
+			'orders' => $count,
+			'edit'   => $order->get_edit_order_url(),
+		);
 	}
 
 	/**

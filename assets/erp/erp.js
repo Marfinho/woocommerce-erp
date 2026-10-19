@@ -466,6 +466,7 @@
 		}
 		if (r.name === 'drucker') { activeArea = 'produktion'; }
 		if (r.name === 'produkt') { activeArea = 'katalog'; }
+		if (r.name === 'bestellung') { activeArea = 'verkauf'; }
 
 		Array.prototype.forEach.call(el.app.querySelectorAll('[data-r]'), function (a) {
 			a.classList.toggle('active', a.getAttribute('data-r') === r.name);
@@ -1664,7 +1665,9 @@
 	}
 
 	function viewShipOrder(id) {
-		setHead('Bestellung', 'Packen und versenden');
+		setHead('Bestellung', 'Verkauf');
+		var sf = findItem('versand');
+		if (sf) { renderSub(sf); }
 		var box = h('div', { class: 'run' });
 		el.view.appendChild(box);
 
@@ -1700,6 +1703,24 @@
 			}
 			act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
 			box.appendChild(act);
+
+			if (o.customer) {
+				var cu = o.customer;
+				box.appendChild(h('div', { class: 'card' }, h('h3', null, 'Kunde'),
+					h('div', { class: 'kv' },
+						h('span', null, 'Name'), h('b', null, cu.name || o.name),
+						cu.email ? h('span', null, 'E-Mail') : null, cu.email ? h('b', null, cu.email) : null,
+						cu.phone ? h('span', null, 'Telefon') : null, cu.phone ? h('b', null, cu.phone) : null,
+						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–'))));
+			}
+
+			if (o.timeline && o.timeline.length) {
+				box.appendChild(h('div', { class: 'card' }, h('h3', null, 'Verlauf'),
+					h('ol', { class: 'timeline' }, o.timeline.map(function (ev) {
+						return h('li', { class: 'ev-' + ev.kind }, h('small', { class: 'muted' }, ev.ts ? when(ev.ts) : ''), h('span', null, ev.text));
+					}))));
+			}
+
 			box.appendChild(h('a', { class: 'btn', href: '#/seite/versand' }, '← Zurück zum Versand'));
 		}
 

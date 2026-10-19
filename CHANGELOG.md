@@ -7,6 +7,30 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.25.0] – 2026-10-19
+
+### Neue Menüführung und Optik im ERP
+- **Sechs Bereiche statt rund 40 Seiten in fünf Listen:** links Heute, Produktion, Verkauf, Lager,
+  Katalog, Zahlen. Innerhalb eines Bereichs Reiter, darunter bei Bedarf eine Auswahl (z. B. Verkauf →
+  Bestellungen → Versand, Aufträge, Picklisten, Shop-Bestellungen). Ein Klick auf den Bereich öffnet
+  die zuletzt besuchte Seite.
+- Mailbox mit Zähler und Profilmenü (Einstellungen, Benutzer & Rechte, Löhne, Etikettendrucker, Import,
+  Support, Anleitungen, Hell/Dunkel, Shop, Abmelden) statt langer Listen. Handy: Leiste unten mit „Mehr“.
+- Neue Optik: schmale dunkle Leiste, große Karten, ruhige Flächen; kein wp-admin-Look mehr im Rahmen.
+  Rechte und Seiten bleiben unverändert; die Zuordnung steht in `Navigation::layout()`.
+- **Heute:** „Dein Nächstes“ und eine Aufgabenliste quer über alles (Platte melden, rüsten, Bestellungen
+  versenden, nachbestellen, Mails) – nur, was die Person laut Rechten erledigen darf.
+- **Drucker:** Übersicht mit Live-Stand und fälliger Wartung; Druckerakte mit Verlauf (Soll/Ist je Platte),
+  Wartung und Verbindung.
+- **Material:** eine Karte je Filamentfarbe mit Bestand, Reichweite, Rollen, Bestellung unterwegs;
+  Nachbestellen und Wareneingang direkt an der Karte.
+- **Produkte:** eine Liste statt Artikel, Revisionen und Shop an verschiedenen Orten, mit Filtern
+  „Ohne 3MF“, „Marge kritisch“, „Nicht im Shop“, „Ohne Preis“. Produktakte mit Preis, Kosten, Marge, Lager,
+  Druckdaten und Soll gegen Ist; Stammdaten, 3MF und Revisionen, Stückliste, Kalkulation und Shop öffnen
+  als Reiter in der Akte. Im Workflow führt „keine 3MF“ direkt zum Hochladen.
+- **Bestellung:** Packseite mit Kunde und Verlauf (Eingang, Zahlung, Notizen, Versand).
+- Neue Schnittstellen `erp/aufgaben`, `erp/drucker/<id>`, `erp/material`, `erp/produkte`, `erp/produkte/<id>`.
+
 ## [0.24.1] – 2026-10-19
 
 ### Verständliche Fehlermeldungen im ERP
