@@ -948,9 +948,19 @@
 				]
 		));
 
-		d.groups.forEach(function (g) { ed.appendChild(groupCard(g, p, idx)); });
-
+		// Erst das Ergebnis („So sieht … das ERP“), dann die Einzelrechte: Wer eine Vorlage wählt,
+		// muss die rund 50 Schalter nicht ansehen. Weicht die Person von allen Vorlagen ab,
+		// sind die Einzelrechte gleich offen.
 		ed.appendChild(previewCard(p, idx));
+
+		var total = 0;
+		d.groups.forEach(function (g) { total += g.perms.filter(function (x) { return x.scope !== 'full'; }).length; });
+
+		var adv = h('details', { class: 'adv' }, h('summary', null, 'Einzelrechte anpassen (' + total + ')'));
+		if (S.adv || (!cur && !p.full)) { adv.setAttribute('open', ''); }
+		adv.addEventListener('toggle', function () { S.adv = adv.open; });
+		d.groups.forEach(function (g) { adv.appendChild(groupCard(g, p, idx)); });
+		ed.appendChild(adv);
 
 		if (!p.full) {
 			var dirty = isDirty();
