@@ -2491,7 +2491,7 @@
 			));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Der Alarm kommt, wenn der Bestand einer Farbe bei dem Verbrauch der letzten 4 Wochen kürzer reicht als Lieferzeit plus Puffer.'));
 			body.appendChild(h('h4', { class: 'sec' }, 'WordPress-Admin'));
-			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' ERP-Menüs im wp-admin ausblenden'));
+			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' wp-admin nur für die Website: ERP-Menüs ausblenden, ERP-Nutzer ohne Websiteverwaltung nach der Anmeldung ins ERP leiten'));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das wp-admin zeigt dann nur noch die Website. Die Seiten bleiben erreichbar und werden im ERP weiter eingebettet angezeigt.'));
 
 			var save = h('button', { class: 'btn primary', type: 'button', style: 'margin-top:16px' }, 'Speichern');

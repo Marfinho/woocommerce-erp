@@ -46,11 +46,13 @@ class Shell {
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'maybe_render' ), 1 );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_link' ), 90 );
+		add_filter( 'login_redirect', array( $this, 'login_redirect' ), 20, 3 );
 
 		if ( is_admin() ) {
 			add_action( 'admin_init', array( $this, 'gate_plugin_pages' ) );
 			add_action( 'admin_menu', array( $this, 'maybe_hide_menus' ), 9999 );
 			add_action( 'admin_init', array( $this, 'gate_actions' ), 2 );
+			add_action( 'admin_init', array( $this, 'dashboard_to_erp' ), 3 );
 			add_action( 'admin_head', array( $this, 'embed_styles' ) );
 			add_action( 'admin_post_lw16_erp_run_file', array( $this, 'serve_run_file' ) );
 		}
@@ -467,6 +469,68 @@ class Shell {
 		header( 'Content-Length: ' . filesize( $plate->file_path ) );
 		readfile( $plate->file_path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
 		exit;
+	}
+
+	/**
+	 * Soll diese Person nach der Anmeldung im ERP landen? – reine Regel.
+	 *
+	 * Gilt nur, wenn die WordPress-Verwaltung ausgeblendet ist (Einstellung im
+	 * Workflow): Wer das ERP nutzen darf und keine Website verwaltet, braucht
+	 * das wp-admin-Dashboard nicht. Wer die Website verwaltet (manage_options),
+	 * behält seinen gewohnten Einstieg.
+	 *
+	 * @param bool $hide       wp-admin-Menüs sind ausgeblendet.
+	 * @param bool $has_erp    Die Person darf das ERP öffnen.
+	 * @param bool $can_manage Die Person verwaltet die Website.
+	 * @return bool
+	 */
+	public static function wants_erp_landing( $hide, $has_erp, $can_manage ) {
+		return (bool) $hide && (bool) $has_erp && ! $can_manage;
+	}
+
+	/**
+	 * Nach der Anmeldung ins ERP statt ins wp-admin-Dashboard.
+	 *
+	 * @param string $to   Bisheriges Ziel.
+	 * @param string $from Angeforderte Adresse.
+	 * @param mixed  $user Angemeldete Person (oder Fehler).
+	 * @return string
+	 */
+	public function login_redirect( $to, $from, $user ) {
+		if ( ! ( $user instanceof \WP_User ) ) {
+			return $to;
+		}
+
+		// Eine ausdrücklich angeforderte Adresse (z. B. ein Link aus einer Mail) bleibt.
+		if ( ! empty( $from ) && false === strpos( (string) $to, 'wp-admin' ) ) {
+			return $to;
+		}
+
+		if ( self::wants_erp_landing( (bool) Workflow::settings()['hide_wpadmin'], Access::has_any( $user->ID ), user_can( $user, 'manage_options' ) ) ) {
+			return self::url();
+		}
+
+		return $to;
+	}
+
+	/**
+	 * Das wp-admin-Dashboard leitet ins ERP, wenn es für diese Person nichts zu tun gibt.
+	 */
+	public function dashboard_to_erp() {
+		global $pagenow;
+
+		if ( 'index.php' !== $pagenow || wp_doing_ajax() || isset( $_GET['lw16_embed'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return;
+		}
+
+		if ( isset( $_SERVER['HTTP_SEC_FETCH_DEST'] ) && 'iframe' === $_SERVER['HTTP_SEC_FETCH_DEST'] ) {
+			return;
+		}
+
+		if ( self::wants_erp_landing( (bool) Workflow::settings()['hide_wpadmin'], Access::has_any(), current_user_can( 'manage_options' ) ) ) {
+			wp_safe_redirect( self::url() );
+			exit;
+		}
 	}
 
 	/**
