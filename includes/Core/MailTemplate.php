@@ -173,6 +173,10 @@ class MailTemplate {
 	 * übernehmen (das Lindenweg16-Block-Theme tut das, damit alle Mails wie die
 	 * Website aussehen). Ohne Rückgabe bleibt dieses Layout.
 	 *
+	 * Persönliche Mails aus der Mailbox kommen mit $context['personal'] = true,
+	 * dazu 'signature' (Klartext) und 'quote' (zitierte Ursprungsmail): Sie
+	 * stehen unter dem Text, und der Hinweis „automatisch versendet" entfällt.
+	 *
 	 * Über $context bekommt das Theme strukturierte Daten, um sie schöner
 	 * darzustellen als im Klartext – etwa die Artikel einer Warenkorb-Erinnerung:
 	 * 'items' => array( 'text' => Klartext-Liste im Body, 'list' => array( array(
@@ -213,6 +217,17 @@ class MailTemplate {
 		}
 
 		$body_html = nl2br( esc_html( $text ) );
+		$personal  = ! empty( $context['personal'] );
+
+		// Persönliche Mails (Mailbox): Signatur und Zitat unter dem Text.
+		if ( $personal ) {
+			if ( ! empty( $context['signature'] ) ) {
+				$body_html .= '<div style="margin-top:24px;padding-top:14px;border-top:1px solid rgba(58,67,77,.12);font-size:13px;color:rgba(58,67,77,.8)">' . nl2br( esc_html( (string) $context['signature'] ) ) . '</div>';
+			}
+			if ( ! empty( $context['quote'] ) ) {
+				$body_html .= '<div style="margin-top:20px;padding-left:12px;border-left:3px solid rgba(58,67,77,.2);font-size:13px;color:rgba(58,67,77,.65)">' . nl2br( esc_html( (string) $context['quote'] ) ) . '</div>';
+			}
+		}
 
 		$footer_parts = array_filter( array( $firma, $strasse, $plz_ort ) );
 		$footer_line  = implode( ' &middot; ', $footer_parts );
@@ -253,7 +268,9 @@ class MailTemplate {
 		// Footer.
 		$html .= '<tr><td style="padding:24px 40px 36px;text-align:center;font-size:12px;color:' . $footer_color . ';line-height:1.7;border-top:1px solid ' . $border_light . '">';
 		$html .= '<div>' . $footer_line . '</div>';
-		$html .= '<div style="margin-top:4px">' . esc_html__( 'Diese E-Mail wurde automatisch versendet.', 'lindenweg16' ) . '</div>';
+		if ( ! $personal ) {
+			$html .= '<div style="margin-top:4px">' . esc_html__( 'Diese E-Mail wurde automatisch versendet.', 'lindenweg16' ) . '</div>';
+		}
 		$html .= '</td></tr>';
 
 		$html .= '</table>';

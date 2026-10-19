@@ -55,6 +55,11 @@ class Scheduler {
 	// Slicing-Aufträge statt die Druckaufträge.
 	const HOOK_SLICING_MAINTENANCE = 'lw16_slicing_maintenance';
 
+	// Mailbox: Postfächer per IMAP abgleichen (alle fünf Minuten) und
+	// Befehle an den Mailserver (gelesen, verschieben, löschen) im Hintergrund.
+	const HOOK_MAIL_SYNC      = 'lw16_mail_sync';
+	const HOOK_MAIL_SERVER_OP = 'lw16_mail_server_op';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -82,6 +87,8 @@ class Scheduler {
 			self::HOOK_DHL_PRINT_MAINTENANCE,
 			self::HOOK_BAMBU_MAINTENANCE,
 			self::HOOK_SLICING_MAINTENANCE,
+			self::HOOK_MAIL_SYNC,
+			self::HOOK_MAIL_SERVER_OP,
 		);
 	}
 
@@ -122,6 +129,7 @@ class Scheduler {
 			self::HOOK_DHL_PRINT_MAINTENANCE => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_BAMBU_MAINTENANCE     => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_SLICING_MAINTENANCE   => 5 * MINUTE_IN_SECONDS,
+			self::HOOK_MAIL_SYNC             => 5 * MINUTE_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

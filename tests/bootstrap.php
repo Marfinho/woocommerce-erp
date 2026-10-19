@@ -348,6 +348,11 @@ foreach ( array( 'Options', 'Stats', 'UploadTypes', 'Viewer' ) as $lw16_class ) 
 	require $lw16_root . '/includes/Modules/ArView/' . $lw16_class . '.php';
 }
 
+// Seiteneffektfreie Klassen der Mailbox.
+foreach ( array( 'MailCrypto', 'MimeParser', 'ImapClient', 'SmtpMailer', 'HtmlSanitizer', 'MailboxAccess', 'ComposeService', 'SyncService' ) as $lw16_class ) {
+	require $lw16_root . '/includes/Modules/Mailbox/' . $lw16_class . '.php';
+}
+
 // ERP-Oberfläche: Rechtekatalog und Navigation sind reine Zuordnungen.
 require $lw16_root . '/includes/Erp/Permissions.php';
 require $lw16_root . '/includes/Erp/Navigation.php';

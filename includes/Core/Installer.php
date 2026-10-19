@@ -60,8 +60,12 @@ class Installer {
 	 *
 	 * DB_VERSION 34: neue Tabelle ar_stats - anonyme Tageszähler der
 	 * AR-Ansicht (Banner gezeigt, Ja, Nein, AR gestartet je Produkt).
+	 *
+	 * DB_VERSION 35: Mailbox - sechs neue Tabellen (mail_accounts,
+	 * mail_shares, mail_folders, mail_messages, mail_attachments,
+	 * mail_notes), siehe Modules\Mailbox\Schema.
 	 */
-	const DB_VERSION = '34';
+	const DB_VERSION = '35';
 
 	/**
 	 * Aktivierungsroutine.
@@ -113,6 +117,10 @@ class Installer {
 			self::protect_belege_directory();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
 
+			// Neue Hintergrundjobs (z. B. der Mailabruf) sofort einplanen, nicht erst
+			// nach Ablauf des Stunden-Merkers in Scheduler::ensure_recurring().
+			delete_transient( Scheduler::TRANSIENT_CHECKED );
+
 			// Ein Update laeuft ohne Aktivierung durch. Ohne diesen Merker
 			// blieben Rewrite-Regeln, die erst in der neuen Fassung dazukommen,
 			// unbekannt – die Adressen liefen dann dauerhaft auf 404.
@@ -154,6 +162,16 @@ class Installer {
 	}
 
 	/**
+	 * Absoluter Pfad zum geschützten Verzeichnis der Mail-Anhänge.
+	 *
+	 * @return string
+	 */
+	public static function mail_dir() {
+		$upload = wp_upload_dir();
+		return trailingslashit( $upload['basedir'] ) . 'lw16-mail';
+	}
+
+	/**
 	 * Dokumentenverzeichnis anlegen, falls es fehlt.
 	 *
 	 * Angelegt wird es beim Aktivieren. Ein Verzeichnis kann aber auch
@@ -169,7 +187,7 @@ class Installer {
 	 * Beleg-Verzeichnis außerhalb des öffentlichen Zugriffs absichern.
 	 */
 	protected static function protect_belege_directory() {
-		foreach ( array( self::belege_dir(), self::docs_dir(), self::models_dir() ) as $dir ) {
+		foreach ( array( self::belege_dir(), self::docs_dir(), self::models_dir(), self::mail_dir() ) as $dir ) {
 			if ( ! file_exists( $dir ) ) {
 				wp_mkdir_p( $dir );
 			}
@@ -801,6 +819,9 @@ class Installer {
 
 		// --- Modul AR-Ansicht ---------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\ArView\Schema::tables( $p, $charset_collate ) );
+
+		// --- Modul Mailbox ------------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\Mailbox\Schema::tables( $p, $charset_collate ) );
 
 		// Migration: Die Druck-Warteschlange hiess zunächst DHL-spezifisch.
 		// Muss vor dbDelta laufen – sonst legt dbDelta die neuen, leeren

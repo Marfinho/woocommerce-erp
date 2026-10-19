@@ -11,7 +11,8 @@
  *     werden in dasselbe Layout verpackt; Links werden klickbar, ein Link
  *     allein in einer Zeile wird zum Button.
  *  3. Das Lindenweg16-ERP-Plugin holt sich sein Layout über den Filter
- *     „lindenweg16_mail_html“ ebenfalls hier ab.
+ *     „lindenweg16_mail_html“ ebenfalls hier ab – auch die persönlichen Mails
+ *     der Mailbox (Kontext „personal“: Text, Signatur, Zitat).
  *
  * Abschalten: add_filter( 'lindenweg16_email_design', '__return_false' );
  *
@@ -421,7 +422,30 @@ function lindenweg16_email_text_to_html( string $text ): string {
 	$lines = explode( "\n", $text );
 	$out   = array();
 
+	// Zitierte Zeilen ("> …", wie in Antworten der Mailbox) bilden einen eigenen Block.
+	$quote = array();
+	$flush = static function () use ( &$quote, &$out, $c ): void {
+		if ( ! $quote ) {
+			return;
+		}
+
+		$out[]  = sprintf(
+			'<blockquote class="lw16-mail-quote" style="margin:12px 0;padding:2px 0 2px 14px;border-left:3px solid %1$s;color:%2$s;font-size:14px;">%3$s</blockquote>',
+			esc_attr( $c['line'] ),
+			esc_attr( $c['text-muted'] ),
+			make_clickable( implode( '<br>', array_map( 'esc_html', $quote ) ) )
+		);
+		$quote = array();
+	};
+
 	foreach ( $lines as $line ) {
+		if ( preg_match( '/^\s*>+ ?(.*)$/u', $line, $qm ) ) {
+			$quote[] = $qm[1];
+			continue;
+		}
+
+		$flush();
+
 		$trimmed = trim( $line );
 
 		// <https://…> (so schreibt WordPress manche Links) als normaler Link.
@@ -453,6 +477,8 @@ function lindenweg16_email_text_to_html( string $text ): string {
 
 		$out[] = make_clickable( esc_html( $line ) );
 	}
+
+	$flush();
 
 	return wpautop( implode( "\n", $out ) );
 }
@@ -692,6 +718,29 @@ function lindenweg16_email_items_card( array $items ): string {
 }
 
 /**
+ * Signatur unter einer persönlichen Mail: durch eine feine Linie abgesetzt,
+ * leiser als der Text.
+ *
+ * @param string $signature Signatur als Klartext.
+ */
+function lindenweg16_email_signature_html( string $signature ): string {
+	$signature = trim( $signature );
+
+	if ( '' === $signature ) {
+		return '';
+	}
+
+	$c = lindenweg16_email_colors();
+
+	return sprintf(
+		'<p class="lw16-mail-signature" style="margin:28px 0 0;padding-top:16px;border-top:1px solid %1$s;font-size:14px;line-height:1.55;color:%2$s;">%3$s</p>',
+		esc_attr( $c['line'] ),
+		esc_attr( $c['text-muted'] ),
+		nl2br( make_clickable( esc_html( $signature ) ) )
+	);
+}
+
+/**
  * Layout für die Mails des Lindenweg16-ERP-Plugins (MailTemplate).
  *
  * Bringt das Plugin die Artikel einer Warenkorb-Erinnerung mit
@@ -705,6 +754,15 @@ function lindenweg16_email_items_card( array $items ): string {
 function lindenweg16_email_erp_html( $html, string $text, string $subject = '', $context = array() ) {
 	if ( ! lindenweg16_email_design_enabled() || ! function_exists( 'WC' ) ) {
 		return $html;
+	}
+
+	// Persönliche Mail aus der Mailbox: Text, darunter Signatur, darunter das Zitat.
+	if ( is_array( $context ) && ! empty( $context['personal'] ) ) {
+		$body = lindenweg16_email_text_to_html( $text )
+			. lindenweg16_email_signature_html( (string) ( $context['signature'] ?? '' ) )
+			. ( ! empty( $context['quote'] ) ? '<div class="lw16-mail-quote-wrap" style="margin-top:28px;">' . lindenweg16_email_text_to_html( (string) $context['quote'] ) . '</div>' : '' );
+
+		return lindenweg16_email_wrap( $subject, $body );
 	}
 
 	$items = is_array( $context ) ? ( $context['items'] ?? null ) : null;
