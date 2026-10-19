@@ -1459,6 +1459,24 @@
 		return hh + ':' + ('0' + mm).slice(-2);
 	}
 
+	function kgTxt(kg) {
+		kg = Number(kg) || 0;
+		return kg < 1 ? Math.round(kg * 1000) + ' g' : kg.toFixed(2).replace('.', ',') + ' kg';
+	}
+
+	function materialRows(rows) {
+		return h('div', { class: 'matrows' }, rows.map(function (m) {
+			var lot = m.lots.filter(function (l) { return l.id === m.suggested; })[0];
+			return h('div', { class: 'matrow' + (m.ok ? '' : ' bad') },
+				h('b', null, m.label),
+				h('span', null, kgTxt(m.needed_kg) + ' nötig'),
+				h('span', { class: 'muted' }, m.ok
+					? (lot ? 'Rolle ' + lot.code + ' · Rest ' + kgTxt(lot.remaining_kg) : 'im Lager ' + kgTxt(m.available_kg))
+					: (m.available_kg > 0 ? 'nur ' + kgTxt(m.available_kg) + ' im Lager – es fehlen ' + kgTxt(m.missing_kg) : 'keine Rolle in dieser Farbe im Lager'))
+			);
+		}));
+	}
+
 	function itemsLine(run) {
 		return run.items.map(function (i) { return qty(i.qty) + '× ' + i.name; }).join(', ');
 	}
@@ -1547,9 +1565,11 @@
 		}
 		pageHead('Workflow', 'Vom Bedarf zum Bestand. Jede Karte hat einen nächsten Schritt.', actions);
 
+		var alertBox = h('div');
 		var steps = h('ol', { class: 'steps' });
 		var board = h('div', { class: 'board' });
 		var done = h('section', { class: 'done-strip' });
+		el.view.appendChild(alertBox);
 		el.view.appendChild(steps);
 		el.view.appendChild(board);
 		el.view.appendChild(done);
@@ -1575,6 +1595,14 @@
 			if (!data) { return; }
 			var cols = data.columns;
 			var dc = demand ? demand.cards : [];
+
+			alertBox.textContent = '';
+			(data.alerts || []).forEach(function (a) {
+				alertBox.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:8px' },
+					h('b', null, a.label + ' wird knapp. '),
+					(a.coverage === null ? 'Reichweite unbekannt' : 'Reicht noch ' + Math.round(a.coverage) + ' Tage') + ' – Meldegrenze ' + a.threshold + ' Tage (Lieferzeit plus Puffer). Bestellen: ca. ' + Math.round(a.order_kg) + ' kg.'
+				));
+			});
 
 			steps.textContent = '';
 			[['1', 'Bedarf', dc.length], ['2', 'Freigegeben', cols.freigegeben.length], ['3', 'Im Druck', cols.im_druck.length], ['4', 'Ist melden', cols.zu_melden.length], ['5', 'Eingelagert', cols.erledigt.length]].forEach(function (s) {
@@ -1691,6 +1719,10 @@
 			rows
 		)));
 
+		if (r.material && r.material.length) {
+			out.appendChild(h('div', { class: 'card', style: 'margin-top:12px' }, h('b', null, 'Filament'), materialRows(r.material)));
+		}
+
 		var lbl = h('input', { type: 'checkbox', id: 'pl-label', checked: true });
 		var release = h('button', { class: 'btn primary', type: 'button' }, 'Freigeben und Etiketten drucken');
 		release.addEventListener('click', function () {
@@ -1727,6 +1759,8 @@
 			var copies = h('select', { class: 'field', id: 'ws-copies' }, [1, 2, 3].map(function (n) { return h('option', { value: String(n), selected: n === s.label_copies }, String(n)); }));
 			var auto = h('input', { type: 'checkbox', id: 'ws-auto', checked: !!s.label_auto });
 			var hide = h('input', { type: 'checkbox', id: 'ws-hide', checked: !!s.hide_wpadmin });
+			var fLead = h('input', { class: 'field', type: 'number', id: 'ws-flead', min: '0', max: '120', value: String(s.filament_lead_days) });
+			var fSafe = h('input', { class: 'field', type: 'number', id: 'ws-fsafe', min: '0', max: '60', value: String(s.filament_safety_days) });
 			var weeks = h('input', { class: 'field', type: 'number', id: 'ws-weeks', min: '1', max: '26', value: String(s.weeks) });
 			var cover = h('input', { class: 'field', type: 'number', id: 'ws-cover', min: '0', max: '12', step: '0.5', value: String(s.cover_weeks) });
 
@@ -1751,6 +1785,12 @@
 				h('div', null, h('label', { for: 'ws-cover' }, 'Bestand soll reichen für (Wochen)'), cover)
 			));
 
+			body.appendChild(h('h4', { class: 'sec' }, 'Filament nachbestellen'));
+			body.appendChild(h('div', { class: 'form-grid' },
+				h('div', null, h('label', { for: 'ws-flead' }, 'Lieferzeit (Tage)'), fLead),
+				h('div', null, h('label', { for: 'ws-fsafe' }, 'Sicherheitspuffer (Tage)'), fSafe)
+			));
+			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Der Alarm kommt, wenn der Bestand einer Farbe bei dem Verbrauch der letzten 4 Wochen kürzer reicht als Lieferzeit plus Puffer.'));
 			body.appendChild(h('h4', { class: 'sec' }, 'WordPress-Admin'));
 			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' ERP-Menüs im wp-admin ausblenden'));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das wp-admin zeigt dann nur noch die Website. Die Seiten bleiben erreichbar und werden im ERP weiter eingebettet angezeigt.'));
@@ -1761,7 +1801,8 @@
 				api('workflow/einstellungen', { method: 'POST', body: {
 					label_printer: printer.value, label_roll: roll.value, label_copies: parseInt(copies.value, 10), label_auto: auto.checked ? 1 : 0,
 					label_fields: Object.keys(boxes).filter(function (k) { return boxes[k].checked; }),
-					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0
+					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0,
+					filament_lead_days: parseInt(fLead.value, 10), filament_safety_days: parseInt(fSafe.value, 10)
 				} }).then(function () { toast('Gespeichert'); d.close(); }).catch(function (e) { save.disabled = false; toast(e.message, true); });
 			});
 			body.appendChild(save);
@@ -1819,8 +1860,10 @@
 			if (run.status === 'freigegeben') {
 				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno' }, '1'), h('div', null, h('b', null, 'Datei laden'), h('div', { class: 'muted small' }, run.file ? 'Projekt-3MF – im Slicer öffnen und slicen' : 'Keine Datei hinterlegt'))));
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px;min-height:52px' }, ico('download'), '3MF herunterladen')); }
-				var colors = run.items.map(function (i) { return i.color; }).filter(Boolean);
-				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno alt' }, '2'), h('div', null, h('b', null, 'Material bereit?'), h('div', { class: 'muted small' }, colors.length ? colors.join(', ') : 'Material laut Auftrag'))));
+				box.appendChild(h('div', { class: 'card' },
+					h('div', { class: 'stepcard' }, h('div', { class: 'stepno alt' }, '2'), h('div', null, h('b', null, 'Material bereit?'), h('div', { class: 'muted small' }, 'Die Rolle wird beim Melden abgezogen'))),
+					run.material && run.material.length ? materialRows(run.material) : h('div', { class: 'muted small', style: 'margin-top:8px' }, 'Für diese Artikel ist kein Gewicht hinterlegt.')
+				));
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
 			} else if (run.status === 'ruesten') {
 				box.appendChild(timeCard([['Rüstzeit', clock(nowTs() - run.setup), 'läuft']]));
@@ -1863,6 +1906,7 @@
 
 		function reportForm() {
 			var ok = {};
+			var lotPick = {};
 			run.items.forEach(function (i) { ok[i.article_id + '|' + i.color] = i.qty; });
 			var form = h('form', { class: 'card reportform' });
 			var reasonWrap = h('div', { hidden: true }, h('label', { for: 'rf-reason' }, 'Fehlerursache'));
@@ -1892,10 +1936,24 @@
 						h('button', { type: 'button', 'aria-label': 'Eins weniger (' + label + ')', onclick: minus }, '−'), node,
 						h('button', { type: 'button', 'aria-label': 'Eins mehr (' + label + ')', onclick: plus }, '+')));
 				};
+				var mrow = (run.material || []).filter(function (m) { return m.color === item.ckey; })[0];
+				var rollBox = null;
+				if (item.kg) {
+					if (mrow && mrow.lots.length) {
+						lotPick[key] = mrow.suggested || mrow.lots[0].id;
+						var sel = h('select', { class: 'field', 'aria-label': 'Rolle für ' + item.name, onchange: function (e) { lotPick[key] = parseInt(e.target.value, 10); } },
+							mrow.lots.map(function (l) { return h('option', { value: String(l.id), selected: l.id === lotPick[key] }, l.code + ' · Rest ' + kgTxt(l.remaining_kg)); }));
+						rollBox = h('div', null, h('div', { class: 'eyebrow' }, 'Rolle · Verbrauch ca. ' + kgTxt(item.kg)), sel);
+					} else {
+						rollBox = h('div', { class: 'notice warn small' }, 'Keine Rolle in dieser Farbe im Lager – der Verbrauch (ca. ' + kgTxt(item.kg) + ') wird nicht abgezogen.');
+					}
+				}
+
 				form.appendChild(h('div', { class: 'rf-item' },
 					h('div', { class: 'row-top' }, h('b', null, item.name), h('span', { class: 'muted' }, 'Soll ' + qty(item.qty))),
 					stepper('Gut', good, function () { step(-1); }, function () { step(1); }),
-					stepper('Ausschuss', scrap, function () { step(1); }, function () { step(-1); })
+					stepper('Ausschuss', scrap, function () { step(1); }, function () { step(-1); }),
+					rollBox
 				));
 			});
 			sync();
@@ -1911,7 +1969,7 @@
 				var short = run.items.some(function (i) { return ok[i.article_id + '|' + i.color] < i.qty; });
 				if (short && !reason.value) { toast('Bitte die Fehlerursache wählen.', true); return; }
 				submit.disabled = true;
-				runAct(id, 'melden', { items: items, failure_reason: short ? reason.value : 'keine' }).then(function (r) {
+				runAct(id, 'melden', { items: items, lots: lotPick, failure_reason: short ? reason.value : 'keine' }).then(function (r) {
 					if (r && r.queued) { localAdvance(run, 'melden'); run.items = run.items.map(function (i) { return Object.assign({}, i, { ok: ok[i.article_id + '|' + i.color], scrap: i.qty - ok[i.article_id + '|' + i.color] }); }); toast('Offline vorgemerkt – wird gebucht, sobald die Verbindung zurück ist.'); paint(); return; }
 					run = r.run; run.fetched = Math.floor(Date.now() / 1000); run.summary = r.summary; paint();
 				}).catch(function (er) { submit.disabled = false; toast(er.message, true); });
@@ -1930,6 +1988,11 @@
 
 			wrap.appendChild(h('div', { class: 'okmark' }, ico('check'), h('div', null, h('b', null, 'Platte ' + run.id + ' erledigt'), h('div', { class: 'muted' }, 'Im Lager eingebucht'))));
 			wrap.appendChild(rows);
+			if (run.summary && run.summary.material && run.summary.material.length) {
+				wrap.appendChild(h('div', { class: 'card summary' }, run.summary.material.map(function (m) {
+					return h('div', { class: 'row-top' }, h('span', null, m.label), h('b', null, m.lot ? '−' + kgTxt(m.kg) + ' · Rolle ' + m.lot + (m.remaining !== null ? ' (Rest ' + kgTxt(m.remaining) + ')' : '') : 'keine Rolle – nicht abgezogen'));
+				})));
+			}
 			wrap.appendChild(times);
 
 			var next = h('div', { style: 'margin-top:14px' });

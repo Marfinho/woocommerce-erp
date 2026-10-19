@@ -71,7 +71,7 @@ class ProcurementAlert {
 	 * @return array
 	 */
 	public static function all() {
-		return array_merge( self::purchased_articles(), self::components(), self::supplies() );
+		return array_merge( self::purchased_articles(), self::components(), self::supplies(), \Lindenweg16\Erp\Material::alerts() );
 	}
 
 	/**

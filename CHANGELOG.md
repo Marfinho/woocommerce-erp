@@ -7,6 +7,26 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.21.1] – 2026-10-19
+
+### Workflow: Filament wird aus dem Bestand abgezogen
+
+Das Filament steht in den Chargen (Rollen); sein Verbrauch ergibt sich aus Druckjobs, die einer
+Rolle zugeordnet sind. Der Workflow hat die Rolle bisher nicht gesetzt – der Verbrauch fehlte in
+der Rechnung. Jetzt:
+
+- **Rolle beim Melden:** Jede Position bekommt die älteste Rolle ihrer Farbe mit genug Rest
+  (FIFO), oder die, die der Mitarbeiter im Meldeformular wählt. Der Verbrauch (Teile mal
+  Bauteilgewicht, inklusive Ausschuss) steht damit im Druckjournal und mindert den Restbestand.
+  Gibt es keine Rolle in der Farbe, sagt das Formular es offen: „nicht abgezogen“.
+- **Materialprüfung vor dem Freigeben:** Die Vorschau zeigt je Farbe Bedarf gegen Bestand und die
+  vorgeschlagene Rolle; fehlt Material, steht es als Warnung dabei. Dieselbe Prüfung steht auf der
+  Plattenseite („Material bereit?“).
+- **Nachbestell-Alarm für Filament:** Reichweite je Farbe aus dem Verbrauch der letzten vier Wochen
+  gegen Lieferzeit plus Puffer (einstellbar, Vorgabe 10 + 5 Tage). Der Alarm steht im Workflow, im
+  Beschaffungsalarm (Dashboard, Materialseite) und in der Wochenmail, mit Bestellvorschlag in kg.
+- Neu: `Erp\Material`, Tests `ErpMaterialTest`.
+
 ## [0.21.0] – 2026-10-19
 
 ### Der Auftragsablauf: vom Bedarf bis zum Bestand (Workflow)
