@@ -7,6 +7,33 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.17.0] – 2026-10-19
+
+### Neu: Mailbox – ein Postfach für jeden Mitarbeiter
+
+- **Postfächer** (persönlich oder geteilt wie `info@`) unter **Mailbox → Postfächer**,
+  für IONOS vorbelegt (`imap.ionos.de:993`, `smtp.ionos.de:587`); Passwörter
+  verschlüsselt, „Verbindung testen“ prüft Eingang und Ausgang vor dem Speichern.
+- **Lesen:** Abgleich per IMAP alle fünf Minuten und auf Knopfdruck, neueste Mails zuerst,
+  Ordner, Suche, Filter (ungelesen, markiert, mir zugewiesen), Verlauf, Anhänge als Download.
+  HTML-Mails in einem abgeschotteten Rahmen, fremde Bilder erst nach „Bilder laden“.
+- **Schreiben:** Antworten, Allen antworten, Weiterleiten, Anhänge, Entwürfe, Vorschau.
+  Die Mail geht **im Layout der Shop-Mails** raus (Logo, Farben, Schriften, Fußzeile des
+  Themes) mit Signatur und Zitat; eine Kopie landet im Gesendet-Ordner bei IONOS.
+- **Team:** Besitzer, Mitnutzer (nur lesen oder auch senden) und Verwalter; Zuweisung und
+  interne Notizen in geteilten Postfächern; Zugriffe auf fremde persönliche Postfächer im
+  Protokoll.
+- **Shop:** Box „Mails“ an der Bestellung, „Im Shop“ unter der Kundenmail, Mail an den
+  Kunden aus der Bestellung.
+- **Datenschutz:** Mails erscheinen in der Auskunft (Werkzeuge → Daten exportieren); sie werden
+  wegen der Aufbewahrungspflicht nicht gelöscht.
+- Neue Tabellen (`DB_VERSION` 35), Hintergrundjob `lw16_mail_sync`, Menü **Mailbox**,
+  Anleitung D.20. Einstellungen: Abruf an/aus, Aufbewahrungsfrist beim Abruf, Anhangsgrenze.
+- **Theme** (1.2.0): Signatur und Zitat in persönlichen Mails; Zitatzeilen („> …“) werden als
+  Zitatblock dargestellt.
+- Tests: 52 neue Unit-Tests; Ende-zu-Ende-Tests gegen einen echten Dovecot in
+  `tests/integration/`.
+
 ## [0.16.0] – 2026-10-19
 
 ### Neu: Updates per Knopfdruck aus GitHub

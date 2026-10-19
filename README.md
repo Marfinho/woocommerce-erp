@@ -84,9 +84,13 @@ includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, 
                              ConfiguratorModule, Admin/ConfiguratorPage
 includes/Modules/ArView/     Options, Schema, Stats, UploadTypes, ProductMeta, Banner, Viewer,
                              RestApi, ArViewModule, Admin/ArViewPage (AR-Ansicht „An deiner Wand“)
-assets/css/                  admin.css, betrieb.css, betrieb-mobile.css, frontend.css
+includes/Modules/Mailbox/    Schema, MailCrypto, MimeParser, ImapClient, SmtpMailer, MailRepository,
+                             SyncService, ComposeService, HtmlSanitizer, MailboxAccess,
+                             MailboxModule, MailboxView, AccountsPage, OrderMailsBox, MailPrivacy
+                             (Mailbox je Mitarbeiter, siehe „Modul Mailbox“)
+assets/css/                  admin.css, betrieb.css, betrieb-mobile.css, frontend.css, mailbox.css
 assets/js/                   admin.js, betrieb-mobile.js, betrieb-productpicker.js,
-                             betrieb-staffel.js, loyalty.js, wishlist.js
+                             betrieb-staffel.js, loyalty.js, wishlist.js, mailbox.js
 assets/vendor/jsqr/          jsQR (Apache-2.0), nur fuer WebKit nachgeladen
 assets/vendor/three/         three.js (MIT), nur auf Seiten mit dem Konfigurator
 assets/vendor/model-viewer/  model-viewer (Apache-2.0), lokal, nur auf der AR-Seite (ES-Modul)
@@ -405,6 +409,75 @@ ihre Kleinteile beim Druckjob, Bestandteile eines Halbzeugs beim Fertigmelden
 des Auftrags, zugekaufte Beigaben beim Packen. Picklisten buchen nie – sie
 liefern nur die Ortsangabe.
 
+### Modul Mailbox
+
+Eine Mailbox für jeden Mitarbeiter, direkt im Verwaltungsbereich – und was
+sie versendet, sieht aus wie die automatischen Shop-Mails (Logo, Farben,
+Schriften, Fußzeile; mit der Signatur des Mitarbeiters). Die Postfächer
+bleiben beim Anbieter (Vorgaben für **IONOS**: `imap.ionos.de:993`,
+`smtp.ionos.de:587`); das Plugin holt per IMAP ab und sendet per SMTP.
+Menü **Mailbox**, Einrichtung unter **Mailbox → Postfächer**; Anleitung in
+Kapitel D.20 der Betriebsanleitung.
+
+**Aufbau**
+
+```
+Mailbox-Seite ──► MailRepository (6 Tabellen)  ◄── SyncService ◄── ImapClient ◄── IMAP (alle 5 min + „Jetzt abrufen“)
+      │
+      └─► ComposeService ─► MailTemplate::wrap_html ─► Theme-Layout (Filter lindenweg16_mail_html)
+                         └► SmtpMailer (PHPMailer, Zugang des Postfachs) ─► SMTP
+                         └► ImapClient::append ─► Gesendet-Ordner + lokale Kopie
+```
+
+- **Kein Fremdcode, keine PHP-IMAP-Erweiterung:** `ImapClient` ist ein
+  schlanker Socket-Client (TLS, STARTTLS, Literale, modifiziertes UTF-7 für
+  Ordnernamen), `MimeParser` liest Mails selbst (RFC 2047/2231,
+  Zeichensätze, mehrteilig, Anhänge). Versand über das in WordPress
+  mitgelieferte PHPMailer. Beides ist frei von WordPress und direkt prüfbar.
+- **Abgleich** (`SyncService`): je Ordner nach UID, `UIDVALIDITY` wird
+  beachtet. Beim ersten Abruf werden die **neuesten** Mails zuerst geholt, ältere
+  innerhalb der Frist (Standard 90 Tage) laufen in den Folgedurchgängen nach
+  (`backfill_uid`). Jeder Durchgang ist durch Zeit und Stückzahl begrenzt; eine
+  Datenbanksperre (`Lock`) verhindert, dass zwei Läufe dasselbe Postfach
+  gleichzeitig abgleichen. Gelesen/Stern/Beantwortet und serverseitig gelöschte
+  Mails werden abgeglichen; Mails über 12 MB nur mit Kopfzeilen.
+- **Befehle an den Server** (gelesen, verschieben, löschen) gehen im
+  Hintergrund über den Action Scheduler (`lw16_mail_server_op`); lokal gilt die
+  Änderung sofort.
+- **Layout:** `ComposeService` setzt Text, Signatur und Zitat über
+  `MailTemplate::wrap_html()` mit dem Kontext `personal` ein; das Theme
+  (`inc/emails.php`) rendert Signatur und Zitat. Ohne Theme greift das
+  CI-Layout des Plugins. Die Reihenfolge ist Text → Signatur → Zitat.
+- **Rechte** (`MailboxAccess`, reine Funktion): Besitzer und Mitnutzer
+  (lesen oder lesen+senden) sehen nur ihre Postfächer, Verwalter (`manage_lw16`
+  oder `lw16_mail_manage`) alle. Das Menü-Recht `lw16_mail_use` vergibt das
+  Plugin selbst, sobald jemand Besitzer oder Mitnutzer wird. Jeder Handler
+  prüft Nonce, Recht und die Stufe **am konkreten Postfach** – eine Mail-ID aus
+  einem fremden Postfach ist wirkungslos.
+- **Sicherheit:** Passwörter mit libsodium verschlüsselt (Schlüssel aus den
+  WordPress-Salts oder `LW16_MAIL_KEY`); fremdes HTML nur in
+  `<iframe sandbox>` ohne Skripte, mit Content-Security-Policy (keine fremden
+  Bilder ohne „Bilder laden“) und zusätzlich bereinigt (`HtmlSanitizer`);
+  Anhänge liegen unter Zufallsnamen in `uploads/lw16-mail` und werden nur als
+  Download ausgeliefert. Formulareingaben laufen durch `ComposeService::clean_text()`
+  statt `sanitize_text_field()` – das würde aus `Name <a@b.de>` die Adresse streichen.
+- **Mit dem Shop verbunden:** Box „Mails“ an der Bestellung (HPOS und
+  klassisch), „Im Shop“ (Kundenkonto, Bestellungen, Bestellnummern aus dem
+  Betreff) unter der Mail, Mail an den Kunden direkt aus der Bestellung.
+- **Datenschutz:** `MailPrivacy` meldet die Mails bei der Auskunft; eine
+  Löschanfrage löscht sie wegen der Aufbewahrungspflicht (§ 257 HGB, § 147
+  AO) bewusst nicht und sagt das.
+
+**Bewusste Vereinfachungen:** Entwürfe liegen nur im ERP (nicht im
+Drafts-Ordner des Servers); der Text wird als Klartext geschrieben (das Layout
+macht daraus HTML, Links allein in einer Zeile werden Buttons); keine
+IMAP-IDLE-Push-Benachrichtigung (Abruf alle fünf Minuten und beim Öffnen).
+
+**Tests:** `tests/Mailbox*Test.php` (Parser, IMAP-Client gegen vorbereitete
+Antworten, SMTP gegen einen Testserver, Bereinigung, Zugriff, Schreiben) laufen
+in der normalen Suite. Dazu `tests/integration/` – Ende-zu-Ende gegen einen
+echten Dovecot in einer echten WordPress-Installation, siehe dortige `README.md`.
+
 ### Modul Konfigurator
 
 Der Haster Haken zum Zusammenstellen: ein Basismodul und Module, die daran
@@ -496,6 +569,9 @@ vorhanden ist – nicht, was geplant war.
   Namen, optionale Teilnehmerbegrenzung mit automatisch nachrückender
   Warteliste, QR-Code auf die Eventseite.
 - **Betrieb:** siehe oben – der größte Teil des Plugins.
+- **Mailbox:** Postfach je Mitarbeiter (IONOS-Vorgaben) mit IMAP-Abgleich,
+  Senden im Layout der Shop-Mails, geteilte Postfächer mit Zuweisung und
+  Notizen, Kundenhinweise und Mailverlauf an der Bestellung (siehe „Modul Mailbox“).
 - **Konfigurator:** Basismodul und frei verschiebbare Module in einer
   räumlichen Ansicht (three.js, Blickwinkel auf ±30° begrenzt), Sperrbereiche
   für die Wandbefestigung, Prüfung des Aufbaus auf dem Server, echte

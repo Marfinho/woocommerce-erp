@@ -28,6 +28,7 @@ use Lindenweg16\Modules\Events\EventsModule;
 use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Configurator\ConfiguratorModule;
 use Lindenweg16\Modules\ArView\ArViewModule;
+use Lindenweg16\Modules\Mailbox\MailboxModule;
 
 /**
  * Singleton, das den Lebenszyklus des Plugins verwaltet.
@@ -107,6 +108,7 @@ class Plugin {
 			'betrieb'    => new BetriebModule(),
 			'konfigurator' => new ConfiguratorModule(),
 			'arview'     => new ArViewModule(),
+			'mailbox'    => new MailboxModule(),
 		);
 
 		foreach ( $this->modules as $module ) {

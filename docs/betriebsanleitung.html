@@ -106,6 +106,7 @@
 		<li><a href="#adm-livegang"><span class="nr">D.17</span> Livegang: sauber starten</a></li>
 		<li><a href="#adm-sicherung"><span class="nr">D.18</span> Datensicherung und Notfall</a></li>
 		<li><a href="#adm-fehler"><span class="nr">D.19</span> Wenn etwas nicht geht</a></li>
+		<li><a href="#adm-mailbox"><span class="nr">D.20</span> Mailbox: Postfächer einrichten und nutzen</a></li>
 	</ol>
 </div>
 
@@ -2393,6 +2394,7 @@
 <tr><td>Beschaffungsalarm</td><td>Laufend berechnet</td><td>Vorlaufzeiten je Komponente</td></tr>
 <tr><td>DHL-Sendungsverfolgung</td><td>Alle 3 Stunden, bis zu 50 offene Sendungen je Lauf</td><td>Verwaltung → Einstellungen → Reiter „Plugin“</td></tr>
 <tr><td>Wartung der Warteschlangen (Etikettendrucker, Bambu, Slicing)</td><td>Alle 5 Minuten: liegengebliebene Aufträge freigeben, alte Einträge aufräumen</td><td>—</td></tr>
+<tr><td>Postfächer der Mailbox abrufen</td><td>Alle 5 Minuten; zusätzlich beim Öffnen der Mailbox</td><td>Mailbox → Postfächer (Kapitel D.20)</td></tr>
 </tbody>
 </table>
 </div>
@@ -2485,6 +2487,77 @@
 	<span class="titel">Der Reflex, der am meisten hilft</span>
 	<p>Lies die Meldung zu Ende. Dieses Plugin schreibt keine Fehlercodes, sondern ganze Sätze – und im Satz steht fast immer schon, was zu tun ist.</p>
 </div>
+
+<h2 id="adm-mailbox"><span class="nr">D.20</span> Mailbox: Postfächer einrichten und nutzen</h2>
+
+<p>Mit der <strong>Mailbox</strong> hat jeder Mitarbeiter sein E-Mail-Postfach im Verwaltungsbereich: Mails lesen, beantworten, weiterleiten, mit Anhang senden. Ausgehende Mails sehen aus wie die automatischen Shop-Mails – gleiches Logo, gleiche Farben und Schriften, gleiche Fußzeile – mit der Signatur des Mitarbeiters darunter. Die Postfächer bleiben bei IONOS; das ERP holt die Mails per IMAP ab und sendet über den SMTP-Server von IONOS.</p>
+
+<h3 id="adm-mailbox-einrichten">Ein Postfach einrichten</h3>
+
+<ol class="schritte">
+	<li>Lege bei IONOS (Kundenbereich → E-Mail) für den Mitarbeiter ein Postfach an, falls es noch keins gibt, und notiere das Passwort.</li>
+	<li>Öffne <span class="weg">Mailbox → Postfächer → Postfach hinzufügen</span>.</li>
+	<li>Trage <strong>Bezeichnung</strong>, <strong>E-Mail-Adresse</strong>, <strong>Absendername</strong> und das <strong>Passwort</strong> ein. Server und Ports sind für IONOS vorbelegt: Eingang <code>imap.ionos.de</code>, Port 993, SSL/TLS – Ausgang <code>smtp.ionos.de</code>, Port 587, STARTTLS. Der Benutzername ist bei IONOS die vollständige Adresse (leer lassen genügt).</li>
+	<li>Wähle den <strong>Besitzer</strong> – der Mitarbeiter, dem das Postfach gehört. Er darf es lesen und senden.</li>
+	<li>Klicke <strong>Verbindung testen</strong>. Beide Zeilen (Eingang, Ausgang) müssen ein Häkchen haben.</li>
+	<li><strong>Speichern.</strong> Beim ersten Öffnen der Mailbox lädt das ERP die Mails der letzten 90 Tage nach, die neuesten zuerst.</li>
+</ol>
+
+<p>Die Signatur steht in der Postfach-Einstellung. <code>{name}</code> wird durch den Namen des Mitarbeiters ersetzt, der die Mail schreibt – bei geteilten Postfächern also durch den jeweiligen Absender.</p>
+
+<h3 id="adm-mailbox-geteilt">Geteilte Postfächer und Rechte</h3>
+
+<p>Für <code>info@</code> oder <code>support@</code> wähle den Typ <strong>Geteilt</strong> und hake unter <em>Weitere Mitarbeiter mit Zugriff</em> alle ab, die es nutzen sollen. Ohne <em>darf senden</em> können sie die Mails nur lesen, markieren und notieren – nicht antworten, verschieben oder löschen. Im Lesefenster lässt sich eine Mail einer Person <strong>zuweisen</strong>; der Filter <em>Mir zugewiesen</em> zeigt, was auf dem eigenen Tisch liegt. <strong>Interne Notizen</strong> sind nur im ERP sichtbar und gehen nie an den Absender.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Wer</th><th>Sieht</th><th>Darf</th></tr></thead>
+<tbody>
+<tr><td>Besitzer eines persönlichen Postfachs</td><td>Nur dieses Postfach</td><td>Lesen, schreiben, antworten, verschieben, löschen</td></tr>
+<tr><td>Mitnutzer eines Postfachs</td><td>Nur dieses Postfach</td><td>Mit „darf senden“ wie der Besitzer, sonst nur lesen, markieren, notieren, zuweisen</td></tr>
+<tr><td>Verwalter (<code>manage_lw16</code>)</td><td>Alle Postfächer</td><td>Alles, dazu Postfächer einrichten und löschen</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Das Menü <strong>Mailbox</strong> erscheint automatisch bei jedem, der Besitzer oder Mitnutzer eines Postfachs ist – dafür braucht niemand ein Betriebs-Rechteprofil. Greift ein Verwalter auf das persönliche Postfach eines anderen zu, steht das im Protokoll.</p>
+
+<h3 id="adm-mailbox-nutzen">Mails lesen und schreiben</h3>
+
+<ul>
+	<li><strong>Posteingang und Ordner</strong> links, die Liste in der Mitte, die Mail rechts. <strong>Jetzt abrufen</strong> holt sofort neue Mails; sonst läuft der Abruf alle fünf Minuten im Hintergrund und beim Öffnen der Seite.</li>
+	<li><strong>HTML-Mails</strong> erscheinen in einem abgeschotteten Rahmen. Fremde Bilder werden blockiert, damit Absender (Newsletter, Spam) nicht sehen, dass du die Mail geöffnet hast – <strong>Bilder laden</strong> erlaubt sie für diese Mail.</li>
+	<li><strong>Anhänge</strong> werden immer als Download angeboten, nie im Browser geöffnet.</li>
+	<li><strong>Antworten</strong>, <strong>Allen antworten</strong> und <strong>Weiterleiten</strong> füllen Empfänger, Betreff und Zitat vor. Die Signatur kommt automatisch zwischen deinen Text und das Zitat.</li>
+	<li><strong>Vorschau</strong> zeigt die Mail so, wie der Empfänger sie sieht – im Layout der Shop-Mails. Ein Link allein in einer Zeile wird dabei zum Button.</li>
+	<li><strong>Entwürfe</strong> liegen nur im ERP. Schlägt das Senden fehl (falsche Adresse, Server nicht erreichbar), wird der Text automatisch als Entwurf gespeichert – nichts geht verloren. Anhänge müssen dann erneut angehängt werden.</li>
+	<li>Gesendete Mails landen zusätzlich im <strong>Gesendet-Ordner bei IONOS</strong> und erscheinen so auch im Webmail und am Handy.</li>
+	<li>An jeder <strong>Bestellung</strong> zeigt eine Box <em>Mails</em> den Schriftverkehr mit der Kundenadresse und bietet <strong>Mail schreiben</strong>; unter einer Kundenmail steht <em>Im Shop</em> mit den letzten Bestellungen.</li>
+</ul>
+
+<h3 id="adm-mailbox-sicher">Sicherheit und Datenschutz</h3>
+
+<ul>
+	<li>Die Passwörter liegen <strong>verschlüsselt</strong> in der Datenbank (libsodium); der Schlüssel stammt aus den WordPress-Salts in der <code>wp-config.php</code>. Ändern sich die Salts, meldet die Postfachliste „Passwort nicht lesbar“ – dann das Passwort neu eintragen. Wer das vermeiden will, setzt in der <code>wp-config.php</code> eine feste Konstante <code>define( 'LW16_MAIL_KEY', '…lange Zufallszeichenfolge…' );</code>.</li>
+	<li>Anhänge liegen im geschützten Ordner <code>wp-content/uploads/lw16-mail</code> unter Zufallsnamen. Den Ordner mitsichern (Kapitel D.18); auf nginx-Servern muss der Zugriff von außen in der Serverkonfiguration gesperrt sein, weil die <code>.htaccess</code> dort nicht gilt.</li>
+	<li>E-Mails sind Geschäftsbriefe. Bei einer Auskunftsanfrage (Werkzeuge → Daten exportieren) erscheinen sie im Export; bei einer Löschanfrage werden sie wegen der Aufbewahrungspflicht (§ 257 HGB, § 147 AO) <strong>nicht</strong> gelöscht, und die Meldung sagt das ausdrücklich.</li>
+	<li>Für die Zustellung sollten SPF (und möglichst DKIM) der Domain bei IONOS eingerichtet sein; gesendet wird über den IONOS-Server, nicht über den Webserver des Shops.</li>
+</ul>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beobachtung</th><th>Ursache</th><th>Abhilfe</th></tr></thead>
+<tbody>
+<tr><td>„Anmeldung am Postfach abgelehnt“</td><td>Passwort oder Benutzername falsch</td><td>Postfach öffnen, Passwort neu eintragen, <strong>Verbindung testen</strong></td></tr>
+<tr><td>„Passwort nicht lesbar“</td><td>Die Salts in der <code>wp-config.php</code> haben sich geändert</td><td>Passwort neu eintragen; künftig <code>LW16_MAIL_KEY</code> setzen</td></tr>
+<tr><td>Keine Verbindung zu <code>imap.ionos.de</code></td><td>Der Webserver darf nach außen nicht auf Port 993/587</td><td>Beim Hoster freischalten lassen</td></tr>
+<tr><td>Senden klappt, aber die Mail landet beim Empfänger im Spam</td><td>SPF/DKIM der Domain fehlen oder die Absenderadresse gehört nicht zum Postfach</td><td>DNS bei IONOS prüfen; Absender = Postfachadresse</td></tr>
+<tr><td>Neue Mails erscheinen erst verzögert</td><td>Der Action Scheduler läuft nur mit Besuchern</td><td>„Jetzt abrufen“ benutzen oder einen echten Cron-Job einrichten (Kapitel D.16)</td></tr>
+<tr><td>Eine sehr große Mail zeigt nur „wurde nicht geladen“</td><td>Mails über 12 MB lädt die Mailbox nicht vollständig (Speicher)</td><td>Im IONOS-Webmail öffnen</td></tr>
+</tbody>
+</table>
+</div>
+
 </section>
 
 <p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.15.0 ·

@@ -108,6 +108,10 @@ class Settings {
 			'dhl_print_automatisch'     => 0,
 			'dhl_print_standarddrucker' => 'eg_dhl',
 			'dhl_print_aufbewahrung_tage' => 30,
+			// Mailbox (IMAP/SMTP-Postfächer der Mitarbeiter).
+			'mail_sync_aktiv'           => 1,
+			'mail_lookback_tage'        => 90,
+			'mail_max_anhang_mb'        => 20,
 			// Bambu-Lab-Anbindung (Bridge auf dem Raspberry Pi).
 			'bambu_aufbewahrung_tage'   => 90,
 		);

@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,10 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.2.0 =
+* E-Mails: persönliche Mails aus der Mailbox des ERP-Plugins (ab 0.17.0) im Website-Look – Text, Signatur in einer eigenen Zeile unter einer feinen Linie, darunter das Zitat der Ursprungsmail
+* E-Mails: Zeilen, die mit „>“ beginnen, werden als Zitatblock mit Randlinie dargestellt
 
 = 1.1.1 =
 * E-Mails offensiver im Website-Look: Sticker „Handgemacht in Haste“ über der Überschrift, letztes Wort mit Textmarker, größere Überschrift in Bricolage, Spaltenköpfe in DM Mono, Gesamtsumme markiert, dunkler Footer
