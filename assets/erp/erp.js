@@ -710,6 +710,7 @@
 			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
 			if (f.item.id === 'einkauf') { return viewProcurement(); }
+			if (f.item.id === 'material') { return viewMaterial(f.item); }
 			if (f.item.id === 'sollist') { return viewVariance(); }
 		}
 
@@ -1702,6 +1703,45 @@
 		load();
 	}
 
+	function num(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
+
+	// Bestellformular für eine Position (Einkauf und Material nutzen es gemeinsam).
+	function orderForm(o, reload) {
+		var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(o.qty), 'aria-label': 'Menge in ' + o.unit, style: 'max-width:90px' });
+		var sup = h('input', { class: 'field', type: 'text', value: o.supplier, placeholder: 'Lieferant', 'aria-label': 'Lieferant' });
+		var price = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: o.price ? num(o.price) : '', placeholder: '€ netto je ' + o.unit, 'aria-label': 'Preis netto', style: 'max-width:120px' });
+		var due = h('input', { class: 'field', type: 'date', 'aria-label': 'Erwartet am' });
+
+		return h('form', {
+			class: 'label-area', onsubmit: function (e) {
+				e.preventDefault();
+				var btn = e.target.querySelector('button[type=submit]');
+				btn.disabled = true;
+				api('einkauf/bestellt', { method: 'POST', body: { type: o.type, item_id: o.item_id, item_ref: o.item_ref, qty: qtyIn.value, price: price.value, supplier: sup.value, expected_on: due.value } })
+					.then(function (r) { toast(r.message); reload(); })
+					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+			}
+		}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'));
+	}
+
+	// Wareneingang zu einer offenen Bestellung.
+	function receiveForm(p, reload) {
+		var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
+		var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
+		var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
+
+		return h('form', {
+			class: 'label-area', onsubmit: function (e) {
+				e.preventDefault();
+				var btn = e.target.querySelector('button[type=submit]');
+				btn.disabled = true;
+				api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
+					.then(function (r) { toast(r.message); reload(); })
+					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+			}
+		}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'));
+	}
+
 	function viewProcurement() {
 		pageHead('Einkauf', 'Bestellen, unterwegs, eingegangen – der Eingang bucht den Bestand.', null);
 		el.view.classList.add('broad');
@@ -1712,53 +1752,24 @@
 			return api('einkauf').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		}
 
-		function num(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
-
 		function orderCard(o) {
-			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(o.qty), 'aria-label': 'Menge in ' + o.unit, style: 'max-width:90px' });
-			var sup = h('input', { class: 'field', type: 'text', value: o.supplier, placeholder: 'Lieferant', 'aria-label': 'Lieferant' });
-			var price = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: o.price ? num(o.price) : '', placeholder: '€ netto je ' + o.unit, 'aria-label': 'Preis netto', style: 'max-width:120px' });
-			var due = h('input', { class: 'field', type: 'date', 'aria-label': 'Erwartet am' });
-
 			return h('div', { class: 'row-card ship' },
 				h('div', { class: 'row-main' },
 					h('b', null, o.label),
 					h('small', null, o.kind + ' · Bestand ' + num(o.stock) + ' ' + o.unit + (o.coverage === null ? '' : ' · reicht noch ' + Math.floor(o.coverage) + ' Tage (Grenze ' + o.threshold + ')'))
 				),
-				h('form', {
-					class: 'label-area', onsubmit: function (e) {
-						e.preventDefault();
-						var btn = e.target.querySelector('button[type=submit]');
-						btn.disabled = true;
-						api('einkauf/bestellt', { method: 'POST', body: { type: o.type, item_id: o.item_id, item_ref: o.item_ref, qty: qtyIn.value, price: price.value, supplier: sup.value, expected_on: due.value } })
-							.then(function (r) { toast(r.message); load(); })
-							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
-					}
-				}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'))
+				orderForm(o, load)
 			);
 		}
 
 		function openCard(p) {
-			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
-			var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
-			var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
-
 			return h('div', { class: 'row-card ship' },
 				h('div', { class: 'row-main' },
 					h('b', null, p.label),
 					h('small', null, num(p.qty) + ' ' + p.unit + (p.supplier ? ' · ' + p.supplier : '') + ' · bestellt ' + p.ordered_on),
 					p.expected_on ? h('small', { class: p.late ? 'tag later' : 'muted' }, p.late ? p.late + ' Tage überfällig (erwartet ' + p.expected_on + ')' : 'erwartet ' + p.expected_on) : null
 				),
-				h('form', {
-					class: 'label-area', onsubmit: function (e) {
-						e.preventDefault();
-						var btn = e.target.querySelector('button[type=submit]');
-						btn.disabled = true;
-						api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
-							.then(function (r) { toast(r.message); load(); })
-							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
-					}
-				}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'))
+				receiveForm(p, load)
 			);
 		}
 
@@ -1781,6 +1792,62 @@
 				board.appendChild(col);
 			});
 			box.appendChild(board);
+		}
+
+		load();
+	}
+
+	var LEVEL_TEXT = { ok: 'reicht', bald: 'bald nachbestellen', knapp: 'jetzt nachbestellen', leer: 'leer' };
+
+	// Material: eine Karte je Filamentfarbe, mit Rollen, Bestellungen und Bestellformular.
+	function viewMaterial(item) {
+		pageHead('Material', 'Filament nach Farbe: was da ist, wie lange es reicht, was unterwegs ist.', classicBtn(item));
+		el.view.classList.add('broad');
+		var box = h('div', { class: 'mat-grid' });
+		el.view.appendChild(box);
+
+		function load() {
+			return api('material').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			if (!d.colors.length) { box.appendChild(h('div', { class: 'notice' }, 'Noch kein Filament im Lager. Der erste Wareneingang legt die Farbe an.')); return; }
+
+			d.colors.forEach(function (c) {
+				var pct = c.coverage === null ? 100 : Math.max(4, Math.min(100, Math.round(c.coverage / (c.threshold * 2) * 100)));
+				var card = h('article', { class: 'card mat lv-' + c.level },
+					h('header', null, h('h3', null, c.label), h('span', { class: 'lvl' }, LEVEL_TEXT[c.level])),
+					h('div', { class: 'mat-kg' }, h('b', null, num(c.stock)), ' kg'),
+					h('div', { class: 'bar', 'aria-hidden': 'true' }, h('i', { style: 'width:' + pct + '%' })),
+					h('div', { class: 'muted', style: 'font-size:13px' }, c.coverage === null ? 'Kein Verbrauch in den letzten 4 Wochen.' : 'reicht noch ' + Math.floor(c.coverage) + ' Tage · Grenze ' + c.threshold + ' · ' + num(c.daily * 1000) + ' g pro Tag')
+				);
+
+				if (c.lots.length) {
+					card.appendChild(h('ul', { class: 'lots' }, c.lots.map(function (l) {
+						return h('li', null,
+							h('b', null, l.code), h('span', null, l.material + ' · ' + num(l.remaining) + ' kg'),
+							l.dry === false ? h('span', { class: 'tag later' }, 'trocknen') : null,
+							l.location ? h('small', { class: 'muted' }, l.location) : null);
+					})));
+				}
+
+				c.open.forEach(function (p) {
+					card.appendChild(h('div', { class: 'incoming' },
+						h('b', null, 'Unterwegs: ' + num(p.qty) + ' kg'),
+						h('small', { class: p.late ? 'tag later' : 'muted' }, (p.supplier ? p.supplier + ' · ' : '') + (p.expected_on ? (p.late ? p.late + ' Tage überfällig' : 'erwartet ' + p.expected_on) : 'bestellt ' + p.ordered_on)),
+						d.receive ? receiveForm(p, load) : null));
+				});
+
+				if (d.order && !c.open.length) {
+					var form = h('div', { hidden: true }, orderForm({ type: 'filament', item_id: 0, item_ref: c.color, unit: 'kg', qty: c.qty, supplier: c.supplier, price: c.price }, load));
+					var open = h('button', { class: 'btn' + (c.level === 'knapp' || c.level === 'leer' ? ' primary' : ''), type: 'button', onclick: function (e) { form.hidden = !form.hidden; e.target.blur(); } }, 'Nachbestellen');
+					card.appendChild(open);
+					card.appendChild(form);
+				}
+
+				box.appendChild(card);
+			});
 		}
 
 		load();

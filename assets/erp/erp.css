@@ -653,3 +653,22 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 .more-link { display: inline-flex; align-items: center; gap: 2px; font-weight: 700; font-size: 13px; text-decoration: none; margin-left: auto; }
 .more-link .ico { width: 14px; height: 14px; }
 .more-link:hover { text-decoration: underline; }
+
+/* ---------- Material ---------- */
+
+.mat-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+.mat { display: grid; gap: 8px; border-top: 5px solid var(--success); }
+.mat.lv-bald { border-top-color: var(--accent); }
+.mat.lv-knapp, .mat.lv-leer { border-top-color: var(--warning); }
+.mat header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mat h3 { margin: 0; font-size: 18px; }
+.lvl { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--success) 16%, var(--surface)); color: var(--success); }
+.lv-bald .lvl { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--accent); }
+.lv-knapp .lvl, .lv-leer .lvl { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.mat-kg { font: 700 34px/1.1 var(--font-head); font-variant-numeric: tabular-nums; }
+.mat-kg b { font-weight: 700; }
+.lots { list-style: none; margin: 4px 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.lots li { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.incoming { display: grid; gap: 6px; padding: 10px; border-radius: 12px; background: var(--surface-muted); }
+.mat.lv-bald .bar i { background: var(--accent); }
+.mat.lv-knapp .bar i, .mat.lv-leer .bar i { background: var(--warning); }

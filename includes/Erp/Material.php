@@ -23,6 +23,7 @@ use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\ProcurementAlert;
+use Lindenweg16\Modules\Betrieb\PurchaseRepository;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 
 /**
@@ -354,5 +355,126 @@ class Material {
 		}
 
 		return $alerts;
+	}
+
+	/**
+	 * Ampel für eine Farbe – reine Regel.
+	 *
+	 * @param float|null $coverage  Reichweite in Tagen (null: kein Verbrauch).
+	 * @param int        $threshold Meldegrenze in Tagen.
+	 * @param float      $stock     Bestand in kg.
+	 * @return string leer, bald, knapp oder leer_lager
+	 */
+	public static function level( $coverage, $threshold, $stock ) {
+		if ( $stock <= 0 ) {
+			return 'leer';
+		}
+
+		if ( null === $coverage ) {
+			return 'ok';
+		}
+
+		if ( $coverage <= $threshold ) {
+			return 'knapp';
+		}
+
+		return $coverage <= $threshold * 2 ? 'bald' : 'ok';
+	}
+
+	/**
+	 * Alle Farben als Karten: Bestand, Reichweite, Rollen, Bestellungen.
+	 *
+	 * @return array
+	 */
+	public static function overview() {
+		$settings  = Workflow::settings();
+		$threshold = (int) $settings['filament_lead_days'] + (int) $settings['filament_safety_days'];
+		$used      = self::consumption_by_color();
+		$colors    = array_unique( array_merge( array_keys( $used ), array_column( self::lots(), 'color' ) ) );
+		$board     = Procurement::board();
+		$open      = array();
+
+		foreach ( $board['open'] as $purchase ) {
+			if ( 'filament' === $purchase['type'] ) {
+				$open[] = $purchase;
+			}
+		}
+
+		$raw = array();
+		foreach ( FilamentRepository::all() as $lot ) {
+			$raw[ (int) $lot['id'] ] = $lot;
+		}
+
+		$cards = array();
+
+		foreach ( $colors as $color ) {
+			$stock    = self::available_kg( $color );
+			$kg       = isset( $used[ $color ] ) ? $used[ $color ] : 0.0;
+			$coverage = ProcurementAlert::coverage_days( $stock, $kg );
+			$lots     = array();
+
+			foreach ( self::lots_for( $color ) as $lot ) {
+				if ( $lot['remaining_kg'] <= 0 ) {
+					continue;
+				}
+
+				$source = isset( $raw[ $lot['id'] ] ) ? $raw[ $lot['id'] ] : array();
+				$lots[] = array(
+					'id'        => $lot['id'],
+					'code'      => $lot['code'],
+					'material'  => $lot['material'],
+					'remaining' => $lot['remaining_kg'],
+					'received'  => $lot['received_on'],
+					'dry'       => $source ? ! FilamentRepository::needs_drying( $source ) : null,
+					'location'  => $source && ! empty( $source['location'] ) ? (string) $source['location'] : '',
+				);
+			}
+
+			$mine   = array_values(
+				array_filter(
+					$open,
+					function ( $p ) use ( $color ) {
+						return isset( $p['item_ref'] ) ? $p['item_ref'] === $color : false;
+					}
+				)
+			);
+			$suggest = null;
+			$last    = PurchaseRepository::last_for( 'filament', 0, $color );
+
+			foreach ( $board['order'] as $row ) {
+				if ( 'filament' === $row['type'] && $row['item_ref'] === $color ) {
+					$suggest = $row;
+				}
+			}
+
+			$cards[] = array(
+				'color'     => $color,
+				'label'     => ColorRegistry::label( $color ),
+				'stock'     => $stock,
+				'daily'     => round( $kg / ProcurementAlert::PERIOD_DAYS, 3 ),
+				'coverage'  => null === $coverage ? null : round( $coverage, 1 ),
+				'threshold' => $threshold,
+				'level'     => self::level( $coverage, $threshold, $stock ),
+				'lots'      => $lots,
+				'open'      => $mine,
+				'suggest'   => $suggest,
+				'qty'       => $suggest ? (float) $suggest['qty'] : (float) self::order_kg( $kg / ProcurementAlert::PERIOD_DAYS, $threshold ),
+				'supplier'  => $last ? (string) $last['supplier'] : '',
+				'price'     => $last ? (float) $last['unit_price_net'] : 0.0,
+			);
+		}
+
+		// Das Knappste zuerst.
+		usort(
+			$cards,
+			function ( $a, $b ) {
+				$ca = null === $a['coverage'] ? PHP_INT_MAX : $a['coverage'];
+				$cb = null === $b['coverage'] ? PHP_INT_MAX : $b['coverage'];
+
+				return $ca <=> $cb;
+			}
+		);
+
+		return $cards;
 	}
 }

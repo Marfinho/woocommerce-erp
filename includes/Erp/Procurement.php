@@ -106,6 +106,7 @@ class Procurement {
 		return array(
 			'id'          => (int) $p['id'],
 			'type'        => $p['item_type'],
+			'item_ref'    => isset( $p['item_ref'] ) ? (string) $p['item_ref'] : '',
 			'label'       => self::label_of( $p ),
 			'qty'         => (float) $p['qty'],
 			'unit'        => self::unit( $p['item_type'] ),

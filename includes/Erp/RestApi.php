@@ -159,6 +159,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/material',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'material' ),
+				'permission_callback' => $this->needs( array( 'lager.material' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/einkauf',
 			array(
 				'methods'             => 'GET',
@@ -438,6 +448,21 @@ class RestApi {
 		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
+	}
+
+	/**
+	 * Material: eine Karte je Filamentfarbe.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function material() {
+		return new WP_REST_Response(
+			array(
+				'colors'  => Material::overview(),
+				'order'   => Access::can( 'lager.einkauf' ),
+				'receive' => Access::can( 'lager.einkauf' ) && Access::can( 'lager.buchen' ),
+			)
+		);
 	}
 
 	/**
