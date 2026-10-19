@@ -532,7 +532,37 @@
 		}
 
 		function openItems(d) {
-			return h('div', { class: 'card vk-gap' }, h('h3', null, 'Offene Posten'), h('div', { class: 'rows' }, d.open.map(orderRow)));
+			var card = h('div', { class: 'card vk-gap' }, h('h3', null, 'Offene Posten'), h('div', { class: 'rows' }, d.open.map(orderRow)));
+			if (d.open.some(function (o) { return o.overdue; })) {
+				card.appendChild(h('button', { class: 'btn primary', type: 'button', style: 'margin-top:10px', onclick: reminderDialog }, 'Zahlungserinnerung schreiben'));
+			}
+			return card;
+		}
+
+		// Erinnerung: Text vorbereitet, vor dem Senden änderbar; danach als Aktivität mit Wiedervorlage festgehalten.
+		function reminderDialog() {
+			var body = h('div', { class: 'vk-dlg' }, loading(ui));
+			var dlg = ui.dlg('Zahlungserinnerung', body, true);
+			ui.api('kontakte/' + id + '/erinnerung').then(function (m) {
+				body.textContent = '';
+				var form = h('form', { class: 'vk-form' },
+					h('p', { class: 'muted' }, m.count + (m.count === 1 ? ' Rechnung' : ' Rechnungen') + ' überfällig, zusammen ' + ui.money(m.total, 'EUR') + '. Lies den Text durch, bevor er rausgeht.'),
+					labelled(ui, 'An', textIn(ui, 'to', m.to, { type: 'email', required: true })),
+					labelled(ui, 'Betreff', textIn(ui, 'subject', m.subject, { required: true })),
+					labelled(ui, 'Text', h('textarea', { class: 'field', name: 'body', rows: '14' }, m.body)));
+				var err = h('div', { class: 'notice warn', hidden: true, role: 'alert' });
+				var btn = h('button', { class: 'btn primary', type: 'submit' }, 'Jetzt senden');
+				form.appendChild(err);
+				form.appendChild(h('div', { class: 'vk-actions' }, btn));
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					btn.disabled = true;
+					err.hidden = true;
+					post('/erinnerung', collect(form)).then(function (r) { dlg.close(); ui.toast(r.message); load(); })
+						.catch(function (er) { btn.disabled = false; err.textContent = er.message; err.hidden = false; });
+				});
+				body.appendChild(form);
+			}).catch(function (e) { errBox(ui, body, e); });
 		}
 
 		function commission(d, classic) {

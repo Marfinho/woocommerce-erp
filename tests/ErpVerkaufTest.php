@@ -272,4 +272,40 @@ class ErpVerkaufTest extends TestCase {
 		$this->assertSame( 7.0, $rows[1]['dealer_net'] );
 		$this->assertSame( 23.8, $rows[0]['uvp'] );
 	}
+
+	public function test_erinnerungstext() {
+		$text = Verkauf::reminder_text(
+			'Café Linde',
+			'Frau Berger',
+			'Lindenweg16',
+			array(
+				array( 'number' => '#1042', 'date' => '2026-09-01', 'value' => 120.5, 'due' => '2026-09-15' ),
+				array( 'number' => 'A-7', 'date' => '2026-09-10', 'value' => 79.5, 'due' => '2026-10-10' ),
+			),
+			'2026-10-19'
+		);
+
+		$this->assertSame( 'Zahlungserinnerung – Café Linde', $text['subject'] );
+		$this->assertSame( 200.0, $text['total'] );
+		$this->assertStringContainsString( 'Guten Tag Frau Berger,', $text['body'] );
+		$this->assertStringContainsString( 'Bestellung #1042 vom 01.09.2026 über 120,50 €, fällig am 15.09.2026 (34 Tage überfällig)', $text['body'] );
+		$this->assertStringContainsString( 'insgesamt 200,00 €', $text['body'] );
+		$this->assertStringEndsWith( 'Lindenweg16', $text['body'] );
+	}
+
+	public function test_tage_und_datum() {
+		$this->assertSame( 9, Verkauf::days_between( '2026-10-10', '2026-10-19' ) );
+		$this->assertSame( 0, Verkauf::days_between( '2026-10-25', '2026-10-19' ) );
+		$this->assertSame( 0, Verkauf::days_between( 'x', '2026-10-19' ) );
+		$this->assertSame( '15.09.2026', Verkauf::german_date( '2026-09-15 08:00:00' ) );
+		$this->assertSame( '', Verkauf::german_date( '' ) );
+	}
+
+	public function test_erinnerung_legt_wiedervorlage_an() {
+		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Verkauf.php' );
+
+		$this->assertStringContainsString( "'follow_up_on'  => gmdate( 'Y-m-d', time() + 7 * DAY_IN_SECONDS )", $src );
+		// Erst senden, dann festhalten – nie eine Aktivität für eine Mail, die nicht rausging.
+		$this->assertLessThan( strpos( $src, "'activity_type' => 'mail'" ), strpos( $src, 'wp_mail( $to' ) );
+	}
 }

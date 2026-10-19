@@ -259,6 +259,81 @@ class Verkauf {
 	}
 
 	/**
+	 * Text einer Zahlungserinnerung – reine Regel.
+	 *
+	 * Freundlich und sachlich: Zwischen Geschäftspartnern ist die erste
+	 * Erinnerung eine Nachfrage, keine Mahnung. Der Mensch sieht und ändert den
+	 * Text, bevor er rausgeht.
+	 *
+	 * @param string $company Firma.
+	 * @param string $person  Ansprechpartner (leer erlaubt).
+	 * @param string $shop    Absender (Name des Shops).
+	 * @param array  $items   Posten mit number, date (JJJJ-MM-TT), value, due (JJJJ-MM-TT).
+	 * @param string $today   Heute (JJJJ-MM-TT).
+	 * @return array {subject, body, total}
+	 */
+	public static function reminder_text( $company, $person, $shop, array $items, $today ) {
+		$lines = array();
+		$total = 0.0;
+
+		foreach ( $items as $item ) {
+			$total  += (float) $item['value'];
+			$days    = self::days_between( $item['due'], $today );
+			$lines[] = sprintf(
+				/* translators: 1: Bestellnummer, 2: Datum, 3: Betrag, 4: Fälligkeit, 5: Tage. */
+				__( '- Bestellung %1$s vom %2$s über %3$s, fällig am %4$s (%5$d Tage überfällig)', 'lindenweg16' ),
+				$item['number'],
+				self::german_date( $item['date'] ),
+				number_format( (float) $item['value'], 2, ',', '.' ) . ' €',
+				self::german_date( $item['due'] ),
+				$days
+			);
+		}
+
+		$greeting = '' !== trim( (string) $person )
+			? sprintf( /* translators: %s: Name. */ __( 'Guten Tag %s,', 'lindenweg16' ), trim( (string) $person ) )
+			: __( 'Guten Tag,', 'lindenweg16' );
+
+		$body = $greeting . "\n\n"
+			. __( 'bei der Durchsicht unserer Konten ist uns aufgefallen, dass die folgenden Rechnungen noch offen sind:', 'lindenweg16' ) . "\n\n"
+			. implode( "\n", $lines ) . "\n\n"
+			. sprintf( /* translators: %s: Betrag. */ __( 'Offen sind damit insgesamt %s.', 'lindenweg16' ), number_format( $total, 2, ',', '.' ) . ' €' ) . "\n\n"
+			. __( 'Falls sich unsere Mail mit Ihrer Zahlung überschnitten hat, betrachten Sie sie bitte als gegenstandslos. Andernfalls freuen wir uns über eine Überweisung in den nächsten Tagen. Bei Rückfragen melden Sie sich gern.', 'lindenweg16' ) . "\n\n"
+			. __( 'Freundliche Grüße', 'lindenweg16' ) . "\n" . $shop;
+
+		return array(
+			'subject' => sprintf( /* translators: %s: Firma. */ __( 'Zahlungserinnerung – %s', 'lindenweg16' ), $company ),
+			'body'    => $body,
+			'total'   => round( $total, 2 ),
+		);
+	}
+
+	/**
+	 * Ganze Tage von einem Datum bis heute – reine Regel.
+	 *
+	 * @param string $from  JJJJ-MM-TT.
+	 * @param string $today JJJJ-MM-TT.
+	 * @return int 0, wenn nicht vergangen oder kein Datum.
+	 */
+	public static function days_between( $from, $today ) {
+		if ( ! self::is_date( $from ) || ! self::is_date( $today ) ) {
+			return 0;
+		}
+
+		return max( 0, (int) floor( ( strtotime( $today . ' 12:00:00 UTC' ) - strtotime( $from . ' 12:00:00 UTC' ) ) / 86400 ) );
+	}
+
+	/**
+	 * Datum für deutsche Texte – reine Regel.
+	 *
+	 * @param string $ymd JJJJ-MM-TT.
+	 * @return string TT.MM.JJJJ oder leer.
+	 */
+	public static function german_date( $ymd ) {
+		return self::is_date( substr( (string) $ymd, 0, 10 ) ) ? implode( '.', array_reverse( explode( '-', substr( (string) $ymd, 0, 10 ) ) ) ) : '';
+	}
+
+	/**
 	 * Zahl aus einer Eingabe lesen, auch mit deutschem Komma.
 	 *
 	 * @param mixed $raw Eingabe.
@@ -772,6 +847,10 @@ class Verkauf {
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'contact_term' ),
 			'permission_callback' => $kontakte,
+		) );
+		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/erinnerung', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'reminder_draft' ), 'permission_callback' => $kontakte ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'reminder_send' ), 'permission_callback' => $kontakte ),
 		) );
 		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/preisliste', array(
 			'methods'             => 'GET',
@@ -1303,6 +1382,130 @@ class Verkauf {
 				'rows'    => self::price_list_rows( ArticleRepository::all(), $vat ),
 			)
 		);
+	}
+
+	/**
+	 * Überfällige offene Rechnungen eines Kontakts.
+	 *
+	 * @param int $id Kontakt.
+	 * @return array Posten mit number, date, value, due.
+	 */
+	protected static function overdue_items( $id ) {
+		$today = gmdate( 'Y-m-d' );
+		$items = array();
+
+		foreach ( self::order_rows( array( 'contact_id' => (int) $id, 'limit' => 1000 ) ) as $row ) {
+			$o   = $row['raw'];
+			$due = self::due_date( (string) $o['invoice_date'], (int) $o['payment_terms_days'] );
+
+			if ( ! self::is_open_invoice( $row['status'], $row['invoice'] ) || '' === $due || $due >= $today ) {
+				continue;
+			}
+
+			$items[] = array(
+				'number' => (int) $o['wc_order_id'] ? '#' . (int) $o['wc_order_id'] : 'A-' . (int) $o['id'],
+				'date'   => substr( (string) OrderOpsRepository::order_date( $o ), 0, 10 ),
+				'value'  => round( $row['value'], 2 ),
+				'due'    => $due,
+			);
+		}
+
+		return $items;
+	}
+
+	/**
+	 * Entwurf der Zahlungserinnerung.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function reminder_draft( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$contact = ContactRepository::find( $id );
+
+		if ( ! $contact ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$items = self::overdue_items( $id );
+
+		if ( ! $items ) {
+			return self::fail( __( 'Bei diesem Kontakt ist nichts überfällig.', 'lindenweg16' ), 409 );
+		}
+
+		$profile = ContactRepository::profile( $id );
+		$to      = $profile && is_email( (string) $profile['billing_email'] ) ? (string) $profile['billing_email'] : (string) $contact['email'];
+		$text    = self::reminder_text( (string) $contact['company'], (string) $contact['contact_person'], get_bloginfo( 'name' ), $items, gmdate( 'Y-m-d' ) );
+
+		return new WP_REST_Response(
+			array(
+				'to'      => $to,
+				'subject' => $text['subject'],
+				'body'    => $text['body'],
+				'count'   => count( $items ),
+				'total'   => $text['total'],
+			)
+		);
+	}
+
+	/**
+	 * Zahlungserinnerung senden und als Aktivität festhalten.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function reminder_send( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$contact = ContactRepository::find( $id );
+
+		if ( ! $contact ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$in      = self::input( $request );
+		$to      = isset( $in['to'] ) ? trim( (string) $in['to'] ) : '';
+		$subject = isset( $in['subject'] ) ? sanitize_text_field( (string) $in['subject'] ) : '';
+		$body    = isset( $in['body'] ) ? sanitize_textarea_field( (string) $in['body'] ) : '';
+
+		if ( ! is_email( $to ) ) {
+			return self::fail( __( 'Die E-Mail-Adresse stimmt nicht. Bitte prüfe sie oder trag sie in der Akte nach.', 'lindenweg16' ) );
+		}
+
+		if ( '' === $subject || '' === trim( $body ) ) {
+			return self::fail( __( 'Betreff und Text dürfen nicht leer sein.', 'lindenweg16' ) );
+		}
+
+		$items = self::overdue_items( $id );
+
+		if ( ! $items ) {
+			return self::fail( __( 'Bei diesem Kontakt ist inzwischen nichts mehr überfällig. Bitte die Akte neu laden.', 'lindenweg16' ), 409 );
+		}
+
+		$lock = 'lw16_erp_mahn_' . $id;
+
+		if ( get_transient( $lock ) ) {
+			return self::fail( __( 'Die Erinnerung ist gerade eben schon rausgegangen. Bitte kurz warten, bevor du sie noch einmal schickst.', 'lindenweg16' ), 409 );
+		}
+
+		if ( ! wp_mail( $to, $subject, $body ) ) {
+			return self::fail( __( 'Die Mail konnte nicht verschickt werden. Bitte die Mail-Einstellungen der Website prüfen.', 'lindenweg16' ), 502 );
+		}
+
+		set_transient( $lock, 1, 60 );
+
+		$total = array_sum( array_column( $items, 'value' ) );
+		ContactRepository::add_activity(
+			array(
+				'contact_id'    => $id,
+				'activity_type' => 'mail',
+				'summary'       => sprintf( /* translators: 1: Anzahl, 2: Betrag, 3: Adresse. */ __( 'Zahlungserinnerung für %1$d offene Rechnungen (%2$s) per Mail an %3$s geschickt.', 'lindenweg16' ), count( $items ), number_format( $total, 2, ',', '.' ) . ' €', $to ),
+				'next_step'     => __( 'Zahlungseingang prüfen', 'lindenweg16' ),
+				'follow_up_on'  => gmdate( 'Y-m-d', time() + 7 * DAY_IN_SECONDS ),
+			)
+		);
+		AuditLog::record( 'erp_zahlungserinnerung', 'contact', $id, array( 'posten' => count( $items ), 'summe' => round( $total, 2 ) ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Erinnerung verschickt. In einer Woche ist Wiedervorlage.', 'lindenweg16' ) ), 201 );
 	}
 
 	/**
