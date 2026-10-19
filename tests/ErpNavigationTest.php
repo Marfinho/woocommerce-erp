@@ -115,9 +115,17 @@ class ErpNavigationTest extends TestCase {
 	public function test_every_native_item_has_a_screen_in_the_app() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/erp.js' );
 
+		// Seiten in eigenen Dateien melden sich mit pages['<id>'] an.
+		foreach ( (array) glob( dirname( __DIR__ ) . '/assets/erp/pages/*.js' ) as $file ) {
+			$js .= "\n" . file_get_contents( $file );
+		}
+
 		foreach ( Navigation::items() as $id => $item ) {
 			if ( 'native' === $item['kind'] ) {
-				$this->assertStringContainsString( "f.item.id === '$id'", $js, "$id hat keine native Seite in erp.js" );
+				$this->assertTrue(
+					false !== strpos( $js, "f.item.id === '$id'" ) || false !== strpos( $js, "pages['$id']" ),
+					"$id hat keine native Seite"
+				);
 			}
 		}
 	}

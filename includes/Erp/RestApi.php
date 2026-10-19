@@ -340,6 +340,17 @@ class RestApi {
 				),
 			)
 		);
+
+		// Seiten, die in eigenen Dateien leben: includes/Erp/Pages/<Name>.php
+		// mit einer statischen register( RestApi $api ). Jede Seite bringt ihre
+		// Routen selbst mit.
+		foreach ( (array) glob( __DIR__ . '/Pages/*.php' ) as $file ) {
+			$class = __NAMESPACE__ . '\\Pages\\' . basename( $file, '.php' );
+
+			if ( class_exists( $class ) && method_exists( $class, 'register' ) ) {
+				$class::register( $this );
+			}
+		}
 	}
 
 	/**
@@ -348,7 +359,7 @@ class RestApi {
 	 * @param string[] $perms Rechte.
 	 * @return callable
 	 */
-	protected function needs( array $perms ) {
+	public function needs( array $perms ) {
 		return function () use ( $perms ) {
 			foreach ( $perms as $perm ) {
 				if ( ! Access::can( $perm ) ) {

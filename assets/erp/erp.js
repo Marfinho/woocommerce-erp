@@ -28,6 +28,16 @@
 	};
 
 	var el = {}; // Gerüst-Elemente
+
+	/*
+	 * Eigene Dateien für Seiten (assets/erp/pages/*.js): Sie melden sich mit
+	 * LW16ERP_UI.pages[<Seitenkennung>] = function (item, ui) { … } für eine
+	 * Seite der Navigation bzw. mit LW16ERP_UI.routes[<Name>] für eine eigene
+	 * Adresse #/<Name>/<id>/<unter>. Die Hilfen (h, api, …) hängen unten an.
+	 */
+	var UI = window.LW16ERP_UI = window.LW16ERP_UI || {};
+	UI.pages = UI.pages || {};
+	UI.routes = UI.routes || {};
 	var timers = [];
 	var camera = null;
 
@@ -558,6 +568,7 @@
 			return viewArea(areaOf(r.id));
 		}
 		if (r.name === 'seite') { return viewPage(r.id); }
+		if (UI.routes[r.name]) { return UI.routes[r.name](r, UI); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
 		if (r.name === 'drucker') { return viewPrinterFile(r.id); }
 		if (r.name === 'produkt') { return viewProduct(parseInt(r.id, 10) || 0, r.sub); }
@@ -705,6 +716,7 @@
 		renderSub(f);
 
 		if (f.item.kind === 'native') {
+			if (UI.pages[f.item.id]) { return UI.pages[f.item.id](f.item, UI); }
 			if (f.item.id === 'rechte') { return viewRights(); }
 			if (f.item.id === 'scannen') { return viewScan(); }
 			if (f.item.id === 'picken') { return viewPick(); }
@@ -2718,6 +2730,21 @@
 		var m = rest.match(/^p\/(\d+)\/?$/);
 		if (m) { history.replaceState(null, '', base + '#/platte/' + m[1]); }
 	})();
+
+	Object.assign(UI, {
+		h: h, api: api, toast: toast, ico: ico, money: money, when: when, ago: ago, qty: qty, num: num, minTxt: minTxt,
+		dlg: dlg, pageHead: pageHead, classicBtn: classicBtn, setHead: setHead, can: can, findItem: findItem,
+		store: store, config: C,
+		view: function () { return el.view; },
+		app: function () { return el.app; },
+		boot: function () { return S.boot; },
+		// Reiter des Bereichs zu einer Seite zeigen (für Seiten mit eigener Adresse).
+		section: function (itemId) { var f = findItem(itemId); if (f) { renderSub(f); } },
+		// Wiederkehrende Aktualisierung, die beim Seitenwechsel endet.
+		every: function (fn, ms) { timers.push(setInterval(function () { if (!document.hidden) { fn(); } }, ms)); },
+		// Zum Seitenkopf der Akte: Seitentitel setzen und Reiter halten.
+		reload: function () { render(); }
+	});
 
 	// Ungelesene Mails als Zähler an der Mailbox, auf jeder Seite.
 	function mailBadge() {
