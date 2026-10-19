@@ -7,6 +7,30 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.17.0] – 2026-10-19
+
+### Neu: ERP-Oberfläche unter /erp (Prototyp, zweiter Zugang neben wp-admin)
+
+- **Eigene Oberfläche** unter `lindenweg16.de/erp`: Anmeldung mit dem normalen WordPress-Konto,
+  Look des Shops, Handy, Tablet und Desktop (Seitenleiste bzw. Tabs unten, Hell/Dunkel,
+  Suche mit Strg/⌘ K). Kleine Browser-Anwendung ohne Build-Schritt (`assets/erp/`).
+- **Menü aus den Rechten:** Jede Person sieht nur die Seiten, die sie darf. Start zeigt
+  Shop-Kennzahlen (WooCommerce), soweit erlaubt.
+- **Alle bestehenden Seiten eingebettet** (Verkauf, Fertigung, Lager, Finanzen, Verwaltung,
+  dazu Shop-Bestellungen und -Produkte); das wp-admin-Gerüst wird im Rahmen ausgeblendet.
+- **Rechte pro Person, fein einstellbar** (Benutzer & Rechte): ~45 Einzelrechte in fünf
+  Bereichen, Vorlagen (Werkstatt, Packtisch, Fertigung, Betriebsleitung), Voraussetzungen
+  schalten automatisch mit, Vorschau „So sieht die Person das ERP“. Gespeichert am Nutzer
+  (`lw16_erp_perms`); die sechs alten Betrieb-Rechte werden nachgeführt, bestehende Nutzer
+  behalten ihre bisherigen Möglichkeiten.
+- **Schutz:** keine Rechteausweitung (nur eigene Rechte vergebbar), keine Selbstaussperrung,
+  Vollzugriff nicht beschneidbar, Änderungen im Protokoll. Plugin-Seiten prüfen das feine
+  Recht auch beim direkten Aufruf im wp-admin.
+- **Grenzen des Prototyps:** Rechte mit Kennzeichnung „Folgt“ werden gespeichert, aber erst
+  von nativen Seiten durchgesetzt; Module hinter „Nur Vollzugriff“ prüfen noch `manage_lw16`.
+- Neu: `includes/Erp/` (Permissions, Navigation, Access, Shell, RestApi), Tests
+  `ErpPermissionsTest`, `ErpNavigationTest`. Route `lw16/v1/erp/*`.
+
 ## [0.16.0] – 2026-10-19
 
 ### Neu: Updates per Knopfdruck aus GitHub
