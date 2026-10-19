@@ -1,0 +1,42 @@
+/* Produktakte: native Reiter (assets/erp/pages/produkt.js). Nur Klassen mit Präfix pf-. */
+.pf { display: grid; gap: 12px; }
+.pf-h { font-size: 18px; margin: 6px 0; }
+.pf-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pf-head h3 { margin: 0; }
+.pf-list { display: grid; gap: 12px; }
+.pf-form { display: grid; gap: 12px; }
+.pf-grid, .pf-grid3 { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 640px) { .pf-grid { grid-template-columns: 1fr 1fr; } .pf-grid3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.pf-field { display: grid; gap: 4px; align-content: start; min-width: 0; }
+.pf-lab { font-size: 13px; font-weight: 600; }
+.pf-hint { font-size: 12px; color: var(--text-muted); font-weight: 400; display: block; }
+.pf-area { min-height: 76px; padding: 10px 12px; resize: vertical; }
+.pf-checks { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.pf-check { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; font-size: 14px; }
+.pf-check input { width: 22px; height: 22px; margin-top: 2px; flex: none; }
+.pf-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.pf-actions .btn { min-height: 44px; }
+.pf-danger { color: var(--error); border-color: var(--error); }
+.pf-msg { padding: 10px 12px; border-radius: 12px; font-size: 14px; border: 1px solid var(--line); }
+.pf-msg.ok { border-color: var(--success); color: var(--success); }
+.pf-msg.err { border-color: var(--error); color: var(--error); background: color-mix(in srgb, var(--error) 8%, var(--surface)); }
+.pf-warn { color: var(--warning); font-size: 14px; font-weight: 600; margin: 6px 0; }
+.pf-model { margin: 12px 0 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pf-rev.on { border-color: var(--success); }
+.pf-file { max-width: 100%; }
+.pf-file-hidden { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+label.btn { position: relative; cursor: pointer; }
+label.btn.busy { opacity: .5; pointer-events: none; }
+.pf-filebox { padding: 12px; border: 1px dashed var(--line); border-radius: 12px; }
+.pf-more summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.pf-per { margin: 0; }
+.pf-bom-main { display: flex; gap: 12px; align-items: flex-start; }
+.pf-pos { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-muted); display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; }
+.pf-inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 10px 0; }
+.pf-inline .btn { min-height: 42px; }
+.pf-scroll { overflow-x: auto; }
+.pf-levels { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 700px) { .pf-levels { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
+.pf-neg { color: var(--error); }
+.pf-pos-ok { color: var(--success); }
+.pf-ul { margin: 6px 0 0 18px; padding: 0; list-style: disc; }
