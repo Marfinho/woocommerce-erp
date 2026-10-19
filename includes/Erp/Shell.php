@@ -39,6 +39,8 @@ class Shell {
 	 * Hooks registrieren.
 	 */
 	public function register() {
+		( new Subdomain() )->register();
+
 		add_action( 'init', array( $this, 'add_rewrite' ) );
 		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
@@ -63,9 +65,12 @@ class Shell {
 		/**
 		 * Adresse der ERP-Oberfläche – z. B. für eine Subdomain.
 		 *
-		 * @param string $url Vorgabe: /erp/ unter der Shop-Adresse.
+		 * @param string $url Vorgabe: /erp/ unter der Shop-Adresse, mit
+		 *                    LW16_ERP_HOST die Subdomain.
 		 */
-		return apply_filters( 'lw16_erp_url', home_url( '/erp/' ) );
+		$url = Subdomain::host() ? 'https://' . Subdomain::host() . '/' : home_url( '/erp/' );
+
+		return apply_filters( 'lw16_erp_url', $url );
 	}
 
 	/**
@@ -73,15 +78,24 @@ class Shell {
 	 */
 	public function add_rewrite() {
 		add_rewrite_rule( '^erp(?:/.*)?$', 'index.php?' . self::QUERY_VAR . '=1', 'top' );
+
+		// Auf der Subdomain liegen Manifest und Service Worker an der Wurzel.
+		if ( Subdomain::host() ) {
+			add_rewrite_rule( '^(?:manifest\.webmanifest|sw\.js)$', 'index.php?' . self::QUERY_VAR . '=1', 'top' );
+		}
 	}
 
 	/**
 	 * Regel nach dem ersten Laden dieser Fassung bekanntmachen.
 	 */
 	public function maybe_flush_rewrite() {
-		if ( '1' !== get_option( self::REWRITE_OPTION ) ) {
+		// Der Merker enthält die Subdomain: Wer sie später einstellt oder
+		// ändert, bekommt die Regeln neu geschrieben.
+		$marker = '1:' . Subdomain::host();
+
+		if ( get_option( self::REWRITE_OPTION ) !== $marker ) {
 			flush_rewrite_rules( false );
-			update_option( self::REWRITE_OPTION, '1' );
+			update_option( self::REWRITE_OPTION, $marker );
 		}
 	}
 
@@ -120,13 +134,36 @@ class Shell {
 	 * Seite ausliefern, wenn /erp aufgerufen wurde.
 	 */
 	public function maybe_render() {
-		if ( ! get_query_var( self::QUERY_VAR ) ) {
+		$path    = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$on_host = Subdomain::is_request( isset( $_SERVER['HTTP_HOST'] ) ? (string) wp_unslash( $_SERVER['HTTP_HOST'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$route   = (bool) get_query_var( self::QUERY_VAR );
+		$root    = '/' === $path || '/index.php' === $path;
+
+		// Auf der Subdomain gibt es nur die Oberfläche, nicht den Shop.
+		if ( $on_host && ! $route && ! $root ) {
+			wp_safe_redirect( self::url() );
+			exit;
+		}
+
+		if ( ! $route && ! ( $on_host && $root ) ) {
 			return;
+		}
+
+		$special = self::special_request();
+
+		// Manifest und Service Worker an der Wurzel gibt es nur auf der Subdomain.
+		if ( $special && Subdomain::host() && ! $on_host && 0 !== strpos( $path, '/erp/' ) ) {
+			return;
+		}
+
+		if ( 'sw' === $special ) {
+			$this->render_sw();
+			exit;
 		}
 
 		// Das App-Manifest enthält nichts Persönliches und wird vom Browser
 		// ohne Anmeldung abgerufen – es muss vor der Anmeldeprüfung kommen.
-		if ( self::is_manifest_request() ) {
+		if ( 'manifest' === $special ) {
 			$this->render_manifest();
 			exit;
 		}
@@ -156,14 +193,36 @@ class Shell {
 	}
 
 	/**
-	 * Fragt der Browser das App-Manifest ab?
+	 * Was verlangt der Browser außer der Oberfläche selbst?
 	 *
-	 * @return bool
+	 * @return string manifest, sw oder leer.
 	 */
-	protected static function is_manifest_request() {
-		$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : '';
+	protected static function special_request() {
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
-		return 'manifest.webmanifest' === basename( $path );
+		if ( 'manifest.webmanifest' === basename( $path ) ) {
+			return 'manifest';
+		}
+
+		return 'sw.js' === basename( $path ) ? 'sw' : '';
+	}
+
+	/**
+	 * Service Worker ausliefern.
+	 *
+	 * Er hält die Oberfläche ohne Verbindung bereit (assets/erp/sw.js).
+	 * Ohne Anmeldung abrufbar, weil der Browser ihn so anfordert; er
+	 * enthält nichts Persönliches.
+	 */
+	protected function render_sw() {
+		$source = (string) file_get_contents( LW16_PLUGIN_DIR . 'assets/erp/sw.js' );
+		$scope  = (string) wp_parse_url( self::url(), PHP_URL_PATH );
+
+		header( 'Content-Type: application/javascript; charset=utf-8' );
+		header( 'Service-Worker-Allowed: ' . ( '' !== $scope ? $scope : '/' ) );
+		header( 'Cache-Control: no-cache' );
+
+		echo str_replace( '__VERSION__', LW16_VERSION . '-' . Assets::version( 'assets/erp/sw.js' ), $source ); // phpcs:ignore WordPress.Security.EscapeOutput -- eigenes Skript, nur Versionsnummer eingesetzt.
 	}
 
 	/**
@@ -207,13 +266,32 @@ class Shell {
 	}
 
 	/**
+	 * Adresse einer Plugin-Datei – auf der Subdomain mit deren Adresse, damit
+	 * Skript und Seite dieselbe Herkunft haben (nötig für den Service Worker).
+	 *
+	 * @param string $relative Pfad ab Plugin-Wurzel.
+	 * @return string
+	 */
+	protected function asset_url( $relative ) {
+		$url = LW16_PLUGIN_URL . ltrim( $relative, '/' );
+
+		if ( Subdomain::is_request( isset( $_SERVER['HTTP_HOST'] ) ? (string) wp_unslash( $_SERVER['HTTP_HOST'] ) : '' ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			return Subdomain::swap_host( $url, Subdomain::host() );
+		}
+
+		return $url;
+	}
+
+	/**
 	 * Rahmen der Anwendung.
 	 */
 	protected function render_app() {
 		$config = array(
 			'rest'     => esc_url_raw( rest_url( 'lw16/v1/erp/' ) ),
 			'api'      => esc_url_raw( rest_url( 'lw16/v1/' ) ),
-			'jsqr'     => LW16_PLUGIN_URL . 'assets/vendor/jsqr/jsQR.js',
+			'jsqr'     => $this->asset_url( 'assets/vendor/jsqr/jsQR.js' ),
+			'sw'       => self::url() . 'sw.js',
+			'swScope'  => (string) wp_parse_url( self::url(), PHP_URL_PATH ),
 			'nonce'    => wp_create_nonce( 'wp_rest' ),
 			'erpUrl'   => self::url(),
 			'adminUrl' => admin_url( '/' ),
@@ -239,12 +317,12 @@ class Shell {
 		if ( $ico ) {
 			echo '<link rel="icon" href="' . esc_url( $ico ) . '">';
 		}
-		echo '<link rel="stylesheet" href="' . esc_url( LW16_PLUGIN_URL . $css . '?ver=' . Assets::version( $css ) ) . '">';
+		echo '<link rel="stylesheet" href="' . esc_url( $this->asset_url( $css ) . '?ver=' . Assets::version( $css ) ) . '">';
 		echo '<script>window.LW16ERP=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';</script>';
 		echo '</head><body>';
 		echo '<div id="app" class="erp-boot">' . esc_html__( 'ERP wird geladen …', 'lindenweg16' ) . '</div>';
 		echo '<noscript><p class="erp-noscript">' . esc_html__( 'Das ERP braucht JavaScript.', 'lindenweg16' ) . '</p></noscript>';
-		echo '<script src="' . esc_url( LW16_PLUGIN_URL . $js . '?ver=' . Assets::version( $js ) ) . '" defer></script>';
+		echo '<script src="' . esc_url( $this->asset_url( $js ) . '?ver=' . Assets::version( $js ) ) . '" defer></script>';
 		echo '</body></html>';
 	}
 

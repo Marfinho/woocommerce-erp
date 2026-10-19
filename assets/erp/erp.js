@@ -93,7 +93,31 @@
 		return null;
 	}
 
-	function api(path, opts) {
+	/* ---------- Schnittstelle, Zwischenspeicher, Warteschlange ---------- */
+
+	var QUEUE_KEY = 'lw16erp-queue';
+	var queueBusy = false;
+	var stale = false;
+
+	function readJson(key, fallback) {
+		try { var raw = window.localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; }
+	}
+
+	function writeJson(key, value) {
+		try { window.localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* voll oder gesperrt */ }
+	}
+
+	function cacheKey(root, path) { return 'lw16erp-c:' + (root ? 'api:' : 'erp:') + path; }
+	function cacheSet(root, path, data) { writeJson(cacheKey(root, path), { at: Date.now(), data: data }); }
+	function cacheGet(root, path) { return readJson(cacheKey(root, path), null); }
+
+	function queue() { return readJson(QUEUE_KEY, []); }
+
+	function uid() {
+		return (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+	}
+
+	function request(path, opts) {
 		opts = opts || {};
 		var headers = { 'X-WP-Nonce': C.nonce };
 		if (opts.body) { headers['Content-Type'] = 'application/json'; }
@@ -111,11 +135,94 @@
 						: (json && json.message) || ('Fehler ' + res.status);
 					var err = new Error(msg);
 					err.status = res.status;
+					err.code = json && json.code;
 					throw err;
 				}
 				return json;
 			});
 		});
+	}
+
+	/*
+	 * opts.cache  – GET: letzte Antwort merken und bei fehlender Verbindung zeigen.
+	 * opts.queue  – POST: bei fehlender Verbindung vormerken und später senden.
+	 * Eine Antwort des Servers (auch ein Fehler) ist nie „offline“; nur wenn
+	 * gar keine Antwort kommt, greifen Zwischenspeicher und Warteschlange.
+	 */
+	function api(path, opts) {
+		opts = opts || {};
+		var method = opts.method || 'GET';
+
+		return request(path, opts).then(function (json) {
+			if (method === 'GET' && opts.cache) { cacheSet(opts.root, path, json); }
+			if (stale) { stale = false; syncNet(); }
+			return json;
+		}).catch(function (err) {
+			if (err.status) { throw err; }
+
+			if (method === 'GET' && opts.cache) {
+				var hit = cacheGet(opts.root, path);
+				if (hit) { stale = true; syncNet(); return hit.data; }
+			}
+
+			if (method === 'POST' && opts.queue) {
+				var body = Object.assign({}, opts.body, { client_ref: uid() });
+				var list = queue();
+				list.push({ id: body.client_ref, path: path, root: !!opts.root, body: body, ts: Date.now() });
+				writeJson(QUEUE_KEY, list);
+				syncNet();
+				return { queued: true };
+			}
+
+			throw new Error('Keine Verbindung zum Server.');
+		});
+	}
+
+	function refreshNonce() {
+		return fetch(C.erpUrl, { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (html) {
+			var m = html.match(/"nonce":"([a-f0-9]+)"/);
+			if (!m) { throw new Error('Neue Sitzung nötig.'); }
+			C.nonce = m[1];
+		});
+	}
+
+	// Vorgemerktes der Reihe nach senden. Antwortet der Server mit einem
+	// Fehler, wird der Eintrag verworfen und gemeldet (er würde nie
+	// gelingen); fehlt die Verbindung, bleibt alles stehen.
+	function flush() {
+		if (queueBusy || !queue().length) { return Promise.resolve(); }
+		queueBusy = true;
+
+		function next() {
+			var list = queue();
+			if (!list.length) { return Promise.resolve(); }
+			var item = list[0];
+			var done = function () { writeJson(QUEUE_KEY, queue().filter(function (x) { return x.id !== item.id; })); syncNet(); return next(); };
+
+			return request(item.path, { root: item.root, method: 'POST', body: item.body }).then(done).catch(function (err) {
+				if (err.code === 'rest_cookie_invalid_nonce') {
+					return refreshNonce().then(function () {
+						return request(item.path, { root: item.root, method: 'POST', body: item.body }).then(done);
+					});
+				}
+				if (err.status && err.status < 500) {
+					toast('Vorgemerkte Buchung abgelehnt: ' + err.message, true);
+					return done();
+				}
+				throw err;
+			});
+		}
+
+		return next().then(function () { toast('Vorgemerktes gesendet'); }).catch(function () { /* später erneut */ }).then(function () { queueBusy = false; syncNet(); });
+	}
+
+	function syncNet() {
+		if (!el.net) { return; }
+		var n = queue().length;
+		var off = !navigator.onLine || stale;
+		el.net.hidden = !off && !n;
+		el.net.textContent = (off ? 'Offline' : '') + (off && n ? ' · ' : '') + (n ? n + ' vorgemerkt' : '');
+		el.net.className = 'net-pill' + (off ? ' off' : '');
 	}
 
 	function toast(msg, isErr) {
@@ -200,6 +307,7 @@
 			)
 		);
 
+		el.net = h('button', { class: 'net-pill', type: 'button', hidden: true, title: 'Jetzt senden', onclick: flush });
 		el.title = h('h1', null, '');
 		el.crumb = h('span', { class: 'crumb' }, '');
 		el.themeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme }, ico('moon'));
@@ -207,6 +315,7 @@
 		var top = h('header', { class: 'top' },
 			h('button', { class: 'icon-btn', id: 'menu-btn', type: 'button', 'aria-label': 'Menü', onclick: function () { el.app.classList.toggle('drawer-open'); } }, ico('menu')),
 			h('div', { class: 'top-title' }, el.crumb, el.title),
+			el.net,
 			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Suchen …', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
 			el.themeBtn
@@ -412,13 +521,11 @@
 	function phasesCard() {
 		var steps = [
 			[true, 'Gerüst, Anmeldung mit dem WordPress-Konto, Menü aus den Rechten'],
-			[true, 'Rechte pro Person, fein einstellbar, mit Vorlagen'],
-			[true, 'Alle bestehenden Seiten eingebettet – voller Funktionsumfang'],
-			[true, 'Werkstatt nativ: Scannen mit Kamera oder Handscanner, Bestand buchen, Picklisten'],
-			[true, 'Live-Aktualisierung der Startseite; als App auf den Startbildschirm legbar'],
-			[false, 'Weitere native Seiten: Druckfarm-Anzeige, Aufträge, Versand – dann entfallen die eingebetteten'],
-			[false, 'Module hinter „Nur Vollzugriff“ (Buchhaltung u. a.) auf feine Rechte umstellen'],
-			[false, 'Subdomain und Offline-Erfassung in der Werkstatt']
+			[true, 'Rechte pro Person, fein einstellbar – auch für Formulare und alle Module'],
+			[true, 'Native Seiten: Scannen, Picklisten, Druckfarm (mit Vollbild), Aufträge, Versand'],
+			[true, 'Ohne Verbindung arbeiten: Oberfläche öffnet offline, Buchungen werden vorgemerkt'],
+			[true, 'Als App auf den Startbildschirm; optional eigene Subdomain'],
+			[false, 'Weitere native Seiten (Artikel, Material, Berichte …) – bis dahin eingebettet']
 		];
 		var list = h('ol', { class: 'phases' });
 		steps.forEach(function (s, i) {
@@ -889,7 +996,7 @@
 			out.textContent = '';
 			out.appendChild(h('div', { class: 'card' }, 'Suche nach „' + code + '“ …'));
 
-			api('scan?code=' + encodeURIComponent(code), { root: true }).then(function (r) {
+			api('scan?code=' + encodeURIComponent(code), { root: true, cache: true }).then(function (r) {
 				showScan(out, r, scan);
 			}).catch(function (e) {
 				out.textContent = '';
@@ -966,7 +1073,7 @@
 				var w = where.value.split('|');
 				var btn = e.target.querySelector('button');
 				btn.disabled = true;
-				api('lager/bewegung', { root: true, method: 'POST', body: { article_id: articleId, qty: q, movement_type: kind.value, bin_id: parseInt(w[0], 10) || 0, color: w[1] || '', note: note.value } }).then(function () {
+				api('lager/bewegung', { root: true, method: 'POST', queue: true, body: { article_id: articleId, qty: q, movement_type: kind.value, bin_id: parseInt(w[0], 10) || 0, color: w[1] || '', note: note.value } }).then(function () {
 					toast('Gebucht');
 					rescan(code);
 				}).catch(function (err) {
@@ -992,17 +1099,29 @@
 		var open = S.pickOpen || 0;
 
 		function load() {
-			return api('picklisten', { root: true }).then(function (lists) { paint(lists); });
+			return api('picklisten', { root: true, cache: true }).then(function (lists) { paint(lists); });
 		}
 
+		var current = [];
+
 		function pick(item, scanned) {
-			return api('picklisten/position', { root: true, method: 'POST', body: { item_id: item.id, qty: 0, scanned: scanned || '' } }).then(function (r) {
+			return api('picklisten/position', { root: true, method: 'POST', queue: true, body: { item_id: item.id, qty: 0, scanned: scanned || '' } }).then(function (r) {
+				if (r && r.queued) {
+					// Ohne Verbindung: sofort in der Anzeige und im Zwischenspeicher abhaken.
+					item.qty_picked = item.qty_required;
+					item.done = true;
+					current.forEach(function (l) { l.open = l.items.filter(function (i) { return !i.done; }).length; });
+					cacheSet(true, 'picklisten', current);
+					toast('Offline vorgemerkt');
+					return paint(current);
+				}
 				toast(r.done ? 'Position vollständig' : 'Entnommen');
 				return load();
 			}).catch(function (e) { toast(e.message, true); });
 		}
 
 		function paint(lists) {
+			current = lists;
 			box.textContent = '';
 
 			if (!lists.length) {
@@ -1038,7 +1157,7 @@
 				if (hit) { return pick(hit, code); }
 
 				// Fremde Barcodes (EAN) kennt nur der Server: Artikel auflösen.
-				api('scan?code=' + encodeURIComponent(code), { root: true }).then(function (r) {
+				api('scan?code=' + encodeURIComponent(code), { root: true, cache: true }).then(function (r) {
 					var match = todo.filter(function (i) { return i.item_type !== 'komponente' && r.type === 'article' && i.article_id === r.id; })[0];
 					if (match) { return pick(match, code); }
 					toast('„' + (r.label || code) + '“ gehört zu keiner offenen Position dieser Liste.', true);
@@ -1349,10 +1468,16 @@
 		if (S.draft && S.rights && isDirty()) { e.preventDefault(); e.returnValue = ''; }
 	});
 
-	api('bootstrap').then(function (boot) {
+	api('bootstrap', { cache: true }).then(function (boot) {
 		S.boot = boot;
 		buildShell();
 		window.addEventListener('hashchange', render);
+		window.addEventListener('online', function () { stale = false; syncNet(); flush(); });
+		window.addEventListener('offline', syncNet);
+		setInterval(function () { if (!document.hidden) { flush(); } }, 30000);
+		syncNet();
+		flush();
+		if ('serviceWorker' in navigator && C.sw) { navigator.serviceWorker.register(C.sw, { scope: C.swScope || '/' }).catch(function () {}); }
 		render();
 	}).catch(function (e) {
 		root.textContent = '';

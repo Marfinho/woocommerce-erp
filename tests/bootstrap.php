@@ -358,6 +358,7 @@ require $lw16_root . '/includes/Core/Roles.php';
 require $lw16_root . '/includes/Erp/Permissions.php';
 require $lw16_root . '/includes/Erp/Navigation.php';
 require $lw16_root . '/includes/Erp/ActionMap.php';
+require $lw16_root . '/includes/Erp/Subdomain.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

@@ -431,8 +431,8 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .row-main small { display: block; color: var(--text-muted); font-size: 12.5px; }
 .row-num { font: 700 17px var(--font-head); font-variant-numeric: tabular-nums; }
 .row-tags { display: flex; gap: 6px; flex-wrap: wrap; }
-.row-card.ship { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; }
-.ship-track { display: grid; gap: 2px; }
+.row-card.ship { grid-template-columns: minmax(0, 1.2fr) minmax(130px, .8fr) auto; }
+.ship-track { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
 .ship-actions { display: grid; gap: 8px; justify-items: start; }
 .label-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .label-area .field { min-height: 40px; width: auto; }
@@ -440,6 +440,11 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 @media (max-width: 760px) {
 	.row-card, .row-card.ship { grid-template-columns: 1fr; }
 }
+
+/* ---------- Verbindung ---------- */
+
+.net-pill { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.net-pill.off { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); border-color: var(--warning); color: var(--warning); }
 
 /* ---------- Suche, Hinweise ---------- */
 
