@@ -197,4 +197,29 @@ class ErpVerkaufTest extends TestCase {
 		$this->assertSame( 'Sonstiges', Verkauf::campaign_type_label( 'sonstiges' ) );
 		$this->assertStringContainsString( 'Punkte gesammelt', Verkauf::ledger_label( 'earned', 'pending' ) );
 	}
+
+	public function test_kommissionszeilen_bereinigen() {
+		$rows = Verkauf::commission_rows(
+			array(
+				array( 'article_id' => 7, 'color' => 'weiss', 'qty' => ' 3 ' ),
+				array( 'article_id' => 8, 'qty' => '' ),
+				array( 'article_id' => 0, 'qty' => '2' ),
+				'kein Array',
+				array( 'article_id' => '9', 'color' => array( 'x' ), 'qty' => '1,5' ),
+			)
+		);
+
+		$this->assertCount( 2, $rows );
+		$this->assertSame( array( 'article_id' => 7, 'color' => 'weiss', 'qty' => '3' ), $rows[0] );
+		$this->assertSame( '', $rows[1]['color'] );
+		$this->assertSame( '1,5', $rows[1]['qty'] );
+		$this->assertSame( array(), Verkauf::commission_rows( 'x' ) );
+	}
+
+	public function test_kommission_buchen_verlangt_das_lagerrecht() {
+		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Verkauf.php' );
+
+		$this->assertStringContainsString( "Access::can( 'lager.buchen' )", $src );
+		$this->assertStringContainsString( 'CommissionRepository::book_batch', $src );
+	}
 }

@@ -20,12 +20,17 @@ use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Core\Roles;
+use Lindenweg16\Modules\Betrieb\CommissionBatch;
+use Lindenweg16\Modules\Betrieb\CommissionRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\ReorderPage;
 use Lindenweg16\Modules\Betrieb\ReorderToken;
+use Lindenweg16\Modules\Betrieb\StockLedger;
+use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 use Lindenweg16\Modules\Marketing\KampagnenReport;
@@ -48,6 +53,46 @@ class Verkauf {
 	/* ====================================================================
 	 * Reine Regeln (ohne Datenbank, getestet)
 	 * ================================================================== */
+
+	/**
+	 * Zeilen einer Kommissionsliste aus der Anfrage bereinigen – reine Regel.
+	 *
+	 * Nur Zeilen mit Artikel und einer Eingabe bleiben; Farbe und Menge werden
+	 * zu Text, damit CommissionBatch::validate() dieselben Wege geht wie die
+	 * alte Seite. Mehr als MAX_LINES Zeilen werden nicht abgeschnitten, sondern
+	 * unverändert weitergegeben, damit der Server sie ablehnen kann.
+	 *
+	 * @param mixed $raw Zeilen aus dem Anfragekörper.
+	 * @return array Liste aus article_id, color, qty.
+	 */
+	public static function commission_rows( $raw ) {
+		$out = array();
+
+		if ( ! is_array( $raw ) ) {
+			return $out;
+		}
+
+		foreach ( $raw as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$article = isset( $row['article_id'] ) ? (int) $row['article_id'] : 0;
+			$qty     = isset( $row['qty'] ) && is_scalar( $row['qty'] ) ? trim( (string) $row['qty'] ) : '';
+
+			if ( $article <= 0 || '' === $qty ) {
+				continue;
+			}
+
+			$out[] = array(
+				'article_id' => $article,
+				'color'      => isset( $row['color'] ) && is_scalar( $row['color'] ) ? (string) $row['color'] : '',
+				'qty'        => $qty,
+			);
+		}
+
+		return $out;
+	}
 
 	/**
 	 * Zahl aus einer Eingabe lesen, auch mit deutschem Komma.
@@ -557,6 +602,10 @@ class Verkauf {
 			'callback'            => array( __CLASS__, 'contact_term' ),
 			'permission_callback' => $kontakte,
 		) );
+		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/kommission', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'commission_options' ), 'permission_callback' => $kontakte ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'commission_book' ), 'permission_callback' => $kontakte ),
+		) );
 		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/link', array(
 			'methods'             => 'POST',
 			'callback'            => array( __CLASS__, 'contact_link' ),
@@ -1060,6 +1109,128 @@ class Verkauf {
 		}
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Kondition festgeschrieben.', 'lindenweg16' ) ), 201 );
+	}
+
+	/**
+	 * Was sich in eine Kommissionsliste eintragen lässt: Lagerware zum
+	 * Ausliefern, Kommissionsbestand zum Abrechnen oder Zurücknehmen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function commission_options( WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+
+		if ( ! ContactRepository::find( $id ) ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$articles = ArticleRepository::all_by_id();
+		$stock    = array();
+
+		foreach ( StockLedger::balances( StockRepository::all() ) as $article_id => $colors ) {
+			if ( ! isset( $articles[ $article_id ] ) || ! ArticleRepository::is_active( $articles[ $article_id ] ) ) {
+				continue;
+			}
+
+			foreach ( $colors as $color => $locations ) {
+				$qty = isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;
+
+				if ( $qty > 0 ) {
+					$stock[] = array(
+						'article_id' => (int) $article_id,
+						'sku'        => (string) $articles[ $article_id ]['sku'],
+						'name'       => (string) $articles[ $article_id ]['name'],
+						'color'      => (string) $color,
+						'label'      => ColorRegistry::label( $color ),
+						'qty'        => $qty,
+					);
+				}
+			}
+		}
+
+		$held = array();
+
+		foreach ( ContactRepository::commission_stock( $id ) as $c ) {
+			$a      = isset( $articles[ (int) $c['article_id'] ] ) ? $articles[ (int) $c['article_id'] ] : array();
+			$held[] = array(
+				'article_id' => (int) $c['article_id'],
+				'sku'        => isset( $a['sku'] ) ? (string) $a['sku'] : '',
+				'name'       => isset( $a['name'] ) ? (string) $a['name'] : '',
+				'color'      => (string) $c['color'],
+				'label'      => ColorRegistry::label( $c['color'] ),
+				'qty'        => (float) $c['qty'],
+			);
+		}
+
+		usort(
+			$stock,
+			static function ( $a, $b ) {
+				return strcmp( $a['sku'] . $a['color'], $b['sku'] . $b['color'] );
+			}
+		);
+
+		$profile = ContactRepository::profile( $id );
+
+		return new WP_REST_Response(
+			array(
+				'types'   => CommissionBatch::types(),
+				'stock'   => $stock,
+				'held'    => $held,
+				// Kein Profil heißt: nichts vereinbart, nichts verboten.
+				'allowed' => $profile ? (bool) (int) $profile['commission_allowed'] : null,
+			)
+		);
+	}
+
+	/**
+	 * Kommission buchen: ausliefern, abrechnen oder zurücknehmen.
+	 *
+	 * Wie handle_commission_batch der alten Seite: Prüfung über
+	 * CommissionBatch, Buchung (und bei „abrechnen“ der offene Posten) über
+	 * CommissionRepository.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function commission_book( WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+
+		if ( ! Roles::current_user_can_betrieb( 'lw16_capture' ) || ! Access::can( 'lager.buchen' ) ) {
+			return self::fail( __( 'Dafür fehlt dir das Recht zum Buchen.', 'lindenweg16' ), 403 );
+		}
+
+		if ( ! ContactRepository::find( $id ) ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$params = (array) $request->get_json_params();
+		$type   = isset( $params['type'] ) ? sanitize_key( (string) $params['type'] ) : '';
+		$rows   = self::commission_rows( isset( $params['rows'] ) ? $params['rows'] : array() );
+
+		if ( CommissionBatch::too_long( $rows ) ) {
+			return self::fail( __( 'Die Liste ist zu lang für eine Lieferung.', 'lindenweg16' ) );
+		}
+
+		$result = CommissionBatch::validate( $rows, $type, $id );
+
+		if ( $result['errors'] ) {
+			return self::fail( implode( ' ', array_unique( $result['errors'] ) ) );
+		}
+
+		// Doppelklick und Wiederholung nach Verbindungsabbruch: dieselbe Liste
+		// nicht binnen Sekunden ein zweites Mal buchen.
+		$lock = 'lw16_erp_kom_' . md5( get_current_user_id() . '|' . $id . '|' . $type . '|' . wp_json_encode( $result['lines'] ) );
+
+		if ( get_transient( $lock ) ) {
+			return self::fail( __( 'Diese Liste wurde gerade eben schon gebucht. Bitte kurz warten und den Bestand prüfen, bevor du sie noch einmal buchst.', 'lindenweg16' ), 409 );
+		}
+
+		set_transient( $lock, 1, 30 );
+
+		$message = CommissionRepository::book_batch( $result['lines'], $type, $id );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => $message ), 201 );
 	}
 
 	/**

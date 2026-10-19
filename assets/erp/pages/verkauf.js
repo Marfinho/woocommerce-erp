@@ -435,8 +435,64 @@
 				card.appendChild(h('p', { class: 'muted' }, 'Keine Kommissionsware.'));
 			}
 
-			card.appendChild(h('a', { class: 'btn', href: classic, target: '_blank', rel: 'noopener' }, ui.ico('ext'), 'Kommission buchen (klassische Ansicht)'));
+			if (ui.can('lager.buchen')) {
+				var acts = h('div', { class: 'vk-actions', style: 'margin-top:10px;flex-wrap:wrap' });
+				[['kommission_raus', 'Ausliefern', true], ['kommission_abgerechnet', 'Abrechnen', false], ['kommission_retour', 'Zurücknehmen', false]].forEach(function (a) {
+					acts.appendChild(h('button', { class: 'btn' + (a[2] ? ' primary' : ''), type: 'button', onclick: function () { commissionDialog(a[0], a[1]); } }, a[1]));
+				});
+				card.appendChild(acts);
+			}
 			return card;
+		}
+
+		// Kommissionsliste: eine Menge je Artikel und Farbe; leere Felder zählen nicht.
+		function commissionDialog(type, title) {
+			var body = h('div', { class: 'vk-dlg' }, loading(ui));
+			var d = ui.dlg('Kommission ' + title.toLowerCase(), body, true);
+
+			ui.api('kontakte/' + id + '/kommission').then(function (o) {
+				var list = type === 'kommission_raus' ? o.stock : o.held;
+				var inputs = [];
+				var err = h('div', { class: 'notice warn', hidden: true, role: 'alert' });
+				var btn = h('button', { class: 'btn primary', type: 'submit' }, title);
+				var search = h('input', { class: 'field', type: 'search', placeholder: 'Artikel suchen …', 'aria-label': 'Artikel suchen' });
+				var rows = h('div', { class: 'rows' });
+
+				function draw() {
+					var q = search.value.trim().toLowerCase();
+					Array.prototype.forEach.call(rows.children, function (r) { r.hidden = q && r.getAttribute('data-q').indexOf(q) < 0; });
+				}
+				search.addEventListener('input', draw);
+
+				list.forEach(function (x) {
+					var input = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0', 'aria-label': 'Menge ' + x.sku + ' ' + x.label, style: 'max-width:90px;text-align:right' });
+					inputs.push({ input: input, x: x });
+					rows.appendChild(h('div', { class: 'row-card', 'data-q': (x.sku + ' ' + x.name + ' ' + x.label).toLowerCase(), style: 'grid-template-columns:minmax(0,1fr) auto auto' },
+						h('div', { class: 'row-main' }, h('b', null, x.sku + ' – ' + x.name), h('small', null, x.label)),
+						h('div', { class: 'muted' }, ui.num(x.qty) + (type === 'kommission_raus' ? ' im Lager' : ' beim Händler')),
+						input));
+				});
+
+				var form = h('form', { class: 'vk-form' },
+					type === 'kommission_raus' && o.allowed === false ? h('div', { class: 'notice warn' }, 'Für diesen Händler ist laut Profil keine Kommission vereinbart. Bitte vor dem Ausliefern klären.') : null,
+					type === 'kommission_abgerechnet' ? h('p', { class: 'muted' }, 'Abrechnen bucht die Ware aus dem Kommissionsbestand aus und erzeugt eine Rechnung über alle Positionen zusammen, damit die Rabattstaffel auf den Gesamtwert greift.') : null,
+					list.length ? search : null,
+					list.length ? rows : h('p', { class: 'muted' }, type === 'kommission_raus' ? 'Im Lager liegt nichts, was sich ausliefern ließe.' : 'Beim Händler liegt keine Kommissionsware.'),
+					err,
+					h('div', { class: 'vk-actions' }, btn));
+
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					var chosen = inputs.filter(function (i) { return i.input.value.trim() !== ''; }).map(function (i) { return { article_id: i.x.article_id, color: i.x.color, qty: i.input.value.trim() }; });
+					if (!chosen.length) { err.textContent = 'Trag bei mindestens einem Artikel eine Menge ein.'; err.hidden = false; return; }
+					btn.disabled = true;
+					err.hidden = true;
+					post('/kommission', { type: type, rows: chosen }).then(function (r) { d.close(); ui.toast(r.message); load(); }).catch(function (er) { btn.disabled = false; err.textContent = er.message; err.hidden = false; });
+				});
+
+				body.textContent = '';
+				body.appendChild(form);
+			}).catch(function (e) { errBox(ui, body, e); });
 		}
 
 		function activities(d) {

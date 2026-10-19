@@ -1688,6 +1688,29 @@
 			return api('versand/' + id).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		}
 
+		// Geschäftskunde: zur Akte springen, zuordnen oder lösen.
+		function contactLink(cu) {
+			if (!can('verkauf.kontakte')) { return null; }
+			var box = h('div', { style: 'margin-top:10px;display:grid;gap:8px' });
+			function link(contactId) {
+				return api('versand/' + id + '/kontakt', { method: 'POST', body: { contact_id: contactId } })
+					.then(function (r) { toast(r.message); load(); })
+					.catch(function (er) { toast(er.message, true); });
+			}
+			if (cu.contact) {
+				box.appendChild(h('div', { class: 'label-area' },
+					h('a', { class: 'btn primary', href: '#/kontakt/' + cu.contact.id }, 'Zur Akte: ' + cu.contact.company),
+					h('button', { class: 'btn', type: 'button', onclick: function () { if (window.confirm('Zuordnung lösen? Die Bestellung zählt dann nicht mehr in der Akte.')) { link(0); } } }, 'Zuordnung lösen')));
+				return box;
+			}
+			(cu.suggest || []).forEach(function (s) {
+				box.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (e) { e.target.disabled = true; link(s.id); } },
+					'Zu „' + s.company + '“ zuordnen (' + (s.why === 'email' ? 'gleiche E-Mail' : 'gleiche Firma') + ')'));
+			});
+			if (!(cu.suggest || []).length) { box.appendChild(h('small', { class: 'muted' }, 'Kein Kontakt mit dieser E-Mail oder Firma gefunden. Lege den Kontakt unter Verkauf → Kunden an, danach lässt sich die Bestellung zuordnen.')); }
+			return box;
+		}
+
 		function paint(o) {
 			box.textContent = '';
 			box.appendChild(h('div', { class: 'card' },
@@ -1724,7 +1747,9 @@
 						h('span', null, 'Name'), h('b', null, cu.name || o.name),
 						cu.email ? h('span', null, 'E-Mail') : null, cu.email ? h('b', null, cu.email) : null,
 						cu.phone ? h('span', null, 'Telefon') : null, cu.phone ? h('b', null, cu.phone) : null,
-						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–'))));
+						cu.company ? h('span', null, 'Firma') : null, cu.company ? h('b', null, cu.company) : null,
+						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–')),
+					contactLink(cu)));
 			}
 
 			if (o.timeline && o.timeline.length) {

@@ -149,6 +149,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/kontakt',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_kontakt' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.kontakte' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/label/(?P<id>\d+)/storno',
 			array(
 				'methods'             => 'POST',
@@ -436,6 +446,18 @@ class RestApi {
 		$data['can_label'] = Access::can( 'verkauf.versand.etikett' );
 
 		return new WP_REST_Response( $data );
+	}
+
+	/**
+	 * Bestellung einem Kontakt zuordnen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_kontakt( WP_REST_Request $request ) {
+		$result = Screens::link_contact( (int) $request['id'], (int) $request->get_param( 'contact_id' ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
 
 	/**
