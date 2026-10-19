@@ -145,6 +145,7 @@ class ErpNavigationTest extends TestCase {
 		$linked = array();
 		foreach ( Navigation::items() as $item ) {
 			$linked[] = $item['target'];
+			$linked[] = $item['alt'];
 		}
 
 		foreach ( array_keys( \Lindenweg16\Admin\Menu::page_caps() ) as $slug ) {

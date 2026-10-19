@@ -366,6 +366,8 @@ require $lw16_root . '/includes/Erp/Procurement.php';
 require $lw16_root . '/includes/Erp/Variance.php';
 require $lw16_root . '/includes/Erp/Tasks.php';
 require $lw16_root . '/includes/Erp/Catalog.php';
+require $lw16_root . '/includes/Modules/Betrieb/ContactRepository.php';
+require $lw16_root . '/includes/Erp/Pages/Verkauf.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
