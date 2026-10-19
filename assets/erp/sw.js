@@ -25,7 +25,7 @@ self.addEventListener('activate', function (event) {
 });
 
 function isShellAsset(url) {
-	return /\/assets\/(erp\/(erp\.(js|css))|vendor\/jsqr\/jsQR\.js)$/.test(url.pathname);
+	return /\/assets\/(erp\/(erp\.(js|css)|pages\/[a-z0-9_-]+\.(js|css))|vendor\/jsqr\/jsQR\.js)$/.test(url.pathname);
 }
 
 self.addEventListener('fetch', function (event) {

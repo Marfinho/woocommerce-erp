@@ -168,4 +168,17 @@ class Access {
 			}
 		);
 	}
+
+	/**
+	 * Die Menüführung dieser Person: Plätze mit Reitern und Seiten.
+	 *
+	 * @return array Platz => [ [label, items[]], … ]
+	 */
+	public static function sections() {
+		return Navigation::sections_visible(
+			function ( $perm ) {
+				return self::can( $perm );
+			}
+		);
+	}
 }

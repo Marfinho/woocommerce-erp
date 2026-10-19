@@ -119,6 +119,27 @@ class RunRepository {
 	}
 
 	/**
+	 * Platten eines Druckers, neueste zuerst.
+	 *
+	 * @param string $bambu_id Bambu-Drucker.
+	 * @param int    $limit    Wie viele.
+	 * @return array
+	 */
+	public static function for_printer( $bambu_id, $limit = 20 ) {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::table() . ' WHERE bambu_printer = %s ORDER BY id DESC LIMIT %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $bambu_id,
+				(int) $limit
+			)
+		);
+
+		return array_map( array( __CLASS__, 'hydrate' ), (array) $rows );
+	}
+
+	/**
 	 * Heute erledigte Platten.
 	 *
 	 * @return array

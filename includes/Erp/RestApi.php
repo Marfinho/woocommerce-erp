@@ -48,6 +48,26 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/aufgaben',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'aufgaben' ),
+				'permission_callback' => array( $this, 'can_use' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/drucker/(?P<id>[A-Za-z0-9_\-]+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'drucker_akte' ),
+				'permission_callback' => $this->needs( array( 'fertigung.druckfarm' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/dashboard',
 			array(
 				'methods'             => 'GET',
@@ -134,6 +154,36 @@ class RestApi {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'versand_storno' ),
 				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.etikett' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/material',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'material' ),
+				'permission_callback' => $this->needs( array( 'lager.material' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/produkte',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'produkte' ),
+				'permission_callback' => $this->needs( array( 'fertigung.artikel' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/produkte/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'produkt' ),
+				'permission_callback' => $this->needs( array( 'fertigung.artikel' ) ),
 			)
 		);
 
@@ -290,6 +340,17 @@ class RestApi {
 				),
 			)
 		);
+
+		// Seiten, die in eigenen Dateien leben: includes/Erp/Pages/<Name>.php
+		// mit einer statischen register( RestApi $api ). Jede Seite bringt ihre
+		// Routen selbst mit.
+		foreach ( (array) glob( __DIR__ . '/Pages/*.php' ) as $file ) {
+			$class = __NAMESPACE__ . '\\Pages\\' . basename( $file, '.php' );
+
+			if ( class_exists( $class ) && method_exists( $class, 'register' ) ) {
+				$class::register( $this );
+			}
+		}
 	}
 
 	/**
@@ -298,7 +359,7 @@ class RestApi {
 	 * @param string[] $perms Rechte.
 	 * @return callable
 	 */
-	protected function needs( array $perms ) {
+	public function needs( array $perms ) {
 		return function () use ( $perms ) {
 			foreach ( $perms as $perm ) {
 				if ( ! Access::can( $perm ) ) {
@@ -418,6 +479,50 @@ class RestApi {
 		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
+	}
+
+	/**
+	 * Produktliste mit Problemen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function produkte() {
+		return new WP_REST_Response( Catalog::listing( Access::can( 'finanzen.kosten' ) ) );
+	}
+
+	/**
+	 * Produktakte.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function produkt( WP_REST_Request $request ) {
+		$file = Catalog::file( (int) $request['id'], Access::can( 'finanzen.kosten' ) );
+
+		if ( null === $file ) {
+			return new WP_REST_Response( array( 'message' => __( 'Dieses Produkt gibt es nicht (mehr).', 'lindenweg16' ) ), 404 );
+		}
+
+		$file['shop_edit'] = $file['shop'] && Access::can( 'verkauf.shop_products' ) && current_user_can( 'edit_products' );
+		$file['edit']      = Access::can( 'fertigung.stammdaten.edit' );
+		$file['money']     = Access::can( 'finanzen.kosten' );
+
+		return new WP_REST_Response( $file );
+	}
+
+	/**
+	 * Material: eine Karte je Filamentfarbe.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function material() {
+		return new WP_REST_Response(
+			array(
+				'colors'  => Material::overview(),
+				'order'   => Access::can( 'lager.einkauf' ),
+				'receive' => Access::can( 'lager.einkauf' ) && Access::can( 'lager.buchen' ),
+			)
+		);
 	}
 
 	/**
@@ -694,48 +799,53 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function bootstrap() {
-		$user   = wp_get_current_user();
-		$areas  = Navigation::areas();
-		$tree   = Access::navigation();
-		$out    = array();
-		$locked = array();
+		$user     = wp_get_current_user();
+		$sections = Navigation::sections();
+		$tree     = Access::sections();
+		$out      = array();
 
-		foreach ( $tree as $area => $items ) {
-			$rows = array();
+		foreach ( $tree as $section => $tabs ) {
+			$flat     = array();
+			$tab_rows = array();
 
-			foreach ( $items as $item ) {
-				$row = array(
-					'id'    => $item['id'],
-					'title' => $item['title'],
-					'kind'  => $item['kind'],
-					'hint'  => Permissions::catalog()[ $item['perm'] ]['hint'],
-				);
+			foreach ( $tabs as $tab ) {
+				$rows = array();
 
-				// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
-				// Der Workflow steht als erster Eintrag oben, nicht in seinem Bereich.
-				if ( 'workflow' === $item['id'] ) {
-					$row['top'] = true;
+				foreach ( $tab['items'] as $item ) {
+					$row = array(
+						'id'    => $item['id'],
+						'title' => $item['title'],
+						'kind'  => $item['kind'],
+						'tab'   => $tab['label'],
+						'hint'  => Permissions::catalog()[ $item['perm'] ]['hint'],
+					);
+
+					// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
+					if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
+						$row['path'] = $this->legacy_path( $item );
+					}
+
+					// Fehlt die WordPress-Rolle für die Shop-Seite, bleibt der
+					// Eintrag sichtbar, erklärt aber, warum er nicht öffnet.
+					if ( $item['wp_cap'] && ! current_user_can( $item['wp_cap'] ) ) {
+						$row['locked'] = __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
+					}
+
+					$rows[] = $row;
+					$flat[] = $row;
 				}
 
-				if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
-					$row['path'] = $this->legacy_path( $item );
-				}
-
-				// Fehlt die WordPress-Rolle für die Shop-Seite, bleibt der
-				// Eintrag sichtbar, erklärt aber, warum er nicht öffnet.
-				if ( $item['wp_cap'] && ! current_user_can( $item['wp_cap'] ) ) {
-					$row['locked'] = __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
-				}
-
-				$rows[] = $row;
+				$tab_rows[] = array( 'label' => $tab['label'], 'items' => $rows );
 			}
 
 			$out[] = array(
-				'id'    => $area,
-				'title' => $areas[ $area ][0],
-				'icon'  => $areas[ $area ][1],
-				'hint'  => $areas[ $area ][2],
-				'items' => $rows,
+				'id'    => $section,
+				'title' => $sections[ $section ][0],
+				'icon'  => $sections[ $section ][1],
+				'hint'  => $sections[ $section ][2],
+				'rail'  => $sections[ $section ][3],
+				'tabs'  => $tab_rows,
+				'items' => $flat,
 			);
 		}
 
@@ -783,6 +893,38 @@ class RestApi {
 	protected function hpos_enabled() {
 		return class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' )
 			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+	}
+
+	/**
+	 * Akte eines Druckers.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function drucker_akte( WP_REST_Request $request ) {
+		$file = Screens::printer_file( (string) $request['id'] );
+
+		if ( null === $file ) {
+			return new WP_REST_Response( array( 'message' => __( 'Diesen Drucker gibt es nicht (mehr).', 'lindenweg16' ) ), 404 );
+		}
+
+		$file['now'] = time();
+
+		return new WP_REST_Response( $file );
+	}
+
+	/**
+	 * Aufgaben dieser Person für „Heute“.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function aufgaben() {
+		return new WP_REST_Response(
+			array(
+				'tasks' => Tasks::collect(),
+				'mail'  => Tasks::unread_mail(),
+			)
+		);
 	}
 
 	/**

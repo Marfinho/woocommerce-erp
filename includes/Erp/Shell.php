@@ -345,10 +345,20 @@ class Shell {
 			echo '<link rel="icon" href="' . esc_url( $ico ) . '">';
 		}
 		echo '<link rel="stylesheet" href="' . esc_url( $this->asset_url( $css ) . '?ver=' . Assets::version( $css ) ) . '">';
+		foreach ( (array) glob( LW16_PLUGIN_DIR . 'assets/erp/pages/*.css' ) as $page ) {
+			$rel = 'assets/erp/pages/' . basename( $page );
+			echo '<link rel="stylesheet" href="' . esc_url( $this->asset_url( $rel ) . '?ver=' . Assets::version( $rel ) ) . '">';
+		}
 		echo '<script>window.LW16ERP=' . wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ';</script>';
 		echo '</head><body>';
 		echo '<div id="app" class="erp-boot">' . esc_html__( 'ERP wird geladen …', 'lindenweg16' ) . '</div>';
 		echo '<noscript><p class="erp-noscript">' . esc_html__( 'Das ERP braucht JavaScript.', 'lindenweg16' ) . '</p></noscript>';
+		// Seiten in eigenen Dateien (assets/erp/pages/*.js) laden vor dem Gerüst;
+		// sie melden sich nur an und laufen erst, wenn die Seite gebraucht wird.
+		foreach ( (array) glob( LW16_PLUGIN_DIR . 'assets/erp/pages/*.js' ) as $page ) {
+			$rel = 'assets/erp/pages/' . basename( $page );
+			echo '<script src="' . esc_url( $this->asset_url( $rel ) . '?ver=' . Assets::version( $rel ) ) . '" defer></script>';
+		}
 		echo '<script src="' . esc_url( $this->asset_url( $js ) . '?ver=' . Assets::version( $js ) ) . '" defer></script>';
 		echo '</body></html>';
 	}

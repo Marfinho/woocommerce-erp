@@ -115,9 +115,17 @@ class ErpNavigationTest extends TestCase {
 	public function test_every_native_item_has_a_screen_in_the_app() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/erp.js' );
 
+		// Seiten in eigenen Dateien melden sich mit pages['<id>'] an.
+		foreach ( (array) glob( dirname( __DIR__ ) . '/assets/erp/pages/*.js' ) as $file ) {
+			$js .= "\n" . file_get_contents( $file );
+		}
+
 		foreach ( Navigation::items() as $id => $item ) {
 			if ( 'native' === $item['kind'] ) {
-				$this->assertStringContainsString( "f.item.id === '$id'", $js, "$id hat keine native Seite in erp.js" );
+				$this->assertTrue(
+					false !== strpos( $js, "f.item.id === '$id'" ) || false !== strpos( $js, "pages['$id']" ),
+					"$id hat keine native Seite"
+				);
 			}
 		}
 	}
@@ -145,5 +153,66 @@ class ErpNavigationTest extends TestCase {
 			}
 			$this->assertContains( $slug, $linked, "$slug fehlt in der ERP-Navigation" );
 		}
+	}
+
+	public function test_jede_seite_hat_einen_platz_und_der_platz_gibt_es() {
+		$sections = Navigation::sections();
+
+		foreach ( Navigation::items() as $id => $item ) {
+			list( $section, $tab ) = Navigation::place( $id );
+
+			$this->assertArrayHasKey( $section, $sections, $id );
+
+			// Alles außer dem Profilmenü hängt an einem Reiter.
+			if ( 'profil' !== $section ) {
+				$this->assertNotSame( '', $tab, "$id braucht einen Reiter" );
+			}
+		}
+	}
+
+	public function test_das_layout_nennt_nur_bekannte_seiten() {
+		$items = Navigation::items();
+
+		foreach ( array_keys( Navigation::layout() ) as $id ) {
+			$this->assertArrayHasKey( $id, $items, "Layout nennt unbekannte Seite $id" );
+		}
+	}
+
+	public function test_links_stehen_hoechstens_sechs_bereiche() {
+		$rail = array_filter(
+			Navigation::sections(),
+			function ( $s ) {
+				return $s[3];
+			}
+		);
+
+		$this->assertLessThanOrEqual( 6, count( $rail ) );
+	}
+
+	public function test_die_plaetze_zeigen_nur_erlaubtes_und_lassen_leere_weg() {
+		$tree = Navigation::sections_visible(
+			function ( $perm ) {
+				return 'verkauf.versand' === $perm;
+			}
+		);
+
+		$this->assertSame( array( 'verkauf' ), array_keys( $tree ) );
+		$this->assertSame( 'versand', $tree['verkauf'][0]['items'][0]['id'] );
+	}
+
+	public function test_seiten_eines_reiters_liegen_beieinander() {
+		$tree = Navigation::sections_visible(
+			function () {
+				return true;
+			}
+		);
+
+		$labels = array();
+		foreach ( $tree['verkauf'] as $tab ) {
+			$labels[] = $tab['label'];
+		}
+
+		$this->assertSame( array_unique( $labels ), $labels, 'Jeder Reiter nur einmal' );
+		$this->assertContains( 'Bestellungen', $labels );
 	}
 }

@@ -84,4 +84,12 @@ class ErpMaterialTest extends TestCase {
 
 		$this->assertStringContainsString( 'Material::alerts()', $source, 'Dashboard, Materialseite und Wochenmail sollen Filament mitmelden' );
 	}
+
+	public function test_ampel_je_farbe() {
+		$this->assertSame( 'leer', Material::level( 3.0, 15, 0.0 ) );
+		$this->assertSame( 'ok', Material::level( null, 15, 2.0 ) );
+		$this->assertSame( 'knapp', Material::level( 15.0, 15, 1.0 ) );
+		$this->assertSame( 'bald', Material::level( 25.0, 15, 1.0 ) );
+		$this->assertSame( 'ok', Material::level( 31.0, 15, 4.0 ) );
+	}
 }

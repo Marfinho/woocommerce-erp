@@ -43,8 +43,12 @@ nach `main` mergen.
 ## ERP-Oberfläche unter /erp
 
 Zweiter Zugang neben wp-admin: `lindenweg16.de/erp`, Anmeldung mit dem WordPress-Konto.
-Das Menü richtet sich nach den Rechten der Person; die bestehenden Seiten sind eingebettet.
-Rechte werden pro Person unter **Verwaltung → Benutzer & Rechte** vergeben (Einzelrechte und
+Links stehen sechs Bereiche (Produktion, Verkauf, Lager, Katalog, Zahlen und „Heute“), oben Reiter,
+darunter bei Bedarf eine Auswahl innerhalb des Reiters. Mailbox und Profilmenü (Einstellungen, Benutzer &
+Rechte, Löhne, Etikettendrucker, Import, Support, Anleitungen) liegen in der Leiste bzw. am Avatar. Das Menü
+richtet sich nach den Rechten der Person; noch nicht ersetzte Seiten sind eingebettet. Die Zuordnung der Seiten
+zu Bereichen und Reitern steht in `Navigation::layout()`, getrennt von den Rechten.
+Rechte werden pro Person im Profilmenü unter **Benutzer & Rechte** vergeben (Einzelrechte und
 Vorlagen, gespeichert im Nutzermerker `lw16_erp_perms`; die sechs Betrieb-Rechte werden
 nachgeführt). Code: `includes/Erp/`, Oberfläche: `assets/erp/`, Schnittstelle: `lw16/v1/erp/*`.
 Die Adresse lässt sich über den Filter `lw16_erp_url` ändern.

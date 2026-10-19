@@ -28,6 +28,17 @@
 	};
 
 	var el = {}; // Gerüst-Elemente
+
+	/*
+	 * Eigene Dateien für Seiten (assets/erp/pages/*.js): Sie melden sich mit
+	 * LW16ERP_UI.pages[<Seitenkennung>] = function (item, ui) { … } für eine
+	 * Seite der Navigation bzw. mit LW16ERP_UI.routes[<Name>] für eine eigene
+	 * Adresse #/<Name>/<id>/<unter>. Die Hilfen (h, api, …) hängen unten an.
+	 */
+	var UI = window.LW16ERP_UI = window.LW16ERP_UI || {};
+	UI.pages = UI.pages || {};
+	UI.routes = UI.routes || {};
+	UI.productTabs = UI.productTabs || {};
 	var timers = [];
 	var camera = null;
 
@@ -74,6 +85,10 @@
 		refresh: '<path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/>',
 		logout: '<path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9"/>',
 		flow: '<circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/><path d="M7 6h6a4 4 0 0 1 4 4M7 18h6a4 4 0 0 0 4-4"/>',
+		book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/>',
+		mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+		dots: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+		clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 		download: '<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>',
 		shop: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9v11H4z"/>'
 	};
@@ -271,7 +286,43 @@
 
 	function route() {
 		var parts = (location.hash || '#/start').replace(/^#\/?/, '').split('/');
-		return { name: parts[0] || 'start', id: parts[1] || '' };
+		return { name: parts[0] || 'start', id: parts[1] || '', sub: parts[2] || '' };
+	}
+
+	/*
+	 * Menüführung: links die Bereiche, oben die Reiter, darunter bei Bedarf
+	 * die Auswahl innerhalb eines Reiters. Zuletzt besuchte Seiten werden
+	 * gemerkt, damit ein Klick auf den Bereich dort weitermacht.
+	 */
+	var LAST_KEY = 'lw16erp-last';
+
+	function lastSeen() { return readJson(LAST_KEY, {}); }
+
+	function remember(section, tab, id) {
+		var last = lastSeen();
+		last[section] = id;
+		last[section + ':' + tab] = id;
+		writeJson(LAST_KEY, last);
+	}
+
+	function hasItem(items, id) {
+		return items.some(function (i) { return i.id === id; });
+	}
+
+	function sectionTarget(sec) {
+		var last = lastSeen();
+		if (last[sec.id] && hasItem(sec.items, last[sec.id])) { return last[sec.id]; }
+		return sec.items.length ? sec.items[0].id : '';
+	}
+
+	function tabTarget(sec, tab) {
+		var last = lastSeen();
+		var id = last[sec.id + ':' + tab.label];
+		return id && hasItem(tab.items, id) ? id : tab.items[0].id;
+	}
+
+	function railAreas() {
+		return S.boot.nav.filter(function (s) { return s.rail; });
 	}
 
 	/* ---------- Gerüst ---------- */
@@ -281,90 +332,70 @@
 		var theme = store('lw16erp-theme');
 		if (theme) { document.documentElement.setAttribute('data-theme', theme); }
 
-		el.nav = h('nav', { class: 'nav', 'aria-label': 'Hauptmenü' });
-		el.nav.appendChild(h('a', { class: 'nav-link', href: '#/start', 'data-r': 'start' }, ico('home'), 'Start'));
-
-		boot.nav.forEach(function (area) {
-			area.items.forEach(function (item) {
-				if (item.top) {
-					el.nav.appendChild(h('a', { class: 'nav-link nav-top', href: '#/seite/' + item.id, 'data-item': item.id }, ico('flow'), item.title));
-				}
-			});
+		var rail = h('nav', { class: 'nav', 'aria-label': 'Bereiche' });
+		el.nav = rail;
+		rail.appendChild(h('a', { class: 'rail-link', href: '#/start', 'data-r': 'start' }, ico('home'), h('span', null, 'Heute')));
+		railAreas().forEach(function (area) {
+			rail.appendChild(h('a', { class: 'rail-link', href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), h('span', null, area.title)));
 		});
 
-		boot.nav.forEach(function (area) {
-			var btn = h('div', { class: 'nav-row' },
-				h('a', { class: 'nav-area area-' + area.id, href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), area.title),
-				h('button', {
-					class: 'chev-btn', type: 'button', 'aria-label': area.title + ' auf- oder zuklappen', 'data-chev': area.id, 'aria-expanded': 'false',
-					onclick: function () { S.open[area.id] = !S.open[area.id]; syncNav(); }
-				}, ico('chev', 'chev'))
-			);
-			var list = h('ul', { class: 'nav-sub', 'data-sub': area.id });
-			area.items.forEach(function (item) {
-				if (item.top) { return; }
-				list.appendChild(h('li', null,
-					h('a', { class: 'nav-link', href: '#/seite/' + item.id, 'data-item': item.id }, item.title, item.locked ? ico('lock', 'nav-lock') : null)
-				));
-			});
-			el.nav.appendChild(btn);
-			el.nav.appendChild(list);
-		});
+		var mail = areaOf('mail');
+		el.mailBtn = mail ? h('a', { class: 'rail-mini', href: '#/bereich/mail', 'data-area': 'mail', 'aria-label': 'Mailbox' }, ico('mail'), h('b', { class: 'badge', hidden: true })) : null;
+		el.avatarBtn = h('button', { class: 'avatar-btn', type: 'button', 'aria-label': 'Profil und Einstellungen', 'aria-haspopup': 'true', onclick: function (e) { e.stopPropagation(); toggleProfile(); } },
+			h('img', { src: boot.user.avatar, alt: '', width: 40, height: 40 }));
 
-		var side = h('aside', { class: 'side', id: 'side' },
-			h('div', { class: 'brand' },
-				h('div', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L'),
-				h('div', { class: 'brand-name' }, boot.shop.name, h('small', null, 'ERP'))
-			),
-			el.nav,
-			h('div', { class: 'side-foot' },
-				h('div', { class: 'me' },
-					h('img', { src: boot.user.avatar, alt: '', width: 36, height: 36 }),
-					h('div', { style: 'min-width:0' }, h('b', null, boot.user.name), h('span', null, boot.user.full ? 'Vollzugriff' : 'ERP-Zugang'))
-				),
-				h('div', { class: 'side-links' },
-					h('a', { href: boot.shop.url }, ico('shop'), 'Zum Shop'),
-					boot.user.full ? h('a', { href: C.adminUrl }, ico('ext'), 'wp-admin') : null,
-					h('a', { href: C.logout }, ico('logout'), 'Abmelden')
-				)
-			)
+		var side = h('aside', { class: 'side rail', id: 'side' },
+			h('div', { class: 'brand' }, h('div', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L')),
+			rail,
+			h('div', { class: 'rail-foot' }, el.mailBtn, el.avatarBtn)
 		);
 
 		el.net = h('button', { class: 'net-pill', type: 'button', hidden: true, title: 'Jetzt senden', onclick: flush });
 		el.title = h('h1', null, '');
 		el.crumb = h('span', { class: 'crumb' }, '');
-		el.themeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme }, ico('moon'));
+		el.themeBtn = h('button', { class: 'pop-item', type: 'button', onclick: toggleTheme }, ico('moon'), h('span', null, 'Hell/Dunkel'));
 
+		var time = findItem('zeit');
 		var top = h('header', { class: 'top' },
-			h('button', { class: 'icon-btn', id: 'menu-btn', type: 'button', 'aria-label': 'Menü', onclick: function () { el.app.classList.toggle('drawer-open'); } }, ico('menu')),
 			h('div', { class: 'top-title' }, el.crumb, el.title),
 			el.net,
-			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Suchen …', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
+			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
-			el.themeBtn
+			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit' }, ico('clock'), h('span', null, 'Zeit')) : null,
+			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
 		);
 
+		el.sub = h('div', { class: 'subnav', hidden: true });
 		el.view = h('main', { class: 'view', id: 'view', tabindex: '-1' });
 
 		var tabs = h('nav', { class: 'tabbar', 'aria-label': 'Bereiche' },
-			h('a', { class: 'tab', href: '#/start', 'data-r': 'start' }, ico('home'), 'Start')
+			h('a', { class: 'tab', href: '#/start', 'data-r': 'start' }, ico('home'), 'Heute')
 		);
-		boot.nav.forEach(function (area) {
+		var rails = railAreas();
+		rails.slice(0, 3).forEach(function (area) {
 			tabs.appendChild(h('a', { class: 'tab', href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), area.title));
 		});
+		tabs.appendChild(h('button', { class: 'tab', type: 'button', 'data-more': '1', onclick: openMore }, ico('dots'), 'Mehr'));
+
+		el.pop = h('div', { class: 'pop', hidden: true, role: 'menu' });
 
 		el.app = h('div', { class: 'erp' },
 			side,
-			h('div', { class: 'scrim', onclick: function () { el.app.classList.remove('drawer-open'); } }),
-			h('div', { class: 'main' }, top, el.view),
-			tabs
+			h('div', { class: 'main' }, top, el.sub, el.view),
+			tabs,
+			el.pop
 		);
 
 		root.textContent = '';
 		root.className = '';
 		root.appendChild(el.app);
 		el.tabs = tabs;
+		el.moreAreas = rails.slice(3);
 		syncTheme();
+
+		document.addEventListener('click', function (e) {
+			if (!el.pop.hidden && !el.pop.contains(e.target)) { el.pop.hidden = true; }
+		});
 
 		// Auf dem Desktop zeigt das große Suchfeld, auf dem Handy nur das Symbol.
 		var mq = window.matchMedia('(min-width: 900px)');
@@ -372,6 +403,48 @@
 		function mqSync() { iconBtn.style.display = mq.matches ? 'none' : 'inline-grid'; }
 		mqSync();
 		if (mq.addEventListener) { mq.addEventListener('change', mqSync); }
+	}
+
+	function profileItems() {
+		var sec = areaOf('profil');
+		return sec ? sec.items : [];
+	}
+
+	function toggleProfile() {
+		var boot = S.boot;
+		if (!el.pop.hidden) { el.pop.hidden = true; return; }
+
+		el.pop.textContent = '';
+		el.pop.appendChild(h('div', { class: 'pop-head' },
+			h('img', { src: boot.user.avatar, alt: '', width: 40, height: 40 }),
+			h('div', { style: 'min-width:0' }, h('b', null, boot.user.name), h('small', null, boot.user.full ? 'Vollzugriff' : 'ERP-Zugang'))
+		));
+		profileItems().forEach(function (i) {
+			el.pop.appendChild(h('a', { class: 'pop-item', href: '#/seite/' + i.id, role: 'menuitem', onclick: function () { el.pop.hidden = true; } }, ico(i.locked ? 'lock' : 'cog'), h('span', null, i.title)));
+		});
+		el.pop.appendChild(h('hr'));
+		el.pop.appendChild(el.themeBtn);
+		el.pop.appendChild(h('a', { class: 'pop-item', href: boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
+		if (boot.user.full) { el.pop.appendChild(h('a', { class: 'pop-item', href: C.adminUrl }, ico('ext'), h('span', null, 'WordPress-Verwaltung'))); }
+		el.pop.appendChild(h('a', { class: 'pop-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
+		el.pop.hidden = false;
+	}
+
+	// Handy: alles, was nicht in die untere Leiste passt.
+	function openMore() {
+		var body = h('div', { class: 'more' });
+		el.moreAreas.forEach(function (a) {
+			body.appendChild(h('a', { class: 'more-item', href: '#/bereich/' + a.id, onclick: closeDlg }, ico(a.icon), h('span', null, a.title)));
+		});
+		if (areaOf('mail')) { body.appendChild(h('a', { class: 'more-item', href: '#/bereich/mail', onclick: closeDlg }, ico('mail'), h('span', null, 'Mailbox'))); }
+		profileItems().forEach(function (i) {
+			body.appendChild(h('a', { class: 'more-item', href: '#/seite/' + i.id, onclick: closeDlg }, ico('cog'), h('span', null, i.title)));
+		});
+		body.appendChild(h('a', { class: 'more-item', href: S.boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
+		body.appendChild(h('a', { class: 'more-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
+		dlg('Mehr', body);
+
+		function closeDlg() { var d = document.querySelector('dialog.sheet[open]'); if (d) { d.close(); } }
 	}
 
 	function isDark() {
@@ -383,6 +456,7 @@
 	function syncTheme() {
 		el.themeBtn.textContent = '';
 		el.themeBtn.appendChild(ico(isDark() ? 'sun' : 'moon'));
+		el.themeBtn.appendChild(h('span', null, isDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'));
 	}
 
 	function toggleTheme() {
@@ -401,29 +475,58 @@
 			var f = findItem(r.id);
 			activeArea = f ? f.area.id : '';
 		}
-		if (activeArea) { S.open[activeArea] = true; }
+		if (r.name === 'drucker') { activeArea = 'produktion'; }
+		if (r.name === 'produkt') { activeArea = 'katalog'; }
+		if (r.name === 'bestellung') { activeArea = 'verkauf'; }
 
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-r]'), function (a) {
+		Array.prototype.forEach.call(el.app.querySelectorAll('[data-r]'), function (a) {
 			a.classList.toggle('active', a.getAttribute('data-r') === r.name);
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-area]'), function (a) {
-			var id = a.getAttribute('data-area');
-			a.classList.toggle('active', r.name === 'bereich' && r.id === id);
+		Array.prototype.forEach.call(el.app.querySelectorAll('[data-area]'), function (a) {
+			a.classList.toggle('active', activeArea === a.getAttribute('data-area'));
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-chev]'), function (b) {
-			b.setAttribute('aria-expanded', S.open[b.getAttribute('data-chev')] ? 'true' : 'false');
+		var more = el.tabs.querySelector('[data-more]');
+		var inRail = railAreas().slice(0, 3).some(function (a) { return a.id === activeArea; });
+		if (more) { more.classList.toggle('active', !!activeArea && !inRail); }
+	}
+
+	// Reiter des Bereichs und, wenn ein Reiter mehrere Seiten hat, deren Auswahl.
+	function renderSub(f) {
+		el.sub.textContent = '';
+		var sec = f ? f.area : null;
+
+		if (!sec || sec.id === 'profil' || !sec.tabs) {
+			el.sub.hidden = true;
+			el.app.classList.remove('has-sub');
+			document.documentElement.style.setProperty('--sub', '0px');
+			return;
+		}
+
+		var active = null;
+		var strip = h('div', { class: 'tabs', role: 'tablist' });
+
+		sec.tabs.forEach(function (t) {
+			var on = hasItem(t.items, f.item.id);
+			if (on) { active = t; }
+			strip.appendChild(h('a', { class: 'tabx' + (on ? ' on' : ''), role: 'tab', 'aria-selected': on ? 'true' : 'false', href: '#/seite/' + tabTarget(sec, t) }, t.label));
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-sub]'), function (ul) {
-			ul.hidden = !S.open[ul.getAttribute('data-sub')];
-		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-item]'), function (a) {
-			var on = r.name === 'seite' && r.id === a.getAttribute('data-item');
-			a.classList.toggle('active', on);
-			if (on) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
-		});
-		Array.prototype.forEach.call(el.tabs.querySelectorAll('.tab'), function (a) {
-			var on = a.hasAttribute('data-r') ? r.name === 'start' : activeArea === a.getAttribute('data-area');
-			a.classList.toggle('active', on);
+
+		el.sub.appendChild(h('div', { class: 'sec-title' }, h('h2', null, sec.title), h('span', null, sec.hint)));
+		if (sec.tabs.length > 1) { el.sub.appendChild(strip); }
+
+		if (active && active.items.length > 1) {
+			var pills = h('div', { class: 'pills' });
+			active.items.forEach(function (i) {
+				pills.appendChild(h('a', { class: 'pill' + (i.id === f.item.id ? ' on' : ''), href: '#/seite/' + i.id }, i.title));
+			});
+			el.sub.appendChild(pills);
+		}
+
+		el.sub.hidden = false;
+		el.app.classList.add('has-sub');
+		if (active) { remember(sec.id, active.label, f.item.id); }
+		window.requestAnimationFrame(function () {
+			document.documentElement.style.setProperty('--sub', el.sub.offsetHeight + 'px');
 		});
 	}
 
@@ -453,12 +556,23 @@
 		syncNav();
 
 		var r = route();
-		el.view.classList.remove('wide');
+		el.view.classList.remove('wide', 'broad');
 		el.view.textContent = '';
 
-		if (r.name === 'bereich' && areaOf(r.id)) { return viewArea(areaOf(r.id)); }
+		el.sub.hidden = true;
+		el.app.classList.remove('has-sub');
+		document.documentElement.style.setProperty('--sub', '0px');
+
+		if (r.name === 'bereich' && areaOf(r.id)) {
+			var target = sectionTarget(areaOf(r.id));
+			if (target) { location.replace('#/seite/' + target); return; }
+			return viewArea(areaOf(r.id));
+		}
 		if (r.name === 'seite') { return viewPage(r.id); }
+		if (UI.routes[r.name]) { return UI.routes[r.name](r, UI); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
+		if (r.name === 'drucker') { return viewPrinterFile(r.id); }
+		if (r.name === 'produkt') { return viewProduct(parseInt(r.id, 10) || 0, r.sub); }
 		if (r.name === 'bestellung') { return viewShipOrder(parseInt(r.id, 10) || 0); }
 		return viewStart();
 	}
@@ -467,40 +581,68 @@
 		var boot = S.boot;
 		var hour = new Date().getHours();
 		var hello = hour < 11 ? 'Guten Morgen' : (hour < 18 ? 'Guten Tag' : 'Guten Abend');
-		setHead('Start', boot.shop.name);
+		setHead('Heute', boot.shop.name);
 
+		el.view.appendChild(h('div', { class: 'page-head today-head' },
+			h('div', null,
+				h('p', { class: 'muted', style: 'margin:0' }, new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })),
+				h('h2', null, hello + ', ' + boot.user.name.split(' ')[0]))
+		));
+
+		var next = h('div');
+		var list = h('div', { class: 'tasks' });
 		var tiles = h('div', { class: 'grid tiles' });
 		var ordersCard = h('div', { class: 'card' }, h('h3', null, 'Letzte Bestellungen'), h('p', { class: 'muted' }, 'Wird geladen …'));
 
-		el.view.appendChild(h('div', { class: 'page-head' },
-			h('div', null, h('h2', null, hello + ', ' + boot.user.name.split(' ')[0]),
-				h('p', { class: 'muted', style: 'margin:4px 0 0' }, new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })))
+		el.view.appendChild(h('div', { class: 'today' },
+			h('div', { class: 'today-main' }, next, list),
+			h('div', { class: 'today-side' }, tiles, ordersCard)
 		));
 
-		el.view.appendChild(tiles);
+		function paintTasks(d) {
+			next.textContent = '';
+			list.textContent = '';
+			var tasks = d.tasks || [];
 
-		var areas = h('div', { class: 'grid cards', style: 'margin-top:18px' });
-		if (findItem('workflow')) {
-			areas.appendChild(h('a', { class: 'link-card area-fertigung', href: '#/seite/workflow' },
-				h('div', { class: 'badge-ico' }, ico('flow')),
-				h('div', null, h('b', null, 'Workflow'), h('span', { class: 'sub' }, 'Vom Bedarf zum Bestand – Platten rüsten, drucken, melden'))
+			if (el.mailBtn) {
+				var badge = el.mailBtn.querySelector('.badge');
+				badge.textContent = String(d.mail || 0);
+				badge.hidden = !d.mail;
+			}
+
+			if (!tasks.length) {
+				next.appendChild(h('div', { class: 'next calm' },
+					h('small', null, 'Heute'),
+					h('b', null, 'Alles erledigt'),
+					h('span', null, 'Gerade wartet nichts auf dich.')
+				));
+				return;
+			}
+
+			var first = tasks[0];
+			next.appendChild(h('div', { class: 'next' },
+				h('small', null, 'Dein Nächstes'),
+				h('b', null, first.title),
+				h('span', null, first.sub),
+				h('a', { class: 'next-go', href: first.href }, first.cta)
 			));
+
+			tasks.slice(1).forEach(function (t) {
+				list.appendChild(h('a', { class: 'task t-' + t.kind, href: t.href },
+					h('div', { class: 'task-main' }, h('b', null, t.title), h('small', null, t.sub)),
+					h('span', { class: 'task-cta' }, t.cta, ico('chev'))
+				));
+			});
 		}
-		boot.nav.forEach(function (area) {
-			areas.appendChild(h('a', { class: 'link-card area-' + area.id, href: '#/bereich/' + area.id },
-				h('div', { class: 'badge-ico' }, ico(area.icon)),
-				h('div', null, h('b', null, area.title), h('span', { class: 'sub' }, area.items.length + (area.items.length === 1 ? ' Seite' : ' Seiten') + ' · ' + area.hint))
-			));
-		});
-		el.view.appendChild(areas);
 
-		el.view.appendChild(h('div', { class: 'two', style: 'margin-top:18px' }, ordersCard, phasesCard()));
-
-		var skel = ['a', 'b', 'c', 'd'].map(function () { return h('div', { class: 'tile skeleton' }, h('div', { class: 'lab' }, ' '), h('div', { class: 'val' })); });
+		var skel = ['a', 'b', 'c', 'd'].map(function () { return h('div', { class: 'tile skeleton' }, h('div', { class: 'lab' }, ' '), h('div', { class: 'val' })); });
 		skel.forEach(function (s) { tiles.appendChild(s); });
 
 		function load() {
-			return api('dashboard').then(paint);
+			return Promise.all([
+				api('aufgaben').then(paintTasks).catch(function (e) { next.textContent = ''; next.appendChild(h('div', { class: 'notice warn' }, e.message)); }),
+				api('dashboard').then(paint)
+			]);
 		}
 
 		function paint(d) {
@@ -549,22 +691,6 @@
 		}, 60000));
 	}
 
-	function phasesCard() {
-		var steps = [
-			[true, 'Gerüst, Anmeldung mit dem WordPress-Konto, Menü aus den Rechten'],
-			[true, 'Rechte pro Person, fein einstellbar – auch für Formulare und alle Module'],
-			[true, 'Native Seiten: Scannen, Picklisten, Druckfarm (mit Vollbild), Aufträge, Versand'],
-			[true, 'Ohne Verbindung arbeiten: Oberfläche öffnet offline, Buchungen werden vorgemerkt'],
-			[true, 'Als App auf den Startbildschirm; optional eigene Subdomain'],
-			[false, 'Weitere native Seiten (Artikel, Material, Berichte …) – bis dahin eingebettet']
-		];
-		var list = h('ol', { class: 'phases' });
-		steps.forEach(function (s, i) {
-			list.appendChild(h('li', { class: s[0] ? 'done' : '' }, h('span', { class: 'dot' }, s[0] ? ico('check') : String(i + 1)), h('span', null, s[1])));
-		});
-		return h('div', { class: 'card' }, h('h3', null, 'Ausbaustufen'), h('p', { class: 'muted', style: 'margin-top:-4px;font-size:13px' }, 'Prototyp – so weit ist die Oberfläche.'), list);
-	}
-
 	function viewArea(area) {
 		setHead(area.title, 'Bereich');
 		el.view.appendChild(h('div', { class: 'page-head' }, h('div', null, h('h2', null, area.title), h('p', { class: 'muted', style: 'margin:4px 0 0' }, area.hint))));
@@ -588,8 +714,10 @@
 		}
 
 		setHead(f.item.title, f.area.title);
+		renderSub(f);
 
 		if (f.item.kind === 'native') {
+			if (UI.pages[f.item.id]) { return UI.pages[f.item.id](f.item, UI); }
 			if (f.item.id === 'rechte') { return viewRights(); }
 			if (f.item.id === 'scannen') { return viewScan(); }
 			if (f.item.id === 'picken') { return viewPick(); }
@@ -598,6 +726,8 @@
 			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
 			if (f.item.id === 'einkauf') { return viewProcurement(); }
+			if (f.item.id === 'material') { return viewMaterial(f.item); }
+			if (f.item.id === 'artikel') { return viewProducts(f.item); }
 			if (f.item.id === 'sollist') { return viewVariance(); }
 		}
 
@@ -1257,9 +1387,44 @@
 		return 'vor ' + Math.round(s / 3600) + ' h';
 	}
 
+	function farmCard(p, now, withLink) {
+		var card = h('article', { class: 'printer st-' + p.status },
+			h('header', null, h('h3', null, p.name), h('span', { class: 'pill st-' + p.status }, p.text)),
+			p.model ? h('div', { class: 'muted', style: 'font-size:12.5px' }, p.model) : null
+		);
+
+		if (p.progress !== null) {
+			card.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt ' + p.name }, h('i', { style: 'width:' + p.progress + '%' })));
+			card.appendChild(h('div', { class: 'bar-txt' }, h('b', null, p.progress + ' %'), p.remaining !== null ? h('span', { class: 'muted' }, 'noch ' + p.remaining + ' min') : null));
+		}
+
+		if (p.nozzle !== null || p.bed !== null) {
+			card.appendChild(h('div', { class: 'temps' }, 'Düse ' + (p.nozzle !== null ? Math.round(p.nozzle) : '–') + ' °C · Bett ' + (p.bed !== null ? Math.round(p.bed) : '–') + ' °C'));
+		}
+
+		if (p.trays.length) {
+			card.appendChild(h('div', { class: 'trays' }, p.trays.map(function (tr) {
+				return h('span', { class: 'tray', title: tr.material + (tr.remain !== null ? ' · ' + tr.remain + ' %' : '') },
+					h('i', { style: 'background:' + tr.color }), tr.material, tr.remain !== null ? h('small', null, tr.remain + ' %') : null);
+			})));
+		}
+
+		if (p.snapshot) { card.appendChild(h('img', { class: 'snap', src: p.snapshot, alt: 'Kamera-Standbild ' + p.name, loading: 'lazy' })); }
+		if (p.error) { card.appendChild(h('div', { class: 'err' }, p.error)); }
+		if (p.service && p.service.length) { card.appendChild(h('div', { class: 'svc' }, ico('refresh'), p.service.length === 1 ? p.service[0] : p.service.length + ' Wartungen fällig')); }
+
+		card.appendChild(h('footer', null,
+			h('span', null, p.queue + ' wartend'),
+			h('span', { class: 'muted' }, 'Kontakt ' + ago(p.seen, now)),
+			withLink ? h('a', { class: 'more-link', href: '#/drucker/' + encodeURIComponent(p.id) }, 'Akte', ico('chev')) : null
+		));
+
+		return card;
+	}
+
 	function viewFarm(item) {
 		var kiosk = h('button', { class: 'btn', type: 'button', onclick: function () { el.app.classList.add('kiosk'); } }, 'Vollbild-Anzeige');
-		pageHead('Druckfarm', 'Live-Stand aller Bambu-Drucker – aktualisiert sich alle 5 Sekunden.', [kiosk, classicBtn(item)]);
+		pageHead('Drucker', 'Live-Stand aller Bambu-Drucker. Ein Klick auf „Akte“ zeigt Verlauf, Wartung und Verbindung.', [kiosk, classicBtn(item)]);
 
 		var grid = h('div', { class: 'farm' });
 		el.view.appendChild(grid);
@@ -1268,40 +1433,93 @@
 		function paint(d) {
 			grid.textContent = '';
 			if (!d.printers.length) { grid.appendChild(h('div', { class: 'notice' }, 'Noch kein Bambu-Drucker angelegt.')); return; }
-
-			d.printers.forEach(function (p) {
-				var card = h('article', { class: 'printer st-' + p.status },
-					h('header', null, h('h3', null, p.name), h('span', { class: 'pill st-' + p.status }, p.text)),
-					p.model ? h('div', { class: 'muted', style: 'font-size:12.5px' }, p.model) : null
-				);
-
-				if (p.progress !== null) {
-					card.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': p.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': 'Fortschritt ' + p.name }, h('i', { style: 'width:' + p.progress + '%' })));
-					card.appendChild(h('div', { class: 'bar-txt' }, h('b', null, p.progress + ' %'), p.remaining !== null ? h('span', { class: 'muted' }, 'noch ' + p.remaining + ' min') : null));
-				}
-
-				if (p.nozzle !== null || p.bed !== null) {
-					card.appendChild(h('div', { class: 'temps' }, 'Düse ' + (p.nozzle !== null ? Math.round(p.nozzle) : '–') + ' °C · Bett ' + (p.bed !== null ? Math.round(p.bed) : '–') + ' °C'));
-				}
-
-				if (p.trays.length) {
-					card.appendChild(h('div', { class: 'trays' }, p.trays.map(function (t) {
-						return h('span', { class: 'tray', title: t.material + (t.remain !== null ? ' · ' + t.remain + ' %' : '') },
-							h('i', { style: 'background:' + t.color }), t.material, t.remain !== null ? h('small', null, t.remain + ' %') : null);
-					})));
-				}
-
-				if (p.snapshot) { card.appendChild(h('img', { class: 'snap', src: p.snapshot, alt: 'Kamera-Standbild ' + p.name, loading: 'lazy' })); }
-				if (p.error) { card.appendChild(h('div', { class: 'err' }, p.error)); }
-
-				card.appendChild(h('footer', null, h('span', null, p.queue + ' wartend'), h('span', { class: 'muted' }, 'Kontakt ' + ago(p.seen, d.now))));
-				grid.appendChild(card);
-			});
+			d.printers.forEach(function (p) { grid.appendChild(farmCard(p, d.now, true)); });
 		}
 
 		function load() { return api('druckfarm').then(paint); }
 		load().catch(function (e) { grid.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 5000));
+	}
+
+	var RUN_TEXT = { freigegeben: 'bereit', ruesten: 'rüsten', druckt: 'im Druck', zu_melden: 'zu melden', erledigt: 'erledigt', abgebrochen: 'abgebrochen' };
+
+	function viewPrinterFile(id) {
+		var f = findItem('druckfarm');
+		setHead('Drucker', 'Produktion');
+		if (f) { renderSub(f); }
+
+		var box = h('div');
+		el.view.appendChild(h('a', { class: 'btn back', href: '#/seite/druckfarm' }, ico('chev', 'flip'), 'Alle Drucker'));
+		el.view.appendChild(box);
+
+		function load() {
+			return api('drucker/' + encodeURIComponent(id)).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function stat(label, value, sub) {
+			return h('div', { class: 'tile' }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, value), sub ? h('div', { class: 'muted', style: 'font-size:12px' }, sub) : null);
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			setHead(d.name, 'Drucker');
+
+			var stats = h('div', { class: 'grid tiles', style: 'margin:14px 0' },
+				stat('Diese Woche', d.week_h + ' h', 'Druckzeit gestempelt'),
+				stat('Aktuell', d.current ? 'Platte ' + d.current.id : 'frei', d.current ? d.current.text : 'nichts eingeplant'),
+				stat('Betriebsstunden', d.device ? d.device.hours + ' h' : '–', d.device ? 'Gerät ' + d.device.code : 'kein Gerät verknüpft'),
+				stat('Wartung', d.service.length ? d.service.length + ' fällig' : 'in Ordnung', d.service.length ? '' : 'nichts überfällig')
+			);
+
+			var left = h('div', { class: 'file-col' });
+			if (d.live && d.live.id) { left.appendChild(farmCard(d.live, d.now, false)); }
+			if (d.current) { left.appendChild(h('a', { class: 'btn primary', href: '#/platte/' + d.current.id }, 'Platte ' + d.current.id + ' öffnen')); }
+
+			var right = h('div', { class: 'file-col' });
+
+			var service = h('div', { class: 'card' }, h('h3', null, 'Wartung'));
+			if (d.service.length) {
+				service.appendChild(h('ul', { class: 'bullets warn' }, d.service.map(function (s) { return h('li', null, s); })));
+			} else {
+				service.appendChild(h('p', { class: 'muted' }, 'Nichts überfällig.'));
+			}
+			if (d.log.length) {
+				service.appendChild(h('table', { class: 'list' }, h('tbody', null, d.log.map(function (l) {
+					return h('tr', null, h('td', null, l.on), h('td', null, l.type), h('td', null, l.part || l.note || ''));
+				}))));
+			}
+			if (findItem('drucker')) { service.appendChild(h('a', { class: 'btn', href: '#/seite/drucker', style: 'margin-top:10px' }, 'Wartung erfassen')); }
+			right.appendChild(service);
+
+			var hist = h('div', { class: 'card' }, h('h3', null, 'Verlauf'));
+			if (!d.history.length) { hist.appendChild(h('p', { class: 'muted' }, 'Noch keine Platte auf diesem Drucker.')); }
+			else {
+				hist.appendChild(h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Platte'), h('th', null, 'Inhalt'), h('th', { class: 'num' }, 'Soll'), h('th', { class: 'num' }, 'Ist'), h('th', null, ''))),
+					h('tbody', null, d.history.map(function (r) {
+						return h('tr', null,
+							h('td', null, h('a', { href: '#/platte/' + r.id }, '#' + r.id), h('div', { class: 'muted', style: 'font-size:12px' }, r.when ? when(r.when) : '')),
+							h('td', null, r.text),
+							h('td', { class: 'num' }, r.plan ? minTxt(r.plan) : '–'),
+							h('td', { class: 'num' }, r.actual !== null ? minTxt(r.actual) : '–'),
+							h('td', null, h('span', { class: 'tag' + (r.status === 'erledigt' ? ' now' : '') }, RUN_TEXT[r.status] || r.status))
+						);
+					}))
+				));
+			}
+			right.appendChild(hist);
+
+			var conn = h('div', { class: 'card' }, h('h3', null, 'Verbindung'));
+			conn.appendChild(h('p', { class: d.linked ? 'muted' : '' }, d.linked ? 'Mit Gerät ' + d.device.code + ' verknüpft: Druckzeiten und Meldungen landen im Druckjournal.' : 'Mit keinem Gerät verknüpft. Ohne Verknüpfung lässt sich nichts ins Druckjournal buchen.'));
+			if (findItem('bambu')) { conn.appendChild(h('a', { class: 'btn', href: '#/seite/bambu' }, 'Verbindung bearbeiten')); }
+			right.appendChild(conn);
+
+			box.appendChild(stats);
+			box.appendChild(h('div', { class: 'file' }, left, right));
+		}
+
+		load();
+		timers.push(setInterval(function () { if (!document.hidden) { load().catch(function () {}); } }, 10000));
 	}
 
 	var ORDER_FILTERS = [['', 'Alle'], ['entwurf', 'Entwürfe'], ['bestaetigt', 'Bestätigt'], ['storniert', 'Storniert']];
@@ -1405,7 +1623,7 @@
 
 	function viewShipping(item) {
 		pageHead('Versand', 'Packen, Label, Versendet – beim Versenden geht der Bestand ab.', classicBtn(item));
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
@@ -1460,7 +1678,9 @@
 	}
 
 	function viewShipOrder(id) {
-		setHead('Bestellung', 'Packen und versenden');
+		setHead('Bestellung', 'Verkauf');
+		var sf = findItem('versand');
+		if (sf) { renderSub(sf); }
 		var box = h('div', { class: 'run' });
 		el.view.appendChild(box);
 
@@ -1496,15 +1716,72 @@
 			}
 			act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
 			box.appendChild(act);
+
+			if (o.customer) {
+				var cu = o.customer;
+				box.appendChild(h('div', { class: 'card' }, h('h3', null, 'Kunde'),
+					h('div', { class: 'kv' },
+						h('span', null, 'Name'), h('b', null, cu.name || o.name),
+						cu.email ? h('span', null, 'E-Mail') : null, cu.email ? h('b', null, cu.email) : null,
+						cu.phone ? h('span', null, 'Telefon') : null, cu.phone ? h('b', null, cu.phone) : null,
+						h('span', null, 'Bestellungen'), h('b', null, cu.orders ? cu.orders + (cu.orders === 1 ? ' (die erste)' : ' insgesamt') : '–'))));
+			}
+
+			if (o.timeline && o.timeline.length) {
+				box.appendChild(h('div', { class: 'card' }, h('h3', null, 'Verlauf'),
+					h('ol', { class: 'timeline' }, o.timeline.map(function (ev) {
+						return h('li', { class: 'ev-' + ev.kind }, h('small', { class: 'muted' }, ev.ts ? when(ev.ts) : ''), h('span', null, ev.text));
+					}))));
+			}
+
 			box.appendChild(h('a', { class: 'btn', href: '#/seite/versand' }, '← Zurück zum Versand'));
 		}
 
 		load();
 	}
 
+	function num(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
+
+	// Bestellformular für eine Position (Einkauf und Material nutzen es gemeinsam).
+	function orderForm(o, reload) {
+		var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(o.qty), 'aria-label': 'Menge in ' + o.unit, style: 'max-width:90px' });
+		var sup = h('input', { class: 'field', type: 'text', value: o.supplier, placeholder: 'Lieferant', 'aria-label': 'Lieferant' });
+		var price = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: o.price ? num(o.price) : '', placeholder: '€ netto je ' + o.unit, 'aria-label': 'Preis netto', style: 'max-width:120px' });
+		var due = h('input', { class: 'field', type: 'date', 'aria-label': 'Erwartet am' });
+
+		return h('form', {
+			class: 'label-area', onsubmit: function (e) {
+				e.preventDefault();
+				var btn = e.target.querySelector('button[type=submit]');
+				btn.disabled = true;
+				api('einkauf/bestellt', { method: 'POST', body: { type: o.type, item_id: o.item_id, item_ref: o.item_ref, qty: qtyIn.value, price: price.value, supplier: sup.value, expected_on: due.value } })
+					.then(function (r) { toast(r.message); reload(); })
+					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+			}
+		}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'));
+	}
+
+	// Wareneingang zu einer offenen Bestellung.
+	function receiveForm(p, reload) {
+		var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
+		var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
+		var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
+
+		return h('form', {
+			class: 'label-area', onsubmit: function (e) {
+				e.preventDefault();
+				var btn = e.target.querySelector('button[type=submit]');
+				btn.disabled = true;
+				api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
+					.then(function (r) { toast(r.message); reload(); })
+					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+			}
+		}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'));
+	}
+
 	function viewProcurement() {
 		pageHead('Einkauf', 'Bestellen, unterwegs, eingegangen – der Eingang bucht den Bestand.', null);
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
@@ -1512,53 +1789,24 @@
 			return api('einkauf').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 		}
 
-		function num(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
-
 		function orderCard(o) {
-			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(o.qty), 'aria-label': 'Menge in ' + o.unit, style: 'max-width:90px' });
-			var sup = h('input', { class: 'field', type: 'text', value: o.supplier, placeholder: 'Lieferant', 'aria-label': 'Lieferant' });
-			var price = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: o.price ? num(o.price) : '', placeholder: '€ netto je ' + o.unit, 'aria-label': 'Preis netto', style: 'max-width:120px' });
-			var due = h('input', { class: 'field', type: 'date', 'aria-label': 'Erwartet am' });
-
 			return h('div', { class: 'row-card ship' },
 				h('div', { class: 'row-main' },
 					h('b', null, o.label),
 					h('small', null, o.kind + ' · Bestand ' + num(o.stock) + ' ' + o.unit + (o.coverage === null ? '' : ' · reicht noch ' + Math.floor(o.coverage) + ' Tage (Grenze ' + o.threshold + ')'))
 				),
-				h('form', {
-					class: 'label-area', onsubmit: function (e) {
-						e.preventDefault();
-						var btn = e.target.querySelector('button[type=submit]');
-						btn.disabled = true;
-						api('einkauf/bestellt', { method: 'POST', body: { type: o.type, item_id: o.item_id, item_ref: o.item_ref, qty: qtyIn.value, price: price.value, supplier: sup.value, expected_on: due.value } })
-							.then(function (r) { toast(r.message); load(); })
-							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
-					}
-				}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'))
+				orderForm(o, load)
 			);
 		}
 
 		function openCard(p) {
-			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
-			var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
-			var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
-
 			return h('div', { class: 'row-card ship' },
 				h('div', { class: 'row-main' },
 					h('b', null, p.label),
 					h('small', null, num(p.qty) + ' ' + p.unit + (p.supplier ? ' · ' + p.supplier : '') + ' · bestellt ' + p.ordered_on),
 					p.expected_on ? h('small', { class: p.late ? 'tag later' : 'muted' }, p.late ? p.late + ' Tage überfällig (erwartet ' + p.expected_on + ')' : 'erwartet ' + p.expected_on) : null
 				),
-				h('form', {
-					class: 'label-area', onsubmit: function (e) {
-						e.preventDefault();
-						var btn = e.target.querySelector('button[type=submit]');
-						btn.disabled = true;
-						api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
-							.then(function (r) { toast(r.message); load(); })
-							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
-					}
-				}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'))
+				receiveForm(p, load)
 			);
 		}
 
@@ -1586,9 +1834,65 @@
 		load();
 	}
 
+	var LEVEL_TEXT = { ok: 'reicht', bald: 'bald nachbestellen', knapp: 'jetzt nachbestellen', leer: 'leer' };
+
+	// Material: eine Karte je Filamentfarbe, mit Rollen, Bestellungen und Bestellformular.
+	function viewMaterial(item) {
+		pageHead('Material', 'Filament nach Farbe: was da ist, wie lange es reicht, was unterwegs ist.', classicBtn(item));
+		el.view.classList.add('broad');
+		var box = h('div', { class: 'mat-grid' });
+		el.view.appendChild(box);
+
+		function load() {
+			return api('material').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			if (!d.colors.length) { box.appendChild(h('div', { class: 'notice' }, 'Noch kein Filament im Lager. Der erste Wareneingang legt die Farbe an.')); return; }
+
+			d.colors.forEach(function (c) {
+				var pct = c.coverage === null ? 100 : Math.max(4, Math.min(100, Math.round(c.coverage / (c.threshold * 2) * 100)));
+				var card = h('article', { class: 'card mat lv-' + c.level },
+					h('header', null, h('h3', null, c.label), h('span', { class: 'lvl' }, LEVEL_TEXT[c.level])),
+					h('div', { class: 'mat-kg' }, h('b', null, num(c.stock)), ' kg'),
+					h('div', { class: 'bar', 'aria-hidden': 'true' }, h('i', { style: 'width:' + pct + '%' })),
+					h('div', { class: 'muted', style: 'font-size:13px' }, c.coverage === null ? 'Kein Verbrauch in den letzten 4 Wochen.' : 'reicht noch ' + Math.floor(c.coverage) + ' Tage · Grenze ' + c.threshold + ' · ' + num(c.daily * 1000) + ' g pro Tag')
+				);
+
+				if (c.lots.length) {
+					card.appendChild(h('ul', { class: 'lots' }, c.lots.map(function (l) {
+						return h('li', null,
+							h('b', null, l.code), h('span', null, l.material + ' · ' + num(l.remaining) + ' kg'),
+							l.dry === false ? h('span', { class: 'tag later' }, 'trocknen') : null,
+							l.location ? h('small', { class: 'muted' }, l.location) : null);
+					})));
+				}
+
+				c.open.forEach(function (p) {
+					card.appendChild(h('div', { class: 'incoming' },
+						h('b', null, 'Unterwegs: ' + num(p.qty) + ' kg'),
+						h('small', { class: p.late ? 'tag later' : 'muted' }, (p.supplier ? p.supplier + ' · ' : '') + (p.expected_on ? (p.late ? p.late + ' Tage überfällig' : 'erwartet ' + p.expected_on) : 'bestellt ' + p.ordered_on)),
+						d.receive ? receiveForm(p, load) : null));
+				});
+
+				if (d.order && !c.open.length) {
+					var form = h('div', { hidden: true }, orderForm({ type: 'filament', item_id: 0, item_ref: c.color, unit: 'kg', qty: c.qty, supplier: c.supplier, price: c.price }, load));
+					var open = h('button', { class: 'btn' + (c.level === 'knapp' || c.level === 'leer' ? ' primary' : ''), type: 'button', onclick: function (e) { form.hidden = !form.hidden; e.target.blur(); } }, 'Nachbestellen');
+					card.appendChild(open);
+					card.appendChild(form);
+				}
+
+				box.appendChild(card);
+			});
+		}
+
+		load();
+	}
+
 	function viewVariance() {
 		pageHead('Soll gegen Ist', 'Gestempelte Druckzeit gegen die Planzeit – damit Plan und Kalkulation der Wirklichkeit folgen.', null);
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
@@ -1642,6 +1946,149 @@
 		}
 
 		load();
+	}
+
+	/* ---------- Produkte ---------- */
+
+	var PRODUCT_FILTERS = [['alle', 'Alle'], ['ohne_3mf', 'Ohne 3MF'], ['marge', 'Marge kritisch'], ['nicht_im_shop', 'Nicht im Shop'], ['kein_preis', 'Ohne Preis']];
+
+	function viewProducts(item) {
+		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', classicBtn(item));
+		var filter = S.prodFilter || 'alle';
+		var q = '';
+		var chips = h('div', { class: 'presets' });
+		var search = h('input', { class: 'field', type: 'search', placeholder: 'Nummer oder Name suchen …', 'aria-label': 'Produkte suchen', style: 'max-width:340px;margin-bottom:10px', oninput: function (e) { q = e.target.value.trim().toLowerCase(); paintList(); } });
+		var box = h('div');
+		var data = null;
+		el.view.appendChild(chips);
+		el.view.appendChild(search);
+		el.view.appendChild(box);
+
+		function drawChips() {
+			chips.textContent = '';
+			PRODUCT_FILTERS.forEach(function (f) {
+				var n = data ? data.counts[f[0]] : null;
+				chips.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; S.prodFilter = f[0]; drawChips(); paintList(); } }, f[1] + (n !== null && f[0] !== 'alle' ? ' · ' + n : '')));
+			});
+		}
+
+		function paintList() {
+			box.textContent = '';
+			if (!data) { return; }
+			var rows = data.rows.filter(function (r) {
+				return (filter === 'alle' || r.flags.indexOf(filter) > -1) && (!q || (r.sku + ' ' + r.name).toLowerCase().indexOf(q) > -1);
+			});
+			if (!rows.length) { box.appendChild(h('div', { class: 'notice' }, filter === 'alle' ? 'Keine Produkte gefunden.' : 'Hier ist nichts auffällig.')); return; }
+
+			var list = h('div', { class: 'rows' });
+			rows.forEach(function (r) {
+				var tags = h('div', { class: 'row-tags' });
+				r.flags.forEach(function (fl) { tags.appendChild(h('span', { class: 'tag later' }, data.flags[fl][0])); });
+				if (!r.flags.length) { tags.appendChild(h('span', { class: 'tag now' }, 'in Ordnung')); }
+
+				list.appendChild(h('a', { class: 'row-card prod', href: '#/produkt/' + r.id },
+					h('div', { class: 'row-main' }, h('b', null, r.sku + ' – ' + r.name), h('small', null, r.sourcing + ' · ' + r.status)),
+					h('div', { class: 'row-num' }, r.price === null ? '–' : money(r.price, 'EUR')),
+					h('div', { class: 'row-num muted' }, num(r.stock) + ' im Lager'),
+					data.money ? h('div', { class: 'row-num muted' }, r.margin === null ? '' : Math.round(r.margin * 100) + ' % Marge') : null,
+					tags
+				));
+			});
+			box.appendChild(list);
+		}
+
+		drawChips();
+		box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+	}
+
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['shop', 'Shop']];
+
+	function viewProduct(id, sub) {
+		var f = findItem('artikel');
+		if (f) { renderSub(f); }
+		setHead('Produkt', 'Katalog');
+
+		var box = h('div');
+		el.view.appendChild(h('a', { class: 'btn back', href: '#/seite/artikel' }, ico('chev', 'flip'), 'Alle Produkte'));
+		el.view.appendChild(box);
+
+		api('produkte/' + id).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+
+		function stat(label, value, sub2) {
+			return h('div', { class: 'tile' }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, value), sub2 ? h('div', { class: 'muted', style: 'font-size:12px' }, sub2) : null);
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			setHead(d.sku + ' – ' + d.name, 'Produkt');
+
+			box.appendChild(h('div', { class: 'page-head', style: 'margin-top:10px' }, h('div', null, h('h2', null, d.sku + ' – ' + d.name), h('p', { class: 'muted', style: 'margin:4px 0 0' }, d.sourcing + ' · ' + d.status))));
+
+			var pills = h('div', { class: 'pills', style: 'padding-top:0' });
+			PRODUCT_TABS.forEach(function (t) {
+				if (t[0] === 'shop' && !d.shop_edit) { return; }
+				if (t[0] === 'stamm' && !d.edit) { return; }
+				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
+			});
+			box.appendChild(pills);
+
+			// Reiter, die in assets/erp/pages/ nativ gebaut sind, haben Vorrang vor der eingebetteten Seite.
+			if (sub && UI.productTabs && UI.productTabs[sub]) {
+				UI.productTabs[sub](d, box, UI);
+				return;
+			}
+
+			if (sub && d.paths[sub] || sub === 'shop' && d.shop) {
+				var path = sub === 'shop' ? d.shop.path : d.paths[sub];
+				var src = C.adminUrl + path + (path.indexOf('?') > -1 ? '&' : '?') + 'lw16_embed=1';
+				var loading = h('div', { class: 'frame-loading' }, 'Wird geladen …');
+				var frame = h('iframe', { src: src, title: sub, loading: 'eager', onload: function () { loading.classList.add('hide'); } });
+				box.appendChild(h('div', { class: 'frame-wrap in-file' }, h('div', { class: 'frame-box' }, frame, loading)));
+				return;
+			}
+
+			d.problems.forEach(function (p) {
+				box.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:10px' }, h('b', null, p.label + ': '), p.text));
+			});
+
+			var stats = h('div', { class: 'grid tiles', style: 'margin:12px 0' },
+				stat('Verkaufspreis', d.price === null ? '–' : money(d.price, 'EUR'), d.sellable ? 'verkäuflich' : 'nicht verkäuflich'),
+				stat('Lagerbestand', num(d.stock), 'Stück im Lager')
+			);
+			if (d.calc) {
+				stats.appendChild(stat('Herstellkosten', money(d.calc.cost, 'EUR'), 'je Stück'));
+				stats.appendChild(stat('Marge', Math.round(d.calc.margin * 100) + ' %', 'DB II ' + money(d.calc.db2, 'EUR') + ' je Stück'));
+			}
+			box.appendChild(stats);
+
+			var cards = h('div', { class: 'two', style: 'margin-top:6px' });
+			var rev = h('div', { class: 'card' }, h('h3', null, 'Druckdaten'));
+			if (d.revision) {
+				rev.appendChild(h('div', { class: 'kv' },
+					h('span', null, 'Revision'), h('b', null, d.revision.version),
+					h('span', null, 'Material'), h('b', null, d.revision.material + (d.revision.color ? ' · ' + d.revision.color : '')),
+					h('span', null, 'Projektdatei'), h('b', null, d.revision.kind === 'modell' ? (d.revision.model || 'vorhanden') : (d.revision.model ? d.revision.model + ' (schon geslict)' : 'fehlt')),
+					h('span', null, 'Platte'), h('b', null, d.revision.parts + ' Stück · ' + String(d.revision.plate_h).replace('.', ',') + ' h'),
+					h('span', null, 'Gewicht'), h('b', null, num(d.revision.weight_g) + ' g')
+				));
+			} else {
+				rev.appendChild(h('p', { class: 'muted' }, 'Noch keine aktive Revision.'));
+			}
+			cards.appendChild(rev);
+
+			var tz = h('div', { class: 'card' }, h('h3', null, 'Soll gegen Ist'));
+			if (d.variance) {
+				var p = Math.round((d.variance.factor - 1) * 100);
+				tz.appendChild(h('p', null, 'Gemessen über ' + d.variance.runs + ' Platten: ', h('b', null, (p > 0 ? '+' : '') + p + ' % gegenüber der Planzeit.')));
+				if (d.variance.adjust) { tz.appendChild(h('p', { class: 'muted' }, 'Vorschlag: Plattenzeit ' + String(d.variance.plate_h).replace('.', ',') + ' h → ' + String(d.variance.new_h).replace('.', ',') + ' h.')); }
+				if (findItem('sollist')) { tz.appendChild(h('a', { class: 'btn', href: '#/seite/sollist' }, 'Zu Soll gegen Ist')); }
+			} else {
+				tz.appendChild(h('p', { class: 'muted' }, 'Noch keine gemessenen Platten.'));
+			}
+			cards.appendChild(tz);
+			box.appendChild(cards);
+		}
 	}
 
 	/* ---------- Workflow ---------- */
@@ -1796,7 +2243,7 @@
 			return h('article', { class: 'run-card demand' + (on ? ' on' : '') },
 				h('div', { class: 'row-top' }, h('b', { class: 'run-title' }, c.name), h('span', { class: 'muted small' }, qty(c.qty) + ' Stk')),
 				h('div', { class: 'muted', style: 'font-size:13px;margin-top:3px' }, c.sku + ' · Lager ' + qty(c.stock)),
-				h('div', { class: 'chips' }, c.chips.map(function (x) { return h('span', { class: 'chip' }, x); }).concat(c.has_model ? [] : [h('span', { class: 'chip warn', title: 'Für diesen Artikel ist keine ungeslicte Projekt-3MF hinterlegt.' }, 'keine 3MF')])),
+				h('div', { class: 'chips' }, c.chips.map(function (x) { return h('span', { class: 'chip' }, x); }).concat(c.has_model ? [] : [h('a', { class: 'chip warn', href: '#/produkt/' + c.article_id + '/rev', title: 'Für diesen Artikel ist keine ungeslicte Projekt-3MF hinterlegt. Klicken, um sie hochzuladen.' }, 'keine 3MF – hochladen')])),
 				plan ? h('button', { class: 'btn' + (on ? ' primary' : ''), type: 'button', style: 'margin-top:11px;width:100%', 'aria-pressed': on ? 'true' : 'false', onclick: function () { if (on) { delete selected[c.article_id]; } else { selected[c.article_id] = c.qty; } paint(); } }, on ? 'Im Plan ✓' : 'In Plan aufnehmen') : null
 			);
 		}
@@ -2291,9 +2738,36 @@
 		if (m) { history.replaceState(null, '', base + '#/platte/' + m[1]); }
 	})();
 
+	Object.assign(UI, {
+		h: h, api: api, toast: toast, ico: ico, money: money, when: when, ago: ago, qty: qty, num: num, minTxt: minTxt,
+		dlg: dlg, pageHead: pageHead, classicBtn: classicBtn, setHead: setHead, can: can, findItem: findItem,
+		store: store, config: C,
+		view: function () { return el.view; },
+		app: function () { return el.app; },
+		boot: function () { return S.boot; },
+		// Reiter des Bereichs zu einer Seite zeigen (für Seiten mit eigener Adresse).
+		section: function (itemId) { var f = findItem(itemId); if (f) { renderSub(f); } },
+		// Wiederkehrende Aktualisierung, die beim Seitenwechsel endet.
+		every: function (fn, ms) { timers.push(setInterval(function () { if (!document.hidden) { fn(); } }, ms)); },
+		// Zum Seitenkopf der Akte: Seitentitel setzen und Reiter halten.
+		reload: function () { render(); }
+	});
+
+	// Ungelesene Mails als Zähler an der Mailbox, auf jeder Seite.
+	function mailBadge() {
+		if (!el.mailBtn) { return; }
+		api('aufgaben').then(function (d) {
+			var badge = el.mailBtn.querySelector('.badge');
+			badge.textContent = String(d.mail || 0);
+			badge.hidden = !d.mail;
+		}).catch(function () {});
+	}
+
 	api('bootstrap', { cache: true }).then(function (boot) {
 		S.boot = boot;
 		buildShell();
+		mailBadge();
+		setInterval(function () { if (!document.hidden) { mailBadge(); } }, 120000);
 		window.addEventListener('hashchange', render);
 		window.addEventListener('online', function () { stale = false; syncNet(); flush(); });
 		window.addEventListener('offline', syncNet);
