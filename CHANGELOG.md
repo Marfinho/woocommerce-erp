@@ -7,6 +7,40 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.20.0] – 2026-10-19
+
+### ERP-Oberfläche: alle Module fein berechtigt, native Seiten, Offline, Subdomain
+
+- **Modulrechte statt Sammelrecht:** Buchhaltung, Reporting, Loyalty, Kasse, Marketing,
+  Produktion, Support, Anleitungen und AR-Ansicht haben je ein eigenes Recht
+  (`lw16_mod_*`) und lassen sich pro Person vergeben. Wer `manage_lw16` hat, bekommt sie alle
+  automatisch (Filter auf `user_has_cap`) – es ist keine Migration nötig, Administratoren
+  verlieren nichts. Menü und Seitenaufruf prüfen das Modulrecht (`Menu::page_caps()`).
+  Neu in der Navigation: Mailbox (Posteingang, Postfächer verwalten) und AR-Ansicht.
+- **Formular- und Ajax-Vorgänge geprüft:** `Erp\ActionMap` ordnet jedem Vorgang
+  (`admin-post.php`, `admin-ajax.php`) die feinen Rechte zu, die gleichzeitig nötig sind –
+  „Artikel sehen“ reicht nicht mehr zum Speichern. Ein Test verlangt für jeden neu
+  eingeführten Vorgang eine Zuordnung oder eine begründete Ausnahme. Damit gelten nun auch
+  „Auftragsstatus ändern“, „Aufträge starten und fertigmelden“, „Stammdaten ändern“ und
+  „Daten exportieren“ wirklich; kein Recht steht mehr auf „Folgt“.
+- **Native Seiten:** Druckfarm (Live-Karten alle 5 s, Fortschritt, AMS-Farben, Kamerabild,
+  Vollbild-Anzeige für Monitor/Tablet), Aufträge (Filter, Entwürfe bestätigen) und Versand
+  (zu versenden/versendet, DHL-Label erzeugen und stornieren, Lieferschein, Sendungsstand).
+  Sie nutzen dieselben Fachklassen wie die klassischen Seiten, die weiter erreichbar und
+  gesperrt bleiben („Klassische Ansicht“).
+- **Offline-Erfassung:** Ein Service Worker (`/erp/sw.js`) hält die Oberfläche ohne
+  Verbindung bereit; Picklisten, zuletzt gescannte Codes und die Navigation bleiben
+  lesbar. Buchungen und Entnahmen ohne Verbindung werden vorgemerkt (Anzeige „Offline · n
+  vorgemerkt“) und bei Rückkehr der Verbindung der Reihe nach gesendet. Jede Buchung
+  trägt eine Kennung (`client_ref`); der Server verbucht sie nur einmal, auch wenn die
+  Antwort verloren ging.
+- **Subdomain:** `define( 'LW16_ERP_HOST', 'erp.lindenweg16.de' );` in `wp-config.php`
+  (Subdomain im Hosting auf dieselbe WordPress-Installation). Auf dieser Adresse liegen
+  Oberfläche, wp-admin, Schnittstelle und Dateien auf derselben Herkunft; der Shop bleibt
+  auf der Hauptadresse. Hinweis zu `COOKIE_DOMAIN` in der README.
+- Tests: ActionMap, Subdomain, Offline-Gegenstücke, Modulrechte; Browsertests mit echtem
+  Service Worker, Fake-Kamera und simulierter Schnittstelle.
+
 ## [0.19.0] – 2026-10-19
 
 ### ERP-Oberfläche: native Werkstatt-Seiten und durchgesetzte Rechte
