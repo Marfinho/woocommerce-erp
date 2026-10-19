@@ -64,7 +64,6 @@ class ActionMap {
 			'lw16_bambu_regen_token'      => $bambu,
 			'lw16_bambu_enqueue_job'      => array( 'fertigung.bambu' ),
 			'lw16_bambu_enqueue_model'    => array( 'fertigung.bambu' ),
-			'lw16_bambu_snapshot'         => array( 'fertigung.bambu' ),
 			'lw16_bambu_cards'            => array( 'fertigung.bambu' ),
 			'lw16_bambu_build_plate'      => array( 'fertigung.bambu' ),
 			'lw16_bambu_download_plate'   => array( 'fertigung.bambu' ),
@@ -88,7 +87,6 @@ class ActionMap {
 			'lw16_betrieb_void_printjob'  => array( 'fertigung.druckjournal' ),
 			'lw16_job_complete'           => array( 'fertigung.produktion' ),
 			'lw16_job_status'             => array( 'fertigung.produktion' ),
-			'lw16_packliste'              => array( 'fertigung.produktion' ),
 			'lw16_save_excluded_weeks'    => array( 'fertigung.produktion' ),
 			'lw16_refresh_tracking'       => array( 'fertigung.produktion' ),
 			'lw16_save_tracking'          => array( 'fertigung.produktion' ),
@@ -199,6 +197,8 @@ class ActionMap {
 
 		$list = array(
 			'lw16_global_search'       => 'Suche prüft Vollzugriff selbst',
+			'lw16_packliste'          => 'Lieferschein: Produktion oder Versand, das Modul prüft beides',
+			'lw16_bambu_snapshot'     => 'Live-Bild: Druckfarm oder Bambu, das Modul prüft die Betriebsrechte',
 			'lw16_reset_run'          => 'nur manage_options (Livegang)',
 			'lw16_check_updates'      => 'WordPress-Updater',
 			'lw16_rechnung'           => $public,

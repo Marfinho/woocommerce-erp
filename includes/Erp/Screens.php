@@ -106,7 +106,7 @@ class Screens {
 
 			$snapshot = '';
 			if ( $printer->snapshot_at ) {
-				$snapshot = wp_nonce_url(
+				$snapshot = Shell::nonce_url(
 					add_query_arg(
 						array(
 							'action'     => 'lw16_bambu_snapshot',
@@ -376,7 +376,7 @@ class Screens {
 			'content'   => self::summarize_items( $lines ),
 			'tracking'  => $row ? (string) $row->tracking_nummer : (string) DhlTracking::extract_tracking_number( $order ),
 			'tstatus'   => $row ? (string) $row->aktueller_status : '',
-			'slip'      => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
+			'slip'      => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_packliste&order_id=' . $id ), 'lw16_packliste_' . $id ),
 			'edit'      => $order->get_edit_order_url(),
 			'label'     => null,
 			'suggested' => null,
@@ -387,7 +387,7 @@ class Screens {
 				'id'      => (int) $label->id,
 				'product' => DhlProduct::label( $label->product ),
 				'weight'  => (int) $label->weight_g,
-				'pdf'     => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
+				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
 			);
 		} elseif ( $dhl['configured'] && ! $done ) {
 			$weight             = DhlShipping::weight_g( $order );

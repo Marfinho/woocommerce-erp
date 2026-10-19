@@ -660,7 +660,7 @@ class Workflow {
 			if ( $plate && is_file( $plate->file_path ) ) {
 				$file = array(
 					'name' => (string) $plate->file_name,
-					'url'  => wp_nonce_url( admin_url( 'admin-post.php?action=lw16_erp_run_file&run=' . (int) $run['id'] ), 'lw16_erp_run_file_' . (int) $run['id'] ),
+					'url'  => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_erp_run_file&run=' . (int) $run['id'] ), 'lw16_erp_run_file_' . (int) $run['id'] ),
 				);
 			}
 		}

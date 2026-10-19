@@ -29,6 +29,10 @@ und im Abschnitt „Umsetzungsstand“ der README.
   Druckdaten und Soll gegen Ist; Stammdaten, 3MF und Revisionen, Stückliste, Kalkulation und Shop öffnen
   als Reiter in der Akte. Im Workflow führt „keine 3MF“ direkt zum Hochladen.
 - **Bestellung:** Packseite mit Kunde und Verlauf (Eingang, Zahlung, Notizen, Versand).
+- **Behoben: Lieferschein, Label, Live-Bild und 3MF-Download öffneten oft nicht.** Die Adressen enthielten
+  „&#038;“ statt „&“ (wp_nonce_url liefert HTML), dadurch fehlten Prüfzahl und Nummer. Außerdem sperrte das ERP
+  den Lieferschein für den Packtisch (verlangte das Produktionsrecht) und das Live-Bild für die Druckfarm (verlangte
+  das Bambu-Recht).
 - Neue Schnittstellen `erp/aufgaben`, `erp/drucker/<id>`, `erp/material`, `erp/produkte`, `erp/produkte/<id>`.
 
 ## [0.24.1] – 2026-10-19
