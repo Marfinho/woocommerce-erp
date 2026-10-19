@@ -7,6 +7,28 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.26.0] – 2026-10-19
+
+### Fast alle Seiten nativ im ERP
+Die eingebetteten alten wp-admin-Seiten sind durch eigene Seiten ersetzt (jede mit „Klassische Ansicht“ als
+Rückfall und denselben Prüfungen, Rechten und Protokolleinträgen wie vorher). Neu: Seiten leben in eigenen Dateien
+(`includes/Erp/Pages/`, `assets/erp/pages/`, Anleitung in `includes/Erp/Pages/README.md`).
+- **Produktakte:** Revisionen mit 3MF-Upload, Stammdaten (auch neu anlegen, stilllegen), Stückliste mit
+  Tiefenprüfung, Kalkulation mit „Preis übernehmen“, Beschaffung.
+- **Lager:** Bestand (buchen, umlagern, Kommission, Journal mit Storno, Sollbestand), Lagerplätze mit
+  Fertigungsaufträgen, Bedarf als Ansicht auf den Plan.
+- **Produktion:** Druckjournal, Drucker & Wartung, Bambu (Status, Verbindung, Geräteverknüpfung), Qualität,
+  Kapazität, Produktionsaufträge.
+- **Verkauf:** Kontakte mit Akte (Konditionen, Bestellungen, offene Posten, Nachbestell-Link), Shop-Bestellungen,
+  Loyalty-Prüfung, Marketing (lesend).
+- **Zahlen:** Finanz-Dashboard, Berichte (Verlauf, Ziele, Export), Reporting, Buchhaltung (nur lesend, GoBD).
+- **Verwaltung:** Zeiterfassung mit Stempeluhr, Löhne, Etikettendrucker (mit „Erneut senden“/„Abbrechen“),
+  Einstellungen (Geheimnisse nie im Klartext).
+- **Mailbox** (lesen, antworten, weiterleiten, Entwürfe), Support, Anleitungen, AR-Ansicht.
+- **Bleibt eingebettet:** Kasse, Konfigurator, Postfächer verwalten, Import & Doku, Shop-Produkte, Buchhaltung
+  (Erfassen/Storno), Marketing (Anlegen), Bambu (Einreihen, Platten, Slicing-Profile).
+- Warteschlange offline: eine mitgegebene `client_ref` bleibt erhalten (keine Doppelbuchung beim Nachsenden).
+
 ## [0.25.0] – 2026-10-19
 
 ### Neue Menüführung und Optik im ERP

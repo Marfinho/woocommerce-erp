@@ -195,7 +195,7 @@
 			}
 
 			if (method === 'POST' && opts.queue) {
-				var body = Object.assign({}, opts.body, { client_ref: uid() });
+				var body = Object.assign({}, opts.body, { client_ref: (opts.body && opts.body.client_ref) || uid() });
 				var list = queue();
 				list.push({ id: body.client_ref, path: path, root: !!opts.root, body: body, ts: Date.now() });
 				writeJson(QUEUE_KEY, list);
