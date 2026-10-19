@@ -1218,6 +1218,22 @@
 		}
 
 		if (r.type === 'component') { card.appendChild(h('p', { class: 'muted' }, 'Komponenten werden unter „Material“ gepflegt.')); }
+
+		// Wareneingang: Liegt zu diesem Teil eine offene Bestellung, genügt ein Tippen.
+		if ((r.type === 'article' || r.type === 'component') && can('lager.einkauf')) {
+			var incoming = h('div');
+			card.appendChild(incoming);
+			api('einkauf/offen?type=' + r.type + '&id=' + r.id).then(function (d) {
+				if (!d.open.length) { return; }
+				incoming.appendChild(h('h4', { style: 'margin:16px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)' }, 'Wareneingang'));
+				d.open.forEach(function (p) {
+					incoming.appendChild(h('div', { class: 'incoming', style: 'margin-bottom:8px' },
+						h('b', null, 'Bestellt: ' + num(p.qty) + ' ' + p.unit + (p.supplier ? ' bei ' + p.supplier : '')),
+						h('small', { class: p.late ? 'tag later' : 'muted' }, p.expected_on ? (p.late ? p.late + ' Tage überfällig' : 'erwartet ' + p.expected_on) : 'bestellt ' + p.ordered_on),
+						d.receive ? receiveForm(p, function () { rescan(r.code); }) : h('small', { class: 'muted' }, 'Buchen darfst du nicht.')));
+				});
+			}).catch(function () { /* ohne Verbindung oder Recht: kein Wareneingang an dieser Stelle */ });
+		}
 	}
 
 	function bookForm(articleId, st, code, rescan) {

@@ -121,6 +121,30 @@ class Procurement {
 	}
 
 	/**
+	 * Offene Bestellungen zu einem Teil – für den Wareneingang am Scanner.
+	 *
+	 * @param string $type Art (article, component, supply).
+	 * @param int    $id   Teil.
+	 * @return array Bestellungen wie im Board (Karten „Unterwegs“), älteste zuerst.
+	 */
+	public static function open_for( $type, $id ) {
+		if ( ! in_array( $type, array( 'article', 'component', 'supply' ), true ) || (int) $id <= 0 ) {
+			return array();
+		}
+
+		$today = gmdate( 'Y-m-d' );
+		$out   = array();
+
+		foreach ( array_reverse( PurchaseRepository::for_item( $type, (int) $id ) ) as $p ) {
+			if ( 'bestellt' === $p['status'] ) {
+				$out[] = self::purchase_entry( $p, $today );
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Das Board.
 	 *
 	 * @return array {order, open, done}

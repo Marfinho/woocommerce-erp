@@ -70,4 +70,13 @@ class ErpProcurementTest extends TestCase {
 		// Charge vor dem Schließen prüfen: sonst wäre die Bestellung zu, die Rolle aber nicht da.
 		$this->assertLessThan( strpos( $src, "'status'       => 'geliefert'" ), strpos( $src, 'FilamentRepository::validate' ) );
 	}
+
+	public function test_wareneingang_per_scan_nur_fuer_teile_mit_bestellung() {
+		$this->assertSame( array(), Procurement::open_for( 'filament', 1 ) );
+		$this->assertSame( array(), Procurement::open_for( 'article', 0 ) );
+		$this->assertSame( array(), Procurement::open_for( 'unbekannt', 5 ) );
+
+		$rest = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/RestApi.php' );
+		$this->assertMatchesRegularExpression( "#'/erp/einkauf/offen'.*?'lager\\.einkauf'#s", $rest );
+	}
 }
