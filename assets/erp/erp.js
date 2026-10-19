@@ -2807,29 +2807,29 @@
 	});
 
 	// Laufende Stempeluhr in der Kopfzeile: holt den Stand selten, zählt selbst weiter.
-	var clock = { running: false, paused: false, base: 0, at: 0 };
+	var uhr = { running: false, paused: false, base: 0, at: 0 };
 
 	function clockText() {
-		if (!clock.running) { return 'Zeit'; }
-		var s = Math.max(0, Math.floor(clock.base + (clock.paused ? 0 : (Date.now() - clock.at) / 1000)));
+		if (!uhr.running) { return 'Zeit'; }
+		var s = Math.max(0, Math.floor(uhr.base + (uhr.paused ? 0 : (Date.now() - uhr.at) / 1000)));
 		var t = ('0' + Math.floor(s / 3600)).slice(-2) + ':' + ('0' + Math.floor((s % 3600) / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
-		return clock.paused ? 'Pause ' + t : t;
+		return uhr.paused ? 'Pause ' + t : t;
 	}
 
 	function clockPaint() {
 		if (!el.clockLabel) { return; }
 		el.clockLabel.textContent = clockText();
 		var pill = document.getElementById('clock-pill');
-		if (pill) { pill.classList.toggle('on', clock.running && !clock.paused); }
+		if (pill) { pill.classList.toggle('on', uhr.running && !uhr.paused); }
 	}
 
 	function clockSync() {
 		if (!el.clockLabel) { return; }
 		api('zeit/uhr').then(function (d) {
-			clock.running = !!d.clock;
-			clock.paused = !!(d.clock && d.clock.paused);
-			clock.base = d.clock ? d.clock.seconds : 0;
-			clock.at = Date.now();
+			uhr.running = !!d.clock;
+			uhr.paused = !!(d.clock && d.clock.paused);
+			uhr.base = d.clock ? d.clock.seconds : 0;
+			uhr.at = Date.now();
 			clockPaint();
 		}).catch(function () {});
 	}

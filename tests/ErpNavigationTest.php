@@ -224,4 +224,14 @@ class ErpNavigationTest extends TestCase {
 
 		$this->assertSame( array_unique( $m[1] ), $m[1], 'Eine Seite steht mehrfach in Navigation::items()' );
 	}
+
+	public function test_keine_funktion_in_erp_js_wird_durch_eine_variable_ueberdeckt() {
+		// Eine „var clock“ neben „function clock()“ hat die Workflow-Seite lahmgelegt.
+		$js = (string) file_get_contents( dirname( __DIR__ ) . '/assets/erp/erp.js' );
+
+		preg_match_all( '/^\tfunction ([A-Za-z0-9_]+)\(/m', $js, $fn );
+		preg_match_all( '/^\tvar ([A-Za-z0-9_]+)\s*=/m', $js, $vars );
+
+		$this->assertSame( array(), array_values( array_intersect( $fn[1], $vars[1] ) ), 'Funktion und Variable mit demselben Namen' );
+	}
 }
