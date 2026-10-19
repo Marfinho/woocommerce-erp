@@ -95,13 +95,143 @@ class Verkauf {
 	}
 
 	/**
+	 * Auswahl für drei Felder des Händlerprofils.
+	 *
+	 * @return array Feld => [Schlüssel => Text].
+	 */
+	public static function profile_options() {
+		return array(
+			'preferred_channel'    => array(
+				'telefon'    => __( 'Telefon', 'lindenweg16' ),
+				'mail'       => __( 'E-Mail', 'lindenweg16' ),
+				'persoenlich' => __( 'persönlich', 'lindenweg16' ),
+				'shop'       => __( 'im Shop', 'lindenweg16' ),
+			),
+			'order_frequency'      => array(
+				'woechentlich'   => __( 'wöchentlich', 'lindenweg16' ),
+				'monatlich'      => __( 'monatlich', 'lindenweg16' ),
+				'quartalsweise'  => __( 'quartalsweise', 'lindenweg16' ),
+				'saisonal'       => __( 'saisonal', 'lindenweg16' ),
+				'unregelmaessig' => __( 'unregelmäßig', 'lindenweg16' ),
+			),
+			'packaging_preference' => array(
+				'einzeln'  => __( 'einzeln verpackt', 'lindenweg16' ),
+				'umkarton' => __( 'im Umkarton', 'lindenweg16' ),
+				'display'  => __( 'im Display', 'lindenweg16' ),
+			),
+		);
+	}
+
+	/**
+	 * Felder des Händlerprofils prüfen – reine Regel.
+	 *
+	 * @param array $in Eingaben.
+	 * @return string[] Fehlertexte (leer = in Ordnung).
+	 */
+	public static function profile_errors( array $in ) {
+		$errors = array();
+
+		if ( isset( $in['vat_id'] ) && '' !== trim( (string) $in['vat_id'] ) ) {
+			$vat = strtoupper( preg_replace( '/\s+/', '', (string) $in['vat_id'] ) );
+
+			if ( ! preg_match( '/^[A-Z]{2}[A-Z0-9]{2,12}$/', $vat ) ) {
+				$errors[] = __( 'Die USt-IdNr. sieht nicht richtig aus. Sie beginnt mit dem Ländercode, zum Beispiel DE123456789.', 'lindenweg16' );
+			}
+		}
+
+		if ( isset( $in['credit_limit'] ) && '' !== trim( (string) $in['credit_limit'] ) ) {
+			$limit = self::number( $in['credit_limit'] );
+
+			if ( null === $limit || $limit < 0 ) {
+				$errors[] = __( 'Das Kreditlimit muss eine Zahl ab 0 sein.', 'lindenweg16' );
+			}
+		}
+
+		if ( isset( $in['next_expected_order'] ) && '' !== trim( (string) $in['next_expected_order'] ) && ! self::is_date( $in['next_expected_order'] ) ) {
+			$errors[] = __( 'Die nächste erwartete Bestellung ist kein gültiges Datum.', 'lindenweg16' );
+		}
+
+		foreach ( self::profile_options() as $field => $options ) {
+			if ( isset( $in[ $field ] ) && '' !== (string) $in[ $field ] && ! isset( $options[ $in[ $field ] ] ) ) {
+				$errors[] = __( 'Eine Auswahl im Profil gibt es nicht.', 'lindenweg16' );
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Bisheriges Profil und neue Eingaben zusammenführen – reine Regel.
+	 *
+	 * ContactRepository::save_profile() setzt jedes nicht mitgeschickte Feld
+	 * auf leer, auch die Artikellisten, die diese Oberfläche gar nicht zeigt.
+	 * Hier bleibt deshalb alles, was nicht geändert wird, wie es war.
+	 *
+	 * @param array|null $before Bisheriges Profil (Spalten) oder null.
+	 * @param array      $in     Eingaben.
+	 * @return array Eingaben für save_profile().
+	 */
+	public static function profile_merge( $before, array $in ) {
+		$text = array(
+			'billing_company', 'billing_address', 'billing_email', 'vat_id', 'shipping_address', 'delivery_notes',
+			'decision_maker', 'goods_receiver', 'preferred_channel', 'best_time', 'preferred_colors', 'season_peak',
+			'order_frequency', 'packaging_preference', 'shelf_situation', 'competitor_products', 'next_expected_order', 'credit_limit',
+		);
+		$out  = array();
+
+		foreach ( $text as $field ) {
+			if ( array_key_exists( $field, $in ) ) {
+				$out[ $field ] = is_scalar( $in[ $field ] ) ? trim( (string) $in[ $field ] ) : '';
+			} elseif ( $before && isset( $before[ $field ] ) ) {
+				$out[ $field ] = (string) $before[ $field ];
+			}
+		}
+
+		if ( isset( $out['vat_id'] ) ) {
+			$out['vat_id'] = strtoupper( preg_replace( '/\s+/', '', $out['vat_id'] ) );
+		}
+
+		if ( isset( $out['credit_limit'] ) && '' !== $out['credit_limit'] ) {
+			$limit = self::number( $out['credit_limit'] );
+			$out['credit_limit'] = null === $limit ? '' : (string) $limit;
+		}
+
+		foreach ( array( 'display_provided', 'commission_allowed' ) as $flag ) {
+			if ( array_key_exists( $flag, $in ) ) {
+				$out[ $flag ] = ! empty( $in[ $flag ] ) && 'false' !== $in[ $flag ] && '0' !== (string) $in[ $flag ] ? 1 : 0;
+			} elseif ( $before && isset( $before[ $flag ] ) ) {
+				$out[ $flag ] = (int) $before[ $flag ];
+			}
+		}
+
+		foreach ( array( 'preferred_articles', 'excluded_articles' ) as $list ) {
+			if ( $before && ! empty( $before[ $list ] ) ) {
+				$decoded = json_decode( (string) $before[ $list ], true );
+
+				if ( is_array( $decoded ) ) {
+					$out[ $list ] = $decoded;
+				}
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Zahl aus einer Eingabe lesen, auch mit deutschem Komma.
 	 *
 	 * @param mixed $raw Eingabe.
 	 * @return float|null Null bei leer oder keine Zahl.
 	 */
 	public static function number( $raw ) {
-		$raw = trim( str_replace( ',', '.', (string) $raw ) );
+		$raw = trim( (string) $raw );
+
+		// „1.500,00“: Punkt als Tausender, Komma als Dezimalzeichen.
+		if ( false !== strpos( $raw, '.' ) && false !== strpos( $raw, ',' ) ) {
+			$raw = str_replace( '.', '', $raw );
+		}
+
+		$raw = str_replace( ',', '.', $raw );
 
 		return '' !== $raw && is_numeric( $raw ) ? (float) $raw : null;
 	}
@@ -602,6 +732,11 @@ class Verkauf {
 			'callback'            => array( __CLASS__, 'contact_term' ),
 			'permission_callback' => $kontakte,
 		) );
+		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/profil', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'contact_profile' ),
+			'permission_callback' => $api->needs( array( 'verkauf.kontakte', 'fertigung.stammdaten.edit' ) ),
+		) );
 		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/kommission', array(
 			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'commission_options' ), 'permission_callback' => $kontakte ),
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'commission_book' ), 'permission_callback' => $kontakte ),
@@ -1044,12 +1179,65 @@ class Verkauf {
 					'count' => count( $unlinked ),
 					'names' => array_slice( array_map( 'strval', $unlinked ), 0, 8 ),
 				),
+				'profile'    => self::profile_view( ContactRepository::profile( $id ) ),
+				'profile_options' => self::profile_options(),
+				'can_profile' => Access::can( 'fertigung.stammdaten.edit' ),
 				'types'      => ContactRepository::type_labels(),
 				'status'     => ContactRepository::status_labels(),
 				'activity_types' => ContactRepository::activity_labels(),
 				'can_orders' => Access::can( 'verkauf.versand' ),
 			)
 		);
+	}
+
+	/**
+	 * Profil für die Oberfläche: alle Felder, leere als leerer Text.
+	 *
+	 * @param array|null $row Profil aus der Datenbank.
+	 * @return array
+	 */
+	protected static function profile_view( $row ) {
+		$fields = array(
+			'billing_company', 'billing_address', 'billing_email', 'vat_id', 'shipping_address', 'delivery_notes',
+			'decision_maker', 'goods_receiver', 'preferred_channel', 'best_time', 'preferred_colors', 'season_peak',
+			'order_frequency', 'packaging_preference', 'shelf_situation', 'competitor_products', 'next_expected_order', 'credit_limit',
+		);
+		$out    = array();
+
+		foreach ( $fields as $field ) {
+			$out[ $field ] = $row && isset( $row[ $field ] ) ? (string) $row[ $field ] : '';
+		}
+
+		$out['display_provided']   = $row ? (bool) (int) $row['display_provided'] : false;
+		$out['commission_allowed'] = $row ? (bool) (int) $row['commission_allowed'] : false;
+		$out['exists']             = (bool) $row;
+
+		return $out;
+	}
+
+	/**
+	 * Händlerprofil speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function contact_profile( WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+
+		if ( ! ContactRepository::find( $id ) ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$in     = (array) $request->get_json_params();
+		$errors = self::profile_errors( $in );
+
+		if ( $errors ) {
+			return self::fail( implode( ' ', $errors ) );
+		}
+
+		ContactRepository::save_profile( $id, self::profile_merge( ContactRepository::profile( $id ), $in ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Profil gespeichert.', 'lindenweg16' ) ) );
 	}
 
 	/**

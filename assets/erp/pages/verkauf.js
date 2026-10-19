@@ -60,7 +60,8 @@
 	function collect(form) {
 		var body = {};
 		Array.prototype.forEach.call(form.elements, function (f) {
-			if (f.name) { body[f.name] = f.value; }
+			if (!f.name) { return; }
+			body[f.name] = f.type === 'checkbox' ? (f.checked ? '1' : '0') : f.value;
 		});
 		return body;
 	}
@@ -282,11 +283,84 @@
 				tile(ui, 'Wiedervorlage', c.follow_up_on ? ymd(c.follow_up_on) : '–')));
 
 			box.appendChild(h('div', { class: 'two vk-gap' }, stamm(d), konditionen(d)));
+			box.appendChild(profileCard(d));
 			box.appendChild(link(d));
 			box.appendChild(orders(d));
 			if (d.open.length) { box.appendChild(openItems(d)); }
 			box.appendChild(commission(d, classic));
 			box.appendChild(activities(d));
+		}
+
+		function profileFields(p, o) {
+			function area(name, text) { return labelled(ui, text, h('textarea', { class: 'field', name: name, rows: '2' }, p[name] || '')); }
+			function check(name, text) {
+				return h('label', { class: 'chk', style: 'display:flex;gap:10px;align-items:center;min-height:44px' },
+					h('input', { type: 'checkbox', name: name, checked: !!p[name], style: 'width:22px;height:22px' }), h('span', null, text));
+			}
+			return [
+				h('div', { class: 'vk-two' },
+					labelled(ui, 'Firma für die Rechnung', textIn(ui, 'billing_company', p.billing_company)),
+					labelled(ui, 'USt-IdNr.', textIn(ui, 'vat_id', p.vat_id, { placeholder: 'DE123456789', autocomplete: 'off' }))),
+				area('billing_address', 'Rechnungsadresse'),
+				labelled(ui, 'E-Mail für Rechnungen', textIn(ui, 'billing_email', p.billing_email, { type: 'email' })),
+				area('shipping_address', 'Lieferadresse (wenn anders)'),
+				area('delivery_notes', 'Lieferhinweise (Rampe, Zeiten, Anmeldung)'),
+				h('div', { class: 'vk-two' },
+					labelled(ui, 'Entscheider', textIn(ui, 'decision_maker', p.decision_maker)),
+					labelled(ui, 'Wareneingang', textIn(ui, 'goods_receiver', p.goods_receiver))),
+				h('div', { class: 'vk-two' },
+					labelled(ui, 'Bevorzugter Kanal', selectIn(ui, 'preferred_channel', o.preferred_channel, p.preferred_channel, '–')),
+					labelled(ui, 'Beste Zeit', textIn(ui, 'best_time', p.best_time))),
+				h('div', { class: 'vk-two' },
+					labelled(ui, 'Bestellrhythmus', selectIn(ui, 'order_frequency', o.order_frequency, p.order_frequency, '–')),
+					labelled(ui, 'Nächste Bestellung erwartet', textIn(ui, 'next_expected_order', p.next_expected_order, { type: 'date' }))),
+				labelled(ui, 'Saisonspitze', textIn(ui, 'season_peak', p.season_peak, { placeholder: 'z. B. Oktober bis Dezember' })),
+				h('div', { class: 'vk-two' },
+					labelled(ui, 'Verpackung', selectIn(ui, 'packaging_preference', o.packaging_preference, p.packaging_preference, '–')),
+					labelled(ui, 'Bevorzugte Farben', textIn(ui, 'preferred_colors', p.preferred_colors))),
+				labelled(ui, 'Kreditlimit in €', textIn(ui, 'credit_limit', p.credit_limit, { inputmode: 'decimal' })),
+				check('commission_allowed', 'Kommission vereinbart'),
+				check('display_provided', 'Display beim Händler gestellt'),
+				area('shelf_situation', 'Regalsituation'),
+				area('competitor_products', 'Wettbewerbsprodukte im Regal')
+			];
+		}
+
+		function profileCard(d) {
+			var p = d.profile;
+			var card = h('div', { class: 'card' }, h('h3', null, 'Händlerprofil'));
+			var yes = function (b) { return b ? 'ja' : 'nein'; };
+			var opts = d.profile_options;
+			var label = function (field, key) { return key && opts[field] && opts[field][key] ? opts[field][key] : ''; };
+
+			if (!p.exists) { card.appendChild(h('p', { class: 'muted' }, 'Noch kein Profil. Mit USt-IdNr., Lieferadresse und Kreditlimit ist die Akte für Rechnung und Versand vollständig.')); }
+
+			card.appendChild(kv(ui, 'Rechnung an', [p.billing_company, p.billing_address].filter(Boolean).join(', ')));
+			card.appendChild(kv(ui, 'USt-IdNr.', p.vat_id));
+			card.appendChild(kv(ui, 'E-Mail Rechnung', p.billing_email));
+			card.appendChild(kv(ui, 'Lieferadresse', p.shipping_address));
+			card.appendChild(kv(ui, 'Lieferhinweise', p.delivery_notes));
+			card.appendChild(kv(ui, 'Entscheider', p.decision_maker));
+			card.appendChild(kv(ui, 'Wareneingang', p.goods_receiver));
+			card.appendChild(kv(ui, 'Kanal', [label('preferred_channel', p.preferred_channel), p.best_time].filter(Boolean).join(', ')));
+			card.appendChild(kv(ui, 'Bestellrhythmus', [label('order_frequency', p.order_frequency), p.season_peak].filter(Boolean).join(' · ')));
+			card.appendChild(kv(ui, 'Nächste Bestellung', p.next_expected_order ? ymd(p.next_expected_order) : ''));
+			card.appendChild(kv(ui, 'Verpackung', label('packaging_preference', p.packaging_preference)));
+			card.appendChild(kv(ui, 'Farben', p.preferred_colors));
+			card.appendChild(kv(ui, 'Kommission', yes(p.commission_allowed)));
+			card.appendChild(kv(ui, 'Display', yes(p.display_provided)));
+			if (p.credit_limit !== '') {
+				var limit = parseFloat(p.credit_limit);
+				var over = d.tiles.open > limit;
+				card.appendChild(kv(ui, 'Kreditlimit', h('span', null, ui.money(limit, 'EUR'), over ? h('span', { class: 'tag later', style: 'margin-left:8px' }, 'überschritten: offen ' + ui.money(d.tiles.open, 'EUR')) : null)));
+			}
+
+			if (d.can_profile) {
+				card.appendChild(h('button', { class: 'btn', type: 'button', style: 'margin-top:10px', onclick: function () {
+					formDialog(ui, 'Händlerprofil', profileFields(p, opts), 'Speichern', function (body) { return post('/profil', body); }, load);
+				} }, p.exists ? 'Profil bearbeiten' : 'Profil anlegen'));
+			}
+			return card;
 		}
 
 		function stamm(d) {

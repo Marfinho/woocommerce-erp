@@ -222,4 +222,36 @@ class ErpVerkaufTest extends TestCase {
 		$this->assertStringContainsString( "Access::can( 'lager.buchen' )", $src );
 		$this->assertStringContainsString( 'CommissionRepository::book_batch', $src );
 	}
+
+	public function test_profil_pruefung() {
+		$this->assertSame( array(), Verkauf::profile_errors( array( 'vat_id' => 'de 123 456 789', 'credit_limit' => '1.500,00', 'next_expected_order' => '2026-11-01', 'order_frequency' => 'monatlich' ) ) );
+		$this->assertNotSame( array(), Verkauf::profile_errors( array( 'vat_id' => '12345' ) ) );
+		$this->assertNotSame( array(), Verkauf::profile_errors( array( 'credit_limit' => '-5' ) ) );
+		$this->assertNotSame( array(), Verkauf::profile_errors( array( 'next_expected_order' => '1.11.2026' ) ) );
+		$this->assertNotSame( array(), Verkauf::profile_errors( array( 'packaging_preference' => 'unbekannt' ) ) );
+	}
+
+	public function test_profil_zusammenfuehren_behaelt_unberuehrtes() {
+		$before = array(
+			'vat_id'             => 'DE1',
+			'delivery_notes'     => 'Hintereingang',
+			'preferred_articles' => '[3,4]',
+			'display_provided'   => '1',
+			'commission_allowed' => '0',
+		);
+
+		$out = Verkauf::profile_merge( $before, array( 'vat_id' => ' de 999 ', 'commission_allowed' => '1' ) );
+
+		$this->assertSame( 'DE999', $out['vat_id'] );
+		$this->assertSame( 'Hintereingang', $out['delivery_notes'] );
+		$this->assertSame( array( 3, 4 ), $out['preferred_articles'] );
+		$this->assertSame( 1, $out['display_provided'] );
+		$this->assertSame( 1, $out['commission_allowed'] );
+	}
+
+	public function test_profil_haken_aus() {
+		$out = Verkauf::profile_merge( array( 'display_provided' => '1' ), array( 'display_provided' => '0' ) );
+
+		$this->assertSame( 0, $out['display_provided'] );
+	}
 }
