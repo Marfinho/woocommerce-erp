@@ -502,6 +502,11 @@ dialog.sheet h3 { margin: 0; font-size: 20px; }
 .fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .fieldset legend { font-size: 12px; color: var(--text-muted); font-weight: 700; padding: 0 6px; }
 
+.matrows { display: grid; gap: 6px; margin-top: 10px; }
+.matrow { display: grid; grid-template-columns: auto auto 1fr; gap: 4px 12px; align-items: baseline; font-size: 14px; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.matrow.bad { background: color-mix(in srgb, var(--warning) 12%, var(--surface)); }
+.matrow.bad span:last-child { color: var(--warning); font-weight: 600; }
+
 /* mobile Plattenseite */
 .runpage { max-width: 520px; margin: 0 auto; display: grid; gap: 14px; }
 .run-head h2 { font: 700 40px/1.05 var(--font-head); margin: 2px 0 0; }

@@ -355,6 +355,17 @@ class RestApi {
 				'columns'  => Workflow::columns(),
 				'plan'     => $plan,
 				'printers' => $plan ? Workflow::printers() : array(),
+				'alerts'   => array_map(
+					static function ( $alert ) {
+						return array(
+							'label'     => $alert['label'],
+							'coverage'  => $alert['coverage_days'],
+							'threshold' => $alert['threshold_days'],
+							'order_kg'  => $alert['order_qty'],
+						);
+					},
+					Material::alerts()
+				),
 				'now'      => time(),
 			)
 		);

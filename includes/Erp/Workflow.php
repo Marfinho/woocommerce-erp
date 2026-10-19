@@ -25,6 +25,7 @@ use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
+use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\LabelPdf;
 use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\MachineRate;
@@ -95,6 +96,8 @@ class Workflow {
 			'weeks'         => Forecast::WEEKS,
 			'cover_weeks'   => Forecast::COVER_WEEKS,
 			'hide_wpadmin'  => 0,
+			'filament_lead_days'   => 10,
+			'filament_safety_days' => 5,
 		);
 	}
 
@@ -128,6 +131,8 @@ class Workflow {
 			'weeks'         => min( 26, max( 1, (int) ( isset( $in['weeks'] ) ? $in['weeks'] : $def['weeks'] ) ) ),
 			'cover_weeks'   => min( 12.0, max( 0.0, (float) ( isset( $in['cover_weeks'] ) ? $in['cover_weeks'] : $def['cover_weeks'] ) ) ),
 			'hide_wpadmin'  => ! empty( $in['hide_wpadmin'] ) ? 1 : 0,
+			'filament_lead_days'   => min( 120, max( 0, (int) ( isset( $in['filament_lead_days'] ) ? $in['filament_lead_days'] : $def['filament_lead_days'] ) ) ),
+			'filament_safety_days' => min( 60, max( 0, (int) ( isset( $in['filament_safety_days'] ) ? $in['filament_safety_days'] : $def['filament_safety_days'] ) ) ),
 		);
 
 		// Ohne irgendeinen Inhalt wäre das Etikett leer.
@@ -303,15 +308,34 @@ class Workflow {
 			return array( 'ok' => false, 'plates' => array(), 'warnings' => (array) $result['warnings'], 'error' => (string) $result['error'] );
 		}
 
-		$plates = array();
+		$plates   = array();
+		$all      = array();
+		$warnings = (array) $result['warnings'];
+
 		foreach ( $result['plate_ids'] as $plate_id ) {
 			$view = self::plate_preview( (int) $plate_id );
 			if ( $view ) {
 				$plates[] = $view;
+				$all      = array_merge( $all, $view['items'] );
 			}
 		}
 
-		return array( 'ok' => true, 'plates' => $plates, 'warnings' => (array) $result['warnings'], 'error' => '' );
+		// Reicht das Filament? Vor dem Freigeben sagen, nicht nach dem
+		// Rüsten feststellen, dass die Rolle leer ist.
+		$material = self::material_view( Material::check( $all ) );
+
+		foreach ( $material as $row ) {
+			if ( ! $row['ok'] ) {
+				$warnings[] = sprintf(
+					/* translators: 1: Farbe, 2: fehlende Menge in Gramm. */
+					__( 'Material reicht nicht: %1$s – es fehlen %2$s g.', 'lindenweg16' ),
+					$row['label'],
+					number_format_i18n( $row['missing_kg'] * 1000, 0 )
+				);
+			}
+		}
+
+		return array( 'ok' => true, 'plates' => $plates, 'material' => $material, 'warnings' => $warnings, 'error' => '' );
 	}
 
 	/**
@@ -567,16 +591,46 @@ class Workflow {
 	public static function view_by_id( $id ) {
 		$run = RunRepository::find( (int) $id );
 
-		return $run ? self::view( $run ) : null;
+		return $run ? self::view( $run, true ) : null;
+	}
+
+	/**
+	 * Materialzeilen für die Anzeige: nur, was die Oberfläche braucht.
+	 *
+	 * @param array $rows Zeilen aus Material::check().
+	 * @return array
+	 */
+	public static function material_view( array $rows ) {
+		return array_map(
+			static function ( $row ) {
+				return array(
+					'color'        => $row['color'],
+					'label'        => $row['label'],
+					'needed_kg'    => $row['needed_kg'],
+					'available_kg' => $row['available_kg'],
+					'missing_kg'   => $row['missing_kg'],
+					'ok'           => $row['ok'],
+					'suggested'    => $row['suggested'],
+					'lots'         => array_map(
+						static function ( $lot ) {
+							return array( 'id' => $lot['id'], 'code' => $lot['code'], 'remaining_kg' => $lot['remaining_kg'] );
+						},
+						$row['lots']
+					),
+				);
+			},
+			$rows
+		);
 	}
 
 	/**
 	 * Eine Platte für die Anzeige aufbereiten.
 	 *
-	 * @param array $run Platte.
+	 * @param array $run    Platte.
+	 * @param bool  $detail Mit Materialprüfung (für die Plattenseite, nicht für die Liste).
 	 * @return array
 	 */
-	public static function view( array $run ) {
+	public static function view( array $run, $detail = false ) {
 		$time = static function ( $value ) {
 			return $value ? (int) strtotime( $value . ' UTC' ) : 0;
 		};
@@ -607,12 +661,25 @@ class Workflow {
 			}
 		}
 
+		$material = array();
+		$items    = $run['items'];
+
+		if ( $detail && in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN, RunFlow::DRUCKT, RunFlow::ZU_MELDEN ), true ) ) {
+			$material = self::material_view( Material::check( $items ) );
+
+			foreach ( $items as $index => $item ) {
+				$items[ $index ]['kg']    = round( Material::weight_kg( $item['article_id'] ) * (float) $item['qty'], 3 );
+				$items[ $index ]['ckey']  = Material::color_of( isset( $item['color'] ) ? $item['color'] : '' );
+			}
+		}
+
 		return array(
+			'material'    => $material,
 			'id'          => (int) $run['id'],
 			'batch'       => (string) $run['batch'],
 			'status'      => $run['status'],
 			'column'      => RunFlow::column( $run['status'] ),
-			'items'       => $run['items'],
+			'items'       => $items,
 			'printer'     => self::printer_name( $run ),
 			'est_minutes' => (int) $run['est_minutes'],
 			'released'    => $time( $run['released_at'] ),
@@ -796,6 +863,35 @@ class Workflow {
 		}
 		$shares = RunFlow::split_hours( $print_h, $qtys );
 
+		// Welche Rolle liefert das Filament? Gewählt (Mobilseite) oder die
+		// älteste mit genug Rest – ohne Rolle würde der Verbrauch aus dem
+		// Bestand verschwinden, ohne dass jemand es merkt.
+		$chosen = isset( $input['lots'] ) && is_array( $input['lots'] ) ? $input['lots'] : array();
+		$lot_of = array();
+		$used   = array();
+
+		foreach ( $check['items'] as $index => $item ) {
+			$color = Material::color_of( $item['color'] );
+			$kg    = Material::weight_kg( $item['article_id'] ) * $item['qty'];
+			$key   = $item['article_id'] . '|' . $item['color'];
+			$lot   = null;
+
+			if ( ! empty( $chosen[ $key ] ) ) {
+				foreach ( Material::lots_for( $color ) as $candidate ) {
+					if ( (int) $candidate['id'] === (int) $chosen[ $key ] ) {
+						$lot = $candidate;
+					}
+				}
+			}
+
+			if ( ! $lot ) {
+				$lot = Material::pick_lot( Material::lots_for( $color ), $kg );
+			}
+
+			$lot_of[ $index ] = $lot ? (int) $lot['id'] : 0;
+			$used[ $index ]   = array( 'color' => $color, 'kg' => round( $kg, 3 ), 'lot' => $lot );
+		}
+
 		// 1. Alles prüfen.
 		$jobs   = array();
 		$errors = array();
@@ -803,6 +899,7 @@ class Workflow {
 		foreach ( $check['items'] as $index => $item ) {
 			$validated = PrintJobRepository::validate(
 				array(
+					'filament_lot_id' => $lot_of[ $index ],
 					'printer_id'     => (int) $run['printer_id'],
 					'article_id'     => $item['article_id'],
 					'color'          => $item['color'],
@@ -835,6 +932,27 @@ class Workflow {
 			if ( $job_id ) {
 				$job_ids[] = $job_id;
 			}
+		}
+
+		Material::flush();
+
+		$material_summary = array();
+		foreach ( $used as $row ) {
+			$lot  = $row['lot'];
+			$rest = null;
+
+			if ( $lot ) {
+				$fresh = FilamentRepository::find( (int) $lot['id'] );
+				$rest  = $fresh ? round( FilamentRepository::remaining_kg( $fresh ), 3 ) : null;
+			}
+
+			$material_summary[] = array(
+				'color'     => $row['color'],
+				'label'     => \Lindenweg16\Modules\Betrieb\ColorRegistry::label( $row['color'] ),
+				'kg'        => $row['kg'],
+				'lot'       => $lot ? $lot['code'] : '',
+				'remaining' => $rest,
+			);
 		}
 
 		$description = sprintf( /* translators: %d: Plattennummer. */ __( 'Platte %d', 'lindenweg16' ), $run['id'] );
@@ -877,6 +995,7 @@ class Workflow {
 			'message' => __( 'Gemeldet und eingelagert.', 'lindenweg16' ),
 			'run'     => self::view_by_id( $run['id'] ),
 			'summary' => array(
+				'material' => $material_summary,
 				'items'   => $items,
 				'setup_h' => $setup_h,
 				'print_h' => $print_h,
