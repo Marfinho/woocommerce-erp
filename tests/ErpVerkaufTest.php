@@ -308,4 +308,12 @@ class ErpVerkaufTest extends TestCase {
 		// Erst senden, dann festhalten – nie eine Aktivität für eine Mail, die nicht rausging.
 		$this->assertLessThan( strpos( $src, "'activity_type' => 'mail'" ), strpos( $src, 'wp_mail( $to' ) );
 	}
+
+	public function test_kontaktliste_laedt_nur_zugeordnete_bestellungen() {
+		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Verkauf.php' );
+		$ops = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/OrderOpsRepository.php' );
+
+		$this->assertStringContainsString( "'with_contact' => true", $src );
+		$this->assertStringContainsString( 'contact_id IS NOT NULL AND contact_id > 0', $ops );
+	}
 }

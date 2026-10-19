@@ -1015,7 +1015,7 @@ class Verkauf {
 	 * @return WP_REST_Response
 	 */
 	public static function contacts_list( WP_REST_Request $request ) {
-		$stats = self::stats_by_contact( self::order_rows( array( 'limit' => 5000 ) ) );
+		$stats = self::stats_by_contact( self::order_rows( array( 'with_contact' => true, 'limit' => 5000 ) ) );
 		$terms = self::active_terms();
 		$due   = array();
 
