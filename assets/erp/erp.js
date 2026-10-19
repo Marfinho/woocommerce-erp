@@ -1953,7 +1953,7 @@
 	var PRODUCT_FILTERS = [['alle', 'Alle'], ['ohne_3mf', 'Ohne 3MF'], ['marge', 'Marge kritisch'], ['nicht_im_shop', 'Nicht im Shop'], ['kein_preis', 'Ohne Preis']];
 
 	function viewProducts(item) {
-		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', classicBtn(item));
+		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', [can('fertigung.stammdaten.edit') ? h('a', { class: 'btn primary', href: '#/produkt-neu' }, 'Neues Produkt') : null, classicBtn(item)]);
 		var filter = S.prodFilter || 'alle';
 		var q = '';
 		var chips = h('div', { class: 'presets' });
@@ -2002,7 +2002,7 @@
 		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 	}
 
-	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['shop', 'Shop']];
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['shop', 'Shop']];
 
 	function viewProduct(id, sub) {
 		var f = findItem('artikel');
@@ -2028,6 +2028,7 @@
 			var pills = h('div', { class: 'pills', style: 'padding-top:0' });
 			PRODUCT_TABS.forEach(function (t) {
 				if (t[0] === 'shop' && !d.shop_edit) { return; }
+				if (t[0] === 'beschaffung' && ['zukauf', 'hybrid'].indexOf(d.sourcing) < 0) { return; }
 				if (t[0] === 'stamm' && !d.edit) { return; }
 				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
 			});
