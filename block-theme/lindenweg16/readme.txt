@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,12 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.1.1 =
+* E-Mails offensiver im Website-Look: Sticker „Handgemacht in Haste“ über der Überschrift, letztes Wort mit Textmarker, größere Überschrift in Bricolage, Spaltenköpfe in DM Mono, Gesamtsumme markiert, dunkler Footer
+* Warenkorb-Erinnerung (ERP-Plugin ab 0.15.1): Artikel als Karte mit Bild, Menge und Preis
+* E-Mails: Zeilen wie „Jetzt bestellen: https://…“ werden ein Knopf „Jetzt bestellen“ (Warenkorb-Erinnerung, Warteliste …)
+* Warenkorb: „Warenkorb-Summe“ wieder als eine Karte (Überschrift, Gutschein, Summe); das Gutschein-Feld ist keine eigene weiße Pille mehr
 
 = 1.1.0 =
 * Alle Mails im CI: auch HTML-Mails anderer Plugins bekommen den Lindenweg16-Rahmen

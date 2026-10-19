@@ -124,9 +124,12 @@ class MailTemplate {
 	 * @param string       $template_key Schlüssel aus templates().
 	 * @param array        $placeholders Assoziativ {platzhalter} => Wert.
 	 * @param array        $attachments  Dateianhänge.
+	 * @param array        $context      Zusatzdaten für das Theme-Layout, z. B.
+	 *                                   'items' => Artikel der Warenkorb-Erinnerung
+	 *                                   (siehe wrap_html()).
 	 * @return bool
 	 */
-	public static function send( $to, $template_key, array $placeholders = array(), $attachments = array() ) {
+	public static function send( $to, $template_key, array $placeholders = array(), $attachments = array(), array $context = array() ) {
 		$templates = self::templates();
 		if ( ! isset( $templates[ $template_key ] ) ) {
 			return false;
@@ -147,7 +150,8 @@ class MailTemplate {
 		$subject = strtr( $subject, $placeholders );
 		$body    = strtr( $body, $placeholders );
 
-		$html = self::wrap_html( $body, $subject );
+		$context['template'] = $template_key;
+		$html                = self::wrap_html( $body, $subject, $context );
 
 		$absender   = Settings::get( 'email_absender_name', get_bloginfo( 'name' ) );
 		$from_email = Settings::get( 'firma_email', get_bloginfo( 'admin_email' ) );
@@ -169,19 +173,26 @@ class MailTemplate {
 	 * übernehmen (das Lindenweg16-Block-Theme tut das, damit alle Mails wie die
 	 * Website aussehen). Ohne Rückgabe bleibt dieses Layout.
 	 *
+	 * Über $context bekommt das Theme strukturierte Daten, um sie schöner
+	 * darzustellen als im Klartext – etwa die Artikel einer Warenkorb-Erinnerung:
+	 * 'items' => array( 'text' => Klartext-Liste im Body, 'list' => array( array(
+	 * 'name', 'qty', 'url', 'image', 'price' ), … ) ).
+	 *
 	 * @param string $text    Klartext-Inhalt.
 	 * @param string $subject Betreff (für die Überschrift im Theme-Layout).
+	 * @param array  $context Zusatzdaten (Vorlage, Artikel …).
 	 * @return string Vollständiges HTML-Dokument.
 	 */
-	public static function wrap_html( $text, $subject = '' ) {
+	public static function wrap_html( $text, $subject = '', array $context = array() ) {
 		/**
 		 * Erlaubt einem Theme, das komplette HTML der Mail zu liefern.
 		 *
 		 * @param string|null $html    null = Layout des Plugins verwenden.
 		 * @param string      $text    Klartext-Inhalt.
 		 * @param string      $subject Betreff.
+		 * @param array       $context Zusatzdaten (Vorlage, Artikel …).
 		 */
-		$custom = apply_filters( 'lindenweg16_mail_html', null, (string) $text, (string) $subject );
+		$custom = apply_filters( 'lindenweg16_mail_html', null, (string) $text, (string) $subject, $context );
 		if ( is_string( $custom ) && '' !== $custom ) {
 			return $custom;
 		}

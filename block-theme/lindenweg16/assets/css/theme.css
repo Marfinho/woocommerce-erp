@@ -2956,9 +2956,8 @@ table.variations select {
 
 /* In Karten gruppiert: Positionen, Schritte, Übersicht */
 .wc-block-cart .wc-block-cart-items,
-.wc-block-cart .wc-block-cart__totals-title + *,
+.wc-block-cart .wp-block-woocommerce-cart-order-summary-block,
 .wc-block-checkout__main .wc-block-components-checkout-step,
-.wc-block-components-sidebar .wp-block-woocommerce-cart-totals-block,
 .wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block,
 .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content {
 	border-radius: var(--lw-r-card) !important;
@@ -3015,9 +3014,43 @@ table.variations select {
 	border-color: var(--lw-line) !important;
 }
 
-.wc-block-components-sidebar .wp-block-woocommerce-cart-totals-block,
 .wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block {
 	padding: 8px 20px 20px;
+}
+
+/*
+ * Warenkorb-Summe als eine Karte: Überschrift, Gutschein, Summe und
+ * Steuerhinweis. Die Überschrift steckt seit WooCommerce 10 im Block selbst –
+ * Bezahlknöpfe und „Weiter zur Kasse“ stehen darunter.
+ */
+.wc-block-cart .wp-block-woocommerce-cart-order-summary-block {
+	padding: 8px 24px 4px;
+}
+
+.wc-block-cart .wc-block-cart__totals-title {
+	margin: 0 !important;
+	padding: 16px 0 12px !important;
+}
+
+/* WooCommerce blendet die Überschrift auf dem Handy aus – die Karte bliebe oben leer. */
+.wc-block-cart.is-mobile .wc-block-cart__totals-title,
+.wc-block-cart.is-small .wc-block-cart__totals-title {
+	display: block !important;
+	font-family: var(--wp--preset--font-family--body);
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: 0;
+	line-height: 1.4;
+	text-transform: uppercase;
+}
+
+.wc-block-cart .wp-block-woocommerce-cart-order-summary-block .wc-block-components-totals-wrapper {
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+}
+
+.wc-block-cart .wc-block-cart__payment-options {
+	margin-top: 20px;
 }
 
 .wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block {
@@ -3255,6 +3288,7 @@ table.variations select {
 	gap: 8px;
 }
 
+.wc-block-components-totals-coupon__input input,
 .wc-block-components-totals-coupon__button {
 	min-height: 52px;
 }

@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.15.1] – 2026-10-19
+
+### Geändert
+
+- **E-Mails im Website-Design:** `MailTemplate::wrap_html()` gibt das Layout über den Filter
+  `lindenweg16_mail_html` an das Lindenweg16-Block-Theme ab. Warenkorb-Erinnerung,
+  Dankeschön, Bewertungsanfrage, Warteliste, Events, Support und Manager-Mails sehen damit
+  aus wie die WooCommerce-Mails. Ohne das Theme bleibt das bisherige Layout.
+- **Warenkorb-Erinnerung mit Artikelkarte:** `MailTemplate::send()` nimmt Zusatzdaten
+  (`$context`) an und reicht sie an den Filter weiter. Die Erinnerung übergibt Bild, Link,
+  Menge und aktuellen Preis je Artikel – das Theme zeigt daraus eine Karte wie in der
+  Bestellübersicht statt der Textliste. Der Warenkorb-Snapshot speichert jetzt auch die
+  Varianten-ID (für Bild und Preis der gewählten Farbe).
+
 ## [0.15.0] – 2026-10-09
 
 ### Neu: AR-Ansicht „An deiner Wand ansehen“

@@ -224,7 +224,7 @@ body, #outer_wrapper, #wrapper, #body_content, #body_content_inner, #body_conten
 	letter-spacing: -0.02em;
 }
 
-#template_header h1 { font-size: 30px !important; font-weight: 800 !important; line-height: 1.1 !important; }
+#template_header h1 { font-size: 34px !important; font-weight: 800 !important; line-height: 1.08 !important; letter-spacing: -0.035em !important; }
 #body_content h2 { font-size: 20px !important; font-weight: 800 !important; }
 
 #body_content_inner { color: {$c['text']} !important; font-size: 15px !important; line-height: 1.6 !important; }
@@ -282,17 +282,134 @@ body, #outer_wrapper, #wrapper, #body_content, #body_content_inner, #body_conten
 	padding: 14px 16px !important;
 }
 
-#template_footer, #template_footer td, #credit, #credit p {
+/* Spaltenköpfe wie im Warenkorb der Website: DM Mono, Versalien, gesperrt */
+#body_content table.td thead th, .email-order-details thead th {
+	font-family: {$mono} !important;
+	font-size: 11px !important;
+	font-weight: 500 !important;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
 	color: {$c['text-muted']} !important;
-	font-size: 12px !important;
 }
 
-#template_footer a, #credit a { color: {$c['text-muted']} !important; }
+/* Gesamtsumme mit Textmarker */
+.email-order-details .order-totals-total td .amount, #body_content table.td tfoot tr:last-child td .amount {
+	background-color: {$c['accent-1']} !important;
+	color: {$c['on-accent']} !important;
+	border-radius: 8px;
+	padding: 2px 8px;
+}
+
+/* Footer dunkel wie auf der Website */
+#template_footer {
+	background-color: {$c['ink']} !important;
+	border-radius: 0 0 28px 28px;
+}
+
+#template_footer td, #credit, #credit p {
+	color: {$c['on-ink']} !important;
+	font-size: 12px !important;
+	border: 0 !important;
+}
+
+#template_footer a, #credit a { color: {$c['on-ink']} !important; }
+";
+
+	// Handy-Größen (nur Programme, die eingebettete Stile verstehen).
+	$css .= "
+@media screen and (max-width: 600px) {
+	#header_wrapper h1 { font-size: 28px !important; }
+	#body_content_inner { font-size: 15px !important; }
+}
 ";
 
 	return $css;
 }
 add_filter( 'woocommerce_email_styles', 'lindenweg16_email_styles', 20 );
+
+/**
+ * Text des Stickers über der Überschrift: der Untertitel der Website
+ * (Einstellungen → Allgemein), sonst „Handgemacht in Haste“.
+ */
+function lindenweg16_email_eyebrow(): string {
+	$text = trim( (string) get_bloginfo( 'description' ) );
+
+	if ( '' === $text ) {
+		$text = __( 'Handgemacht in Haste', 'lindenweg16' );
+	}
+
+	/**
+	 * Filtert den Sticker über der Überschrift. Leer = kein Sticker.
+	 *
+	 * @param string $text Text.
+	 */
+	return (string) apply_filters( 'lindenweg16_email_eyebrow', $text );
+}
+
+/**
+ * Website-Look für die fertige Mail: Sticker über der Überschrift und das
+ * letzte Wort der Überschrift mit Textmarker – wie „Haster Haken“ auf der
+ * Startseite.
+ *
+ * Läuft nach dem Inlining; die Stile stehen deshalb direkt im HTML. Programme
+ * ohne Verläufe zeigen den Marker als volle Fläche.
+ *
+ * @param string $html Fertiges HTML der Mail.
+ */
+function lindenweg16_email_brand( $html ) {
+	$html = (string) $html;
+
+	if ( ! lindenweg16_email_design_enabled() || false !== strpos( $html, 'lw16-marker' ) ) {
+		return $html;
+	}
+
+	if ( ! preg_match( '#<h1([^>]*)>(.*?)</h1>#s', $html, $m, PREG_OFFSET_CAPTURE ) ) {
+		return $html;
+	}
+
+	$c       = lindenweg16_email_colors();
+	$heading = $m[2][0];
+
+	// Nur reiner Text: das letzte Wort markieren – ist es sehr kurz („Dich“ ja, „ab“ nicht), die letzten zwei.
+	if ( false === strpos( $heading, '<' ) && preg_match( '/^(.*?)(\S+?)([!?.,:…]*)$/us', trim( $heading ), $w ) ) {
+		$before = $w[1];
+		$words  = $w[2];
+
+		if ( mb_strlen( $words ) <= 3 && preg_match( '/^(.*?)(\S+\s+)$/us', $before, $prev ) ) {
+			$before = $prev[1];
+			$words  = $prev[2] . $words;
+		}
+
+		$heading = $before . sprintf(
+			'<span class="lw16-marker" style="background-color:%1$s;color:%2$s;border-radius:8px;padding:0 0.12em;white-space:nowrap;">%3$s</span>',
+			esc_attr( $c['accent-1'] ),
+			esc_attr( $c['on-accent'] ),
+			$words
+		) . $w[3];
+	}
+
+	$eyebrow = lindenweg16_email_eyebrow();
+	$sticker = '' === $eyebrow ? '' : sprintf(
+		'<p class="lw16-mail-eyebrow" style="margin:0 0 16px;"><span style="display:inline-block;padding:6px 14px;border-radius:999px;background-color:%1$s;color:%2$s;font-family:\'DM Mono\', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:11px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;transform:rotate(-2deg);">%3$s</span></p>',
+		esc_attr( $c['accent-1'] ),
+		esc_attr( $c['on-accent'] ),
+		esc_html( $eyebrow )
+	);
+
+	$replacement = $sticker . '<h1' . $m[1][0] . '>' . $heading . '</h1>';
+	$html        = substr_replace( $html, $replacement, $m[0][1], strlen( $m[0][0] ) );
+
+	// Textmarker nur in der unteren Hälfte wie auf der Website – für Programme, die
+	// eingebettete Stile verstehen (Apple Mail, iOS, Gmail). Steht erst hier, weil
+	// das Inlining Regeln für noch nicht vorhandene Elemente verwirft.
+	$style = sprintf(
+		'<style type="text/css">@media screen { .lw16-marker { background: linear-gradient(180deg, rgba(255,255,255,0) 46%%, %1$s 46%%) !important; border-radius: 6px !important; } }</style>',
+		esc_attr( $c['accent-1'] )
+	);
+
+	return false !== stripos( $html, '</head>' ) ? (string) preg_replace( '#</head>#i', $style . '</head>', $html, 1 ) : $style . $html;
+}
+add_filter( 'woocommerce_mail_content', 'lindenweg16_email_brand', 20 );
 
 /**
  * Klartext in einfaches E-Mail-HTML umwandeln: Absätze, klickbare Links und
@@ -312,13 +429,24 @@ function lindenweg16_email_text_to_html( string $text ): string {
 			$trimmed = $m[1];
 		}
 
+		// Eine Zeile nur mit Link – oder „Jetzt bestellen: https://…“ – wird ein Knopf.
+		$url   = '';
+		$label = '';
 		if ( preg_match( '#^https?://\S+$#', $trimmed ) ) {
+			$url   = $trimmed;
+			$label = lindenweg16_email_button_label( $trimmed );
+		} elseif ( preg_match( '#^([^:\n]{2,40}):\s*(https?://\S+)$#u', $trimmed, $m ) ) {
+			$url   = $m[2];
+			$label = trim( $m[1] );
+		}
+
+		if ( '' !== $url ) {
 			$out[] = sprintf(
 				'<p style="margin:20px 0;"><a class="lw16-mail-button" href="%1$s" style="display:inline-block;padding:14px 26px;border-radius:999px;background-color:%2$s;color:%3$s;font-weight:700;text-decoration:none;">%4$s</a></p>',
-				esc_url( $trimmed ),
+				esc_url( $url ),
 				esc_attr( $c['primary'] ),
 				esc_attr( $c['on-primary'] ),
-				esc_html( lindenweg16_email_button_label( $trimmed ) )
+				esc_html( $label )
 			);
 			continue;
 		}
@@ -360,7 +488,7 @@ function lindenweg16_email_wrap( string $heading, string $body_html ): string {
 
 	$email = new WC_Email();
 
-	return (string) $email->style_inline( $html );
+	return lindenweg16_email_brand( $email->style_inline( $html ) );
 }
 
 /**
@@ -504,17 +632,93 @@ function lindenweg16_email_wpforms_template( $value, $key = '' ) {
 add_filter( 'wpforms_setting', 'lindenweg16_email_wpforms_template', 10, 2 );
 
 /**
+ * Artikel als Karte wie in der Bestellübersicht: Bild, Name (verlinkt), Menge
+ * und Preis. Tabellen statt Flexbox, damit es auch in Outlook hält.
+ *
+ * @param array<int, array<string, mixed>> $items Artikel (name, qty, url, image, price).
+ */
+function lindenweg16_email_items_card( array $items ): string {
+	$c     = lindenweg16_email_colors();
+	$mono  = "'DM Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+	$line  = lindenweg16_email_mix( $c['line'], $c['surface-muted'], 70 );
+	$rows  = '';
+	$count = count( $items );
+
+	foreach ( array_values( $items ) as $i => $item ) {
+		$name  = (string) ( $item['name'] ?? '' );
+		$url   = (string) ( $item['url'] ?? '' );
+		$image = (string) ( $item['image'] ?? '' );
+		$qty   = max( 1, (int) ( $item['qty'] ?? 1 ) );
+		$price = isset( $item['price'] ) && is_numeric( $item['price'] ) ? html_entity_decode( wp_strip_all_tags( wc_price( (float) $item['price'] ) ), ENT_QUOTES, 'UTF-8' ) : '';
+
+		if ( '' === $name ) {
+			continue;
+		}
+
+		$border = $i < $count - 1 ? 'border-bottom:1px solid ' . esc_attr( $line ) . ';' : '';
+		$title  = '' !== $url
+			? sprintf( '<a href="%1$s" style="color:%2$s;text-decoration:none;font-weight:700;">%3$s</a>', esc_url( $url ), esc_attr( $c['text'] ), esc_html( $name ) )
+			: sprintf( '<strong style="color:%1$s;">%2$s</strong>', esc_attr( $c['text'] ), esc_html( $name ) );
+		$thumb  = '' !== $image
+			? sprintf( '<img src="%1$s" alt="" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:12px;object-fit:cover;border:0;">', esc_url( $image ) )
+			: sprintf( '<div style="width:56px;height:56px;border-radius:12px;background-color:%s;"></div>', esc_attr( $c['accent-3'] ) );
+
+		$rows .= sprintf(
+			'<tr>'
+			. '<td width="56" style="padding:14px 0 14px 16px;%1$s" valign="middle">%2$s</td>'
+			. '<td style="padding:14px 12px;font-size:15px;line-height:1.35;%1$s" valign="middle">%3$s<div style="margin-top:4px;font-family:%4$s;font-size:13px;color:%5$s;">× %6$d</div></td>'
+			. '<td align="right" style="padding:14px 16px 14px 0;font-size:15px;color:%7$s;white-space:nowrap;%1$s" valign="middle"><span style="font-family:%4$s;">%8$s</span></td>'
+			. '</tr>',
+			$border,
+			$thumb,
+			$title,
+			$mono,
+			esc_attr( $c['text-muted'] ),
+			$qty,
+			esc_attr( $c['text'] ),
+			esc_html( $price )
+		);
+	}
+
+	if ( '' === $rows ) {
+		return '';
+	}
+
+	return sprintf(
+		'<table class="lw16-mail-items" role="presentation" width="100%%" cellpadding="0" cellspacing="0" border="0" style="width:100%%;margin:8px 0 20px;border-collapse:separate;border-radius:20px;background-color:%1$s;">%2$s</table>',
+		esc_attr( $c['surface-muted'] ),
+		$rows
+	);
+}
+
+/**
  * Layout für die Mails des Lindenweg16-ERP-Plugins (MailTemplate).
  *
- * @param string|null $html    Bisheriges Ergebnis (null = Plugin-Layout).
- * @param string      $text    Klartext der Mail.
- * @param string      $subject Betreff.
+ * Bringt das Plugin die Artikel einer Warenkorb-Erinnerung mit
+ * ($context['items']), ersetzt eine Karte die Klartext-Liste.
+ *
+ * @param string|null          $html    Bisheriges Ergebnis (null = Plugin-Layout).
+ * @param string               $text    Klartext der Mail.
+ * @param string               $subject Betreff.
+ * @param array<string, mixed> $context Zusatzdaten des Plugins.
  */
-function lindenweg16_email_erp_html( $html, string $text, string $subject = '' ) {
+function lindenweg16_email_erp_html( $html, string $text, string $subject = '', $context = array() ) {
 	if ( ! lindenweg16_email_design_enabled() || ! function_exists( 'WC' ) ) {
 		return $html;
 	}
 
-	return lindenweg16_email_wrap( $subject, lindenweg16_email_text_to_html( $text ) );
+	$items = is_array( $context ) ? ( $context['items'] ?? null ) : null;
+	$list  = is_array( $items ) ? trim( (string) ( $items['text'] ?? '' ) ) : '';
+	$card  = '' !== $list && ! empty( $items['list'] ) && is_array( $items['list'] ) ? lindenweg16_email_items_card( $items['list'] ) : '';
+
+	if ( '' !== $card && false !== strpos( $text, $list ) ) {
+		list( $before, $after ) = explode( $list, $text, 2 );
+
+		$body = lindenweg16_email_text_to_html( $before ) . $card . lindenweg16_email_text_to_html( $after );
+	} else {
+		$body = lindenweg16_email_text_to_html( $text );
+	}
+
+	return lindenweg16_email_wrap( $subject, $body );
 }
-add_filter( 'lindenweg16_mail_html', 'lindenweg16_email_erp_html', 10, 3 );
+add_filter( 'lindenweg16_mail_html', 'lindenweg16_email_erp_html', 10, 4 );
