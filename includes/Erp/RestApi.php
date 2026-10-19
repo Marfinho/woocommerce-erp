@@ -694,48 +694,53 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function bootstrap() {
-		$user   = wp_get_current_user();
-		$areas  = Navigation::areas();
-		$tree   = Access::navigation();
-		$out    = array();
-		$locked = array();
+		$user     = wp_get_current_user();
+		$sections = Navigation::sections();
+		$tree     = Access::sections();
+		$out      = array();
 
-		foreach ( $tree as $area => $items ) {
-			$rows = array();
+		foreach ( $tree as $section => $tabs ) {
+			$flat     = array();
+			$tab_rows = array();
 
-			foreach ( $items as $item ) {
-				$row = array(
-					'id'    => $item['id'],
-					'title' => $item['title'],
-					'kind'  => $item['kind'],
-					'hint'  => Permissions::catalog()[ $item['perm'] ]['hint'],
-				);
+			foreach ( $tabs as $tab ) {
+				$rows = array();
 
-				// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
-				// Der Workflow steht als erster Eintrag oben, nicht in seinem Bereich.
-				if ( 'workflow' === $item['id'] ) {
-					$row['top'] = true;
+				foreach ( $tab['items'] as $item ) {
+					$row = array(
+						'id'    => $item['id'],
+						'title' => $item['title'],
+						'kind'  => $item['kind'],
+						'tab'   => $tab['label'],
+						'hint'  => Permissions::catalog()[ $item['perm'] ]['hint'],
+					);
+
+					// Eingebettet (legacy) bzw. als „klassische Ansicht“ (native mit Vorgänger).
+					if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
+						$row['path'] = $this->legacy_path( $item );
+					}
+
+					// Fehlt die WordPress-Rolle für die Shop-Seite, bleibt der
+					// Eintrag sichtbar, erklärt aber, warum er nicht öffnet.
+					if ( $item['wp_cap'] && ! current_user_can( $item['wp_cap'] ) ) {
+						$row['locked'] = __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
+					}
+
+					$rows[] = $row;
+					$flat[] = $row;
 				}
 
-				if ( 'legacy' === $item['kind'] || '' !== $item['alt'] ) {
-					$row['path'] = $this->legacy_path( $item );
-				}
-
-				// Fehlt die WordPress-Rolle für die Shop-Seite, bleibt der
-				// Eintrag sichtbar, erklärt aber, warum er nicht öffnet.
-				if ( $item['wp_cap'] && ! current_user_can( $item['wp_cap'] ) ) {
-					$row['locked'] = __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
-				}
-
-				$rows[] = $row;
+				$tab_rows[] = array( 'label' => $tab['label'], 'items' => $rows );
 			}
 
 			$out[] = array(
-				'id'    => $area,
-				'title' => $areas[ $area ][0],
-				'icon'  => $areas[ $area ][1],
-				'hint'  => $areas[ $area ][2],
-				'items' => $rows,
+				'id'    => $section,
+				'title' => $sections[ $section ][0],
+				'icon'  => $sections[ $section ][1],
+				'hint'  => $sections[ $section ][2],
+				'rail'  => $sections[ $section ][3],
+				'tabs'  => $tab_rows,
+				'items' => $flat,
 			);
 		}
 

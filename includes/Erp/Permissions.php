@@ -134,7 +134,7 @@ class Permissions {
 			'lager.scannen'           => self::def( 'lager', __( 'Scannen', 'lindenweg16' ), __( 'Native Seite: Codes scannen (Kamera oder Handscanner) und sehen, was dort liegt.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.lagerplaetze'      => self::def( 'lager', __( 'Lagerplätze & Picklisten', 'lindenweg16' ), __( 'Fächer, Fertigung und Picklisten.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.material'          => self::def( 'lager', __( 'Material', 'lindenweg16' ), __( 'Filament und Zukaufteile.', 'lindenweg16' ), array( $production ), $page ),
-			'lager.einkauf'           => self::def( 'lager', __( 'Einkauf', 'lindenweg16' ), __( 'Nachbestellen und Wareneingang: Bestellungen anlegen, eingegangene Ware buchen. Der Eingang erhöht den Bestand, dafür braucht es zusätzlich „Bestand buchen“.', 'lindenweg16' ), array( $production ), $page ),
+			'lager.einkauf'           => self::def( 'lager', __( 'Einkauf', 'lindenweg16' ), __( 'Nachbestellen und Wareneingang: Bestellungen anlegen, eingegangene Ware buchen. Der Wareneingang erhöht den Bestand und braucht zusätzlich das Recht zum Lagerbuchen.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.bedarf'            => self::def( 'lager', __( 'Bedarf', 'lindenweg16' ), __( 'Bedarfsplanung und Nachbestellung.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.buchen'            => self::def( 'lager', __( 'Bestand buchen und korrigieren', 'lindenweg16' ), __( 'Zu- und Abgänge buchen, Inventurdifferenzen korrigieren – auch beim Scannen und in der mobilen Erfassung.', 'lindenweg16' ), array( $capture ), $cap, array( 'lager.bestand' ) ),
 

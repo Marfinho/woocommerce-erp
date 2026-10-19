@@ -44,6 +44,134 @@ class Navigation {
 	}
 
 	/**
+	 * Die Plätze der Menüführung.
+	 *
+	 * Die Bereiche (areas) gehören den Rechten: Sie gruppieren den Katalog der
+	 * Berechtigungen. Die Plätze hier gehören der Oberfläche: sechs links in
+	 * der Leiste, dazu Mailbox und Profilmenü. Beides ist bewusst getrennt,
+	 * damit sich die Menüführung ändern lässt, ohne Rechte anzufassen.
+	 *
+	 * @return array Kennung => [Titel, Symbol, Hinweis, in der Leiste].
+	 */
+	public static function sections() {
+		return array(
+			'produktion' => array( __( 'Produktion', 'lindenweg16' ), 'hammer', __( 'Planen, rüsten, drucken, melden', 'lindenweg16' ), true ),
+			'verkauf'    => array( __( 'Verkauf', 'lindenweg16' ), 'cart', __( 'Von der Bestellung bis zum Paket', 'lindenweg16' ), true ),
+			'lager'      => array( __( 'Lager', 'lindenweg16' ), 'box', __( 'Was da ist, was kommt, was fehlt', 'lindenweg16' ), true ),
+			'katalog'    => array( __( 'Katalog', 'lindenweg16' ), 'book', __( 'Alles, was verkauft wird, an einem Ort', 'lindenweg16' ), true ),
+			'zahlen'     => array( __( 'Zahlen', 'lindenweg16' ), 'euro', __( 'Was kam rein, was blieb übrig', 'lindenweg16' ), true ),
+			'mail'       => array( __( 'Mailbox', 'lindenweg16' ), 'mail', __( 'Postfächer und Nachrichten', 'lindenweg16' ), false ),
+			'profil'     => array( __( 'Profil und Einstellungen', 'lindenweg16' ), 'cog', __( 'Selten gebraucht', 'lindenweg16' ), false ),
+		);
+	}
+
+	/**
+	 * Wohin eine Seite in der Menüführung gehört: Platz und Reiter.
+	 *
+	 * Seiten mit demselben Reiter liegen unter diesem Reiter als Auswahl
+	 * nebeneinander; die Reihenfolge hier ist die Reihenfolge dort. Eine Seite
+	 * ohne Eintrag landet im Profilmenü, damit nichts verschwindet.
+	 *
+	 * @return array Seitenkennung => [Platz, Reiter].
+	 */
+	public static function layout() {
+		return array(
+			'workflow'         => array( 'produktion', __( 'Plan und Board', 'lindenweg16' ) ),
+			'produktion'       => array( 'produktion', __( 'Plan und Board', 'lindenweg16' ) ),
+			'druckfarm'        => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
+			'drucker'          => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
+			'bambu'            => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
+			'sollist'          => array( 'produktion', __( 'Soll gegen Ist', 'lindenweg16' ) ),
+			'kapazitaet'       => array( 'produktion', __( 'Soll gegen Ist', 'lindenweg16' ) ),
+			'druckjournal'     => array( 'produktion', __( 'Journal', 'lindenweg16' ) ),
+			'qualitaet'        => array( 'produktion', __( 'Journal', 'lindenweg16' ) ),
+
+			'versand'          => array( 'verkauf', __( 'Bestellungen', 'lindenweg16' ) ),
+			'auftraege'        => array( 'verkauf', __( 'Bestellungen', 'lindenweg16' ) ),
+			'picken'           => array( 'verkauf', __( 'Bestellungen', 'lindenweg16' ) ),
+			'shop-bestellungen' => array( 'verkauf', __( 'Bestellungen', 'lindenweg16' ) ),
+			'kontakte'         => array( 'verkauf', __( 'Kunden', 'lindenweg16' ) ),
+			'loyalty'          => array( 'verkauf', __( 'Kunden', 'lindenweg16' ) ),
+			'kasse'            => array( 'verkauf', __( 'Kasse', 'lindenweg16' ) ),
+			'marketing'        => array( 'verkauf', __( 'Marketing', 'lindenweg16' ) ),
+
+			'lager'            => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
+			'lagerplaetze'     => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
+			'scannen'          => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
+			'material'         => array( 'lager', __( 'Material', 'lindenweg16' ) ),
+			'einkauf'          => array( 'lager', __( 'Einkauf', 'lindenweg16' ) ),
+			'bedarf'           => array( 'lager', __( 'Einkauf', 'lindenweg16' ) ),
+
+			'artikel'          => array( 'katalog', __( 'Produkte', 'lindenweg16' ) ),
+			'shop-produkte'    => array( 'katalog', __( 'Produkte', 'lindenweg16' ) ),
+			'konfigurator'     => array( 'katalog', __( 'Konfigurator', 'lindenweg16' ) ),
+			'arview'           => array( 'katalog', __( 'AR-Ansicht', 'lindenweg16' ) ),
+
+			'finanz-dashboard' => array( 'zahlen', __( 'Übersicht', 'lindenweg16' ) ),
+			'berichte'         => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
+			'reporting'        => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
+			'buchhaltung'      => array( 'zahlen', __( 'Buchhaltung', 'lindenweg16' ) ),
+
+			'mailbox'          => array( 'mail', __( 'Mailbox', 'lindenweg16' ) ),
+			'mailbox-konten'   => array( 'mail', __( 'Mailbox', 'lindenweg16' ) ),
+		);
+	}
+
+	/**
+	 * Platz und Reiter einer Seite.
+	 *
+	 * @param string $id Seitenkennung.
+	 * @return array [Platz, Reiter]
+	 */
+	public static function place( $id ) {
+		$layout = self::layout();
+
+		return isset( $layout[ $id ] ) ? $layout[ $id ] : array( 'profil', '' );
+	}
+
+	/**
+	 * Die sichtbaren Seiten, geordnet nach Platz und Reiter.
+	 *
+	 * @param callable $can Prüft ein Recht.
+	 * @return array Platz => [ [label, items[]], … ]
+	 */
+	public static function sections_visible( callable $can ) {
+		$order  = array_keys( self::layout() );
+		$out    = array();
+		$items  = self::items();
+
+		foreach ( array_keys( self::sections() ) as $section ) {
+			$out[ $section ] = array();
+		}
+
+		// Reihenfolge der Reiter und Seiten: wie im Layout, Rest hinten.
+		$ids = array_merge( $order, array_diff( array_keys( $items ), $order ) );
+
+		foreach ( $ids as $id ) {
+			if ( ! isset( $items[ $id ] ) || ! $can( $items[ $id ]['perm'] ) ) {
+				continue;
+			}
+
+			list( $section, $tab ) = self::place( $id );
+
+			$found = false;
+			foreach ( $out[ $section ] as $i => $existing ) {
+				if ( $existing['label'] === $tab ) {
+					$out[ $section ][ $i ]['items'][] = $items[ $id ];
+					$found                              = true;
+					break;
+				}
+			}
+
+			if ( ! $found ) {
+				$out[ $section ][] = array( 'label' => $tab, 'items' => array( $items[ $id ] ) );
+			}
+		}
+
+		return array_filter( $out );
+	}
+
+	/**
 	 * Ein Seiteneintrag.
 	 *
 	 * @param string $id     Kennung (Teil der Adresse).

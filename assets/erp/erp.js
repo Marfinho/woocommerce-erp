@@ -74,6 +74,10 @@
 		refresh: '<path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/>',
 		logout: '<path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9"/>',
 		flow: '<circle cx="5" cy="6" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="18" r="2"/><path d="M7 6h6a4 4 0 0 1 4 4M7 18h6a4 4 0 0 0 4-4"/>',
+		book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 7h6"/>',
+		mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+		dots: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+		clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 		download: '<path d="M12 3v12M7 11l5 5 5-5M4 20h16"/>',
 		shop: '<path d="M4 9l1.5-5h13L20 9"/><path d="M4 9a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0A2.7 2.7 0 0 0 20 9v11H4z"/>'
 	};
@@ -274,6 +278,42 @@
 		return { name: parts[0] || 'start', id: parts[1] || '' };
 	}
 
+	/*
+	 * Menüführung: links die Bereiche, oben die Reiter, darunter bei Bedarf
+	 * die Auswahl innerhalb eines Reiters. Zuletzt besuchte Seiten werden
+	 * gemerkt, damit ein Klick auf den Bereich dort weitermacht.
+	 */
+	var LAST_KEY = 'lw16erp-last';
+
+	function lastSeen() { return readJson(LAST_KEY, {}); }
+
+	function remember(section, tab, id) {
+		var last = lastSeen();
+		last[section] = id;
+		last[section + ':' + tab] = id;
+		writeJson(LAST_KEY, last);
+	}
+
+	function hasItem(items, id) {
+		return items.some(function (i) { return i.id === id; });
+	}
+
+	function sectionTarget(sec) {
+		var last = lastSeen();
+		if (last[sec.id] && hasItem(sec.items, last[sec.id])) { return last[sec.id]; }
+		return sec.items.length ? sec.items[0].id : '';
+	}
+
+	function tabTarget(sec, tab) {
+		var last = lastSeen();
+		var id = last[sec.id + ':' + tab.label];
+		return id && hasItem(tab.items, id) ? id : tab.items[0].id;
+	}
+
+	function railAreas() {
+		return S.boot.nav.filter(function (s) { return s.rail; });
+	}
+
 	/* ---------- Gerüst ---------- */
 
 	function buildShell() {
@@ -281,90 +321,70 @@
 		var theme = store('lw16erp-theme');
 		if (theme) { document.documentElement.setAttribute('data-theme', theme); }
 
-		el.nav = h('nav', { class: 'nav', 'aria-label': 'Hauptmenü' });
-		el.nav.appendChild(h('a', { class: 'nav-link', href: '#/start', 'data-r': 'start' }, ico('home'), 'Start'));
-
-		boot.nav.forEach(function (area) {
-			area.items.forEach(function (item) {
-				if (item.top) {
-					el.nav.appendChild(h('a', { class: 'nav-link nav-top', href: '#/seite/' + item.id, 'data-item': item.id }, ico('flow'), item.title));
-				}
-			});
+		var rail = h('nav', { class: 'nav', 'aria-label': 'Bereiche' });
+		el.nav = rail;
+		rail.appendChild(h('a', { class: 'rail-link', href: '#/start', 'data-r': 'start' }, ico('home'), h('span', null, 'Heute')));
+		railAreas().forEach(function (area) {
+			rail.appendChild(h('a', { class: 'rail-link', href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), h('span', null, area.title)));
 		});
 
-		boot.nav.forEach(function (area) {
-			var btn = h('div', { class: 'nav-row' },
-				h('a', { class: 'nav-area area-' + area.id, href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), area.title),
-				h('button', {
-					class: 'chev-btn', type: 'button', 'aria-label': area.title + ' auf- oder zuklappen', 'data-chev': area.id, 'aria-expanded': 'false',
-					onclick: function () { S.open[area.id] = !S.open[area.id]; syncNav(); }
-				}, ico('chev', 'chev'))
-			);
-			var list = h('ul', { class: 'nav-sub', 'data-sub': area.id });
-			area.items.forEach(function (item) {
-				if (item.top) { return; }
-				list.appendChild(h('li', null,
-					h('a', { class: 'nav-link', href: '#/seite/' + item.id, 'data-item': item.id }, item.title, item.locked ? ico('lock', 'nav-lock') : null)
-				));
-			});
-			el.nav.appendChild(btn);
-			el.nav.appendChild(list);
-		});
+		var mail = areaOf('mail');
+		el.mailBtn = mail ? h('a', { class: 'rail-mini', href: '#/bereich/mail', 'data-area': 'mail', 'aria-label': 'Mailbox' }, ico('mail'), h('b', { class: 'badge', hidden: true })) : null;
+		el.avatarBtn = h('button', { class: 'avatar-btn', type: 'button', 'aria-label': 'Profil und Einstellungen', 'aria-haspopup': 'true', onclick: function (e) { e.stopPropagation(); toggleProfile(); } },
+			h('img', { src: boot.user.avatar, alt: '', width: 40, height: 40 }));
 
-		var side = h('aside', { class: 'side', id: 'side' },
-			h('div', { class: 'brand' },
-				h('div', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L'),
-				h('div', { class: 'brand-name' }, boot.shop.name, h('small', null, 'ERP'))
-			),
-			el.nav,
-			h('div', { class: 'side-foot' },
-				h('div', { class: 'me' },
-					h('img', { src: boot.user.avatar, alt: '', width: 36, height: 36 }),
-					h('div', { style: 'min-width:0' }, h('b', null, boot.user.name), h('span', null, boot.user.full ? 'Vollzugriff' : 'ERP-Zugang'))
-				),
-				h('div', { class: 'side-links' },
-					h('a', { href: boot.shop.url }, ico('shop'), 'Zum Shop'),
-					boot.user.full ? h('a', { href: C.adminUrl }, ico('ext'), 'wp-admin') : null,
-					h('a', { href: C.logout }, ico('logout'), 'Abmelden')
-				)
-			)
+		var side = h('aside', { class: 'side rail', id: 'side' },
+			h('div', { class: 'brand' }, h('div', { class: 'brand-mark', 'aria-hidden': 'true' }, 'L')),
+			rail,
+			h('div', { class: 'rail-foot' }, el.mailBtn, el.avatarBtn)
 		);
 
 		el.net = h('button', { class: 'net-pill', type: 'button', hidden: true, title: 'Jetzt senden', onclick: flush });
 		el.title = h('h1', null, '');
 		el.crumb = h('span', { class: 'crumb' }, '');
-		el.themeBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Hell/Dunkel umschalten', onclick: toggleTheme }, ico('moon'));
+		el.themeBtn = h('button', { class: 'pop-item', type: 'button', onclick: toggleTheme }, ico('moon'), h('span', null, 'Hell/Dunkel'));
 
+		var time = findItem('zeit');
 		var top = h('header', { class: 'top' },
-			h('button', { class: 'icon-btn', id: 'menu-btn', type: 'button', 'aria-label': 'Menü', onclick: function () { el.app.classList.toggle('drawer-open'); } }, ico('menu')),
 			h('div', { class: 'top-title' }, el.crumb, el.title),
 			el.net,
-			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Suchen …', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
+			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
-			el.themeBtn
+			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit' }, ico('clock'), h('span', null, 'Zeit')) : null,
+			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
 		);
 
+		el.sub = h('div', { class: 'subnav', hidden: true });
 		el.view = h('main', { class: 'view', id: 'view', tabindex: '-1' });
 
 		var tabs = h('nav', { class: 'tabbar', 'aria-label': 'Bereiche' },
-			h('a', { class: 'tab', href: '#/start', 'data-r': 'start' }, ico('home'), 'Start')
+			h('a', { class: 'tab', href: '#/start', 'data-r': 'start' }, ico('home'), 'Heute')
 		);
-		boot.nav.forEach(function (area) {
+		var rails = railAreas();
+		rails.slice(0, 3).forEach(function (area) {
 			tabs.appendChild(h('a', { class: 'tab', href: '#/bereich/' + area.id, 'data-area': area.id }, ico(area.icon), area.title));
 		});
+		tabs.appendChild(h('button', { class: 'tab', type: 'button', 'data-more': '1', onclick: openMore }, ico('dots'), 'Mehr'));
+
+		el.pop = h('div', { class: 'pop', hidden: true, role: 'menu' });
 
 		el.app = h('div', { class: 'erp' },
 			side,
-			h('div', { class: 'scrim', onclick: function () { el.app.classList.remove('drawer-open'); } }),
-			h('div', { class: 'main' }, top, el.view),
-			tabs
+			h('div', { class: 'main' }, top, el.sub, el.view),
+			tabs,
+			el.pop
 		);
 
 		root.textContent = '';
 		root.className = '';
 		root.appendChild(el.app);
 		el.tabs = tabs;
+		el.moreAreas = rails.slice(3);
 		syncTheme();
+
+		document.addEventListener('click', function (e) {
+			if (!el.pop.hidden && !el.pop.contains(e.target)) { el.pop.hidden = true; }
+		});
 
 		// Auf dem Desktop zeigt das große Suchfeld, auf dem Handy nur das Symbol.
 		var mq = window.matchMedia('(min-width: 900px)');
@@ -372,6 +392,48 @@
 		function mqSync() { iconBtn.style.display = mq.matches ? 'none' : 'inline-grid'; }
 		mqSync();
 		if (mq.addEventListener) { mq.addEventListener('change', mqSync); }
+	}
+
+	function profileItems() {
+		var sec = areaOf('profil');
+		return sec ? sec.items : [];
+	}
+
+	function toggleProfile() {
+		var boot = S.boot;
+		if (!el.pop.hidden) { el.pop.hidden = true; return; }
+
+		el.pop.textContent = '';
+		el.pop.appendChild(h('div', { class: 'pop-head' },
+			h('img', { src: boot.user.avatar, alt: '', width: 40, height: 40 }),
+			h('div', { style: 'min-width:0' }, h('b', null, boot.user.name), h('small', null, boot.user.full ? 'Vollzugriff' : 'ERP-Zugang'))
+		));
+		profileItems().forEach(function (i) {
+			el.pop.appendChild(h('a', { class: 'pop-item', href: '#/seite/' + i.id, role: 'menuitem', onclick: function () { el.pop.hidden = true; } }, ico(i.locked ? 'lock' : 'cog'), h('span', null, i.title)));
+		});
+		el.pop.appendChild(h('hr'));
+		el.pop.appendChild(el.themeBtn);
+		el.pop.appendChild(h('a', { class: 'pop-item', href: boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
+		if (boot.user.full) { el.pop.appendChild(h('a', { class: 'pop-item', href: C.adminUrl }, ico('ext'), h('span', null, 'WordPress-Verwaltung'))); }
+		el.pop.appendChild(h('a', { class: 'pop-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
+		el.pop.hidden = false;
+	}
+
+	// Handy: alles, was nicht in die untere Leiste passt.
+	function openMore() {
+		var body = h('div', { class: 'more' });
+		el.moreAreas.forEach(function (a) {
+			body.appendChild(h('a', { class: 'more-item', href: '#/bereich/' + a.id, onclick: closeDlg }, ico(a.icon), h('span', null, a.title)));
+		});
+		if (areaOf('mail')) { body.appendChild(h('a', { class: 'more-item', href: '#/bereich/mail', onclick: closeDlg }, ico('mail'), h('span', null, 'Mailbox'))); }
+		profileItems().forEach(function (i) {
+			body.appendChild(h('a', { class: 'more-item', href: '#/seite/' + i.id, onclick: closeDlg }, ico('cog'), h('span', null, i.title)));
+		});
+		body.appendChild(h('a', { class: 'more-item', href: S.boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
+		body.appendChild(h('a', { class: 'more-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
+		dlg('Mehr', body);
+
+		function closeDlg() { var d = document.querySelector('dialog.sheet[open]'); if (d) { d.close(); } }
 	}
 
 	function isDark() {
@@ -383,6 +445,7 @@
 	function syncTheme() {
 		el.themeBtn.textContent = '';
 		el.themeBtn.appendChild(ico(isDark() ? 'sun' : 'moon'));
+		el.themeBtn.appendChild(h('span', null, isDark() ? 'Helle Ansicht' : 'Dunkle Ansicht'));
 	}
 
 	function toggleTheme() {
@@ -401,29 +464,55 @@
 			var f = findItem(r.id);
 			activeArea = f ? f.area.id : '';
 		}
-		if (activeArea) { S.open[activeArea] = true; }
 
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-r]'), function (a) {
+		Array.prototype.forEach.call(el.app.querySelectorAll('[data-r]'), function (a) {
 			a.classList.toggle('active', a.getAttribute('data-r') === r.name);
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-area]'), function (a) {
-			var id = a.getAttribute('data-area');
-			a.classList.toggle('active', r.name === 'bereich' && r.id === id);
+		Array.prototype.forEach.call(el.app.querySelectorAll('[data-area]'), function (a) {
+			a.classList.toggle('active', activeArea === a.getAttribute('data-area'));
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-chev]'), function (b) {
-			b.setAttribute('aria-expanded', S.open[b.getAttribute('data-chev')] ? 'true' : 'false');
+		var more = el.tabs.querySelector('[data-more]');
+		var inRail = railAreas().slice(0, 3).some(function (a) { return a.id === activeArea; });
+		if (more) { more.classList.toggle('active', !!activeArea && !inRail); }
+	}
+
+	// Reiter des Bereichs und, wenn ein Reiter mehrere Seiten hat, deren Auswahl.
+	function renderSub(f) {
+		el.sub.textContent = '';
+		var sec = f ? f.area : null;
+
+		if (!sec || sec.id === 'profil' || !sec.tabs) {
+			el.sub.hidden = true;
+			el.app.classList.remove('has-sub');
+			document.documentElement.style.setProperty('--sub', '0px');
+			return;
+		}
+
+		var active = null;
+		var strip = h('div', { class: 'tabs', role: 'tablist' });
+
+		sec.tabs.forEach(function (t) {
+			var on = hasItem(t.items, f.item.id);
+			if (on) { active = t; }
+			strip.appendChild(h('a', { class: 'tabx' + (on ? ' on' : ''), role: 'tab', 'aria-selected': on ? 'true' : 'false', href: '#/seite/' + tabTarget(sec, t) }, t.label));
 		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-sub]'), function (ul) {
-			ul.hidden = !S.open[ul.getAttribute('data-sub')];
-		});
-		Array.prototype.forEach.call(el.nav.querySelectorAll('[data-item]'), function (a) {
-			var on = r.name === 'seite' && r.id === a.getAttribute('data-item');
-			a.classList.toggle('active', on);
-			if (on) { a.setAttribute('aria-current', 'page'); } else { a.removeAttribute('aria-current'); }
-		});
-		Array.prototype.forEach.call(el.tabs.querySelectorAll('.tab'), function (a) {
-			var on = a.hasAttribute('data-r') ? r.name === 'start' : activeArea === a.getAttribute('data-area');
-			a.classList.toggle('active', on);
+
+		el.sub.appendChild(h('div', { class: 'sec-title' }, h('h2', null, sec.title), h('span', null, sec.hint)));
+		if (sec.tabs.length > 1) { el.sub.appendChild(strip); }
+
+		if (active && active.items.length > 1) {
+			var pills = h('div', { class: 'pills' });
+			active.items.forEach(function (i) {
+				pills.appendChild(h('a', { class: 'pill' + (i.id === f.item.id ? ' on' : ''), href: '#/seite/' + i.id }, i.title));
+			});
+			el.sub.appendChild(pills);
+		}
+
+		el.sub.hidden = false;
+		el.app.classList.add('has-sub');
+		if (active) { remember(sec.id, active.label, f.item.id); }
+		window.requestAnimationFrame(function () {
+			document.documentElement.style.setProperty('--sub', el.sub.offsetHeight + 'px');
 		});
 	}
 
@@ -453,10 +542,18 @@
 		syncNav();
 
 		var r = route();
-		el.view.classList.remove('wide');
+		el.view.classList.remove('wide', 'broad');
 		el.view.textContent = '';
 
-		if (r.name === 'bereich' && areaOf(r.id)) { return viewArea(areaOf(r.id)); }
+		el.sub.hidden = true;
+		el.app.classList.remove('has-sub');
+		document.documentElement.style.setProperty('--sub', '0px');
+
+		if (r.name === 'bereich' && areaOf(r.id)) {
+			var target = sectionTarget(areaOf(r.id));
+			if (target) { location.replace('#/seite/' + target); return; }
+			return viewArea(areaOf(r.id));
+		}
 		if (r.name === 'seite') { return viewPage(r.id); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
 		if (r.name === 'bestellung') { return viewShipOrder(parseInt(r.id, 10) || 0); }
@@ -588,6 +685,7 @@
 		}
 
 		setHead(f.item.title, f.area.title);
+		renderSub(f);
 
 		if (f.item.kind === 'native') {
 			if (f.item.id === 'rechte') { return viewRights(); }
@@ -1405,7 +1503,7 @@
 
 	function viewShipping(item) {
 		pageHead('Versand', 'Packen, Label, Versendet – beim Versenden geht der Bestand ab.', classicBtn(item));
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
@@ -1504,7 +1602,7 @@
 
 	function viewProcurement() {
 		pageHead('Einkauf', 'Bestellen, unterwegs, eingegangen – der Eingang bucht den Bestand.', null);
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
@@ -1588,7 +1686,7 @@
 
 	function viewVariance() {
 		pageHead('Soll gegen Ist', 'Gestempelte Druckzeit gegen die Planzeit – damit Plan und Kalkulation der Wirklichkeit folgen.', null);
-		el.view.classList.add('wide');
+		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
 
