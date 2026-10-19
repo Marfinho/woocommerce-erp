@@ -239,8 +239,6 @@ class Navigation {
 			self::item( 'finanz-dashboard', 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), 'finanzen.dashboard', '', 'native', '', 'lindenweg16' ),
 
 			self::item( 'zeit', 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), 'verwaltung.zeit', '', 'native', '', 'lw16-betrieb-zeit' ),
-			self::item( 'mailbox', 'verwaltung', __( 'Mailbox', 'lindenweg16' ), 'verwaltung.mailbox', 'lw16-mailbox' ),
-			self::item( 'zeit', 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), 'verwaltung.zeit', 'lw16-betrieb-zeit' ),
 			self::item( 'mailbox', 'verwaltung', __( 'Mailbox', 'lindenweg16' ), 'verwaltung.mailbox', '', 'native', '', 'lw16-mailbox' ),
 			self::item( 'mailbox-konten', 'verwaltung', __( 'Postfächer', 'lindenweg16' ), 'verwaltung.mailbox_konten', 'lw16-mailbox-konten' ),
 			self::item( 'etiketten', 'verwaltung', __( 'Etikettendrucker', 'lindenweg16' ), 'verwaltung.etiketten', '', 'native', '', 'lw16-betrieb-druckwarteschlange-drucker' ),
