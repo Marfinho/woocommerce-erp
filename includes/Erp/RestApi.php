@@ -169,6 +169,26 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/produkte',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'produkte' ),
+				'permission_callback' => $this->needs( array( 'fertigung.artikel' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/produkte/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'produkt' ),
+				'permission_callback' => $this->needs( array( 'fertigung.artikel' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/einkauf',
 			array(
 				'methods'             => 'GET',
@@ -448,6 +468,35 @@ class RestApi {
 		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
+	}
+
+	/**
+	 * Produktliste mit Problemen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function produkte() {
+		return new WP_REST_Response( Catalog::listing( Access::can( 'finanzen.kosten' ) ) );
+	}
+
+	/**
+	 * Produktakte.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function produkt( WP_REST_Request $request ) {
+		$file = Catalog::file( (int) $request['id'], Access::can( 'finanzen.kosten' ) );
+
+		if ( null === $file ) {
+			return new WP_REST_Response( array( 'message' => __( 'Dieses Produkt gibt es nicht (mehr).', 'lindenweg16' ) ), 404 );
+		}
+
+		$file['shop_edit'] = $file['shop'] && Access::can( 'verkauf.shop_products' ) && current_user_can( 'edit_products' );
+		$file['edit']      = Access::can( 'fertigung.stammdaten.edit' );
+		$file['money']     = Access::can( 'finanzen.kosten' );
+
+		return new WP_REST_Response( $file );
 	}
 
 	/**

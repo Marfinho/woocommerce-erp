@@ -672,3 +672,13 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 .incoming { display: grid; gap: 6px; padding: 10px; border-radius: 12px; background: var(--surface-muted); }
 .mat.lv-bald .bar i { background: var(--accent); }
 .mat.lv-knapp .bar i, .mat.lv-leer .bar i { background: var(--warning); }
+
+/* ---------- Produkte ---------- */
+
+.row-card.prod { text-decoration: none; color: inherit; grid-template-columns: minmax(0, 1.6fr) auto auto auto minmax(120px, auto); }
+.row-card.prod:hover { border-color: var(--accent); }
+.row-card.prod .row-tags { justify-content: flex-end; }
+@media (max-width: 760px) { .row-card.prod { grid-template-columns: 1fr; } .row-card.prod .row-tags { justify-content: flex-start; } }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
+.kv span { color: var(--text-muted); }
+.frame-wrap.in-file { height: calc(100dvh - var(--top) - var(--sub, 0px) - 230px); min-height: 480px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }

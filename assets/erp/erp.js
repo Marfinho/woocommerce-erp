@@ -275,7 +275,7 @@
 
 	function route() {
 		var parts = (location.hash || '#/start').replace(/^#\/?/, '').split('/');
-		return { name: parts[0] || 'start', id: parts[1] || '' };
+		return { name: parts[0] || 'start', id: parts[1] || '', sub: parts[2] || '' };
 	}
 
 	/*
@@ -465,6 +465,7 @@
 			activeArea = f ? f.area.id : '';
 		}
 		if (r.name === 'drucker') { activeArea = 'produktion'; }
+		if (r.name === 'produkt') { activeArea = 'katalog'; }
 
 		Array.prototype.forEach.call(el.app.querySelectorAll('[data-r]'), function (a) {
 			a.classList.toggle('active', a.getAttribute('data-r') === r.name);
@@ -558,6 +559,7 @@
 		if (r.name === 'seite') { return viewPage(r.id); }
 		if (r.name === 'platte') { return viewRun(parseInt(r.id, 10) || 0); }
 		if (r.name === 'drucker') { return viewPrinterFile(r.id); }
+		if (r.name === 'produkt') { return viewProduct(parseInt(r.id, 10) || 0, r.sub); }
 		if (r.name === 'bestellung') { return viewShipOrder(parseInt(r.id, 10) || 0); }
 		return viewStart();
 	}
@@ -711,6 +713,7 @@
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
 			if (f.item.id === 'einkauf') { return viewProcurement(); }
 			if (f.item.id === 'material') { return viewMaterial(f.item); }
+			if (f.item.id === 'artikel') { return viewProducts(f.item); }
 			if (f.item.id === 'sollist') { return viewVariance(); }
 		}
 
@@ -1911,6 +1914,143 @@
 		load();
 	}
 
+	/* ---------- Produkte ---------- */
+
+	var PRODUCT_FILTERS = [['alle', 'Alle'], ['ohne_3mf', 'Ohne 3MF'], ['marge', 'Marge kritisch'], ['nicht_im_shop', 'Nicht im Shop'], ['kein_preis', 'Ohne Preis']];
+
+	function viewProducts(item) {
+		pageHead('Produkte', 'Alles, woran ein Produkt hängt, in einer Liste. Probleme stehen direkt am Produkt.', classicBtn(item));
+		var filter = S.prodFilter || 'alle';
+		var q = '';
+		var chips = h('div', { class: 'presets' });
+		var search = h('input', { class: 'field', type: 'search', placeholder: 'Nummer oder Name suchen …', 'aria-label': 'Produkte suchen', style: 'max-width:340px;margin-bottom:10px', oninput: function (e) { q = e.target.value.trim().toLowerCase(); paintList(); } });
+		var box = h('div');
+		var data = null;
+		el.view.appendChild(chips);
+		el.view.appendChild(search);
+		el.view.appendChild(box);
+
+		function drawChips() {
+			chips.textContent = '';
+			PRODUCT_FILTERS.forEach(function (f) {
+				var n = data ? data.counts[f[0]] : null;
+				chips.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': filter === f[0] ? 'true' : 'false', onclick: function () { filter = f[0]; S.prodFilter = f[0]; drawChips(); paintList(); } }, f[1] + (n !== null && f[0] !== 'alle' ? ' · ' + n : '')));
+			});
+		}
+
+		function paintList() {
+			box.textContent = '';
+			if (!data) { return; }
+			var rows = data.rows.filter(function (r) {
+				return (filter === 'alle' || r.flags.indexOf(filter) > -1) && (!q || (r.sku + ' ' + r.name).toLowerCase().indexOf(q) > -1);
+			});
+			if (!rows.length) { box.appendChild(h('div', { class: 'notice' }, filter === 'alle' ? 'Keine Produkte gefunden.' : 'Hier ist nichts auffällig.')); return; }
+
+			var list = h('div', { class: 'rows' });
+			rows.forEach(function (r) {
+				var tags = h('div', { class: 'row-tags' });
+				r.flags.forEach(function (fl) { tags.appendChild(h('span', { class: 'tag later' }, data.flags[fl][0])); });
+				if (!r.flags.length) { tags.appendChild(h('span', { class: 'tag now' }, 'in Ordnung')); }
+
+				list.appendChild(h('a', { class: 'row-card prod', href: '#/produkt/' + r.id },
+					h('div', { class: 'row-main' }, h('b', null, r.sku + ' – ' + r.name), h('small', null, r.sourcing + ' · ' + r.status)),
+					h('div', { class: 'row-num' }, r.price === null ? '–' : money(r.price, 'EUR')),
+					h('div', { class: 'row-num muted' }, num(r.stock) + ' im Lager'),
+					data.money ? h('div', { class: 'row-num muted' }, r.margin === null ? '' : Math.round(r.margin * 100) + ' % Marge') : null,
+					tags
+				));
+			});
+			box.appendChild(list);
+		}
+
+		drawChips();
+		box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+	}
+
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['shop', 'Shop']];
+
+	function viewProduct(id, sub) {
+		var f = findItem('artikel');
+		if (f) { renderSub(f); }
+		setHead('Produkt', 'Katalog');
+
+		var box = h('div');
+		el.view.appendChild(h('a', { class: 'btn back', href: '#/seite/artikel' }, ico('chev', 'flip'), 'Alle Produkte'));
+		el.view.appendChild(box);
+
+		api('produkte/' + id).then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+
+		function stat(label, value, sub2) {
+			return h('div', { class: 'tile' }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, value), sub2 ? h('div', { class: 'muted', style: 'font-size:12px' }, sub2) : null);
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			setHead(d.sku + ' – ' + d.name, 'Produkt');
+
+			box.appendChild(h('div', { class: 'page-head', style: 'margin-top:10px' }, h('div', null, h('h2', null, d.sku + ' – ' + d.name), h('p', { class: 'muted', style: 'margin:4px 0 0' }, d.sourcing + ' · ' + d.status))));
+
+			var pills = h('div', { class: 'pills', style: 'padding-top:0' });
+			PRODUCT_TABS.forEach(function (t) {
+				if (t[0] === 'shop' && !d.shop_edit) { return; }
+				if (t[0] === 'stamm' && !d.edit) { return; }
+				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
+			});
+			box.appendChild(pills);
+
+			if (sub && d.paths[sub] || sub === 'shop' && d.shop) {
+				var path = sub === 'shop' ? d.shop.path : d.paths[sub];
+				var src = C.adminUrl + path + (path.indexOf('?') > -1 ? '&' : '?') + 'lw16_embed=1';
+				var loading = h('div', { class: 'frame-loading' }, 'Wird geladen …');
+				var frame = h('iframe', { src: src, title: sub, loading: 'eager', onload: function () { loading.classList.add('hide'); } });
+				box.appendChild(h('div', { class: 'frame-wrap in-file' }, h('div', { class: 'frame-box' }, frame, loading)));
+				return;
+			}
+
+			d.problems.forEach(function (p) {
+				box.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:10px' }, h('b', null, p.label + ': '), p.text));
+			});
+
+			var stats = h('div', { class: 'grid tiles', style: 'margin:12px 0' },
+				stat('Verkaufspreis', d.price === null ? '–' : money(d.price, 'EUR'), d.sellable ? 'verkäuflich' : 'nicht verkäuflich'),
+				stat('Lagerbestand', num(d.stock), 'Stück im Lager')
+			);
+			if (d.calc) {
+				stats.appendChild(stat('Herstellkosten', money(d.calc.cost, 'EUR'), 'je Stück'));
+				stats.appendChild(stat('Marge', Math.round(d.calc.margin * 100) + ' %', 'DB II ' + money(d.calc.db2, 'EUR') + ' je Stück'));
+			}
+			box.appendChild(stats);
+
+			var cards = h('div', { class: 'two', style: 'margin-top:6px' });
+			var rev = h('div', { class: 'card' }, h('h3', null, 'Druckdaten'));
+			if (d.revision) {
+				rev.appendChild(h('div', { class: 'kv' },
+					h('span', null, 'Revision'), h('b', null, d.revision.version),
+					h('span', null, 'Material'), h('b', null, d.revision.material + (d.revision.color ? ' · ' + d.revision.color : '')),
+					h('span', null, 'Projektdatei'), h('b', null, d.revision.kind === 'modell' ? (d.revision.model || 'vorhanden') : (d.revision.model ? d.revision.model + ' (schon geslict)' : 'fehlt')),
+					h('span', null, 'Platte'), h('b', null, d.revision.parts + ' Stück · ' + String(d.revision.plate_h).replace('.', ',') + ' h'),
+					h('span', null, 'Gewicht'), h('b', null, num(d.revision.weight_g) + ' g')
+				));
+			} else {
+				rev.appendChild(h('p', { class: 'muted' }, 'Noch keine aktive Revision.'));
+			}
+			cards.appendChild(rev);
+
+			var tz = h('div', { class: 'card' }, h('h3', null, 'Soll gegen Ist'));
+			if (d.variance) {
+				var p = Math.round((d.variance.factor - 1) * 100);
+				tz.appendChild(h('p', null, 'Gemessen über ' + d.variance.runs + ' Platten: ', h('b', null, (p > 0 ? '+' : '') + p + ' % gegenüber der Planzeit.')));
+				if (d.variance.adjust) { tz.appendChild(h('p', { class: 'muted' }, 'Vorschlag: Plattenzeit ' + String(d.variance.plate_h).replace('.', ',') + ' h → ' + String(d.variance.new_h).replace('.', ',') + ' h.')); }
+				if (findItem('sollist')) { tz.appendChild(h('a', { class: 'btn', href: '#/seite/sollist' }, 'Zu Soll gegen Ist')); }
+			} else {
+				tz.appendChild(h('p', { class: 'muted' }, 'Noch keine gemessenen Platten.'));
+			}
+			cards.appendChild(tz);
+			box.appendChild(cards);
+		}
+	}
+
 	/* ---------- Workflow ---------- */
 
 	function dlg(title, body, wide) {
@@ -2063,7 +2203,7 @@
 			return h('article', { class: 'run-card demand' + (on ? ' on' : '') },
 				h('div', { class: 'row-top' }, h('b', { class: 'run-title' }, c.name), h('span', { class: 'muted small' }, qty(c.qty) + ' Stk')),
 				h('div', { class: 'muted', style: 'font-size:13px;margin-top:3px' }, c.sku + ' · Lager ' + qty(c.stock)),
-				h('div', { class: 'chips' }, c.chips.map(function (x) { return h('span', { class: 'chip' }, x); }).concat(c.has_model ? [] : [h('span', { class: 'chip warn', title: 'Für diesen Artikel ist keine ungeslicte Projekt-3MF hinterlegt.' }, 'keine 3MF')])),
+				h('div', { class: 'chips' }, c.chips.map(function (x) { return h('span', { class: 'chip' }, x); }).concat(c.has_model ? [] : [h('a', { class: 'chip warn', href: '#/produkt/' + c.article_id + '/rev', title: 'Für diesen Artikel ist keine ungeslicte Projekt-3MF hinterlegt. Klicken, um sie hochzuladen.' }, 'keine 3MF – hochladen')])),
 				plan ? h('button', { class: 'btn' + (on ? ' primary' : ''), type: 'button', style: 'margin-top:11px;width:100%', 'aria-pressed': on ? 'true' : 'false', onclick: function () { if (on) { delete selected[c.article_id]; } else { selected[c.article_id] = c.qty; } paint(); } }, on ? 'Im Plan ✓' : 'In Plan aufnehmen') : null
 			);
 		}
