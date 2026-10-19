@@ -53,7 +53,7 @@ class ArViewPage {
 			MenuGroups::VERWALTUNG,
 			__( 'AR-Ansicht', 'lindenweg16' ),
 			__( 'AR-Ansicht', 'lindenweg16' ),
-			LW16_CAPABILITY,
+			'lw16_mod_arview',
 			self::SLUG,
 			array( $this, 'render' )
 		);
@@ -63,7 +63,7 @@ class ArViewPage {
 	 * Einstellungen speichern.
 	 */
 	public function handle_save() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_arview' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ), '', array( 'response' => 403 ) );
 		}
 
@@ -88,7 +88,7 @@ class ArViewPage {
 	 * Seite ausgeben.
 	 */
 	public function render() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_arview' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 

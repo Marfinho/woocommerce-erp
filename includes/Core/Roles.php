@@ -30,6 +30,27 @@ class Roles {
 	);
 
 	/**
+	 * Rechte der übrigen Module (Buchhaltung, Kasse, Support …).
+	 *
+	 * Früher prüfte jedes dieser Module das Sammelrecht manage_lw16 – wer
+	 * Buchhaltung sehen sollte, bekam damit alles. Jetzt hat jedes Modul ein
+	 * eigenes Recht, das sich pro Person in der ERP-Oberfläche vergeben
+	 * lässt. Wer manage_lw16 hat, bekommt sie alle automatisch (siehe
+	 * grant_module_caps), es muss also nichts migriert werden.
+	 */
+	const MODULE_CAPS = array(
+		'lw16_mod_finanzen',
+		'lw16_mod_reporting',
+		'lw16_mod_loyalty',
+		'lw16_mod_kasse',
+		'lw16_mod_marketing',
+		'lw16_mod_produktion',
+		'lw16_mod_support',
+		'lw16_mod_anleitungen',
+		'lw16_mod_arview',
+	);
+
+	/**
 	 * Rolle für das Modul Betrieb (voller Zugriff, keine WordPress-Adminrechte).
 	 */
 	const BETRIEB_ROLE = 'lw16_betrieb';
@@ -97,6 +118,26 @@ class Roles {
 				$role->add_cap( 'upload_files' );
 			}
 		}
+	}
+
+	/**
+	 * Vollzugriff schließt alle Modulrechte ein.
+	 *
+	 * Filter für user_has_cap. Liegt zur Laufzeit an, nicht in der
+	 * Datenbank: Neue Modulrechte brauchen keine Migration, und ein
+	 * Administrator kann sich nicht durch fehlende Einträge aussperren.
+	 *
+	 * @param array $allcaps Alle Rechte des Nutzers.
+	 * @return array
+	 */
+	public static function grant_module_caps( $allcaps ) {
+		if ( ! empty( $allcaps[ LW16_CAPABILITY ] ) ) {
+			foreach ( self::MODULE_CAPS as $cap ) {
+				$allcaps[ $cap ] = true;
+			}
+		}
+
+		return $allcaps;
 	}
 
 	/**

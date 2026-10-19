@@ -73,7 +73,7 @@ class SupportModule {
 	 * Export sofort auslösen (Admin-Button).
 	 */
 	public function export_now() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_support' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( 'lw16_export_now' );
@@ -351,7 +351,7 @@ class SupportModule {
 	 * Ticket-Aktion (Status / Gutschrift).
 	 */
 	public function handle_ticket_action() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_support' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_REQUEST['id'] ?? 0 );

@@ -47,6 +47,7 @@ class Shell {
 
 		if ( is_admin() ) {
 			add_action( 'admin_init', array( $this, 'gate_plugin_pages' ) );
+			add_action( 'admin_init', array( $this, 'gate_actions' ), 2 );
 			add_action( 'admin_head', array( $this, 'embed_styles' ) );
 		}
 
@@ -295,6 +296,33 @@ class Shell {
 			. '#wpbody-content{padding-bottom:24px}'
 			. 'body.wp-admin{background:#f4f2ee}'
 			. '</style>';
+	}
+
+	/**
+	 * Formular- und Ajax-Vorgänge nur ausführen, wenn die feinen Rechte
+	 * dafür da sind (siehe ActionMap). Gilt für admin-post.php und
+	 * admin-ajax.php; Vollzugriff ist ausgenommen.
+	 */
+	public function gate_actions() {
+		// phpcs:ignore WordPress.Security.NonceVerification
+		$action = isset( $_REQUEST['action'] ) ? sanitize_key( wp_unslash( $_REQUEST['action'] ) ) : '';
+		$perms  = ActionMap::perms_for( $action );
+
+		if ( ! $perms || ! is_user_logged_in() || Access::is_full() ) {
+			return;
+		}
+
+		foreach ( $perms as $perm ) {
+			if ( ! Access::can( $perm ) ) {
+				$message = __( 'Dafür fehlt dir das Recht in der ERP-Oberfläche.', 'lindenweg16' );
+
+				if ( wp_doing_ajax() ) {
+					wp_send_json_error( array( 'message' => $message ), 403 );
+				}
+
+				wp_die( esc_html( $message ), '', array( 'response' => 403 ) );
+			}
+		}
 	}
 
 	/**

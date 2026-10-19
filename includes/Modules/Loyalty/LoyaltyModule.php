@@ -360,7 +360,7 @@ class LoyaltyModule {
 	 * Freigabe/Ablehnung eines Review-Referrals (Ein-Klick).
 	 */
 	public function handle_review_decision() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_loyalty' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );

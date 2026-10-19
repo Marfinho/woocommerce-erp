@@ -42,9 +42,35 @@ class ErpPermissionsTest extends TestCase {
 		}
 	}
 
-	public function test_full_only_rights_are_not_grantable() {
-		$this->assertFalse( Permissions::grantable( 'finanzen.buchhaltung' ) );
-		$this->assertSame( array(), Permissions::normalize( array( 'finanzen.buchhaltung' ) ) );
+	public function test_every_module_right_is_grantable_and_has_its_own_cap() {
+		foreach ( array( 'finanzen.buchhaltung', 'finanzen.reporting', 'verkauf.kasse', 'verkauf.loyalty', 'verkauf.marketing', 'fertigung.produktion', 'verwaltung.support' ) as $key ) {
+			$this->assertTrue( Permissions::grantable( $key ), $key );
+			$this->assertNotEmpty( Permissions::catalog()[ $key ]['caps'], $key );
+			$this->assertStringStartsWith( 'lw16_mod_', Permissions::catalog()[ $key ]['caps'][0], $key );
+		}
+	}
+
+	public function test_module_caps_are_known_to_roles() {
+		$known = array_merge( \Lindenweg16\Core\Roles::MODULE_CAPS, array( 'lw16_mail_use', 'lw16_mail_manage' ) );
+
+		foreach ( Permissions::all_caps() as $cap ) {
+			if ( 0 === strpos( $cap, 'lw16_mod_' ) ) {
+				$this->assertContains( $cap, $known, "$cap fehlt in Roles::MODULE_CAPS" );
+			}
+		}
+		foreach ( \Lindenweg16\Core\Roles::MODULE_CAPS as $cap ) {
+			$this->assertContains( $cap, Permissions::all_caps(), "$cap wird von keinem Recht gebraucht" );
+		}
+	}
+
+	public function test_full_access_grants_all_module_caps() {
+		$caps = \Lindenweg16\Core\Roles::grant_module_caps( array( LW16_CAPABILITY => true ) );
+		foreach ( \Lindenweg16\Core\Roles::MODULE_CAPS as $cap ) {
+			$this->assertTrue( $caps[ $cap ], $cap );
+		}
+
+		$none = \Lindenweg16\Core\Roles::grant_module_caps( array( 'read' => true ) );
+		$this->assertArrayNotHasKey( 'lw16_mod_finanzen', $none, 'ohne Vollzugriff gibt es kein Modulrecht dazu' );
 	}
 
 	public function test_normalize_drops_unknown_and_duplicates_and_keeps_catalog_order() {
@@ -129,25 +155,31 @@ class ErpPermissionsTest extends TestCase {
 		}
 	}
 
-	public function test_rights_marked_as_enforced_in_code_are_really_checked() {
-		// Geltungsbereich „cap“ ohne eigene Entsprechung im alten Backend
-		// verspricht eine Prüfung im Code. Die Rechte hier sind die, für die
-		// das Versprechen über Access::can() eingelöst wird.
-		$enforced = array(
-			'lager.buchen'            => 'Modules/Betrieb/RestApi.php',
-			'verkauf.versand.etikett' => 'Modules/Betrieb/Admin/ShippingPage.php',
-		);
-
-		foreach ( $enforced as $key => $file ) {
-			$this->assertSame( Permissions::SCOPE_CAP, Permissions::catalog()[ $key ]['scope'], $key );
-			$this->assertStringContainsString( "Access::can( '$key' )", file_get_contents( dirname( __DIR__ ) . '/includes/' . $file ), "$key wird in $file nicht geprüft" );
+	public function test_every_cap_scoped_right_is_really_enforced() {
+		// Ein Recht ohne eigene Entsprechung im alten Backend, das „wirkt in
+		// den Seiten“ verspricht, muss in der Vorgangstabelle stehen oder im
+		// Code per Access::can() geprüft werden.
+		$enforced = array();
+		foreach ( \Lindenweg16\Erp\ActionMap::rules() as $perms ) {
+			foreach ( $perms as $perm ) {
+				$enforced[ $perm ] = true;
+			}
 		}
 
-		// Umgekehrt darf kein Recht „Folgt“ tragen, das schon geprüft wird.
-		foreach ( Permissions::catalog() as $key => $def ) {
-			if ( Permissions::SCOPE_PHASE2 === $def['scope'] ) {
-				$this->assertArrayNotHasKey( $key, $enforced, $key );
+		$iterator = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( dirname( __DIR__ ) . '/includes', FilesystemIterator::SKIP_DOTS ) );
+		foreach ( $iterator as $file ) {
+			if ( 'php' === $file->getExtension() && preg_match_all( "/Access::can\\(\\s*'([\\w.]+)'/", file_get_contents( $file->getPathname() ), $m ) ) {
+				foreach ( $m[1] as $key ) {
+					$enforced[ $key ] = true;
+				}
 			}
+		}
+
+		foreach ( Permissions::catalog() as $key => $def ) {
+			if ( Permissions::SCOPE_CAP === $def['scope'] && 'finanzen.kosten' !== $key ) {
+				$this->assertArrayHasKey( $key, $enforced, "$key verspricht Wirkung, wird aber nirgends geprüft" );
+			}
+			$this->assertNotSame( Permissions::SCOPE_PHASE2, $def['scope'], "$key steht noch auf 'folgt'" );
 		}
 	}
 }

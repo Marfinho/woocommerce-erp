@@ -202,7 +202,7 @@ class AccountingModule {
 	 * Gebühr einer Bestellung von Hand suchen lassen.
 	 */
 	public function handle_fee_rescan() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 
@@ -593,7 +593,7 @@ class AccountingModule {
 	 * Beleg festschreiben.
 	 */
 	public function handle_festschreiben() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -610,7 +610,7 @@ class AccountingModule {
 	 * Beleg-Foto nur für berechtigte Nutzer ausliefern.
 	 */
 	public function serve_beleg_file() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -649,7 +649,7 @@ class AccountingModule {
 	 * EÜR als PDF exportieren (inkl. Beleg-Fotos als Anhang).
 	 */
 	public function export_euer_pdf() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( 'lw16_euer_pdf' );
@@ -744,7 +744,7 @@ class AccountingModule {
 		}
 
 		// Berechtigung: Manager ODER Eigentümer der Bestellung.
-		$erlaubt = current_user_can( LW16_CAPABILITY );
+		$erlaubt = current_user_can( 'lw16_mod_finanzen' );
 		if ( ! $erlaubt ) {
 			$order = wc_get_order( $rechnung->order_id );
 			if ( $order && get_current_user_id() && (int) $order->get_customer_id() === get_current_user_id() ) {
@@ -1031,7 +1031,7 @@ class AccountingModule {
 	 * Beleg stornieren.
 	 */
 	public function handle_beleg_storno() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1044,7 +1044,7 @@ class AccountingModule {
 	 * Rechnung stornieren.
 	 */
 	public function handle_rechnung_storno() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1073,7 +1073,7 @@ class AccountingModule {
 	 * E-Rechnung als Beleg übernehmen.
 	 */
 	public function handle_erechnung_beleg() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1114,7 +1114,7 @@ class AccountingModule {
 	 * Verfahrensdokumentation als PDF.
 	 */
 	public function handle_verfahrensdoku() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( 'lw16_verfahrensdoku' );
@@ -1387,7 +1387,7 @@ class AccountingModule {
 	 * Kassenbuch-Eintrag stornieren.
 	 */
 	public function handle_storno_kassenbuch() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1417,7 +1417,7 @@ class AccountingModule {
 	 * Dauerbuchung deaktivieren.
 	 */
 	public function handle_deactivate_dauerbuchung() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1475,7 +1475,7 @@ class AccountingModule {
 	 * Anlage als ausgeschieden markieren.
 	 */
 	public function handle_ausscheiden_anlage() {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		$id = (int) ( $_GET['id'] ?? 0 );
@@ -1489,7 +1489,7 @@ class AccountingModule {
 	 */
 	public function handle_ocr_scan() {
 		check_ajax_referer( 'lw16_ocr_scan' );
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_send_json_error( array( 'error' => __( 'Keine Berechtigung.', 'lindenweg16' ) ) );
 		}
 
@@ -1560,7 +1560,7 @@ class AccountingModule {
 	 * @param string $nonce Nonce-Aktion.
 	 */
 	protected function guard( $nonce ) {
-		if ( ! current_user_can( LW16_CAPABILITY ) ) {
+		if ( ! current_user_can( 'lw16_mod_finanzen' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
 		check_admin_referer( $nonce );

@@ -114,4 +114,29 @@ class ErpNavigationTest extends TestCase {
 			}
 		}
 	}
+
+	public function test_module_pages_are_covered_by_their_permission_cap() {
+		$caps = \Lindenweg16\Admin\Menu::page_caps();
+
+		foreach ( Navigation::items() as $id => $item ) {
+			if ( ! isset( $caps[ $item['target'] ] ) ) {
+				continue;
+			}
+			$this->assertContains( $caps[ $item['target'] ], Permissions::catalog()[ $item['perm'] ]['caps'], "$id: Seite verlangt {$caps[ $item['target'] ]}" );
+		}
+	}
+
+	public function test_every_menu_page_is_in_the_navigation() {
+		$linked = array();
+		foreach ( Navigation::items() as $item ) {
+			$linked[] = $item['target'];
+		}
+
+		foreach ( array_keys( \Lindenweg16\Admin\Menu::page_caps() ) as $slug ) {
+			if ( LW16_MENU_SLUG === $slug ) {
+				$slug = 'lindenweg16';
+			}
+			$this->assertContains( $slug, $linked, "$slug fehlt in der ERP-Navigation" );
+		}
+	}
 }

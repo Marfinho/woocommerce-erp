@@ -354,5 +354,15 @@ foreach ( array( 'MailCrypto', 'MimeParser', 'ImapClient', 'SmtpMailer', 'HtmlSa
 }
 
 // ERP-Oberfläche: Rechtekatalog und Navigation sind reine Zuordnungen.
+require $lw16_root . '/includes/Core/Roles.php';
 require $lw16_root . '/includes/Erp/Permissions.php';
 require $lw16_root . '/includes/Erp/Navigation.php';
+require $lw16_root . '/includes/Erp/ActionMap.php';
+if ( ! defined( 'LW16_CAPABILITY' ) ) {
+	define( 'LW16_CAPABILITY', 'manage_lw16' );
+}
+if ( ! defined( 'LW16_MENU_SLUG' ) ) {
+	define( 'LW16_MENU_SLUG', 'lindenweg16' );
+}
+require $lw16_root . '/includes/Admin/MenuGroups.php';
+require $lw16_root . '/includes/Admin/Menu.php';
