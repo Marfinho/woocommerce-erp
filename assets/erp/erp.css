@@ -691,3 +691,6 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 .timeline .ev-start::before, .timeline .ev-paid::before { background: var(--a-fertigung); }
 .timeline .ev-done::before { background: var(--success); }
 .timeline .ev-customer::before { background: var(--accent); }
+
+.clock-pill.on { border-color: var(--success); }
+.clock-pill.on span { font-variant-numeric: tabular-nums; font-weight: 700; }

@@ -51,7 +51,52 @@ class TimerState {
 			'last_seen_at'  => isset( $state['last_seen_at'] ) ? (string) $state['last_seen_at'] : (string) $state['started_at'],
 			'seen'          => isset( $state['seen'] ) && is_array( $state['seen'] ) ? $state['seen'] : array(),
 			'work_order_id' => isset( $state['work_order_id'] ) ? (int) $state['work_order_id'] : 0,
+			'paused_at'     => isset( $state['paused_at'] ) ? (string) $state['paused_at'] : '',
 		);
+	}
+
+	/**
+	 * Uhr anhalten. Eine angehaltene oder fehlende Uhr bleibt, wie sie ist.
+	 *
+	 * @return bool Ob angehalten wurde.
+	 */
+	public static function pause() {
+		$user_id = get_current_user_id();
+		$raw     = $user_id ? get_user_meta( $user_id, self::META_KEY, true ) : null;
+		$state   = self::get( $user_id );
+
+		if ( ! $state || '' !== $state['paused_at'] || ! is_array( $raw ) ) {
+			return false;
+		}
+
+		$raw['paused_at'] = current_time( 'mysql', true );
+		update_user_meta( $user_id, self::META_KEY, $raw );
+
+		return true;
+	}
+
+	/**
+	 * Nach der Pause weitermachen: Der Start rückt um die Pause nach hinten.
+	 *
+	 * @return bool Ob weitergemacht wurde.
+	 */
+	public static function resume() {
+		$user_id = get_current_user_id();
+		$raw     = $user_id ? get_user_meta( $user_id, self::META_KEY, true ) : null;
+		$state   = self::get( $user_id );
+
+		if ( ! $state || '' === $state['paused_at'] || ! is_array( $raw ) ) {
+			return false;
+		}
+
+		$pause = Stopwatch::elapsed( $state['paused_at'], current_time( 'mysql', true ) );
+
+		$raw['started_at']   = Stopwatch::shift( $state['started_at'], $pause );
+		$raw['last_seen_at'] = current_time( 'mysql', true );
+		unset( $raw['paused_at'] );
+		update_user_meta( $user_id, self::META_KEY, $raw );
+
+		return true;
 	}
 
 	/**
@@ -110,7 +155,8 @@ class TimerState {
 		$user_id = get_current_user_id();
 		$state   = self::get( $user_id );
 
-		if ( ! $state ) {
+		// Während der Pause gehört keine Zeit einer Seite.
+		if ( ! $state || '' !== $state['paused_at'] ) {
 			return;
 		}
 
@@ -169,13 +215,16 @@ class TimerState {
 
 		// Die Zeit bis jetzt gehört noch der zuletzt gesehenen Seite, sonst
 		// fehlt die letzte Sitzung im Vorschlag.
+		// Angehalten zählt die Zeit nur bis zum Anhalten.
+		$bis = '' !== $state['paused_at'] ? $state['paused_at'] : current_time( 'mysql', true );
+
 		$seen = TimeCategoryGuess::accumulate(
 			$state['seen'],
 			isset( $state['last_page'] ) ? $state['last_page'] : '',
-			Stopwatch::elapsed( $state['last_seen_at'], current_time( 'mysql', true ) )
+			Stopwatch::elapsed( $state['last_seen_at'], $bis )
 		);
 
-		$sekunden = Stopwatch::elapsed( $state['started_at'], current_time( 'mysql', true ) );
+		$sekunden = Stopwatch::elapsed( $state['started_at'], $bis );
 		$vorschlag = TimeCategoryGuess::suggest( $seen );
 
 		return array(
@@ -188,6 +237,7 @@ class TimerState {
 			'explanation'   => TimeCategoryGuess::explain( $seen ),
 			'bookable'      => Stopwatch::is_bookable( $sekunden ),
 			'implausible'   => Stopwatch::is_implausible( $sekunden ),
+			'paused'        => '' !== $state['paused_at'],
 		);
 	}
 }

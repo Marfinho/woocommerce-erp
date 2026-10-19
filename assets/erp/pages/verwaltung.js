@@ -125,6 +125,7 @@
 				state.data = d;
 				state.base = d.clock ? d.clock.seconds : 0;
 				state.fetched = Date.now();
+				if (ui.clockSync) { ui.clockSync(); }
 				paint();
 			}).catch(function (e) { box.textContent = ''; box.appendChild(problem(e.message)); });
 		}
@@ -148,6 +149,8 @@
 			clockText = h('div', { class: 'vw-clock', role: 'timer', 'aria-live': 'off' }, hms(c.seconds));
 			var stop = h('button', { class: 'btn primary', type: 'button' }, ui.ico('check'), 'Stoppen und erfassen');
 			var drop = h('button', { class: 'btn', type: 'button' }, 'Verwerfen');
+			var pause = h('button', { class: 'btn', type: 'button' }, c.paused ? 'Weiter' : 'Pause');
+			pause.addEventListener('click', function () { run(pause, function () { return post(c.paused ? 'zeit/weiter' : 'zeit/pause'); }, function () { load(); }); });
 
 			stop.addEventListener('click', function () { run(stop, function () { return ui.api('zeit?woche=' + state.offset); }, function (fresh) { if (fresh.clock) { stopDialog(fresh); } else { ui.toast('Die Uhr läuft nicht mehr.', true); load(); } }); });
 			drop.addEventListener('click', function () {
@@ -156,12 +159,12 @@
 			});
 
 			return h('section', { class: 'card vw-run' },
-				h('h3', null, 'Laufende Zeit'),
+				h('h3', null, c.paused ? 'Angehalten' : 'Laufende Zeit'),
 				clockText,
 				h('p', { class: 'muted' }, 'Gestartet ' + ui.when(c.started_at) + ' Uhr.'),
 				c.hint && c.hint.text ? h('div', { class: 'notice warn' }, c.hint.text) : null,
 				c.explanation ? h('p', { class: 'muted' }, 'Währenddessen warst du hier: ' + c.explanation) : null,
-				h('div', { class: 'vw-actions' }, stop, drop));
+				h('div', { class: 'vw-actions' }, pause, stop, drop));
 		}
 
 		function stopDialog(d) {
@@ -239,7 +242,7 @@
 
 		// Die Uhr zählt hier im Browser weiter; der Server kennt nur den Start.
 		ui.every(function () {
-			if (clockText && clockText.isConnected && state.data && state.data.clock) {
+			if (clockText && clockText.isConnected && state.data && state.data.clock && !state.data.clock.paused) {
 				clockText.textContent = hms(state.base + (Date.now() - state.fetched) / 1000);
 			}
 		}, 1000);

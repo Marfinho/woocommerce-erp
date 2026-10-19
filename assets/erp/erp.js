@@ -361,7 +361,7 @@
 			el.net,
 			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
-			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit' }, ico('clock'), h('span', null, 'Zeit')) : null,
+			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill' }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
 			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
 		);
 
@@ -2792,8 +2792,37 @@
 		// Wiederkehrende Aktualisierung, die beim Seitenwechsel endet.
 		every: function (fn, ms) { timers.push(setInterval(function () { if (!document.hidden) { fn(); } }, ms)); },
 		// Zum Seitenkopf der Akte: Seitentitel setzen und Reiter halten.
-		reload: function () { render(); }
+		reload: function () { render(); },
+		clockSync: function () { clockSync(); }
 	});
+
+	// Laufende Stempeluhr in der Kopfzeile: holt den Stand selten, zählt selbst weiter.
+	var clock = { running: false, paused: false, base: 0, at: 0 };
+
+	function clockText() {
+		if (!clock.running) { return 'Zeit'; }
+		var s = Math.max(0, Math.floor(clock.base + (clock.paused ? 0 : (Date.now() - clock.at) / 1000)));
+		var t = ('0' + Math.floor(s / 3600)).slice(-2) + ':' + ('0' + Math.floor((s % 3600) / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
+		return clock.paused ? 'Pause ' + t : t;
+	}
+
+	function clockPaint() {
+		if (!el.clockLabel) { return; }
+		el.clockLabel.textContent = clockText();
+		var pill = document.getElementById('clock-pill');
+		if (pill) { pill.classList.toggle('on', clock.running && !clock.paused); }
+	}
+
+	function clockSync() {
+		if (!el.clockLabel) { return; }
+		api('zeit/uhr').then(function (d) {
+			clock.running = !!d.clock;
+			clock.paused = !!(d.clock && d.clock.paused);
+			clock.base = d.clock ? d.clock.seconds : 0;
+			clock.at = Date.now();
+			clockPaint();
+		}).catch(function () {});
+	}
 
 	// Ungelesene Mails als Zähler an der Mailbox, auf jeder Seite.
 	function mailBadge() {
@@ -2809,7 +2838,9 @@
 		S.boot = boot;
 		buildShell();
 		mailBadge();
-		setInterval(function () { if (!document.hidden) { mailBadge(); } }, 120000);
+		clockSync();
+		setInterval(function () { if (!document.hidden) { mailBadge(); clockSync(); } }, 120000);
+		setInterval(clockPaint, 1000);
 		window.addEventListener('hashchange', render);
 		window.addEventListener('online', function () { stale = false; syncNet(); flush(); });
 		window.addEventListener('offline', syncNet);
