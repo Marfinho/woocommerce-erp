@@ -139,6 +139,36 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/einkauf',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'einkauf' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/einkauf/bestellt',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'einkauf_bestellt' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/einkauf/(?P<id>\d+)/eingang',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'einkauf_eingang' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf', 'lager.buchen' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/workflow',
 			array(
 				'methods'             => 'GET',
@@ -368,6 +398,57 @@ class RestApi {
 		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::void_label( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
+	}
+
+	/**
+	 * Einkaufs-Board.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function einkauf() {
+		return new WP_REST_Response( Procurement::board() );
+	}
+
+	/**
+	 * Als bestellt vermerken.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function einkauf_bestellt( WP_REST_Request $request ) {
+		$result = Procurement::place(
+			array(
+				'item_type'      => sanitize_key( (string) $request->get_param( 'type' ) ),
+				'item_id'        => (int) $request->get_param( 'item_id' ),
+				'item_ref'       => sanitize_key( (string) $request->get_param( 'item_ref' ) ),
+				'qty'            => (string) $request->get_param( 'qty' ),
+				'unit_price_net' => (string) $request->get_param( 'price' ),
+				'supplier'       => sanitize_text_field( (string) $request->get_param( 'supplier' ) ),
+				'order_ref'      => sanitize_text_field( (string) $request->get_param( 'order_ref' ) ),
+				'expected_on'    => sanitize_text_field( (string) $request->get_param( 'expected_on' ) ),
+			)
+		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
+	}
+
+	/**
+	 * Wareneingang buchen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function einkauf_eingang( WP_REST_Request $request ) {
+		$result = Procurement::receive(
+			(int) $request['id'],
+			(string) $request->get_param( 'qty' ),
+			array(
+				'lot_code' => sanitize_text_field( (string) $request->get_param( 'lot_code' ) ),
+				'material' => sanitize_text_field( (string) $request->get_param( 'material' ) ),
+			)
+		);
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
 
 	/**

@@ -28,7 +28,7 @@ class Purchase {
 	/**
 	 * Was bestellt werden kann.
 	 */
-	const TYPES = array( 'component', 'supply' );
+	const TYPES = array( 'component', 'supply', 'article', 'filament' );
 
 	/**
 	 * Die Zustände einer Bestellung.
@@ -62,6 +62,8 @@ class Purchase {
 		return array(
 			'component' => __( 'Komponente', 'lindenweg16' ),
 			'supply'    => __( 'Verbrauchsmaterial', 'lindenweg16' ),
+			'article'   => __( 'Zukaufartikel', 'lindenweg16' ),
+			'filament'  => __( 'Filament', 'lindenweg16' ),
 		);
 	}
 
@@ -139,7 +141,7 @@ class Purchase {
 	 * @param int    $item_id   Teil.
 	 * @return float
 	 */
-	public static function incoming( array $purchases, $type, $item_id ) {
+	public static function incoming( array $purchases, $type, $item_id, $ref = '' ) {
 		$summe = 0.0;
 
 		foreach ( $purchases as $purchase ) {
@@ -149,6 +151,10 @@ class Purchase {
 				continue;
 			}
 			if ( (int) $purchase['item_id'] !== (int) $item_id ) {
+				continue;
+			}
+			// Filament hat keine Nummer, es wird über die Farbe erkannt.
+			if ( '' !== (string) $ref && (string) ( isset( $purchase['item_ref'] ) ? $purchase['item_ref'] : '' ) !== (string) $ref ) {
 				continue;
 			}
 			if ( ! self::is_open( $purchase ) ) {
@@ -188,8 +194,16 @@ class Purchase {
 			$type     = 'component';
 		}
 
-		$item_id = isset( $input['item_id'] ) ? (int) $input['item_id'] : 0;
-		if ( $item_id <= 0 ) {
+		$item_id  = isset( $input['item_id'] ) ? (int) $input['item_id'] : 0;
+		$item_ref = isset( $input['item_ref'] ) ? preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $input['item_ref'] ) ) : '';
+
+		if ( 'filament' === $type ) {
+			// Filament wird über die Farbe bestellt, nicht über eine Nummer.
+			$item_id = 0;
+			if ( '' === $item_ref ) {
+				$errors[] = __( 'Es ist nicht klar, welche Filamentfarbe bestellt wurde.', 'lindenweg16' );
+			}
+		} elseif ( $item_id <= 0 ) {
 			$errors[] = __( 'Es ist nicht klar, was bestellt wurde.', 'lindenweg16' );
 		}
 
@@ -210,6 +224,7 @@ class Purchase {
 			'data'   => array(
 				'item_type'      => $type,
 				'item_id'        => $item_id,
+				'item_ref'       => 'filament' === $type ? $item_ref : null,
 				'status'         => 'bestellt',
 				'qty'            => $qty,
 				'unit_price_net' => isset( $input['unit_price_net'] ) ? (float) str_replace( ',', '.', (string) $input['unit_price_net'] ) : 0.0,

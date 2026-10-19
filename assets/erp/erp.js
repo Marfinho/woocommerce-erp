@@ -585,6 +585,7 @@
 			if (f.item.id === 'druckfarm') { return viewFarm(f.item); }
 			if (f.item.id === 'auftraege') { return viewOrders(f.item); }
 			if (f.item.id === 'versand') { return viewShipping(f.item); }
+			if (f.item.id === 'einkauf') { return viewProcurement(); }
 		}
 
 		if (f.item.locked) {
@@ -1483,6 +1484,90 @@
 			act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
 			box.appendChild(act);
 			box.appendChild(h('a', { class: 'btn', href: '#/seite/versand' }, '← Zurück zum Versand'));
+		}
+
+		load();
+	}
+
+	function viewProcurement() {
+		pageHead('Einkauf', 'Bestellen, unterwegs, eingegangen – der Eingang bucht den Bestand.', null);
+		el.view.classList.add('wide');
+		var box = h('div');
+		el.view.appendChild(box);
+
+		function load() {
+			return api('einkauf').then(paint).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
+		}
+
+		function num(v) { return String(Math.round(v * 100) / 100).replace('.', ','); }
+
+		function orderCard(o) {
+			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(o.qty), 'aria-label': 'Menge in ' + o.unit, style: 'max-width:90px' });
+			var sup = h('input', { class: 'field', type: 'text', value: o.supplier, placeholder: 'Lieferant', 'aria-label': 'Lieferant' });
+			var price = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: o.price ? num(o.price) : '', placeholder: '€ netto je ' + o.unit, 'aria-label': 'Preis netto', style: 'max-width:120px' });
+			var due = h('input', { class: 'field', type: 'date', 'aria-label': 'Erwartet am' });
+
+			return h('div', { class: 'row-card ship' },
+				h('div', { class: 'row-main' },
+					h('b', null, o.label),
+					h('small', null, o.kind + ' · Bestand ' + num(o.stock) + ' ' + o.unit + (o.coverage === null ? '' : ' · reicht noch ' + Math.floor(o.coverage) + ' Tage (Grenze ' + o.threshold + ')'))
+				),
+				h('form', {
+					class: 'label-area', onsubmit: function (e) {
+						e.preventDefault();
+						var btn = e.target.querySelector('button[type=submit]');
+						btn.disabled = true;
+						api('einkauf/bestellt', { method: 'POST', body: { type: o.type, item_id: o.item_id, item_ref: o.item_ref, qty: qtyIn.value, price: price.value, supplier: sup.value, expected_on: due.value } })
+							.then(function (r) { toast(r.message); load(); })
+							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+					}
+				}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'))
+			);
+		}
+
+		function openCard(p) {
+			var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
+			var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
+			var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
+
+			return h('div', { class: 'row-card ship' },
+				h('div', { class: 'row-main' },
+					h('b', null, p.label),
+					h('small', null, num(p.qty) + ' ' + p.unit + (p.supplier ? ' · ' + p.supplier : '') + ' · bestellt ' + p.ordered_on),
+					p.expected_on ? h('small', { class: p.late ? 'tag later' : 'muted' }, p.late ? p.late + ' Tage überfällig (erwartet ' + p.expected_on + ')' : 'erwartet ' + p.expected_on) : null
+				),
+				h('form', {
+					class: 'label-area', onsubmit: function (e) {
+						e.preventDefault();
+						var btn = e.target.querySelector('button[type=submit]');
+						btn.disabled = true;
+						api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
+							.then(function (r) { toast(r.message); load(); })
+							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+					}
+				}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'))
+			);
+		}
+
+		function doneCard(p) {
+			return h('div', { class: 'row-card ship' },
+				h('div', { class: 'row-main' },
+					h('b', null, p.label),
+					h('small', null, num(p.received === null ? p.qty : p.received) + ' ' + p.unit + ' · eingegangen ' + p.received_on + (p.supplier ? ' · ' + p.supplier : ''))
+				)
+			);
+		}
+
+		function paint(d) {
+			box.textContent = '';
+			var board = h('div', { class: 'board ship-board' });
+			[['Bestellen', d.order, orderCard, 'Nichts zu bestellen.'], ['Unterwegs', d.open, openCard, 'Nichts unterwegs.'], ['Eingegangen (14 Tage)', d.done, doneCard, 'Noch nichts eingegangen.']].forEach(function (c) {
+				var col = h('section', { class: 'col' }, h('h3', null, c[0], ' ', h('span', { class: 'count' }, String(c[1].length))));
+				if (!c[1].length) { col.appendChild(h('div', { class: 'muted', style: 'padding:8px 2px' }, c[3])); }
+				c[1].forEach(function (x) { col.appendChild(c[2](x)); });
+				board.appendChild(col);
+			});
+			box.appendChild(board);
 		}
 
 		load();

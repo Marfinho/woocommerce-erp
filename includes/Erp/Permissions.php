@@ -133,6 +133,7 @@ class Permissions {
 			'lager.scannen'           => self::def( 'lager', __( 'Scannen', 'lindenweg16' ), __( 'Native Seite: Codes scannen (Kamera oder Handscanner) und sehen, was dort liegt.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.lagerplaetze'      => self::def( 'lager', __( 'Lagerplätze & Picklisten', 'lindenweg16' ), __( 'Fächer, Fertigung und Picklisten.', 'lindenweg16' ), array( $capture ), $page ),
 			'lager.material'          => self::def( 'lager', __( 'Material', 'lindenweg16' ), __( 'Filament und Zukaufteile.', 'lindenweg16' ), array( $production ), $page ),
+			'lager.einkauf'           => self::def( 'lager', __( 'Einkauf', 'lindenweg16' ), __( 'Nachbestellen und Wareneingang: Bestellungen anlegen, eingegangene Ware buchen. Der Eingang erhöht den Bestand, dafür braucht es zusätzlich „Bestand buchen“.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.bedarf'            => self::def( 'lager', __( 'Bedarf', 'lindenweg16' ), __( 'Bedarfsplanung und Nachbestellung.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.buchen'            => self::def( 'lager', __( 'Bestand buchen und korrigieren', 'lindenweg16' ), __( 'Zu- und Abgänge buchen, Inventurdifferenzen korrigieren – auch beim Scannen und in der mobilen Erfassung.', 'lindenweg16' ), array( $capture ), $cap, array( 'lager.bestand' ) ),
 
@@ -322,7 +323,7 @@ class Permissions {
 			'fertigung'   => array(
 				'label' => __( 'Fertigung', 'lindenweg16' ),
 				'hint'  => __( 'Wie Werkstatt, dazu Stammdaten, Material, Bedarf und Berichte – aber kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.einkauf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
 			),
 			'leitung'     => array(
 				'label' => __( 'Betriebsleitung', 'lindenweg16' ),
@@ -331,7 +332,7 @@ class Permissions {
 					$shop,
 					array( 'verkauf.orders', 'verkauf.orders.status', 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.picken', 'verkauf.kontakte' ),
 					array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
-					array( 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.buchen' ),
+					array( 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.einkauf', 'lager.buchen' ),
 					array( 'finanzen.berichte', 'finanzen.kosten', 'finanzen.export' ),
 					array( 'verwaltung.zeit', 'verwaltung.etiketten' )
 				),

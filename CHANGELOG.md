@@ -7,6 +7,23 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.23.0] – 2026-10-19
+
+### Einkaufs-Workflow: Nachbestellen und Wareneingang
+- Neue Seite „Einkauf“ im Bereich Lager mit drei Spalten: **Bestellen**, **Unterwegs**,
+  **Eingegangen (14 Tage)**. Die Karten unter „Bestellen“ kommen aus dem Beschaffungsalarm
+  (Zukaufartikel, Kleinteile, Verbrauchsmaterial, Filament), die dringendsten zuerst. Lieferant
+  und Preis werden aus der letzten Bestellung vorbelegt.
+- „Bestellt ✓“ legt die Bestellung an; die Karte wandert nach „Unterwegs“ und verschwindet aus
+  „Bestellen“. Überfällige Bestellungen sind markiert.
+- „Eingegangen ✓“ bucht den Bestand: Zukaufartikel als Bewegung im Lagerjournal, Kleinteile und
+  Verbrauchsmaterial als Aufschlag, **Filament als neue Charge** (Rolle) mit Chargencode, Material
+  und Preis je kg. Die Menge darf von der bestellten abweichen.
+- Bestellungen gibt es jetzt auch für Zukaufartikel und Filament (neue Spalte `purchases.item_ref`,
+  DB-Version 37; Filament wird über die Farbe erkannt).
+- Neues Recht `lager.einkauf` (Wareneingang braucht zusätzlich `lager.buchen`); in den Presets
+  Fertigung und Leitung enthalten, wo auch Bedarf enthalten war.
+
 ## [0.22.0] – 2026-10-19
 
 ### Versand-Workflow mit Lagerabgang beim Versand
