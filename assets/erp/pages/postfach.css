@@ -1,0 +1,67 @@
+/* ERP-Seite „Mailbox“ – mobil zuerst: Liste und Lesefenster nacheinander, ab 1000 px nebeneinander. */
+.pf { display: grid; gap: 12px; }
+.pf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pf-acc { display: grid; }
+.pf-account { width: auto; min-width: 200px; }
+.pf-tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.pf-status { color: var(--text-muted); }
+.pf-status.err { color: var(--error); }
+.pf-folders { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.pf-folder { min-height: 44px; padding: 4px 14px; font-size: 14px; flex: none; }
+.pf-count { background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; font-weight: 700; }
+.pf-count.quiet { background: var(--surface-muted); color: var(--text-muted); }
+.pf-main { display: grid; gap: 12px; align-items: start; }
+.pf-list, .pf-pane { padding: 12px; min-width: 0; }
+.pf-search { margin-bottom: 8px; }
+.pf-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.pf-filters .chip { min-height: 36px; }
+.pf-rows { list-style: none; margin: 0; padding: 0; }
+.pf-row { display: flex; align-items: stretch; border-top: 1px solid var(--line); }
+.pf-row.current { background: var(--surface-muted); }
+.pf-star { flex: none; width: 44px; min-height: 44px; background: none; border: 0; font-size: 20px; color: var(--text-muted); cursor: pointer; }
+.pf-star.on { color: var(--accent); }
+.pf-open { flex: 1; min-width: 0; display: grid; gap: 2px; text-align: left; background: none; border: 0; padding: 8px 4px; min-height: 44px; color: inherit; font: inherit; cursor: pointer; }
+.pf-top { display: flex; justify-content: space-between; gap: 8px; }
+.pf-who, .pf-subject, .pf-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-date { flex: none; font-size: 12px; color: var(--text-muted); }
+.pf-snippet { font-size: 13px; color: var(--text-muted); }
+.pf-row.unread .pf-who, .pf-row.unread .pf-subject { font-weight: 700; }
+.pf-row.unread .pf-who::before { content: "● "; color: var(--accent); }
+.pf-pager { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; }
+.pf-title { margin: 8px 0; overflow-wrap: anywhere; }
+.pf-toolbar, .pf-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.pf-toolbar .field { width: auto; min-width: 160px; }
+.pf-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 0 0 12px; font-size: 14px; }
+.pf-head dt { color: var(--text-muted); }
+.pf-head dd { margin: 0; overflow-wrap: anywhere; }
+.pf-plain { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; padding: 8px 0; }
+.pf-quote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line); color: var(--text-muted); }
+.pf-frame { width: 100%; height: 60vh; min-height: 280px; border: 1px solid var(--line); border-radius: 12px; background: #fff; resize: vertical; }
+.pf-imgnote { margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pf-block { margin-top: 14px; display: grid; gap: 8px; }
+.pf-files, .pf-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.pf-link { background: none; border: 0; padding: 8px 0; min-height: 44px; color: var(--accent); text-align: left; font: inherit; cursor: pointer; text-decoration: underline; }
+.pf-note { padding: 8px 10px; border-radius: 12px; background: var(--surface-muted); margin-bottom: 6px; }
+.pf-empty { display: grid; justify-items: center; gap: 6px; padding: 40px 0; color: var(--text-muted); }
+.pf-empty .ico { width: 36px; height: 36px; }
+.pf-compose { display: grid; gap: 10px; }
+.pf-field { display: grid; gap: 4px; }
+.pf-field label { font-size: 13px; color: var(--text-muted); }
+.pf-to { display: flex; gap: 8px; align-items: center; }
+.pf-ccrows { display: grid; gap: 10px; }
+.pf-ccrows[hidden] { display: none; }
+.pf-body { min-height: 260px; padding: 10px 12px; }
+.pf-sig pre { margin: 4px 0 0; white-space: pre-wrap; font-family: inherit; }
+.pf .field, .pf textarea.field { min-height: 44px; }
+.pf textarea.field { width: 100%; padding: 10px 12px; }
+.pf-back { justify-self: start; }
+
+@media (max-width: 999px) {
+	.pf.reading .pf-list { display: none; }
+	.pf:not(.reading) .pf-pane { display: none; }
+}
+@media (min-width: 1000px) {
+	.pf-main { grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); }
+	.pf-back { display: none; }
+	.pf-list { max-height: calc(100dvh - 260px); overflow: auto; }
+}

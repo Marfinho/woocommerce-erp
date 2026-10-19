@@ -239,16 +239,16 @@ class Navigation {
 			self::item( 'finanz-dashboard', 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), 'finanzen.dashboard', 'lindenweg16' ),
 
 			self::item( 'zeit', 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), 'verwaltung.zeit', 'lw16-betrieb-zeit' ),
-			self::item( 'mailbox', 'verwaltung', __( 'Mailbox', 'lindenweg16' ), 'verwaltung.mailbox', 'lw16-mailbox' ),
+			self::item( 'mailbox', 'verwaltung', __( 'Mailbox', 'lindenweg16' ), 'verwaltung.mailbox', '', 'native', '', 'lw16-mailbox' ),
 			self::item( 'mailbox-konten', 'verwaltung', __( 'Postfächer', 'lindenweg16' ), 'verwaltung.mailbox_konten', 'lw16-mailbox-konten' ),
 			self::item( 'etiketten', 'verwaltung', __( 'Etikettendrucker', 'lindenweg16' ), 'verwaltung.etiketten', 'lw16-betrieb-druckwarteschlange-drucker' ),
 			self::item( 'rechte', 'verwaltung', __( 'Benutzer & Rechte', 'lindenweg16' ), 'verwaltung.rechte', '', 'native' ),
 			self::item( 'loehne', 'verwaltung', __( 'Löhne & Protokoll', 'lindenweg16' ), 'verwaltung.loehne', 'lw16-betrieb-benutzer' ),
 			self::item( 'einstellungen', 'verwaltung', __( 'Einstellungen', 'lindenweg16' ), 'verwaltung.einstellungen', 'lw16-betrieb-einstellungen' ),
 			self::item( 'import', 'verwaltung', __( 'Import & Doku', 'lindenweg16' ), 'verwaltung.import', 'lw16-betrieb-import' ),
-			self::item( 'arview', 'verwaltung', __( 'AR-Ansicht', 'lindenweg16' ), 'verwaltung.arview', 'lw16-arview' ),
-			self::item( 'support', 'verwaltung', __( 'Support', 'lindenweg16' ), 'verwaltung.support', 'lw16-support' ),
-			self::item( 'anleitungen', 'verwaltung', __( 'Anleitungen', 'lindenweg16' ), 'verwaltung.anleitungen', 'lw16-anleitungen' ),
+			self::item( 'arview', 'verwaltung', __( 'AR-Ansicht', 'lindenweg16' ), 'verwaltung.arview', '', 'native', '', 'lw16-arview' ),
+			self::item( 'support', 'verwaltung', __( 'Support', 'lindenweg16' ), 'verwaltung.support', '', 'native', '', 'lw16-support' ),
+			self::item( 'anleitungen', 'verwaltung', __( 'Anleitungen', 'lindenweg16' ), 'verwaltung.anleitungen', '', 'native', '', 'lw16-anleitungen' ),
 		);
 
 		$items = array();

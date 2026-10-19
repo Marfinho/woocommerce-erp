@@ -489,7 +489,7 @@ class MailboxModule {
 	 * @param string $flag    seen oder flag.
 	 * @param bool   $on      Setzen oder entfernen.
 	 */
-	protected function set_flag( array $account, array $msg, $flag, $on ) {
+	public function set_flag( array $account, array $msg, $flag, $on ) {
 		$column = 'seen' === $flag ? 'is_read' : 'is_starred';
 		MailRepository::update_message( (int) $msg['id'], array( $column => $on ? 1 : 0 ) );
 
@@ -516,7 +516,7 @@ class MailboxModule {
 	 * @param array  $msg     Nachricht.
 	 * @param string $role    trash, spam oder inbox.
 	 */
-	protected function move_to_role( array $account, array $msg, $role ) {
+	public function move_to_role( array $account, array $msg, $role ) {
 		// Entwürfe gibt es nur lokal.
 		if ( MailRepository::DRAFTS === $msg['folder'] ) {
 			MailRepository::delete_message( (int) $msg['id'] );
@@ -552,7 +552,7 @@ class MailboxModule {
 	 * @param array  $msg     Nachricht.
 	 * @param string $dest    Zielordner.
 	 */
-	protected function move_message( array $account, array $msg, $dest ) {
+	public function move_message( array $account, array $msg, $dest ) {
 		if ( ! empty( $msg['uid'] ) ) {
 			Scheduler::enqueue_async( Scheduler::HOOK_MAIL_SERVER_OP, array( (int) $account['id'], $msg['folder'], (int) $msg['uid'], 'move', $dest ) );
 		}
