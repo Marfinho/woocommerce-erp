@@ -7,6 +7,19 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.29.0] – 2026-10-20
+
+### Hinzugefügt
+- **Workflow erkennt die Druckdatei:** Die Bambu-Bridge meldet den Dateinamen des Jobs auf dem Drucker
+  (`subtask_name`/`gcode_file`). Das ERP ordnet ihn der Platte zu und schaltet genau diese auf „Im Druck“ bzw. „Ist melden“ –
+  auch wenn mehrere Platten für denselben Drucker anstehen. Die Karte zeigt „Datei am Drucker erkannt“ bzw. „wartet auf
+  <Datei>“. Ohne Dateinamen gilt die alte Regel (genau eine Platte pro Drucker).
+- Die Projekt-3MF heißt jetzt lesbar `Platte-<Drucker>-<Datum>-<Nr>-<Zufall>.3mf` statt `bambu-plate-…`. Beim Senden aus
+  Bambu Studio den Projektnamen unverändert lassen (Suffixe wie `_plate_1` sind ok).
+- Schema: `bambu_printers.current_file` (DB_VERSION 38).
+
+**Hinweis:** Die Bridge auf dem Pi muss aktualisiert werden (`raspberry-pi/bambu_bridge.py`).
+
 ## [0.28.1] – 2026-10-20
 
 ### Behoben

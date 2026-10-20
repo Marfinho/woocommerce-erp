@@ -203,7 +203,9 @@ class PlateService {
 				continue;
 			}
 
-			$filename = sprintf( 'bambu-plate-%d-%s.3mf', time(), wp_generate_password( 6, false, false ) );
+			// Lesbar und eindeutig: Der Name erscheint auf dem Druckerdisplay und
+			// ordnet den Druck im Workflow der Platte zu (RunFlow::file_matches).
+			$filename = sanitize_file_name( sprintf( 'Platte-%s-%s-%d-%s.3mf', $bambu_printer_id, gmdate( 'Ymd-His' ), $index + 1, strtolower( wp_generate_password( 4, false, false ) ) ) );
 			$out_path = trailingslashit( Installer::docs_dir() ) . $filename;
 
 			$compose = PlateComposer::compose( $placements, $out_path );
