@@ -168,20 +168,25 @@ class Exporter {
 		}
 
 		$labels = $this->requested_labels();
-		$pdf    = LabelPdf::build_roll( $labels, $format );
 
-		if ( ! $pdf ) {
+		if ( ! $labels ) {
 			$this->redirect_to_labels( __( 'Es gibt nichts zu drucken – bitte mindestens eine Sorte wählen, zu der es auch Datensätze gibt.', 'lindenweg16' ), 'error' );
 		}
 
-		$roll     = LabelSheet::roll( $format );
-		$breite   = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
-		$hoehe    = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
-		$anzahl   = count( $labels );
-		$job_id   = PrintQueueService::enqueue_pdf_labels( $printer_id, $pdf->output(), 'article_bin_label', $breite, $hoehe, $format );
+		$roll   = LabelSheet::roll( $format );
+		$breite = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
+		$hoehe  = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
+		$anzahl = count( $labels );
 
-		if ( ! $job_id ) {
-			$this->redirect_to_labels( __( 'Der Druckjob konnte nicht angelegt werden – ist die Drucker-ID richtig geschrieben?', 'lindenweg16' ), 'error' );
+		// Ein Druckauftrag je Etikett: Der Etikettendrucker nimmt je Auftrag
+		// eine Seite, weitere gingen sonst verloren.
+		foreach ( $labels as $label ) {
+			$pdf    = LabelPdf::build_roll( array( $label ), $format );
+			$job_id = $pdf ? PrintQueueService::enqueue_pdf_labels( $printer_id, $pdf->output(), 'article_bin_label', $breite, $hoehe, $format ) : 0;
+
+			if ( ! $job_id ) {
+				$this->redirect_to_labels( __( 'Der Druckjob konnte nicht angelegt werden – ist die Drucker-ID richtig geschrieben?', 'lindenweg16' ), 'error' );
+			}
 		}
 
 		/* translators: 1: Anzahl Etiketten, 2: Drucker-ID. */

@@ -518,19 +518,23 @@ class Workflow {
 			}
 		}
 
-		$pdf = LabelPdf::build_roll( $labels, $settings['label_roll'] );
-
-		if ( ! $pdf ) {
+		if ( ! $labels ) {
 			return array( 'ok' => false, 'message' => __( 'Es gab nichts zu drucken.', 'lindenweg16' ) );
 		}
 
 		$roll   = LabelSheet::roll( $settings['label_roll'] );
 		$width  = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
 		$height = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
-		$job_id = PrintQueueService::enqueue_pdf_labels( $settings['label_printer'], $pdf->output(), 'run_label', $width, $height, $settings['label_roll'] );
 
-		if ( ! $job_id ) {
-			return array( 'ok' => false, 'message' => __( 'Der Druckjob konnte nicht angelegt werden – ist der Etikettendrucker richtig eingestellt?', 'lindenweg16' ) );
+		// Ein Druckauftrag je Etikett: Der Etikettendrucker nimmt je Auftrag
+		// eine Seite, weitere gingen sonst verloren.
+		foreach ( $labels as $label ) {
+			$pdf    = LabelPdf::build_roll( array( $label ), $settings['label_roll'] );
+			$job_id = $pdf ? PrintQueueService::enqueue_pdf_labels( $settings['label_printer'], $pdf->output(), 'run_label', $width, $height, $settings['label_roll'] ) : 0;
+
+			if ( ! $job_id ) {
+				return array( 'ok' => false, 'message' => __( 'Der Druckjob konnte nicht angelegt werden – ist der Etikettendrucker richtig eingestellt?', 'lindenweg16' ) );
+			}
 		}
 
 		return array(

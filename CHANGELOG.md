@@ -10,10 +10,9 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ## [0.28.1] – 2026-10-20
 
 ### Behoben
-- **Mehrere Platten, ein Etikett:** Beim Freigeben mehrerer Platten legt das ERP ein PDF mit einer Seite je Platte an.
-  Der Pi-Client (`raspberry-pi/haster_print_client.py`, Weg `brother_ql`) hat aber nur die erste Seite gedruckt, die
-  übrigen gingen verloren. Jetzt druckt er alle Seiten, mit Schnitt nach jedem Etikett. Der Client muss auf dem Pi
-  aktualisiert und neu gestartet werden (`sudo systemctl restart haster-print`).
+- **Mehrere Platten, ein Etikett:** Beim Freigeben mehrerer Platten kam nur das erste Etikett aus dem Drucker, weil alle
+  Seiten in einem Druckauftrag lagen. Jetzt legt das ERP für jedes Etikett einen eigenen Druckauftrag an (Platten und
+  Lagerplatz-Etiketten). Der Pi-Client bleibt unverändert.
 - **Theme-Seite und Finanz-Dashboard** teilten die Kennung `lindenweg16`; die Theme-Seite heißt jetzt
   `lindenweg16-inhalte`.
 
