@@ -983,6 +983,18 @@ class BambuDruck {
 			return self::fail( __( 'Diese Platte gibt es nicht (mehr). Bitte die Liste neu laden.', 'lindenweg16' ), 404 );
 		}
 
+		return new WP_REST_Response( self::layout( $plate ) );
+	}
+
+	/**
+	 * Anordnung einer Platte: Bett und Umrisse der Teile.
+	 *
+	 * Auch für den Workflow (Plan-Vorschau, Plattenseite).
+	 *
+	 * @param object $plate Plattendatei.
+	 * @return array {id, width, height, items, missing}
+	 */
+	public static function layout( $plate ) {
 		$placements = json_decode( (string) $plate->placements, true );
 		$items      = is_array( $placements ) && isset( $placements['items'] ) && is_array( $placements['items'] ) ? $placements['items'] : array();
 		$articles   = ArticleRepository::all_by_id();
@@ -1021,14 +1033,12 @@ class BambuDruck {
 			);
 		}
 
-		return new WP_REST_Response(
-			array(
-				'id'      => (int) $plate->id,
-				'width'   => (int) $plate->plate_width_mm,
-				'height'  => (int) $plate->plate_height_mm,
-				'items'   => $out,
-				'missing' => $missing,
-			)
+		return array(
+			'id'      => (int) $plate->id,
+			'width'   => (int) $plate->plate_width_mm,
+			'height'  => (int) $plate->plate_height_mm,
+			'items'   => $out,
+			'missing' => $missing,
 		);
 	}
 

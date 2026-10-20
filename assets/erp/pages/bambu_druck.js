@@ -319,6 +319,21 @@
 		return { el: root, legend: legend };
 	}
 
+	// Anordnung samt Legende und Hinweis – auch für den Workflow (Plan-Vorschau, Plattenseite).
+	UI.plateView = function (d) {
+		var s = plateSvg(d);
+		var wrap = h('div', { class: 'bd-layout' });
+		wrap.appendChild(h('p', { class: 'muted', style: 'margin:0 0 8px' }, 'Druckbett ' + d.width + ' × ' + d.height + ' mm, ' + d.items.length + ' Teile. Ursprung unten links, wie im Slicer.'));
+		wrap.appendChild(s.el);
+		var ul = h('ul', { class: 'pf-list' });
+		s.legend.forEach(function (l) {
+			ul.appendChild(h('li', null, h('span', { class: 'pf-swatch', style: 'background:' + PALETTE[l[0]] }), l[1]));
+		});
+		wrap.appendChild(ul);
+		if (d.missing) { wrap.appendChild(h('div', { class: 'notice warn' }, 'Bei ' + d.missing + ' Teil(en) ist die Form nicht auslesbar, sie sind nur als Punkt eingezeichnet.')); }
+		return wrap;
+	};
+
 	function openPlate(row) {
 		var body = h('div', { class: 'sheet-body' }, h('p', { class: 'muted' }, 'Wird geladen …'));
 		UI.dlg('Platte #' + row.id + ' · ' + row.printer, body, true);

@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.29.0] – 2026-10-20
+
+### Anordnung auf dem Bett sichtbar
+- **Plan freigeben:** Unter der Plattenliste steht je Platte „Anordnung auf dem Bett“ mit den Umrissen der Teile
+  (aufklappbar, bei nur einer Platte offen).
+- **Plattenseite (Rüsten):** Derselbe Block steht über den Schritten, damit man vor dem Slicen sieht, wie die Teile
+  liegen. Die Zeichnung ist die der Bambu-Seite; Teile, deren Form sich nicht mehr auslesen lässt, erscheinen als Punkt.
+
 ## [0.28.1] – 2026-10-20
 
 ### Behoben
