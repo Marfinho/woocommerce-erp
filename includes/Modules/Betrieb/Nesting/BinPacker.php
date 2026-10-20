@@ -116,20 +116,70 @@ class BinPacker {
 				'width'  => $bbox['maxx'] - $bbox['minx'],
 				'height' => $bbox['maxy'] - $bbox['miny'],
 				'area'   => Polygon::area( $hull ),
+				// Kopien eines Artikels haben dieselbe Hülle: Passt eine nicht\n				// mehr auf eine Platte, passt keine weitere (siehe pack()).
+				'sig'    => md5( json_encode( $hull ) ),
 			);
 		}
 
-		usort(
-			$normalized,
+		// Mehrere feste Reihenfolgen probieren und die beste Anordnung
+		// behalten: Welche Reihenfolge gut packt, hängt von den Formen ab
+		// (lange Teile zuerst, grosse Fläche zuerst, hohe Teile zuerst).
+		// Alle Läufe sind deterministisch, das Ergebnis ist es damit auch.
+		$orders = array(
 			static function ( $a, $b ) {
 				return $b['area'] <=> $a['area'];
-			}
+			},
+			static function ( $a, $b ) {
+				return max( $b['width'], $b['height'] ) <=> max( $a['width'], $a['height'] ) ?: $b['area'] <=> $a['area'];
+			},
+			static function ( $a, $b ) {
+				return $b['height'] <=> $a['height'] ?: $b['area'] <=> $a['area'];
+			},
+			static function ( $a, $b ) {
+				return $b['width'] <=> $a['width'] ?: $b['area'] <=> $a['area'];
+			},
 		);
 
+		$best = null;
+
+		foreach ( $orders as $order ) {
+			$sorted = $normalized;
+			usort( $sorted, $order );
+
+			$run = self::pack( $sorted, $bed_width_mm, $bed_height_mm, $margin_mm, $rotations, $inflated_exclusions );
+
+			if ( null === $best || self::better( $run, $best ) ) {
+				$best = $run;
+			}
+		}
+
+		$bins   = $best['bins'];
+		$errors = $best['errors'];
+
+		$out_bins = array();
+		foreach ( $bins as $bin ) {
+			$out_bins[] = array( 'placements' => $bin['placements'] );
+		}
+
+		return array( 'bins' => $out_bins, 'errors' => $errors );
+	}
+
+	/**
+	 * Teile in der gegebenen Reihenfolge auf Platten verteilen.
+	 *
+	 * @param array $sorted               Normierte Teile, in Packreihenfolge.
+	 * @param float $bed_width_mm         Bettbreite.
+	 * @param float $bed_height_mm        Betttiefe.
+	 * @param float $margin_mm            Sicherheitsabstand.
+	 * @param array $rotations            Erlaubte Rotationswinkel.
+	 * @param array $inflated_exclusions  Aufgeblasene Sperrflächen.
+	 * @return array {bins, errors}
+	 */
+	protected static function pack( array $sorted, $bed_width_mm, $bed_height_mm, $margin_mm, array $rotations, array $inflated_exclusions ) {
 		$bins   = array();
 		$errors = array();
 
-		foreach ( $normalized as $part ) {
+		foreach ( $sorted as $part ) {
 			if ( ! self::fits_any_rotation( $part['hull'], $bed_width_mm, $bed_height_mm, $margin_mm, $rotations ) ) {
 				$errors[] = array(
 					'key'     => $part['key'],
@@ -141,18 +191,25 @@ class BinPacker {
 			$placed = false;
 
 			foreach ( $bins as &$bin ) {
+				if ( isset( $bin['failed'][ $part['sig'] ] ) ) {
+					continue;
+				}
+
 				$fit = self::try_place( $part, $bin, $bed_width_mm, $bed_height_mm, $margin_mm, $rotations );
 				if ( $fit ) {
 					$bin['placements'][] = $fit['placement'];
 					$bin['occupied'][]   = $fit['inflated_hull'];
+					$bin['failed']       = array();
 					$placed              = true;
 					break;
 				}
+
+				$bin['failed'][ $part['sig'] ] = true;
 			}
 			unset( $bin );
 
 			if ( ! $placed ) {
-				$bin = array( 'placements' => array(), 'occupied' => $inflated_exclusions );
+				$bin = array( 'placements' => array(), 'occupied' => $inflated_exclusions, 'failed' => array() );
 
 				$fit = self::try_place( $part, $bin, $bed_width_mm, $bed_height_mm, $margin_mm, $rotations );
 
@@ -174,12 +231,40 @@ class BinPacker {
 			}
 		}
 
-		$out_bins = array();
-		foreach ( $bins as $bin ) {
-			$out_bins[] = array( 'placements' => $bin['placements'] );
+		return array( 'bins' => $bins, 'errors' => $errors );
+	}
+
+	/**
+	 * Ist Lauf $a besser als $b? Weniger nicht platzierte Teile, dann
+	 * weniger Platten, dann weniger belegte Höhe auf der letzten Platte
+	 * (sie lässt sich dann mit Folgeaufträgen am ehesten auffüllen).
+	 *
+	 * @param array $a Lauf {bins, errors}.
+	 * @param array $b Lauf {bins, errors}.
+	 * @return bool
+	 */
+	protected static function better( array $a, array $b ) {
+		if ( count( $a['errors'] ) !== count( $b['errors'] ) ) {
+			return count( $a['errors'] ) < count( $b['errors'] );
 		}
 
-		return array( 'bins' => $out_bins, 'errors' => $errors );
+		if ( count( $a['bins'] ) !== count( $b['bins'] ) ) {
+			return count( $a['bins'] ) < count( $b['bins'] );
+		}
+
+		return self::last_fill( $a ) < self::last_fill( $b );
+	}
+
+	/**
+	 * Anzahl Teile auf der letzten Platte (weniger = die vorderen sind voller).
+	 *
+	 * @param array $run Lauf {bins, errors}.
+	 * @return int
+	 */
+	protected static function last_fill( array $run ) {
+		$last = end( $run['bins'] );
+
+		return $last ? count( $last['placements'] ) : 0;
 	}
 
 	/**
@@ -208,10 +293,12 @@ class BinPacker {
 	}
 
 	/**
-	 * Versucht, ein Bauteil in einem bestehenden (ggf. leeren) Bin zu
-	 * platzieren. Liefert bei Erfolg Platzierung + die um den
-	 * Sicherheitsabstand aufgeblasene Hülle (für künftige
-	 * Kollisionsprüfungen), sonst null.
+	 * Besten Platz für ein Bauteil in einem Bin suchen.
+	 *
+	 * Alle Kandidatenpunkte und Rotationen werden bewertet, nicht der erste
+	 * freie Treffer genommen: Gewählt wird die Lage mit der niedrigsten
+	 * Oberkante, dann der geringsten Breite nach rechts. Das hält die Teile
+	 * zusammen und lässt rechts oben eine zusammenhängende freie Fläche.
 	 *
 	 * @param array $part          {key, hull (auf 0,0 normiert), width, height}.
 	 * @param array $bin           {placements, occupied} - occupied sind
@@ -224,33 +311,68 @@ class BinPacker {
 	 * @return array|null {placement, inflated_hull}
 	 */
 	protected static function try_place( array $part, array $bin, $bed_width_mm, $bed_height_mm, $margin_mm, array $rotations ) {
-		$candidates = self::candidate_points( $bin, $margin_mm );
+		$boxes = array();
+		foreach ( $bin['occupied'] as $inflated ) {
+			$boxes[] = Polygon::bounding_box( $inflated );
+		}
 
-		foreach ( $candidates as $point ) {
+		// Ausdehnung je Rotation einmal rechnen: place() setzt die Ecke des
+		// Begrenzungsrechtecks auf den Kandidatenpunkt, die Box dort ist also
+		// Punkt + (Breite, Höhe) – die Hülle selbst wird erst gebraucht, wenn
+		// die Box alle Prüfungen bestanden hat.
+		$sizes = array();
+		foreach ( $rotations as $deg ) {
+			$bb            = Polygon::bounding_box( Polygon::rotate( $part['hull'], $deg ) );
+			$sizes[ $deg ] = array( $bb['maxx'] - $bb['minx'], $bb['maxy'] - $bb['miny'] );
+		}
+
+		$min_height = min( array_column( $sizes, 1 ) );
+		$best       = null;
+
+		// Die Punkte sind nach y sortiert: Liegt schon die Unterkante so hoch,
+		// dass auch das niedrigste Teil über dem besten Treffer endet, ist
+		// kein späterer Punkt mehr besser.
+		foreach ( self::candidate_points( $bin, $margin_mm ) as $point ) {
+			if ( $best && $point[1] + $min_height > $best['top'] + Polygon::EPSILON ) {
+				break;
+			}
+
 			foreach ( $rotations as $deg ) {
-				$placed_hull = Polygon::place( $part['hull'], $deg, $point[0], $point[1] );
-				$bbox        = Polygon::bounding_box( $placed_hull );
+				$minx = $point[0];
+				$miny = $point[1];
+				$maxx = $minx + $sizes[ $deg ][0];
+				$maxy = $miny + $sizes[ $deg ][1];
 
-				// Sowohl die untere/linke als auch die obere/rechte Kante
-				// prüfen: Kandidatenpunkte, die vom aufgeblasenen Nachbarn
-				// abgeleitet sind (siehe candidate_points()), können
-				// rechnerisch unterhalb von margin_mm liegen, wenn der
-				// Nachbar selbst nahe am Bettrand sitzt - ohne diese Prüfung
-				// würde ein Bauteil dann den Randabstand unterschreiten,
-				// statt (korrekt) diesen Kandidaten zu verwerfen.
-				if ( $bbox['minx'] < $margin_mm - Polygon::EPSILON || $bbox['miny'] < $margin_mm - Polygon::EPSILON ) {
+				// Rand: sowohl die untere/linke als auch die obere/rechte
+				// Kante prüfen (Kandidaten können rechnerisch unter
+				// margin_mm liegen, wenn der Nachbar nahe am Rand sitzt).
+				if ( $minx < $margin_mm - Polygon::EPSILON || $miny < $margin_mm - Polygon::EPSILON ) {
+					continue;
+				}
+				if ( $maxx > $bed_width_mm - $margin_mm + Polygon::EPSILON || $maxy > $bed_height_mm - $margin_mm + Polygon::EPSILON ) {
 					continue;
 				}
 
-				if ( $bbox['maxx'] > $bed_width_mm - $margin_mm + Polygon::EPSILON ) {
-					continue;
-				}
-				if ( $bbox['maxy'] > $bed_height_mm - $margin_mm + Polygon::EPSILON ) {
+				// Schlechter als der bisher beste Treffer? Dann gar nicht erst prüfen.
+				if ( $best && ( $maxy > $best['top'] + Polygon::EPSILON || ( abs( $maxy - $best['top'] ) <= Polygon::EPSILON && $maxx >= $best['right'] - Polygon::EPSILON ) ) ) {
 					continue;
 				}
 
-				$collides = false;
-				foreach ( $bin['occupied'] as $inflated ) {
+				$placed_hull = null;
+				$collides    = false;
+
+				foreach ( $bin['occupied'] as $index => $inflated ) {
+					$box = $boxes[ $index ];
+
+					// Begrenzungsrechtecke ohne Überlappung: kann nicht kollidieren.
+					if ( $maxx <= $box['minx'] || $minx >= $box['maxx'] || $maxy <= $box['miny'] || $miny >= $box['maxy'] ) {
+						continue;
+					}
+
+					if ( null === $placed_hull ) {
+						$placed_hull = Polygon::place( $part['hull'], $deg, $point[0], $point[1] );
+					}
+
 					if ( Sat::overlap( $placed_hull, $inflated ) ) {
 						$collides = true;
 						break;
@@ -261,7 +383,13 @@ class BinPacker {
 					continue;
 				}
 
-				return array(
+				if ( null === $placed_hull ) {
+					$placed_hull = Polygon::place( $part['hull'], $deg, $point[0], $point[1] );
+				}
+
+				$best = array(
+					'top'           => $maxy,
+					'right'         => $maxx,
 					'placement'     => array(
 						'key'          => $part['key'],
 						'x'            => round( $point[0], 3 ),
@@ -273,41 +401,47 @@ class BinPacker {
 			}
 		}
 
-		return null;
+		return $best ? array( 'placement' => $best['placement'], 'inflated_hull' => $best['inflated_hull'] ) : null;
 	}
 
 	/**
 	 * Kandidaten-Ankerpunkte (linke-untere Ecke der Bounding Box) für die
-	 * nächste Platzierung: die Bett-Ecke plus, für jedes bereits platzierte
-	 * Teil, die Punkte rechts und oberhalb seiner Bounding Box – das
-	 * klassische Bottom-Left-Fill-Kandidatenset. Sortiert nach (y, x)
-	 * aufsteigend, damit die unterste, dann linkeste freie Stelle zuerst
-	 * versucht wird.
+	 * nächste Platzierung: Alle Kombinationen aus den x-Kanten und den
+	 * y-Kanten der belegten Flächen (plus Bettecke). Das deckt auch Nischen
+	 * ab, die nur an den Kanten zweier verschiedener Teile entstehen (etwa
+	 * rechts neben dem einen und über dem anderen), und die der alte
+	 * Kandidatensatz nie versucht hat.
 	 *
 	 * @param array $bin       {placements, occupied}.
 	 * @param float $margin_mm Randabstand.
-	 * @return array Liste [x, y], sortiert.
+	 * @return array Liste [x, y], sortiert nach y, dann x.
 	 */
 	protected static function candidate_points( array $bin, $margin_mm ) {
-		$points = array( array( $margin_mm, $margin_mm ) );
+		$xs = array( round( $margin_mm, 3 ) => $margin_mm );
+		$ys = array( round( $margin_mm, 3 ) => $margin_mm );
 
 		foreach ( $bin['occupied'] as $hull ) {
-			$bbox     = Polygon::bounding_box( $hull );
-			$points[] = array( $bbox['maxx'] + self::NUDGE_MM, $margin_mm );
-			$points[] = array( $margin_mm, $bbox['maxy'] + self::NUDGE_MM );
-			$points[] = array( $bbox['maxx'] + self::NUDGE_MM, $bbox['miny'] );
-			$points[] = array( $bbox['minx'], $bbox['maxy'] + self::NUDGE_MM );
+			$bbox = Polygon::bounding_box( $hull );
+
+			foreach ( array( $bbox['maxx'] + self::NUDGE_MM, $bbox['minx'] ) as $x ) {
+				$xs[ (string) round( $x, 3 ) ] = $x;
+			}
+			foreach ( array( $bbox['maxy'] + self::NUDGE_MM, $bbox['miny'] ) as $y ) {
+				$ys[ (string) round( $y, 3 ) ] = $y;
+			}
 		}
 
-		usort(
-			$points,
-			static function ( $a, $b ) {
-				if ( abs( $a[1] - $b[1] ) > Polygon::EPSILON ) {
-					return $a[1] <=> $b[1];
-				}
-				return $a[0] <=> $b[0];
+		$xs = array_values( $xs );
+		$ys = array_values( $ys );
+		sort( $xs );
+		sort( $ys );
+
+		$points = array();
+		foreach ( $ys as $y ) {
+			foreach ( $xs as $x ) {
+				$points[] = array( $x, $y );
 			}
-		);
+		}
 
 		return $points;
 	}

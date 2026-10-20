@@ -2406,6 +2406,14 @@
 		d = dlg('Plan freigeben', body, true);
 	}
 
+	// Anordnung auf dem Bett als aufklappbarer Block; die Zeichnung liefert die Bambu-Seite.
+	function layoutBlock(layout, open) {
+		if (!layout || !layout.items || !layout.items.length || !UI.plateView) { return null; }
+		return h('details', { class: 'adv', open: !!open, style: 'margin-top:12px' },
+			h('summary', null, 'Anordnung auf dem Bett (' + layout.items.length + ' Teile)'),
+			UI.plateView(layout));
+	}
+
 	function showPreview(out, r, d, reload) {
 		out.textContent = '';
 		(r.warnings || []).forEach(function (w) { out.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:8px' }, w)); });
@@ -2427,6 +2435,11 @@
 			h('thead', null, h('tr', null, h('th', null, 'Platte'), h('th', null, 'Drucker'), h('th', null, 'Inhalt'), h('th', { class: 'num' }, 'Dauer'), h('th', null, 'Datei'))),
 			rows
 		)));
+
+		r.plates.forEach(function (p, i) {
+			var block = layoutBlock(p.layout, r.plates.length === 1);
+			if (block) { block.querySelector('summary').textContent = 'Platte ' + (i + 1) + ': Anordnung auf dem Bett (' + p.layout.items.length + ' Teile)'; out.appendChild(block); }
+		});
 
 		if (r.material && r.material.length) {
 			out.appendChild(h('div', { class: 'card', style: 'margin-top:12px' }, h('b', null, 'Filament'), materialRows(r.material)));
@@ -2565,6 +2578,11 @@
 				h('div', { class: 'run-items' }, itemsLine(run)),
 				h('div', { class: 'muted' }, [run.est_minutes ? 'ca. ' + minTxt(run.est_minutes) : '', run.batch ? 'Plan ' + run.batch : ''].filter(Boolean).join(' · '))
 			));
+
+			if (run.status === 'freigegeben' || run.status === 'ruesten') {
+				var lay = layoutBlock(run.layout, false);
+				if (lay) { box.appendChild(lay); }
+			}
 
 			if (run.status === 'freigegeben') {
 				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno' }, '1'), h('div', null, h('b', null, 'Datei laden'), h('div', { class: 'muted small' }, run.file ? 'Projekt-3MF – im Slicer öffnen und slicen' : 'Keine Datei hinterlegt'))));

@@ -22,6 +22,7 @@ namespace Lindenweg16\Erp;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Erp\Pages\BambuDruck;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
@@ -363,6 +364,7 @@ class Workflow {
 			'printer'     => $printer ? $printer->name : $plate->printer_id,
 			'items'       => $items['items'],
 			'est_minutes' => $items['est_minutes'],
+			'layout'      => BambuDruck::layout( $plate ),
 		);
 	}
 
@@ -657,9 +659,14 @@ class Workflow {
 			);
 		}
 
-		$file = null;
+		$file   = null;
+		$layout = null;
 		if ( ! empty( $run['plate_job_id'] ) ) {
 			$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
+
+			if ( $plate && $detail ) {
+				$layout = BambuDruck::layout( $plate );
+			}
 
 			if ( $plate && is_file( $plate->file_path ) ) {
 				$file = array(
@@ -682,6 +689,7 @@ class Workflow {
 		}
 
 		return array(
+			'layout'      => $layout,
 			'material'    => $material,
 			'id'          => (int) $run['id'],
 			'batch'       => (string) $run['batch'],

@@ -305,7 +305,7 @@ foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository', 'BambuService',
 // (Polygon, Sat, MeshOutline, BinPacker), die Transformationsmatrix-
 // Berechnung von PlateComposer sowie dieselbe Claim-/Lock-/Token-Logik wie
 // bei den übrigen Warteschlangen sind ohne Datenbank prüfbar.
-foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'PlateComposer', 'PlateService', 'SlicingJobRepository', 'SlicingWorkerAuth' ) as $lw16_class ) {
+foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'Silhouette', 'RasterPacker', 'PlateComposer', 'PlateService', 'SlicingJobRepository', 'SlicingWorkerAuth' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/Nesting/' . $lw16_class . '.php';
 }
 

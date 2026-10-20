@@ -7,6 +7,33 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.29.0] – 2026-10-20
+
+### Anordnung auf dem Bett sichtbar
+- **Plan freigeben:** Unter der Plattenliste steht je Platte „Anordnung auf dem Bett“ mit den Umrissen der Teile
+  (aufklappbar, bei nur einer Platte offen).
+- **Plattenseite (Rüsten):** Derselbe Block steht über den Schritten, damit man vor dem Slicen sieht, wie die Teile
+  liegen. Die Zeichnung ist die der Bambu-Seite; Teile, deren Form sich nicht mehr auslesen lässt, erscheinen als Punkt.
+
+### Anordnung: mehr Teile pro Platte
+- **Echter Umriss statt Hülle:** Der Packer rechnet jetzt mit dem Schattenbild des Teils (alle Dreiecke von oben,
+  Raster 0,5 mm) statt mit der konvexen Hülle. Einbuchtungen werden genutzt: Kleine Teile liegen in der Öffnung eines
+  C-förmigen Klemmrings oder neben den Aufhängebögen einer Schale. Die Plan-Vorschau und die Plattenansicht zeichnen
+  denselben Umriss. Sperrflächen und Randabstand stecken im Raster, der Abstand bleibt 5 mm.
+- **Suche:** Je Teil wird die niedrigste, dann linkeste freie Lage gesucht, bitweise für ein ganzes Bett auf einmal.
+  Dazu zwei feste Sortierungen und gewürfelte Varianten (fester Startwert), solange mehr Platten nötig sind, als die
+  Fläche mindestens verlangt (Zeitbudget 4 s). Behalten wird die Anordnung mit den wenigsten Platten. Die
+  Hüllen-Anordnung läuft zur Gegenprobe mit, wenn mehr als eine Platte entsteht.
+- **Keine Kippung:** Gedreht wird nur um die senkrechte Achse in Vierteldrehungen; die Auflagefläche bleibt, wie in der
+  Projektdatei vorgegeben (ein Test sichert das). 45°-Schritte lassen sich über den Filter `lw16_plate_rotations`
+  einschalten, `array( 0 )` schaltet jede Drehung ab.
+- **Fehler behoben:** Beim Zusammensetzen der 3MF lagen gedrehte Teile um ihre Höhe oder Breite neben der berechneten
+  Position (die Matrix drehte um die Ecke des ungedrehten Teils). Jetzt liegt die Ecke des gedrehten Teils auf der
+  Zielposition.
+- **Schneller:** Die konvexe Hülle prüfte jeden Punkt gegen jeden (quadratischer Aufwand); große Netze brauchten
+  Minuten, jetzt Sekundenbruchteile.
+- **Bekannte Grenze:** Die konvexe Gegenprobe füllt Einbuchtungen weiter auf.
+
 ## [0.28.1] – 2026-10-20
 
 ### Behoben
