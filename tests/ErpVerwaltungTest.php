@@ -118,4 +118,17 @@ class ErpVerwaltungTest extends TestCase {
 			$this->assertStringContainsString( "UI.pages['$id']", $js );
 		}
 	}
+
+	public function test_pause_schiebt_den_start_um_die_pausenlaenge() {
+		$this->assertSame( '2026-10-19 08:10:00', \Lindenweg16\Modules\Betrieb\Stopwatch::shift( '2026-10-19 08:00:00', 600 ) );
+		$this->assertSame( '2026-10-19 08:00:00', \Lindenweg16\Modules\Betrieb\Stopwatch::shift( '2026-10-19 08:00:00', -50 ) );
+		$this->assertSame( 'kaputt', \Lindenweg16\Modules\Betrieb\Stopwatch::shift( 'kaputt', 5 ) );
+	}
+
+	public function test_pause_zaehlt_nur_bis_zum_anhalten() {
+		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/TimerState.php' );
+
+		$this->assertStringContainsString( "'' !== \$state['paused_at'] ? \$state['paused_at'] : current_time( 'mysql', true )", $src );
+		$this->assertStringContainsString( 'Stopwatch::shift( $state[\'started_at\'], $pause )', $src );
+	}
 }

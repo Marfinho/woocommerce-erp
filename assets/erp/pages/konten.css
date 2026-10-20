@@ -1,0 +1,36 @@
+/* Postfächer (assets/erp/pages/konten.js). Nur Klassen mit Präfix kt-. */
+.kt { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: 860px; }
+.kt .card { margin: 0; }
+.kt .rows { display: grid; gap: 10px; }
+.kt-card { display: grid; gap: 10px; }
+.kt-mail, .kt-small { overflow-wrap: anywhere; }
+.kt-small { font-size: 12.5px; margin-top: 4px; }
+.kt-st.bad { background: color-mix(in srgb, var(--error) 14%, var(--surface)); color: var(--error); white-space: normal; text-align: left; }
+.kt-st.good { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.kt-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.kt-btns .btn { min-height: 44px; }
+@media (min-width: 640px) {
+	.kt-card { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+}
+.kt-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.kt-form h3 { margin: 0; }
+.kt-f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+.kt-f small { font-weight: 400; }
+.kt-f .field { min-height: 44px; }
+.kt-area { padding: 8px 12px; font-family: inherit; min-height: 90px; }
+.kt-set { border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px 12px; display: grid; gap: 10px; min-width: 0; margin: 0; }
+.kt-set legend { font-weight: 700; font-size: 13.5px; padding: 0 6px; }
+.kt-pair { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+.kt-check { display: flex; gap: 10px; align-items: center; font-size: 14px; min-height: 44px; font-weight: 400; }
+.kt-check input { width: 22px; height: 22px; flex: none; }
+.kt-shares { display: grid; gap: 2px; }
+.kt-share { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); }
+.kt-share:first-child { border-top: 0; }
+.kt-send { color: var(--text-muted); }
+.kt-test { display: grid; gap: 6px; }
+.kt-testline { font-size: 14px; overflow-wrap: anywhere; }
+.kt-testline.good { color: var(--success); }
+.kt-testline.bad { color: var(--error); }
+.kt-dlg { display: grid; gap: 12px; padding: 4px 16px 16px; }
+.kt-tips ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; }
+.kt-tips h3 { margin: 0; }

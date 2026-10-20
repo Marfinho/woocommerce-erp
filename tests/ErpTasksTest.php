@@ -14,6 +14,10 @@ class ErpTasksTest extends TestCase {
 		$sorted = Tasks::sort(
 			array(
 				array( 'kind' => 'mail', 'title' => 'm' ),
+				array( 'kind' => 'nachfassen', 'title' => 'n' ),
+				array( 'kind' => 'rechnung', 'title' => 'g' ),
+				array( 'kind' => 'lieferung', 'title' => 'l' ),
+				array( 'kind' => 'wartung', 'title' => 'w' ),
 				array( 'kind' => 'bestellen', 'title' => 'b' ),
 				array( 'kind' => 'melden', 'title' => 'x' ),
 				array( 'kind' => 'packen', 'title' => 'p' ),
@@ -21,7 +25,7 @@ class ErpTasksTest extends TestCase {
 			)
 		);
 
-		$this->assertSame( array( 'melden', 'ruesten', 'packen', 'bestellen', 'mail' ), array_column( $sorted, 'kind' ) );
+		$this->assertSame( array( 'melden', 'ruesten', 'packen', 'wartung', 'bestellen', 'lieferung', 'rechnung', 'nachfassen', 'mail' ), array_column( $sorted, 'kind' ) );
 	}
 
 	public function test_unbekannte_arten_kommen_zuletzt() {
@@ -38,7 +42,7 @@ class ErpTasksTest extends TestCase {
 	public function test_aufgaben_nur_mit_passendem_recht() {
 		$src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Tasks.php' );
 
-		foreach ( array( 'fertigung.workflow', 'verkauf.versand', 'lager.einkauf', 'verwaltung.mailbox' ) as $perm ) {
+		foreach ( array( 'fertigung.workflow', 'verkauf.versand', 'lager.einkauf', 'verwaltung.mailbox', 'fertigung.drucker', 'verkauf.kontakte' ) as $perm ) {
 			$this->assertStringContainsString( "Access::can( '$perm' )", $src );
 		}
 	}

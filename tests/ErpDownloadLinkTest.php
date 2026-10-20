@@ -25,4 +25,11 @@ class ErpDownloadLinkTest extends TestCase {
 		$this->assertArrayNotHasKey( 'lw16_bambu_snapshot', $rules );
 		$this->assertArrayHasKey( 'lw16_packliste', \Lindenweg16\Erp\ActionMap::exempt() );
 	}
+
+	public function test_einstieg_ins_erp_nur_fuer_erp_nutzer_ohne_websiteverwaltung() {
+		$this->assertTrue( \Lindenweg16\Erp\Shell::wants_erp_landing( true, true, false ) );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::wants_erp_landing( false, true, false ) );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::wants_erp_landing( true, false, false ) );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::wants_erp_landing( true, true, true ) );
+	}
 }

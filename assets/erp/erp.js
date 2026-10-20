@@ -361,7 +361,7 @@
 			el.net,
 			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
-			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit' }, ico('clock'), h('span', null, 'Zeit')) : null,
+			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill' }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
 			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
 		);
 
@@ -948,9 +948,19 @@
 				]
 		));
 
-		d.groups.forEach(function (g) { ed.appendChild(groupCard(g, p, idx)); });
-
+		// Erst das Ergebnis („So sieht … das ERP“), dann die Einzelrechte: Wer eine Vorlage wählt,
+		// muss die rund 50 Schalter nicht ansehen. Weicht die Person von allen Vorlagen ab,
+		// sind die Einzelrechte gleich offen.
 		ed.appendChild(previewCard(p, idx));
+
+		var total = 0;
+		d.groups.forEach(function (g) { total += g.perms.filter(function (x) { return x.scope !== 'full'; }).length; });
+
+		var adv = h('details', { class: 'adv' }, h('summary', null, 'Einzelrechte anpassen (' + total + ')'));
+		if (S.adv || (!cur && !p.full)) { adv.setAttribute('open', ''); }
+		adv.addEventListener('toggle', function () { S.adv = adv.open; });
+		d.groups.forEach(function (g) { adv.appendChild(groupCard(g, p, idx)); });
+		ed.appendChild(adv);
 
 		if (!p.full) {
 			var dirty = isDirty();
@@ -1218,6 +1228,22 @@
 		}
 
 		if (r.type === 'component') { card.appendChild(h('p', { class: 'muted' }, 'Komponenten werden unter „Material“ gepflegt.')); }
+
+		// Wareneingang: Liegt zu diesem Teil eine offene Bestellung, genügt ein Tippen.
+		if ((r.type === 'article' || r.type === 'component') && can('lager.einkauf')) {
+			var incoming = h('div');
+			card.appendChild(incoming);
+			api('einkauf/offen?type=' + r.type + '&id=' + r.id).then(function (d) {
+				if (!d.open.length) { return; }
+				incoming.appendChild(h('h4', { style: 'margin:16px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)' }, 'Wareneingang'));
+				d.open.forEach(function (p) {
+					incoming.appendChild(h('div', { class: 'incoming', style: 'margin-bottom:8px' },
+						h('b', null, 'Bestellt: ' + num(p.qty) + ' ' + p.unit + (p.supplier ? ' bei ' + p.supplier : '')),
+						h('small', { class: p.late ? 'tag later' : 'muted' }, p.expected_on ? (p.late ? p.late + ' Tage überfällig' : 'erwartet ' + p.expected_on) : 'bestellt ' + p.ordered_on),
+						d.receive ? receiveForm(p, function () { rescan(r.code); }) : h('small', { class: 'muted' }, 'Buchen darfst du nicht.')));
+				});
+			}).catch(function () { /* ohne Verbindung oder Recht: kein Wareneingang an dieser Stelle */ });
+		}
 	}
 
 	function bookForm(articleId, st, code, rescan) {
@@ -2475,7 +2501,7 @@
 			));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Der Alarm kommt, wenn der Bestand einer Farbe bei dem Verbrauch der letzten 4 Wochen kürzer reicht als Lieferzeit plus Puffer.'));
 			body.appendChild(h('h4', { class: 'sec' }, 'WordPress-Admin'));
-			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' ERP-Menüs im wp-admin ausblenden'));
+			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' wp-admin nur für die Website: ERP-Menüs ausblenden, ERP-Nutzer ohne Websiteverwaltung nach der Anmeldung ins ERP leiten'));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das wp-admin zeigt dann nur noch die Website. Die Seiten bleiben erreichbar und werden im ERP weiter eingebettet angezeigt.'));
 
 			var save = h('button', { class: 'btn primary', type: 'button', style: 'margin-top:16px' }, 'Speichern');
@@ -2776,8 +2802,37 @@
 		// Wiederkehrende Aktualisierung, die beim Seitenwechsel endet.
 		every: function (fn, ms) { timers.push(setInterval(function () { if (!document.hidden) { fn(); } }, ms)); },
 		// Zum Seitenkopf der Akte: Seitentitel setzen und Reiter halten.
-		reload: function () { render(); }
+		reload: function () { render(); },
+		clockSync: function () { clockSync(); }
 	});
+
+	// Laufende Stempeluhr in der Kopfzeile: holt den Stand selten, zählt selbst weiter.
+	var uhr = { running: false, paused: false, base: 0, at: 0 };
+
+	function clockText() {
+		if (!uhr.running) { return 'Zeit'; }
+		var s = Math.max(0, Math.floor(uhr.base + (uhr.paused ? 0 : (Date.now() - uhr.at) / 1000)));
+		var t = ('0' + Math.floor(s / 3600)).slice(-2) + ':' + ('0' + Math.floor((s % 3600) / 60)).slice(-2) + ':' + ('0' + (s % 60)).slice(-2);
+		return uhr.paused ? 'Pause ' + t : t;
+	}
+
+	function clockPaint() {
+		if (!el.clockLabel) { return; }
+		el.clockLabel.textContent = clockText();
+		var pill = document.getElementById('clock-pill');
+		if (pill) { pill.classList.toggle('on', uhr.running && !uhr.paused); }
+	}
+
+	function clockSync() {
+		if (!el.clockLabel) { return; }
+		api('zeit/uhr').then(function (d) {
+			uhr.running = !!d.clock;
+			uhr.paused = !!(d.clock && d.clock.paused);
+			uhr.base = d.clock ? d.clock.seconds : 0;
+			uhr.at = Date.now();
+			clockPaint();
+		}).catch(function () {});
+	}
 
 	// Ungelesene Mails als Zähler an der Mailbox, auf jeder Seite.
 	function mailBadge() {
@@ -2793,7 +2848,9 @@
 		S.boot = boot;
 		buildShell();
 		mailBadge();
-		setInterval(function () { if (!document.hidden) { mailBadge(); } }, 120000);
+		clockSync();
+		setInterval(function () { if (!document.hidden) { mailBadge(); clockSync(); } }, 120000);
+		setInterval(clockPaint, 1000);
 		window.addEventListener('hashchange', render);
 		window.addEventListener('online', function () { stale = false; syncNet(); flush(); });
 		window.addEventListener('offline', syncNet);

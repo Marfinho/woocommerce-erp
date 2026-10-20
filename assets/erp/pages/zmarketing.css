@@ -1,0 +1,19 @@
+.mk-back { display: inline-block; min-height: 44px; line-height: 44px; text-decoration: none; color: var(--text-muted); font-weight: 600; }
+.mk-gap { margin-top: 14px; }
+.mk-row { text-decoration: none; color: inherit; }
+.mk-kv { display: grid; grid-template-columns: minmax(96px, 30%) 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.mk-kv:last-child { border-bottom: 0; }
+.mk-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mk-actions .btn { min-height: 44px; }
+.mk-dlg { padding: 4px 16px 16px; display: grid; gap: 10px; }
+.mk-form { padding: 4px 16px 16px; display: grid; gap: 10px; }
+.mk-field { display: grid; gap: 4px; font-size: 13px; color: var(--text-muted); }
+.mk-field .field { width: 100%; min-height: 44px; color: var(--text); font-size: 16px; box-sizing: border-box; }
+.mk-field textarea.field { min-height: 80px; }
+.mk-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mk-small { min-height: 44px; min-width: 44px; }
+.mk-beleg { flex-wrap: wrap; }
+.card .mk-field { margin-bottom: 10px; }
+@media (max-width: 440px) {
+	.mk-two { grid-template-columns: 1fr; }
+}

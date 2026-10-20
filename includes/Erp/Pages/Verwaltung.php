@@ -356,6 +356,9 @@ class Verwaltung {
 
 		register_rest_route( $ns, '/erp/zeit', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'zeit' ), 'permission_callback' => $zeit ) );
 		register_rest_route( $ns, '/erp/zeit/start', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_start' ), 'permission_callback' => $zeit ) );
+		register_rest_route( $ns, '/erp/zeit/uhr', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'zeit_uhr' ), 'permission_callback' => $zeit ) );
+		register_rest_route( $ns, '/erp/zeit/pause', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_pause' ), 'permission_callback' => $zeit ) );
+		register_rest_route( $ns, '/erp/zeit/weiter', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_weiter' ), 'permission_callback' => $zeit ) );
 		register_rest_route( $ns, '/erp/zeit/stopp', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_stopp' ), 'permission_callback' => $zeit ) );
 		register_rest_route( $ns, '/erp/zeit/verwerfen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_verwerfen' ), 'permission_callback' => $zeit ) );
 		register_rest_route( $ns, '/erp/zeit/eintrag', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'zeit_eintrag' ), 'permission_callback' => $zeit ) );
@@ -477,6 +480,7 @@ class Verwaltung {
 
 		return array(
 			'seconds'     => (int) $stopp['seconds'],
+			'paused'      => ! empty( $stopp['paused'] ),
 			'hours'       => (float) $stopp['hours'],
 			'started_at'  => self::ts( $stopp['started_at'] ),
 			'entry_date'  => $stopp['entry_date'],
@@ -565,6 +569,49 @@ class Verwaltung {
 
 		if ( ! TimerState::start() ) {
 			return self::fail( __( 'Die Uhr ließ sich nicht starten. Bitte melde dich neu an und versuche es noch einmal.', 'lindenweg16' ), 500 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'clock' => self::clock(), 'now' => time() ) );
+	}
+
+	/**
+	 * Nur der Stand der Uhr – leicht genug für die Kopfzeile.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function zeit_uhr() {
+		return new WP_REST_Response( array( 'clock' => self::clock(), 'now' => time() ) );
+	}
+
+	/**
+	 * Uhr anhalten.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function zeit_pause() {
+		if ( ! TimerState::is_running() ) {
+			return self::fail( __( 'Es läuft keine Uhr, die sich anhalten ließe.', 'lindenweg16' ), 409 );
+		}
+
+		if ( ! TimerState::pause() ) {
+			return self::fail( __( 'Die Uhr ist schon angehalten.', 'lindenweg16' ), 409 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'clock' => self::clock(), 'now' => time() ) );
+	}
+
+	/**
+	 * Nach der Pause weitermachen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function zeit_weiter() {
+		if ( ! TimerState::is_running() ) {
+			return self::fail( __( 'Es läuft keine Uhr, die sich fortsetzen ließe.', 'lindenweg16' ), 409 );
+		}
+
+		if ( ! TimerState::resume() ) {
+			return self::fail( __( 'Die Uhr läuft schon.', 'lindenweg16' ), 409 );
 		}
 
 		return new WP_REST_Response( array( 'ok' => true, 'clock' => self::clock(), 'now' => time() ) );

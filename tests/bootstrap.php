@@ -210,6 +210,7 @@ require $lw16_root . '/includes/Modules/Accounting/BelegOcr.php';
 require $lw16_root . '/includes/Modules/Accounting/FeeExtractor.php';
 require $lw16_root . '/includes/Modules/Accounting/Kontenrahmen.php';
 require $lw16_root . '/includes/Modules/Marketing/Kampagnenrechnung.php';
+require $lw16_root . '/includes/Modules/Marketing/KampagnenRepository.php';
 require $lw16_root . '/includes/Modules/Events/RsvpRechnung.php';
 require $lw16_root . '/includes/Modules/Events/EventFields.php';
 require $lw16_root . '/includes/Modules/Events/EventsWidget.php';
@@ -304,7 +305,7 @@ foreach ( array( 'BambuJobRepository', 'BambuPrinterRepository', 'BambuService',
 // (Polygon, Sat, MeshOutline, BinPacker), die Transformationsmatrix-
 // Berechnung von PlateComposer sowie dieselbe Claim-/Lock-/Token-Logik wie
 // bei den übrigen Warteschlangen sind ohne Datenbank prüfbar.
-foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'PlateComposer', 'SlicingJobRepository', 'SlicingWorkerAuth' ) as $lw16_class ) {
+foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'PlateComposer', 'PlateService', 'SlicingJobRepository', 'SlicingWorkerAuth' ) as $lw16_class ) {
 	require $lw16_root . '/includes/Modules/Betrieb/Nesting/' . $lw16_class . '.php';
 }
 
@@ -379,7 +380,13 @@ require $lw16_root . '/includes/Erp/Pages/Support.php';
 require $lw16_root . '/includes/Erp/Pages/Hilfe.php';
 require $lw16_root . '/includes/Erp/Pages/ArAnsicht.php';
 require $lw16_root . '/includes/Erp/Pages/Produktion.php';
+require $lw16_root . '/includes/Erp/Pages/BambuDruck.php';
 require $lw16_root . '/includes/Erp/Pages/Lager.php';
+require $lw16_root . '/includes/Erp/Pages/Konfigurator.php';
+require $lw16_root . '/includes/Erp/Pages/Marketing.php';
+require $lw16_root . '/includes/Modules/Betrieb/Admin/ImportPage.php';
+require $lw16_root . '/includes/Erp/Pages/Import.php';
+require $lw16_root . '/includes/Erp/Pages/Konten.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

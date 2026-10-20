@@ -209,6 +209,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/einkauf/offen',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'einkauf_offen' ),
+				'permission_callback' => $this->needs( array( 'lager.einkauf' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/einkauf/bestellt',
 			array(
 				'methods'             => 'POST',
@@ -554,6 +564,21 @@ class RestApi {
 	 */
 	public function einkauf() {
 		return new WP_REST_Response( Procurement::board() );
+	}
+
+	/**
+	 * Offene Bestellungen zu einem Teil (Wareneingang per Scan).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function einkauf_offen( WP_REST_Request $request ) {
+		return new WP_REST_Response(
+			array(
+				'open'    => Procurement::open_for( sanitize_key( (string) $request->get_param( 'type' ) ), (int) $request->get_param( 'id' ) ),
+				'receive' => Access::can( 'lager.buchen' ),
+			)
+		);
 	}
 
 	/**

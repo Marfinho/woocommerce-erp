@@ -1,0 +1,35 @@
+/* Import & Doku (assets/erp/pages/import.js). Nur Klassen mit Präfix im-. */
+.im { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; max-width: 980px; margin-top: 14px; }
+.im .card { margin: 0; }
+.im-wizard { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.im-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.im-form h3, .im-errcard h3 { margin: 0; }
+.im-steps { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+.im-steps li { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); font-size: 13.5px; }
+.im-steps li.on { background: var(--ink); color: var(--on-ink); font-weight: 700; }
+.im-steps li.past { color: var(--text); }
+.im-no { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); color: var(--text); font-size: 12.5px; font-weight: 700; }
+.im-f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; min-width: 0; }
+.im-f small { font-weight: 400; }
+.im-f .field, .im-maprow .field { min-height: 44px; }
+.im-file { padding: 10px 12px; height: auto; }
+.im-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.im-actions .btn { min-height: 44px; }
+.im-map { display: grid; gap: 12px; }
+.im-maprow { display: grid; gap: 4px; min-width: 0; }
+.im-maprow label { font-size: 13px; font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.im-sample { overflow-wrap: anywhere; }
+@media (min-width: 720px) {
+	.im-maprow { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.2fr); align-items: center; gap: 12px; }
+}
+.im-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.im-errors { margin: 8px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+.im-errtxt { color: var(--error); font-size: 13px; }
+.im-bad td { background: color-mix(in srgb, var(--error) 8%, var(--surface)); }
+.im-ok { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.im-tile-bad .val { color: var(--error); }
+.im-dlg { display: grid; gap: 12px; padding: 4px 16px 16px; }
+.im-doku { max-height: 60vh; overflow: auto; padding: 4px 12px; border: 1px solid var(--line); border-radius: 12px; font-size: 14px; }
+.im-doku h4 { margin: 14px 0 4px; }
+.im-doku h5 { margin: 12px 0 2px; }
+.im-doku p { margin: 4px 0; overflow-wrap: anywhere; }

@@ -437,11 +437,31 @@
 
 	UI.pages['bambu'] = function (item) {
 		head(item, 'Bambu-Lab-Drucker', 'Live-Stand der angebundenen Drucker und ihre Verbindung zum Gerätestamm.');
+		var tab = 'drucker';
+		var tabs = UI.h('div');
 		var box = UI.h('div');
+		var other = UI.h('div');
+		UI.view().appendChild(tabs);
 		UI.view().appendChild(box);
-		UI.view().appendChild(UI.h('div', { class: 'notice', style: 'margin-top:14px' },
-			'Druckaufträge einreihen, Platten anordnen und Slicing-Profile gibt es noch in der klassischen Ansicht: ',
-			classicTab(item, '&tab=auftraege'), ' ', classicTab(item, '&tab=platte'), ' ', classicTab(item, '&tab=slicing')));
+		UI.view().appendChild(other);
+
+		// Die weiteren Reiter (Aufträge, Platten, Profile) stehen in bambu_druck.js.
+		function setTab(t) {
+			tab = t;
+			other.textContent = '';
+			box.style.display = t === 'drucker' ? '' : 'none';
+			drawTabs();
+			if (t === 'drucker') { load(); return; }
+			var render = UI.bambuTabs && UI.bambuTabs[t];
+			if (render) { render(other, { classic: function (query) { return classicTab(item, query); } }); }
+			else { other.appendChild(UI.h('div', { class: 'notice' }, 'Dieser Reiter ist nicht geladen. Bitte die Seite neu laden.')); }
+		}
+
+		function drawTabs() {
+			tabs.textContent = '';
+			tabs.appendChild(pills([['drucker', 'Drucker'], ['auftraege', 'Aufträge'], ['platten', 'Platten anordnen'], ['profile', 'Slicing-Profile']], tab, setTab));
+		}
+		drawTabs();
 		var data = null;
 		var token = null;
 
@@ -564,7 +584,7 @@
 		}
 
 		load();
-		UI.every(function () { if (!document.querySelector('dialog[open]')) { load(); } }, 10000);
+		UI.every(function () { if (tab === 'drucker' && !document.querySelector('dialog[open]')) { load(); } }, 10000);
 	};
 
 	/* ====================================================================

@@ -7,6 +7,29 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.28.0] – 2026-10-19
+
+### Roadmap-Runde: Werkstatt, B2B und Verwaltung
+- **Wareneingang per Scan:** Scannt man einen Artikel oder ein Kleinteil mit offener Bestellung, steht unter dem
+  Bestand der Block „Wareneingang“ mit Menge und „Eingegangen ✓“.
+- **Stempeluhr:** Pause und Weiter; die laufende Uhr steht in der Kopfzeile und zählt dort mit. Die Pause rückt den
+  Start nach hinten, es zählt nur die gearbeitete Zeit.
+- **Kommission als Listenbuchung vom Lager aus** (Händler wählen, dann dieselbe Liste wie in der Kundenakte).
+- **Heute** zeigt zusätzlich fällige Wartung, überfällige Lieferungen und Rechnungen und fällige Wiedervorlagen.
+- **wp-admin nur für die Website:** Mit der Einstellung leiten Anmeldung und Dashboard ERP-Nutzer ohne
+  Websiteverwaltung ins ERP.
+- **Rechte:** Vorlage und Vorschau „So sieht … das ERP“ stehen oben, die Einzelrechte sind eingeklappt.
+- **Bambu nativ:** Druckaufträge einreihen (Upload, Modellablage, AMS-Fach) und abbrechen, Platten anordnen mit
+  Ansicht und Download, Slicing-Profile hochladen, ersetzen, löschen.
+- **Konfigurator nativ:** Teile und Sperrbereiche, Modell-Upload (.glb).
+- **Marketing schreibend:** Kampagnen anlegen und ändern, Belege zuordnen, Kilometer, beenden.
+- **Import & Doku nativ:** CSV-Import in vier Schritten (Datei, Zuordnung, Vorschau, Import), Migration und
+  Verfahrensdokumentation. Deutsche Datums- und Zahlenformate werden umgewandelt.
+- **Postfächer verwalten nativ:** Anlegen, ändern, testen, Freigaben, ohne dass Passwörter je ausgegeben werden.
+- **Behoben:** Die laufende Uhr in der Kopfzeile überdeckte eine Funktion und legte die Workflow-Seite lahm; ein
+  Test sichert jetzt ab, dass keine Variable eine Funktion in `erp.js` überdeckt.
+- **Bleibt eingebettet:** Kasse, Buchhaltung (Erfassen und Storno), Shop-Produkte.
+
 ## [0.27.0] – 2026-10-19
 
 ### B2B: Kundenakte ausgebaut

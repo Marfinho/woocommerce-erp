@@ -43,6 +43,26 @@ class Stopwatch {
 	const MIN_SECONDS = 60;
 
 	/**
+	 * Zeitpunkt um Sekunden nach hinten schieben – für die Pause.
+	 *
+	 * Wer pausiert, verschiebt den Start um die Dauer der Pause. Dann zählt
+	 * die Uhr nach dem Weitermachen genau die Zeit, die gearbeitet wurde.
+	 *
+	 * @param string $value   Zeitpunkt (Y-m-d H:i:s, UTC).
+	 * @param int    $seconds Sekunden (nie negativ).
+	 * @return string Der verschobene Zeitpunkt, bei ungültiger Eingabe unverändert.
+	 */
+	public static function shift( $value, $seconds ) {
+		$ts = self::timestamp( $value );
+
+		if ( null === $ts ) {
+			return (string) $value;
+		}
+
+		return gmdate( 'Y-m-d H:i:s', $ts + max( 0, (int) $seconds ) );
+	}
+
+	/**
 	 * Verstrichene Sekunden.
 	 *
 	 * @param string $started_at Startzeit (Y-m-d H:i:s, UTC).
