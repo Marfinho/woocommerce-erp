@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.30.0] – 2026-10-20
+
+### Betriebsanleitung neu, vier Fehler behoben
+- **Betriebsanleitung vollständig neu geschrieben** für die Oberfläche unter `/erp`: alle Wege (Platz → Reiter → Auswahl,
+  Profilmenü), Teil A–D mit 96 neuen Bildschirmfotos aus einer Testinstallation mit Beispieldaten (Desktop und Handy).
+  Die alten wp-admin-Bilder sind entfernt. Was nur in der Klassischen Ansicht geht (Komponenten, Verbrauchsmaterial,
+  erste Filamentcharge, manuelle Bestellung, Slicing-Worker-Token, Livegang) steht ausdrücklich dabei.
+- **Zahlen → Buchhaltung:** Seitenumbruch der Belegliste und der Rechnungen warf einen Fehler, wenn nur eine Seite da war.
+- **Bedarf und Dashboard:** Der Sollbestand wurde als Zeichenkette gerechnet und konnte bei Dezimalwerten falsche Lücken
+  und Warnungen erzeugen; jetzt als Zahl.
+- **Produktion → Drucker:** Die Gerätezeile verlinkt bei einem verknüpften Bambu-Drucker auf die Druckerakte.
+- **Suchfeld:** Beschriftung „Gehe zu … Seite“ (es sucht nur Seiten, keine Artikel oder Bestellungen).
+- Tests: `SollbestandSpalteTest`, `DruckerAkteLinkTest`.
+
 ## [0.29.0] – 2026-10-20
 
 ### Storno, Deinstallation und Absicherung

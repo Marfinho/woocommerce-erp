@@ -1019,8 +1019,19 @@ class Produktion {
 		$labels = PrinterRepository::status_labels();
 		$hours  = PrintJobRepository::operating_hours( (int) $printer['id'] );
 
+		// Die Druckerakte gehört dem Bambu-Drucker (Schlüssel wie bambu_p1s_1), nicht
+		// dem Gerät. Ohne verknüpften Bambu-Drucker gibt es keine Akte zu öffnen.
+		$bambu = '';
+		foreach ( BambuPrinterRepository::all() as $bp ) {
+			if ( (int) $bp->geraet_id === (int) $printer['id'] ) {
+				$bambu = (string) $bp->printer_id;
+				break;
+			}
+		}
+
 		return array(
 			'id'           => (int) $printer['id'],
+			'bambu'        => $bambu,
 			'code'         => $printer['code'],
 			'manufacturer' => (string) $printer['manufacturer'],
 			'model'        => (string) $printer['model'],

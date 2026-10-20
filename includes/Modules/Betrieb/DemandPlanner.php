@@ -394,7 +394,7 @@ class DemandPlanner {
 
 		foreach ( StockRepository::targets() as $target ) {
 			$have = StockLedger::pick( $balances, (int) $target['article_id'], (string) $target['color'] );
-			$gap  = (float) $target['qty'] - $have['lager'];
+			$gap  = (float) $target['target_qty'] - $have['lager'];
 
 			if ( $gap > 0 && $noch_aktiv( $target['article_id'] ) ) {
 				$demands[] = array(

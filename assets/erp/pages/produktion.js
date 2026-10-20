@@ -321,7 +321,7 @@
 					tags,
 					UI.h('div', { class: 'label-area' },
 						UI.h('button', { class: 'btn', type: 'button', onclick: function () { serviceDialog(x.id); } }, 'Wartung'),
-						UI.h('a', { class: 'btn', href: '#/drucker/' + x.id }, 'Akte'),
+						x.bambu ? UI.h('a', { class: 'btn', href: '#/drucker/' + encodeURIComponent(x.bambu) }, 'Akte') : null,
 						data.can_edit ? UI.h('button', { class: 'btn', type: 'button', onclick: function () { editDialog(x.id); } }, 'Bearbeiten') : null)));
 			});
 			box.appendChild(rows);

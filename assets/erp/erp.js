@@ -359,7 +359,7 @@
 		var top = h('header', { class: 'top' },
 			h('div', { class: 'top-title' }, el.crumb, el.title),
 			el.net,
-			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
+			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
 			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill' }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
 			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null

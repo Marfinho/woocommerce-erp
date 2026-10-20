@@ -17,8 +17,8 @@ Eine bebilderte Anleitung in vier Teilen, je einer pro Aufgabe: **`docs/betriebs
 | Teil C – Personal | Zeiterfassung, Löhne, Rechteprofile | `docs/betriebsanleitung.html#teil-personal` |
 | Teil D – Administration | Einrichtung, Kalkulation, Buchhaltung, Drucker im Netz, Livegang | `docs/betriebsanleitung.html#teil-admin` |
 
-Die Bildschirmfotos in `docs/bilder/` stammen aus einer laufenden Installation
-dieses Plugins mit Beispieldaten – sie sind nicht nachgezeichnet.
+Die Bildschirmfotos in `docs/bilder/` zeigen die Oberfläche unter `/erp` und stammen aus einer
+Testinstallation dieses Plugins mit erfundenen Beispieldaten – sie sind nicht nachgezeichnet.
 
 ## Installation
 
