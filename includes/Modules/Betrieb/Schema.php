@@ -869,6 +869,7 @@ class Schema {
 			nozzle_temp DECIMAL(5,1) NULL,
 			bed_temp DECIMAL(5,1) NULL,
 			last_error TEXT NULL,
+			current_file VARCHAR(255) NULL,
 			last_status_at DATETIME NULL,
 			ams_json LONGTEXT NULL,
 			snapshot_at DATETIME NULL,

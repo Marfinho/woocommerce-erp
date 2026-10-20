@@ -70,8 +70,11 @@ class Installer {
 	 *
 	 * DB_VERSION 37: purchases um item_ref (Filamentfarbe) erweitert; Bestellungen
 	 * gibt es nun auch für Zukaufartikel und Filament.
+	 *
+	 * DB_VERSION 38: bambu_printers um current_file (Dateiname des Jobs auf dem
+	 * Drucker) – damit ordnet der ERP-Workflow einen Druck der Platte zu.
 	 */
-	const DB_VERSION = '37';
+	const DB_VERSION = '38';
 
 	/**
 	 * Aktivierungsroutine.

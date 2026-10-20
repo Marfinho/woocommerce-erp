@@ -2229,6 +2229,8 @@
 		var chips = [];
 		if (run.batch) { chips.push('Plan ' + run.batch); }
 		if (run.file) { chips.push('3MF bereit'); }
+		if (live && live.matched && (run.status === 'ruesten' || run.status === 'druckt')) { chips.push('Datei am Drucker erkannt'); }
+		else if (live && live.file && run.file && (run.status === 'freigegeben' || run.status === 'ruesten')) { chips.push('wartet auf ' + run.file.name); }
 		if (live && run.status === 'druckt' && live.remaining !== null) { chips.push('noch ' + minTxt(live.remaining)); }
 		if (run.status === 'zu_melden') { chips.push('wartet auf Meldung'); }
 

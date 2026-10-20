@@ -283,6 +283,11 @@ class PrinterState:
         self.bed_temp: Optional[float] = None
         self.printer_model = ""
         self.last_error = ""
+        # Name der Datei, die der Drucker gerade geladen hat/druckt
+        # (subtask_name bzw. gcode_file) - damit ordnet das ERP den Druck
+        # der richtigen Platte zu. Bambu sendet Teilreports; der Wert bleibt
+        # daher bis zum nächsten Dateinamen stehen.
+        self.current_file = ""
         # AMS-Belegung (Material/Farbe/Restmenge je Fach) - siehe
         # _on_mqtt_message(). None solange noch kein AMS-Report kam (z. B.
         # Drucker ohne AMS), dann bleibt es auch dauerhaft None.
@@ -304,6 +309,7 @@ class PrinterState:
                 "bed_temp": self.bed_temp,
                 "printer_model": self.printer_model,
                 "last_error": self.last_error,
+                "current_file": self.current_file,
                 "ams": self.ams,
             }
 
@@ -373,6 +379,14 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
             updates["bed_temp"] = float(printer["bed_temper"])
         except (TypeError, ValueError):
             pass
+
+    # Dateiname des laufenden/geladenen Jobs. subtask_name ist der
+    # Projektname (ohne Endung), gcode_file der Pfad der Druckdatei.
+    datei = str(printer.get("subtask_name") or "").strip()
+    if not datei:
+        datei = os.path.basename(str(printer.get("gcode_file") or "").replace("\\", "/")).strip()
+    if datei:
+        updates["current_file"] = datei[:255]
 
     # print_error ist bei Bambu ein numerischer Fehlercode, 0 = kein Fehler.
     fehler_code = printer.get("print_error")
@@ -913,6 +927,9 @@ class ApiClient:
             "printer_model": snap["printer_model"],
             "error": snap["last_error"],
         }
+
+        if snap["current_file"]:
+            data["current_file"] = snap["current_file"]
 
         # Nur mitschicken, wenn schon mindestens ein AMS-Report da war -
         # sonst würde jeder Heartbeat vor dem ersten AMS-Report die zuletzt
