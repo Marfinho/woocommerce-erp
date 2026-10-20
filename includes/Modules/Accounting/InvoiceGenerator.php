@@ -32,6 +32,20 @@ class InvoiceGenerator {
 
 		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE order_id = %d', $order_id ) ); // phpcs:ignore
 		if ( $existing ) {
+			// Pro Bestellung gibt es genau eine Rechnung (eindeutiger Index). Wird
+			// eine stornierte Bestellung erneut abgeschlossen, bleibt die
+			// stornierte stehen – das sagen wir, statt still nichts zu tun.
+			if ( (int) $existing->storniert === 1 && ! $order->get_meta( '_lw16_rechnung_storno_hinweis' ) ) {
+				$order->add_order_note(
+					sprintf(
+						/* translators: %s: Rechnungsnummer. */
+						__( 'Rechnung %s ist storniert. Für diese Bestellung wird keine neue Rechnung erzeugt – bitte manuell nachbuchen.', 'lindenweg16' ),
+						$existing->rechnungsnummer
+					)
+				);
+				$order->update_meta_data( '_lw16_rechnung_storno_hinweis', 1 );
+				$order->save();
+			}
 			return (int) $existing->id;
 		}
 

@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.29.0] – 2026-10-20
+
+### Storno, Deinstallation und Absicherung
+- **Storno und Erstattung:** Eine stornierte oder erstattete Bestellung storniert jetzt ihre Rechnung samt
+  Einnahmebuchung (Gegenbuchung, nichts wird gelöscht) und bucht den Lagerabgang zurück. Beides ist unter
+  *Einstellungen → Storno und Erstattung* abschaltbar. Wird die Bestellung später wieder abgeschlossen, bucht das Lager
+  neu; eine neue Rechnung entsteht nicht (eine Rechnung je Bestellung), die Bestellung erhält dazu eine Notiz.
+- **Deinstallation:** neues `uninstall.php`. Ohne `LW16_REMOVE_ALL_DATA` bleibt alles stehen (Aufbewahrungspflicht).
+- **CI:** GitHub-Action für PHPUnit, PHP- und JS-Syntax, Theme-Prüfung und Aktualität des Theme-ZIPs.
+- **Doku:** Betriebsanleitung um Kapitel D.21 (Oberfläche unter /erp, Storno, Deinstallation) ergänzt; README-Zahl der
+  Formular-Handler und Hinweis in `Navigation.php` berichtigt. Das Verzeichnis `languages/` aus dem Plugin-Kopf existiert.
+- **Geprüft** in einer echten Installation (WordPress, WooCommerce, MariaDB): Aktivierung, Bestellung bis Rechnung,
+  Storno, REST-Rechte aller GET-Routen für vier Nutzerarten, alle 40 ERP-Seiten im Browser ohne JS-Fehler.
+
 ## [0.28.0] – 2026-10-19
 
 ### Roadmap-Runde: Werkstatt, B2B und Verwaltung

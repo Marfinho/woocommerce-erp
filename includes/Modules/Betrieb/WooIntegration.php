@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Lock;
 use Lindenweg16\Core\Roles;
+use Lindenweg16\Core\Settings;
 
 
 /**
@@ -34,6 +35,8 @@ class WooIntegration {
 	public function register() {
 		add_action( 'woocommerce_order_status_processing', array( $this, 'ensure_record' ), 20, 1 );
 		add_action( 'woocommerce_order_status_completed', array( $this, 'book_stock' ), 30, 1 );
+		add_action( 'woocommerce_order_status_cancelled', array( $this, 'reverse_stock' ), 30, 1 );
+		add_action( 'woocommerce_order_status_refunded', array( $this, 'reverse_stock' ), 30, 1 );
 
 		if ( is_admin() ) {
 			add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
@@ -80,6 +83,64 @@ class WooIntegration {
 
 		try {
 			$this->book_stock_locked( (int) $order_id );
+		} finally {
+			Lock::release( 'wc_stock_' . (int) $order_id );
+		}
+	}
+
+	/**
+	 * Lagerabgang einer stornierten oder erstatteten Bestellung zurücknehmen.
+	 *
+	 * Als Gegenbuchung je Bewegung, nie durch Löschen. Nur Bestellungen, für
+	 * die der Abgang überhaupt gebucht wurde. Danach fällt die Marke weg,
+	 * damit eine später wieder abgeschlossene Bestellung neu bucht. Der
+	 * Verbrauch an Kleinteilen und Verpackung geht bewusst nicht zurück
+	 * (siehe `OrderOpsRepository::cancel_orphaned()`).
+	 *
+	 * Abschaltbar, weil eine versandte und dann stornierte Bestellung erst
+	 * mit der Retoure wieder im Lager liegt.
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	public function reverse_stock( $order_id ) {
+		if ( ! StockOwnership::is_active() || ! (int) Settings::get( 'betrieb_storno_lager', 1 ) || ! function_exists( 'wc_get_order' ) ) {
+			return;
+		}
+
+		if ( ! Lock::acquire( 'wc_stock_' . (int) $order_id, 10 ) ) {
+			return;
+		}
+
+		try {
+			$order = wc_get_order( (int) $order_id );
+
+			if ( ! $order || ! $order->get_meta( self::META_BOOKED ) ) {
+				return;
+			}
+
+			$reason = sprintf(
+				/* translators: %s: Bestellstatus. */
+				__( 'Bestellung %s (automatisch)', 'lindenweg16' ),
+				wc_get_order_status_name( $order->get_status() )
+			);
+			$zurueck = 0;
+
+			foreach ( StockRepository::by_ref( 'wc_order', (int) $order_id ) as $movement ) {
+				$result = StockRepository::void( (int) $movement['id'], $reason );
+				if ( $result['success'] ) {
+					$zurueck++;
+				}
+			}
+
+			$order->delete_meta_data( self::META_BOOKED );
+			$order->add_order_note(
+				sprintf(
+					/* translators: %d: Anzahl Bewegungen. */
+					_n( 'Betrieb: %d Lagerbewegung zurückgebucht.', 'Betrieb: %d Lagerbewegungen zurückgebucht.', $zurueck, 'lindenweg16' ),
+					$zurueck
+				)
+			);
+			$order->save();
 		} finally {
 			Lock::release( 'wc_stock_' . (int) $order_id );
 		}

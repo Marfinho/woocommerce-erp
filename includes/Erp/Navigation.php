@@ -10,9 +10,9 @@
  * Zwei Arten von Seiten:
  *
  * - `native` – gehört der neuen Oberfläche (Start, Rechte).
- * - `legacy` – die bestehende wp-admin-Seite, eingebettet. So steht von
- *   Anfang an der volle Funktionsumfang bereit; native Seiten ersetzen
- *   die eingebetteten nach und nach.
+ * - `legacy` – die bestehende wp-admin-Seite, eingebettet. Das gilt nur
+ *   noch für Seiten ohne eigene Oberfläche (derzeit Kasse und Shop-Produkte);
+ *   alles andere ist `native`.
  *
  * Frei von Datenbank und WordPress, damit die Zuordnung prüfbar ist.
  *

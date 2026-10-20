@@ -33,6 +33,8 @@ class AccountingModule {
 
 		// Automatische Rechnungserstellung: bei Abschluss asynchron einreihen.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'enqueue_invoice' ), 30, 1 );
+		add_action( 'woocommerce_order_status_cancelled', array( $this, 'storno_invoice_for_order' ), 30, 1 );
+		add_action( 'woocommerce_order_status_refunded', array( $this, 'storno_invoice_for_order' ), 30, 1 );
 		add_action( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( $this, 'generate_invoice' ), 10, 1 );
 
 		// Zahlungsgebühr übernehmen. Bewusst an mehreren Statuswechseln: Die
@@ -110,6 +112,29 @@ class AccountingModule {
 	 */
 	public function enqueue_invoice( $order_id ) {
 		\Lindenweg16\Core\Scheduler::enqueue_async( \Lindenweg16\Core\Scheduler::HOOK_GENERATE_INVOICE, array( 'order_id' => (int) $order_id ) );
+	}
+
+	/**
+	 * Rechnung einer stornierten oder voll erstatteten Bestellung stornieren.
+	 *
+	 * Die Rechnung bleibt stehen (GoBD), wird als storniert gekennzeichnet,
+	 * und die Einnahmebuchung bekommt ihre Gegenbuchung. Gibt es noch keine
+	 * Rechnung, ist nichts zu tun.
+	 *
+	 * @param int $order_id Bestell-ID.
+	 */
+	public function storno_invoice_for_order( $order_id ) {
+		global $wpdb;
+
+		if ( ! (int) Settings::get( 'rechnung_auto_storno', 1 ) ) {
+			return;
+		}
+
+		$id = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . InvoiceGenerator::table() . ' WHERE order_id = %d AND storniert = 0', (int) $order_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+		if ( $id ) {
+			InvoiceGenerator::stornieren( $id, __( 'Bestellung storniert oder erstattet (automatisch)', 'lindenweg16' ) );
+		}
 	}
 
 	/**

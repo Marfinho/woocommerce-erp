@@ -68,6 +68,24 @@ online geöffnet haben.
 `includes/Erp/ActionMap.php` an die feinen Rechte gebunden. Neue Aktionen dort eintragen – ein Test
 erinnert daran.
 
+## Storno, Deinstallation, Tests
+
+- **Storno und Erstattung:** Setzt man eine Bestellung auf „storniert" oder „erstattet", storniert das Plugin die
+  Rechnung samt Einnahmebuchung (`AccountingModule::storno_invoice_for_order()`, Gegenbuchung, nichts wird gelöscht)
+  und bucht den Lagerabgang zurück (`WooIntegration::reverse_stock()`, unter derselben Sperre wie der Abgang).
+  Beides ist unter *Einstellungen → Storno und Erstattung* abschaltbar (`rechnung_auto_storno`,
+  `betrieb_storno_lager`). Grenze: Pro Bestellung gibt es eine Rechnung (eindeutiger Index auf `order_id`); wird eine
+  stornierte Bestellung wieder abgeschlossen, bucht das Lager neu, die Rechnung muss von Hand ersetzt werden – die
+  Bestellung bekommt dazu eine Notiz.
+- **Deinstallation:** `uninstall.php` löscht standardmäßig nichts (Aufbewahrungspflicht). Mit
+  `define( 'LW16_REMOVE_ALL_DATA', true );` in `wp-config.php` werden Tabellen, Einstellungen, Rollen und Nutzermerker
+  entfernt; Dateien bleiben liegen.
+- **Tests:** `composer install && vendor/bin/phpunit` (läuft ohne WordPress). Die GitHub-Action
+  `.github/workflows/tests.yml` führt PHPUnit, die Syntaxprüfung von PHP und JS, `block-theme/check-theme.py` und den
+  Vergleich des Theme-ZIPs mit dem Quelltext bei jedem Push und Pull Request aus. Ende-zu-Ende-Tests gegen echtes
+  WordPress und WooCommerce liegen in `tests/integration/` (Mailbox); der Bestell-, Rechnungs- und Storno-Fluss wurde
+  zusätzlich von Hand in einer Testinstallation durchgespielt.
+
 ## Architektur
 
 - Reines PHP-Plugin nach WordPress-Konventionen, **HPOS-kompatibel**, kein Build-Tooling.
@@ -171,7 +189,7 @@ und die Papierformulare ab.
 - **Formular-Handler unter Aufsicht** (`tests/AdminPostSchutzTest.php`):
   `admin_post_*` ist eine offene Tür – die Adresse ist erratbar und führt
   mitten in eine schreibende Funktion. Ein Test liest den Quelltext und
-  verlangt von jedem der 104 Handler Nonce und Rechteprüfung, wobei er der
+  verlangt von jedem Handler (derzeit über 140) Nonce und Rechteprüfung, wobei er der
   Weiterreichung an `guard()`/`require_cap()` eine Ebene tief folgt. Zwei
   Kundenformulare (Wartelisten-Anmeldung, Support-Ticket) stehen namentlich
   als Ausnahme von der Rechteprüfung, mit Begründung; ein weiterer Test

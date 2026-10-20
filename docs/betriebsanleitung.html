@@ -107,6 +107,7 @@
 		<li><a href="#adm-sicherung"><span class="nr">D.18</span> Datensicherung und Notfall</a></li>
 		<li><a href="#adm-fehler"><span class="nr">D.19</span> Wenn etwas nicht geht</a></li>
 		<li><a href="#adm-mailbox"><span class="nr">D.20</span> Mailbox: Postfächer einrichten und nutzen</a></li>
+		<li><a href="#adm-erp"><span class="nr">D.21</span> Die ERP-Oberfläche unter /erp, Storno und Deinstallation</a></li>
 	</ol>
 </div>
 
@@ -2557,6 +2558,34 @@
 </tbody>
 </table>
 </div>
+
+<h2 id="adm-erp"><span class="nr">D.21</span> Die ERP-Oberfläche unter /erp, Storno und Deinstallation</h2>
+
+<div class="hinweis">
+	<p><strong>Stand der Bilder:</strong> Die Bildschirmfotos in dieser Anleitung stammen aus Version 0.15.0 und zeigen noch die Menüs im wp-admin. Seit Version 0.26 gibt es fast alle Seiten auch in der eigenen Oberfläche unter <code>/erp</code>. Die Abläufe sind dieselben, nur die Wege dorthin sind andere. Dieses Kapitel beschreibt die Unterschiede.</p>
+</div>
+
+<h3 id="adm-erp-oberflaeche">Die Oberfläche unter /erp</h3>
+<ol class="schritte">
+	<li>Öffne <code>lindenweg16.de/erp</code> und melde dich mit deinem WordPress-Konto an.</li>
+	<li>Links stehen fünf Bereiche: <strong>Produktion</strong>, <strong>Verkauf</strong>, <strong>Lager</strong>, <strong>Katalog</strong> und <strong>Zahlen</strong>, dazu die Startseite „Heute". Oben stehen die Reiter, darunter bei Bedarf eine Auswahl innerhalb des Reiters.</li>
+	<li><strong>Mailbox</strong> liegt oben in der Leiste. Einstellungen, Benutzer &amp; Rechte, Löhne, Etikettendrucker, Import, Support und die Anleitungen erreichst du über das Profilmenü am Avatar.</li>
+	<li>Du siehst nur, wofür du Rechte hast. Rechte vergibst du unter <span class="weg">Profilmenü → Benutzer &amp; Rechte</span>.</li>
+	<li>Mit <strong>Strg K</strong> springst du direkt zu einer Seite, einem Artikel oder einer Bestellung.</li>
+</ol>
+<p>Ohne Netz öffnet sich die Oberfläche trotzdem; Buchungen und Entnahmen werden vorgemerkt und gesendet, sobald die Verbindung zurück ist. Voraussetzung ist eine https-Adresse und dass die Seite einmal online geöffnet wurde.</p>
+
+<h3 id="adm-erp-storno">Was bei Storno und Erstattung automatisch passiert</h3>
+<p>Wird eine Bestellung auf <strong>storniert</strong> oder <strong>erstattet</strong> gesetzt, erledigt das Plugin zwei Dinge selbst:</p>
+<ul>
+	<li><strong>Rechnung und Einnahme:</strong> Die Rechnung bleibt erhalten, wird aber als storniert gekennzeichnet, und die Einnahmebuchung bekommt eine Gegenbuchung („Storno von BU-…"). Nichts wird gelöscht.</li>
+	<li><strong>Lager:</strong> Der Lagerabgang dieser Bestellung wird als Gegenbuchung zurückgebucht. Der Verbrauch an Kleinteilen und Verpackung geht bewusst nicht zurück, weil die damalige Menge nicht nachrechenbar ist.</li>
+</ul>
+<p>Beides lässt sich unter <span class="weg">Einstellungen → Storno und Erstattung</span> abschalten. <strong>Wichtig:</strong> Ist die Ware schon beim Kunden, solltest du die automatische Lagerrückbuchung ausschalten und erst bei Eingang der Retoure buchen.</p>
+<p>Setzt du eine stornierte Bestellung später wieder auf <strong>abgeschlossen</strong>, wird der Lagerabgang neu gebucht. Eine neue Rechnung entsteht dabei <em>nicht</em>: Pro Bestellung gibt es genau eine Rechnung. Das Plugin schreibt dazu eine Notiz an die Bestellung; die Rechnung stellst du dann von Hand.</p>
+
+<h3 id="adm-erp-deinstall">Plugin löschen</h3>
+<p>Beim Löschen des Plugins bleiben <strong>alle Daten erhalten</strong>, denn Belege, Rechnungen und Buchungen müssen aufbewahrt werden (§ 147 AO, GoBD). Wer wirklich alles entfernen will, trägt vorher in <code>wp-config.php</code> die Zeile <code>define( 'LW16_REMOVE_ALL_DATA', true );</code> ein. Dann werden beim Löschen alle Tabellen <code>lw16_*</code>, die Einstellungen, die Rollen und die Nutzermerker gelöscht. Hochgeladene Dateien (Belege, Modelle, Mailanhänge) bleiben liegen und müssen von Hand entfernt werden. Vorher unbedingt eine Sicherung ziehen (siehe D.18).</p>
 
 </section>
 
