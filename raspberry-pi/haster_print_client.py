@@ -328,8 +328,11 @@ _BROTHER_QL_DOTS_PRINTABLE = {
 }
 
 
-def _render_pdf_page(pdf_path: Path, dpi: int = 300):
-    """Erste Seite des PDF als Graustufen-Bild, in der übergebenen DPI.
+def _render_pdf_pages(pdf_path: Path, dpi: int = 300):
+    """Alle Seiten des PDF als Graustufen-Bilder, in der übergebenen DPI.
+
+    Ein Etikett ist eine Seite; mehrere Platten kommen als ein PDF mit
+    mehreren Seiten und müssen alle gedruckt werden.
 
     Import von PyMuPDF/Pillow erst hier (nicht am Modulanfang), damit ein
     reiner CUPS-Client (PRINT_BACKEND=cups) diese Pakete gar nicht
@@ -340,10 +343,12 @@ def _render_pdf_page(pdf_path: Path, dpi: int = 300):
 
     doc = fitz.open(str(pdf_path))
     try:
-        page = doc.load_page(0)
         zoom = dpi / 72.0  # PDF-Punkte sind 72 dpi.
-        pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), colorspace=fitz.csGRAY)
-        return Image.frombytes("L", (pix.width, pix.height), pix.samples)
+        images = []
+        for number in range(doc.page_count):
+            pix = doc.load_page(number).get_pixmap(matrix=fitz.Matrix(zoom, zoom), colorspace=fitz.csGRAY)
+            images.append(Image.frombytes("L", (pix.width, pix.height), pix.samples))
+        return images
     finally:
         doc.close()
 
@@ -359,9 +364,12 @@ def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
     DHL-Label auf diesem Drucker) unbemerkt schiefgeht.
     """
     try:
-        image = _render_pdf_page(pdf_path)
+        rendered = _render_pdf_pages(pdf_path)
     except Exception as exc:  # noqa: BLE001 - jede Ursache soll als Fehlermeldung zurück
         return False, f"PDF konnte nicht gerastert werden: {exc}"[:500]
+
+    if not rendered:
+        return False, "Das PDF enthält keine Seite."
 
     dots = _BROTHER_QL_DOTS_PRINTABLE.get(Config.BROTHER_QL_LABEL)
     if dots is None:
@@ -371,36 +379,39 @@ def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
         )
 
     width_px, height_px = dots
-    toleranz = 0.25  # Grosszügig - die Ränder sind modellabhängig unterschiedlich breit.
+    images = []
+    for image in rendered:
+        toleranz = 0.25  # Grosszügig - die Ränder sind modellabhängig unterschiedlich breit.
 
-    if abs(image.width - width_px) > width_px * toleranz:
-        return False, (
-            f"Seitenbreite des Labels ({image.width}px) passt nicht zum "
-            f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
-            f"(erwartet ca. {width_px}px) – falscher Drucker für diesen Job "
-            "gewählt?"
-        )
-
-    if height_px is not None:
-        if abs(image.height - height_px) > height_px * toleranz:
+        if abs(image.width - width_px) > width_px * toleranz:
             return False, (
-                f"Seitenhöhe des Labels ({image.height}px) passt nicht zum "
+                f"Seitenbreite des Labels ({image.width}px) passt nicht zum "
                 f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
-                f"(erwartet ca. {height_px}px) – falscher Drucker für diesen "
-                "Job gewählt?"
+                f"(erwartet ca. {width_px}px) – falscher Drucker für diesen Job "
+                "gewählt?"
             )
 
-        # Gestanztes Etikett: brother_ql verlangt exakte Pixelmasse (anders
-        # als bei einer Endlosrolle, wo es selbst auf die Breite skaliert)
-        # und wirft sonst "Bad image dimensions" statt zu drucken. Die
-        # Plausibilitätsprüfung oben lässt Abweichungen bis 25% zu (z. B.
-        # durch den unbedruckbaren Rand), das exakte Mass stellt erst
-        # dieser Resize her.
-        if image.size != (width_px, height_px):
-            from PIL import Image
+        if height_px is not None:
+            if abs(image.height - height_px) > height_px * toleranz:
+                return False, (
+                    f"Seitenhöhe des Labels ({image.height}px) passt nicht zum "
+                    f"eingestellten Format BROTHER_QL_LABEL={Config.BROTHER_QL_LABEL} "
+                    f"(erwartet ca. {height_px}px) – falscher Drucker für diesen "
+                    "Job gewählt?"
+                )
 
-            resample = getattr(Image, "LANCZOS", None) or Image.Resampling.LANCZOS
-            image = image.resize((width_px, height_px), resample)
+            # Gestanztes Etikett: brother_ql verlangt exakte Pixelmasse (anders
+            # als bei einer Endlosrolle, wo es selbst auf die Breite skaliert)
+            # und wirft sonst "Bad image dimensions" statt zu drucken. Die
+            # Plausibilitätsprüfung oben lässt Abweichungen bis 25% zu (z. B.
+            # durch den unbedruckbaren Rand), das exakte Mass stellt erst
+            # dieser Resize her.
+            if image.size != (width_px, height_px):
+                from PIL import Image
+
+                resample = getattr(Image, "LANCZOS", None) or Image.Resampling.LANCZOS
+                image = image.resize((width_px, height_px), resample)
+        images.append(image)
 
     try:
         from brother_ql.raster import BrotherQLRaster
@@ -412,7 +423,7 @@ def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
 
         instructions = convert(
             qlr=qlr,
-            images=[image],
+            images=images,
             label=Config.BROTHER_QL_LABEL,
             rotate=0,  # Das PDF liegt bereits fertig ausgerichtet vor.
             threshold=70.0,
@@ -433,7 +444,7 @@ def print_via_brother_ql(pdf_path: Path) -> tuple[bool, str]:
     except Exception as exc:  # noqa: BLE001 - USB-/Druckerfehler sollen als Fehlermeldung zurück
         return False, str(exc)[:500]
 
-    return True, "brother_ql: Job gesendet."
+    return True, f"brother_ql: Job gesendet ({len(images)} Etikett{'en' if len(images) != 1 else ''})."
 
 
 # ---------------------------------------------------------------------
