@@ -16,14 +16,23 @@ und im Abschnitt „Umsetzungsstand“ der README.
   liegen. Die Zeichnung ist die der Bambu-Seite; Teile, deren Form sich nicht mehr auslesen lässt, erscheinen als Punkt.
 
 ### Anordnung: mehr Teile pro Platte
-- **Packer überarbeitet:** Er probierte nur wenige Ankerpunkte und nahm den ersten freien Treffer. Nischen, die erst
-  an den Kanten zweier Teile entstehen, blieben ungenutzt, und es wurden zu früh neue Platten angefangen. Jetzt werden
-  alle Kombinationen der Teilekanten bewertet, gewählt wird die niedrigste, dann linkeste Lage. Vier feste
-  Reihenfolgen (Fläche, längste Seite, Höhe, Breite) werden probiert, behalten wird die mit den wenigsten Platten.
-  Das Ergebnis bleibt deterministisch. Beispiel mit Nachbau der Plan-2026-43-1-Teile: eine Platte mit 14 Teilen statt
-  zwei mit 10 und 4.
-- **Bekannte Grenze:** Gepackt wird mit der konvexen Hülle. Teile mit Einbuchtung (C-förmige Klemmringe, Schalen mit
-  Aufhängebögen) belegen dadurch mehr Fläche, als sie wirklich brauchen.
+- **Echter Umriss statt Hülle:** Der Packer rechnet jetzt mit dem Schattenbild des Teils (alle Dreiecke von oben,
+  Raster 0,5 mm) statt mit der konvexen Hülle. Einbuchtungen werden genutzt: Kleine Teile liegen in der Öffnung eines
+  C-förmigen Klemmrings oder neben den Aufhängebögen einer Schale. Die Plan-Vorschau und die Plattenansicht zeichnen
+  denselben Umriss. Sperrflächen und Randabstand stecken im Raster, der Abstand bleibt 5 mm.
+- **Suche:** Je Teil wird die niedrigste, dann linkeste freie Lage gesucht, bitweise für ein ganzes Bett auf einmal.
+  Dazu zwei feste Sortierungen und gewürfelte Varianten (fester Startwert), solange mehr Platten nötig sind, als die
+  Fläche mindestens verlangt (Zeitbudget 4 s). Behalten wird die Anordnung mit den wenigsten Platten. Die
+  Hüllen-Anordnung läuft zur Gegenprobe mit, wenn mehr als eine Platte entsteht.
+- **Keine Kippung:** Gedreht wird nur um die senkrechte Achse in Vierteldrehungen; die Auflagefläche bleibt, wie in der
+  Projektdatei vorgegeben (ein Test sichert das). 45°-Schritte lassen sich über den Filter `lw16_plate_rotations`
+  einschalten, `array( 0 )` schaltet jede Drehung ab.
+- **Fehler behoben:** Beim Zusammensetzen der 3MF lagen gedrehte Teile um ihre Höhe oder Breite neben der berechneten
+  Position (die Matrix drehte um die Ecke des ungedrehten Teils). Jetzt liegt die Ecke des gedrehten Teils auf der
+  Zielposition.
+- **Schneller:** Die konvexe Hülle prüfte jeden Punkt gegen jeden (quadratischer Aufwand); große Netze brauchten
+  Minuten, jetzt Sekundenbruchteile.
+- **Bekannte Grenze:** Die konvexe Gegenprobe füllt Einbuchtungen weiter auf.
 
 ## [0.28.1] – 2026-10-20
 

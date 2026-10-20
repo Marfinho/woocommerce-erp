@@ -309,7 +309,13 @@
 		d.items.forEach(function (it) {
 			if (!(it.article_id in colors)) { colors[it.article_id] = next % PALETTE.length; next++; legend.push([colors[it.article_id], it.label]); }
 			var c = PALETTE[colors[it.article_id]];
-			if (it.points.length >= 3) {
+			var shape = d.shapes && d.shapes[it.article_id];
+			if (shape && it.tx !== undefined) {
+				// Echter Umriss mit Einbuchtungen: gedreht um die Ecke, dann auf die Platte gesetzt; y spiegeln.
+				var rad = (it.rotation || 0) * Math.PI / 180;
+				var cs = Math.cos(rad), sn = Math.sin(rad);
+				root.appendChild(svg('path', { d: shape, fill: c, 'fill-opacity': '0.35', stroke: c, 'stroke-width': Math.max(W, H) / 400, transform: 'matrix(' + [cs, -sn, -sn, -cs, it.tx, H - it.ty].join(' ') + ')' }));
+			} else if (it.points.length >= 3) {
 				var pts = it.points.map(function (p) { return p[0] + ',' + (H - p[1]); }).join(' ');
 				root.appendChild(svg('polygon', { points: pts, fill: c, 'fill-opacity': '0.35', stroke: c, 'stroke-width': Math.max(W, H) / 300 }));
 			} else {

@@ -118,15 +118,19 @@ class PlateService {
 				continue;
 			}
 
+			// Das echte Schattenbild (mit Einbuchtungen) aus den Dreiecken; nur wenn
+			// die sich nicht lesen lassen, die konvexe Hülle als Ersatz.
 			// xy_hull_from_file() statt xy_hull_from_xml(): manche Bambu-Studio-
-		// Exporte lagern die Geometrie eines Objekts in eine eigene Datei
-		// innerhalb der 3MF aus (Production Extension, siehe MeshOutline)
-		// statt sie im Wurzel-3dmodel.model einzubetten - das lässt sich nur
-		// mit Zugriff auf die ganze ZIP-Datei auflösen, nicht aus dem
-		// XML-String allein.
-		$hull = MeshOutline::xy_hull_from_file( $path );
+			// Exporte lagern die Geometrie eines Objekts in eine eigene Datei
+			// innerhalb der 3MF aus (Production Extension, siehe MeshOutline).
+			$sil = Silhouette::for_file( $path );
 
-			if ( ! $hull || count( $hull ) < 3 ) {
+			if ( ! $sil ) {
+				$hull = MeshOutline::xy_hull_from_file( $path );
+				$sil  = $hull && count( $hull ) >= 3 ? Silhouette::from_hull( $hull ) : null;
+			}
+
+			if ( ! $sil || count( $sil['hull'] ) < 3 ) {
 				$warnings[] = sprintf(
 					/* translators: %s: Artikel (Nummer – Name). */
 					__( '%s: In der 3MF ist keine auswertbare Form zu finden. Bitte die Projektdatei neu aus dem Slicer exportieren und hochladen.', 'lindenweg16' ),
@@ -135,10 +139,14 @@ class PlateService {
 				continue;
 			}
 
+			$sil['sig'] = md5( $path . '|' . count( $sil['hull'] ) . '|' . json_encode( $sil['runs'] ) );
+			$hull       = $sil['hull'];
+
 			for ( $i = 0; $i < $qty; $i++ ) {
 				$expanded[] = array(
 					'key'         => $article_id . '#' . $i,
 					'hull'        => $hull,
+					'sil'         => $sil,
 					'article_id'  => $article_id,
 					'source_path' => $path,
 				);
@@ -150,19 +158,7 @@ class PlateService {
 			return $leer;
 		}
 
-		$result = BinPacker::arrange(
-			array_map(
-				static function ( $p ) {
-					return array( 'key' => $p['key'], 'hull' => $p['hull'] );
-				},
-				$expanded
-			),
-			$bed['width_mm'],
-			$bed['height_mm'],
-			$margin_mm,
-			BinPacker::DEFAULT_ROTATIONS,
-			$exclusion_zones
-		);
+		$result = self::arrange( $expanded, $bed['width_mm'], $bed['height_mm'], $margin_mm, $exclusion_zones );
 
 		foreach ( $result['errors'] as $error ) {
 			$warnings[] = $error['message'];
@@ -265,5 +261,64 @@ class PlateService {
 		}
 
 		return array( 'ok' => true, 'plate_ids' => $plate_ids, 'warnings' => $warnings, 'error' => '' );
+	}
+
+	/**
+	 * Teile anordnen: erst nach dem echten Umriss (RasterPacker), und wenn das
+	 * mehr als eine Platte ergibt, zur Gegenprobe mit der konvexen Hülle
+	 * (BinPacker). Genommen wird, was weniger Platten braucht; bei Gleichstand
+	 * die Rasteranordnung, weil sie Einbuchtungen nutzt.
+	 *
+	 * @param array $expanded        Teile {key, hull, sil, ...}.
+	 * @param float $width_mm        Bettbreite.
+	 * @param float $height_mm       Betttiefe.
+	 * @param float $margin_mm       Sicherheitsabstand.
+	 * @param array $exclusion_zones Sperrflächen.
+	 * @return array {bins, errors}
+	 */
+	public static function arrange( array $expanded, $width_mm, $height_mm, $margin_mm, array $exclusion_zones ) {
+		// Nur Drehungen um die senkrechte Achse; ein Teil wird nie gekippt, seine
+		// Auflagefläche bleibt, wie in der Projektdatei vorgegeben. Wer gar keine
+		// Drehung will, gibt array( 0 ) zurück.
+		$rotations = function_exists( 'apply_filters' ) ? (array) apply_filters( 'lw16_plate_rotations', RasterPacker::DEFAULT_ROTATIONS ) : RasterPacker::DEFAULT_ROTATIONS;
+		$rotations = $rotations ? array_values( $rotations ) : RasterPacker::DEFAULT_ROTATIONS;
+
+		$raster = RasterPacker::arrange(
+			array_map(
+				static function ( $p ) {
+					return array( 'key' => $p['key'], 'sil' => $p['sil'] );
+				},
+				$expanded
+			),
+			$width_mm,
+			$height_mm,
+			$margin_mm,
+			$rotations,
+			$exclusion_zones
+		);
+
+		if ( count( $raster['bins'] ) <= 1 && ! $raster['errors'] ) {
+			return $raster;
+		}
+
+		$convex = BinPacker::arrange(
+			array_map(
+				static function ( $p ) {
+					return array( 'key' => $p['key'], 'hull' => $p['hull'] );
+				},
+				$expanded
+			),
+			$width_mm,
+			$height_mm,
+			$margin_mm,
+			$rotations,
+			$exclusion_zones
+		);
+
+		if ( count( $convex['errors'] ) < count( $raster['errors'] ) || ( count( $convex['errors'] ) === count( $raster['errors'] ) && count( $convex['bins'] ) < count( $raster['bins'] ) ) ) {
+			return $convex;
+		}
+
+		return $raster;
 	}
 }

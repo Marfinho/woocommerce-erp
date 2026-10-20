@@ -86,19 +86,23 @@ class Polygon {
 	 * @return array
 	 */
 	protected static function unique_points( array $points ) {
-		$out = array();
+		// Über ein Raster der Weite EPSILON statt jeden Punkt mit jedem zu
+		// vergleichen: Netze mit hunderttausend Eckpunkten brauchten sonst
+		// Minuten (quadratischer Aufwand).
+		$seen = array();
+		$out  = array();
+
 		foreach ( $points as $p ) {
-			$found = false;
-			foreach ( $out as $o ) {
-				if ( abs( $o[0] - $p[0] ) < self::EPSILON && abs( $o[1] - $p[1] ) < self::EPSILON ) {
-					$found = true;
-					break;
-				}
+			$key = round( $p[0] / self::EPSILON ) . ':' . round( $p[1] / self::EPSILON );
+
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
 			}
-			if ( ! $found ) {
-				$out[] = array( (float) $p[0], (float) $p[1] );
-			}
+
+			$seen[ $key ] = true;
+			$out[]        = array( (float) $p[0], (float) $p[1] );
 		}
+
 		return $out;
 	}
 

@@ -72,4 +72,22 @@ class PlateComposerRotationTest extends TestCase {
 		$this->assertEqualsWithDelta( 20.0, $minx, 0.001 );
 		$this->assertEqualsWithDelta( 30.0, $miny, 0.001 );
 	}
+
+	/**
+	 * @dataProvider angles
+	 */
+	public function test_teile_werden_nie_gekippt_nur_um_die_senkrechte_achse_gedreht( $deg ) {
+		$m = array_map( 'floatval', explode( ' ', PlateComposer::transform_matrix( $deg, 10, 20, 3 ) ) );
+
+		// Dritte Spalte (z) und dritte Zeile: Einheit, keine Neigung; z wird nur angehoben.
+		$this->assertEqualsWithDelta( 0.0, $m[2], 1e-9 );
+		$this->assertEqualsWithDelta( 0.0, $m[5], 1e-9 );
+		$this->assertEqualsWithDelta( 0.0, $m[6], 1e-9 );
+		$this->assertEqualsWithDelta( 0.0, $m[7], 1e-9 );
+		$this->assertEqualsWithDelta( 1.0, $m[8], 1e-9 );
+	}
+
+	public function test_standard_drehungen_sind_vierteldrehungen() {
+		$this->assertSame( array( 0, 90, 180, 270 ), \Lindenweg16\Modules\Betrieb\Nesting\RasterPacker::DEFAULT_ROTATIONS );
+	}
 }

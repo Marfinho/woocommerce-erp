@@ -31,6 +31,7 @@ use Lindenweg16\Modules\Betrieb\Nesting\MeshOutline;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateService;
 use Lindenweg16\Modules\Betrieb\Nesting\Polygon;
+use Lindenweg16\Modules\Betrieb\Nesting\Silhouette;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
@@ -999,6 +1000,7 @@ class BambuDruck {
 		$items      = is_array( $placements ) && isset( $placements['items'] ) && is_array( $placements['items'] ) ? $placements['items'] : array();
 		$articles   = ArticleRepository::all_by_id();
 		$hulls      = array();
+		$shapes     = array();
 		$out        = array();
 		$missing    = 0;
 
@@ -1009,8 +1011,17 @@ class BambuDruck {
 				$hulls[ $article_id ] = array();
 				$revision             = RevisionRepository::active_for_article( $article_id );
 				$path                 = $revision && ! empty( $revision['model_file'] ) ? ModelFile::safe_path( $revision['model_file'] ) : '';
-				$hull                 = '' !== $path ? MeshOutline::xy_hull_from_file( $path ) : null;
-				$hulls[ $article_id ] = is_array( $hull ) ? $hull : array();
+
+				// Das echte Schattenbild (mit Einbuchtungen), wie der Packer es sieht.
+				$sil = '' !== $path ? Silhouette::for_file( $path ) : null;
+
+				if ( $sil ) {
+					$hulls[ $article_id ]  = $sil['hull'];
+					$shapes[ $article_id ] = Silhouette::path_d( $sil );
+				} else {
+					$hull                 = '' !== $path ? MeshOutline::xy_hull_from_file( $path ) : null;
+					$hulls[ $article_id ] = is_array( $hull ) ? $hull : array();
+				}
 			}
 
 			$x   = isset( $item['x'] ) ? (float) $item['x'] : 0.0;
@@ -1022,6 +1033,19 @@ class BambuDruck {
 				++$missing;
 			}
 
+			// Versatz, mit dem der Pfad des ungedrehten Teils auf die Platte kommt:
+			// gedreht um die Ecke, dann so verschoben, dass die Ecke des gedrehten
+			// Begrenzungsrechtecks auf {x, y} liegt.
+			$tx = $x;
+			$ty = $y;
+
+			if ( isset( $shapes[ $article_id ] ) && count( $hulls[ $article_id ] ) >= 3 ) {
+				$box     = Polygon::bounding_box( $hulls[ $article_id ] );
+				$rotated = Polygon::bounding_box( Polygon::rotate( Polygon::translate( $hulls[ $article_id ], -$box['minx'], -$box['miny'] ), $deg ) );
+				$tx      = $x - $rotated['minx'];
+				$ty      = $y - $rotated['miny'];
+			}
+
 			$article = isset( $articles[ $article_id ] ) ? $articles[ $article_id ] : null;
 			$out[]   = array(
 				'article_id' => $article_id,
@@ -1029,6 +1053,8 @@ class BambuDruck {
 				'x'          => $x,
 				'y'          => $y,
 				'rotation'   => $deg,
+				'tx'         => round( $tx, 3 ),
+				'ty'         => round( $ty, 3 ),
 				'points'     => $pts,
 			);
 		}
@@ -1038,6 +1064,7 @@ class BambuDruck {
 			'width'   => (int) $plate->plate_width_mm,
 			'height'  => (int) $plate->plate_height_mm,
 			'items'   => $out,
+			'shapes'  => (object) $shapes,
 			'missing' => $missing,
 		);
 	}
