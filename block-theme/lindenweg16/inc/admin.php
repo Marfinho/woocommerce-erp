@@ -24,7 +24,7 @@ function lindenweg16_admin_menu(): void {
 		__( 'Lindenweg16 – Inhalte bearbeiten', 'lindenweg16' ),
 		__( 'Lindenweg16', 'lindenweg16' ),
 		'edit_theme_options',
-		'lindenweg16',
+		'lindenweg16-inhalte',
 		'lindenweg16_admin_page'
 	);
 }
@@ -63,14 +63,14 @@ function lindenweg16_create_front_page(): void {
 	);
 
 	if ( is_wp_error( $page_id ) ) {
-		wp_safe_redirect( add_query_arg( 'lw16-front', 'error', admin_url( 'themes.php?page=lindenweg16' ) ) );
+		wp_safe_redirect( add_query_arg( 'lw16-front', 'error', admin_url( 'themes.php?page=lindenweg16-inhalte' ) ) );
 		exit;
 	}
 
 	update_option( 'show_on_front', 'page' );
 	update_option( 'page_on_front', (int) $page_id );
 
-	wp_safe_redirect( add_query_arg( 'lw16-front', 'created', admin_url( 'themes.php?page=lindenweg16' ) ) );
+	wp_safe_redirect( add_query_arg( 'lw16-front', 'created', admin_url( 'themes.php?page=lindenweg16-inhalte' ) ) );
 	exit;
 }
 add_action( 'admin_post_lindenweg16_create_front_page', 'lindenweg16_create_front_page' );
@@ -98,7 +98,7 @@ function lindenweg16_save_front_images(): void {
 	// Gecachte Seiten zeigen sonst noch die alten Bilder.
 	do_action( 'litespeed_purge_all' );
 
-	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16', 'lw16-images' => 'saved' ), admin_url( 'themes.php' ) ) );
+	wp_safe_redirect( add_query_arg( array( 'page' => 'lindenweg16-inhalte', 'lw16-images' => 'saved' ), admin_url( 'themes.php' ) ) );
 	exit;
 }
 add_action( 'admin_post_lindenweg16_save_front_images', 'lindenweg16_save_front_images' );
@@ -193,7 +193,7 @@ add_action( 'admin_post_lindenweg16_save_meta_description', 'lindenweg16_save_me
  * @param string $hook Aktuelle Admin-Seite.
  */
 function lindenweg16_admin_assets( string $hook ): void {
-	if ( 'appearance_page_lindenweg16' !== $hook ) {
+	if ( 'appearance_page_lindenweg16-inhalte' !== $hook ) {
 		return;
 	}
 
