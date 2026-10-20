@@ -15,6 +15,16 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Plattenseite (Rüsten):** Derselbe Block steht über den Schritten, damit man vor dem Slicen sieht, wie die Teile
   liegen. Die Zeichnung ist die der Bambu-Seite; Teile, deren Form sich nicht mehr auslesen lässt, erscheinen als Punkt.
 
+### Anordnung: mehr Teile pro Platte
+- **Packer überarbeitet:** Er probierte nur wenige Ankerpunkte und nahm den ersten freien Treffer. Nischen, die erst
+  an den Kanten zweier Teile entstehen, blieben ungenutzt, und es wurden zu früh neue Platten angefangen. Jetzt werden
+  alle Kombinationen der Teilekanten bewertet, gewählt wird die niedrigste, dann linkeste Lage. Vier feste
+  Reihenfolgen (Fläche, längste Seite, Höhe, Breite) werden probiert, behalten wird die mit den wenigsten Platten.
+  Das Ergebnis bleibt deterministisch. Beispiel mit Nachbau der Plan-2026-43-1-Teile: eine Platte mit 14 Teilen statt
+  zwei mit 10 und 4.
+- **Bekannte Grenze:** Gepackt wird mit der konvexen Hülle. Teile mit Einbuchtung (C-förmige Klemmringe, Schalen mit
+  Aufhängebögen) belegen dadurch mehr Fläche, als sie wirklich brauchen.
+
 ## [0.28.1] – 2026-10-20
 
 ### Behoben
