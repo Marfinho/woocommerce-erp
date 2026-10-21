@@ -7,6 +7,25 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.31.0] – 2026-10-21
+
+### Lohnabrechnungen aus den Zeiten
+- **Neue Seite `#/lohn`** (Knopf „Lohnabrechnungen erstellen“ auf der Seite Löhne, Recht wie Löhne): Monat wählen, je Person
+  Stunden, Stundenlohn und Brutto. „Alle offenen als Entwurf anlegen“ oder je Person „Abrechnung erstellen“.
+- **Gerechnet wird brutto:** Stunden mal der am jeweiligen Tag gültigen Stundenlohn. Ändert sich der Lohn im Monat, gibt es
+  zwei Zeilen mit je eigenem Satz. Dazu frei eintragbare Zuschläge und Abzüge (Prämie, Vorschuss mit Minus). **Lohnsteuer
+  und Sozialversicherung werden nicht berechnet**, das steht auch auf Seite und Beleg; die Abrechnung ist die Grundlage für
+  den Steuerberater oder ein Lohnprogramm.
+- **Ablauf:** Entwurf (rechnet sich bei jedem Speichern aus den Zeiten neu) → Festschreiben (bekommt die laufende Nummer
+  `LA-JJJJ-NNNN` und eine Prüfsumme, bleibt unverändert) → Bezahlt (mit Datum) oder Storniert (mit Grund, bleibt stehen).
+  Korrektur heißt stornieren und neu anlegen. Eine zweite Abrechnung für denselben Monat und dieselbe Person wird abgewiesen.
+- **Lücken werden benannt, nicht mit null bewertet:** Fehlt für Stunden der Stundenlohn, lässt sich der Entwurf anlegen, aber
+  nicht festschreiben; die Zeile sagt, wie viele Stunden es betrifft. Werden nach dem Festschreiben noch Zeiten für den Monat
+  nachgetragen, zeigt die Zeile die Abweichung in Stunden.
+- **Belege:** PDF je Abrechnung (Tage, Sätze, Zuschläge, Gesamtbetrag, Prüfsumme) und CSV je Monat (Semikolon, deutsches
+  Zahlenformat, UTF-8 mit Marke für Excel, gegen Formeln abgesichert).
+- Neue Tabelle `payslips` (DB-Version 38), in Verfahrensdokumentation und Reset-Schutz aufgenommen; alle Schritte stehen im Protokoll.
+
 ## [0.30.0] – 2026-10-21
 
 ### Montage im Workflow

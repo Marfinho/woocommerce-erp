@@ -85,6 +85,37 @@ class Schema {
 			KEY article_valid (article_id, valid_from)
 		) {$charset_collate};";
 
+		$t[] = "CREATE TABLE {$p}payslips (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			number VARCHAR(32) NULL,
+			user_id BIGINT UNSIGNED NOT NULL,
+			employee_name VARCHAR(255) NOT NULL DEFAULT '',
+			period_von DATE NOT NULL,
+			period_bis DATE NOT NULL,
+			hours DECIMAL(10,2) NOT NULL DEFAULT 0,
+			gross DECIMAL(12,2) NOT NULL DEFAULT 0,
+			adjustments_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+			total DECIMAL(12,2) NOT NULL DEFAULT 0,
+			lines_json LONGTEXT NULL,
+			days_json LONGTEXT NULL,
+			adjustments_json LONGTEXT NULL,
+			note VARCHAR(255) NULL,
+			status VARCHAR(16) NOT NULL DEFAULT 'entwurf',
+			checksum CHAR(64) NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			finalized_at DATETIME NULL,
+			finalized_by BIGINT UNSIGNED NULL,
+			paid_on DATE NULL,
+			voided_at DATETIME NULL,
+			voided_by BIGINT UNSIGNED NULL,
+			void_reason VARCHAR(255) NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY number (number),
+			KEY user_period (user_id, period_von),
+			KEY status (status)
+		) {$charset_collate};";
+
 		$t[] = "CREATE TABLE {$p}components (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			code VARCHAR(64) NOT NULL,

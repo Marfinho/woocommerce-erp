@@ -55,6 +55,8 @@ class Shell {
 			add_action( 'admin_init', array( $this, 'dashboard_to_erp' ), 3 );
 			add_action( 'admin_head', array( $this, 'embed_styles' ) );
 			add_action( 'admin_post_lw16_erp_run_file', array( $this, 'serve_run_file' ) );
+			add_action( 'admin_post_lw16_erp_payslip_pdf', array( PayslipPdf::class, 'serve_pdf' ) );
+			add_action( 'admin_post_lw16_erp_payslip_csv', array( PayslipPdf::class, 'serve_csv' ) );
 		}
 
 		( new RestApi() )->register();
