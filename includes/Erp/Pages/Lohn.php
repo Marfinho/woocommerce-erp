@@ -37,6 +37,7 @@ class Lohn {
 		$gate = $api->needs( array( 'verwaltung.loehne' ) );
 
 		register_rest_route( $ns, '/erp/lohn/monat', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'month' ), 'permission_callback' => $gate ) );
+		register_rest_route( $ns, '/erp/lohn/grenzen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'limits' ), 'permission_callback' => $gate ) );
 		register_rest_route( $ns, '/erp/lohn/vorschau', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'preview' ), 'permission_callback' => $gate ) );
 		register_rest_route( $ns, '/erp/lohn/abrechnung', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'create' ), 'permission_callback' => $gate ) );
 		register_rest_route( $ns, '/erp/lohn/abrechnung/(?P<id>\d+)', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'slip' ), 'permission_callback' => $gate ) );
@@ -50,7 +51,26 @@ class Lohn {
 	 * @return WP_REST_Response
 	 */
 	protected static function reply( array $result ) {
-		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : ( ! empty( $result['needs_confirm'] ) ? 409 : 422 ) );
+	}
+
+	/**
+	 * Obergrenzen einer Person speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage (user_id, gross_month, hours_month, gross_year).
+	 * @return WP_REST_Response
+	 */
+	public static function limits( WP_REST_Request $request ) {
+		return self::reply(
+			Payslips::set_limits(
+				(int) $request->get_param( 'user_id' ),
+				array(
+					'gross_month' => $request->get_param( 'gross_month' ),
+					'hours_month' => $request->get_param( 'hours_month' ),
+					'gross_year'  => $request->get_param( 'gross_year' ),
+				)
+			)
+		);
 	}
 
 	/**
@@ -146,7 +166,11 @@ class Lohn {
 				$sum['total'] += $slip['total'];
 			}
 
+			$checks = Payslips::check( $uid, $bounds['von'], $slip ? $slip['total'] : $calc['gross'], $slip ? $slip['hours'] : $calc['hours'], $slip ? $slip['id'] : 0 );
+
 			$people[] = array(
+				'limits'         => Payslips::limits( $uid ),
+				'checks'         => $checks,
 				'id'             => $uid,
 				'name'           => $user->display_name,
 				'email'          => $user->user_email,
@@ -205,7 +229,7 @@ class Lohn {
 			$calc['days'][ $i ]['category_text'] = isset( $labels[ $day['category'] ] ) ? $labels[ $day['category'] ] : $day['category'];
 		}
 
-		return new WP_REST_Response( array( 'name' => $user->display_name, 'label' => $bounds['label'], 'calc' => $calc ) );
+		return new WP_REST_Response( array( 'name' => $user->display_name, 'label' => $bounds['label'], 'calc' => $calc, 'limits' => Payslips::limits( $user->ID ), 'year_before' => Payslips::year_before( $user->ID, $bounds['von'] ) ) );
 	}
 
 	/**
@@ -228,7 +252,7 @@ class Lohn {
 			$days['days'][ $i ]['category_text'] = isset( $labels[ $day['category'] ] ) ? $labels[ $day['category'] ] : $day['category'];
 		}
 
-		return new WP_REST_Response( array( 'slip' => self::slip_view( $slip ), 'calc' => $days ) );
+		return new WP_REST_Response( array( 'slip' => self::slip_view( $slip ), 'calc' => $days, 'limits' => Payslips::limits( $slip['user_id'] ), 'year_before' => Payslips::year_before( $slip['user_id'], $slip['period_von'], $slip['id'] ) ) );
 	}
 
 	/**
@@ -261,7 +285,7 @@ class Lohn {
 			case 'speichern':
 				return self::reply( Payslips::update( $id, $request->get_param( 'adjustments' ), (string) $request->get_param( 'note' ) ) );
 			case 'festschreiben':
-				return self::reply( Payslips::finalize( $id ) );
+				return self::reply( Payslips::finalize( $id, (bool) $request->get_param( 'force' ) ) );
 			case 'bezahlt':
 				return self::reply( Payslips::mark_paid( $id, (string) $request->get_param( 'paid_on' ) ) );
 			case 'storno':

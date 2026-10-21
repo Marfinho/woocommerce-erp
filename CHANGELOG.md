@@ -24,6 +24,12 @@ und im Abschnitt „Umsetzungsstand“ der README.
   nachgetragen, zeigt die Zeile die Abweichung in Stunden.
 - **Belege:** PDF je Abrechnung (Tage, Sätze, Zuschläge, Gesamtbetrag, Prüfsumme) und CSV je Monat (Semikolon, deutsches
   Zahlenformat, UTF-8 mit Marke für Excel, gegen Formeln abgesichert).
+- **Obergrenzen für Minijobs und Aushilfen:** Je Person lassen sich eine Verdienstgrenze je Monat, eine Stundengrenze je
+  Monat und eine Verdienstgrenze je Jahr eintragen („Obergrenze setzen“ an der Zeile; leer heißt keine Grenze, die Zahlen
+  legt der Admin fest, nichts ist fest eingebaut). Die Zeile zeigt Verbrauch in Prozent, ab 90 % gelb, darüber mit Warnung;
+  der Dialog rechnet mit Zuschlägen und Abzügen live mit. **Festschreiben fragt bei überschrittener Grenze nach** und
+  schreibt erst nach Bestätigung fest (im Protokoll vermerkt). Das Jahr zählt die übrigen gültigen Abrechnungen des
+  Kalenderjahres dazu.
 - Neue Tabelle `payslips` (DB-Version 38), in Verfahrensdokumentation und Reset-Schutz aufgenommen; alle Schritte stehen im Protokoll.
 
 ## [0.30.0] – 2026-10-21

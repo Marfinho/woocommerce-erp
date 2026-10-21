@@ -181,4 +181,44 @@ class ErpPayrollTest extends TestCase {
 		$this->assertStringContainsString( "href: '#/lohn'", $this->read( 'assets/erp/pages/verwaltung.js' ) );
 		$this->assertStringContainsString( "UI.routes['lohn']", $this->read( 'assets/erp/pages/lohn.js' ) );
 	}
+
+	public function test_grenze_ok_nah_ueber_und_keine() {
+		$this->assertSame( 'keine', Payroll::limit_state( 500, null ) );
+		$this->assertSame( 'ok', Payroll::limit_state( 400, 603 ) );
+		$this->assertSame( 'nah', Payroll::limit_state( 543, 603 ), '90 % von 603 sind 542,70.' );
+		$this->assertSame( 'nah', Payroll::limit_state( 603, 603 ), 'Genau auf der Grenze ist erlaubt.' );
+		$this->assertSame( 'ueber', Payroll::limit_state( 603.01, 603 ) );
+	}
+
+	public function test_grenzen_aus_der_eingabe() {
+		$ok = Payroll::limits_clean( array( 'gross_month' => '603', 'hours_month' => '43,5', 'gross_year' => '' ) );
+
+		$this->assertSame( '', $ok['error'] );
+		$this->assertEqualsWithDelta( 603.0, $ok['limits']['gross_month'], 0.001 );
+		$this->assertEqualsWithDelta( 43.5, $ok['limits']['hours_month'], 0.001 );
+		$this->assertNull( $ok['limits']['gross_year'], 'Leer heißt: keine Grenze.' );
+
+		$this->assertStringContainsString( 'Verdienstgrenze je Monat', Payroll::limits_clean( array( 'gross_month' => 'viel' ) )['error'] );
+		$this->assertStringContainsString( 'größer als null', Payroll::limits_clean( array( 'hours_month' => '-5' ) )['error'] );
+		$this->assertSame( array( 'gross_month' => null, 'hours_month' => null, 'gross_year' => null ), Payroll::limits_clean( 'x' )['limits'] );
+	}
+
+	public function test_pruefungen_nennen_nur_gesetzte_grenzen_und_das_jahr() {
+		$limits = array( 'gross_month' => 603.0, 'hours_month' => null, 'gross_year' => 7236.0 );
+		$rows   = Payroll::checks( $limits, 650.0, 40.0, 7000.0 );
+
+		$this->assertCount( 2, $rows );
+		$this->assertSame( 'ueber', $rows[0]['state'] );
+		$this->assertSame( 'nah', $rows[1]['state'] );
+		$this->assertStringContainsString( 'erlaubt sind 603,00 €', Payroll::over_text( $rows[0] ) );
+	}
+
+	public function test_festschreiben_fragt_bei_ueberschrittener_grenze_nach() {
+		$src = $this->read( 'includes/Erp/Payslips.php' );
+
+		$this->assertStringContainsString( "if ( \$over && ! \$force )", $src );
+		$this->assertStringContainsString( "'needs_confirm'", $src );
+		$this->assertStringContainsString( "(bool) \$request->get_param( 'force' )", $this->read( 'includes/Erp/Pages/Lohn.php' ) );
+		$this->assertStringContainsString( '409', $this->read( 'includes/Erp/Pages/Lohn.php' ) );
+	}
 }

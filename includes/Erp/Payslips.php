@@ -293,10 +293,11 @@ class Payslips {
 	/**
 	 * Entwurf festschreiben: neu rechnen, Nummer und Prüfsumme vergeben.
 	 *
-	 * @param int $id Abrechnung.
-	 * @return array {ok, message, id}
+	 * @param int  $id    Abrechnung.
+	 * @param bool $force Trotz überschrittener Obergrenze festschreiben.
+	 * @return array {ok, message, id, needs_confirm}
 	 */
-	public static function finalize( $id ) {
+	public static function finalize( $id, $force = false ) {
 		global $wpdb;
 
 		$slip = self::find( $id );
@@ -322,6 +323,16 @@ class Payslips {
 
 		$adj    = Payroll::adjustments( $slip['adjustments'] );
 		$values = self::values( $calc, $adj, (string) $slip['note'] );
+
+		$over = self::over( self::check( $slip['user_id'], $slip['period_von'], $values['total'], $calc['hours'], (int) $id ) );
+
+		if ( $over && ! $force ) {
+			$result                  = self::result( false, sprintf( /* translators: 1: Name, 2: Aufzählung. */ __( 'Für %1$s ist eine Obergrenze überschritten: %2$s.', 'lindenweg16' ), $slip['employee_name'], implode( '; ', $over ) ), (int) $id );
+			$result['needs_confirm'] = true;
+
+			return $result;
+		}
+
 		$full   = array(
 			'user_id'     => $slip['user_id'],
 			'von'         => $slip['period_von'],
@@ -348,7 +359,7 @@ class Payslips {
 			array( 'id' => (int) $id )
 		);
 
-		AuditLog::record( 'erp_lohnabrechnung_festgeschrieben', 'payslip', (int) $id, array( 'nummer' => $number, 'person' => $slip['user_id'] ) );
+		AuditLog::record( 'erp_lohnabrechnung_festgeschrieben', 'payslip', (int) $id, array( 'nummer' => $number, 'person' => $slip['user_id'], 'grenze_ueberschritten' => $over ? $over : null ) );
 
 		return self::result( true, sprintf( /* translators: %s: Nummer. */ __( 'Abrechnung %s festgeschrieben.', 'lindenweg16' ), $number ), (int) $id );
 	}
@@ -467,6 +478,108 @@ class Payslips {
 		$calc = self::compute( $slip['user_id'], $slip['period_von'], $slip['period_bis'] );
 
 		return round( $calc['hours'] - (float) $slip['hours'], 2 );
+	}
+
+	/**
+	 * Obergrenzen einer Person.
+	 *
+	 * @param int $user_id Person.
+	 * @return array {gross_month, hours_month, gross_year}; null = keine Grenze.
+	 */
+	public static function limits( $user_id ) {
+		return Payroll::limits_clean( get_user_meta( (int) $user_id, 'lw16_pay_limits', true ) )['limits'];
+	}
+
+	/**
+	 * Obergrenzen einer Person festlegen.
+	 *
+	 * @param int   $user_id Person.
+	 * @param mixed $raw     Eingabe.
+	 * @return array {ok, message, id}
+	 */
+	public static function set_limits( $user_id, $raw ) {
+		$user = get_userdata( (int) $user_id );
+
+		if ( ! $user ) {
+			return self::result( false, __( 'Diese Person gibt es nicht mehr.', 'lindenweg16' ) );
+		}
+
+		$clean = Payroll::limits_clean( $raw );
+
+		if ( $clean['error'] ) {
+			return self::result( false, $clean['error'] );
+		}
+
+		update_user_meta( (int) $user_id, 'lw16_pay_limits', $clean['limits'] );
+		AuditLog::record( 'erp_lohn_grenzen', 'user', (int) $user_id, $clean['limits'] );
+
+		return self::result( true, sprintf( /* translators: %s: Name. */ __( 'Obergrenzen für %s gespeichert.', 'lindenweg16' ), $user->display_name ), (int) $user_id );
+	}
+
+	/**
+	 * Prüfung einer Person und eines Monats gegen ihre Grenzen.
+	 *
+	 * Das Jahr zählt alle noch gültigen Abrechnungen des Kalenderjahres und
+	 * diese als Letzte dazu; eine schon gezählte Abrechnung wird nicht doppelt genommen.
+	 *
+	 * @param int    $user_id   Person.
+	 * @param string $von       Beginn des Monats.
+	 * @param float  $gross     Verdienst im Monat (brutto, mit Zuschlägen).
+	 * @param float  $hours     Stunden im Monat.
+	 * @param int    $except_id Abrechnung, die nicht zusätzlich zählt.
+	 * @return array Zeilen aus Payroll::checks().
+	 */
+	public static function check( $user_id, $von, $gross, $hours, $except_id = 0 ) {
+		$limits = self::limits( $user_id );
+
+		if ( null === $limits['gross_year'] && null === $limits['gross_month'] && null === $limits['hours_month'] ) {
+			return array();
+		}
+
+		$sum = null !== $limits['gross_year'] ? self::year_before( $user_id, $von, $except_id ) : 0.0;
+
+		return Payroll::checks( $limits, $gross, $hours, $sum + $gross );
+	}
+
+	/**
+	 * Verdienst des Kalenderjahres aus den übrigen gültigen Abrechnungen.
+	 *
+	 * Der Monat dieser Abrechnung zählt nicht mit, er wird dazugerechnet.
+	 *
+	 * @param int    $user_id   Person.
+	 * @param string $von       Beginn des Monats.
+	 * @param int    $except_id Abrechnung, die nicht zählt.
+	 * @return float
+	 */
+	public static function year_before( $user_id, $von, $except_id = 0 ) {
+		$year = substr( $von, 0, 4 );
+		$sum  = 0.0;
+
+		foreach ( self::between( $year . '-01-01', $year . '-12-31' ) as $slip ) {
+			if ( $slip['user_id'] === (int) $user_id && self::VOID !== $slip['status'] && (int) $slip['id'] !== (int) $except_id && substr( $slip['period_von'], 0, 7 ) !== substr( $von, 0, 7 ) ) {
+				$sum += $slip['total'];
+			}
+		}
+
+		return round( $sum, 2 );
+	}
+
+	/**
+	 * Überschrittene Grenzen als Sätze.
+	 *
+	 * @param array $checks Zeilen aus check().
+	 * @return array
+	 */
+	public static function over( array $checks ) {
+		$out = array();
+
+		foreach ( $checks as $row ) {
+			if ( 'ueber' === $row['state'] ) {
+				$out[] = Payroll::over_text( $row );
+			}
+		}
+
+		return $out;
 	}
 
 	/**

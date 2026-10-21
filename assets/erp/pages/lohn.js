@@ -30,6 +30,30 @@
 		return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
 	}
 
+	function state(value, limit) {
+		if (limit === null || limit === undefined) { return 'keine'; }
+		if (Math.round(value * 100) / 100 > limit + 0.004) { return 'ueber'; }
+		return value >= limit * 0.9 ? 'nah' : 'ok';
+	}
+
+	function amountText(v, unit) { return unit === '€' ? eur(v) : hrs(v) + ' h'; }
+
+	function checkRows(limits, gross, hours, yearBefore) {
+		var rows = [['gross_month', 'Verdienst im Monat', '€', gross], ['hours_month', 'Stunden im Monat', 'h', hours], ['gross_year', 'Verdienst im Jahr', '€', yearBefore + gross]];
+		var out = [];
+		rows.forEach(function (r) {
+			var limit = limits ? limits[r[0]] : null;
+			if (limit === null || limit === undefined) { return; }
+			out.push({ label: r[1], unit: r[3] === undefined ? '' : r[2], value: r[3], limit: limit, state: state(r[3], limit), pct: Math.round(r[3] / limit * 100) });
+		});
+		return out;
+	}
+
+	function checkChip(c) {
+		var text = c.label + ' ' + amountText(c.value, c.unit) + ' von ' + amountText(c.limit, c.unit) + ' (' + (c.pct !== undefined ? c.pct : Math.round(c.value / c.limit * 100)) + ' %)';
+		return h('span', { class: c.state === 'ueber' ? 'chip warn' : (c.state === 'nah' ? 'chip warn' : 'chip'), title: c.state === 'ueber' ? 'Obergrenze überschritten' : (c.state === 'nah' ? 'Obergrenze fast erreicht' : 'Unter der Obergrenze') }, (c.state === 'ueber' ? '⚠ ' : '') + text);
+	}
+
 	var TAG = { entwurf: 'tag later', festgeschrieben: 'tag now', bezahlt: 'tag now', storniert: 'tag' };
 
 	UI.routes['lohn'] = function (r, ui) {
@@ -60,6 +84,39 @@
 
 		function act(path, body) {
 			return ui.api(path, { method: 'POST', body: body || {} }).then(function (x) { ui.toast(x.message); return load(); }, function (e) { ui.toast(e.message, true); });
+		}
+
+		// Eine überschrittene Obergrenze meldet der Server mit 409; erst nach Rückfrage geht es mit force weiter.
+		function finalize(s, force) {
+			return ui.api('lohn/abrechnung/' + s.id + '/festschreiben', { method: 'POST', body: { force: !!force } }).then(function (x) { ui.toast(x.message); return load(); }, function (e) {
+				if (e.status === 409 && !force) {
+					if (window.confirm(e.message + '\n\nTrotzdem festschreiben?')) { return finalize(s, true); }
+					return null;
+				}
+				ui.toast(e.message, true);
+				return null;
+			});
+		}
+
+		function limitsDialog(p) {
+			var lim = p.limits || {};
+			function val(v) { return v === null || v === undefined ? '' : String(v).replace('.', ','); }
+			var gm = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: val(lim.gross_month), 'aria-label': 'Verdienstgrenze je Monat', placeholder: 'z. B. 603' });
+			var hm = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: val(lim.hours_month), 'aria-label': 'Stundengrenze je Monat', placeholder: 'z. B. 43' });
+			var gy = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: val(lim.gross_year), 'aria-label': 'Verdienstgrenze je Jahr', placeholder: 'z. B. 7236' });
+			var err = h('div', { 'aria-live': 'polite' });
+			var save = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
+			var f = h('form', { class: 'sheet-body lh-limits' },
+				h('p', { class: 'muted', style: 'margin-top:0' }, 'Für Minijobs und Aushilfen mit Obergrenze. Leer lassen heißt: keine Grenze. Das System warnt ab 90 % und fragt beim Festschreiben nach, wenn die Grenze überschritten ist. Welche Zahl gilt, legst du fest; sie ist hier nicht fest eingebaut.'),
+				h('label', null, 'Verdienst je Monat (brutto, €)', gm), h('label', null, 'Stunden je Monat', hm), h('label', null, 'Verdienst je Jahr (brutto, €)', gy), err, h('div', null, save));
+			var d = ui.dlg('Obergrenzen ' + p.name, f);
+			f.addEventListener('submit', function (e) {
+				e.preventDefault();
+				save.disabled = true;
+				ui.api('lohn/grenzen', { method: 'POST', body: { user_id: p.id, gross_month: gm.value, hours_month: hm.value, gross_year: gy.value } }).then(function (x) { d.close(); ui.toast(x.message); load(); }, function (x) {
+					save.disabled = false; err.textContent = ''; err.appendChild(h('div', { class: 'notice warn', role: 'alert' }, x.message));
+				});
+			});
 		}
 
 		function ask(title, label, value, type, onOk) {
@@ -113,6 +170,10 @@
 
 			if (p.unpriced_hours > 0) { warn = h('div', { class: 'notice warn' }, 'Für ' + hrs(p.unpriced_hours) + ' Stunden ist kein Stundenlohn hinterlegt. Trag ihn unter Löhne mit passendem Stichtag ein, sonst lässt sich nicht festschreiben.'); }
 
+			var over = (p.checks || []).filter(function (c) { return c.state === 'ueber'; });
+			var checkChips = (p.checks && p.checks.length) ? h('div', { class: 'chips' }, p.checks.map(checkChip)) : null;
+			var overNote = over.length ? h('div', { class: 'notice warn' }, 'Obergrenze überschritten: ' + over.map(function (c) { return c.label + ' ' + amountText(c.value, c.unit) + ' (erlaubt ' + amountText(c.limit, c.unit) + ')'; }).join('; ') + '. Festschreiben fragt noch einmal nach.') : null;
+
 			if (!s) {
 				actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function () { openSlip(p, null); } }, 'Abrechnung erstellen'));
 			} else {
@@ -120,7 +181,7 @@
 				if (s.status === 'entwurf') {
 					actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { openSlip(p, s); } }, 'Bearbeiten'));
 					actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function () {
-						if (window.confirm('Abrechnung für ' + p.name + ' festschreiben? Danach lässt sie sich nicht mehr ändern, nur stornieren.')) { act('lohn/abrechnung/' + s.id + '/festschreiben'); }
+						if (window.confirm('Abrechnung für ' + p.name + ' festschreiben? Danach lässt sie sich nicht mehr ändern, nur stornieren.')) { finalize(s, false); }
 					} }, 'Festschreiben'));
 					actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { if (window.confirm('Entwurf löschen?')) { act('lohn/abrechnung/' + s.id + '/loeschen'); } } }, 'Löschen'));
 				}
@@ -132,12 +193,15 @@
 				}
 			}
 
+			actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { limitsDialog(p); } }, p.checks && p.checks.length ? 'Grenzen ändern' : 'Obergrenze setzen'));
+
 			return h('article', { class: 'row-card lh-row' },
 				h('div', { class: 'lh-main' },
 					h('b', null, p.name),
 					h('div', { class: 'muted small' }, p.email + ' · ' + (p.rate === null ? 'kein Stundenlohn' : eur(p.rate) + ' je Stunde')),
 					s ? h('div', { class: 'chips' }, h('span', { class: TAG[s.status] || 'tag' }, s.status_text), s.number ? h('span', { class: 'chip' }, s.number) : null, s.paid_on ? h('span', { class: 'chip' }, 'bezahlt ' + dmy(s.paid_on)) : null,
 						s.drift ? h('span', { class: 'chip warn', title: 'Seit der Abrechnung wurden Zeiten für diesen Monat nachgetragen oder geändert.' }, (s.drift > 0 ? '+' : '') + hrs(s.drift) + ' h seit Abrechnung') : null) : null,
+					checkChips, overNote,
 					p.voided ? h('div', { class: 'muted small' }, p.voided + ' stornierte Abrechnung' + (p.voided > 1 ? 'en' : '') + ' in diesem Monat') : null,
 					warn),
 				h('div', { class: 'lh-num' }, h('div', null, hrs(s ? s.hours : p.hours) + ' h'), h('b', null, eur(s ? s.total : p.gross))),
@@ -156,6 +220,7 @@
 				var note = h('input', { class: 'field', type: 'text', maxlength: '255', value: slip ? slip.note : '', 'aria-label': 'Bemerkung', placeholder: 'Bemerkung (steht auf dem Beleg)' });
 				var adjBox = h('div', { class: 'lh-adj' });
 				var totalEl = h('b', null, '');
+				var checksBox = h('div', { class: 'lh-checks' });
 				var err = h('div', { 'aria-live': 'polite' });
 
 				function sum() {
@@ -164,7 +229,16 @@
 					return t;
 				}
 
-				function paintTotal() { totalEl.textContent = eur(calc.gross + sum()); }
+				function paintTotal() {
+					var total = calc.gross + sum();
+					totalEl.textContent = eur(total);
+					checksBox.textContent = '';
+					checkRows(x.limits, total, calc.hours, x.year_before || 0).forEach(function (c) {
+						checksBox.appendChild(c.state === 'ueber'
+							? h('div', { class: 'notice warn', role: 'alert' }, '⚠ ' + c.label + ': ' + amountText(c.value, c.unit) + ', erlaubt sind ' + amountText(c.limit, c.unit) + '. Festschreiben fragt nach.')
+							: h('div', { class: 'muted small' }, c.label + ': ' + amountText(c.value, c.unit) + ' von ' + amountText(c.limit, c.unit) + (c.state === 'nah' ? ' (fast erreicht)' : '')));
+					});
+				}
 
 				function paintAdj() {
 					adjBox.textContent = '';
@@ -194,6 +268,7 @@
 				body.appendChild(adjBox);
 				body.appendChild(note);
 				body.appendChild(h('p', { class: 'lh-total' }, 'Gesamtbetrag brutto: ', totalEl));
+				body.appendChild(checksBox);
 				body.appendChild(err);
 
 				var save = h('button', { class: 'btn primary', type: 'button' }, slip ? 'Speichern' : 'Als Entwurf anlegen');

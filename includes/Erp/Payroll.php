@@ -266,6 +266,129 @@ class Payroll {
 	}
 
 	/**
+	 * Ab diesem Anteil der Grenze gilt sie als fast erreicht.
+	 */
+	const NEAR = 0.9;
+
+	/**
+	 * Obergrenzen einer Person aus der Eingabe säubern.
+	 *
+	 * Leer heißt: keine Grenze. Gedacht für Minijobs und Aushilfen mit
+	 * Verdienst- oder Stundenobergrenze; welche Zahl gilt, bestimmt der Admin.
+	 *
+	 * @param mixed $raw {gross_month, hours_month, gross_year}.
+	 * @return array {limits, error}
+	 */
+	public static function limits_clean( $raw ) {
+		$raw    = is_array( $raw ) ? $raw : array();
+		$limits = array( 'gross_month' => null, 'hours_month' => null, 'gross_year' => null );
+		$names  = array(
+			'gross_month' => __( 'Verdienstgrenze je Monat', 'lindenweg16' ),
+			'hours_month' => __( 'Stundengrenze je Monat', 'lindenweg16' ),
+			'gross_year'  => __( 'Verdienstgrenze je Jahr', 'lindenweg16' ),
+		);
+
+		foreach ( $limits as $key => $unused ) {
+			if ( ! isset( $raw[ $key ] ) || '' === trim( (string) $raw[ $key ] ) ) {
+				continue;
+			}
+
+			$n = self::number( $raw[ $key ] );
+
+			if ( null === $n || $n <= 0 || $n > 1000000 ) {
+				return array(
+					'limits' => $limits,
+					'error'  => sprintf(
+						/* translators: %s: Name der Grenze. */
+						__( 'Bei „%s“ bitte eine Zahl größer als null eintragen, zum Beispiel 603 oder 43,5. Leer lassen heißt: keine Grenze.', 'lindenweg16' ),
+						$names[ $key ]
+					),
+				);
+			}
+
+			$limits[ $key ] = round( $n, 2 );
+		}
+
+		return array( 'limits' => $limits, 'error' => '' );
+	}
+
+	/**
+	 * Wie weit ist ein Wert an einer Grenze – reine Regel.
+	 *
+	 * @param float      $value Wert.
+	 * @param float|null $limit Grenze (null = keine).
+	 * @return string keine, ok, nah oder ueber.
+	 */
+	public static function limit_state( $value, $limit ) {
+		if ( null === $limit || (float) $limit <= 0 ) {
+			return 'keine';
+		}
+
+		if ( round( (float) $value, 2 ) > (float) $limit + 0.004 ) {
+			return 'ueber';
+		}
+
+		return (float) $value >= (float) $limit * self::NEAR ? 'nah' : 'ok';
+	}
+
+	/**
+	 * Alle Prüfungen gegen die Grenzen einer Person.
+	 *
+	 * @param array $limits    Grenzen aus limits_clean().
+	 * @param float $gross     Verdienst im Monat (brutto, mit Zuschlägen).
+	 * @param float $hours     Stunden im Monat.
+	 * @param float $year_gross Verdienst im Jahr bis einschließlich dieser Abrechnung.
+	 * @return array Liste {kind, label, unit, value, limit, state}; nur gesetzte Grenzen.
+	 */
+	public static function checks( array $limits, $gross, $hours, $year_gross ) {
+		$rows = array(
+			array( 'gross_month', __( 'Verdienst im Monat', 'lindenweg16' ), '€', $gross ),
+			array( 'hours_month', __( 'Stunden im Monat', 'lindenweg16' ), 'h', $hours ),
+			array( 'gross_year', __( 'Verdienst im Jahr', 'lindenweg16' ), '€', $year_gross ),
+		);
+		$out  = array();
+
+		foreach ( $rows as $row ) {
+			$limit = isset( $limits[ $row[0] ] ) ? $limits[ $row[0] ] : null;
+
+			if ( null === $limit ) {
+				continue;
+			}
+
+			$out[] = array(
+				'kind'  => $row[0],
+				'label' => $row[1],
+				'unit'  => $row[2],
+				'value' => round( (float) $row[3], 2 ),
+				'limit' => (float) $limit,
+				'state' => self::limit_state( $row[3], $limit ),
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Satz zu einer überschrittenen Grenze.
+	 *
+	 * @param array $check Zeile aus checks().
+	 * @return string
+	 */
+	public static function over_text( array $check ) {
+		$fmt = static function ( $n, $unit ) {
+			return '€' === $unit ? Payroll::eur( $n ) : Payroll::hours_text( $n ) . ' h';
+		};
+
+		return sprintf(
+			/* translators: 1: Art der Grenze, 2: Wert, 3: Grenze. */
+			__( '%1$s: %2$s, erlaubt sind %3$s', 'lindenweg16' ),
+			$check['label'],
+			$fmt( $check['value'], $check['unit'] ),
+			$fmt( $check['limit'], $check['unit'] )
+		);
+	}
+
+	/**
 	 * Beträge deutsch: 1.234,50 €.
 	 *
 	 * @param float $n Betrag.
