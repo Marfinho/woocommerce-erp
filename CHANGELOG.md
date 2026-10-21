@@ -7,7 +7,7 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [0.31.0] – 2026-10-21
+## [0.32.0] – 2026-10-21
 
 ### Picklisten im ERP erzeugen
 - **Verkauf → Bestellungen → Picklisten:** Der neue Kasten *Neue Pickliste aus Bestellungen* zeigt, wie viele offene
@@ -17,7 +17,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Neue REST-Routen `erp/picklisten/bestellungen` (Vorschau) und `erp/picklisten/erzeugen`.
 - Betriebsanleitung B.3 beschreibt den neuen Weg.
 
-## [0.30.0] – 2026-10-20
+## [0.31.0] – 2026-10-20
 
 ### Betriebsanleitung neu, vier Fehler behoben
 - **Betriebsanleitung vollständig neu geschrieben** für die Oberfläche unter `/erp`: alle Wege (Platz → Reiter → Auswahl,
@@ -31,19 +31,54 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Suchfeld:** Beschriftung „Gehe zu … Seite“ (es sucht nur Seiten, keine Artikel oder Bestellungen).
 - Tests: `SollbestandSpalteTest`, `DruckerAkteLinkTest`.
 
+## [0.30.0] – 2026-10-20
+
+### Hinzugefügt
+- **Workflow erkennt die Druckdatei:** Die Bambu-Bridge meldet den Dateinamen des Jobs auf dem Drucker
+  (`subtask_name`/`gcode_file`). Das ERP ordnet ihn der Platte zu und schaltet genau diese auf „Im Druck“ bzw. „Ist melden“ –
+  auch wenn mehrere Platten für denselben Drucker anstehen. Die Karte zeigt „Datei am Drucker erkannt“ bzw. „wartet auf
+  <Datei>“. Ohne Dateinamen gilt die alte Regel (genau eine Platte pro Drucker).
+- Die Projekt-3MF heißt jetzt lesbar `Platte-<Drucker>-<Datum>-<Nr>-<Zufall>.3mf` statt `bambu-plate-…`. Beim Senden aus
+  Bambu Studio den Projektnamen unverändert lassen (Suffixe wie `_plate_1` sind ok).
+- Schema: `bambu_printers.current_file` (DB_VERSION 38).
+
+**Hinweis:** Die Bridge auf dem Pi muss aktualisiert werden (`raspberry-pi/bambu_bridge.py`).
+
 ## [0.29.0] – 2026-10-20
 
-### Storno, Deinstallation und Absicherung
-- **Storno und Erstattung:** Eine stornierte oder erstattete Bestellung storniert jetzt ihre Rechnung samt
-  Einnahmebuchung (Gegenbuchung, nichts wird gelöscht) und bucht den Lagerabgang zurück. Beides ist unter
-  *Einstellungen → Storno und Erstattung* abschaltbar. Wird die Bestellung später wieder abgeschlossen, bucht das Lager
-  neu; eine neue Rechnung entsteht nicht (eine Rechnung je Bestellung), die Bestellung erhält dazu eine Notiz.
-- **Deinstallation:** neues `uninstall.php`. Ohne `LW16_REMOVE_ALL_DATA` bleibt alles stehen (Aufbewahrungspflicht).
-- **CI:** GitHub-Action für PHPUnit, PHP- und JS-Syntax, Theme-Prüfung und Aktualität des Theme-ZIPs.
-- **Doku:** Betriebsanleitung um Kapitel D.21 (Oberfläche unter /erp, Storno, Deinstallation) ergänzt; README-Zahl der
-  Formular-Handler und Hinweis in `Navigation.php` berichtigt. Das Verzeichnis `languages/` aus dem Plugin-Kopf existiert.
-- **Geprüft** in einer echten Installation (WordPress, WooCommerce, MariaDB): Aktivierung, Bestellung bis Rechnung,
-  Storno, REST-Rechte aller GET-Routen für vier Nutzerarten, alle 40 ERP-Seiten im Browser ohne JS-Fehler.
+### Anordnung auf dem Bett sichtbar
+- **Plan freigeben:** Unter der Plattenliste steht je Platte „Anordnung auf dem Bett“ mit den Umrissen der Teile
+  (aufklappbar, bei nur einer Platte offen).
+- **Plattenseite (Rüsten):** Derselbe Block steht über den Schritten, damit man vor dem Slicen sieht, wie die Teile
+  liegen. Die Zeichnung ist die der Bambu-Seite; Teile, deren Form sich nicht mehr auslesen lässt, erscheinen als Punkt.
+
+### Anordnung: mehr Teile pro Platte
+- **Echter Umriss statt Hülle:** Der Packer rechnet jetzt mit dem Schattenbild des Teils (alle Dreiecke von oben,
+  Raster 0,5 mm) statt mit der konvexen Hülle. Einbuchtungen werden genutzt: Kleine Teile liegen in der Öffnung eines
+  C-förmigen Klemmrings oder neben den Aufhängebögen einer Schale. Die Plan-Vorschau und die Plattenansicht zeichnen
+  denselben Umriss. Sperrflächen und Randabstand stecken im Raster, der Abstand bleibt 5 mm.
+- **Suche:** Je Teil wird die niedrigste, dann linkeste freie Lage gesucht, bitweise für ein ganzes Bett auf einmal.
+  Dazu zwei feste Sortierungen und gewürfelte Varianten (fester Startwert), solange mehr Platten nötig sind, als die
+  Fläche mindestens verlangt (Zeitbudget 4 s). Behalten wird die Anordnung mit den wenigsten Platten. Die
+  Hüllen-Anordnung läuft zur Gegenprobe mit, wenn mehr als eine Platte entsteht.
+- **Keine Kippung:** Gedreht wird nur um die senkrechte Achse in Vierteldrehungen; die Auflagefläche bleibt, wie in der
+  Projektdatei vorgegeben (ein Test sichert das). 45°-Schritte lassen sich über den Filter `lw16_plate_rotations`
+  einschalten, `array( 0 )` schaltet jede Drehung ab.
+- **Fehler behoben:** Beim Zusammensetzen der 3MF lagen gedrehte Teile um ihre Höhe oder Breite neben der berechneten
+  Position (die Matrix drehte um die Ecke des ungedrehten Teils). Jetzt liegt die Ecke des gedrehten Teils auf der
+  Zielposition.
+- **Schneller:** Die konvexe Hülle prüfte jeden Punkt gegen jeden (quadratischer Aufwand); große Netze brauchten
+  Minuten, jetzt Sekundenbruchteile.
+- **Bekannte Grenze:** Die konvexe Gegenprobe füllt Einbuchtungen weiter auf.
+
+## [0.28.1] – 2026-10-20
+
+### Behoben
+- **Mehrere Platten, ein Etikett:** Beim Freigeben mehrerer Platten kam nur das erste Etikett aus dem Drucker, weil alle
+  Seiten in einem Druckauftrag lagen. Jetzt legt das ERP für jedes Etikett einen eigenen Druckauftrag an (Platten und
+  Lagerplatz-Etiketten). Der Pi-Client bleibt unverändert.
+- **Theme-Seite und Finanz-Dashboard** teilten die Kennung `lindenweg16`; die Theme-Seite heißt jetzt
+  `lindenweg16-inhalte`.
 
 ## [0.28.0] – 2026-10-19
 

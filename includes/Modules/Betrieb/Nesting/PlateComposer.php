@@ -187,6 +187,7 @@ class PlateComposer {
 		$bounds_by_path                  = array();
 		$object_id_by_path[ $base_path ] = $base_object->getAttribute( 'id' );
 		$bounds_by_path[ $base_path ]    = self::mesh_bounds_min( $base_object );
+		$rotated_min                     = array();
 
 		foreach ( $placements as $placement ) {
 			$path = (string) $placement['source_path'];
@@ -204,16 +205,22 @@ class PlateComposer {
 				$next_id                    = $imported['object_id'] + 1;
 			}
 
-			$bounds = $bounds_by_path[ $path ];
+			$bounds   = $bounds_by_path[ $path ];
+			$rotation = isset( $placement['rotation_deg'] ) ? $placement['rotation_deg'] : 0;
+			$rot_key  = $path . '|' . $rotation;
+
+			if ( ! isset( $rotated_min[ $rot_key ] ) ) {
+				$rotated_min[ $rot_key ] = self::rotated_min( isset( $bounds['points'] ) ? $bounds['points'] : array(), $bounds['min_x'], $bounds['min_y'], $rotation );
+			}
 
 			$item = $doc->createElementNS( $doc->documentElement->namespaceURI ?: null, 'item' );
 			$item->setAttribute( 'objectid', $object_id_by_path[ $path ] );
 			$item->setAttribute(
 				'transform',
 				self::transform_matrix(
-					isset( $placement['rotation_deg'] ) ? $placement['rotation_deg'] : 0,
-					$placement['x'],
-					$placement['y'],
+					$rotation,
+					$placement['x'] - $rotated_min[ $rot_key ][0],
+					$placement['y'] - $rotated_min[ $rot_key ][1],
 					-$bounds['min_z'],
 					$bounds['min_x'],
 					$bounds['min_y']
@@ -442,20 +449,60 @@ class PlateComposer {
 			return $nullpunkt;
 		}
 
-		$min = $vertices[0];
+		$min    = $vertices[0];
+		$points = array();
 		foreach ( $vertices as $v ) {
-			$min = array(
+			$min      = array(
 				min( $min[0], $v[0] ),
 				min( $min[1], $v[1] ),
 				min( $min[2], $v[2] ),
 			);
+			$points[] = array( $v[0], $v[1] );
 		}
 
 		return array(
-			'min_x' => $min[0],
-			'min_y' => $min[1],
-			'min_z' => $min[2],
+			'min_x'  => $min[0],
+			'min_y'  => $min[1],
+			'min_z'  => $min[2],
+			'points' => $points,
 		);
+	}
+
+	/**
+	 * Kleinste X- und Y-Koordinate des Mesh nach der Drehung um den eigenen
+	 * Nullpunkt (Bounding-Box-Ecke), so wie transform_matrix() sie anwendet.
+	 *
+	 * Eine Platzierung {x, y} meint die Ecke des GEDREHTEN Begrenzungs-
+	 * rechtecks (so rechnet BinPacker). transform_matrix() dreht aber um die
+	 * Ecke des ungedrehten: Bei 90° liegt das Teil dann um seine Höhe links
+	 * der Zielposition, bei 180° um Breite und Höhe. Diesen Versatz rechnet
+	 * compose() mit heraus.
+	 *
+	 * @param array $points  Liste [x, y] des rohen Mesh.
+	 * @param float $ox      Eigener Nullpunkt X.
+	 * @param float $oy      Eigener Nullpunkt Y.
+	 * @param float $degrees Winkel, Gegenuhrzeigersinn.
+	 * @return array [min_x, min_y]
+	 */
+	public static function rotated_min( array $points, $ox, $oy, $degrees ) {
+		if ( ! $points ) {
+			return array( 0.0, 0.0 );
+		}
+
+		$rad = deg2rad( (float) $degrees );
+		$cos = cos( $rad );
+		$sin = sin( $rad );
+		$minx = INF;
+		$miny = INF;
+
+		foreach ( $points as $p ) {
+			$x = $p[0] - $ox;
+			$y = $p[1] - $oy;
+			$minx = min( $minx, $x * $cos - $y * $sin );
+			$miny = min( $miny, $x * $sin + $y * $cos );
+		}
+
+		return array( $minx, $miny );
 	}
 
 	/**

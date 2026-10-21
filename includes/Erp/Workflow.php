@@ -22,6 +22,7 @@ namespace Lindenweg16\Erp;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Erp\Pages\BambuDruck;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
@@ -363,6 +364,7 @@ class Workflow {
 			'printer'     => $printer ? $printer->name : $plate->printer_id,
 			'items'       => $items['items'],
 			'est_minutes' => $items['est_minutes'],
+			'layout'      => BambuDruck::layout( $plate ),
 		);
 	}
 
@@ -518,19 +520,23 @@ class Workflow {
 			}
 		}
 
-		$pdf = LabelPdf::build_roll( $labels, $settings['label_roll'] );
-
-		if ( ! $pdf ) {
+		if ( ! $labels ) {
 			return array( 'ok' => false, 'message' => __( 'Es gab nichts zu drucken.', 'lindenweg16' ) );
 		}
 
 		$roll   = LabelSheet::roll( $settings['label_roll'] );
 		$width  = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
 		$height = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
-		$job_id = PrintQueueService::enqueue_pdf_labels( $settings['label_printer'], $pdf->output(), 'run_label', $width, $height, $settings['label_roll'] );
 
-		if ( ! $job_id ) {
-			return array( 'ok' => false, 'message' => __( 'Der Druckjob konnte nicht angelegt werden – ist der Etikettendrucker richtig eingestellt?', 'lindenweg16' ) );
+		// Ein Druckauftrag je Etikett: Der Etikettendrucker nimmt je Auftrag
+		// eine Seite, weitere gingen sonst verloren.
+		foreach ( $labels as $label ) {
+			$pdf    = LabelPdf::build_roll( array( $label ), $settings['label_roll'] );
+			$job_id = $pdf ? PrintQueueService::enqueue_pdf_labels( $settings['label_printer'], $pdf->output(), 'run_label', $width, $height, $settings['label_roll'] ) : 0;
+
+			if ( ! $job_id ) {
+				return array( 'ok' => false, 'message' => __( 'Der Druckjob konnte nicht angelegt werden – ist der Etikettendrucker richtig eingestellt?', 'lindenweg16' ) );
+			}
 		}
 
 		return array(
@@ -653,9 +659,14 @@ class Workflow {
 			);
 		}
 
-		$file = null;
+		$file   = null;
+		$layout = null;
 		if ( ! empty( $run['plate_job_id'] ) ) {
 			$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
+
+			if ( $plate && $detail ) {
+				$layout = BambuDruck::layout( $plate );
+			}
 
 			if ( $plate && is_file( $plate->file_path ) ) {
 				$file = array(
@@ -678,6 +689,7 @@ class Workflow {
 		}
 
 		return array(
+			'layout'      => $layout,
 			'material'    => $material,
 			'id'          => (int) $run['id'],
 			'batch'       => (string) $run['batch'],
@@ -697,6 +709,19 @@ class Workflow {
 			'failure'     => (string) $run['failure_reason'],
 			'now'         => time(),
 		);
+	}
+
+	/**
+	 * Hat der Drucker die Datei dieser Platte geladen?
+	 *
+	 * @param array  $run     Platte.
+	 * @param object $printer Bambu-Drucker.
+	 * @return bool
+	 */
+	protected static function file_is_on_printer( array $run, $printer ) {
+		$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
+
+		return $plate && RunFlow::file_matches( (string) $printer->current_file, (string) $plate->file_name );
 	}
 
 	/**
@@ -726,39 +751,85 @@ class Workflow {
 	/**
 	 * Platten mit dem Stand der Bambu-Drucker abgleichen.
 	 *
-	 * Meldet der Drucker, dass er druckt, ist das Rüsten vorbei; meldet er
-	 * „fertig“, ist der Druck zu Ende. Nur wenn auf dem Drucker genau eine
-	 * Platte läuft – bei zwei Platten wüsste niemand, welche gemeint ist.
+	 * Der Drucker meldet den Namen der geladenen Datei. Passt er zur
+	 * Plattendatei einer Platte, ist genau diese gemeint – auch wenn mehrere
+	 * Platten für denselben Drucker anstehen. Meldet der Drucker „druckt“,
+	 * ist das Rüsten vorbei; meldet er „fertig“, ist der Druck zu Ende.
+	 * Kennt die Bridge noch keinen Dateinamen, gilt wie früher: nur wenn auf
+	 * dem Drucker genau eine Platte läuft – bei zwei wüsste niemand, welche.
 	 */
 	public static function sync_printers() {
 		$by_printer = array();
 
 		foreach ( RunRepository::active() as $run ) {
-			if ( in_array( $run['status'], array( RunFlow::RUESTEN, RunFlow::DRUCKT ), true ) && ! empty( $run['bambu_printer'] ) ) {
+			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN, RunFlow::DRUCKT ), true ) && ! empty( $run['bambu_printer'] ) ) {
 				$by_printer[ $run['bambu_printer'] ][] = $run;
 			}
 		}
 
 		foreach ( $by_printer as $bambu_id => $runs ) {
-			if ( 1 !== count( $runs ) ) {
-				continue;
-			}
-
 			$printer = BambuPrinterRepository::find_by_printer_id( $bambu_id );
 
 			if ( ! $printer || ! BambuPrinterRepository::is_online( $printer ) ) {
 				continue;
 			}
 
-			$status = strtolower( (string) $printer->status );
-			$run    = $runs[0];
+			$run = self::run_for_file( $runs, (string) $printer->current_file );
 
-			if ( RunFlow::RUESTEN === $run['status'] && in_array( $status, array( 'running', 'prepare' ), true ) ) {
+			if ( ! $run ) {
+				// Ohne Dateinamen von der Bridge: alte Regel, aber nur für
+				// Platten, die schon gerüstet werden oder drucken.
+				if ( '' !== trim( (string) $printer->current_file ) ) {
+					continue;
+				}
+
+				$started = array_values(
+					array_filter(
+						$runs,
+						static function ( $candidate ) {
+							return in_array( $candidate['status'], array( RunFlow::RUESTEN, RunFlow::DRUCKT ), true );
+						}
+					)
+				);
+
+				if ( 1 !== count( $started ) ) {
+					continue;
+				}
+
+				$run = $started[0];
+			}
+
+			$status = strtolower( (string) $printer->status );
+
+			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && in_array( $status, array( 'running', 'prepare' ), true ) ) {
 				self::act( $run['id'], 'druckstart', array(), 0 );
 			} elseif ( RunFlow::DRUCKT === $run['status'] && 'finish' === $status && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
 				self::act( $run['id'], 'druckende', array(), 0 );
 			}
 		}
+	}
+
+	/**
+	 * Die Platte, deren Datei der Drucker gerade geladen hat.
+	 *
+	 * @param array  $runs Platten eines Druckers.
+	 * @param string $file Dateiname laut Drucker.
+	 * @return array|null
+	 */
+	protected static function run_for_file( array $runs, $file ) {
+		if ( '' === RunFlow::normalize_file( $file ) ) {
+			return null;
+		}
+
+		foreach ( $runs as $run ) {
+			$plate = ! empty( $run['plate_job_id'] ) ? PlateJobRepository::find( (int) $run['plate_job_id'] ) : null;
+
+			if ( $plate && RunFlow::file_matches( $file, (string) $plate->file_name ) ) {
+				return $run;
+			}
+		}
+
+		return null;
 	}
 
 	/* ====================================================================

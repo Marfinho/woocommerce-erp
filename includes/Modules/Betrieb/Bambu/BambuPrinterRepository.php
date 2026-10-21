@@ -373,6 +373,11 @@ class BambuPrinterRepository {
 				? null
 				: mb_substr( sanitize_textarea_field( (string) $data['last_error'] ), 0, 1000 );
 		}
+		// Name der Datei auf dem Drucker. Leer lässt den letzten Namen stehen:
+		// Bambu sendet Teilreports, ein fehlender Name heißt nicht „keine Datei“.
+		if ( array_key_exists( 'current_file', $data ) && '' !== trim( (string) $data['current_file'] ) ) {
+			$update['current_file'] = mb_substr( sanitize_text_field( (string) $data['current_file'] ), 0, 255 );
+		}
 		if ( array_key_exists( 'ams', $data ) ) {
 			$update['ams_json'] = self::normalize_ams_json( $data['ams'] );
 

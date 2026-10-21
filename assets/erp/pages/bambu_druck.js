@@ -309,7 +309,13 @@
 		d.items.forEach(function (it) {
 			if (!(it.article_id in colors)) { colors[it.article_id] = next % PALETTE.length; next++; legend.push([colors[it.article_id], it.label]); }
 			var c = PALETTE[colors[it.article_id]];
-			if (it.points.length >= 3) {
+			var shape = d.shapes && d.shapes[it.article_id];
+			if (shape && it.tx !== undefined) {
+				// Echter Umriss mit Einbuchtungen: gedreht um die Ecke, dann auf die Platte gesetzt; y spiegeln.
+				var rad = (it.rotation || 0) * Math.PI / 180;
+				var cs = Math.cos(rad), sn = Math.sin(rad);
+				root.appendChild(svg('path', { d: shape, fill: c, 'fill-opacity': '0.35', stroke: c, 'stroke-width': Math.max(W, H) / 400, transform: 'matrix(' + [cs, -sn, -sn, -cs, it.tx, H - it.ty].join(' ') + ')' }));
+			} else if (it.points.length >= 3) {
 				var pts = it.points.map(function (p) { return p[0] + ',' + (H - p[1]); }).join(' ');
 				root.appendChild(svg('polygon', { points: pts, fill: c, 'fill-opacity': '0.35', stroke: c, 'stroke-width': Math.max(W, H) / 300 }));
 			} else {
@@ -318,6 +324,21 @@
 		});
 		return { el: root, legend: legend };
 	}
+
+	// Anordnung samt Legende und Hinweis – auch für den Workflow (Plan-Vorschau, Plattenseite).
+	UI.plateView = function (d) {
+		var s = plateSvg(d);
+		var wrap = h('div', { class: 'bd-layout' });
+		wrap.appendChild(h('p', { class: 'muted', style: 'margin:0 0 8px' }, 'Druckbett ' + d.width + ' × ' + d.height + ' mm, ' + d.items.length + ' Teile. Ursprung unten links, wie im Slicer.'));
+		wrap.appendChild(s.el);
+		var ul = h('ul', { class: 'pf-list' });
+		s.legend.forEach(function (l) {
+			ul.appendChild(h('li', null, h('span', { class: 'pf-swatch', style: 'background:' + PALETTE[l[0]] }), l[1]));
+		});
+		wrap.appendChild(ul);
+		if (d.missing) { wrap.appendChild(h('div', { class: 'notice warn' }, 'Bei ' + d.missing + ' Teil(en) ist die Form nicht auslesbar, sie sind nur als Punkt eingezeichnet.')); }
+		return wrap;
+	};
 
 	function openPlate(row) {
 		var body = h('div', { class: 'sheet-body' }, h('p', { class: 'muted' }, 'Wird geladen …'));
