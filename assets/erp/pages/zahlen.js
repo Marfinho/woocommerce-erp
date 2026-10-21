@@ -411,7 +411,8 @@
 				lc.appendChild(table(ui, ['Zeit', 'Person', 'Aktion', 'Objekt', 'Details'], d.log.map(function (r) {
 					return { cells: [r.zeit, r.nutzer, r.aktion, r.objekt, h('span', { class: 'zt-detail' }, r.details)] };
 				})));
-				lc.appendChild(pager(ui, d, function (s) { q.seite = s; load(); }));
+				var lp = pager(ui, d, function (s) { q.seite = s; load(); });
+				if (lp) { lc.appendChild(lp); }
 			}
 			box.appendChild(lc);
 		}
@@ -451,7 +452,8 @@
 					if (hint) { c.appendChild(h('p', { class: 'muted', style: 'font-size:13px' }, hint)); }
 					if (!d.rows.length) { c.appendChild(h('p', { class: 'muted' }, 'Hier gibt es noch keine Einträge.')); }
 					else { c.appendChild(table(ui, head, d.rows.map(rowFn), nums)); }
-					c.appendChild(pager(ui, d, go));
+					var pg = pager(ui, d, go);
+					if (pg) { c.appendChild(pg); }
 					box.appendChild(c);
 				}).catch(function (e) { fail(box, ui, e); });
 			}

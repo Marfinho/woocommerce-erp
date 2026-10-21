@@ -359,7 +359,7 @@
 		var top = h('header', { class: 'top' },
 			h('div', { class: 'top-title' }, el.crumb, el.title),
 			el.net,
-			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite, Artikel, Bestellung', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
+			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
 			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', title: 'Stempeluhr', onclick: function (e) { if (UI.clockBubble) { e.preventDefault(); UI.clockBubble(e.currentTarget); } } }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
 			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
@@ -1288,6 +1288,8 @@
 			h('h2', null, 'Picklisten'),
 			h('p', { class: 'muted', style: 'margin:4px 0 0' }, 'Offene Listen abarbeiten: Position entnehmen oder den Artikel scannen.'))));
 
+		var make = h('div');
+		el.view.appendChild(make);
 		var box = h('div');
 		el.view.appendChild(box);
 		var open = S.pickOpen || 0;
@@ -1295,6 +1297,32 @@
 		function load() {
 			return api('picklisten', { root: true, cache: true }).then(function (lists) { paint(lists); });
 		}
+
+		// Pickliste aus den offenen Bestellungen: nur für Personen mit dem Recht
+		// (sonst antwortet die Vorschau mit 403 und der Block bleibt weg).
+		function loadMake() {
+			return api('picklisten/bestellungen').then(function (d) {
+				make.textContent = '';
+				var go = h('button', { class: 'btn primary', type: 'button' }, 'Pickliste erzeugen');
+				go.disabled = !d.lines;
+				go.addEventListener('click', function () {
+					if (d.open_lists && !window.confirm('Es gibt schon ' + d.open_lists + ' offene Pickliste(n) aus Bestellungen. Eine neue enthält wieder alle offenen Bestellungen – Positionen können doppelt auf Listen stehen. Trotzdem erzeugen?')) { return; }
+					go.disabled = true;
+					api('picklisten/erzeugen', { method: 'POST', body: {} }).then(function (r) {
+						toast(r.message);
+						S.pickOpen = r.id; open = r.id;
+						return load().then(loadMake);
+					}).catch(function (e) { go.disabled = false; toast(e.message, true); });
+				});
+				make.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' },
+					h('h3', null, 'Neue Pickliste aus Bestellungen'),
+					h('p', { class: 'muted' }, d.lines
+						? d.orders + ' offene Bestellung(en) mit ' + d.lines + ' Position(en) – zusammengefasst und nach Lagerplatz sortiert. Gebucht wird erst beim Abhaken.'
+						: 'Keine offenen Bestellungen – es gibt nichts zu picken.'),
+					go));
+			}).catch(function () { make.textContent = ''; });
+		}
+		loadMake();
 
 		var current = [];
 
@@ -1319,7 +1347,7 @@
 			box.textContent = '';
 
 			if (!lists.length) {
-				box.appendChild(h('div', { class: 'notice' }, 'Keine offenen Picklisten. Neue entstehen aus Bestellungen und Fertigungsaufträgen.'));
+				box.appendChild(h('div', { class: 'notice' }, 'Keine offenen Picklisten. Oben erzeugst du eine aus den offenen Bestellungen; Fertigungsaufträge legen ihre Liste selbst an.'));
 				return;
 			}
 
@@ -2229,6 +2257,8 @@
 		var chips = [];
 		if (run.batch) { chips.push('Plan ' + run.batch); }
 		if (run.file) { chips.push('3MF bereit'); }
+		if (live && live.matched && (run.status === 'ruesten' || run.status === 'druckt')) { chips.push('Datei am Drucker erkannt'); }
+		else if (live && live.file && run.file && (run.status === 'freigegeben' || run.status === 'ruesten')) { chips.push('wartet auf ' + run.file.name); }
 		if (live && run.status === 'druckt' && live.remaining !== null) { chips.push('noch ' + minTxt(live.remaining)); }
 		if (run.status === 'zu_melden') { chips.push('wartet auf Meldung'); }
 

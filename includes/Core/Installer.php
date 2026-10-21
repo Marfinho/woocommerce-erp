@@ -68,12 +68,15 @@ class Installer {
 	 * DB_VERSION 36: ERP-Workflow - neue Tabelle runs (Platten) und
 	 * time_entries.run_id, siehe Erp\Schema.
 	 *
-	 * DB_VERSION 38: Tabelle payslips (Lohnabrechnungen aus erfassten Zeiten, im ERP unter Löhne).
+	 * DB_VERSION 39: Tabelle payslips (Lohnabrechnungen aus erfassten Zeiten, im ERP unter Löhne).
 	 *
 	 * DB_VERSION 37: purchases um item_ref (Filamentfarbe) erweitert; Bestellungen
 	 * gibt es nun auch für Zukaufartikel und Filament.
+	 *
+	 * DB_VERSION 38: bambu_printers um current_file (Dateiname des Jobs auf dem
+	 * Drucker) – damit ordnet der ERP-Workflow einen Druck der Platte zu.
 	 */
-	const DB_VERSION = '38';
+	const DB_VERSION = '39';
 
 	/**
 	 * Aktivierungsroutine.

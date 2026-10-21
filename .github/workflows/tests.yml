@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  phpunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, gd, sodium
+          tools: composer
+      - run: composer install --no-interaction --prefer-dist
+      - name: Syntax
+        run: find includes tests lindenweg16.php uninstall.php block-theme theme -name '*.php' -print0 | xargs -0 -n1 php -l > /dev/null
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: JavaScript-Syntax
+        run: |
+          for f in assets/erp/*.js assets/erp/pages/*.js assets/js/*.js; do node --check "$f"; done
+      - name: Theme prüfen und ZIP auf Aktualität
+        run: |
+          python3 block-theme/check-theme.py
+          cp block-theme/dist/lindenweg16.zip /tmp/alt.zip
+          bash block-theme/build-zip.sh
+          mkdir /tmp/a /tmp/b
+          unzip -q /tmp/alt.zip -d /tmp/a && unzip -q block-theme/dist/lindenweg16.zip -d /tmp/b
+          diff -r /tmp/a /tmp/b

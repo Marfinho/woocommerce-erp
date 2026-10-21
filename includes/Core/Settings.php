@@ -63,6 +63,8 @@ class Settings {
 			'betrieb_wochenmail'        => 1,
 			'betrieb_reorder_layout'    => 'theme',
 			'gebuehren_automatisch'     => 1,
+			'rechnung_auto_storno'      => 1,
+			'betrieb_storno_lager'      => 1,
 			// Reporting.
 			'digest_wochentag'          => 1, // Montag.
 			'export_email'              => get_bloginfo( 'admin_email' ),

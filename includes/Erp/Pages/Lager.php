@@ -675,6 +675,10 @@ class Lager {
 		self::route( $ns, '/erp/fertigung/uhr', 'POST', 'fertigung_uhr', $api->needs( $werk ) );
 		self::route( $ns, '/erp/fertigung/fertig', 'POST', 'fertigung_fertig', $api->needs( $werk ) );
 
+		// Picklisten aus offenen Bestellungen.
+		self::route( $ns, '/erp/picklisten/bestellungen', 'GET', 'pickliste_vorschau', $api->needs( $rules['lw16_betrieb_make_picklist'] ) );
+		self::route( $ns, '/erp/picklisten/erzeugen', 'POST', 'pickliste_erzeugen', $api->needs( $rules['lw16_betrieb_make_picklist'] ) );
+
 		// Bedarf.
 		self::route( $ns, '/erp/bedarf', 'GET', 'bedarf', $api->needs( array( 'lager.bedarf' ) ) );
 	}
@@ -1536,6 +1540,79 @@ class Lager {
 						? __( 'Druckauftrag %s angelegt. Gebucht wird er im Druckjournal.', 'lindenweg16' )
 						: __( 'Fertigungsauftrag %s angelegt. Die Materialliste steht am Handy unter „Picken“ bereit.', 'lindenweg16' ),
 					$order['code']
+				),
+			),
+			201
+		);
+	}
+
+	/**
+	 * Was eine Pickliste aus den offenen Bestellungen enthielte.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function pickliste_vorschau() {
+		$lines  = \Lindenweg16\Modules\Betrieb\WooIntegration::open_order_lines();
+		$orders = array();
+		$qty    = 0.0;
+
+		foreach ( $lines as $line ) {
+			$orders[ (int) $line['wc_order_id'] ] = true;
+			$qty                                  += (float) $line['qty'];
+		}
+
+		$open = 0;
+		foreach ( \Lindenweg16\Modules\Betrieb\PicklistRepository::all( 'offen' ) as $list ) {
+			if ( 'bestellungen' === $list['source'] ) {
+				++$open;
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'orders'     => count( $orders ),
+				'lines'      => count( $lines ),
+				'qty'        => $qty,
+				'open_lists' => $open,
+			)
+		);
+	}
+
+	/**
+	 * Pickliste aus allen offenen Bestellungen erzeugen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function pickliste_erzeugen() {
+		$repo  = '\Lindenweg16\Modules\Betrieb\PicklistRepository';
+		$lines = \Lindenweg16\Modules\Betrieb\WooIntegration::open_order_lines();
+
+		if ( ! $lines ) {
+			return self::fail( __( 'Keine offenen Bestellungen – es gibt nichts zu picken.', 'lindenweg16' ), 422 );
+		}
+
+		$rows = $repo::condense(
+			$lines,
+			\Lindenweg16\Modules\Betrieb\BinRepository::article_hints(),
+			\Lindenweg16\Modules\Betrieb\BinRepository::component_hints()
+		);
+		$id   = $repo::create( $rows );
+
+		if ( ! $id ) {
+			return self::fail( __( 'Die Pickliste konnte nicht angelegt werden. Bitte noch einmal versuchen.', 'lindenweg16' ), 500 );
+		}
+
+		$list = $repo::find( $id );
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'id'      => (int) $id,
+				'code'    => $list ? (string) $list['code'] : '',
+				'message' => sprintf(
+					/* translators: %d: Anzahl Positionen. */
+					__( 'Pickliste mit %d Positionen angelegt. Sie steht jetzt unter „Picklisten“ bereit.', 'lindenweg16' ),
+					count( $rows )
 				),
 			),
 			201

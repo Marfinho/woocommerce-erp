@@ -504,7 +504,7 @@
 
 		function pickTab() {
 			return h('div', { class: 'card' }, h('h3', null, 'Picklisten'),
-				h('p', null, 'Picklisten arbeitest du unter „Picklisten“ ab: offene Listen ansehen, Positionen entnehmen oder den Artikel scannen. Gebucht wird beim Abhaken.'),
+				h('p', null, 'Unter „Picklisten“ erzeugst du eine Liste aus den offenen Bestellungen und arbeitest offene Listen ab: Positionen entnehmen oder den Artikel scannen. Gebucht wird beim Abhaken.'),
 				ui.findItem('picken') ? h('a', { class: 'btn primary', href: '#/seite/picken' }, 'Zu den Picklisten') : h('p', { class: 'muted' }, 'Dafür fehlt dir das Recht.'));
 		}
 

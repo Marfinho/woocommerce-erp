@@ -162,7 +162,7 @@ class Dashboard {
 				(int) $target['article_id'],
 				(string) $target['color']
 			);
-			if ( $stock['lager'] < (float) $target['qty'] ) {
+			if ( $stock['lager'] < (float) $target['target_qty'] ) {
 				$lagerwarnungen++;
 			}
 		}

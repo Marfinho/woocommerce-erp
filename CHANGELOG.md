@@ -7,7 +7,25 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [0.31.0] – 2026-10-21
+## [0.33.0] – 2026-10-21
+
+### Montage im Workflow
+- **Spur „Montage“ unter dem Brett:** Der Workflow zeigt jetzt auch, was aus Rohlingen und Kleinteilen montiert werden
+  muss (Halbzeuge und Module mit Stückliste, Beschaffungsweg „Montage“). Jede Karte nennt die Teile der Stückliste mit
+  Bedarf, Lagerbestand und Zustand: **da**, **im Druck** (Platte läuft oder ist freigegeben) oder **fehlt**.
+- **Montage anlegen:** Sind alle Teile da, legt ein Klick den Fertigungsauftrag samt Pickliste an. Vorher nicht, damit
+  der Planer den Bedarf an Rohlingen nicht für gedeckt hält, die noch gar nicht gedruckt sind.
+- **Arbeitsseite `#/montage/<Nr>`** (am Handy nutzbar): Material holen, Uhr mit Pause und Weiter, Fertigmelden mit
+  Stückzahl. Gebucht wird beim Fertigmelden wie bisher: Material geht ab, die Stücke kommen ins Lager. Abbrechen darf, wer
+  Pläne freigeben darf.
+- **Heute:** Offene Montagen stehen unter „Dein Nächstes“ (nach Platte melden und rüsten).
+
+### Stempeluhr als Sprechblase
+- **Klick auf die Uhr in der Kopfzeile** öffnet eine Blase statt der Zeitseite: Stand (läuft, Pause, steht), laufende Zeit,
+  Start, Heute gebucht, Woche gegen Sollstunden und was währenddessen im Betrieb lief. Dort lassen sich die Uhr starten,
+  pausieren, fortsetzen, verwerfen und mit Kategorie, Stunden und Tätigkeit stoppen und buchen. „Mehr …“ führt zur
+  Zeiterfassung. Escape, Klick daneben oder Seitenwechsel schließen die Blase.
+- **Am Handy erreichbar:** Die Uhr stand dort bisher gar nicht in der Kopfzeile (sie erschien erst ab 900 px Breite).
 
 ### Lohnabrechnungen aus den Zeiten
 - **Neue Seite `#/lohn`** (Knopf „Lohnabrechnungen erstellen“ auf der Seite Löhne, Recht wie Löhne): Monat wählen, je Person
@@ -30,27 +48,44 @@ und im Abschnitt „Umsetzungsstand“ der README.
   der Dialog rechnet mit Zuschlägen und Abzügen live mit. **Festschreiben fragt bei überschrittener Grenze nach** und
   schreibt erst nach Bestätigung fest (im Protokoll vermerkt). Das Jahr zählt die übrigen gültigen Abrechnungen des
   Kalenderjahres dazu.
-- Neue Tabelle `payslips` (DB-Version 38), in Verfahrensdokumentation und Reset-Schutz aufgenommen; alle Schritte stehen im Protokoll.
+- Neue Tabelle `payslips` (DB-Version 39), in Verfahrensdokumentation und Reset-Schutz aufgenommen; alle Schritte stehen im Protokoll.
 
-## [0.30.0] – 2026-10-21
+## [0.32.0] – 2026-10-21
 
-### Montage im Workflow
-- **Spur „Montage“ unter dem Brett:** Der Workflow zeigt jetzt auch, was aus Rohlingen und Kleinteilen montiert werden
-  muss (Halbzeuge und Module mit Stückliste, Beschaffungsweg „Montage“). Jede Karte nennt die Teile der Stückliste mit
-  Bedarf, Lagerbestand und Zustand: **da**, **im Druck** (Platte läuft oder ist freigegeben) oder **fehlt**.
-- **Montage anlegen:** Sind alle Teile da, legt ein Klick den Fertigungsauftrag samt Pickliste an. Vorher nicht, damit
-  der Planer den Bedarf an Rohlingen nicht für gedeckt hält, die noch gar nicht gedruckt sind.
-- **Arbeitsseite `#/montage/<Nr>`** (am Handy nutzbar): Material holen, Uhr mit Pause und Weiter, Fertigmelden mit
-  Stückzahl. Gebucht wird beim Fertigmelden wie bisher: Material geht ab, die Stücke kommen ins Lager. Abbrechen darf, wer
-  Pläne freigeben darf.
-- **Heute:** Offene Montagen stehen unter „Dein Nächstes“ (nach Platte melden und rüsten).
+### Picklisten im ERP erzeugen
+- **Verkauf → Bestellungen → Picklisten:** Der neue Kasten *Neue Pickliste aus Bestellungen* zeigt, wie viele offene
+  Bestellungen und Positionen die Liste enthielte, und erzeugt sie mit einem Klick (vorher nur in der Klassischen
+  Ansicht). Gibt es schon eine offene Liste aus Bestellungen, fragt das ERP vor dem Erzeugen nach. Die neue Liste
+  öffnet sich sofort. Der Kasten erscheint nur mit dem Recht „Picklisten erzeugen“ (`lw16_betrieb_make_picklist`).
+- Neue REST-Routen `erp/picklisten/bestellungen` (Vorschau) und `erp/picklisten/erzeugen`.
+- Betriebsanleitung B.3 beschreibt den neuen Weg.
 
-### Stempeluhr als Sprechblase
-- **Klick auf die Uhr in der Kopfzeile** öffnet eine Blase statt der Zeitseite: Stand (läuft, Pause, steht), laufende Zeit,
-  Start, Heute gebucht, Woche gegen Sollstunden und was währenddessen im Betrieb lief. Dort lassen sich die Uhr starten,
-  pausieren, fortsetzen, verwerfen und mit Kategorie, Stunden und Tätigkeit stoppen und buchen. „Mehr …“ führt zur
-  Zeiterfassung. Escape, Klick daneben oder Seitenwechsel schließen die Blase.
-- **Am Handy erreichbar:** Die Uhr stand dort bisher gar nicht in der Kopfzeile (sie erschien erst ab 900 px Breite).
+## [0.31.0] – 2026-10-20
+
+### Betriebsanleitung neu, vier Fehler behoben
+- **Betriebsanleitung vollständig neu geschrieben** für die Oberfläche unter `/erp`: alle Wege (Platz → Reiter → Auswahl,
+  Profilmenü), Teil A–D mit 96 neuen Bildschirmfotos aus einer Testinstallation mit Beispieldaten (Desktop und Handy).
+  Die alten wp-admin-Bilder sind entfernt. Was nur in der Klassischen Ansicht geht (Komponenten, Verbrauchsmaterial,
+  erste Filamentcharge, manuelle Bestellung, Slicing-Worker-Token, Livegang) steht ausdrücklich dabei.
+- **Zahlen → Buchhaltung:** Seitenumbruch der Belegliste und der Rechnungen warf einen Fehler, wenn nur eine Seite da war.
+- **Bedarf und Dashboard:** Der Sollbestand wurde als Zeichenkette gerechnet und konnte bei Dezimalwerten falsche Lücken
+  und Warnungen erzeugen; jetzt als Zahl.
+- **Produktion → Drucker:** Die Gerätezeile verlinkt bei einem verknüpften Bambu-Drucker auf die Druckerakte.
+- **Suchfeld:** Beschriftung „Gehe zu … Seite“ (es sucht nur Seiten, keine Artikel oder Bestellungen).
+- Tests: `SollbestandSpalteTest`, `DruckerAkteLinkTest`.
+
+## [0.30.0] – 2026-10-20
+
+### Hinzugefügt
+- **Workflow erkennt die Druckdatei:** Die Bambu-Bridge meldet den Dateinamen des Jobs auf dem Drucker
+  (`subtask_name`/`gcode_file`). Das ERP ordnet ihn der Platte zu und schaltet genau diese auf „Im Druck“ bzw. „Ist melden“ –
+  auch wenn mehrere Platten für denselben Drucker anstehen. Die Karte zeigt „Datei am Drucker erkannt“ bzw. „wartet auf
+  <Datei>“. Ohne Dateinamen gilt die alte Regel (genau eine Platte pro Drucker).
+- Die Projekt-3MF heißt jetzt lesbar `Platte-<Drucker>-<Datum>-<Nr>-<Zufall>.3mf` statt `bambu-plate-…`. Beim Senden aus
+  Bambu Studio den Projektnamen unverändert lassen (Suffixe wie `_plate_1` sind ok).
+- Schema: `bambu_printers.current_file` (DB_VERSION 38).
+
+**Hinweis:** Die Bridge auf dem Pi muss aktualisiert werden (`raspberry-pi/bambu_bridge.py`).
 
 ## [0.29.0] – 2026-10-20
 

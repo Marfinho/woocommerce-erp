@@ -548,6 +548,10 @@ class BambuRestApi {
 			'last_error'        => (string) $request->get_param( 'error' ),
 		);
 
+		if ( null !== $request->get_param( 'current_file' ) ) {
+			$update['current_file'] = (string) $request->get_param( 'current_file' );
+		}
+
 		// 'ams' nur mitschicken, wenn der Parameter tatsächlich da ist -
 		// sonst würde jeder Status-Heartbeat ohne AMS-Angabe (z. B. weil
 		// die Bridge gerade nicht verbunden ist) die zuletzt bekannte

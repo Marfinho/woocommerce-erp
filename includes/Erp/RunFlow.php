@@ -108,6 +108,53 @@ class RunFlow {
 	}
 
 	/**
+	 * Dateiname auf den Kern bringen, damit Platte und Druckermeldung vergleichbar sind.
+	 *
+	 * Der Drucker meldet den Projektnamen ohne oder mit Endung; über die
+	 * Druck-Warteschlange der Bridge kommt das Präfix „lw16-<Job>-“ dazu.
+	 *
+	 * @param string $name Dateiname.
+	 * @return string Kleingeschrieben, ohne Pfad, Endung und Präfix.
+	 */
+	public static function normalize_file( $name ) {
+		$name = strtolower( trim( basename( str_replace( '\\', '/', (string) $name ) ) ) );
+		$name = preg_replace( '/^lw16-\d+-/', '', $name );
+
+		do {
+			$before = $name;
+			$name   = preg_replace( '/\.(gcode|3mf)$/', '', $name );
+		} while ( $name !== $before );
+
+		return $name;
+	}
+
+	/**
+	 * Gehört der gemeldete Dateiname des Druckers zur Plattendatei?
+	 *
+	 * Gleich oder mit angehängtem Suffix (Bambu Studio ergänzt gern
+	 * „_plate_1“) – aber nur an einer Wortgrenze, sonst träfe „platte-a-1“
+	 * auch „platte-a-10“.
+	 *
+	 * @param string $reported Name laut Drucker.
+	 * @param string $plate    Dateiname der Platte.
+	 * @return bool
+	 */
+	public static function file_matches( $reported, $plate ) {
+		$reported = self::normalize_file( $reported );
+		$plate    = self::normalize_file( $plate );
+
+		if ( '' === $reported || '' === $plate ) {
+			return false;
+		}
+
+		if ( $reported === $plate ) {
+			return true;
+		}
+
+		return 0 === strpos( $reported, $plate ) && ! ctype_alnum( $reported[ strlen( $plate ) ] );
+	}
+
+	/**
 	 * Spalte im Workflow für einen Zustand.
 	 *
 	 * @param string $status Zustand.
