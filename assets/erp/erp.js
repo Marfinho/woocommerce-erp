@@ -2278,10 +2278,12 @@
 		var steps = h('ol', { class: 'steps' });
 		var board = h('div', { class: 'board' });
 		var done = h('section', { class: 'done-strip' });
+		var asmBox = h('div');
 		el.view.appendChild(alertBox);
 		el.view.appendChild(steps);
 		el.view.appendChild(board);
 		el.view.appendChild(done);
+		el.view.appendChild(asmBox);
 
 		function column(title, count, cards, empty) {
 			return h('section', { class: 'col' },
@@ -2331,6 +2333,11 @@
 			cols.erledigt.forEach(function (r) {
 				done.appendChild(h('a', { class: 'muted', href: '#/platte/' + r.id }, 'Platte ' + r.id + ' · ' + itemsLine(r)));
 			});
+
+			// Montage: Rohlinge und Kleinteile zu Halbzeugen und Modulen (pages/montage.js).
+			if (UI.assemblyLane) {
+				UI.assemblyLane(asmBox, { board: data.assembly, cards: demand ? demand.assembly : [], plan: plan, demandLoaded: !!demand, reload: function () { load(); loadDemand(); } });
+			}
 		}
 
 		function load() {

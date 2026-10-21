@@ -22,10 +22,11 @@ class ErpTasksTest extends TestCase {
 				array( 'kind' => 'melden', 'title' => 'x' ),
 				array( 'kind' => 'packen', 'title' => 'p' ),
 				array( 'kind' => 'ruesten', 'title' => 'r' ),
+				array( 'kind' => 'montage', 'title' => 'mo' ),
 			)
 		);
 
-		$this->assertSame( array( 'melden', 'ruesten', 'packen', 'wartung', 'bestellen', 'lieferung', 'rechnung', 'nachfassen', 'mail' ), array_column( $sorted, 'kind' ) );
+		$this->assertSame( array( 'melden', 'ruesten', 'montage', 'packen', 'wartung', 'bestellen', 'lieferung', 'rechnung', 'nachfassen', 'mail' ), array_column( $sorted, 'kind' ) );
 	}
 
 	public function test_unbekannte_arten_kommen_zuletzt() {

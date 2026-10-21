@@ -316,6 +316,36 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/workflow/montage',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'assembly_create' ),
+				'permission_callback' => array( $this, 'can_plan' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/montage/(?P<id>\d+)',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'assembly_get' ),
+				'permission_callback' => array( $this, 'can_workflow' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/montage/(?P<id>\d+)/(?P<action>start|pause|fertig|abbrechen)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'assembly_act' ),
+				'permission_callback' => array( $this, 'can_workflow' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/runs/(?P<id>\d+)',
 			array(
 				'methods'             => 'GET',
@@ -680,6 +710,7 @@ class RestApi {
 			array(
 				'columns'  => Workflow::columns(),
 				'plan'     => $plan,
+				'assembly' => Assembly::board(),
 				'printers' => $plan ? Workflow::printers() : array(),
 				'alerts'   => array_map(
 					static function ( $alert ) {
@@ -818,6 +849,63 @@ class RestApi {
 		}
 
 		$result = Workflow::act( $id, $action, (array) $request->get_json_params() );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
+	}
+
+	/**
+	 * Montageauftrag aus dem Bedarf anlegen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function assembly_create( WP_REST_Request $request ) {
+		$result = Assembly::create( (int) $request->get_param( 'article_id' ), $request->get_param( 'qty' ), (string) $request->get_param( 'color' ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 201 : $result['status'] );
+	}
+
+	/**
+	 * Ein Montageauftrag mit Teilen und Bestand.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function assembly_get( WP_REST_Request $request ) {
+		$order = \Lindenweg16\Modules\Betrieb\WorkOrderRepository::find( (int) $request['id'] );
+
+		if ( ! $order || 'montage' !== $order['kind'] ) {
+			return new WP_Error( 'lw16_erp_montage', __( 'Montageauftrag nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'order' => Assembly::view( $order, true ),
+				'plan'  => Access::can( 'fertigung.workflow.plan' ),
+			)
+		);
+	}
+
+	/**
+	 * Aktion auf einem Montageauftrag.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function assembly_act( WP_REST_Request $request ) {
+		$action = (string) $request['action'];
+
+		// Abbrechen vernichtet Arbeit: nur, wer auch Pläne freigibt.
+		if ( 'abbrechen' === $action && ! Access::can( 'fertigung.workflow.plan' ) ) {
+			return new WP_Error( 'lw16_forbidden', __( 'Abbrechen darf nur, wer Pläne freigeben darf.', 'lindenweg16' ), array( 'status' => 403 ) );
+		}
+
+		$result = Assembly::act( (int) $request['id'], $action, (array) $request->get_json_params() );
+		$order  = \Lindenweg16\Modules\Betrieb\WorkOrderRepository::find( (int) $request['id'] );
+
+		if ( $order ) {
+			$result['order'] = Assembly::view( $order, true );
+		}
 
 		return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
 	}

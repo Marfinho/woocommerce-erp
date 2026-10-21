@@ -194,7 +194,8 @@ class Workflow {
 			Forecast::demands( Forecast::sales_by_article( $settings['weeks'] ), $open, $settings['weeks'], $settings['cover_weeks'] )
 		);
 
-		$plan   = DemandPlanner::plan( $demands, DemandPlanner::context() );
+		$ctx    = DemandPlanner::context();
+		$plan   = DemandPlanner::plan( $demands, $ctx );
 		$labels = DemandPlanner::source_labels();
 		$cards  = array();
 
@@ -227,6 +228,7 @@ class Workflow {
 
 		return array(
 			'cards'    => $cards,
+			'assembly' => Assembly::cards( $plan, $ctx, $labels ),
 			'warnings' => $plan['warnings'],
 		);
 	}

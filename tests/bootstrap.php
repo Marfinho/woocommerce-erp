@@ -366,6 +366,7 @@ require $lw16_root . '/includes/Erp/Material.php';
 require $lw16_root . '/includes/Erp/Procurement.php';
 require $lw16_root . '/includes/Erp/Variance.php';
 require $lw16_root . '/includes/Erp/Tasks.php';
+require $lw16_root . '/includes/Erp/Assembly.php';
 require $lw16_root . '/includes/Erp/Catalog.php';
 require $lw16_root . '/includes/Erp/OrderContact.php';
 require $lw16_root . '/includes/Erp/ProductFile.php';

@@ -7,6 +7,19 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.30.0] – 2026-10-21
+
+### Montage im Workflow
+- **Spur „Montage“ unter dem Brett:** Der Workflow zeigt jetzt auch, was aus Rohlingen und Kleinteilen montiert werden
+  muss (Halbzeuge und Module mit Stückliste, Beschaffungsweg „Montage“). Jede Karte nennt die Teile der Stückliste mit
+  Bedarf, Lagerbestand und Zustand: **da**, **im Druck** (Platte läuft oder ist freigegeben) oder **fehlt**.
+- **Montage anlegen:** Sind alle Teile da, legt ein Klick den Fertigungsauftrag samt Pickliste an. Vorher nicht, damit
+  der Planer den Bedarf an Rohlingen nicht für gedeckt hält, die noch gar nicht gedruckt sind.
+- **Arbeitsseite `#/montage/<Nr>`** (am Handy nutzbar): Material holen, Uhr mit Pause und Weiter, Fertigmelden mit
+  Stückzahl. Gebucht wird beim Fertigmelden wie bisher: Material geht ab, die Stücke kommen ins Lager. Abbrechen darf, wer
+  Pläne freigeben darf.
+- **Heute:** Offene Montagen stehen unter „Dein Nächstes“ (nach Platte melden und rüsten).
+
 ## [0.29.0] – 2026-10-20
 
 ### Anordnung auf dem Bett sichtbar
