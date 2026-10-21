@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.31.0] – 2026-10-21
+
+### Picklisten im ERP erzeugen
+- **Verkauf → Bestellungen → Picklisten:** Der neue Kasten *Neue Pickliste aus Bestellungen* zeigt, wie viele offene
+  Bestellungen und Positionen die Liste enthielte, und erzeugt sie mit einem Klick (vorher nur in der Klassischen
+  Ansicht). Gibt es schon eine offene Liste aus Bestellungen, fragt das ERP vor dem Erzeugen nach. Die neue Liste
+  öffnet sich sofort. Der Kasten erscheint nur mit dem Recht „Picklisten erzeugen“ (`lw16_betrieb_make_picklist`).
+- Neue REST-Routen `erp/picklisten/bestellungen` (Vorschau) und `erp/picklisten/erzeugen`.
+- Betriebsanleitung B.3 beschreibt den neuen Weg.
+
 ## [0.30.0] – 2026-10-20
 
 ### Betriebsanleitung neu, vier Fehler behoben

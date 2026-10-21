@@ -13,10 +13,10 @@
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version 0.30.0</div>
+	<div class="marke">Lindenweg16 ERP · Version 0.31.0</div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Alle Bilder sind echte Bildschirmfotos der Oberfläche unter /erp, aufgenommen in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden). Stand: Plugin-Version 0.30.0.</div>
+	<div class="meta">Alle Bilder sind echte Bildschirmfotos der Oberfläche unter /erp, aufgenommen in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden). Stand: Plugin-Version 0.31.0.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -1095,7 +1095,7 @@
 <table>
 <thead><tr><th>#</th><th>Schritt</th><th>Wo</th><th>Ergebnis</th></tr></thead>
 <tbody>
-<tr><td>1</td><td>Pickliste erzeugen</td><td>Computer, <em>Lagerplätze &amp; Picklisten</em> (Klassische Ansicht)</td><td>Eine Liste, sortiert nach Lagerplatz</td></tr>
+<tr><td>1</td><td>Pickliste erzeugen</td><td>Computer, <em>Verkauf → Bestellungen → Picklisten</em></td><td>Eine Liste, sortiert nach Lagerplatz</td></tr>
 <tr><td>2</td><td>Picken</td><td>Handy oder Computer, <em>Verkauf → Bestellungen → Picklisten</em></td><td>Ware auf dem Packtisch, Bestand gebucht</td></tr>
 <tr><td>3</td><td>Packen</td><td>Packtisch</td><td>Karton mit Ware und Beipackzettel</td></tr>
 <tr><td>4</td><td>Lieferschein drucken</td><td>Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>PDF, kommt ins Paket</td></tr>
@@ -1121,19 +1121,21 @@
 
 <h2 id="vers-pickliste"><span class="nr">B.3</span> Schritt 1: Pickliste erzeugen</h2>
 
-<p><span class="weg">Lager → Bestand → Lagerplätze &amp; Picklisten → Klassische Ansicht → Reiter „Picklisten“</span></p>
+<p><span class="weg">Verkauf → Bestellungen → Picklisten</span></p>
 
-<div class="kasten info">
-	<span class="titel">Dieser eine Schritt liegt noch in der klassischen Ansicht</span>
-	<p>Das <em>Abarbeiten</em> der Picklisten ist ins ERP umgezogen (Kapitel B.4). Das <em>Erzeugen</em> einer Pickliste aus den offenen Bestellungen geht noch auf der klassischen Seite. Klick dazu auf der Seite <em>Lagerplätze &amp; Picklisten</em> oben rechts auf <strong>Klassische Ansicht</strong>. Sie öffnet sich im WordPress-Verwaltungsbereich. Zurück ins ERP kommst du mit dem Zurück-Knopf des Browsers. Picklisten zu <em>Fertigungsaufträgen</em> entstehen dagegen von allein, wenn du den Auftrag anlegst (Kapitel A.5).</p>
-</div>
+<figure>
+	<img src="bilder/picklisten-erzeugen.png" alt="Die Seite Picklisten mit dem Kasten Neue Pickliste aus Bestellungen, dem Knopf Pickliste erzeugen und einer vorhandenen Liste">
+	<figcaption>Oben der Kasten zum Erzeugen, darunter die offenen Listen.</figcaption>
+</figure>
 
 <ol class="schritte">
-	<li>Öffne die klassische Seite <strong>Lagerplätze &amp; Picklisten</strong> und wähle den Reiter <strong>Picklisten</strong>.</li>
-	<li>Klick oben auf den blauen Knopf <strong>Pickliste aus offenen Bestellungen erzeugen</strong>.</li>
-	<li>Darunter erscheint eine neue Liste mit einem Code wie <code>PL261020-01</code> und dem Status <strong>offen</strong>.</li>
-	<li>Schau die Tabelle kurz an. Sie ist nach der Spalte <strong>Platz</strong> sortiert – das ist deine Laufreihenfolge.</li>
+	<li>Öffne <span class="weg">Verkauf → Bestellungen → Picklisten</span>. Oben steht, wie viele offene Bestellungen und Positionen die neue Liste enthielte.</li>
+	<li>Klick auf <strong>Pickliste erzeugen</strong>. Eine kurze Meldung bestätigt die Liste, und sie öffnet sich sofort.</li>
+	<li>Sie hat einen Code wie <code>PL261020-01</code> und ist nach der Spalte <strong>Platz</strong> sortiert – das ist deine Laufreihenfolge.</li>
+	<li>Der Knopf ist grau, wenn es keine offenen Bestellungen gibt. Ihn sehen nur Personen mit dem Recht, Picklisten zu erzeugen.</li>
 </ol>
+
+<p>Die Liste fasst gleiche Artikel in gleicher Farbe zusammen; die Spalte <em>Bestellung</em> sagt weiter, zu welcher Bestellung eine Zeile gehört.</p>
 
 <div class="tabelle">
 <table>
@@ -1151,7 +1153,7 @@
 
 <div class="kasten achtung">
 	<span class="titel">Erzeug nicht zweimal hintereinander eine Liste</span>
-	<p>Die Liste enthält alle offenen Bestellungen. Wenn du sofort noch einmal auf den Knopf drückst, hast du zwei Listen mit derselben Ware und pickst am Ende doppelt. Eine Liste, ein Durchgang. Erst wenn sie abgearbeitet ist, machst du die nächste.</p>
+	<p>Die Liste enthält alle offenen Bestellungen. Wenn du sofort noch einmal auf den Knopf drückst, hast du zwei Listen mit derselben Ware und pickst am Ende doppelt. Gibt es schon eine offene Liste aus Bestellungen, fragt das ERP vorher nach. Eine Liste, ein Durchgang. Erst wenn sie abgearbeitet ist, machst du die nächste.</p>
 </div>
 
 <h2 id="vers-picken"><span class="nr">B.4</span> Schritt 2: Picken</h2>
@@ -1161,8 +1163,8 @@
 <p>Zum Picken nimmst du am besten das Handy mit ins Lager. Der Computer bleibt am Packtisch stehen. Es geht aber auch am Computer.</p>
 
 <figure>
-	<img src="bilder/picken.png" alt="Die Seite Picklisten mit einer Karte PL261020-01, 5 von 5 Positionen offen">
-	<figcaption>Die Seite <strong>Picklisten</strong> zeigt alle offenen Listen. Tipp oder klick auf eine Liste, um sie zu öffnen. Mehrere Personen können gleichzeitig packen – die Seite frischt sich alle 30 Sekunden auf.</figcaption>
+	<img src="bilder/picken.png" alt="Eine geöffnete Pickliste mit Platz, Artikel, Bestellung, Menge und dem Knopf Entnommen je Position">
+	<figcaption>Die Seite <strong>Picklisten</strong> zeigt alle offenen Listen; hier ist eine geöffnet. Tipp oder klick auf eine Liste, um sie zu öffnen. Mehrere Personen können gleichzeitig packen – die Seite frischt sich alle 30 Sekunden auf.</figcaption>
 </figure>
 
 <h3>Am Handy</h3>
@@ -2891,7 +2893,7 @@
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.30.0 ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.31.0 ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·
