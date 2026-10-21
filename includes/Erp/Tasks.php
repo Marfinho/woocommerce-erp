@@ -37,13 +37,14 @@ class Tasks {
 		return array(
 			'melden'    => 1,
 			'ruesten'   => 2,
-			'packen'    => 3,
-			'wartung'   => 4,
-			'bestellen' => 5,
-			'lieferung' => 6,
-			'rechnung'  => 7,
-			'nachfassen' => 8,
-			'mail'      => 9,
+			'montage'   => 3,
+			'packen'    => 4,
+			'wartung'   => 5,
+			'bestellen' => 6,
+			'lieferung' => 7,
+			'rechnung'  => 8,
+			'nachfassen' => 9,
+			'mail'      => 10,
 		);
 	}
 
@@ -107,6 +108,19 @@ class Tasks {
 					'sub'   => implode( ', ', $lines ),
 					'cta'   => $melden ? __( 'Menge melden', 'lindenweg16' ) : __( 'Rüsten starten', 'lindenweg16' ),
 					'href'  => '#/platte/' . (int) $run['id'],
+				);
+			}
+		}
+
+		if ( Access::can( 'fertigung.workflow' ) ) {
+			foreach ( Assembly::board()['open'] as $order ) {
+				$tasks[] = array(
+					'kind'  => 'montage',
+					/* translators: 1: Stückzahl, 2: Artikel. */
+					'title' => sprintf( __( 'Montage: %1$s× %2$s', 'lindenweg16' ), (int) $order['qty'], $order['name'] ),
+					'sub'   => $order['code'] . ( $order['running'] ? ' · ' . __( 'läuft', 'lindenweg16' ) : '' ),
+					'cta'   => $order['running'] ? __( 'Weiterarbeiten', 'lindenweg16' ) : __( 'Montage starten', 'lindenweg16' ),
+					'href'  => '#/montage/' . (int) $order['id'],
 				);
 			}
 		}

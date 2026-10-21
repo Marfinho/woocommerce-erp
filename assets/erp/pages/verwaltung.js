@@ -284,6 +284,7 @@
 				state.von = d.von; state.bis = d.bis;
 				box.textContent = '';
 				box.appendChild(h('section', { class: 'card' },
+					h('p', null, h('a', { class: 'btn primary', href: '#/lohn' }, 'Lohnabrechnungen erstellen')),
 					h('p', { class: 'muted' }, 'Wer im Betrieb etwas darf, steht hier – mit Stundenlohn, erfasster Arbeitszeit im Zeitraum und dem, was zuletzt getan wurde. Rechte vergibst du unter „Benutzer & Rechte“.'),
 					periodForm(d, list)));
 

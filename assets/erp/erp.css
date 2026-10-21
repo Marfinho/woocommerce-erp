@@ -169,11 +169,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .search-btn kbd { margin-left: auto; font: 12px var(--font-mono); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
 .clock-pill {
-	display: none; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border-radius: 999px; text-decoration: none;
+	display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 16px; border-radius: 999px; text-decoration: none;
 	background: var(--surface); border: 1px solid var(--line); font-weight: 700; font-size: 14px;
 }
 .clock-pill .ico { width: 18px; height: 18px; color: var(--success); }
 .clock-pill:hover { border-color: var(--accent); }
+@media (max-width: 899px) { .clock-pill { height: 40px; padding: 0 12px; gap: 6px; font-size: 13px; } }
 
 /* Reiter unter der Kopfzeile */
 .subnav {
@@ -246,7 +247,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 	.main { margin-left: var(--rail); padding-bottom: 0; }
 	.tabbar, .mobile-only { display: none; }
 	.search-btn { display: inline-flex; }
-	.clock-pill { display: inline-flex; }
 	.top { padding-inline: 28px; }
 	.top-title { display: none; }
 	.search-btn { margin-right: auto; }

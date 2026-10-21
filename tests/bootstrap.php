@@ -333,6 +333,30 @@ if ( ! function_exists( 'sanitize_text_field' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	/**
+	 * Tags entfernen (vereinfacht).
+	 *
+	 * @param string $text Text.
+	 * @return string
+	 */
+	function wp_strip_all_tags( $text ) {
+		return trim( strip_tags( (string) $text ) );
+	}
+}
+
+if ( ! function_exists( 'wp_json_encode' ) ) {
+	/**
+	 * JSON wie WordPress.
+	 *
+	 * @param mixed $data Daten.
+	 * @return string|false
+	 */
+	function wp_json_encode( $data ) {
+		return json_encode( $data );
+	}
+}
+
 if ( ! function_exists( 'current_user_can' ) ) {
 	/**
 	 * Berechtigung aus $GLOBALS['lw16_test_caps'] (Liste erlaubter Rechte).
@@ -366,6 +390,11 @@ require $lw16_root . '/includes/Erp/Material.php';
 require $lw16_root . '/includes/Erp/Procurement.php';
 require $lw16_root . '/includes/Erp/Variance.php';
 require $lw16_root . '/includes/Erp/Tasks.php';
+require $lw16_root . '/includes/Erp/Assembly.php';
+require $lw16_root . '/includes/Core/Pdf.php';
+require $lw16_root . '/includes/Erp/Payroll.php';
+require $lw16_root . '/includes/Erp/Payslips.php';
+require $lw16_root . '/includes/Erp/PayslipPdf.php';
 require $lw16_root . '/includes/Erp/Catalog.php';
 require $lw16_root . '/includes/Erp/OrderContact.php';
 require $lw16_root . '/includes/Erp/ProductFile.php';

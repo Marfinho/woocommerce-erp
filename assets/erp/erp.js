@@ -361,7 +361,7 @@
 			el.net,
 			h('button', { class: 'search-btn', type: 'button', onclick: openPalette }, ico('search'), 'Gehe zu … Seite', h('kbd', null, navigator.platform.indexOf('Mac') > -1 ? '⌘K' : 'Strg K')),
 			h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Suchen', id: 'search-icon', onclick: openPalette }, ico('search')),
-			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill' }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
+			time ? h('a', { class: 'clock-pill', href: '#/seite/zeit', id: 'clock-pill', 'aria-haspopup': 'dialog', 'aria-expanded': 'false', title: 'Stempeluhr', onclick: function (e) { if (UI.clockBubble) { e.preventDefault(); UI.clockBubble(e.currentTarget); } } }, ico('clock'), el.clockLabel = h('span', null, 'Zeit')) : null,
 			el.mailBtn ? h('a', { class: 'icon-btn mobile-only', href: '#/bereich/mail', 'aria-label': 'Mailbox' }, ico('mail')) : null
 		);
 
@@ -2308,10 +2308,12 @@
 		var steps = h('ol', { class: 'steps' });
 		var board = h('div', { class: 'board' });
 		var done = h('section', { class: 'done-strip' });
+		var asmBox = h('div');
 		el.view.appendChild(alertBox);
 		el.view.appendChild(steps);
 		el.view.appendChild(board);
 		el.view.appendChild(done);
+		el.view.appendChild(asmBox);
 
 		function column(title, count, cards, empty) {
 			return h('section', { class: 'col' },
@@ -2361,6 +2363,11 @@
 			cols.erledigt.forEach(function (r) {
 				done.appendChild(h('a', { class: 'muted', href: '#/platte/' + r.id }, 'Platte ' + r.id + ' · ' + itemsLine(r)));
 			});
+
+			// Montage: Rohlinge und Kleinteile zu Halbzeugen und Modulen (pages/montage.js).
+			if (UI.assemblyLane) {
+				UI.assemblyLane(asmBox, { board: data.assembly, cards: demand ? demand.assembly : [], plan: plan, demandLoaded: !!demand, reload: function () { load(); loadDemand(); } });
+			}
 		}
 
 		function load() {
