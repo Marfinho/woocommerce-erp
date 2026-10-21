@@ -20,6 +20,13 @@ und im Abschnitt „Umsetzungsstand“ der README.
   Pläne freigeben darf.
 - **Heute:** Offene Montagen stehen unter „Dein Nächstes“ (nach Platte melden und rüsten).
 
+### Stempeluhr als Sprechblase
+- **Klick auf die Uhr in der Kopfzeile** öffnet eine Blase statt der Zeitseite: Stand (läuft, Pause, steht), laufende Zeit,
+  Start, Heute gebucht, Woche gegen Sollstunden und was währenddessen im Betrieb lief. Dort lassen sich die Uhr starten,
+  pausieren, fortsetzen, verwerfen und mit Kategorie, Stunden und Tätigkeit stoppen und buchen. „Mehr …“ führt zur
+  Zeiterfassung. Escape, Klick daneben oder Seitenwechsel schließen die Blase.
+- **Am Handy erreichbar:** Die Uhr stand dort bisher gar nicht in der Kopfzeile (sie erschien erst ab 900 px Breite).
+
 ## [0.29.0] – 2026-10-20
 
 ### Anordnung auf dem Bett sichtbar
