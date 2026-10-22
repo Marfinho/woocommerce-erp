@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.35.1] – 2026-10-22
+
+- **Belege ohne Tesseract auf dem Server:** Fotos werden jetzt im Browser gelesen (tesseract.js, wird beim ersten Mal einmalig geladen). Das Foto bleibt auf dem Gerät, nur der erkannte Text geht zur Auswertung an den Server (`buch/belege/ocr-text`). Klappt auch das nicht (offline), bleibt es bei der Handeingabe.
+
 ## [0.35.0] – 2026-10-22
 
 ### Buchhaltung und Marketing-Kosten im ERP
