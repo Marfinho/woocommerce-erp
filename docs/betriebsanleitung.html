@@ -7,16 +7,201 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400&display=swap">
-<link rel="stylesheet" href="ba.css">
+<style>
+/* Gemeinsames Aussehen der Betriebsanleitungen. */
+:root{
+	--papier:#F5F6F4;
+	--karte:#FFFFFF;
+	--text:#1F2629;
+	--text-2:#59656B;
+	--text-3:#8B969B;
+	--linie:#DDE2DC;
+	--linie-2:#ECEFEA;
+	--akzent:#8B6914;
+	--akzent-weich:#F6EFDC;
+	--gruen:#1F5F52;
+	--gruen-weich:#E4EEEA;
+	--rot:#8C3327;
+	--rot-weich:#F8E7E4;
+	--blau:#1C4E80;
+	--blau-weich:#E5EDF6;
+	--schatten:0 1px 2px rgba(31,38,41,.06), 0 10px 28px -20px rgba(31,38,41,.35);
+}
+@media (prefers-color-scheme:dark){
+	:root:not([data-theme="light"]){
+		--papier:#13181A; --karte:#1A2124; --text:#E5EAE7; --text-2:#A2AFB3; --text-3:#77858B;
+		--linie:#2B3538; --linie-2:#222A2D; --akzent:#D9AC4E; --akzent-weich:#2B2416;
+		--gruen:#6FBFAA; --gruen-weich:#192927; --rot:#E08878; --rot-weich:#2D1E1B;
+		--blau:#7FB2E5; --blau-weich:#17222E;
+		--schatten:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -20px rgba(0,0,0,.7);
+	}
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+	margin:0;
+	background:var(--papier);
+	color:var(--text);
+	font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+	font-size:18px;
+	line-height:1.62;
+	-webkit-text-size-adjust:100%;
+}
+.seite{max-width:1180px;margin:0 auto;padding:0 24px 120px}
+
+/* Kopf */
+.kopf{padding:56px 0 28px;border-bottom:2px solid var(--linie)}
+.kopf .marke{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--akzent);font-weight:700}
+.kopf h1{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:clamp(30px,5vw,46px);line-height:1.1;margin:10px 0 12px;letter-spacing:-.02em}
+.kopf .unter{font-size:20px;color:var(--text-2);margin:0;max-width:62ch}
+.kopf .meta{font-family:system-ui,sans-serif;font-size:13px;color:var(--text-3);margin-top:18px}
+.kopf .meta a{color:var(--text-3)}
+
+/* Navigation zwischen den Anleitungen */
+.wegweiser{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0;font-family:system-ui,sans-serif;font-size:14px}
+.wegweiser a{
+	display:inline-block;padding:7px 14px;border:1px solid var(--linie);border-radius:999px;
+	background:var(--karte);color:var(--text-2);text-decoration:none;
+}
+.wegweiser a:hover{border-color:var(--akzent);color:var(--akzent)}
+.wegweiser a.hier{background:var(--akzent);border-color:var(--akzent);color:#fff}
+
+/* Inhaltsverzeichnis */
+.inhalt{
+	background:var(--karte);border:1px solid var(--linie);border-radius:14px;
+	padding:24px 28px;margin:36px 0 12px;box-shadow:var(--schatten);
+}
+.inhalt h2{font-family:system-ui,sans-serif;font-size:15px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);margin:0 0 14px;border:0;padding:0}
+.inhalt ol{margin:0;padding-left:22px;columns:2;column-gap:40px;font-family:system-ui,sans-serif;font-size:15px}
+@media (max-width:760px){.inhalt ol{columns:1}}
+.inhalt li{margin:0 0 7px;break-inside:avoid}
+.inhalt a{color:var(--text);text-decoration:none;border-bottom:1px solid var(--linie)}
+.inhalt a:hover{color:var(--akzent);border-color:var(--akzent)}
+
+/* Überschriften */
+h2{
+	font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+	font-size:clamp(24px,3.4vw,32px);line-height:1.2;letter-spacing:-.015em;
+	margin:64px 0 6px;padding-top:18px;border-top:2px solid var(--linie);
+}
+h2 .nr{color:var(--akzent);font-variant-numeric:tabular-nums}
+h3{font-family:system-ui,sans-serif;font-size:21px;margin:38px 0 4px;letter-spacing:-.01em}
+h4{font-family:system-ui,sans-serif;font-size:17px;margin:26px 0 2px;color:var(--text-2)}
+p{margin:12px 0}
+a{color:var(--akzent)}
+strong{font-weight:600}
+code,kbd{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:var(--linie-2);border:1px solid var(--linie);border-radius:5px;padding:1px 5px}
+
+/* Weg durchs Menü */
+.weg{
+	font-family:system-ui,sans-serif;font-size:15px;font-weight:600;
+	display:inline-block;background:var(--blau-weich);color:var(--blau);
+	border:1px solid color-mix(in srgb, var(--blau) 25%, transparent);
+	border-radius:8px;padding:6px 12px;margin:6px 0;
+}
+
+/* Schrittfolgen */
+ol.schritte{list-style:none;counter-reset:schritt;padding:0;margin:20px 0}
+ol.schritte>li{
+	counter-increment:schritt;position:relative;padding:0 0 4px 52px;margin:0 0 20px;
+}
+ol.schritte>li::before{
+	content:counter(schritt);position:absolute;left:0;top:1px;
+	width:34px;height:34px;border-radius:50%;
+	background:var(--akzent);color:#fff;
+	font-family:system-ui,sans-serif;font-size:16px;font-weight:700;
+	display:flex;align-items:center;justify-content:center;
+}
+ol.schritte ul{margin:8px 0}
+ul{margin:12px 0;padding-left:24px}
+li{margin:0 0 6px}
+
+/* Bilder */
+figure{margin:22px 0 26px}
+figure img{
+	display:block;width:100%;height:auto;
+	border:1px solid var(--linie);border-radius:10px;background:var(--karte);
+	box-shadow:var(--schatten);
+}
+figcaption{
+	font-family:system-ui,sans-serif;font-size:14px;color:var(--text-3);
+	margin-top:9px;line-height:1.5;
+}
+figure.handy img{max-width:340px;margin:0 auto}
+figure.schmal img{max-width:760px}
+
+/* Teile der zusammengeführten Anleitung */
+section.teil{margin-top:72px}
+.teilkopf{padding:40px 0 20px;border-top:3px solid var(--akzent);border-bottom:2px solid var(--linie);margin-bottom:8px}
+.teilkopf .marke{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--akzent);font-weight:700}
+.teilkopf h1{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:clamp(28px,4.5vw,40px);line-height:1.1;margin:8px 0 10px;letter-spacing:-.02em}
+.teilkopf .unter{font-size:19px;color:var(--text-2);margin:0;max-width:62ch}
+.inhalt p.teilkopf{border:0;padding:14px 0 4px;margin:0;font-family:system-ui,sans-serif;font-weight:700;font-size:16px}
+.inhalt p.teilkopf .fuer{font-weight:400;color:var(--text-3);font-size:13px;margin-left:8px}
+.inhalt ol.flach{columns:2;column-gap:32px;list-style:none;padding-left:0}
+.inhalt ol.flach .nr{color:var(--text-3);margin-right:6px}
+@media (max-width:760px){.inhalt ol.flach{columns:1}}
+@media print{.teilkopf{break-before:page}}
+
+/* Kästen */
+.kasten{
+	border-radius:12px;padding:16px 20px;margin:22px 0;
+	font-family:system-ui,sans-serif;font-size:16px;line-height:1.55;
+	border:1px solid var(--linie);background:var(--karte);
+}
+.kasten p:first-child{margin-top:0}
+.kasten p:last-child{margin-bottom:0}
+.kasten .titel{display:block;font-weight:700;margin-bottom:4px;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+.achtung{background:var(--rot-weich);border-color:color-mix(in srgb, var(--rot) 30%, transparent)}
+.achtung .titel{color:var(--rot)}
+.merke{background:var(--akzent-weich);border-color:color-mix(in srgb, var(--akzent) 30%, transparent)}
+.merke .titel{color:var(--akzent)}
+.tipp{background:var(--gruen-weich);border-color:color-mix(in srgb, var(--gruen) 30%, transparent)}
+.tipp .titel{color:var(--gruen)}
+.info{background:var(--blau-weich);border-color:color-mix(in srgb, var(--blau) 25%, transparent)}
+.info .titel{color:var(--blau)}
+
+/* Tabellen */
+.tabelle{overflow-x:auto;margin:22px 0;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-family:system-ui,sans-serif;font-size:15px;background:var(--karte);
+	border:1px solid var(--linie);border-radius:10px;overflow:hidden}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--linie-2);vertical-align:top}
+th{background:var(--linie-2);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--text-2)}
+tr:last-child td{border-bottom:0}
+
+/* Startseite: Karten */
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin:34px 0}
+.karte{
+	display:block;text-decoration:none;color:inherit;
+	background:var(--karte);border:1px solid var(--linie);border-radius:14px;
+	padding:24px 26px;box-shadow:var(--schatten);transition:border-color .15s, transform .15s;
+}
+.karte:hover{border-color:var(--akzent);transform:translateY(-2px)}
+.karte h3{margin:0 0 6px;font-size:22px}
+.karte p{margin:0;font-size:16px;color:var(--text-2);font-family:system-ui,sans-serif;line-height:1.5}
+.karte .fuer{font-family:system-ui,sans-serif;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--akzent);font-weight:700}
+
+/* Fuß */
+.fuss{margin-top:80px;padding-top:24px;border-top:2px solid var(--linie);
+	font-family:system-ui,sans-serif;font-size:14px;color:var(--text-3)}
+
+@media print{
+	body{background:#fff;font-size:11pt}
+	.wegweiser,.inhalt{break-inside:avoid}
+	figure,ol.schritte>li,.kasten,table{break-inside:avoid}
+	h2{break-before:page}
+	.karte{box-shadow:none}
+}
+</style>
 </head>
 <body>
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version 0.32.0</div>
+	<div class="marke">Lindenweg16 ERP · Version 0.32.1</div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Alle Bilder sind echte Bildschirmfotos der Oberfläche unter /erp, aufgenommen in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden). Stand: Plugin-Version 0.32.0.</div>
+	<div class="meta">Alle Bilder sind echte Bildschirmfotos der Oberfläche unter /erp, aufgenommen in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden). Stand: Plugin-Version 0.32.1.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2893,7 +3078,7 @@
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.32.0 ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version 0.32.1 ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·
