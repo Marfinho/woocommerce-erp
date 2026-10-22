@@ -123,6 +123,7 @@ class VerfahrensDokuBetrieb {
 			// Auswertung.
 			'time_entries'      => __( 'Zeiterfassung je Woche und Tätigkeit, bei Auftragszeiten mit dem zugehörigen Fertigungsauftrag', 'lindenweg16' ),
 			'user_rates'        => __( 'Stundenlöhne je Nutzer mit Stichtag; frühere Sätze bleiben stehen, damit vergangene Kosten vergangene Kosten bleiben', 'lindenweg16' ),
+			'payslips'          => __( 'Lohnabrechnungen je Person und Monat aus den erfassten Zeiten (brutto), mit Zuschlägen und Abzügen; Entwurf, festgeschrieben mit laufender Nummer und Prüfsumme, bezahlt oder storniert; festgeschriebene Abrechnungen bleiben unverändert, eine Korrektur ist Storno und neue Abrechnung', 'lindenweg16' ),
 			'capacity_weeks'    => __( 'Kapazitätsannahmen je Kalenderwoche', 'lindenweg16' ),
 			'kpi_snapshots'     => __( 'Festgehaltene Kennzahlen je Zeitraum', 'lindenweg16' ),
 			'kpi_goals'         => __( 'Ziele und Alarmgrenzen je Quartal; kürzere und längere Zeiträume werden daraus abgeleitet, Summengrößen nach Tagen verteilt, Verhältnisgrößen unverändert', 'lindenweg16' ),

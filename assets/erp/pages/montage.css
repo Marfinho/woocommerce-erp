@@ -1,0 +1,6 @@
+.mt-parts { display: grid; gap: 6px; margin-top: 10px; }
+.mt-part { display: grid; grid-template-columns: auto 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; }
+.mt-need { font-weight: 700; min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+.mt-name { min-width: 0; overflow-wrap: anywhere; }
+.tag.warn { background: color-mix(in srgb, var(--error) 18%, transparent); color: var(--error); }
+.mt-run { display: grid; gap: 12px; align-content: start; }

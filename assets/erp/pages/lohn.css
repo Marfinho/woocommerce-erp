@@ -1,0 +1,13 @@
+.lh { display: grid; gap: 14px; max-width: 980px; }
+.lh-month { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lh-month b { min-width: 150px; text-align: center; font-size: 18px; }
+.lh-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; }
+.lh-main { min-width: 0; }
+.lh-num { text-align: right; font-variant-numeric: tabular-nums; }
+.lh-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+.lh-adj { display: grid; gap: 8px; margin: 6px 0 10px; }
+.lh-adjrow { display: flex; gap: 8px; align-items: center; }
+.lh-adjrow input:first-child { flex: 1; min-width: 0; }
+.lh-total { font-size: 18px; margin: 12px 0 0; }
+@media (max-width: 720px) { .lh-row { grid-template-columns: 1fr; } .lh-num { text-align: left; } }
+.lh-month input { width: 200px; }

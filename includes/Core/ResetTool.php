@@ -221,6 +221,8 @@ class ResetTool {
 			'calc_settings',
 			'price_tiers',
 			'user_rates',
+			// Lohnabrechnungen sind Personal- und Buchungsunterlagen, keine Testdaten.
+			'payslips',
 			'kpi_goals',
 			'produkte',
 			'stueckliste',

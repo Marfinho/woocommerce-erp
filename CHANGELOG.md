@@ -7,10 +7,80 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [0.32.1] – 2026-10-22
+## [0.34.1] – 2026-10-22
 
 - **Betriebsanleitung:** Das Stylesheet steht jetzt direkt in `docs/betriebsanleitung.html` (die Datei `docs/ba.css`
   entfällt). Auf Servern, die die separate CSS-Datei nicht auslieferten (503), erschien die Anleitung ohne Gestaltung.
+
+## [0.34.0] – 2026-10-22
+
+### Live-Dashboard für den Vollbildschirm
+- **Neue Seite `#/live`** (Knopf „● Live“ in der Kopfzeile am Desktop; `#/live/tv` startet direkt im Kiosk ohne Menü):
+  Uhr und Datum groß, darunter Verkauf heute (Umsatz, Bestellungen, Ø Warenkorb, zu versenden, Verlauf nach Stunde, letzte
+  Bestellungen, Vergleich zu gestern), Seitenaufrufe der Website, Kennzahlen des Monats gegen ihre Ziele (grün, gelb, rot),
+  Produktion (Platten nach Stand, Drucker mit Fortschritt und Restzeit, knappes Filament) und laufende Kampagnen mit Kosten,
+  Umsatz, Ertrag je Euro und Budgetverbrauch.
+- **Live:** Alle 15 Sekunden neue Werte (kurz zwischengespeichert, damit die Datenbank nicht belastet wird), Anzeige „vor
+  x s“ und bei Verbindungsabbruch der letzte Stand mit Uhrzeit. „Vollbild“ nutzt den Browser-Vollbildmodus und hält den
+  Bildschirm wach. Eine neue Bestellung leuchtet kurz auf.
+- **Rechte:** Jede Person sieht nur die Blöcke, für die sie das Recht hat (Verkauf, Berichte, Produktion, Marketing).
+  Personenbezogene Kennzahlen wie Wochenstunden fehlen bewusst, der Bildschirm hängt im Raum.
+- **Seitenaufrufe statt Besucher:** Ein kleines Skript am Seitenende der Website meldet jeden Aufruf anonym: kein Cookie, keine
+  Adresse, kein Seitenpfad gespeichert, nur Anzahl je Zehn-Minuten-Fenster und Bereich (Start, Shop, Warenkorb, Kasse,
+  Inhalt). Nicht gezählt werden angemeldete Personen, Roboter und Browser mit „Do Not Track“. Es zählt Aufrufe, nicht
+  Personen: Wer dreimal lädt, zählt dreimal. Neue Tabelle `traffic` (DB-Version 40).
+
+## [0.33.1] – 2026-10-22
+
+### Druckzeit ist keine Arbeitszeit
+- **Der Workflow bucht beim Melden einer Platte nur noch die Rüstzeit** als Arbeitszeit. Die Druckzeit ist Maschinenzeit
+  (sie steht im Druckjournal und in Soll gegen Ist): Während der Drucker läuft, arbeitet die Person an etwas anderem.
+  Vorher stand sie in „Meine Woche“ und hätte in jede Lohnabrechnung gezählt.
+- **Ältere Buchungen** (Kategorie Druckzeit, mit einer Platte verbunden) bleiben gespeichert, zählen aber nicht mehr mit:
+  nicht in Wochensummen, Löhnen, Lohnabrechnungen und Kapazität. Von Hand erfasste Druckzeit ohne Platte zählt weiter.
+
+## [0.33.0] – 2026-10-21
+
+### Montage im Workflow
+- **Spur „Montage“ unter dem Brett:** Der Workflow zeigt jetzt auch, was aus Rohlingen und Kleinteilen montiert werden
+  muss (Halbzeuge und Module mit Stückliste, Beschaffungsweg „Montage“). Jede Karte nennt die Teile der Stückliste mit
+  Bedarf, Lagerbestand und Zustand: **da**, **im Druck** (Platte läuft oder ist freigegeben) oder **fehlt**.
+- **Montage anlegen:** Sind alle Teile da, legt ein Klick den Fertigungsauftrag samt Pickliste an. Vorher nicht, damit
+  der Planer den Bedarf an Rohlingen nicht für gedeckt hält, die noch gar nicht gedruckt sind.
+- **Arbeitsseite `#/montage/<Nr>`** (am Handy nutzbar): Material holen, Uhr mit Pause und Weiter, Fertigmelden mit
+  Stückzahl. Gebucht wird beim Fertigmelden wie bisher: Material geht ab, die Stücke kommen ins Lager. Abbrechen darf, wer
+  Pläne freigeben darf.
+- **Heute:** Offene Montagen stehen unter „Dein Nächstes“ (nach Platte melden und rüsten).
+
+### Stempeluhr als Sprechblase
+- **Klick auf die Uhr in der Kopfzeile** öffnet eine Blase statt der Zeitseite: Stand (läuft, Pause, steht), laufende Zeit,
+  Start, Heute gebucht, Woche gegen Sollstunden und was währenddessen im Betrieb lief. Dort lassen sich die Uhr starten,
+  pausieren, fortsetzen, verwerfen und mit Kategorie, Stunden und Tätigkeit stoppen und buchen. „Mehr …“ führt zur
+  Zeiterfassung. Escape, Klick daneben oder Seitenwechsel schließen die Blase.
+- **Am Handy erreichbar:** Die Uhr stand dort bisher gar nicht in der Kopfzeile (sie erschien erst ab 900 px Breite).
+
+### Lohnabrechnungen aus den Zeiten
+- **Neue Seite `#/lohn`** (Knopf „Lohnabrechnungen erstellen“ auf der Seite Löhne, Recht wie Löhne): Monat wählen, je Person
+  Stunden, Stundenlohn und Brutto. „Alle offenen als Entwurf anlegen“ oder je Person „Abrechnung erstellen“.
+- **Gerechnet wird brutto:** Stunden mal der am jeweiligen Tag gültigen Stundenlohn. Ändert sich der Lohn im Monat, gibt es
+  zwei Zeilen mit je eigenem Satz. Dazu frei eintragbare Zuschläge und Abzüge (Prämie, Vorschuss mit Minus). **Lohnsteuer
+  und Sozialversicherung werden nicht berechnet**, das steht auch auf Seite und Beleg; die Abrechnung ist die Grundlage für
+  den Steuerberater oder ein Lohnprogramm.
+- **Ablauf:** Entwurf (rechnet sich bei jedem Speichern aus den Zeiten neu) → Festschreiben (bekommt die laufende Nummer
+  `LA-JJJJ-NNNN` und eine Prüfsumme, bleibt unverändert) → Bezahlt (mit Datum) oder Storniert (mit Grund, bleibt stehen).
+  Korrektur heißt stornieren und neu anlegen. Eine zweite Abrechnung für denselben Monat und dieselbe Person wird abgewiesen.
+- **Lücken werden benannt, nicht mit null bewertet:** Fehlt für Stunden der Stundenlohn, lässt sich der Entwurf anlegen, aber
+  nicht festschreiben; die Zeile sagt, wie viele Stunden es betrifft. Werden nach dem Festschreiben noch Zeiten für den Monat
+  nachgetragen, zeigt die Zeile die Abweichung in Stunden.
+- **Belege:** PDF je Abrechnung (Tage, Sätze, Zuschläge, Gesamtbetrag, Prüfsumme) und CSV je Monat (Semikolon, deutsches
+  Zahlenformat, UTF-8 mit Marke für Excel, gegen Formeln abgesichert).
+- **Obergrenzen für Minijobs und Aushilfen:** Je Person lassen sich eine Verdienstgrenze je Monat, eine Stundengrenze je
+  Monat und eine Verdienstgrenze je Jahr eintragen („Obergrenze setzen“ an der Zeile; leer heißt keine Grenze, die Zahlen
+  legt der Admin fest, nichts ist fest eingebaut). Die Zeile zeigt Verbrauch in Prozent, ab 90 % gelb, darüber mit Warnung;
+  der Dialog rechnet mit Zuschlägen und Abzügen live mit. **Festschreiben fragt bei überschrittener Grenze nach** und
+  schreibt erst nach Bestätigung fest (im Protokoll vermerkt). Das Jahr zählt die übrigen gültigen Abrechnungen des
+  Kalenderjahres dazu.
+- Neue Tabelle `payslips` (DB-Version 39), in Verfahrensdokumentation und Reset-Schutz aufgenommen; alle Schritte stehen im Protokoll.
 
 ## [0.32.0] – 2026-10-21
 
