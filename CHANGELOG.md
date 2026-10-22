@@ -25,6 +25,11 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Block „Seitenaufrufe“ zeigt den letzten gezählten Aufruf** („vor x Min“) oder sagt, dass noch keiner gezählt wurde und warum
   das sein kann: Angemeldete Personen zählen nicht, ein Seiten-Cache liefert die alte Seite ohne Skript aus.
 
+## [0.34.1] (Anleitung) – 2026-10-22
+
+- **Betriebsanleitung:** Das Stylesheet steht jetzt direkt in `docs/betriebsanleitung.html` (die Datei `docs/ba.css`
+  entfällt). Auf Servern, die die separate CSS-Datei nicht auslieferten (503), erschien die Anleitung ohne Gestaltung.
+
 ## [0.34.0] – 2026-10-22
 
 ### Live-Dashboard für den Vollbildschirm

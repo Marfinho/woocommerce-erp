@@ -375,7 +375,15 @@ class ArticlesPage {
 			$this->redirect( __( 'Komponente gespeichert.', 'lindenweg16' ), 'success', array( 'tab' => 'komponenten' ) );
 		}
 
-		ComponentRepository::insert( $result['data'] );
+		global $wpdb;
+		$new = ComponentRepository::insert( $result['data'] );
+		if ( ! $new ) {
+			$this->redirect(
+				trim( __( 'Komponente konnte nicht angelegt werden.', 'lindenweg16' ) . ' ' . $wpdb->last_error ),
+				'error',
+				array( 'tab' => 'komponenten' )
+			);
+		}
 		$this->redirect( __( 'Komponente angelegt.', 'lindenweg16' ), 'success', array( 'tab' => 'komponenten' ) );
 	}
 

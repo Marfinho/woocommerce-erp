@@ -145,7 +145,6 @@ assets/js/                   (zusätzlich) ar-hint.js, ar-viewer.js, ar-admin.js
 assets/css/                  (zusätzlich) ar-view.css
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
 docs/betriebsanleitung.html  Betriebsanleitung in vier Teilen (Produktion, Versand, Personal, Administration)
-docs/ba.css                  gemeinsames Aussehen der Anleitungen
 docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```
 
