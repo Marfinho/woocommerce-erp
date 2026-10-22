@@ -7,6 +7,33 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.34.0] – 2026-10-22
+
+### Live-Dashboard für den Vollbildschirm
+- **Neue Seite `#/live`** (Knopf „● Live“ in der Kopfzeile am Desktop; `#/live/tv` startet direkt im Kiosk ohne Menü):
+  Uhr und Datum groß, darunter Verkauf heute (Umsatz, Bestellungen, Ø Warenkorb, zu versenden, Verlauf nach Stunde, letzte
+  Bestellungen, Vergleich zu gestern), Seitenaufrufe der Website, Kennzahlen des Monats gegen ihre Ziele (grün, gelb, rot),
+  Produktion (Platten nach Stand, Drucker mit Fortschritt und Restzeit, knappes Filament) und laufende Kampagnen mit Kosten,
+  Umsatz, Ertrag je Euro und Budgetverbrauch.
+- **Live:** Alle 15 Sekunden neue Werte (kurz zwischengespeichert, damit die Datenbank nicht belastet wird), Anzeige „vor
+  x s“ und bei Verbindungsabbruch der letzte Stand mit Uhrzeit. „Vollbild“ nutzt den Browser-Vollbildmodus und hält den
+  Bildschirm wach. Eine neue Bestellung leuchtet kurz auf.
+- **Rechte:** Jede Person sieht nur die Blöcke, für die sie das Recht hat (Verkauf, Berichte, Produktion, Marketing).
+  Personenbezogene Kennzahlen wie Wochenstunden fehlen bewusst, der Bildschirm hängt im Raum.
+- **Seitenaufrufe statt Besucher:** Ein kleines Skript am Seitenende der Website meldet jeden Aufruf anonym: kein Cookie, keine
+  Adresse, kein Seitenpfad gespeichert, nur Anzahl je Zehn-Minuten-Fenster und Bereich (Start, Shop, Warenkorb, Kasse,
+  Inhalt). Nicht gezählt werden angemeldete Personen, Roboter und Browser mit „Do Not Track“. Es zählt Aufrufe, nicht
+  Personen: Wer dreimal lädt, zählt dreimal. Neue Tabelle `traffic` (DB-Version 40).
+
+## [0.33.1] – 2026-10-22
+
+### Druckzeit ist keine Arbeitszeit
+- **Der Workflow bucht beim Melden einer Platte nur noch die Rüstzeit** als Arbeitszeit. Die Druckzeit ist Maschinenzeit
+  (sie steht im Druckjournal und in Soll gegen Ist): Während der Drucker läuft, arbeitet die Person an etwas anderem.
+  Vorher stand sie in „Meine Woche“ und hätte in jede Lohnabrechnung gezählt.
+- **Ältere Buchungen** (Kategorie Druckzeit, mit einer Platte verbunden) bleiben gespeichert, zählen aber nicht mehr mit:
+  nicht in Wochensummen, Löhnen, Lohnabrechnungen und Kapazität. Von Hand erfasste Druckzeit ohne Platte zählt weiter.
+
 ## [0.33.0] – 2026-10-21
 
 ### Montage im Workflow

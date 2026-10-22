@@ -42,6 +42,22 @@ class TimeRepository {
 	}
 
 	/**
+	 * Bedingung, die Maschinenlaufzeit aus der Arbeitszeit herausnimmt.
+	 *
+	 * Während der Drucker läuft, arbeitet niemand daran: Die Druckzeit einer
+	 * Platte ist Maschinenzeit (sie steht im Druckjournal), keine Arbeitszeit.
+	 * Der Workflow bucht sie deshalb nicht mehr. Ältere Buchungen dieser Art
+	 * (Kategorie Druckzeit, mit Platte verbunden) bleiben gespeichert, zählen
+	 * aber nicht mit: nicht für Löhne, nicht für Wochensummen, nicht für die
+	 * Kapazität. Von Hand erfasste Druckzeit (ohne Platte) zählt weiter.
+	 *
+	 * @return string SQL-Bedingung.
+	 */
+	public static function working_time_sql() {
+		return "NOT ( category = 'druckzeit' AND run_id IS NOT NULL )";
+	}
+
+	/**
 	 * Tabellenname.
 	 *
 	 * @return string
@@ -61,7 +77,7 @@ class TimeRepository {
 		global $wpdb;
 
 		$table  = self::table();
-		$where  = array( '1=1' );
+		$where  = array( self::working_time_sql() );
 		$params = array();
 
 		foreach ( array( 'iso_year', 'iso_week' ) as $field ) {
@@ -92,6 +108,7 @@ class TimeRepository {
 			$wpdb->prepare(
 				"SELECT iso_year, iso_week, SUM( hours ) AS hours
 				 FROM {$table}
+				 WHERE " . self::working_time_sql() . "
 				 GROUP BY iso_year, iso_week
 				 ORDER BY iso_year DESC, iso_week DESC
 				 LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -115,7 +132,7 @@ class TimeRepository {
 
 		return (float) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COALESCE( SUM( hours ), 0 ) FROM {$table} WHERE iso_year = %d AND iso_week = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT COALESCE( SUM( hours ), 0 ) FROM {$table} WHERE iso_year = %d AND iso_week = %d AND " . self::working_time_sql(), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(int) $iso_year,
 				(int) $iso_week
 			)
@@ -137,7 +154,7 @@ class TimeRepository {
 		return $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT category, SUM( hours ) AS hours FROM {$table}
-				 WHERE entry_date BETWEEN %s AND %s
+				 WHERE entry_date BETWEEN %s AND %s AND " . self::working_time_sql() . "
 				 GROUP BY category ORDER BY hours DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$von,
 				$bis
@@ -222,7 +239,7 @@ class TimeRepository {
 
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE entry_date BETWEEN %s AND %s ORDER BY entry_date DESC, id DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$table} WHERE entry_date BETWEEN %s AND %s AND " . self::working_time_sql() . " ORDER BY entry_date DESC, id DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$von,
 				$bis
 			),
@@ -243,7 +260,7 @@ class TimeRepository {
 
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE created_by = %d ORDER BY entry_date DESC, id DESC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT * FROM {$table} WHERE created_by = %d AND " . self::working_time_sql() . " ORDER BY entry_date DESC, id DESC LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(int) $user_id,
 				(int) $limit
 			),

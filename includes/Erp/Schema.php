@@ -56,6 +56,17 @@ class Schema {
 			KEY reported_at (reported_at)
 		) {$charset_collate};";
 
+		// Anonymer Seitenaufruf-Zähler fürs Live-Dashboard: keine Adresse, kein Cookie,
+		// keine Person, nur Anzahl je Zehn-Minuten-Fenster und Bereich der Website.
+		$t[] = "CREATE TABLE {$p}traffic (
+			day DATE NOT NULL,
+			hour TINYINT UNSIGNED NOT NULL,
+			slot TINYINT UNSIGNED NOT NULL,
+			section VARCHAR(16) NOT NULL,
+			views INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (day, hour, slot, section)
+		) {$charset_collate};";
+
 		return $t;
 	}
 }
