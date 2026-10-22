@@ -167,6 +167,10 @@
 				secs.appendChild(h('div', { class: 'row' }, h('span', null, names[k]), h('div', { class: 'meter' }, h('i', { style: 'width:' + Math.round(b.sections[k] / max * 100) + '%' })), h('b', null, int(b.sections[k]))));
 			});
 			c.body.appendChild(secs);
+			var ago = b.last_ts ? Math.max(0, Math.round((Date.now() / 1000 - b.last_ts) / 60)) : null;
+			c.body.appendChild(h('p', { class: 'lv-note' }, ago === null
+				? 'Noch kein Aufruf gezählt. Angemeldete Personen (auch du im selben Browser) zählen nicht: Öffne die Website in einem privaten Fenster, um den Zähler zu prüfen.'
+				: 'Letzter gezählter Aufruf: vor ' + (ago < 10 ? 'unter 10' : ago) + ' Min.'));
 			c.body.appendChild(h('p', { class: 'lv-note' }, 'Aufrufe, nicht Besucher: anonym gezählt, ohne Cookie und Adresse. AR-Ansicht heute: ' + int(b.ar_today) + ' angezeigt.'));
 			return c.el;
 		}
