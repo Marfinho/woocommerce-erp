@@ -4,7 +4,7 @@
  * Die Datei heißt zmarketing.js, damit sie nach verkauf.js geladen wird und die
  * nur lesende Fassung von UI.pages['marketing'] / UI.routes['kampagne'] ersetzt.
  * Lesen: erp/marketing (Verkauf.php). Schreiben: includes/Erp/Pages/Marketing.php.
- * Alle Texte aus dem Server gelangen über textContent bzw. h() in die Seite, nie über innerHTML.
+ * Alle Texte aus dem Server gelangen über textContent bzw. h() in die Seite, nie als HTML-Text.
  */
 (function () {
 	'use strict';
@@ -124,8 +124,23 @@
 			var save = h('button', { class: 'btn primary', type: 'submit' }, label);
 			var d;
 
+			var tpl = null;
+			if (!existing && o.templates && o.templates.length) {
+				tpl = h('select', { class: 'field' }, h('option', { value: '' }, '– ohne Vorlage –'));
+				o.templates.forEach(function (t) { tpl.appendChild(h('option', { value: t.key }, t.label)); });
+				tpl.addEventListener('change', function () {
+					o.templates.forEach(function (t) {
+						if (t.key !== tpl.value) { return; }
+						typ.value = t.fields.typ;
+						kanal.value = t.fields.kanal;
+						notiz.value = t.fields.notiz;
+					});
+				});
+			}
+
 			var form = h('form', { class: 'mk-form', novalidate: 'novalidate' },
 				existing ? h('p', { class: 'muted', style: 'margin:0' }, 'Kostenstelle ' + existing.kst + ' (bleibt unverändert)') : null,
+				tpl ? field(ui, 'Vorlage', tpl, 'Füllt Art, Kanal und Notiz vor. Alles lässt sich danach ändern. Eine bestehende Kampagne kopiert „Duplizieren“ in ihrer Ansicht.') : null,
 				field(ui, 'Name', name),
 				h('div', { class: 'mk-two' }, field(ui, 'Art', typ), field(ui, 'Status', status)),
 				field(ui, 'Kanal', kanal),
@@ -227,7 +242,55 @@
 		}).catch(function (e) { errBox(ui, list, e); });
 	};
 
+	/* ---------- Kampagne duplizieren ---------- */
+
+	function duplicateDialog(ui, k) {
+		var h = ui.h;
+		var name = input(ui, 'text', 'Kopie von ' + k.name, { maxlength: 190 });
+		var err = h('div', { class: 'notice warn', hidden: true });
+		var label = 'Kopie anlegen';
+		var save = h('button', { class: 'btn primary', type: 'submit' }, label);
+		var d;
+		var form = h('form', { class: 'mk-form', novalidate: 'novalidate' },
+			h('p', { class: 'muted', style: 'margin:0' }, 'Art, Kanal, Budget und Notiz werden übernommen. Beginn ist heute. Termine, Belege, Kilometer, Gutscheincode und Kampagnenkennung werden bewusst nicht übernommen – sonst würden Bestellungen in zwei Kampagnen doppelt zählen.'),
+			field(ui, 'Name der Kopie', name),
+			err,
+			h('div', { class: 'mk-actions' }, save, h('button', { class: 'btn', type: 'button', onclick: function () { d.close(); } }, 'Abbrechen')));
+		form.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			err.hidden = true;
+			run(ui, save, label, function () {
+				return ui.api('marketing/' + k.id + '/duplizieren', { method: 'POST', body: { name: name.value } });
+			}, err).then(function (r) {
+				d.close();
+				ui.toast(r.message);
+				location.hash = '#/kampagne/' + r.id;
+			}).catch(function () {});
+		});
+		d = ui.dlg('Kampagne duplizieren', form, true);
+	}
+
 	/* ---------- Einzelansicht ---------- */
+
+	var STEPS = [['geplant', 'Geplant'], ['aktiv', 'Aktiv'], ['abgeschlossen', 'Abgeschlossen']];
+
+	// Sprung zum Beleg: die Buchhaltung öffnet ihn, wenn sie UI.belegOpen anbietet; sonst
+	// geht es zur Buchhaltung, und UI.buchFocus merkt sich den gewünschten Beleg.
+	function belegLinks(ui, b) {
+		var h = ui.h;
+		var out = [];
+		out.push(h('a', { class: 'btn mk-small', href: '#/seite/buchhaltung', onclick: function (ev) {
+			UI.buchFocus = { tab: 'belege', beleg: b.id };
+			if (typeof UI.belegOpen === 'function') {
+				ev.preventDefault();
+				UI.belegOpen(b.id);
+			}
+		} }, 'Beleg öffnen'));
+		if (b.file) {
+			out.push(h('a', { class: 'btn mk-small', href: b.file, target: '_blank', rel: 'noopener' }, 'Foto'));
+		}
+		return out;
+	}
 
 	UI.routes['kampagne'] = function (r, ui) {
 		var h = ui.h;
@@ -241,7 +304,7 @@
 		box.appendChild(loading(ui));
 
 		function load() {
-			Promise.all([ui.api('marketing/' + id), ui.api('marketing/' + id + '/stamm'), options(ui)]).then(function (res) {
+			Promise.all([ui.api('marketing/' + id + '/auswertung'), ui.api('marketing/' + id + '/stamm'), options(ui)]).then(function (res) {
 				draw(res[0], res[1], res[2]);
 			}).catch(function (e) { errBox(ui, box, e); });
 		}
@@ -251,42 +314,186 @@
 			load();
 		}
 
+		function money(v) { return ui.money(v, 'EUR'); }
+
+		function ratio(n) { return n === null || n === undefined ? '–' : decimal(n); }
+
+		function steps(k) {
+			var idx = 0;
+			STEPS.forEach(function (s, i) { if (s[0] === k.status) { idx = i; } });
+			return h('ol', { class: 'mk-steps', 'aria-label': 'Ablauf der Kampagne' }, STEPS.map(function (s, i) {
+				return h('li', { class: i < idx ? 'done' : (i === idx ? 'now' : ''), 'aria-current': i === idx ? 'step' : null }, s[1]);
+			}));
+		}
+
+		function statusButton(k) {
+			var next = k.next;
+			if (!next) { return null; }
+			var warns = k.hints.filter(function (x) { return x.level === 'warn'; });
+			return h('button', { class: 'btn' + (next.value === 'aktiv' ? ' primary' : ''), type: 'button', onclick: function () {
+				var text = next.value === 'abgeschlossen'
+					? 'Die Kampagne „' + k.name + '“ wird abgeschlossen. Belege, Fahrtkosten und Auswertung bleiben unverändert; über „Wieder öffnen“ geht sie wieder auf.'
+					: (k.status === 'abgeschlossen' ? 'Die Kampagne „' + k.name + '“ wird wieder geöffnet.' : 'Die Kampagne „' + k.name + '“ wird auf „aktiv“ gesetzt.');
+				var inner = [h('p', null, text)];
+				if (next.value === 'abgeschlossen' && warns.length) {
+					inner.push(h('p', { class: 'muted', style: 'margin:0' }, 'Vorher noch beachten:'));
+					warns.forEach(function (x) { inner.push(h('div', { class: 'notice warn' }, x.text)); });
+				}
+				statusDlg(next, inner);
+			} }, next.label);
+		}
+
+		function statusDlg(next, inner) {
+			var d;
+			var err = h('div', { class: 'notice warn', hidden: true });
+			var ok = h('button', { class: 'btn primary', type: 'button' }, next.label);
+			ok.addEventListener('click', function () {
+				run(ui, ok, next.label, function () {
+					return ui.api('marketing/' + id + '/status', { method: 'POST', body: { status: next.value } }).then(after);
+				}, err).then(function () { d.close(); }).catch(function () {});
+			});
+			d = ui.dlg(next.label, h('div', { class: 'mk-dlg' }, inner, err,
+				h('div', { class: 'mk-actions' }, ok, h('button', { class: 'btn', type: 'button', onclick: function () { d.close(); } }, 'Abbrechen'))));
+		}
+
+		function why(text) {
+			return h('details', { class: 'mk-why' }, h('summary', null, 'Woher kommt das?'), h('p', null, text));
+		}
+
+		function numRow(label, value, explain, strong) {
+			return h('div', { class: 'mk-num' },
+				h('div', { class: 'mk-num-line' }, h('span', null, label), h(strong ? 'b' : 'span', { class: 'mk-num-val' }, value)),
+				explain ? why(explain) : null);
+		}
+
+		function meter(b) {
+			if (b.ampel === 'kein_budget') {
+				return h('p', { class: 'muted' }, 'Kein Budget gesetzt – gebuchte Kosten bisher: ' + money(b.used) + '. Unter „Ändern“ lässt sich ein Budget eintragen, dann erscheint hier die Ampel.');
+			}
+			var w = Math.max(2, Math.min(100, b.usage));
+			return h('div', null,
+				h('div', { class: 'mk-meter amp-' + b.ampel, role: 'img', 'aria-label': 'Budget ' + pct(b.usage) + ' genutzt, ' + b.label },
+					h('i', { style: 'width:' + w + '%' })),
+				h('div', { class: 'mk-meter-txt' },
+					h('span', { class: 'mk-amp amp-' + b.ampel }, b.label),
+					h('span', null, money(b.used) + ' von ' + money(b.plan) + ' (' + pct(b.usage) + ')')),
+				h('p', { class: 'muted', style: 'margin:6px 0 0' }, b.rest < 0 ? money(-b.rest) + ' über dem Budget.' : money(b.rest) + ' Budget sind noch frei.'));
+		}
+
 		function draw(k, m, o) {
 			box.textContent = '';
 			ui.setHead(k.name, 'Marketing');
-			var closed = k.status === 'abgeschlossen';
+			var kmRow = null;
+			k.costs.rows.forEach(function (b) { if (b.is_km) { kmRow = b; } });
+
 			box.appendChild(h('div', { class: 'page-head' },
-				h('div', null, h('h2', null, k.kst + ' – ' + k.name), h('p', { class: 'muted', style: 'margin:4px 0 0' }, [k.type, k.period, k.status].filter(Boolean).join(' · '))),
+				h('div', null, h('h2', null, k.kst + ' – ' + k.name), h('p', { class: 'muted', style: 'margin:4px 0 0' }, [k.type, k.channel, k.period].filter(Boolean).join(' · '))),
 				canEdit ? h('div', { class: 'mk-actions' },
+					statusButton(k),
 					h('button', { class: 'btn', type: 'button', onclick: function () { campaignDialog(ui, m, function () { load(); }); } }, 'Ändern'),
-					closed ? null : h('button', { class: 'btn', type: 'button', onclick: function () {
-						confirmDlg(ui, 'Kampagne beenden', 'Die Kampagne „' + k.name + '“ wird auf „abgeschlossen“ gesetzt. Belege, Fahrtkosten und Auswertung bleiben unverändert; über „Ändern“ lässt sie sich wieder öffnen.', 'Kampagne beenden', function () {
-							return ui.api('marketing/' + id + '/beenden', { method: 'POST', body: {} }).then(after);
-						});
-					} }, 'Beenden')) : null));
+					h('button', { class: 'btn', type: 'button', onclick: function () { duplicateDialog(ui, k); } }, 'Duplizieren')) : null));
 
-			box.appendChild(h('div', { class: 'grid tiles' },
-				tile(ui, 'Einsatz gesamt', ui.money(k.effort, 'EUR'), k.rebate > 0 ? 'inkl. ' + ui.money(k.rebate, 'EUR') + ' Rabatt' : ''),
-				tile(ui, 'Umsatz gesamt', ui.money(k.revenue, 'EUR')),
-				tile(ui, 'Ergebnis', ui.money(k.result, 'EUR'), 'Umsatz − Einsatz'),
-				tile(ui, 'Umsatz je Euro Einsatz', k.roas === null ? '–' : String(Math.round(k.roas * 100) / 100).replace('.', ','))));
+			box.appendChild(steps(k));
+			k.hints.forEach(function (x) {
+				box.appendChild(h('div', { class: 'notice' + (x.level === 'warn' ? ' warn' : ''), style: 'margin-top:10px' }, x.text));
+			});
 
-			box.appendChild(h('div', { class: 'card mk-gap' }, h('h3', null, 'Zahlen im Einzelnen'),
-				kv(ui, 'Kosten (gebucht)', ui.money(k.costs, 'EUR')),
-				kv(ui, 'Rabatt (nicht gebucht)', ui.money(k.rebate, 'EUR')),
-				kv(ui, 'Budget', k.budget.ampel === 'kein_budget' ? 'kein Budget gesetzt' : ui.money(k.budget.plan, 'EUR') + ' · ' + pct(k.budget.usage) + ' genutzt · ' + (k.budget.rest < 0 ? ui.money(-k.budget.rest, 'EUR') + ' über Budget' : ui.money(k.budget.rest, 'EUR') + ' frei')),
-				kv(ui, 'Umsatz Marktkasse', ui.money(k.market, 'EUR')),
-				kv(ui, 'Umsatz Shop (nachgewiesen)', ui.money(k.shop.sum, 'EUR') + (k.shop.count ? ' · ' + k.shop.count + ' Bestellungen (' + k.shop.utm + ' über Kampagnenkennung, ' + k.shop.voucher + ' über Gutschein)' : '')),
-				kv(ui, 'Einsatz je Bestellung', k.cpo === null ? '–' : ui.money(k.cpo, 'EUR'))));
+			box.appendChild(h('div', { class: 'grid tiles mk-gap' },
+				tile(ui, 'Einsatz gesamt', money(k.effort), k.rebate > 0 ? 'inkl. ' + money(k.rebate) + ' Rabatt' : 'gebuchte Kosten'),
+				tile(ui, 'Umsatz gesamt', money(k.revenue.sum), 'Markt + Shop (nachgewiesen)'),
+				tile(ui, 'Ergebnis', money(k.result), 'Umsatz − Einsatz'),
+				tile(ui, 'Umsatz je Euro Einsatz', ratio(k.roas), k.roas === null ? 'noch kein Einsatz' : null),
+				tile(ui, 'Einsatz je Bestellung', k.cpo === null ? '–' : money(k.cpo), k.revenue.shop.count ? k.revenue.shop.count + ' Shop-Bestellungen' : 'keine Shop-Bestellung zugeordnet')));
 
-			if (k.rebate > 0) {
-				box.appendChild(h('p', { class: 'muted' }, 'Der Rabatt steht bewusst nicht in der Buchhaltung: Ein gewährter Nachlass ist Erlösschmälerung, keine Betriebsausgabe – es gibt keinen Beleg, und der Bestellwert ist bereits gemindert. Für die Frage, was die Kampagne gekostet hat, zählt er trotzdem. Deshalb misst sich das Budget nur an den gebuchten Kosten, Ergebnis und Kennzahlen dagegen am Einsatz gesamt.'));
+			box.appendChild(h('div', { class: 'card mk-gap' }, h('h3', null, 'Budget'), meter(k.budget), why(k.explain.budget)));
+
+			var shop = k.revenue.shop;
+			var shopTxt = money(shop.sum) + (shop.count ? ' · ' + shop.count + ' Bestellungen (' + shop.utm + ' über Kampagnenkennung, ' + shop.voucher + ' über Gutschein)' : '');
+			box.appendChild(h('div', { class: 'card mk-gap' }, h('h3', null, 'Zahlen im Einzelnen – und woher sie kommen'),
+				numRow('Kosten aus Belegen', money(k.costs.sum), k.explain.kosten),
+				numRow('  davon Fahrtkosten', money(k.costs.km.booked ? k.costs.km.amount : 0), k.explain.fahrt),
+				numRow('Rabatt (ohne Beleg)', money(k.rebate), k.explain.rabatt),
+				numRow('Einsatz gesamt', money(k.effort), k.explain.einsatz, true),
+				numRow('Umsatz Marktkasse', money(k.revenue.market.sum) + (k.revenue.market.days.length ? ' · ' + k.revenue.market.days.length + ' Kassentag(e)' : ''), k.explain.markt),
+				numRow('Umsatz Shop (nachgewiesen)', shopTxt, k.explain.shop),
+				numRow('Umsatz gesamt', money(k.revenue.sum), k.explain.umsatz, true),
+				numRow('Ergebnis', money(k.result), k.explain.ergebnis, true),
+				numRow('Umsatz je Euro Einsatz', ratio(k.roas), k.explain.roas),
+				numRow('Einsatz je Bestellung', k.cpo === null ? '–' : money(k.cpo), k.explain.cpo),
+				numRow('Nicht zuordenbar', 'nicht gerechnet', k.explain.offen),
+				h('p', { class: 'muted', style: 'margin-bottom:0' }, 'Umsatz ausgewertet von ' + ymd(k.from) + ' bis ' + ymd(k.to) + ' (inklusive Nachlauffenster).')));
+
+			box.appendChild(costCard(k, m));
+			box.appendChild(revenueCard(k));
+			if (canEdit) {
+				box.appendChild(captureCard());
+				box.appendChild(kmCard(m, o));
+				box.appendChild(assignCard(m));
 			}
-			box.appendChild(h('p', { class: 'muted' }, 'Umsatz ausgewertet von ' + ymd(k.from) + ' bis ' + ymd(k.to) + ' (inklusive Nachlauffenster). Der Rohertrag lässt den Wareneinsatz außen vor – der hängt am Artikel, nicht an der Kampagne.'));
+		}
 
-			if (canEdit) { box.appendChild(kmCard(m, o)); }
-			box.appendChild(belegCard(m));
-			if (canEdit) { box.appendChild(assignCard(m)); }
+		function costCard(k, m) {
+			var card = h('div', { class: 'card mk-gap' }, h('h3', null, 'Kosten dieser Kampagne'));
+			if (!k.costs.rows.length) {
+				card.appendChild(h('p', { class: 'muted' }, 'Noch kein Beleg zugeordnet. Unten lässt sich ein vorhandener Beleg zuordnen oder ein neuer direkt für diese Kampagne erfassen.'));
+				return card;
+			}
+			card.appendChild(h('div', { class: 'rows' }, k.costs.rows.map(function (b) {
+				return h('div', { class: 'row-card mk-beleg' },
+					h('div', { class: 'row-main' }, h('b', null, b.number + ' · ' + (b.vendor || 'ohne Händler')),
+						h('small', null, [ymd(b.date), b.account, money(b.amount) + ' Beleg', pct(b.share) + ' Anteil'].filter(Boolean).join(' · '))),
+					h('div', { class: 'row-num' }, money(b.part)),
+					h('div', { class: 'row-tags mk-beleg-actions' },
+						b.is_km ? h('span', { class: 'tag' }, 'Fahrtkosten') : null,
+						!b.counts ? h('span', { class: 'tag later' }, 'zählt nicht als Kosten') : null,
+						belegLinks(ui, b),
+						canEdit && !b.is_km ? h('button', { class: 'btn mk-small', type: 'button', onclick: function () {
+							confirmDlg(ui, 'Zuordnung lösen', 'Beleg ' + b.number + ' wird von dieser Kampagne gelöst. Der Beleg selbst bleibt in der Buchhaltung unverändert.', 'Zuordnung lösen', function () {
+								return ui.api('marketing/' + id + '/loesen', { method: 'POST', body: { beleg_id: b.id } }).then(after);
+							});
+						} }, 'lösen') : null));
+			})));
+			if (k.costs.accounts.length) {
+				card.appendChild(h('h4', { class: 'mk-sub' }, 'Nach Kostenart'));
+				k.costs.accounts.forEach(function (a) { card.appendChild(kv(ui, a.account, money(a.sum))); });
+			}
+			return card;
+		}
+
+		function revenueCard(k) {
+			var card = h('div', { class: 'card mk-gap' }, h('h3', null, 'Umsatz dieser Kampagne'));
+			var days = k.revenue.market.days;
+			card.appendChild(h('h4', { class: 'mk-sub' }, 'Marktkasse'));
+			if (days.length) {
+				days.forEach(function (t) { card.appendChild(kv(ui, ymd(t.date) + (t.name ? ' · ' + t.name : ''), money(t.sum))); });
+			} else {
+				card.appendChild(h('p', { class: 'muted' }, k.explain.markt));
+			}
+			var s = k.revenue.shop;
+			card.appendChild(h('h4', { class: 'mk-sub' }, 'Shop'));
+			card.appendChild(kv(ui, 'Kampagnenkennung', k.utm || 'nicht hinterlegt'));
+			card.appendChild(kv(ui, 'Gutscheincode', k.code || 'nicht hinterlegt'));
+			card.appendChild(kv(ui, 'Bestellungen', s.count ? s.count + ' (' + s.utm + ' über Kennung, ' + s.voucher + ' über Gutschein)' : 'keine zugeordnet'));
+			card.appendChild(kv(ui, 'Umsatz', money(s.sum)));
+			card.appendChild(h('p', { class: 'muted' }, k.explain.shop));
+			return card;
+		}
+
+		function captureCard() {
+			var card = h('div', { class: 'card mk-gap' }, h('h3', null, 'Beleg zur Kampagne erfassen'));
+			if (typeof UI.belegCapture !== 'function') {
+				card.appendChild(h('div', { class: 'notice' }, 'Beleg-Erfassung folgt in der Buchhaltung. Bis dahin lässt sich ein vorhandener Beleg unten zuordnen.'));
+				return card;
+			}
+			function open(mode) {
+				UI.belegCapture({ mode: mode, campaignId: id, onSaved: function () { ui.toast('Beleg gespeichert und der Kampagne zugeordnet.'); load(); } });
+			}
+			card.appendChild(h('p', { class: 'muted', style: 'margin-top:0' }, 'Quittung fotografieren oder Datei wählen. Die Kampagne ist schon eingetragen, der Beleg wird beim Speichern zugeordnet.'));
+			card.appendChild(h('div', { class: 'mk-actions' },
+				h('button', { class: 'btn primary', type: 'button', onclick: function () { open('camera'); } }, 'Foto aufnehmen'),
+				h('button', { class: 'btn', type: 'button', onclick: function () { open('upload'); } }, 'Datei hochladen'),
+				h('button', { class: 'btn', type: 'button', onclick: function () { open('choose'); } }, 'Beleg von Hand erfassen')));
+			return card;
 		}
 
 		function kmCard(m, o) {
@@ -304,35 +511,13 @@
 				field(ui, 'Gefahrene Kilometer (Hin- und Rückweg)', km),
 				h('div', { class: 'mk-actions' }, btn),
 				err,
-				h('p', { class: 'muted' }, 'Pauschale ' + decimal(o.km_rate) + ' € je km (in den Einstellungen änderbar)' + (m.km.booked ? ' – gebucht sind derzeit ' + ui.money(m.km.amount, 'EUR') : '') + ' als Eigenbeleg auf Konto ' + o.km_account + '. Beim Ändern wird der bisherige Beleg storniert und neu gebucht; mit 0 wird die Fahrt zurückgenommen.'));
-		}
-
-		function belegCard(m) {
-			var card = h('div', { class: 'card mk-gap' }, h('h3', null, 'Zugeordnete Belege'));
-			if (!m.belege.length) {
-				card.appendChild(h('p', { class: 'muted' }, 'Noch nichts zugeordnet.'));
-				return card;
-			}
-			card.appendChild(h('div', { class: 'rows' }, m.belege.map(function (b) {
-				return h('div', { class: 'row-card mk-beleg' },
-					h('div', { class: 'row-main' }, h('b', null, b.number + ' · ' + (b.vendor || 'ohne Händler')),
-						h('small', null, [ymd(b.date), b.account, ui.money(b.amount, 'EUR') + ' Beleg', pct(b.share) + ' Anteil'].filter(Boolean).join(' · '))),
-					h('div', { class: 'row-num' }, ui.money(b.part, 'EUR')),
-					canEdit ? h('div', { class: 'row-tags' }, b.is_km
-						? h('span', { class: 'tag' }, 'Fahrtkosten')
-						: h('button', { class: 'btn mk-small', type: 'button', onclick: function () {
-							confirmDlg(ui, 'Zuordnung lösen', 'Beleg ' + b.number + ' wird von dieser Kampagne gelöst. Der Beleg selbst bleibt in der Buchhaltung unverändert.', 'Zuordnung lösen', function () {
-								return ui.api('marketing/' + id + '/loesen', { method: 'POST', body: { beleg_id: b.id } }).then(after);
-							});
-						} }, 'lösen')) : null);
-			})));
-			return card;
+				h('p', { class: 'muted' }, 'Pauschale ' + decimal(o.km_rate) + ' € je km (in den Einstellungen änderbar)' + (m.km.booked ? ' – gebucht sind derzeit ' + money(m.km.amount) : '') + ' als Eigenbeleg auf Konto ' + o.km_account + '. Beim Ändern wird der bisherige Beleg storniert und neu gebucht; mit 0 wird die Fahrt zurückgenommen.'));
 		}
 
 		function assignCard(m) {
 			var sel = h('select', { class: 'field' }, h('option', { value: '' }, '– Beleg wählen –'));
 			m.pickable.forEach(function (b) {
-				sel.appendChild(h('option', { value: String(b.id) }, [b.number, ymd(b.date), b.vendor, ui.money(b.amount, 'EUR') + ' (' + Math.round(b.free) + ' % frei)'].join(' · ')));
+				sel.appendChild(h('option', { value: String(b.id) }, [b.number, ymd(b.date), b.vendor, money(b.amount) + ' (' + Math.round(b.free) + ' % frei)'].join(' · ')));
 			});
 			var share = input(ui, 'text', '100', { inputmode: 'decimal' });
 			var err = h('div', { class: 'notice warn', hidden: true });
@@ -349,13 +534,13 @@
 					return ui.api('marketing/' + id + '/zuordnen', { method: 'POST', body: { beleg_id: parseInt(sel.value, 10), anteil: share.value } });
 				}, err).then(after).catch(function () {});
 			});
-			return h('div', { class: 'card mk-gap' }, h('h3', null, 'Beleg zuordnen'),
+			return h('div', { class: 'card mk-gap' }, h('h3', null, 'Vorhandenen Beleg zuordnen'),
 				m.pickable.length ? null : h('p', { class: 'muted' }, 'Keine Belege mit freiem Anteil unter den letzten 100.'),
 				field(ui, 'Beleg', sel),
 				field(ui, 'Anteil (%)', share),
 				h('div', { class: 'mk-actions' }, btn),
 				err,
-				h('p', { class: 'muted' }, 'Ein Beleg lässt sich auf mehrere Kampagnen aufteilen – etwa eine Flyerrechnung für zwei Märkte. Über alle Kampagnen zusammen sind nie mehr als 100 % möglich.'));
+				h('p', { class: 'muted' }, 'Ein Beleg lässt sich auf mehrere Kampagnen aufteilen – etwa eine Flyerrechnung für zwei Märkte. Über alle Kampagnen zusammen sind nie mehr als 100 % möglich. Belege, die nach Werbung aussehen und noch keiner Kampagne gehören, stehen auch in der Buchhaltung unter „Marketing-Kosten“.'));
 		}
 
 		load();

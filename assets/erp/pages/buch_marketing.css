@@ -1,0 +1,53 @@
+/* Marketing-Kosten (Buchhaltungs-Reiter) und Kampagnen-Auswertung (zmarketing.js) */
+
+/* Reiter */
+.bm-intro { margin: 4px 0 10px; font-size: 14px; }
+.bm-bar-top { display: grid; gap: 8px; margin-bottom: 12px; }
+.bm-range { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bm-range .field { flex: 1 1 140px; min-width: 0; min-height: 44px; font-size: 16px; }
+.bm-range .btn { min-height: 44px; }
+.bm-gap { margin-top: 14px; }
+.bm-sub { font-size: 12px; }
+.bm-table td { vertical-align: top; }
+.bm-neg { color: var(--error); }
+.bm-pos { color: var(--success); }
+.bm-chart { width: 100%; height: auto; max-width: 560px; display: block; }
+.bm-lab { fill: var(--text); font-size: 11px; }
+.bm-val { fill: var(--text-muted); font-size: 10px; }
+.bm-axis { stroke: var(--line); stroke-width: 1; }
+.bm-bar-cost { fill: var(--accent); background: var(--accent); }
+.bm-bar-rev { fill: var(--success); background: var(--success); }
+.bm-legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.bm-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; }
+.bm-un { flex-wrap: wrap; }
+.bm-reason { display: block; color: var(--text-muted); }
+.bm-assign { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bm-assign .btn { min-height: 44px; }
+.bm-pick { display: flex; flex-wrap: wrap; gap: 8px; flex: 1 1 240px; }
+.bm-pick .field { flex: 1 1 160px; min-width: 0; min-height: 44px; font-size: 16px; }
+.bm-un .mk-small { display: inline-flex; align-items: center; }
+
+/* Kampagnen-Ansicht */
+.mk-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 12px 0 0; flex-wrap: wrap; }
+.mk-steps li { flex: 1 1 90px; text-align: center; padding: 8px 6px; border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); font-size: 13px; font-weight: 600; }
+.mk-steps li.done { background: var(--accent-soft); color: var(--text); }
+.mk-steps li.now { background: var(--primary); color: var(--on-primary); }
+.mk-meter { height: 14px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.mk-meter i { display: block; height: 100%; border-radius: 999px; background: var(--success); }
+.mk-meter.amp-knapp i { background: var(--warning); }
+.mk-meter.amp-ueberzogen i { background: var(--error); }
+.mk-meter-txt { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 6px; font-size: 14px; }
+.mk-amp { font-weight: 700; }
+.mk-amp.amp-im_rahmen { color: var(--success); }
+.mk-amp.amp-knapp { color: var(--warning); }
+.mk-amp.amp-ueberzogen { color: var(--error); }
+.mk-num { padding: 6px 0; border-bottom: 1px solid var(--line); }
+.mk-num:last-of-type { border-bottom: 0; }
+.mk-num-line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; overflow-wrap: anywhere; }
+.mk-num-val { font-variant-numeric: tabular-nums; text-align: right; }
+.mk-why summary { cursor: pointer; font-size: 13px; color: var(--text-muted); min-height: 32px; line-height: 32px; }
+.mk-why p { margin: 0 0 6px; font-size: 13px; color: var(--text-muted); }
+.mk-sub { margin: 14px 0 4px; font-size: 14px; }
+.mk-beleg-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mk-beleg-actions .btn, .mk-beleg-actions a.btn { min-height: 44px; display: inline-flex; align-items: center; text-decoration: none; }
+.page-head .mk-actions { margin-top: 8px; }
