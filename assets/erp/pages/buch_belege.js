@@ -225,6 +225,8 @@
 		host.appendChild(box);
 
 		function reload() { load(); }
+		var focus = UI.buchFocus;
+		if (focus && focus.beleg) { UI.buchFocus = null; setTimeout(function () { openDetail(focus.beleg, ctx, reload); }, 0); }
 
 		function load() {
 			Promise.all([rq('buch/belege?' + qs(q)), loadOptions()]).then(function (r) {

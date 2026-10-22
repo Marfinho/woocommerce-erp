@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.35.0] – 2026-10-22
+
+### Buchhaltung und Marketing-Kosten im ERP
+
+- Buchhaltung mit Reitern: Belege (Foto per Kamera, Datei- und E-Rechnung-Upload, OCR füllt Felder vor, Doppelbeleg-Warnung, Festschreiben, Storno mit Grund), Rechnungen, Kasse, Journal, Dauerbuchungen, Marketing-Kosten, Anlagen/AfA, Jahresabschluss-Checkliste, EÜR, GoBD-Prüfung, Export.
+- Marketing: Kampagnen-Auswertung mit Kosten, Budget-Ampel, ROAS, Status, Duplizieren, Vorlagen; Kostenübersicht je Kanal/Monat mit CSV-Export und Zuordnung loser Belege.
+- Alle Schreibvorgänge laufen über die bestehenden GoBD-Repositories (Hash-Kette, Protokoll).
+- Noch nicht in echtem WordPress, Browser oder mit Tesseract getestet.
+
 ## [0.34.1] – 2026-10-22
 
 ### Seitenaufruf-Zähler robuster, mit Selbsttest

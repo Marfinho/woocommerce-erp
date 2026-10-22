@@ -431,7 +431,7 @@
 		var cfg = ui.config || {};
 		// Wie in der klassischen Ansicht (ActionMap): Wer die Buchhaltung öffnen darf, darf auch erfassen und buchen.
 		var canWrite = ui.can('finanzen.buchhaltung');
-		var tab = ui.store('lw16erp-buch-tab') || 'belege';
+		var tab = (UI.buchFocus && UI.buchFocus.tab) || ui.store('lw16erp-buch-tab') || 'belege';
 		var bar = h('div');
 		var box = h('div');
 		var quick = [];
@@ -459,7 +459,8 @@
 			qs: qs, dateRange: function (von, bis, label, onGo) { return dateRange(ui, von, bis, label, onGo); },
 			loading: function (host) { host.textContent = ''; host.appendChild(h('div', { class: 'card' }, 'Wird geladen …')); },
 			status: function (s) { return status(s); },
-			download: download
+			download: download,
+			goTab: function (k) { tab = k; ui.store('lw16erp-buch-tab', k); drawTabs(); show(); }
 		};
 		UI.zt = ctx;
 
