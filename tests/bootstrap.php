@@ -419,6 +419,7 @@ require $lw16_root . '/includes/Modules/Betrieb/Admin/ImportPage.php';
 require $lw16_root . '/includes/Erp/Pages/Import.php';
 require $lw16_root . '/includes/Erp/Pages/Konten.php';
 require $lw16_root . '/includes/Erp/Pages/BuchBelege.php';
+require $lw16_root . '/includes/Erp/Pages/BuchAbschluss.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
