@@ -403,6 +403,7 @@ require $lw16_root . '/includes/Modules/Betrieb/ContactRepository.php';
 require $lw16_root . '/includes/Erp/Pages/Verkauf.php';
 require $lw16_root . '/includes/Erp/Pages/Verwaltung.php';
 require $lw16_root . '/includes/Erp/Pages/Zahlen.php';
+require $lw16_root . '/includes/Erp/Pages/BuchBuchungen.php';
 require $lw16_root . '/includes/Modules/Mailbox/MailRepository.php';
 require $lw16_root . '/includes/Modules/Mailbox/MailboxView.php';
 require $lw16_root . '/includes/Erp/Pages/Postfach.php';
@@ -414,9 +415,12 @@ require $lw16_root . '/includes/Erp/Pages/BambuDruck.php';
 require $lw16_root . '/includes/Erp/Pages/Lager.php';
 require $lw16_root . '/includes/Erp/Pages/Konfigurator.php';
 require $lw16_root . '/includes/Erp/Pages/Marketing.php';
+require $lw16_root . '/includes/Erp/Pages/BuchMarketing.php';
 require $lw16_root . '/includes/Modules/Betrieb/Admin/ImportPage.php';
 require $lw16_root . '/includes/Erp/Pages/Import.php';
 require $lw16_root . '/includes/Erp/Pages/Konten.php';
+require $lw16_root . '/includes/Erp/Pages/BuchBelege.php';
+require $lw16_root . '/includes/Erp/Pages/BuchAbschluss.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }

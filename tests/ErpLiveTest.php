@@ -50,6 +50,8 @@ class ErpLiveTest extends TestCase {
 		$this->assertSame( 9, $s['last30'] );
 		$this->assertSame( 14, $s['sections']['shop'] );
 		$this->assertSame( 2, $s['sections']['kasse'] );
+		$this->assertSame( strtotime( '2026-10-22 12:30:00 UTC' ), $s['last_ts'] );
+		$this->assertSame( 0, Traffic::summarize( array(), $now )['last_ts'], 'Ohne Aufrufe gibt es keinen letzten.' );
 		$this->assertCount( 24, $s['series'] );
 		$this->assertSame( 18, $s['series'][23]['views'], 'Die letzte Stunde ist 12 Uhr: 5 + 4 + 9.' );
 		$this->assertSame( 2, $s['series'][19]['views'], 'Vier Stunden davor: 8 Uhr.' );
@@ -68,6 +70,8 @@ class ErpLiveTest extends TestCase {
 		}
 		$this->assertStringContainsString( 'is_user_logged_in()', $src, 'Angemeldete Personen tragen das Skript nicht.' );
 		$this->assertStringContainsString( 'doNotTrack', $src );
+		$this->assertStringContainsString( 'type:"text/plain"', $src, 'Kein JSON-Typ: sonst fragt der Browser vorab und fremde Ursprünge scheitern.' );
+		$this->assertStringContainsString( "wp_parse_url( rest_url( 'lw16/v1/pv' ) )", $src, 'Adresse ohne Host, damit www und ohne www nicht auseinanderfallen.' );
 	}
 
 	public function test_jeder_block_hat_sein_recht() {

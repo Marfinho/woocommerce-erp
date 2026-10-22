@@ -7,7 +7,25 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.35.0] – 2026-10-22
+
+### Buchhaltung und Marketing-Kosten im ERP
+
+- Buchhaltung mit Reitern: Belege (Foto per Kamera, Datei- und E-Rechnung-Upload, OCR füllt Felder vor, Doppelbeleg-Warnung, Festschreiben, Storno mit Grund), Rechnungen, Kasse, Journal, Dauerbuchungen, Marketing-Kosten, Anlagen/AfA, Jahresabschluss-Checkliste, EÜR, GoBD-Prüfung, Export.
+- Marketing: Kampagnen-Auswertung mit Kosten, Budget-Ampel, ROAS, Status, Duplizieren, Vorlagen; Kostenübersicht je Kanal/Monat mit CSV-Export und Zuordnung loser Belege.
+- Alle Schreibvorgänge laufen über die bestehenden GoBD-Repositories (Hash-Kette, Protokoll).
+- Noch nicht in echtem WordPress, Browser oder mit Tesseract getestet.
+
 ## [0.34.1] – 2026-10-22
+
+### Seitenaufruf-Zähler robuster, mit Selbsttest
+- **Meldung ohne Ursprungsprüfung:** Die Meldung geht jetzt an die Adresse ohne Host (nur Pfad) und als einfacher Text. Vorher
+  scheiterte sie, wenn die Website unter einer anderen Schreibweise der Adresse aufgerufen wurde (mit und ohne www), weil der Browser
+  sie dann als fremden Ursprung vorab abfragte.
+- **Block „Seitenaufrufe“ zeigt den letzten gezählten Aufruf** („vor x Min“) oder sagt, dass noch keiner gezählt wurde und warum
+  das sein kann: Angemeldete Personen zählen nicht, ein Seiten-Cache liefert die alte Seite ohne Skript aus.
+
+## [0.34.1] (Anleitung) – 2026-10-22
 
 - **Betriebsanleitung:** Das Stylesheet steht jetzt direkt in `docs/betriebsanleitung.html` (die Datei `docs/ba.css`
   entfällt). Auf Servern, die die separate CSS-Datei nicht auslieferten (503), erschien die Anleitung ohne Gestaltung.

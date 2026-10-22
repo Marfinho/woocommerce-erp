@@ -66,10 +66,14 @@ class Traffic {
 			return;
 		}
 
-		$url = esc_url_raw( rest_url( 'lw16/v1/pv' ) );
+		// Nur Pfad und Abfrage: Die Meldung geht an dieselbe Adresse, von der die Seite kam.
+		// Mit www-Adresse und ohne www wäre sie sonst ein fremder Ursprung und würde abgewiesen.
+		$parts = wp_parse_url( rest_url( 'lw16/v1/pv' ) );
+		$url   = ( isset( $parts['path'] ) ? $parts['path'] : '/' ) . ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' );
 
-		// sendBeacon: kein Cookie, blockiert nichts; „Do Not Track“ wird respektiert.
-		echo '<script>(function(){try{if(navigator.doNotTrack==="1"||window.doNotTrack==="1"){return;}var p=location.pathname;var b=new Blob([JSON.stringify({p:p})],{type:"application/json"});if(!navigator.sendBeacon||!navigator.sendBeacon(' . wp_json_encode( $url ) . ',b)){}}catch(e){}})();</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// sendBeacon als einfacher Text: keine Vorabfrage des Browsers, kein Cookie;
+		// „Do Not Track“ wird respektiert.
+		echo '<script>(function(){try{if(navigator.doNotTrack==="1"||window.doNotTrack==="1"){return;}var b=new Blob([JSON.stringify({p:location.pathname})],{type:"text/plain"});if(navigator.sendBeacon){navigator.sendBeacon(' . wp_json_encode( $url ) . ',b);}}catch(e){}})();</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -82,8 +86,8 @@ class Traffic {
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 		if ( ! self::is_bot( $ua ) ) {
-			$body = $request->get_json_params();
-			$path = is_array( $body ) && isset( $body['p'] ) ? (string) $body['p'] : '';
+			$body = json_decode( (string) $request->get_body(), true );
+			$path = is_array( $body ) && isset( $body['p'] ) && is_string( $body['p'] ) ? $body['p'] : '';
 
 			self::record( self::classify( $path ) );
 		}
@@ -185,7 +189,7 @@ class Traffic {
 	 *
 	 * @param array $rows Zeilen {day, hour, slot, section, views}.
 	 * @param int   $now  Zeitpunkt.
-	 * @return array {today, yesterday, last30, sections, series}; series: 24 Stunden, älteste zuerst, je {ts, views}.
+	 * @return array {today, yesterday, last30, sections, series, last_ts}; series: 24 Stunden, älteste zuerst, je {ts, views}; last_ts: Beginn des Fensters mit dem letzten Aufruf (0 = keiner in den letzten zwei Tagen).
 	 */
 	public static function summarize( array $rows, $now ) {
 		$today     = gmdate( 'Y-m-d', $now );
@@ -198,6 +202,7 @@ class Traffic {
 			'last30'    => 0,
 			'sections'  => array_fill_keys( self::SECTIONS, 0 ),
 			'series'    => array(),
+			'last_ts'   => 0,
 		);
 
 		$by_hour = array();
@@ -219,6 +224,10 @@ class Traffic {
 			// Die letzten drei Fenster, das laufende eingerechnet.
 			if ( (int) floor( $ts / 600 ) > $slot_now - 3 && (int) floor( $ts / 600 ) <= $slot_now ) {
 				$out['last30'] += $views;
+			}
+
+			if ( $views > 0 ) {
+				$out['last_ts'] = max( $out['last_ts'], $ts );
 			}
 
 			$h             = (int) floor( $ts / 3600 );

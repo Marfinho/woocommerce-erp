@@ -120,4 +120,128 @@ class ErpMarketingTest extends TestCase {
 		$this->assertSame( '2026-04-01', Marketing::km_datum( array( 'event_datum' => null, 'start_datum' => '2026-04-01' ), '2026-10-19' ) );
 		$this->assertSame( '2026-10-19', Marketing::km_datum( array(), '2026-10-19' ) );
 	}
+
+	/* ---------- Status-Ablauf, Hinweise, Duplizieren, Vorlagen, Erklärungen ---------- */
+
+	public function test_statusablauf() {
+		$this->assertSame( '', Marketing::status_transition_error( 'geplant', 'aktiv' ) );
+		$this->assertSame( '', Marketing::status_transition_error( 'aktiv', 'abgeschlossen' ) );
+		$this->assertSame( '', Marketing::status_transition_error( 'geplant', 'abgeschlossen' ) );
+		$this->assertSame( '', Marketing::status_transition_error( 'abgeschlossen', 'aktiv' ) );
+		$this->assertNotSame( '', Marketing::status_transition_error( 'aktiv', 'geplant' ) );
+		$this->assertNotSame( '', Marketing::status_transition_error( 'abgeschlossen', 'geplant' ) );
+		$this->assertStringContainsString( 'schon', Marketing::status_transition_error( 'aktiv', 'aktiv' ) );
+		$this->assertStringContainsString( 'gibt es nicht', Marketing::status_transition_error( 'aktiv', 'vorbei' ) );
+	}
+
+	public function test_naechster_schritt() {
+		$this->assertSame( 'aktiv', Marketing::next_status( 'geplant' )['value'] );
+		$this->assertSame( 'abgeschlossen', Marketing::next_status( 'aktiv' )['value'] );
+		$this->assertSame( 'aktiv', Marketing::next_status( 'abgeschlossen' )['value'] );
+		$this->assertNull( Marketing::next_status( 'x' ) );
+	}
+
+	private function hints( array $over ) {
+		return Marketing::status_hints( array_merge( array(
+			'status' => 'aktiv', 'typ' => 'sonstiges', 'start_datum' => '2026-10-01', 'ende_datum' => '', 'event_datum' => '',
+			'today' => '2026-10-22', 'cost_count' => 1, 'budget_ampel' => 'im_rahmen', 'km_booked' => false,
+			'has_attribution' => true, 'market_days' => 0, 'revenue' => 10.0,
+		), $over ) );
+	}
+
+	public function test_hinweise_ruhige_kampagne_hat_keine() {
+		$this->assertSame( array(), $this->hints( array() ) );
+	}
+
+	public function test_hinweis_fehlende_belege_nach_ende_ist_warnung() {
+		$h = $this->hints( array( 'cost_count' => 0, 'event_datum' => '2026-10-10', 'typ' => 'event' ) );
+		$this->assertSame( 'warn', $h[0]['level'] );
+		$this->assertStringContainsString( 'kein Beleg', $h[0]['text'] );
+		// Fahrt fehlt bei Events nach dem Termin, aber nur als Hinweis.
+		$this->assertContains( 'info', array_column( $h, 'level' ) );
+		// Läuft noch: nur Info.
+		$this->assertSame( array( 'info' ), array_column( $this->hints( array( 'cost_count' => 0 ) ), 'level' ) );
+	}
+
+	public function test_hinweis_budget_ueberschritten_und_knapp() {
+		$this->assertSame( 'warn', $this->hints( array( 'budget_ampel' => 'ueberzogen' ) )[0]['level'] );
+		$this->assertSame( 'info', $this->hints( array( 'budget_ampel' => 'knapp' ) )[0]['level'] );
+	}
+
+	public function test_hinweis_beginn_erreicht_und_vorbei() {
+		$h     = $this->hints( array( 'status' => 'geplant', 'start_datum' => '2026-10-22', 'budget_ampel' => 'kein_budget' ) );
+		$texts = implode( ' ', array_column( $h, 'text' ) );
+		$this->assertStringContainsString( 'aktiv', $texts );
+		$this->assertStringContainsString( 'Budget', $texts );
+
+		$h = $this->hints( array( 'ende_datum' => '2026-10-15' ) );
+		$this->assertStringContainsString( 'vorbei', $h[0]['text'] );
+		$this->assertSame( array(), $this->hints( array( 'status' => 'abgeschlossen', 'ende_datum' => '2026-10-15' ) ) );
+	}
+
+	public function test_hinweis_kein_umsatz_zuordenbar() {
+		$h = $this->hints( array( 'has_attribution' => false, 'revenue' => 0.0 ) );
+		$this->assertStringContainsString( 'kein Umsatz zuordenbar', $h[0]['text'] );
+		$this->assertSame( array(), $this->hints( array( 'has_attribution' => false, 'revenue' => 0.0, 'market_days' => 1 ) ) );
+		$this->assertSame( array(), $this->hints( array( 'status' => 'geplant', 'has_attribution' => false, 'revenue' => 0.0, 'start_datum' => '2026-11-01' ) ) );
+	}
+
+	public function test_kopie_uebernimmt_rahmen_aber_keine_zuordnungsmerkmale() {
+		$f = Marketing::duplicate_fields( array(
+			'name' => 'Weihnachtsmarkt', 'typ' => 'event', 'kanal' => 'Markt', 'budget_geplant' => '120.50', 'notiz' => 'Stand B',
+			'utm_campaign' => 'wm25', 'gutschein_code' => 'WM25', 'event_datum' => '2025-12-06', 'status' => 'abgeschlossen', 'gefahrene_km' => 40,
+		), '2026-10-22' );
+		$this->assertSame( 'Kopie von Weihnachtsmarkt', $f['name'] );
+		$this->assertSame( 'event', $f['typ'] );
+		$this->assertSame( 120.5, $f['budget_geplant'] );
+		$this->assertSame( 'Stand B', $f['notiz'] );
+		$this->assertSame( '', $f['utm_campaign'] );
+		$this->assertSame( '', $f['gutschein_code'] );
+		$this->assertNull( $f['event_datum'] );
+		$this->assertNull( $f['ende_datum'] );
+		$this->assertSame( '2026-10-22', $f['start_datum'] );
+		$this->assertSame( 'geplant', $f['status'] );
+		$this->assertArrayNotHasKey( 'gefahrene_km', $f );
+		$this->assertArrayNotHasKey( 'km_beleg_id', $f );
+		$this->assertSame( 'Neuer Markt', Marketing::duplicate_fields( array( 'name' => 'x' ), '2026-10-22', ' Neuer Markt ' )['name'] );
+	}
+
+	public function test_vorlagen_sind_gueltig() {
+		$keys = array();
+		foreach ( Marketing::templates() as $t ) {
+			$keys[] = $t['key'];
+			$this->assertContains( $t['fields']['typ'], \Lindenweg16\Modules\Marketing\KampagnenRepository::TYPEN );
+			$this->assertNotSame( '', $t['label'] );
+		}
+		$this->assertSame( count( $keys ), count( array_unique( $keys ) ) );
+	}
+
+	public function test_erklaerungen_nennen_herkunft_und_grenzen() {
+		$e = Marketing::explain( array( 'nachlauf' => 30, 'von' => '2026-04-01', 'bis' => '2026-05-12', 'utm' => '', 'code' => '', 'km_booked' => false, 'market_days' => 0 ) );
+		foreach ( array( 'kosten', 'fahrt', 'markt', 'shop', 'rabatt', 'einsatz', 'umsatz', 'ergebnis', 'roas', 'cpo', 'budget', 'offen' ) as $k ) {
+			$this->assertArrayHasKey( $k, $e );
+			$this->assertNotSame( '', $e[ $k ] );
+		}
+		$this->assertStringContainsString( 'bewusst nichts geschätzt', $e['shop'] );
+		$this->assertStringContainsString( 'Kassenabschluss', $e['markt'] );
+
+		$e = Marketing::explain( array( 'nachlauf' => 14, 'von' => '2026-04-01', 'bis' => '2026-05-12', 'utm' => 'fruehling', 'code' => 'FR26', 'km_rate' => 0.3, 'km_booked' => true, 'market_days' => 2 ) );
+		$this->assertStringContainsString( 'Kampagnenkennung', $e['shop'] );
+		$this->assertStringContainsString( 'Gutscheincode', $e['shop'] );
+		$this->assertStringContainsString( '14 Tagen', $e['shop'] );
+		$this->assertStringContainsString( '0,30 €', $e['fahrt'] );
+		$this->assertStringContainsString( 'abgeschlossenen Kassentage', $e['markt'] );
+	}
+
+	public function test_einnahmekonto_zaehlt_nicht_als_kosten() {
+		$this->assertTrue( Marketing::konto_zaehlt_als_kosten( '4600' ) );
+		$this->assertTrue( Marketing::konto_zaehlt_als_kosten( '' ) );
+		$this->assertFalse( Marketing::konto_zaehlt_als_kosten( \Lindenweg16\Modules\Accounting\Kontenrahmen::erloes_konto( true ) ) );
+	}
+
+	public function test_ampel_beschriftung() {
+		foreach ( array( 'im_rahmen', 'knapp', 'ueberzogen', 'kein_budget' ) as $a ) {
+			$this->assertNotSame( $a, Marketing::ampel_label( $a ) );
+		}
+	}
 }
