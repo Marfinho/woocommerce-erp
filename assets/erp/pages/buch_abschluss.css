@@ -1,0 +1,74 @@
+/* ERP-Bereich Buchhaltung: Reiter Anlagen, EÜR, GoBD, Export, Jahresabschluss (Präfix ba-) */
+.ba-h { margin: 22px 0 10px; font-size: 17px; }
+.ba-h4 { margin: 14px 0 8px; font-size: 15px; }
+.ba-sub { font-size: 12.5px; }
+.ba-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.ba-chip { min-height: 44px; padding: 0 16px; font-size: 14px; }
+.ba-wide { width: 100%; min-height: 44px; margin-top: 10px; }
+.ba-tile .val { font-variant-numeric: tabular-nums; }
+.ba-field { display: grid; gap: 4px; font-size: 13px; margin-bottom: 10px; }
+.ba-field .field, .ba-cash .field, .ba-controls .field { min-height: 44px; width: 100%; }
+.ba-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 8px 0; }
+.ba-controls .ba-field { flex: 1 1 150px; margin-bottom: 0; }
+.ba-controls .btn, .ba-actions .btn, .ba-form .btn, .ba-cash .btn, .ba-line .btn { min-height: 44px; }
+.ba-check { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; }
+.ba-check input { width: 22px; height: 22px; }
+.ba-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.ba-detail { margin-top: 10px; }
+.ba-detail[hidden], .ba-new [hidden] { display: none; }
+.ba-form .field { min-height: 44px; width: 100%; }
+.ba-off { opacity: .6; }
+
+/* Anlagen */
+.ba-anlage .ba-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
+.ba-anlage .ba-kv > div { display: grid; gap: 2px; font-size: 14px; }
+.ba-plan td, .ba-plan th { white-space: nowrap; }
+.ba-line { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: space-between; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.ba-line-main { flex: 1 1 220px; min-width: 0; }
+.ba-line-side { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+/* EÜR */
+.ba-cmp { display: grid; gap: 4px; }
+.ba-delta { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ba-delta.ba-good { color: var(--success); }
+.ba-delta.ba-bad { color: var(--error); }
+.ba-group-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.ba-num { font-variant-numeric: tabular-nums; }
+.ba-konto { display: flex; flex-wrap: wrap; gap: 4px 12px; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.ba-konto span:first-child { flex: 1 1 200px; }
+
+/* Ampel */
+.ba-lamp { flex: none; display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-top: 3px; background: var(--text-muted); box-shadow: 0 0 0 3px color-mix(in srgb, var(--text-muted) 20%, transparent); }
+.ba-lamp.gruen { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 22%, transparent); }
+.ba-lamp.gelb { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 25%, transparent); }
+.ba-lamp.rot { background: var(--error); box-shadow: 0 0 0 3px color-mix(in srgb, var(--error) 22%, transparent); }
+
+/* GoBD */
+.ba-point { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ba-point-body { min-width: 0; display: grid; gap: 3px; font-size: 14px; }
+.ba-tech summary { cursor: pointer; font-size: 12.5px; color: var(--text-muted); min-height: 32px; }
+.ba-mono { font-family: var(--font-mono); font-size: 11.5px; word-break: break-all; }
+.ba-hist summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.ba-hist-line { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+
+/* Export */
+.ba-files { margin: 8px 0 14px; padding-left: 18px; display: grid; gap: 4px; font-size: 14px; }
+
+/* Checkliste */
+.ba-sum { display: flex; gap: 12px; align-items: flex-start; border-left: 4px solid var(--line); }
+.ba-sum.gruen { border-left-color: var(--success); }
+.ba-sum.gelb { border-left-color: var(--warning); }
+.ba-sum.rot { border-left-color: var(--error); }
+.ba-check-row { display: grid; gap: 6px; border-left: 4px solid var(--line); }
+.ba-check-row.gruen { border-left-color: var(--success); }
+.ba-check-row.gelb { border-left-color: var(--warning); }
+.ba-check-row.rot { border-left-color: var(--error); }
+.ba-check-head { display: flex; gap: 10px; align-items: flex-start; }
+.ba-check-title { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; }
+.ba-cash { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.ba-cash .field { flex: 1 1 200px; }
+
+@media (max-width: 480px) {
+	.ba-line-side { width: 100%; justify-content: space-between; }
+	.ba-actions .btn { flex: 1 1 100%; }
+}
