@@ -422,24 +422,46 @@
 
 	/* ---------- Buchhaltung (nur lesend) ---------- */
 
+	// Reiter der Buchhaltung: Jede Datei unter pages/ trägt ihre Reiter in UI.buchTabs ein
+	// (Schlüssel → { label, order, render(host, ctx) }); die hier unten sind der Rückfall.
+	UI.buchTabs = UI.buchTabs || {};
+
 	UI.pages['buchhaltung'] = function (item, ui) {
 		var h = ui.h;
 		var cfg = ui.config || {};
-		function classic(view) { return cfg.adminUrl + 'admin.php?page=lw16-buchhaltung' + (view ? '&view=' + view : ''); }
-
-		ui.pageHead('Buchhaltung', 'Belege, Rechnungen, Journal und EÜR ansehen, GoBD-Prüfung und Exporte.', ui.classicBtn(item));
-		var tab = 'belege';
-		var tabs = [['belege', 'Belege'], ['rechnungen', 'Rechnungen'], ['journal', 'Journal'], ['euer', 'EÜR'], ['gobd', 'GoBD-Prüfung'], ['export', 'Betriebsprüfung'], ['mehr', 'Erfassen & ändern']];
+		// Wie in der klassischen Ansicht (ActionMap): Wer die Buchhaltung öffnen darf, darf auch erfassen und buchen.
+		var canWrite = ui.can('finanzen.buchhaltung');
+		var tab = ui.store('lw16erp-buch-tab') || 'belege';
 		var bar = h('div');
 		var box = h('div');
-		ui.view().appendChild(h('div', { class: 'notice zt-gobd' }, 'Aus Gründen der GoBD (Unveränderbarkeit, Hash-Kette, Protokoll) ist diese Seite zum Ansehen. Buchungen erfassen, festschreiben und stornieren geht weiterhin in der klassischen Ansicht – Reiter „Erfassen & ändern“.'));
+		var quick = [];
+
+		function refresh() { drawTabs(); show(); }
+
+		// Neuer Beleg: Kamera oder Datei; die Erfassung selbst liefert pages/buch_belege.js.
+		if (canWrite && UI.belegCapture) {
+			quick.push(h('button', { class: 'btn primary', type: 'button', onclick: function () { UI.belegCapture({ mode: 'camera', onSaved: function () { tab = 'belege'; refresh(); } }); } }, ui.ico('camera'), 'Beleg scannen'));
+			quick.push(h('button', { class: 'btn', type: 'button', onclick: function () { UI.belegCapture({ mode: 'upload', onSaved: function () { tab = 'belege'; refresh(); } }); } }, ui.ico('upload'), 'Beleg hochladen'));
+		}
+		quick.push(ui.classicBtn(item));
+		ui.pageHead('Buchhaltung', 'Belege erfassen und einscannen, Rechnungen, Kasse, Journal, Anlagen, EÜR und Betriebsprüfung.', quick);
 		ui.view().appendChild(bar);
 		ui.view().appendChild(box);
 
-		function drawTabs() {
-			bar.textContent = '';
-			bar.appendChild(chips(ui, tabs.map(function (t) { return { key: t[0], label: t[1] }; }), tab, function (k) { tab = k; drawTabs(); show(); }));
-		}
+		// Gemeinsames Werkzeug für alle Reiter.
+		var ctx = {
+			ui: ui, h: h, canWrite: canWrite, refresh: refresh,
+			eur: function (v) { return eur(ui, v); },
+			table: function (head, rows, nums) { return table(ui, head, rows, nums); },
+			pager: function (d, go) { return pager(ui, d, go); },
+			chips: function (items, current, onPick) { return chips(ui, items, current, onPick); },
+			fail: function (host, e) { fail(host, ui, e); },
+			qs: qs, dateRange: function (von, bis, label, onGo) { return dateRange(ui, von, bis, label, onGo); },
+			loading: function (host) { host.textContent = ''; host.appendChild(h('div', { class: 'card' }, 'Wird geladen …')); },
+			status: function (s) { return status(s); },
+			download: download
+		};
+		UI.zt = ctx;
 
 		function loading() { box.textContent = ''; box.appendChild(h('div', { class: 'card' }, 'Wird geladen …')); }
 
@@ -465,29 +487,51 @@
 			return h('span', { class: 'tag ' + (s === 'festgeschrieben' ? 'now' : (s === 'offen' ? 'later' : '')) }, t);
 		}
 
-		function show() {
-			if (tab === 'belege') {
+		// Rückfall-Reiter (nur lesend), solange kein Reiter derselben Art eingetragen ist.
+		var CORE = {
+			belege: { label: 'Belege', order: 10, render: function () {
 				list('belege', ['Nr.', 'Datum', 'Händler', 'Kategorie', 'Betrag', 'Quelle', 'Foto', 'Status'], function (b) {
 					return { cls: b.status === 'storniert' ? 'zt-storno' : null, cells: [b.nummer, b.datum, b.haendler, b.kategorie, eur(ui, b.betrag), b.quelle,
 						b.datei ? h('a', { href: b.datei, target: '_blank', rel: 'noopener' }, 'ansehen') : '–', status(b.status)] };
-				}, [4], 'Festschreiben und Stornieren: klassische Ansicht (Reiter „Erfassen & ändern“).');
-			} else if (tab === 'rechnungen') {
+				}, [4]);
+			} },
+			rechnungen: { label: 'Rechnungen', order: 20, render: function () {
 				list('rechnungen', ['Rechnungsnr.', 'Bestellung', 'Betrag', 'Erstellt', 'Status'], function (r) {
 					return { cls: r.storniert ? 'zt-storno' : null, cells: [h('a', { href: r.url, target: '_blank', rel: 'noopener' }, r.nummer), '#' + r.bestellung, eur(ui, r.betrag), r.erstellt, status(r.storniert ? 'storniert' : 'festgeschrieben')] };
 				}, [2]);
-			} else if (tab === 'journal') {
+			} },
+			journal: { label: 'Journal', order: 40, render: function () {
 				list('journal', ['Nr.', 'Datum', 'Typ', 'Betrag', 'Kategorie', 'Beschreibung', 'Status'], function (b) {
 					return { cls: b.storniert ? 'zt-storno' : null, cells: [b.nummer, b.datum, b.typ, eur(ui, b.betrag), b.kategorie, b.beschreibung, b.storniert ? 'storniert' : 'aktiv'] };
 				}, [3]);
-			} else if (tab === 'euer') {
-				euer({});
-			} else if (tab === 'gobd') {
-				gobd();
-			} else if (tab === 'export') {
-				exportTab();
-			} else {
-				more();
-			}
+			} },
+			euer: { label: 'EÜR', order: 70, render: function () { euer({}); } },
+			gobd: { label: 'GoBD-Prüfung', order: 80, render: function () { gobd(); } },
+			export: { label: 'Betriebsprüfung', order: 90, render: function () { exportTab(); } }
+		};
+
+		function tabList() {
+			var all = {};
+			Object.keys(CORE).forEach(function (k) { all[k] = CORE[k]; });
+			Object.keys(UI.buchTabs).forEach(function (k) { all[k] = UI.buchTabs[k]; });
+
+			return Object.keys(all).map(function (k) { return { key: k, label: all[k].label, order: all[k].order || 100, tab: all[k], core: CORE[k] === all[k] }; })
+				.sort(function (a, b) { return a.order - b.order; });
+		}
+
+		function drawTabs() {
+			var list = tabList();
+			if (!list.some(function (t) { return t.key === tab; })) { tab = list[0].key; }
+			bar.textContent = '';
+			bar.appendChild(chips(ui, list, tab, function (k) { tab = k; ui.store('lw16erp-buch-tab', k); drawTabs(); show(); }));
+		}
+
+		function show() {
+			var t = tabList().filter(function (x) { return x.key === tab; })[0];
+			if (!t) { return; }
+			if (t.core) { t.tab.render(); return; }
+			box.textContent = '';
+			try { t.tab.render(box, ctx); } catch (e) { fail(box, ui, e); }
 		}
 
 		function euer(q) {
@@ -566,21 +610,6 @@
 			}).catch(function (e) { fail(box, ui, e); });
 		}
 
-		function more() {
-			box.textContent = '';
-			var links = [['neu', 'Beleg erfassen', 'Neuen Beleg anlegen, Foto hochladen.'], ['', 'Belege festschreiben / stornieren', 'Offene Belege festschreiben, festgeschriebene stornieren.'],
-				['kassenbuch', 'Kassenbuch', 'Kasseneinträge und Tagesabschluss.'], ['dauerbuchungen', 'Dauerbuchungen', 'Wiederkehrende Buchungen anlegen und ausführen.'],
-				['anlagen', 'Anlagen', 'Anlagevermögen und Abschreibung.'], ['erechnung', 'E-Rechnung', 'E-Rechnungen hochladen und als Beleg übernehmen.'],
-				['dashboard', 'Klassisches Dashboard', 'Die frühere Finanzübersicht.']];
-			var g = h('div', { class: 'grid cards' });
-			links.forEach(function (l) {
-				g.appendChild(h('a', { class: 'tile', href: classic(l[0]), target: '_blank', rel: 'noopener' }, h('div', { class: 'lab' }, 'Klassische Ansicht'), h('div', { style: 'font-weight:700;margin:4px 0' }, l[1]), h('div', { class: 'muted', style: 'font-size:13px' }, l[2])));
-			});
-			box.appendChild(h('p', { class: 'muted' }, 'Diese Vorgänge verändern die Bücher und bleiben in der klassischen Ansicht, damit die GoBD-Regeln dort an einer Stelle gelten.'));
-			box.appendChild(g);
-		}
-
-		drawTabs();
-		show();
+		refresh();
 	};
 })();
