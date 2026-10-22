@@ -877,6 +877,43 @@
 			return out;
 		}
 
+		/* Rückfall ohne Tesseract auf dem Server: Texterkennung im Browser (tesseract.js, einmal geladen). */
+		var TESS_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+		function loadTesseract() {
+			if (window.Tesseract) { return Promise.resolve(window.Tesseract); }
+			return new Promise(function (resolve, reject) {
+				var sc = document.createElement('script');
+				sc.src = TESS_SRC;
+				sc.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('Die Texterkennung konnte nicht geladen werden.')); };
+				sc.onerror = function () { reject(new Error('Die Texterkennung konnte nicht geladen werden (keine Internetverbindung?).')); };
+				document.head.appendChild(sc);
+			});
+		}
+		function browserOcr(pages) {
+			busyView('Foto wird im Browser gelesen … (beim ersten Mal wird die Texterkennung geladen, das kann etwas dauern)');
+			return loadTesseract().then(function (T) {
+				return T.createWorker('deu').then(function (worker) {
+					var texts = [];
+					return pages.slice(0, 4).reduce(function (chain, p) {
+						return chain.then(function () {
+							return worker.recognize(p.file || p.blob).then(function (r) { texts.push((r && r.data && r.data.text) || ''); });
+						});
+					}, Promise.resolve()).then(function () {
+						return worker.terminate();
+					}).then(function () { return texts.join('\n'); });
+				});
+			}).then(function (text) {
+				return rq('buch/belege/ocr-text', 'POST', { text: text });
+			});
+		}
+		function applyOcr(o) {
+			S.fields = o.felder || {};
+			S.found = o.gefunden || [];
+			S.hints = o.hinweise || [];
+			S.ocrWarn = !o.erkannt;
+			S.ocrMessage = o.meldung || '';
+		}
+
 		function analyse() {
 			if (!S.pages.length) { stepForm(); return; }
 			busyView('Beleg wird gelesen …');
@@ -912,9 +949,16 @@
 					S.found = o.gefunden;
 					S.hints = o.hinweise;
 					S.ocrWarn = !o.erkannt;
-					S.ocrMessage = !o.erkannt && o.tesseract === false
-						? 'Fotos werden auf diesem Server noch nicht automatisch gelesen (die Texterkennung Tesseract ist nicht eingerichtet). Bitte die Felder von Hand ausfüllen. PDFs mit Text werden gelesen.'
-						: o.meldung;
+					S.ocrMessage = o.meldung;
+					// Server ohne Tesseract: Foto im Browser lesen. Das Foto verlässt dabei das Gerät nicht.
+					if (!o.erkannt && o.tesseract === false && first.kind === 'image') {
+						browserOcr(S.pages).then(function (b) { applyOcr(b); stepForm(); }).catch(function (e) {
+							S.ocrWarn = true;
+							S.ocrMessage = e.message + ' Bitte die Felder von Hand ausfüllen.';
+							stepForm();
+						});
+						return;
+					}
 				}
 				stepForm();
 			}).catch(function (e) {

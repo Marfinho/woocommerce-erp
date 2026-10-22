@@ -252,7 +252,8 @@ class Shell {
 		header( 'Service-Worker-Allowed: ' . ( '' !== $scope ? $scope : '/' ) );
 		header( 'Cache-Control: no-cache' );
 
-		echo str_replace( '__VERSION__', LW16_VERSION . '-' . Assets::version( 'assets/erp/sw.js' ), $source ); // phpcs:ignore WordPress.Security.EscapeOutput -- eigenes Skript, nur Versionsnummer eingesetzt.
+		$source = str_replace( '__VERSION__', LW16_VERSION . '-' . Assets::version( 'assets/erp/sw.js' ), $source );
+		echo str_replace( '__PUSH_URL__', esc_url_raw( rest_url( 'lw16/v1/erp/push/abruf' ) ), $source ); // phpcs:ignore WordPress.Security.EscapeOutput -- eigenes Skript, nur Versionsnummer eingesetzt.
 	}
 
 	/**

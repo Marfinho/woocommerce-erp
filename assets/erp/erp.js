@@ -68,6 +68,7 @@
 
 	var ICONS = {
 		x: '<path d="M6 6l12 12M18 6L6 18"/>',
+		bell: '<path d="M6 17V11a6 6 0 0 1 12 0v6l1.5 2h-15z"/><path d="M10 21h4"/>',
 		camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
 		upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
 		home: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>',
@@ -427,6 +428,7 @@
 			el.pop.appendChild(h('a', { class: 'pop-item', href: '#/seite/' + i.id, role: 'menuitem', onclick: function () { el.pop.hidden = true; } }, ico(i.locked ? 'lock' : 'cog'), h('span', null, i.title)));
 		});
 		el.pop.appendChild(h('hr'));
+		el.pop.appendChild(h('button', { class: 'pop-item', type: 'button', onclick: function () { el.pop.hidden = true; if (UI.pushDialog) { UI.pushDialog(); } } }, ico('bell'), h('span', null, 'Benachrichtigungen')));
 		el.pop.appendChild(el.themeBtn);
 		el.pop.appendChild(h('a', { class: 'pop-item', href: boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
 		if (boot.user.full) { el.pop.appendChild(h('a', { class: 'pop-item', href: C.adminUrl }, ico('ext'), h('span', null, 'WordPress-Verwaltung'))); }
@@ -444,6 +446,7 @@
 		profileItems().forEach(function (i) {
 			body.appendChild(h('a', { class: 'more-item', href: '#/seite/' + i.id, onclick: closeDlg }, ico('cog'), h('span', null, i.title)));
 		});
+		body.appendChild(h('button', { class: 'more-item', type: 'button', onclick: function () { closeDlg(); if (UI.pushDialog) { UI.pushDialog(); } } }, ico('bell'), h('span', null, 'Benachrichtigungen')));
 		body.appendChild(h('a', { class: 'more-item', href: S.boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
 		body.appendChild(h('a', { class: 'more-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
 		dlg('Mehr', body);

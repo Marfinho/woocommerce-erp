@@ -70,3 +70,49 @@ self.addEventListener('fetch', function (event) {
 		);
 	}
 });
+
+/*
+ * Benachrichtigungen. Der Push-Dienst weckt nur auf (ohne Inhalt); die
+ * Meldungen holt der Service Worker selbst beim Server ab.
+ */
+var PUSH_URL = '__PUSH_URL__';
+
+self.addEventListener('push', function (event) {
+	event.waitUntil(
+		self.registration.pushManager.getSubscription().then(function (sub) {
+			if (!sub) { return []; }
+			return fetch(PUSH_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ endpoint: sub.endpoint }),
+				cache: 'no-store'
+			}).then(function (r) { return r.json(); }).then(function (d) { return (d && d.meldungen) || []; }).catch(function () { return []; });
+		}).then(function (list) {
+			// Browser verlangen zu jedem Weckruf eine sichtbare Meldung.
+			if (!list.length) { list = [{ title: 'Lindenweg16 ERP', body: 'Es gibt Neuigkeiten.', url: '', tag: 'allgemein' }]; }
+			return Promise.all(list.map(function (m) {
+				return self.registration.showNotification(m.title || 'Lindenweg16 ERP', {
+					body: m.body || '',
+					tag: m.tag ? m.tag + '-' + (m.time || '') : undefined,
+					data: { url: m.url || '' }
+				});
+			}));
+		})
+	);
+});
+
+self.addEventListener('notificationclick', function (event) {
+	event.notification.close();
+	var hash = (event.notification.data && event.notification.data.url) || '';
+	event.waitUntil(
+		self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (wins) {
+			for (var i = 0; i < wins.length; i++) {
+				if (wins[i].url.indexOf(SCOPE) > -1) {
+					if (hash && wins[i].navigate) { wins[i].navigate(SCOPE + hash).catch(function () {}); }
+					return wins[i].focus();
+				}
+			}
+			return self.clients.openWindow(SCOPE + hash);
+		})
+	);
+});

@@ -91,6 +91,7 @@ class BuchBelege {
 		self::route( $ns, $base . '/optionen', 'GET', 'optionen', $perm );
 		self::route( $ns, $base . '/doppelt', 'GET', 'doppelt', $perm );
 		self::route( $ns, $base . '/ocr', 'POST', 'ocr', $perm );
+		self::route( $ns, $base . '/ocr-text', 'POST', 'ocr_text', $perm );
 		self::route( $ns, $base . '/erechnung', 'POST', 'erechnung_hochladen', $perm );
 		self::route( $ns, $base . '/erechnung/(?P<id>\d+)/uebernehmen', 'POST', 'erechnung_uebernehmen', $perm );
 		self::route( $ns, $base . '/festschreiben-alle', 'POST', 'festschreiben_alle', $perm );
@@ -1839,6 +1840,39 @@ class BuchBelege {
 				'gefunden' => $gefunden,
 				'meldung'  => $gefunden
 					? __( 'Felder vorausgefüllt. Bitte alles prüfen, die Erkennung kann sich irren.', 'lindenweg16' )
+					: __( 'Es wurde Text gelesen, aber kein Betrag oder Datum sicher erkannt. Bitte die Felder von Hand ausfüllen.', 'lindenweg16' ),
+				'hinweise' => $vorschlag['hinweise'],
+			)
+		);
+	}
+
+	/**
+	 * Felder aus Text, den der Browser selbst erkannt hat (Rückfall ohne Tesseract auf dem Server).
+	 *
+	 * Das Foto wird dafür nicht übertragen, nur der gelesene Text. Die Regeln zum Finden von
+	 * Betrag, Datum und Händler sind dieselben wie bei der Erkennung auf dem Server.
+	 *
+	 * @param WP_REST_Request $request Anfrage mit dem Feld text.
+	 * @return WP_REST_Response
+	 */
+	public static function ocr_text( WP_REST_Request $request ) {
+		$text = (string) $request->get_param( 'text' );
+		$text = function_exists( 'mb_substr' ) ? mb_substr( $text, 0, 20000 ) : substr( $text, 0, 20000 );
+		if ( '' === trim( $text ) ) {
+			return self::fail( __( 'Es wurde kein Text übergeben.', 'lindenweg16' ) );
+		}
+		$vorschlag = self::ocr_felder( $text, gmdate( 'Y-m-d' ) );
+		$gefunden  = $vorschlag['gefunden'];
+
+		return new WP_REST_Response(
+			array(
+				'ok'       => true,
+				'erkannt'  => (bool) $gefunden,
+				'quelle'   => 'browser',
+				'felder'   => $vorschlag['felder'],
+				'gefunden' => $gefunden,
+				'meldung'  => $gefunden
+					? __( 'Felder vorausgefüllt (Texterkennung im Browser). Bitte alles prüfen, die Erkennung kann sich irren.', 'lindenweg16' )
 					: __( 'Es wurde Text gelesen, aber kein Betrag oder Datum sicher erkannt. Bitte die Felder von Hand ausfüllen.', 'lindenweg16' ),
 				'hinweise' => $vorschlag['hinweise'],
 			)
