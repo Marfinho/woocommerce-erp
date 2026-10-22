@@ -174,7 +174,7 @@ class ErpPayrollTest extends TestCase {
 
 	public function test_tabelle_und_version() {
 		$this->assertStringContainsString( '{$p}payslips', $this->read( 'includes/Modules/Betrieb/Schema.php' ) );
-		$this->assertStringContainsString( "const DB_VERSION = '39'", $this->read( 'includes/Core/Installer.php' ) );
+		$this->assertStringContainsString( "const DB_VERSION = '40'", $this->read( 'includes/Core/Installer.php' ) );
 	}
 
 	public function test_oberflaeche_ist_von_loehne_aus_erreichbar() {
