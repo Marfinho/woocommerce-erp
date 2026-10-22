@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.33.1] – 2026-10-22
+
+### Druckzeit ist keine Arbeitszeit
+- **Der Workflow bucht beim Melden einer Platte nur noch die Rüstzeit** als Arbeitszeit. Die Druckzeit ist Maschinenzeit
+  (sie steht im Druckjournal und in Soll gegen Ist): Während der Drucker läuft, arbeitet die Person an etwas anderem.
+  Vorher stand sie in „Meine Woche“ und hätte in jede Lohnabrechnung gezählt.
+- **Ältere Buchungen** (Kategorie Druckzeit, mit einer Platte verbunden) bleiben gespeichert, zählen aber nicht mehr mit:
+  nicht in Wochensummen, Löhnen, Lohnabrechnungen und Kapazität. Von Hand erfasste Druckzeit ohne Platte zählt weiter.
+
 ## [0.33.0] – 2026-10-21
 
 ### Montage im Workflow

@@ -1033,8 +1033,9 @@ class Workflow {
 		}
 
 		$description = sprintf( /* translators: %d: Plattennummer. */ __( 'Platte %d', 'lindenweg16' ), $run['id'] );
+		// Nur das Rüsten ist Arbeitszeit. Der Druck selbst ist Maschinenzeit (Druckjournal):
+		// Während er läuft, arbeitet die Person an etwas anderem.
 		self::book_time( 'ruestzeit', $setup_h, $description, $run['id'] );
-		self::book_time( 'druckzeit', $print_h, $description, $run['id'] );
 
 		$items = array();
 		foreach ( $check['items'] as $item ) {
@@ -1086,7 +1087,7 @@ class Workflow {
 	 * Ein Druck über das Wochenende dauert länger als ein Tag; die
 	 * Zeiterfassung lässt je Eintrag höchstens 24 Stunden zu.
 	 *
-	 * @param string $category    ruestzeit oder druckzeit.
+	 * @param string $category    Kategorie der Zeit (der Workflow bucht nur ruestzeit).
 	 * @param float  $hours       Stunden.
 	 * @param string $description Beschreibung.
 	 * @param int    $run_id      Platte.
