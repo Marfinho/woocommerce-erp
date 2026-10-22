@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.36.0] – 2026-10-22
+
+### Push-Benachrichtigungen
+- Das ERP kann Benachrichtigungen aufs Handy und den Desktop schicken (Web-Push mit VAPID, ohne Fremdbibliothek). Einschalten pro Gerät im Profilmenü unter „Benachrichtigungen“, mit Testmeldung und Auswahl der Meldungsarten.
+- Meldungsarten: neue Shop-Bestellung, Artikel fast oder ganz ausverkauft; jeweils nur für Personen mit dem passenden Recht.
+- Der Push-Dienst des Browsers bekommt keinen Text: Er weckt nur den Service Worker, der die Meldung selbst beim Server abholt.
+- iPhone und iPad: nur, wenn das ERP über „Zum Home-Bildschirm“ als App installiert ist (iOS 16.4 oder neuer).
+
 ## [0.35.1] – 2026-10-22
 
 - **Belege ohne Tesseract auf dem Server:** Fotos werden jetzt im Browser gelesen (tesseract.js, wird beim ersten Mal einmalig geladen). Das Foto bleibt auf dem Gerät, nur der erkannte Text geht zur Auswertung an den Server (`buch/belege/ocr-text`). Klappt auch das nicht (offline), bleibt es bei der Handeingabe.

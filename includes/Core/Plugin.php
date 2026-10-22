@@ -90,6 +90,7 @@ class Plugin {
 		// Eigene ERP-Oberfläche unter /erp (zweiter Zugang neben wp-admin).
 		( new ErpShell() )->register();
 		( new \Lindenweg16\Erp\Traffic() )->register();
+		\Lindenweg16\Erp\Push::init();
 
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
