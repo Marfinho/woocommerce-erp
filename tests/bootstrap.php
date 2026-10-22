@@ -415,6 +415,7 @@ require $lw16_root . '/includes/Erp/Pages/BambuDruck.php';
 require $lw16_root . '/includes/Erp/Pages/Lager.php';
 require $lw16_root . '/includes/Erp/Pages/Konfigurator.php';
 require $lw16_root . '/includes/Erp/Pages/Marketing.php';
+require $lw16_root . '/includes/Erp/Pages/BuchMarketing.php';
 require $lw16_root . '/includes/Modules/Betrieb/Admin/ImportPage.php';
 require $lw16_root . '/includes/Erp/Pages/Import.php';
 require $lw16_root . '/includes/Erp/Pages/Konten.php';
