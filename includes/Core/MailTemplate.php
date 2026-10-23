@@ -108,6 +108,12 @@ class MailTemplate {
 				'text'        => __( "Hallo {name},\n\ngute Nachricht: Bei \"{event}\" ({termin}) ist ein Platz frei geworden und Du bist nachgerückt. Deine Anmeldung ist damit gültig.\n{personen}\n\n{absagen}\n\nBis bald!", 'lindenweg16' ),
 				'platzhalter' => '{name}, {event}, {termin}, {personen}, {absagen}',
 			),
+			'gutschein_mail'    => array(
+				'label'       => __( 'Gutschein (nur als E-Mail)', 'lindenweg16' ),
+				'betreff'     => __( '{von} hat Dir einen Gutschein geschenkt', 'lindenweg16' ),
+				'text'        => __( "Hallo {an},\n\n{von} schenkt Dir einen Gutschein über {betrag}.\n\n{text}\n\nGutscheincode: {code}\nGültig bis: {gueltig_bis}\n\nEinfach im Warenkorb unter \"Gutschein\" eingeben. Viel Freude damit!", 'lindenweg16' ),
+				'platzhalter' => '{von}, {an}, {text}, {code}, {betrag}, {gueltig_bis}',
+			),
 			'referral_review'    => array(
 				'label'       => __( 'Referral zur Prüfung (an Manager)', 'lindenweg16' ),
 				'betreff'     => __( '[{firmenname}] Referral zur Prüfung', 'lindenweg16' ),

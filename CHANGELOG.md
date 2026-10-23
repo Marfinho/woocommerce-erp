@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.37.0] – 2026-10-23
+
+### Gutschein mit Vorlagenwahl
+- Neues Modul „Gutschein“: Im Produktformular (Allgemein) lässt sich ein Produkt als „Gutschein mit Vorlagenwahl“ markieren. Unter dem Schalter gibt es eine Vorschau aller drei Vorlagen.
+- Auf der Produktseite wählt der Kunde zwischen drei Vorlagen im Stil von lindenweg16.de (Klassik – Tinte & Gold, Leicht – Taubenblau, Warm – Cognac & Rosé) oder „Nur E-Mail“. Felder: Von, An, Text und optional die E-Mail des Beschenkten. Die Karte schreibt beim Tippen live mit.
+- Auswahl und Texte stehen im Warenkorb, an der Kasse und an der Bestellposition. Ein Gutschein ist immer ein Stück, damit jeder seinen eigenen Text hat.
+- Nach der Zahlung entsteht ein WooCommerce-Gutscheincode (`LW16-XXXX-XXXX`) in Höhe des bezahlten Betrags, einmal einlösbar, gültig bis Ende des dritten Jahres, nicht für den Kauf weiterer Gutscheine. Der Beschenkte bekommt die gestaltete Karte per Mail, ohne Adresse der Besteller selbst. Bei fremder Adresse geht eine Kopie an den Besteller.
+- „Nur E-Mail“ nutzt die neue Mail-Vorlage „Gutschein (nur als E-Mail)“, die unter Einstellungen wie die anderen Mails angepasst werden kann.
+- Im Bestell-Backend gibt es die Aktion „Gutschein erneut senden“.
+- Noch nicht in echtem WordPress/WooCommerce getestet.
+
 ## [0.36.0] – 2026-10-22
 
 ### Push-Benachrichtigungen

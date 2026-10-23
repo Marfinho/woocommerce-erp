@@ -1,0 +1,33 @@
+/* Gutschein-Formular auf der Produktseite. Farben aus dem Theme, mit Rückfall. */
+.lw16-gv {
+	--gv-ink: var(--wp--preset--color--ink, #2b323a);
+	--gv-line: var(--wp--preset--color--line, #d9d4cb);
+	--gv-accent: var(--wp--preset--color--accent-2, #a86f38);
+	margin: 0 0 1.5rem;
+	width: 100%;
+}
+.lw16-gv__titel { margin: 0 0 .75rem; font-size: 1.15rem; }
+.lw16-gv__wahl { display: grid; grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr)); gap: .5rem; border: 0; margin: 0 0 1rem; padding: 0; }
+.lw16-gv__karte { position: relative; display: block; cursor: pointer; }
+.lw16-gv__karte input { position: absolute; opacity: 0; inset: 0; }
+.lw16-gv__karte span {
+	display: block; padding: .7rem .5rem; text-align: center; font-weight: 600; font-size: .9rem;
+	border: 2px solid var(--gv-line); border-radius: 12px; background: #fff; color: var(--gv-ink);
+}
+.lw16-gv__karte--klassik span { background: #2b323a; color: #e7c78f; }
+.lw16-gv__karte--leicht span { background: #c8d2d7; }
+.lw16-gv__karte--warm span { background: #e8b9a1; }
+.lw16-gv__karte input:checked + span { border-color: var(--gv-accent); box-shadow: 0 0 0 2px var(--gv-accent); }
+.lw16-gv__karte input:focus-visible + span { outline: 2px solid var(--gv-ink); outline-offset: 2px; }
+.lw16-gv__felder p { margin: 0 0 .75rem; }
+.lw16-gv__felder label { display: block; font-weight: 600; font-size: .9rem; }
+.lw16-gv__felder input,
+.lw16-gv__felder textarea {
+	display: block; width: 100%; box-sizing: border-box; margin-top: .25rem; padding: .6rem .75rem;
+	border: 1px solid var(--gv-line); border-radius: 10px; font: inherit; font-weight: 400; background: #fff;
+}
+.lw16-gv__felder small { display: block; margin-top: .25rem; font-weight: 400; opacity: .7; }
+.lw16-gv__vorschau { margin-top: 1rem; }
+.lw16-gv__bild[hidden], .lw16-gv__mailhinweis[hidden] { display: none; }
+.lw16-gv__bild table { max-width: 100%; }
+.lw16-gv__mailhinweis { padding: 1rem; border: 1px dashed var(--gv-line); border-radius: 12px; font-size: .9rem; }

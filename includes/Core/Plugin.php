@@ -30,6 +30,7 @@ use Lindenweg16\Modules\Betrieb\BetriebModule;
 use Lindenweg16\Modules\Configurator\ConfiguratorModule;
 use Lindenweg16\Modules\ArView\ArViewModule;
 use Lindenweg16\Modules\Mailbox\MailboxModule;
+use Lindenweg16\Modules\Gutschein\GutscheinModule;
 
 /**
  * Singleton, das den Lebenszyklus des Plugins verwaltet.
@@ -118,6 +119,7 @@ class Plugin {
 			'konfigurator' => new ConfiguratorModule(),
 			'arview'     => new ArViewModule(),
 			'mailbox'    => new MailboxModule(),
+			'gutschein'  => new GutscheinModule(),
 		);
 
 		foreach ( $this->modules as $module ) {
