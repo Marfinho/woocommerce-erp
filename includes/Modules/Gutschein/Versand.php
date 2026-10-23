@@ -205,27 +205,32 @@ class Versand {
 			return $ok;
 		}
 
-		$karte   = Vorlagen::render(
-			$g['vorlage'],
-			array(
-				'von'         => $g['von'],
-				'an'          => $g['an'],
-				'text'        => $g['text'],
-				'betrag'      => $betrag,
-				'code'        => $code,
-				'gueltig_bis' => $bis,
-			)
+		$daten   = array(
+			'von'         => $g['von'],
+			'an'          => $g['an'],
+			'text'        => $g['text'],
+			'betrag'      => $betrag,
+			'code'        => $code,
+			'gueltig_bis' => $bis,
 		);
+		$karte   = Vorlagen::render( $g['vorlage'], $daten );
 		/* translators: %s: Name des Schenkenden. */
 		$betreff = sprintf( __( '%s hat Dir einen Gutschein geschenkt', 'lindenweg16' ), $g['von'] );
 		$html    = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f4f2ee">' . $karte . '</body></html>';
+		$pdf     = GutscheinPdf::datei( $g['vorlage'], $daten );
+		$anhang  = $pdf ? array( $pdf ) : array();
 
-		$ok = $this->wp_mail( $an, $betreff, $html );
-
-		if ( $ok && $kopie && strtolower( $kopie ) !== strtolower( $an ) ) {
-			/* translators: %s: Betreff. */
-			$this->wp_mail( $kopie, sprintf( __( 'Kopie: %s', 'lindenweg16' ), $betreff ), $html );
+		// Der Besteller bekommt den Gutschein als PDF immer, der Beschenkte
+		// zusätzlich, wenn er eine eigene Adresse hat.
+		if ( $kopie ) {
+			/* translators: %s: Name des Beschenkten. */
+			$ok = $this->wp_mail( $kopie, sprintf( __( 'Dein Gutschein für %s', 'lindenweg16' ), $g['an'] ), $html, $anhang );
 		}
+		if ( $an && strtolower( $an ) !== strtolower( $kopie ) ) {
+			$ok = $this->wp_mail( $an, $betreff, $html, $anhang ) || $ok;
+		}
+
+		GutscheinPdf::loeschen( $pdf );
 
 		return $ok;
 	}
@@ -236,9 +241,10 @@ class Versand {
 	 * @param string $an      Empfänger.
 	 * @param string $betreff Betreff.
 	 * @param string $html    Inhalt.
+	 * @param array  $anhang  Pfade der Anhänge.
 	 * @return bool
 	 */
-	protected function wp_mail( $an, $betreff, $html ) {
+	protected function wp_mail( $an, $betreff, $html, array $anhang = array() ) {
 		$absender = Settings::get( 'email_absender_name', get_bloginfo( 'name' ) );
 		$von      = Settings::get( 'firma_email', get_bloginfo( 'admin_email' ) );
 
@@ -249,7 +255,8 @@ class Versand {
 			array(
 				'Content-Type: text/html; charset=UTF-8',
 				'From: ' . $absender . ' <' . $von . '>',
-			)
+			),
+			$anhang
 		);
 	}
 }
