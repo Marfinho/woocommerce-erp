@@ -15,6 +15,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Beim Speichern wird der Slug gegen Seiten, Beiträge, Produkte, Kategorie-/Produkt-Basen und WordPress-Reservierte geprüft; bei Kollision wird nichts gespeichert. Neue Seiten bekommen nie den Slug eines aktiven Kurzlinks.
 - Anonyme Tageszähler (`lw16_kurzlinks_stats`, DB_VERSION 41) je Link und `utm_source`, ohne IP, User-Agent, Cookie und JavaScript; Bots und HEAD-Anfragen zählen nicht. Anzeige für 7 Tage, 30 Tage und gesamt, dazu Widget im Dashboard Finanzen.
 - Auswertung „Bestellungen nach Herkunft“ (Anzahl und Umsatz je `utm_source` aus der WooCommerce-Bestellherkunft); Bestellungen ohne Herkunft stehen als „unbekannt“.
+- Auch in der ERP-Oberfläche (`/erp`): Verkauf → Kurzlinks mit Verwaltung, Aufrufen und Bestellungen nach Herkunft.
 - Noch nicht in echtem WordPress/WooCommerce getestet.
 
 ## [0.37.0] – 2026-10-23

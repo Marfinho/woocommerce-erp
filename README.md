@@ -622,7 +622,7 @@ kein User-Agent (er wird nur auf Bots geprüft), kein Cookie, kein JavaScript, k
 gängige Bots zählen nicht; je Tag und Link werden höchstens 30 verschiedene Quellen geführt, der Rest läuft unter
 „sonstige“. Anzeige: Aufrufe je Link und Quelle für 7 Tage, 30 Tage und gesamt, dazu ein Widget im Dashboard Finanzen.
 
-**Bestellungen nach Herkunft:** Auf derselben Seite, Anzahl und Umsatz (brutto nach Erstattungen, bezahlte Bestellungen)
+**Bestellungen nach Herkunft:** Auf derselben Seite (in der ERP-Oberfläche unter Verkauf → Marketing → Kurzlinks, Recht `verkauf.kurzlinks`, WordPress-Recht `manage_woocommerce`; Code `includes/Erp/Pages/Kurzlinks.php`, `assets/erp/pages/kurzlinks.js`), Anzahl und Umsatz (brutto nach Erstattungen, bezahlte Bestellungen)
 je `utm_source` aus `_wc_order_attribution_utm_source` (`$order->get_meta()`, HPOS-kompatibel). Ohne Cookie-Einwilligung
 erfasst WooCommerce keine Herkunft; solche Bestellungen stehen als „unbekannt“, das ist kein Fehler.
 

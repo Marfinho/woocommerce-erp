@@ -112,6 +112,7 @@ class Permissions {
 			'verkauf.loyalty'         => self::def( 'verkauf', __( 'Loyalty', 'lindenweg16' ), __( 'Kundenbindung und Guthaben.', 'lindenweg16' ), array( 'lw16_mod_loyalty' ), $page ),
 			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array( 'lw16_mod_kasse' ), $page ),
 			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array( 'lw16_mod_marketing' ), $page ),
+			'verkauf.kurzlinks'       => self::def( 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), __( 'Feste Adressen für Printmaterial verwalten, Aufrufe und Bestellungen nach Herkunft sehen.', 'lindenweg16' ), array( 'manage_woocommerce' ), $page ),
 
 			// Fertigung.
 			'fertigung.workflow'      => self::def( 'fertigung', __( 'Workflow: Platten abarbeiten', 'lindenweg16' ), __( 'Den Auftragsablauf sehen, Platten rüsten, drucken, per QR-Code am Handy bearbeiten und die Ist-Menge melden.', 'lindenweg16' ), array( $capture ), $page ),
