@@ -94,6 +94,7 @@ class Navigation {
 			'loyalty'          => array( 'verkauf', __( 'Kunden', 'lindenweg16' ) ),
 			'kasse'            => array( 'verkauf', __( 'Kasse', 'lindenweg16' ) ),
 			'marketing'        => array( 'verkauf', __( 'Marketing', 'lindenweg16' ) ),
+			'kurzlinks'        => array( 'verkauf', __( 'Marketing', 'lindenweg16' ) ),
 
 			'lager'            => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
 			'lagerplaetze'     => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
@@ -213,6 +214,7 @@ class Navigation {
 			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', '', 'native', '', 'lw16-loyalty' ),
 			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', 'lw16-kasse' ),
 			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', '', 'native', '', 'lw16-marketing' ),
+			self::item( 'kurzlinks', 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), 'verkauf.kurzlinks', '', 'native', '', 'lw16-kurzlinks' ),
 
 			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
