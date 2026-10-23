@@ -15,12 +15,50 @@ namespace Lindenweg16\Modules\Gutschein;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Pdf;
-use Lindenweg16\Core\Settings;
+use Lindenweg16\Modules\Betrieb\QrCode;
 
 /**
  * Baut das PDF und legt es als Datei ab.
  */
 class GutscheinPdf {
+
+	/**
+	 * Kennungen für die Auswertung. WooCommerce merkt sie sich bei der
+	 * Bestellung (Order Attribution); das Marketing-Modul ordnet über
+	 * `utm_campaign` zu – dort einfach eine Kampagne mit dieser Kennung anlegen.
+	 */
+	const UTM_SOURCE   = 'gutschein';
+	const UTM_MEDIUM   = 'qr';
+	const UTM_CAMPAIGN = 'gutschein-pdf';
+
+	/**
+	 * Adresse hinter dem QR-Code, mit Auswertungskennung.
+	 *
+	 * utm_content trägt die Vorlage, damit sich vergleichen lässt, welche
+	 * Gestaltung zum Einkauf führt.
+	 *
+	 * @param string $kennung Vorlage.
+	 * @return string
+	 */
+	public static function qr_url( $kennung ) {
+		$url = add_query_arg(
+			array(
+				'utm_source'   => self::UTM_SOURCE,
+				'utm_medium'   => self::UTM_MEDIUM,
+				'utm_campaign' => self::UTM_CAMPAIGN,
+				'utm_content'  => $kennung,
+			),
+			home_url( '/' )
+		);
+
+		/**
+		 * Adresse im QR-Code des Gutschein-PDFs ändern.
+		 *
+		 * @param string $url     Adresse mit utm-Parametern.
+		 * @param string $kennung Vorlage.
+		 */
+		return (string) apply_filters( 'lw16_gutschein_qr_url', $url, $kennung );
+	}
 
 	/**
 	 * Das PDF als Binärstring.
@@ -102,7 +140,49 @@ class GutscheinPdf {
 		/* translators: %s: Datum. */
 		$pdf->text_xy( sprintf( __( 'Gültig bis zum %s.', 'lindenweg16' ), $d['gueltig_bis'] ), $x, 553, 8.5 );
 
+		self::qr( $pdf, $kennung, $w - $x - 84, 482, 84 );
+
 		return $pdf->output();
+	}
+
+	/**
+	 * QR-Code als Vektor auf weißer Fläche, damit er auf jedem Grund liest.
+	 *
+	 * @param Pdf    $pdf     Dokument.
+	 * @param string $kennung Vorlage.
+	 * @param float  $x       Linke Kante der Fläche.
+	 * @param float  $y       Obere Kante der Fläche.
+	 * @param float  $kante   Kantenlänge der Fläche inklusive Ruhezone.
+	 */
+	protected static function qr( Pdf $pdf, $kennung, $x, $y, $kante ) {
+		try {
+			$matrix = QrCode::matrix( self::qr_url( $kennung ), 'M' );
+		} catch ( \InvalidArgumentException $e ) {
+			return; // Lieber kein QR-Code als ein ungültiger.
+		}
+
+		$ruhe  = 3; // Module Ruhezone (Norm: 4, drei lesen alle gängigen Scanner).
+		$n     = count( $matrix );
+		$modul = $kante / ( $n + 2 * $ruhe );
+
+		$pdf->set_color( '#FFFFFF' );
+		$pdf->rect( $x, $y, $kante, $kante );
+		$pdf->set_color( '#161616' );
+
+		foreach ( $matrix as $zeile => $reihe ) {
+			$start = null;
+
+			for ( $spalte = 0; $spalte <= $n; $spalte++ ) {
+				$an = $spalte < $n && ! empty( $reihe[ $spalte ] );
+
+				if ( $an && null === $start ) {
+					$start = $spalte;
+				} elseif ( ! $an && null !== $start ) {
+					$pdf->rect( $x + ( $ruhe + $start ) * $modul, $y + ( $ruhe + $zeile ) * $modul, ( $spalte - $start ) * $modul, $modul );
+					$start = null;
+				}
+			}
+		}
 	}
 
 	/**
