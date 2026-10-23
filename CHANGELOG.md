@@ -11,12 +11,13 @@ und im Abschnitt „Umsetzungsstand“ der README.
 
 ### Gutschein mit Vorlagenwahl
 - Neues Modul „Gutschein“: Im Produktformular (Allgemein) lässt sich ein Produkt als „Gutschein mit Vorlagenwahl“ markieren. Unter dem Schalter gibt es eine Vorschau aller drei Vorlagen.
-- Auf der Produktseite wählt der Kunde zwischen drei Vorlagen im Stil von lindenweg16.de (Klassik – Tinte & Gold, Leicht – Taubenblau, Warm – Cognac & Rosé) oder „Nur E-Mail“. Felder: Von, An, Text und optional die E-Mail des Beschenkten. Die Karte schreibt beim Tippen live mit.
+- Auf der Produktseite wählt der Kunde zwischen drei Vorlagen im Stil des Haster-Haken-Flyers (Hell – Grau & Pink, Pink – volle Farbe, Dunkel – Schwarz & Pink: fette Grotesk, Sperrschrift, dünne Linien, Akzent #EE1C4F) oder „Nur E-Mail“. Felder: Von, An, Text und optional die E-Mail des Beschenkten. Die Karte schreibt beim Tippen live mit.
 - Auswahl und Texte stehen im Warenkorb, an der Kasse und an der Bestellposition. Ein Gutschein ist immer ein Stück, damit jeder seinen eigenen Text hat.
 - Nach der Zahlung entsteht ein WooCommerce-Gutscheincode (`LW16-XXXX-XXXX`) in Höhe des bezahlten Betrags, einmal einlösbar, gültig bis Ende des dritten Jahres, nicht für den Kauf weiterer Gutscheine. Die gestaltete Karte geht per Mail an den Besteller und, wenn angegeben, an den Beschenkten.
-- Der Gutschein geht bei den drei Vorlagen zusätzlich als PDF (A4, in den Farben der Vorlage) im Anhang der Mail raus. Der Besteller bekommt ihn immer, ein Beschenkter mit eigener Adresse ebenfalls.
+- Der Gutschein geht bei den drei Vorlagen zusätzlich als PDF (A5 hoch, randlos, im Stil der Vorlage) im Anhang der Mail raus. Der Besteller bekommt ihn immer, ein Beschenkter mit eigener Adresse ebenfalls.
 - „Nur E-Mail“ nutzt die neue Mail-Vorlage „Gutschein (nur als E-Mail)“, die unter Einstellungen wie die anderen Mails angepasst werden kann.
 - Im Bestell-Backend gibt es die Aktion „Gutschein erneut senden“.
+- Wortmarke und Titel der PDFs sind mit Bricolage Grotesque vorgezeichnete Bilder (`assets/gutschein/`, erzeugt mit `branding/gutschein/erzeuge-bilder.py`), weil der PDF-Generator nur Helvetica kennt. Der Generator kann dafür jetzt Zeichenabstand (Sperrschrift).
 - Noch nicht in echtem WordPress/WooCommerce getestet.
 
 ## [0.36.0] – 2026-10-22

@@ -244,15 +244,18 @@ class Pdf {
 
 	/**
 	 * Textzeile an beliebiger Position (Y von oben, kein Y-Vorschub).
+	 *
+	 * $tracking ist der zusätzliche Abstand je Zeichen in pt (Sperrung).
 	 */
-	public function text_xy( $text, $x, $y_top, $size, $bold = false ) {
+	public function text_xy( $text, $x, $y_top, $size, $bold = false, $tracking = 0.0 ) {
 		$font = $bold ? '/F2' : '/F1';
 		$ty   = $this->page_h - $y_top - $size;
 		$this->buffer .= sprintf(
-			"BT %s %s %.2F Tf %.2F %.2F Td (%s) Tj ET\n",
+			"BT %s %s %.2F Tf %.2F Tc %.2F %.2F Td (%s) Tj ET\n",
 			$this->color_cmd(),
 			$font,
 			$size,
+			(float) $tracking,
 			$x,
 			$ty,
 			$this->enc( $text )
@@ -502,7 +505,7 @@ class Pdf {
 				$tinte_cmd = sprintf( '%.3F %.3F %.3F rg', $tinte[0], $tinte[1], $tinte[2] );
 
 				$stream .= sprintf(
-					"BT %s /F2 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					"BT %s /F2 7 Tf 0 Tc %.2F %.2F Td (%s) Tj ET\n",
 					$tinte_cmd,
 					$this->margin,
 					30.0,
@@ -513,7 +516,7 @@ class Pdf {
 					$info_w = strlen( $footer_info ) * 3.5;
 					$info_x = ( $this->page_w - $info_w ) / 2;
 					$stream .= sprintf(
-						"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+						"BT %s rg /F1 7 Tf 0 Tc %.2F %.2F Td (%s) Tj ET\n",
 						$grey,
 						$info_x,
 						30.0,
@@ -523,7 +526,7 @@ class Pdf {
 
 				$page_w = strlen( $page_str ) * 3.5;
 				$stream .= sprintf(
-					"BT %s rg /F1 7 Tf %.2F %.2F Td (%s) Tj ET\n",
+					"BT %s rg /F1 7 Tf 0 Tc %.2F %.2F Td (%s) Tj ET\n",
 					$grey,
 					$this->page_w - $this->margin - $page_w,
 					30.0,

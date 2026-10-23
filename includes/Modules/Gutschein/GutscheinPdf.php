@@ -1,10 +1,11 @@
 <?php
 /**
- * Der Gutschein als PDF (A4, eine Seite) in den Farben der gewählten Vorlage.
+ * Der Gutschein als PDF (A5 hoch, eine Seite, randlos) im Stil des Flyers.
  *
- * Der PDF-Generator des Plugins kennt nur Helvetica, Rechtecke und Linien;
- * die Karte ist deshalb eine Nachzeichnung der Mail-Vorlage ohne Rundungen
- * und Serifenschrift – Farben, Aufbau und Inhalt sind dieselben.
+ * Der PDF-Generator des Plugins kennt nur Helvetica. Wortmarke und Titel
+ * sind deshalb mit Bricolage Grotesque vorgezeichnete Bilder (siehe
+ * branding/gutschein/erzeuge-bilder.py); Namen, Text, Betrag und Code sind
+ * Text in Helvetica Bold.
  *
  * @package Lindenweg16
  */
@@ -35,78 +36,71 @@ class GutscheinPdf {
 			return '';
 		}
 
-		$p   = $alle[ $kennung ];
-		$pdf = new Pdf();
-		$w   = $pdf->page_width();
-		$h   = $pdf->page_height();
+		$p = $alle[ $kennung ];
+		$w = 419.53; // A5 hoch, randlos wie der Flyer.
+		$h = 595.28;
 
-		$x  = 56.7;
-		$cw = $w - 2 * $x;
-		$cy = 110.0;
-		$ch = 560.0;
-		$ix = $x + 40;
-		$iw = $cw - 80;
+		$pdf = new Pdf( $w, $h, 36 );
+		$x   = 36.0;
+		$iw  = $w - 2 * $x;
 
-		// Seitenhintergrund und Karte.
-		$pdf->set_color( $p['outer'] );
+		$pdf->set_color( $p['bg'] );
 		$pdf->rect( 0, 0, $w, $h );
-		$pdf->set_color( $p['line'] );
-		$pdf->rect( $x - 1, $cy - 1, $cw + 2, $ch + 2 );
-		$pdf->set_color( $p['card'] );
-		$pdf->rect( $x, $cy, $cw, $ch );
 
-		// Kopf.
+		// Wortmarke und Titel sind mit Bricolage Grotesque vorgezeichnet.
+		$pdf->image_jpeg_at( LW16_PLUGIN_DIR . 'assets/gutschein/marke-' . $kennung . '.jpg', $x, 34, 150, 38 );
+		$pdf->image_jpeg_at( LW16_PLUGIN_DIR . 'assets/gutschein/titel-' . $kennung . '.jpg', $x - 1, 98, 230, 56 );
 		$pdf->set_color( $p['accent'] );
-		$pdf->text_xy( strtoupper( (string) Settings::get( 'firma_name', 'Lindenweg16' ) ), $ix, $cy + 40, 10, true );
-		$pdf->set_color( $p['text'] );
-		$pdf->text_xy( 'Gutschein', $ix, $cy + 62, 40, true );
-		$pdf->set_color( $p['accent'] );
-		$pdf->rect( $ix, $cy + 118, 48, 3 );
+		$pdf->rect( $x, 164, 32, 3 );
 
 		// Betrag.
-		$pdf->text_xy( (string) $d['betrag'], $ix, $cy + 140, 44, true );
+		$pdf->set_color( $p['fg'] );
+		$pdf->text_xy( (string) $d['betrag'], $x, 184, 34, true );
 
-		// Für / Von.
-		$pdf->set_color( $p['muted'] );
-		$pdf->text_xy( 'FÜR', $ix, $cy + 220, 9 );
-		$pdf->text_xy( 'VON', $ix + $iw / 2, $cy + 220, 9 );
-		$pdf->set_color( $p['text'] );
-		$pdf->text_xy( self::kuerzen( $pdf, (string) $d['an'], 15, $iw / 2 - 12, true ), $ix, $cy + 234, 15, true );
-		$pdf->text_xy( self::kuerzen( $pdf, (string) $d['von'], 15, $iw / 2 - 12, true ), $ix + $iw / 2, $cy + 234, 15, true );
+		// Für / Von zwischen dünnen Linien.
+		$pdf->set_color( $p['line'] );
+		$pdf->rect( $x, 238, $iw, 0.6 );
+		$pdf->set_color( $p['accent'] );
+		$pdf->text_xy( 'FÜR', $x, 250, 7.5, true, 1.6 );
+		$pdf->text_xy( 'VON', $x + $iw / 2, 250, 7.5, true, 1.6 );
+		$pdf->set_color( $p['fg'] );
+		$pdf->text_xy( self::kuerzen( $pdf, (string) $d['an'], 14, $iw / 2 - 12, true ), $x, 263, 14, true );
+		$pdf->text_xy( self::kuerzen( $pdf, (string) $d['von'], 14, $iw / 2 - 12, true ), $x + $iw / 2, 263, 14, true );
+		$pdf->set_color( $p['line'] );
+		$pdf->rect( $x, 288, $iw, 0.6 );
 
-		// Text, umbrochen, mit Balken links.
-		$zeilen = self::umbrechen( $pdf, (string) $d['text'], 13, $iw - 18 );
-		$zeilen = array_slice( $zeilen, 0, 7 );
-		if ( $zeilen ) {
-			$pdf->set_color( $p['accent'] );
-			$pdf->rect( $ix, $cy + 280, 3, count( $zeilen ) * 18 );
-			$pdf->set_color( $p['text'] );
-			foreach ( $zeilen as $i => $zeile ) {
-				$pdf->text_xy( $zeile, $ix + 16, $cy + 282 + $i * 18, 13 );
-			}
+		// Text, höchstens sechs Zeilen.
+		$zeilen = array_slice( self::umbrechen( $pdf, (string) $d['text'], 11, $iw ), 0, 6 );
+		$pdf->set_color( $p['fg'] );
+		foreach ( $zeilen as $i => $zeile ) {
+			$pdf->text_xy( $zeile, $x, 300 + $i * 16, 11 );
 		}
+		$pdf->set_color( $p['line'] );
+		$pdf->rect( $x, 404, $iw, 0.6 );
 
-		// Code-Kasten mit Rahmen in Akzentfarbe.
-		$by = $cy + 430;
-		$bh = 64.0;
-		$pdf->set_color( $p['accent'] );
-		$pdf->rect( $ix - 1, $by - 1, $iw + 2, $bh + 2 );
+		// Code-Kasten.
+		$pdf->set_color( $p['box_ln'] );
+		$pdf->rect( $x, 420, $iw, 50 );
 		$pdf->set_color( $p['box'] );
-		$pdf->rect( $ix, $by, $iw, $bh );
-		$pdf->set_color( $p['accent'] );
-		$pdf->text_xy( 'GUTSCHEINCODE', $ix + ( $iw - $pdf->text_width( 'GUTSCHEINCODE', 9 ) ) / 2, $by + 12, 9 );
-		$pdf->set_color( $p['on_box'] );
-		$pdf->text_xy( (string) $d['code'], $ix + ( $iw - $pdf->text_width( (string) $d['code'], 22, true ) ) / 2, $by + 28, 22, true );
+		$pdf->rect( $x + 0.8, 420.8, $iw - 1.6, 48.4 );
+		$pdf->set_color( '#EE1C4F' );
+		$pdf->text_xy( 'GUTSCHEINCODE', $x + 14, 431, 7.5, true, 1.6 );
+		$pdf->set_color( $p['box_fg'] );
+		$pdf->text_xy( (string) $d['code'], $x + 14, 444, 20, true, 1.0 );
 
-		// Fuß.
+		// Fuß wie die Rückseite des Flyers.
 		$host = wp_parse_url( home_url(), PHP_URL_HOST );
 		$host = $host ? $host : 'lindenweg16.de';
-		/* translators: 1: Shop-Adresse, 2: Datum. */
-		$fuss  = sprintf( __( 'Einlösbar im Shop auf %1$s bis zum %2$s.', 'lindenweg16' ), $host, $d['gueltig_bis'] );
-		$fuss2 = __( 'Code im Warenkorb unter "Gutschein" eingeben.', 'lindenweg16' );
 		$pdf->set_color( $p['muted'] );
-		$pdf->text_xy( $fuss, $x + ( $cw - $pdf->text_width( $fuss, 10 ) ) / 2, $cy + $ch - 52, 10 );
-		$pdf->text_xy( $fuss2, $x + ( $cw - $pdf->text_width( $fuss2, 10 ) ) / 2, $cy + $ch - 36, 10 );
+		$pdf->text_xy( __( 'Jetzt einlösen', 'lindenweg16' ), $x, 492, 9 );
+		$pdf->set_color( $p['fg'] );
+		$pdf->text_xy( $host, $x, 504, 17, true );
+		$pdf->set_color( $p['accent'] );
+		$pdf->rect( $x, 530, 32, 3 );
+		$pdf->set_color( $p['muted'] );
+		$pdf->text_xy( __( 'Code im Warenkorb unter "Gutschein" eingeben.', 'lindenweg16' ), $x, 541, 8.5 );
+		/* translators: %s: Datum. */
+		$pdf->text_xy( sprintf( __( 'Gültig bis zum %s.', 'lindenweg16' ), $d['gueltig_bis'] ), $x, 553, 8.5 );
 
 		return $pdf->output();
 	}

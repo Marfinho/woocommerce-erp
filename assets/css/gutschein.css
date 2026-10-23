@@ -2,7 +2,7 @@
 .lw16-gv {
 	--gv-ink: var(--wp--preset--color--ink, #2b323a);
 	--gv-line: var(--wp--preset--color--line, #d9d4cb);
-	--gv-accent: var(--wp--preset--color--accent-2, #a86f38);
+	--gv-accent: #ee1c4f;
 	margin: 0 0 1.5rem;
 	width: 100%;
 }
@@ -14,9 +14,9 @@
 	display: block; padding: .7rem .5rem; text-align: center; font-weight: 600; font-size: .9rem;
 	border: 2px solid var(--gv-line); border-radius: 12px; background: #fff; color: var(--gv-ink);
 }
-.lw16-gv__karte--klassik span { background: #2b323a; color: #e7c78f; }
-.lw16-gv__karte--leicht span { background: #c8d2d7; }
-.lw16-gv__karte--warm span { background: #e8b9a1; }
+.lw16-gv__karte--hell span { background: #edebe9; color: #161616; }
+.lw16-gv__karte--pink span { background: #ee1c4f; color: #fff; }
+.lw16-gv__karte--dunkel span { background: #161616; color: #fff; }
 .lw16-gv__karte input:checked + span { border-color: var(--gv-accent); box-shadow: 0 0 0 2px var(--gv-accent); }
 .lw16-gv__karte input:focus-visible + span { outline: 2px solid var(--gv-ink); outline-offset: 2px; }
 .lw16-gv__felder p { margin: 0 0 .75rem; }

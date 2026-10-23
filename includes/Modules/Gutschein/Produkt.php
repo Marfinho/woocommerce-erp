@@ -109,7 +109,7 @@ class Produkt {
 			'email'   => isset( $_POST['lw16_gv_email'] ) ? sanitize_email( wp_unslash( $_POST['lw16_gv_email'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification
 		);
 
-		$gewaehlt = '' !== $alt['vorlage'] ? $alt['vorlage'] : 'klassik';
+		$gewaehlt = '' !== $alt['vorlage'] ? $alt['vorlage'] : 'hell';
 		$betrag   = $product->is_type( 'simple' ) ? trim( html_entity_decode( wp_strip_all_tags( wc_price( (float) wc_get_price_to_display( $product ) ) ) ) ) : '';
 
 		echo '<div class="lw16-gv" data-betrag="' . esc_attr( $betrag ) . '">';

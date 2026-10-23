@@ -1,11 +1,12 @@
 <?php
 /**
- * Die drei Gutschein-Vorlagen im Stil von lindenweg16.de.
+ * Die drei Gutschein-Vorlagen im Stil des Haster-Haken-Flyers.
  *
  * Gerendert wird mit Tabellen und Inline-Stilen, denn dasselbe Markup geht
- * als E-Mail raus und dient auf der Produktseite als Vorschau. Die Farben
- * sind die des Block-Themes (theme.json): Tinte, Cognac, Gold, Taubenblau
- * und Rosé auf dem warmen Seitenhintergrund.
+ * als E-Mail raus und dient auf der Produktseite als Vorschau. Die Vorlage
+ * ist der Flyer: warmes Hellgrau, fette enge Grotesk in Schwarz, ein
+ * einziger pinkroter Akzent (#EE1C4F), Sperrschrift in Großbuchstaben und
+ * dünne Linien – keine Rundungen, keine Verläufe.
  *
  * @package Lindenweg16
  */
@@ -13,8 +14,6 @@
 namespace Lindenweg16\Modules\Gutschein;
 
 defined( 'ABSPATH' ) || exit;
-
-use Lindenweg16\Core\Settings;
 
 /**
  * Vorlagen-Katalog und HTML-Ausgabe.
@@ -33,41 +32,44 @@ class Vorlagen {
 	 */
 	public static function alle() {
 		return array(
-			'klassik' => array(
-				'label'   => __( 'Klassik – Tinte & Gold', 'lindenweg16' ),
-				'kurz'    => __( 'Klassik', 'lindenweg16' ),
-				'outer'   => '#f4f2ee',
-				'card'    => '#2b323a',
-				'text'    => '#f4f2ee',
-				'muted'   => '#c8d2d7',
-				'accent'  => '#e7c78f',
-				'line'    => '#59626c',
-				'box'     => '#3a424c',
-				'on_box'  => '#ffffff',
+			'hell'   => array(
+				'label'   => __( 'Hell – Grau & Pink', 'lindenweg16' ),
+				'kurz'    => __( 'Hell', 'lindenweg16' ),
+				'bg'      => '#EDEBE9',
+				'fg'      => '#161616',
+				'accent'  => '#EE1C4F',
+				'sixteen' => '#EE1C4F',
+				'muted'   => '#6B6B6B',
+				'line'    => '#D4D1CE',
+				'box'     => '#FFFFFF',
+				'box_fg'  => '#161616',
+				'box_ln'  => '#D4D1CE',
 			),
-			'leicht'  => array(
-				'label'   => __( 'Leicht – Taubenblau', 'lindenweg16' ),
-				'kurz'    => __( 'Leicht', 'lindenweg16' ),
-				'outer'   => '#f4f2ee',
-				'card'    => '#c8d2d7',
-				'text'    => '#22282f',
-				'muted'   => '#3a424c',
-				'accent'  => '#a86f38',
-				'line'    => '#a9b6bd',
-				'box'     => '#ffffff',
-				'on_box'  => '#22282f',
+			'pink'   => array(
+				'label'   => __( 'Pink – volle Farbe', 'lindenweg16' ),
+				'kurz'    => __( 'Pink', 'lindenweg16' ),
+				'bg'      => '#EE1C4F',
+				'fg'      => '#FFFFFF',
+				'accent'  => '#161616',
+				'sixteen' => '#161616',
+				'muted'   => '#FFE3E9',
+				'line'    => '#F46B8C',
+				'box'     => '#FFFFFF',
+				'box_fg'  => '#161616',
+				'box_ln'  => '#FFFFFF',
 			),
-			'warm'    => array(
-				'label'   => __( 'Warm – Cognac & Rosé', 'lindenweg16' ),
-				'kurz'    => __( 'Warm', 'lindenweg16' ),
-				'outer'   => '#f4f2ee',
-				'card'    => '#e8b9a1',
-				'text'    => '#22282f',
-				'muted'   => '#3a424c',
-				'accent'  => '#7a4a1f',
-				'line'    => '#d29c80',
-				'box'     => '#f4f2ee',
-				'on_box'  => '#22282f',
+			'dunkel' => array(
+				'label'   => __( 'Dunkel – Schwarz & Pink', 'lindenweg16' ),
+				'kurz'    => __( 'Dunkel', 'lindenweg16' ),
+				'bg'      => '#161616',
+				'fg'      => '#FFFFFF',
+				'accent'  => '#EE1C4F',
+				'sixteen' => '#EE1C4F',
+				'muted'   => '#A8A8A8',
+				'line'    => '#3A3A3A',
+				'box'     => '#262626',
+				'box_fg'  => '#FFFFFF',
+				'box_ln'  => '#3A3A3A',
 			),
 		);
 	}
@@ -137,10 +139,11 @@ class Vorlagen {
 			)
 		);
 
-		$firma = (string) Settings::get( 'firma_name', 'Lindenweg16' );
-		$serif = "Georgia,'Times New Roman',serif";
-		$sans  = "'Inter',-apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
-		$mono  = "'DM Mono',ui-monospace,Menlo,Consolas,monospace";
+		$font = "'Bricolage Grotesque','Helvetica Neue',Helvetica,Arial,sans-serif";
+		$fg   = $p['fg'];
+		$acc  = $p['accent'];
+		$mut  = $p['muted'];
+		$ln   = $p['line'];
 
 		// Feld mit Platzhalter für die Vorschau.
 		$feld = function ( $name, $wert, $leer ) use ( $vorschau ) {
@@ -150,43 +153,60 @@ class Vorlagen {
 			return '<span' . $attr . '>' . nl2br( esc_html( $anzeige ) ) . '</span>';
 		};
 
-		$html  = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['outer'] . '" style="background:' . $p['outer'] . ';font-family:' . $sans . '"><tr><td align="center" style="padding:24px 12px">';
-		$html .= '<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['card'] . '" style="width:100%;max-width:560px;background:' . $p['card'] . ';border-radius:18px;border:1px solid ' . $p['line'] . '">';
+		// Kleine gesperrte Beschriftung in Großbuchstaben.
+		$label = function ( $text, $farbe ) {
+			return '<div style="font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:' . $farbe . '">' . esc_html( $text ) . '</div>';
+		};
 
-		// Kopf.
-		$html .= '<tr><td style="padding:30px 36px 0;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:' . $p['accent'] . ';font-weight:600">' . esc_html( $firma ) . '</td></tr>';
-		$html .= '<tr><td style="padding:6px 36px 0;font-family:' . $serif . ';font-size:38px;line-height:1.1;color:' . $p['text'] . '">' . esc_html__( 'Gutschein', 'lindenweg16' ) . '</td></tr>';
-		$html .= '<tr><td style="padding:14px 36px 0"><table role="presentation" width="48" cellpadding="0" cellspacing="0" border="0"><tr><td height="3" bgcolor="' . $p['accent'] . '" style="background:' . $p['accent'] . ';font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr>';
+		// Dünne Trennlinie über die ganze Breite.
+		$linie = '<tr><td style="padding:0 40px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td height="1" bgcolor="' . $ln . '" style="background:' . $ln . ';font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr>';
+		$balken = function ( $breite ) use ( $acc ) {
+			return '<table role="presentation" width="' . (int) $breite . '" cellpadding="0" cellspacing="0" border="0"><tr><td height="4" bgcolor="' . $acc . '" style="background:' . $acc . ';font-size:0;line-height:0">&nbsp;</td></tr></table>';
+		};
+
+		$html  = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['bg'] . '" style="background:' . $p['bg'] . ';font-family:' . $font . '"><tr><td align="center" style="padding:0">';
+		$html .= '<table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['bg'] . '" style="width:100%;max-width:560px;background:' . $p['bg'] . '">';
+
+		// Wortmarke und Tagline wie im Flyer.
+		$html .= '<tr><td style="padding:40px 40px 0"><div style="font-size:30px;font-weight:800;letter-spacing:-.045em;line-height:1;color:' . $fg . '">Lindenweg<span style="color:' . $p['sixteen'] . '">16</span></div>';
+		$html .= '<div style="margin-top:8px;font-size:10px;font-weight:600;letter-spacing:.3em;text-transform:uppercase;color:' . $mut . '">' . esc_html__( 'Handgemacht in Haste', 'lindenweg16' ) . '</div></td></tr>';
+
+		// Titel und Balken.
+		$html .= '<tr><td style="padding:52px 40px 0;font-size:64px;font-weight:800;letter-spacing:-.05em;line-height:.95;color:' . $fg . '">' . esc_html__( 'Gutschein.', 'lindenweg16' ) . '</td></tr>';
+		$html .= '<tr><td style="padding:20px 40px 0">' . $balken( 44 ) . '</td></tr>';
 
 		// Betrag.
-		$html .= '<tr><td style="padding:22px 36px 0;font-family:' . $serif . ';font-size:44px;line-height:1;color:' . $p['accent'] . '">' . $feld( 'betrag', $daten['betrag'], __( 'Dein Betrag', 'lindenweg16' ) ) . '</td></tr>';
+		$html .= '<tr><td style="padding:26px 40px 30px;font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;color:' . $fg . '">' . $feld( 'betrag', $daten['betrag'], __( 'Dein Betrag', 'lindenweg16' ) ) . '</td></tr>';
 
 		// Für / Von.
-		$html .= '<tr><td style="padding:26px 36px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>';
-		$html .= '<td width="50%" valign="top" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:' . $p['muted'] . '">' . esc_html__( 'Für', 'lindenweg16' ) . '<div style="margin-top:4px;font-size:18px;letter-spacing:0;text-transform:none;color:' . $p['text'] . ';font-weight:600">' . $feld( 'an', $daten['an'], __( 'Name des Beschenkten', 'lindenweg16' ) ) . '</div></td>';
-		$html .= '<td width="50%" valign="top" style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:' . $p['muted'] . '">' . esc_html__( 'Von', 'lindenweg16' ) . '<div style="margin-top:4px;font-size:18px;letter-spacing:0;text-transform:none;color:' . $p['text'] . ';font-weight:600">' . $feld( 'von', $daten['von'], __( 'Dein Name', 'lindenweg16' ) ) . '</div></td>';
+		$html .= $linie;
+		$html .= '<tr><td style="padding:18px 40px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>';
+		$html .= '<td width="50%" valign="top">' . $label( __( 'Für', 'lindenweg16' ), $acc ) . '<div style="margin-top:6px;font-size:20px;font-weight:700;letter-spacing:-.02em;color:' . $fg . '">' . $feld( 'an', $daten['an'], __( 'Name des Beschenkten', 'lindenweg16' ) ) . '</div></td>';
+		$html .= '<td width="50%" valign="top">' . $label( __( 'Von', 'lindenweg16' ), $acc ) . '<div style="margin-top:6px;font-size:20px;font-weight:700;letter-spacing:-.02em;color:' . $fg . '">' . $feld( 'von', $daten['von'], __( 'Dein Name', 'lindenweg16' ) ) . '</div></td>';
 		$html .= '</tr></table></td></tr>';
 
-		// Persönlicher Text.
-		$html .= '<tr><td style="padding:22px 36px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>';
-		$html .= '<td width="3" bgcolor="' . $p['accent'] . '" style="background:' . $p['accent'] . '">&nbsp;</td>';
-		$html .= '<td style="padding:4px 0 4px 16px;font-family:' . $serif . ';font-style:italic;font-size:17px;line-height:1.55;color:' . $p['text'] . '">' . $feld( 'text', $daten['text'], __( 'Hier steht Deine persönliche Nachricht.', 'lindenweg16' ) ) . '</td>';
-		$html .= '</tr></table></td></tr>';
+		// Text.
+		$html .= $linie;
+		$html .= '<tr><td style="padding:18px 40px;font-size:16px;line-height:1.6;color:' . $fg . '">' . $feld( 'text', $daten['text'], __( 'Hier steht Deine persönliche Nachricht.', 'lindenweg16' ) ) . '</td></tr>';
+		$html .= $linie;
 
 		// Code.
-		$html .= '<tr><td style="padding:28px 36px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['box'] . '" style="background:' . $p['box'] . ';border-radius:12px;border:1px dashed ' . $p['accent'] . '"><tr><td align="center" style="padding:16px 12px">';
-		$html .= '<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:' . $p['accent'] . '">' . esc_html__( 'Gutscheincode', 'lindenweg16' ) . '</div>';
-		$html .= '<div style="margin-top:6px;font-family:' . $mono . ';font-size:22px;letter-spacing:.08em;color:' . $p['on_box'] . '">' . esc_html( $daten['code'] ) . '</div>';
+		$html .= '<tr><td style="padding:26px 40px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="' . $p['box'] . '" style="background:' . $p['box'] . ';border:1px solid ' . $p['box_ln'] . '"><tr><td style="padding:16px 20px">';
+		$html .= $label( __( 'Gutscheincode', 'lindenweg16' ), '#EE1C4F' );
+		$html .= '<div style="margin-top:6px;font-size:26px;font-weight:800;letter-spacing:.06em;color:' . $p['box_fg'] . '">' . esc_html( $daten['code'] ) . '</div>';
 		$html .= '</td></tr></table></td></tr>';
 
-		// Fuß.
-		$fuss = '' !== (string) $daten['gueltig_bis']
-			/* translators: 1: Shop-Adresse, 2: Datum. */
-			? sprintf( __( 'Einlösbar im Shop auf %1$s bis zum %2$s.', 'lindenweg16' ), self::shop_host(), $daten['gueltig_bis'] )
-			/* translators: %s: Shop-Adresse. */
-			: sprintf( __( 'Einlösbar im Shop auf %s.', 'lindenweg16' ), self::shop_host() );
+		// Fuß wie die Rückseite des Flyers.
+		$html .= '<tr><td style="padding:32px 40px 0;font-size:13px;color:' . $mut . '">' . esc_html__( 'Jetzt einlösen', 'lindenweg16' ) . '</td></tr>';
+		$html .= '<tr><td style="padding:4px 40px 0;font-size:24px;font-weight:800;letter-spacing:-.04em;color:' . $fg . '">' . esc_html( self::shop_host() ) . '</td></tr>';
+		$html .= '<tr><td style="padding:12px 40px 0">' . $balken( 44 ) . '</td></tr>';
 
-		$html .= '<tr><td align="center" style="padding:22px 36px 30px;font-size:12px;line-height:1.6;color:' . $p['muted'] . '">' . esc_html( $fuss ) . '<br>' . esc_html__( 'Code im Warenkorb unter „Gutschein“ eingeben.', 'lindenweg16' ) . '</td></tr>';
+		$fuss = esc_html__( 'Code im Warenkorb unter „Gutschein“ eingeben.', 'lindenweg16' );
+		if ( '' !== (string) $daten['gueltig_bis'] ) {
+			/* translators: %s: Datum. */
+			$fuss .= '<br>' . esc_html( sprintf( __( 'Gültig bis zum %s.', 'lindenweg16' ), $daten['gueltig_bis'] ) );
+		}
+		$html .= '<tr><td style="padding:12px 40px 44px;font-size:13px;line-height:1.6;color:' . $mut . '">' . $fuss . '</td></tr>';
 
 		$html .= '</table></td></tr></table>';
 
