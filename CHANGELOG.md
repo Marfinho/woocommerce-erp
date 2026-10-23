@@ -7,7 +7,7 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [Unveröffentlicht]
+## [0.38.0] – 2026-10-23
 
 ### Kurzlinks für Printmaterial
 - Neues Modul „Kurzlinks“ (Verkauf → Kurzlinks, Recht `manage_woocommerce`): feste Adressen wie `/montage` für QR-Codes auf Paketbeilage, Flyer, Sticker und Stand, deren Ziel (Seite oder freie URL) im Backend einstellbar bleibt. Beim Update entstehen `montage`, `bewerten` und `freunde` mit der Startseite als Platzhalter.
