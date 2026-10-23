@@ -130,6 +130,8 @@ includes/Modules/Configurator/ Schema, PartRepository, BlockRepository, Layout, 
                              ConfiguratorModule, Admin/ConfiguratorPage
 includes/Modules/ArView/     Options, Schema, Stats, UploadTypes, ProductMeta, Banner, Viewer,
                              RestApi, ArViewModule, Admin/ArViewPage (AR-Ansicht „An deiner Wand“)
+includes/Modules/Kurzlinks/  Links, Redirect, Stats, OrderOrigin, Schema, KurzlinksModule, Admin/KurzlinksPage
+                             (feste Adressen für Printmaterial, siehe „Modul Kurzlinks“)
 includes/Modules/Mailbox/    Schema, MailCrypto, MimeParser, ImapClient, SmtpMailer, MailRepository,
                              SyncService, ComposeService, HtmlSanitizer, MailboxAccess,
                              MailboxModule, MailboxView, AccountsPage, OrderMailsBox, MailPrivacy
@@ -587,6 +589,42 @@ auch. Die Bildschirmfarbe der Vorschau kommt aus `ColorHex` und lässt sich
 **An der Bestellung** steht die Konfiguration als Text: Gruppenkennung an
 jeder Zeile, die Position je Modul, der vollständige Code an der Zeile des
 Basismoduls.
+
+### Modul Kurzlinks
+
+Feste Adressen für Printmaterial (Paketbeilage, Flyer, Sticker, Stand): `lindenweg16.de/montage` leitet auf ein
+Ziel weiter, das sich im Backend jederzeit ändern lässt, auch wenn die Adresse längst gedruckt ist. Menü:
+**Verkauf → Kurzlinks** (Recht `manage_woocommerce`). Bei Aktivierung bzw. Update (DB_VERSION 41) entstehen
+`montage`, `bewerten` und `freunde` mit der Startseite als Platzhalter-Ziel.
+
+**Neuen Kurzlink für Printmaterial anlegen**
+
+1. **Verkauf → Kurzlinks**, in der leeren letzten Zeile den **Slug** eintragen (z. B. `flyer`; nur Kleinbuchstaben,
+   Ziffern, Bindestriche) und eine **Beschreibung** („Flyer Markt, Rückseite“).
+2. **Ziel** wählen: eine veröffentlichte Seite aus der Liste *oder* eine freie URL (`https://…` oder ein Pfad wie
+   `/montageanleitung`). Ohne Angabe geht der Link auf die Startseite. **Aktiv** angehakt lassen, speichern.
+3. Der Slug darf keine bestehende Seite, keinen Beitrag, kein Produkt und keine WordPress-/WooCommerce-Basis
+   (`shop`, `produkt`, `category`, `wp-admin` …) verdecken – sonst kommt eine Fehlermeldung und nichts wird gespeichert.
+   Wichtig: Die **Zielseite braucht einen anderen Slug** als der Kurzlink (`/montage` ist der Kurzlink, die Seite
+   z. B. `/montageanleitung`). Neue Seiten mit einem Kurzlink-Slug bekommen von WordPress automatisch ein `-2`.
+4. Für den QR-Code die Adresse mit Quelle drucken: `https://lindenweg16.de/flyer?utm_source=flyer`. Übliche Quellen:
+   `beilage`, `flyer`, `sticker`, `werbestand`.
+5. Slugs bestehender Links lassen sich nicht umbenennen (sie sind gedruckt). Ein **deaktivierter** Link liefert 404.
+
+**Verhalten:** Weiterleitung per **302** (nichts wird zwischengespeichert), mit und ohne Slash am Ende. Zeigt das Ziel
+auf lindenweg16.de, werden die Parameter der Anfrage (`utm_source` …) angehängt, damit WooCommerce die Bestellherkunft
+(Order Attribution) erfasst; bei externen Zielen (z. B. Google) werden keine Parameter angehängt. Weitergeleitet wird nur
+auf im Backend hinterlegte Ziele, nie auf URLs aus der Anfrage. Die Rewrite-Regel gilt für alle aktiven Slugs und wird
+nur neu geschrieben, wenn sich deren Liste ändert.
+
+**Zählung:** Tabelle `lw16_kurzlinks_stats` mit Tageszählern (`datum`, `slug`, `utm_source`, `anzahl`). Keine IP-Adresse,
+kein User-Agent (er wird nur auf Bots geprüft), kein Cookie, kein JavaScript, kein Log pro Aufruf. HEAD-Anfragen und
+gängige Bots zählen nicht; je Tag und Link werden höchstens 30 verschiedene Quellen geführt, der Rest läuft unter
+„sonstige“. Anzeige: Aufrufe je Link und Quelle für 7 Tage, 30 Tage und gesamt, dazu ein Widget im Dashboard Finanzen.
+
+**Bestellungen nach Herkunft:** Auf derselben Seite, Anzahl und Umsatz (brutto nach Erstattungen, bezahlte Bestellungen)
+je `utm_source` aus `_wc_order_attribution_utm_source` (`$order->get_meta()`, HPOS-kompatibel). Ohne Cookie-Einwilligung
+erfasst WooCommerce keine Herkunft; solche Bestellungen stehen als „unbekannt“, das ist kein Fehler.
 
 ## Umsetzungsstand
 

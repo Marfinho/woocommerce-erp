@@ -77,8 +77,11 @@ class Installer {
 	 *
 	 * DB_VERSION 38: bambu_printers um current_file (Dateiname des Jobs auf dem
 	 * Drucker) – damit ordnet der ERP-Workflow einen Druck der Platte zu.
+	 *
+	 * DB_VERSION 41: Tabelle kurzlinks_stats (anonyme Tageszähler der Kurzlinks) und
+	 * die drei Startlinks montage, bewerten, freunde, siehe Modules\Kurzlinks.
 	 */
-	const DB_VERSION = '40';
+	const DB_VERSION = '41';
 
 	/**
 	 * Aktivierungsroutine.
@@ -97,6 +100,7 @@ class Installer {
 		add_rewrite_rule( '^nachbestellen/([a-f0-9]{64})/?$', 'index.php?lw16_reorder=1&lw16_token=$matches[1]', 'top' );
 		add_rewrite_endpoint( 'praemien', EP_ROOT | EP_PAGES );
 		add_rewrite_endpoint( 'wunschliste', EP_ROOT | EP_PAGES );
+		\Lindenweg16\Modules\Kurzlinks\Redirect::add_rules();
 		flush_rewrite_rules();
 
 		// Sicherheitshalber nochmal beim nächsten init flushen.
@@ -833,6 +837,9 @@ class Installer {
 		// --- Modul AR-Ansicht ---------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\ArView\Schema::tables( $p, $charset_collate ) );
 
+		// --- Modul Kurzlinks ----------------------------------------------
+		$tables = array_merge( $tables, \Lindenweg16\Modules\Kurzlinks\Schema::tables( $p, $charset_collate ) );
+
 		// --- Modul Mailbox ------------------------------------------------
 		$tables = array_merge( $tables, \Lindenweg16\Modules\Mailbox\Schema::tables( $p, $charset_collate ) );
 
@@ -847,6 +854,9 @@ class Installer {
 		foreach ( $tables as $sql ) {
 			dbDelta( $sql );
 		}
+
+		// Startlinks der Kurzlinks (nur wenn es noch keine gibt).
+		\Lindenweg16\Modules\Kurzlinks\Links::seed_defaults();
 
 		// Startwerte der Kalkulationsannahmen (nur wenn noch keine vorhanden).
 		\Lindenweg16\Modules\Betrieb\CalcSettings::seed_defaults();
