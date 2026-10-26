@@ -95,6 +95,9 @@
 	--lw-icon-chat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20.5 12a8 8 0 0 1-11.6 7.2L3.5 20.5l1.3-4.6A8 8 0 1 1 20.5 12Z'/%3E%3C/svg%3E");
 	--lw-icon-clock: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8.5'/%3E%3Cpath d='M12 7.5V12l3 2'/%3E%3C/svg%3E");
 	--lw-icon-heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20Z'/%3E%3C/svg%3E");
+	--lw-icon-mail: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2.5'/%3E%3Cpath d='m3.5 7.5 8.5 6 8.5-6'/%3E%3C/svg%3E");
+	--lw-icon-phone: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5.5 3.5h3l1.8 4.6-2.3 1.4a11 11 0 0 0 6.5 6.5l1.4-2.3 4.6 1.8v3a2 2 0 0 1-2 2A16.5 16.5 0 0 1 3.5 5.5a2 2 0 0 1 2-2Z'/%3E%3C/svg%3E");
+	--lw-icon-arrow-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4.5v15M6 13.5l6 6 6-6'/%3E%3C/svg%3E");
 	--lw-icon-filter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 7h10M18 7h2M4 17h2M10 17h10'/%3E%3Ccircle cx='16' cy='7' r='2'/%3E%3Ccircle cx='8' cy='17' r='2'/%3E%3C/svg%3E");
 	--lw-icon-quote: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 36 28'%3E%3Cpath d='M0 28V16C0 7 5 1.5 14 0l1.6 3.6C10.8 5 8.4 8 8 12h7v16zm20 0V16c0-9 5-14.5 14-16l1.6 3.6C30.8 5 28.4 8 28 12h7v16z'/%3E%3C/svg%3E");
 	--lw-icon-star: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='9' stroke-linejoin='round'%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z' stroke-width='0.5'/%3E%3Cpath d='m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8z' stroke-width='3.5'/%3E%3C/svg%3E");
@@ -906,6 +909,9 @@ body.lw16-is-scrolled .lw16-header {
 .lw16-icon--chat { --lw-icon: var(--lw-icon-chat); }
 .lw16-icon--clock { --lw-icon: var(--lw-icon-clock); }
 .lw16-icon--heart { --lw-icon: var(--lw-icon-heart); }
+.lw16-icon--mail { --lw-icon: var(--lw-icon-mail); }
+.lw16-icon--phone { --lw-icon: var(--lw-icon-phone); }
+.lw16-icon--arrow-down { --lw-icon: var(--lw-icon-arrow-down); }
 .lw16-icon--check { --lw-icon: var(--lw-icon-check); }
 .lw16-icon--cart { --lw-icon: var(--lw-icon-cart); }
 
@@ -1635,6 +1641,135 @@ label {
 		-webkit-mask-image: none;
 		mask-image: none;
 	}
+}
+
+/* 8.9 Kontaktseite (Template „Kontakt“, Pattern hidden-kontakt) */
+.lw16-kontakt-intro {
+	gap: var(--wp--preset--spacing--30);
+	padding-block: var(--wp--preset--spacing--50) var(--wp--preset--spacing--30);
+}
+
+.lw16-kontakt-intro .wp-block-heading {
+	max-width: 18ch;
+	margin: 0;
+}
+
+.lw16-kontakt-intro__lead {
+	max-width: 56ch;
+	margin: 0;
+}
+
+.lw16-kontakt-intro__chips {
+	gap: 10px;
+	margin-top: var(--wp--preset--spacing--20);
+}
+
+.lw16-kontakt-intro__chips .is-style-chip a {
+	text-decoration: none;
+}
+
+.lw16-kontakt-intro__chips .is-style-chip {
+	transition: transform var(--lw-base) var(--lw-spring), border-color var(--lw-fast) ease;
+}
+
+.lw16-kontakt-intro__chips .is-style-chip:hover {
+	transform: translateY(-2px);
+	border-color: var(--lw-text-muted);
+}
+
+/* Themen-Kacheln: vier gleich große Kacheln, Text in Textfarbe */
+.lw16-kontakt-topics__grid .lw16-bento__tile {
+	min-height: 200px;
+	color: var(--lw-text);
+}
+
+.lw16-kontakt-topics__grid .lw16-bento__arrow {
+	align-self: flex-end;
+}
+
+.lw16-kontakt-topics__grid .has-surface-background-color .lw16-bento__arrow {
+	background: var(--lw-surface-muted);
+}
+
+@media (min-width: 782px) {
+	.lw16-kontakt-topics__grid {
+		grid-auto-rows: auto;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-kontakt-topics__grid .lw16-bento__tile {
+		min-height: 0;
+	}
+}
+
+/* Formular und Direktkontakt */
+.lw16-kontakt-main__columns {
+	gap: var(--wp--preset--spacing--40);
+}
+
+.lw16-kontakt-form,
+.lw16-kontakt-direct {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--20);
+}
+
+.lw16-kontakt-form:hover,
+.lw16-kontakt-direct:hover {
+	transform: none;
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-kontakt-form > *,
+.lw16-kontakt-direct > * {
+	margin-block: 0;
+}
+
+.lw16-kontakt-form .wp-block-heading {
+	margin: 0;
+}
+
+.lw16-kontakt-form__content {
+	margin-block: var(--wp--preset--spacing--20);
+}
+
+.lw16-kontakt-form__content > * {
+	max-width: none;
+}
+
+.lw16-kontakt-form__content .wpforms-container {
+	margin: 0;
+}
+
+.lw16-kontakt-direct__row {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-size: var(--wp--preset--font-size--large);
+	line-height: 1.35;
+}
+
+.lw16-kontakt-direct__label {
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--lw-text-muted);
+}
+
+.lw16-kontakt-direct__row a {
+	color: inherit;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+.lw16-kontakt-faq {
+	margin-top: var(--wp--preset--spacing--30);
+}
+
+.lw16-kontakt-faq .lw16-faq__item > summary {
+	font-size: var(--wp--preset--font-size--medium);
 }
 
 /* --------------------------------------------------------------------------
