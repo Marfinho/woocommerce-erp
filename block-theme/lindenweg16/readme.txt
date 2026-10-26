@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,11 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.3.0 =
+* Neues Template „Kontakt“ (Seite mit Slug „kontakt“ automatisch, sonst in den Seiten-Einstellungen wählbar): Einleitung mit Kontakt-Chips, vier Themen-Kacheln, Formular aus dem Seiteninhalt (z. B. WPForms-Block), Direktkontakt und kurze Antworten
+* E-Mail, Telefon und Adresse kommen aus den Firmendaten des ERP-Plugins (Rückfall: WooCommerce-Shopadresse, Admin-E-Mail); ohne Telefonnummer wird keine angezeigt
+* Neue Symbole für Chips: Mail, Telefon, Pfeil nach unten
 
 = 1.2.0 =
 * E-Mails: persönliche Mails aus der Mailbox des ERP-Plugins (ab 0.18.0) im Website-Look – Text, Signatur in einer eigenen Zeile unter einer feinen Linie, darunter das Zitat der Ursprungsmail

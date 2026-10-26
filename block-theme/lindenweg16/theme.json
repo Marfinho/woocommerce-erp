@@ -402,6 +402,11 @@
 			"name": "page-landing",
 			"title": "Landingpage (ohne Seitentitel)",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "page-kontakt",
+			"title": "Kontakt",
+			"postTypes": [ "page" ]
 		}
 	]
 }
