@@ -7,7 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-<<<<<<< Updated upstream
+## [0.38.1] – 2026-10-26
+
+- **Lager: „Soll festlegen“.** Ein Sollbestand lässt sich jetzt auch für Artikel setzen, die noch nicht in der Lagerliste stehen (z. B. fertige Module mit Bestand 0). Der Artikel erscheint danach mit Soll im Lager und löst Bedarf aus.
+
 ## [0.38.0] – 2026-10-23
 
 ### Kurzlinks für Printmaterial
@@ -32,11 +35,6 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Auf dem Gutschein-PDF sitzt unten rechts ein QR-Code (Vektor, mit Plugin-eigenem Generator). Er führt auf den Shop mit `utm_source=gutschein`, `utm_medium=qr`, `utm_campaign=gutschein-pdf` und `utm_content=<Vorlage>`. WooCommerce speichert das bei der Bestellung; im Marketing legt man eine Kampagne mit der Kennung `gutschein-pdf` an, um Bestellungen zuzuordnen. Die Adresse ist über den Filter `lw16_gutschein_qr_url` änderbar.
 - Wortmarke und Titel der PDFs sind mit Bricolage Grotesque vorgezeichnete Bilder (`assets/gutschein/`, erzeugt mit `branding/gutschein/erzeuge-bilder.py`), weil der PDF-Generator nur Helvetica kennt. Der Generator kann dafür jetzt Zeichenabstand (Sperrschrift).
 - Noch nicht in echtem WordPress/WooCommerce getestet.
-=======
-## [0.36.1] – 2026-10-26
-
-- **Lager: „Soll festlegen“.** Ein Sollbestand lässt sich jetzt auch für Artikel setzen, die noch nicht in der Lagerliste stehen (z. B. fertige Module mit Bestand 0). Der Artikel erscheint danach mit Soll im Lager und löst Bedarf aus.
->>>>>>> Stashed changes
 
 ## [0.36.0] – 2026-10-22
 
