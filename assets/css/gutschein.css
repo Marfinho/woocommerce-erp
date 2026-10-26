@@ -1,4 +1,5 @@
 /* Gutschein-Formular auf der Produktseite. Farben aus dem Theme, mit Rückfall. */
+[hidden] { display: none !important; }
 .lw16-gv {
 	--gv-ink: var(--wp--preset--color--ink, #2b323a);
 	--gv-line: var(--wp--preset--color--line, #d9d4cb);
