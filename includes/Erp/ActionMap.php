@@ -211,6 +211,7 @@ class ActionMap {
 			'lw16_event_rsvp_export'  => 'Events-Verwaltung über den Beitragstyp',
 			'lw16_event_rsvp_status'  => 'Events-Verwaltung über den Beitragstyp',
 			'lw16_komoot_vorschau'    => 'Events-Verwaltung über den Beitragstyp',
+			'lw16_gutschein_vorschau' => 'prüft das Modul selbst (Recht „edit_products“)',
 			'lw16_mail_action'        => $mailbox,
 			'lw16_mail_attachment'    => $mailbox,
 			'lw16_mail_note'          => $mailbox,

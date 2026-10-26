@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.38.1] – 2026-10-26
+
+- **Lager: „Soll festlegen“.** Ein Sollbestand lässt sich jetzt auch für Artikel setzen, die noch nicht in der Lagerliste stehen (z. B. fertige Module mit Bestand 0). Der Artikel erscheint danach mit Soll im Lager und löst Bedarf aus.
+
 ## [0.38.0] – 2026-10-23
 
 ### Kurzlinks für Printmaterial
