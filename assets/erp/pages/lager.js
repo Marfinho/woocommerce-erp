@@ -177,6 +177,23 @@
 			}, done));
 		}
 
+		// Soll für einen Artikel festlegen, der noch nicht in der Liste steht (z. B. fertige Module mit Bestand 0).
+		function newTargetDialog(d, done) {
+			var art = articleSelect(d.articles, 0);
+			var color = select(d.colors.map(function (c) { return [c.slug, c.label]; }), d.colors[0] && d.colors[0].slug, 'Farbe');
+			var qty = textIn('', 'Sollmenge', { inputmode: 'decimal', placeholder: 'z. B. 20', required: '' });
+			var err = h('div', { 'aria-live': 'polite' });
+			var save = h('button', { class: 'btn primary', type: 'submit' }, 'Soll speichern');
+			var form = h('form', { class: 'lg-form' },
+				row('Artikel', art.box), row('Farbe', color),
+				row('Sollbestand', qty, 'Darunter meldet die Bedarfsplanung Bedarf. Der Artikel erscheint danach im Lager, auch bei Bestand 0.'),
+				err, h('div', { class: 'lg-actions' }, save));
+			var dialog = ui.dlg('Soll festlegen', h('div', { class: 'sheet-body' }, form));
+			form.addEventListener('submit', submitter(dialog, err, save, function () {
+				return ui.api('lager/soll', { method: 'POST', body: { article_id: parseInt(art.sel.value, 10) || 0, color: color.value, target_qty: qty.value } });
+			}, done));
+		}
+
 		function partDialog(p, done) {
 			var qty = textIn('', 'Menge', { inputmode: 'decimal', placeholder: 'z. B. 50 oder -10', required: '' });
 			var note = textIn('', 'Begründung', { placeholder: 'Pflicht, z. B. „Inventur“', required: '' });
@@ -357,6 +374,7 @@
 					pills([['bestand', 'Bestand'], ['teile', 'Kleinteile & Kartons'], ['journal', 'Journal']], state.tab, function (t) { state.tab = t; paint(); }),
 					h('div', { class: 'lg-btns' },
 						d.can_book && ui.can('verkauf.kontakte') && UI.commissionDialog ? h('button', { class: 'btn', type: 'button', onclick: function () { commissionPicker(load); } }, 'Kommission') : null,
+						d.can_target && d.articles ? h('button', { class: 'btn', type: 'button', onclick: function () { newTargetDialog(d, load); } }, 'Soll festlegen') : null,
 						d.can_book ? h('button', { class: 'btn primary', type: 'button', onclick: function () { bookDialog(d, {}, load); } }, 'Neue Buchung') : null));
 				head.appendChild(bar);
 				body.textContent = '';

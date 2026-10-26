@@ -3,7 +3,11 @@
  * Plugin Name:       Lindenweg16 ERP
  * Plugin URI:        https://lindenweg16.de
  * Description:       Gesamtplugin für lindenweg16.de: Buchhaltung, Lagerverwaltung, Loyalty, Produktions- und Bestellplanung, Preiskalkulation, Kundenbindung, Support & Reporting – vollständig in WooCommerce integriert.
+<<<<<<< Updated upstream
  * Version:           0.38.0
+=======
+ * Version:           0.36.1
+>>>>>>> Stashed changes
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Lindenweg16
@@ -17,7 +21,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
+<<<<<<< Updated upstream
 define( 'LW16_VERSION', '0.38.0' );
+=======
+define( 'LW16_VERSION', '0.36.1' );
+>>>>>>> Stashed changes
 define( 'LW16_PLUGIN_FILE', __FILE__ );
 define( 'LW16_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'LW16_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
