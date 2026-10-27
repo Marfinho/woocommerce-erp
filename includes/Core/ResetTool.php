@@ -219,6 +219,8 @@ class ResetTool {
 			'filament_lots',
 			'storage_bins',
 			'stock_targets',
+			// Das Ereignisprotokoll überlebt jeden Schnitt: Es belegt auch, dass er stattfand.
+			'event_log',
 			'calc_settings',
 			'price_tiers',
 			'user_rates',

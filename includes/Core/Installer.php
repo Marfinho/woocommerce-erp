@@ -86,8 +86,10 @@ class Installer {
 	 *
 	 * DB_VERSION 43: Tabelle stock_balance - mitlaufende Summe des Bewegungskontos,
 	 * siehe Modules\Betrieb\StockRepository::balances().
+	 *
+	 * DB_VERSION 44: Tabelle event_log - das Ereignisprotokoll, siehe Core\Log.
 	 */
-	const DB_VERSION = '43';
+	const DB_VERSION = '44';
 
 	/**
 	 * Aktivierungsroutine.
@@ -562,6 +564,24 @@ class Installer {
 		) {$charset_collate};";
 
 		// --- Sicherheit: Audit-Log ----------------------------------------
+		// Ereignisprotokoll: alles, was im ERP geschieht, in drei Stufen
+		// (normal, attention, critical). Anders als das hashverkettete
+		// Änderungsprotokoll dient es dem Betrieb, nicht der Revision, und
+		// wird nach Stufe und Alter aufgeräumt.
+		$tables[] = "CREATE TABLE {$p}event_log (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			created_at DATETIME NOT NULL,
+			level VARCHAR(12) NOT NULL DEFAULT 'normal',
+			area VARCHAR(40) NOT NULL DEFAULT '',
+			message VARCHAR(500) NOT NULL,
+			context TEXT NULL,
+			user_id BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY level_time (level, created_at),
+			KEY area (area),
+			KEY created_at (created_at)
+		) {$charset_collate};";
+
 		$tables[] = "CREATE TABLE {$p}audit_log (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			user_id BIGINT UNSIGNED NULL,

@@ -509,7 +509,7 @@
 		ui.view().appendChild(bar);
 		ui.view().appendChild(box);
 
-		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Systemmeldungen'], ['updates', 'Updates'], ['plugin', 'Plugin (Firma, DHL, …)']];
+		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Ereignisprotokoll'], ['updates', 'Updates'], ['plugin', 'Plugin (Firma, DHL, …)']];
 
 		function tabs() {
 			bar.textContent = '';
@@ -671,20 +671,50 @@
 			}).catch(fail);
 		}
 
+		var evState = { level: '', area: '', q: '', page: 1 };
+
 		function meldungen() {
-			ui.api('einstellungen/meldungen').then(function (d) {
+			var qs = 'level=' + encodeURIComponent(evState.level) + '&area=' + encodeURIComponent(evState.area) + '&q=' + encodeURIComponent(evState.q) + '&page=' + evState.page;
+			ui.api('einstellungen/ereignisse?' + qs).then(function (d) {
 				box.textContent = '';
+				var NAMES = { normal: 'Normal', attention: 'Aufmerksamkeit', critical: 'Kritisch' };
+				var CLS = { normal: 'vw-gruen', attention: 'vw-gelb', critical: 'vw-rot' };
+
+				// Übersicht der letzten sieben Tage – ein Klick filtert.
+				var tiles = h('div', { class: 'vw-tiles' });
+				['critical', 'attention', 'normal'].forEach(function (lv) {
+					var tile = h('button', { class: 'btn' + (evState.level === lv ? ' primary' : ''), type: 'button' }, NAMES[lv] + ': ' + d.counts[lv]);
+					tile.addEventListener('click', function () { evState.level = evState.level === lv ? '' : lv; evState.page = 1; meldungen(); });
+					tiles.appendChild(tile);
+				});
 				var hooks = Object.keys(d.failed);
 				var sync = d.last_sync ? 'Letzter vollständiger Bestandsabgleich in den Shop: ' + ui.when(d.last_sync) + '.' : 'Der stündliche Bestandsabgleich in den Shop ist noch nicht gelaufen.';
-				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Hintergrundjobs'),
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Ereignisprotokoll – letzte 7 Tage'),
+					h('p', { class: 'muted' }, 'Alles, was im ERP geschieht: Normal ist der gewöhnliche Lauf (Bestellung, Buchung, Einstellung, Anmeldung). Aufmerksamkeit heißt: etwas weicht ab (Bestand unter null, Storno, fehlgeschlagene Anmeldung, Abweichung zum Shop). Kritisch heißt: etwas ist nicht gelaufen (Buchung zurückgerollt, Job abgebrochen, PHP-Fehler). Normale Einträge bleiben 90 Tage, Aufmerksamkeit ein Jahr, Kritisches drei Jahre.'),
+					tiles,
 					h('p', { class: 'muted' }, sync),
-					hooks.length ? h('div', { class: 'notice warn' }, 'Fehlgeschlagene Aufträge: ' + hooks.map(function (k) { return k + ' (' + d.failed[k] + ')'; }).join(', ') + '. Details unter WooCommerce → Status → Geplante Aktionen.')
-						: h('div', { class: 'notice' }, 'Keine fehlgeschlagenen Aufträge.')));
-				var clear = h('button', { class: 'btn', type: 'button' }, 'Meldungen löschen');
-				clear.addEventListener('click', function () { run(clear, function () { return post('einstellungen/meldungen', {}); }, function (r) { ui.toast(r.message); meldungen(); }); });
-				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Letzte Meldungen'),
-					d.entries.length ? table(['Zeit', 'Stufe', 'Bereich', 'Meldung'], d.entries.map(function (e) { return [ui.when(e.time), e.level === 'error' ? 'Fehler' : 'Warnung', e.area, e.message]; })) : h('p', { class: 'muted' }, 'Keine Meldungen.'),
-					d.entries.length ? clear : null));
+					hooks.length ? h('div', { class: 'notice warn' }, 'Fehlgeschlagene Hintergrundaufträge: ' + hooks.map(function (k) { return k + ' (' + d.failed[k] + ')'; }).join(', ') + '. Details unter WooCommerce → Status → Geplante Aktionen.') : null));
+
+				// Filter.
+				var areaSel = select([['', 'Alle Bereiche']].concat(d.areas.map(function (a) { return [a, a]; })), evState.area);
+				var search = input('search', evState.q);
+				var filter = h('form', { class: 'vw-form' }, field('Bereich', areaSel), field('Suche in der Meldung', search), h('button', { class: 'btn', type: 'submit' }, 'Filtern'));
+				filter.addEventListener('submit', function (e) { e.preventDefault(); evState.area = areaSel.value; evState.q = search.value; evState.page = 1; meldungen(); });
+
+				var list = h('section', { class: 'card' }, h('h3', null, d.total + ' Einträge'), filter,
+					d.entries.length ? table(['Zeit', 'Stufe', 'Bereich', 'Meldung', 'Wer'], d.entries.map(function (e) {
+						return [ui.when(e.time), h('span', { class: 'tag ' + CLS[e.level] }, NAMES[e.level]), e.area, e.message, e.user || '—'];
+					})) : h('p', { class: 'muted' }, 'Keine Einträge für diese Auswahl.'));
+
+				if (d.pages > 1) {
+					var prev = h('button', { class: 'btn', type: 'button', disabled: d.page <= 1 }, '← Neuere');
+					var next = h('button', { class: 'btn', type: 'button', disabled: d.page >= d.pages }, 'Ältere →');
+					prev.addEventListener('click', function () { evState.page = d.page - 1; meldungen(); });
+					next.addEventListener('click', function () { evState.page = d.page + 1; meldungen(); });
+					list.appendChild(h('p', null, prev, ' Seite ' + d.page + ' von ' + d.pages + ' ', next));
+				}
+
+				box.appendChild(list);
 			}).catch(fail);
 		}
 

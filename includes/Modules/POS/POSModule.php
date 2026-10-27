@@ -16,6 +16,7 @@ use Lindenweg16\Modules\Inventory\Repository as LagerRepository;
 use Lindenweg16\Modules\Inventory\StockManager;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Core\Lock;
+use Lindenweg16\Core\Log;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 
 /**
@@ -1004,6 +1005,8 @@ class POSModule {
 			}
 		}
 
+		Log::normal( 'kasse', sprintf( 'Kassenverkauf: %d × %s (%s €)', $menge, $artikel, number_format( $betrag, 2, ',', '.' ) ), array( 'tag_id' => $tag_id ) );
+
 		$this->redirect_back( __( 'Verkauf gebucht.', 'lindenweg16' ) );
 	}
 
@@ -1029,6 +1032,7 @@ class POSModule {
 			$pos = POSRepository::get_position( $id );
 			if ( $pos && ! $pos->storniert ) {
 				POSRepository::update_position( $id, array( 'storniert' => 1 ) );
+				Log::attention( 'kasse', 'Kassenverkauf storniert: ' . (int) $pos->menge . ' × ' . $pos->artikel_name, array( 'position' => $id ) );
 
 				// Lagerbestand zurückbuchen – über dieselbe Weiche wie der
 				// Verkauf, sonst landet der Storno im anderen Lager als der

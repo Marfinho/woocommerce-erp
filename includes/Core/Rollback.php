@@ -213,7 +213,7 @@ class Rollback {
 			return $result->get_error_message();
 		}
 
-		Log::warning( 'update', 'Plugin auf gesicherte Fassung ' . $name . ' zurückgesetzt.' );
+		Log::attention( 'update', 'Plugin auf gesicherte Fassung ' . $name . ' zurückgesetzt.' );
 
 		return true;
 	}

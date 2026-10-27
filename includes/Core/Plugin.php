@@ -74,6 +74,7 @@ class Plugin {
 		// Hintergrundjobs sicherstellen.
 		add_action( 'init', array( Scheduler::class, 'ensure_recurring' ) );
 		Scheduler::watch_failures();
+		( new EventLog() )->register();
 
 		// Einmaliger Rewrite-Flush nach Aktivierung.
 		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );

@@ -90,6 +90,7 @@ class VerfahrensDokuBetrieb {
 			'filament_lots'     => __( 'Filamentchargen; Verbrauch aus den Druckjobs', 'lindenweg16' ),
 			'batches'           => __( 'Chargenbuch für die Rückverfolgbarkeit', 'lindenweg16' ),
 			'stock_movements'   => __( 'Lagerbestand als Bewegungskonto; es gibt kein Bestandsfeld', 'lindenweg16' ),
+			'event_log'         => __( 'Ereignisprotokoll des Betriebs in drei Stufen (normal, Aufmerksamkeit, kritisch); wird nach Alter und Stufe aufgeräumt', 'lindenweg16' ),
 			'stock_balance'     => __( 'Mitlaufende Summe des Bewegungskontos; maßgeblich bleiben die Bewegungen, die Summe lässt sich daraus neu aufbauen', 'lindenweg16' ),
 			'order_ops'         => __( 'Betriebliche Zusatzdaten zu Bestellungen', 'lindenweg16' ),
 			'contacts'          => __( 'Händler, Vereine, Leads mit Aktivitäten und Konditionen', 'lindenweg16' ),

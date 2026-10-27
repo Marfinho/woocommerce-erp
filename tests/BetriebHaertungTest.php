@@ -6,6 +6,7 @@
  */
 
 use PHPUnit\Framework\TestCase;
+use Lindenweg16\Core\EventLog;
 use Lindenweg16\Core\Log;
 use Lindenweg16\Core\Throttle;
 use Lindenweg16\Modules\Betrieb\Consistency;
@@ -85,17 +86,21 @@ class BetriebHaertungTest extends TestCase {
 	}
 
 	/**
-	 * Das Protokoll behält die neuesten Einträge und kürzt Wucherndes.
+	 * Die drei Stufen; die alten Namen bleiben gültig.
 	 */
-	public function test_protokoll_kuerzt() {
-		$entries = array();
-		for ( $i = 1; $i <= 5; $i++ ) {
-			$entries = Log::push( $entries, Log::entry( 'error', 'lager', 'Fehler ' . $i, array(), $i ), 3 );
-		}
+	public function test_stufen_des_ereignisprotokolls() {
+		$this->assertSame( array( 'normal', 'attention', 'critical' ), array_keys( Log::levels() ) );
+		$this->assertSame( 'critical', Log::normalize_level( 'error' ) );
+		$this->assertSame( 'attention', Log::normalize_level( 'warning' ) );
+		$this->assertSame( 'normal', Log::normalize_level( 'irgendwas' ) );
+	}
 
-		$this->assertCount( 3, $entries );
-		$this->assertSame( 'Fehler 5', $entries[0]['message'] );
-		$this->assertSame( 'Fehler 3', $entries[2]['message'] );
+	/**
+	 * Kritisches wird am längsten aufbewahrt, Gewöhnliches am kürzesten.
+	 */
+	public function test_aufbewahrung_nach_stufe() {
+		$this->assertLessThan( Log::keep_days( 'attention' ), Log::keep_days( 'normal' ) );
+		$this->assertLessThan( Log::keep_days( 'critical' ), Log::keep_days( 'attention' ) );
 	}
 
 	/**
@@ -104,10 +109,53 @@ class BetriebHaertungTest extends TestCase {
 	public function test_protokolleintrag_bereinigt_kontext() {
 		$entry = Log::entry( 'warning', 'dhl', 'x', array( 'id' => 7, 'obj' => new stdClass(), 'lang' => str_repeat( 'a', 500 ) ), 100 );
 
-		$this->assertSame( 'warning', $entry['level'] );
+		$this->assertSame( 'attention', $entry['level'] );
 		$this->assertSame( '7', $entry['context']['id'] );
 		$this->assertSame( '[object]', $entry['context']['obj'] );
 		$this->assertSame( 200, strlen( $entry['context']['lang'] ) );
+	}
+
+	/**
+	 * Stornierungen und Löschungen im Änderungsprotokoll verdienen Aufmerksamkeit, alles andere ist normal.
+	 */
+	public function test_aenderungen_werden_eingestuft() {
+		$this->assertSame( 'normal', EventLog::classify_audit( array( 'aktion' => 'betrieb_create', 'objekt_typ' => 'stock_movements', 'objekt_id' => 5 ) )['level'] );
+		$this->assertSame( 'attention', EventLog::classify_audit( array( 'aktion' => 'betrieb_void', 'objekt_typ' => 'stock_movements', 'objekt_id' => 5 ) )['level'] );
+		$this->assertSame( 'lager', EventLog::classify_audit( array( 'aktion' => 'betrieb_create', 'objekt_typ' => 'stock_movements' ) )['area'] );
+		$this->assertSame( 'artikel', EventLog::area_of( 'articles' ) );
+		$this->assertSame( 'system', EventLog::area_of( '' ) );
+		$this->assertSame( 'daten', EventLog::area_of( 'sonstiges' ) );
+	}
+
+	/**
+	 * Stornos, Erstattungen und Fehlschläge einer Bestellung fallen auf.
+	 */
+	public function test_bestellstatus_mit_aufmerksamkeit() {
+		$this->assertTrue( EventLog::status_needs_attention( 'cancelled' ) );
+		$this->assertTrue( EventLog::status_needs_attention( 'refunded' ) );
+		$this->assertTrue( EventLog::status_needs_attention( 'failed' ) );
+		$this->assertFalse( EventLog::status_needs_attention( 'processing' ) );
+		$this->assertFalse( EventLog::status_needs_attention( 'completed' ) );
+	}
+
+	/**
+	 * Fünf Fehlanmeldungen in kurzer Zeit sind kritisch.
+	 */
+	public function test_fehlanmeldungen() {
+		$this->assertFalse( EventLog::is_brute_force( 4 ) );
+		$this->assertTrue( EventLog::is_brute_force( 5 ) );
+	}
+
+	/**
+	 * Nur schwere PHP-Fehler in unserem Ordner zählen als kritisch.
+	 */
+	public function test_php_fehler_im_plugin() {
+		$dir = '/var/www/wp-content/plugins/lindenweg16/';
+
+		$this->assertTrue( EventLog::is_plugin_fatal( array( 'type' => E_ERROR, 'file' => $dir . 'includes/Core/Log.php' ), $dir ) );
+		$this->assertFalse( EventLog::is_plugin_fatal( array( 'type' => E_WARNING, 'file' => $dir . 'x.php' ), $dir ) );
+		$this->assertFalse( EventLog::is_plugin_fatal( array( 'type' => E_ERROR, 'file' => '/var/www/wp-content/plugins/anderes/x.php' ), $dir ) );
+		$this->assertFalse( EventLog::is_plugin_fatal( array( 'type' => E_ERROR, 'file' => $dir . 'x.php' ), '' ) );
 	}
 
 	/**
@@ -212,5 +260,19 @@ class BetriebHaertungTest extends TestCase {
 		$this->assertFalse( \Lindenweg16\Core\Rollback::is_valid_name( 'lindenweg16-1-20200101-000000.zip/../x' ) );
 		$this->assertTrue( \Lindenweg16\Core\Rollback::skip( 'vendor/phpunit/x.php' ) );
 		$this->assertFalse( \Lindenweg16\Core\Rollback::skip( 'includes/Core/Log.php' ) );
+	}
+
+	/**
+	 * Klassische Seiten leiten nur dann ins ERP, wenn es dort eine gibt und die Person sie öffnen darf.
+	 */
+	public function test_klassische_seite_leitet_nur_wenn_erp_sie_bietet() {
+		require_once dirname( __DIR__ ) . '/includes/Erp/Shell.php';
+
+		$native = array( 'kind' => 'native', 'alt' => 'lw16-betrieb-versand', 'id' => 'versand' );
+
+		$this->assertTrue( \Lindenweg16\Erp\Shell::classic_redirects( $native, true ) );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::classic_redirects( $native, false ), 'Ohne Recht keine Umleitung auf eine leere Seite.' );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::classic_redirects( array( 'kind' => 'legacy', 'alt' => '', 'id' => 'kasse' ), true ), 'Eingebettete Seiten haben im ERP keine eigene Ansicht.' );
+		$this->assertFalse( \Lindenweg16\Erp\Shell::classic_redirects( null, true ) );
 	}
 }

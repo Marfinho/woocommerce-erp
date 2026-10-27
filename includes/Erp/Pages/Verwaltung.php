@@ -397,10 +397,7 @@ class Verwaltung {
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'lager_speichern' ), 'permission_callback' => $einstellungen ),
 		) );
 		register_rest_route( $ns, '/erp/einstellungen/lager/shop-bestand', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'shop_bestand_abgleichen' ), 'permission_callback' => $einstellungen ) );
-		register_rest_route( $ns, '/erp/einstellungen/meldungen', array(
-			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'meldungen' ), 'permission_callback' => $einstellungen ),
-			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'meldungen_leeren' ), 'permission_callback' => $einstellungen ),
-		) );
+		register_rest_route( $ns, '/erp/einstellungen/ereignisse', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'ereignisse' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/lager/saldo-neu', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'saldo_neu' ), 'permission_callback' => $einstellungen ) );
 		$updates = static function () {
 			return current_user_can( 'update_plugins' );
@@ -1512,11 +1509,42 @@ class Verwaltung {
 	}
 
 	/**
-	 * Systemmeldungen: Fehler aus Hintergrundjobs und Buchungen.
+	 * Ereignisprotokoll: alles, was im ERP geschieht, in drei Stufen.
 	 *
+	 * @param WP_REST_Request $request Anfrage (level, area, q, page).
 	 * @return WP_REST_Response
 	 */
-	public static function meldungen() {
+	public static function ereignisse( WP_REST_Request $request ) {
+		$page   = max( 1, (int) $request->get_param( 'page' ) );
+		$result = Log::query(
+			array(
+				'level'    => sanitize_key( (string) $request->get_param( 'level' ) ),
+				'area'     => sanitize_key( (string) $request->get_param( 'area' ) ),
+				'q'        => sanitize_text_field( (string) $request->get_param( 'q' ) ),
+				'page'     => $page,
+				'per_page' => 50,
+			)
+		);
+
+		$users = array();
+		$rows  = array();
+
+		foreach ( $result['rows'] as $row ) {
+			$uid = (int) $row['user_id'];
+			if ( $uid && ! isset( $users[ $uid ] ) ) {
+				$user          = get_userdata( $uid );
+				$users[ $uid ] = $user ? $user->display_name : '#' . $uid;
+			}
+
+			$rows[] = array(
+				'time'    => strtotime( $row['created_at'] . ' UTC' ),
+				'level'   => Log::normalize_level( $row['level'] ),
+				'area'    => (string) $row['area'],
+				'message' => (string) $row['message'],
+				'user'    => $uid ? $users[ $uid ] : '',
+			);
+		}
+
 		$failed = array();
 
 		if ( function_exists( 'as_get_scheduled_actions' ) ) {
@@ -1529,32 +1557,17 @@ class Verwaltung {
 
 		return new WP_REST_Response(
 			array(
-				'entries' => array_map(
-					static function ( $e ) {
-						return array(
-							'time'    => (int) $e['time'],
-							'level'   => (string) $e['level'],
-							'area'    => (string) $e['area'],
-							'message' => (string) $e['message'],
-						);
-					},
-					Log::recent( 100 )
-				),
-				'failed'  => array_count_values( $failed ),
+				'entries'   => $rows,
+				'total'     => $result['total'],
+				'pages'     => (int) max( 1, ceil( $result['total'] / 50 ) ),
+				'page'      => $page,
+				'levels'    => Log::levels(),
+				'counts'    => Log::counts( 7 ),
+				'areas'     => Log::areas(),
+				'failed'    => array_count_values( $failed ),
 				'last_sync' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
 			)
 		);
-	}
-
-	/**
-	 * Systemmeldungen leeren.
-	 *
-	 * @return WP_REST_Response
-	 */
-	public static function meldungen_leeren() {
-		Log::clear();
-
-		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Meldungen gelöscht.', 'lindenweg16' ) ) );
 	}
 
 	/**

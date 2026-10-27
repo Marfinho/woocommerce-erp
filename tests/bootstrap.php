@@ -201,6 +201,7 @@ require $lw16_root . '/includes/Core/Assets.php';
 require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/Lock.php';
 require $lw16_root . '/includes/Core/Log.php';
+require $lw16_root . '/includes/Core/EventLog.php';
 require $lw16_root . '/includes/Core/Throttle.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';

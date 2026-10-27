@@ -175,6 +175,7 @@ class Consistency {
 			'balance_expected' => StockLedger::balances( StockRepository::all() ),
 			'balance_actual'   => $balances,
 			'shop_stock'  => WooStockSync::is_active() ? WooStockSync::deviations() : array(),
+			'critical_events' => (int) \Lindenweg16\Core\Log::counts( 1 )['critical'],
 			'shop_stock_last' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
 			'shop_stock_active' => WooStockSync::is_active(),
 			'bom_parents' => $bom_parents,
@@ -249,6 +250,7 @@ class Consistency {
 			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() ),
 			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() ),
 			self::check_balance_drift( isset( $ctx['balance_expected'] ) ? (array) $ctx['balance_expected'] : array(), isset( $ctx['balance_actual'] ) ? (array) $ctx['balance_actual'] : array() ),
+			self::check_critical_events( isset( $ctx['critical_events'] ) ? (int) $ctx['critical_events'] : 0 ),
 			self::check_shop_stock( isset( $ctx['shop_stock'] ) ? (array) $ctx['shop_stock'] : array() ),
 			self::check_shop_stock_job( isset( $ctx['shop_stock_last'] ) ? (int) $ctx['shop_stock_last'] : null, time(), ! empty( $ctx['shop_stock_active'] ) ),
 			self::check_orphan_orders( isset( $ctx['orphan_orders'] ) ? (array) $ctx['orphan_orders'] : array() )
@@ -602,6 +604,31 @@ class Consistency {
 					$liste
 				),
 				__( 'Unter Verwaltung → Einstellungen → Lagerhoheit „Bestand jetzt in den Shop übertragen" drücken. Kehrt die Abweichung wieder, ändert jemand den Bestand von Hand im Shop oder der stündliche Abgleich läuft nicht (siehe Systemmeldungen).', 'lindenweg16' )
+			),
+		);
+	}
+
+	/**
+	 * Stehen kritische Ereignisse der letzten 24 Stunden im Ereignisprotokoll?
+	 *
+	 * @param int $count Anzahl kritischer Einträge in 24 Stunden.
+	 * @return array
+	 */
+	public static function check_critical_events( $count ) {
+		if ( (int) $count <= 0 ) {
+			return array();
+		}
+
+		return array(
+			self::finding(
+				'fehler',
+				__( 'Ereignisprotokoll', 'lindenweg16' ),
+				sprintf(
+					/* translators: %d: Anzahl. */
+					_n( 'Im Ereignisprotokoll steht %d kritischer Eintrag der letzten 24 Stunden.', 'Im Ereignisprotokoll stehen %d kritische Einträge der letzten 24 Stunden.', (int) $count, 'lindenweg16' ),
+					(int) $count
+				),
+				__( 'Unter Verwaltung → Einstellungen → Ereignisprotokoll nach „Kritisch" filtern und den Ursachen nachgehen.', 'lindenweg16' )
 			),
 		);
 	}

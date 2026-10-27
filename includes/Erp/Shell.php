@@ -18,6 +18,8 @@ namespace Lindenweg16\Erp;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Settings;
+
 use Lindenweg16\Core\Assets;
 
 /**
@@ -53,6 +55,7 @@ class Shell {
 			add_action( 'admin_menu', array( $this, 'maybe_hide_menus' ), 9999 );
 			add_action( 'admin_init', array( $this, 'gate_actions' ), 2 );
 			add_action( 'admin_init', array( $this, 'dashboard_to_erp' ), 3 );
+			add_action( 'admin_init', array( $this, 'classic_to_erp' ), 4 );
 			add_action( 'admin_head', array( $this, 'embed_styles' ) );
 			add_action( 'admin_post_lw16_erp_run_file', array( $this, 'serve_run_file' ) );
 			add_action( 'admin_post_lw16_erp_payslip_pdf', array( PayslipPdf::class, 'serve_pdf' ) );
@@ -534,6 +537,50 @@ class Shell {
 			wp_safe_redirect( self::url() );
 			exit;
 		}
+	}
+
+	/**
+	 * Klassische Betriebsseite im wp-admin: ins ERP leiten, wenn es dort eine gibt.
+	 *
+	 * Wer das ERP für alles nutzt, soll nicht versehentlich in der alten
+	 * Oberfläche landen (Lesezeichen, Links aus Mails). Ausgenommen sind
+	 * der Rahmen im ERP („klassische Ansicht"), Ajax und alles außer einem
+	 * einfachen Seitenaufruf - dort darf nie etwas umgeleitet werden.
+	 */
+	public function classic_to_erp() {
+		global $pagenow;
+
+		if ( ! Settings::get( 'erp_klassisch_umleiten', 0 ) || 'admin.php' !== $pagenow || wp_doing_ajax() || self::is_embedded() ) {
+			return;
+		}
+
+		if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! isset( $_GET['page'] ) || isset( $_GET['lw16_classic'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return;
+		}
+
+		$item = Navigation::find_by_page( sanitize_key( wp_unslash( $_GET['page'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+
+		if ( ! self::classic_redirects( $item, $item ? Access::can( $item['perm'] ) : false ) ) {
+			return;
+		}
+
+		wp_safe_redirect( self::url() . '#/seite/' . $item['id'] );
+		exit;
+	}
+
+	/**
+	 * Wird für diesen Eintrag umgeleitet? Reine Regel.
+	 *
+	 * Nur Seiten, die das ERP selbst anbietet (native, mit klassischem
+	 * Vorgänger), und nur, wer sie dort auch öffnen darf - sonst stünde
+	 * die Person vor einer leeren Seite.
+	 *
+	 * @param array|null $item    Eintrag aus Navigation::find_by_page().
+	 * @param bool       $allowed Darf die Person die Seite im ERP öffnen?
+	 * @return bool
+	 */
+	public static function classic_redirects( $item, $allowed ) {
+		return is_array( $item ) && 'native' === $item['kind'] && '' !== $item['alt'] && (bool) $allowed;
 	}
 
 	/**

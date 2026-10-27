@@ -228,6 +228,12 @@ class WooStockSync {
 		// Lebenszeichen: Die Systemprüfung schlägt an, wenn es ausbleibt.
 		update_option( self::LAST_RUN, time(), false );
 
+		if ( $result['geaendert'] ) {
+			Log::attention( 'shop-bestand', sprintf( 'Abgleich hat %d Shop-Einträge korrigiert (geprüft: %d) - jemand hat den Bestand im Shop von Hand geändert oder eine Buchung kam nicht an.', $result['geaendert'], $result['geprueft'] ) );
+		} else {
+			Log::normal( 'shop-bestand', sprintf( 'Abgleich ohne Abweichung (%d Artikel geprüft)', $result['geprueft'] ) );
+		}
+
 		return $result;
 	}
 

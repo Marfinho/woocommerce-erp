@@ -32,6 +32,9 @@ Testinstallation dieses Plugins mit erfundenen Beispieldaten – sie sind nicht 
 
 ### Updates
 
+Unter ERP → Verwaltung → Einstellungen → Updates wählt man den Kanal (`main` = jeder Stand, `release` = nur getaggte
+Veröffentlichungen auf GitHub) und kann auf die Sicherung vor dem letzten Update zurücksetzen.
+
 Plugin und Theme aktualisieren sich über die normale WordPress-Update-Funktion aus
 dem Branch `main` dieses Repos (`Core\Updater`). Sobald die Versionsnummer in
 `lindenweg16.php` bzw. `block-theme/lindenweg16/style.css` steigt, erscheint unter

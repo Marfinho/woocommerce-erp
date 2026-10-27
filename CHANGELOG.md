@@ -7,6 +7,34 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.45.0] – 2026-10-27
+
+### Ereignisprotokoll in drei Stufen (DB_VERSION 44)
+- **Neu: ERP → Verwaltung → Einstellungen → Ereignisprotokoll.** Alles, was im ERP geschieht, in drei Stufen: **Normal** (gewöhnlicher Lauf: Bestellung, Lagerbuchung, Änderung, Einstellung, Anmeldung eines Mitarbeitenden), **Aufmerksamkeit** (etwas weicht ab: Bestand unter null, Storno, Erstattung, fehlgeschlagene Anmeldung, E-Mail nicht gesendet, niedriger Bestand, Abweichung zum Shop, Kassen-Storno) und **Kritisch** (etwas ist nicht gelaufen: Buchung zurückgerollt, Hintergrundjob abgebrochen, PHP-Abbruch im Plugin, fünf Fehlanmeldungen in 15 Minuten).
+- Filter nach Stufe (Klick auf die Zähler der letzten 7 Tage), Bereich und Suchtext, Seitenwechsel, Wer und Wann je Eintrag. Fehlgeschlagene Action-Scheduler-Aufträge stehen darüber.
+- Gespeichert in der Tabelle `event_log`, aufgeräumt nach Stufe: Normal 90 Tage, Aufmerksamkeit ein Jahr, Kritisch drei Jahre. Das Protokoll übersteht „Daten zurücksetzen“. Fehler beim Schreiben werden verschluckt - das Protokoll bricht nie einen Vorgang ab. Aufmerksamkeit und Kritisch gehen zusätzlich in den WooCommerce-Logger (Quelle `lindenweg16`).
+- Gesammelt wird über vorhandene Ereignisse (`Core\EventLog`): jede Zeile des hashverketteten Änderungsprotokolls erscheint automatisch auch hier; dazu WooCommerce (Bestellungen, Statuswechsel, Lagerwarnungen), WordPress (Anmeldungen, Mailfehler, Updates) und PHP-Abbrüche. Kundenanmeldungen im Shop werden nicht protokolliert, Einstellungen nur mit den Namen der Felder, nie den Werten.
+- Die Systemprüfung meldet kritische Einträge der letzten 24 Stunden als Fehler.
+
+### Bestellbuchung ohne Doppelabzug (Härtung)
+- Die Lagerbuchung einer Bestellung läuft in **einer Transaktion**. Bricht sie mittendrin ab (Zeitlimit, Fehler), wird alles zurückgerollt und an der Bestellung steht eine Notiz.
+- Zusätzlich wird vor jeder Position gegen das Konto gerechnet, was für diese Bestellung schon als Verkauf gebucht ist (Stornierte zählen nicht). Ein Wiederholungslauf bucht nur den Rest, nie doppelt.
+
+### Bestandssummen mitlaufend (DB_VERSION 43)
+- Neue Tabelle `stock_balance` mit der mitlaufenden Summe je Artikel, Farbe und Lagerort. Seiten, Dashboard, Bedarfsplanung und Prüfungen lesen sie, statt bei jedem Aufruf das ganze Bewegungskonto durchzurechnen. **Maßgeblich bleiben die Bewegungen**: Die Summe baut sich beim ersten Zugriff selbst auf, die Systemprüfung vergleicht beide, und „Bestandssummen neu berechnen“ (Einstellungen → Farben & Lager) stellt sie aus den Bewegungen wieder her.
+
+### Weitere Härtung
+- **Systemprotokoll für Hintergrundjobs:** Schlägt ein Job des Plugins fehl oder überschreitet das Zeitlimit, steht er im Ereignisprotokoll (kritisch). Der stündliche Shop-Abgleich hinterlässt ein Lebenszeichen; bleibt es drei Stunden aus, meldet die Systemprüfung es.
+- **Offene Schnittstellen gedrosselt:** Besucherzähler (`/pv`, höchstens 120 je Minute und Adresse, nur vom eigenen Ursprung) und Push-Abruf (120 je Minute).
+- **Kassen-Storno** nur noch per POST (statt per Link), mit Sperre gegen Doppelklick und zwei Geräte zugleich.
+- **Shop-Bestand:** Reservierung über alle offenen Bestellungen (bisher nur die ersten 200); die Bestandsfelder im Produkt-Editor von WooCommerce sind für ERP-Produkte gesperrt, ein im Editor gespeichertes Produkt wird sofort zurückgestellt; die Systemprüfung zeigt Abweichungen zwischen ERP und Shop.
+- **Wunschliste, Lagerwarnungen, Dashboard und Vorproduktionsvorschläge** rechnen nicht mehr mit dem eingefrorenen Bestand von Produkten, die Betrieb schon übernommen hat. Die Wunschliste zeigt „lieferbar“ nach Lager minus offene Bestellungen.
+- **Updates:** Wahlweise nur getaggte Veröffentlichungen (Kanal „Release“, Einstellungen → Updates; Standard bleibt `main`). Vor jedem Update legt das System ein ZIP der bisherigen Plugin-Dateien an (die letzten zwei bleiben, `uploads/lw16-backup/`), und im ERP lässt sich darauf zurücksetzen. Nur die Programmdateien, nie die Daten.
+- **Altes Lager-Modul stilllegen:** Sobald alle Produkte der alten Verwaltung übernommen sind, lässt es sich unter Einstellungen → Farben & Lager abschalten (bucht nichts mehr, zeigt nichts mehr).
+- **Klassische Betriebsseiten im wp-admin leiten ins ERP** (Einstellung „Oberfläche“ in den Plugin-Einstellungen, Standard aus). Die klassische Ansicht im Rahmen des ERP, Ajax und Formulare bleiben unberührt; `&lw16_classic=1` an der Adresse umgeht die Umleitung.
+- Konfigurator: Grenzwert der Modelllage kommt immer als Kommazahl zurück (ein seit 0.41 roter Test ist repariert).
+- Tests: `BetriebHaertungTest`.
+
 ## [0.44.0] – 2026-10-27
 
 ### Das ERP führt den Bestand im Shop

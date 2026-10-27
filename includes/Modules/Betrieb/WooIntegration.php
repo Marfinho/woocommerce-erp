@@ -149,6 +149,7 @@ class WooIntegration {
 				}
 			}
 
+			Log::attention( 'lager', 'Bestellung #' . (int) $order_id . ' storniert: ' . $zurueck . ' Lagerbewegung(en) zurückgebucht', array( 'order_id' => (int) $order_id ) );
 			$order->delete_meta_data( self::META_BOOKED );
 			$order->add_order_note(
 				sprintf(
@@ -270,7 +271,9 @@ class WooIntegration {
 		ComponentConsumption::consume_supplies( $order_op_id );
 
 		$order->update_meta_data( self::META_BOOKED, current_time( 'mysql' ) );
+		Log::normal( 'lager', 'Bestellung #' . (int) $order_id . ' ins Lager gebucht (' . count( $lines ) . ' Positionen)', array( 'order_id' => (int) $order_id ) );
 		if ( $unresolved ) {
+			Log::attention( 'lager', 'Bestellung #' . (int) $order_id . ': ' . $unresolved . ' Position(en) ohne eindeutige Farbe gebucht', array( 'order_id' => (int) $order_id ) );
 			$order->add_order_note(
 				sprintf(
 					/* translators: %d: Anzahl Positionen. */

@@ -109,6 +109,8 @@ class StockRepository {
 			return 0;
 		}
 
+		self::watch_negative( $row );
+
 		BetriebAudit::record( 'create', 'stock_movements', $id, null, $row, isset( $data['void_reason'] ) ? $data['void_reason'] : '' );
 
 		// Der Shop zieht nach (siehe WooStockSync).
@@ -117,6 +119,35 @@ class StockRepository {
 		self::maybe_announce_replenished( (int) $row['article_id'], (float) $row['qty'] );
 
 		return $id;
+	}
+
+	/**
+	 * Wird durch einen Abgang das Lager negativ? Dann Aufmerksamkeit.
+	 *
+	 * Verhindert wird die Buchung nicht - die Ware ist ja schon weg -, aber
+	 * es soll auffallen, solange man noch nachsehen kann, was fehlt.
+	 *
+	 * @param array $row Gebuchte Bewegung.
+	 */
+	protected static function watch_negative( array $row ) {
+		global $wpdb;
+
+		if ( (float) $row['qty'] >= 0 || 'lager' !== $row['location'] ) {
+			return;
+		}
+
+		$stand = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT qty FROM ' . self::balance_table() . ' WHERE article_id = %d AND color = %s AND location = %s', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				(int) $row['article_id'],
+				(string) $row['color'],
+				'lager'
+			)
+		);
+
+		if ( $stand < -0.0005 ) {
+			Log::attention( 'lager', 'Bestand unter null: Artikel #' . (int) $row['article_id'] . ' (' . $row['color'] . ') steht bei ' . $stand, array( 'article_id' => (int) $row['article_id'] ) );
+		}
 	}
 
 	/**

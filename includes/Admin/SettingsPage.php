@@ -61,6 +61,9 @@ class SettingsPage {
 				'rechnung_auto_storno' => array( __( 'Rechnung samt Einnahmebuchung automatisch stornieren, wenn die Bestellung storniert oder erstattet wird', 'lindenweg16' ), 'checkbox' ),
 				'betrieb_storno_lager' => array( __( 'Lagerabgang automatisch zurückbuchen, wenn die Bestellung storniert oder erstattet wird (nur wenn die Ware nicht schon beim Kunden ist)', 'lindenweg16' ), 'checkbox' ),
 			),
+			__( 'Oberfläche', 'lindenweg16' )     => array(
+				'erp_klassisch_umleiten' => array( __( 'Betriebsseiten im wp-admin (Lager, Aufträge, Versand, Artikel …) leiten ins ERP um. Die klassische Ansicht bleibt im ERP erreichbar.', 'lindenweg16' ), 'checkbox' ),
+			),
 			__( 'Marketing', 'lindenweg16' )      => array(
 				'km_pauschale'            => array( __( 'Kilometerpauschale (€ je km)', 'lindenweg16' ), 'number' ),
 				'marketing_nachlauf_tage' => array( __( 'Nachlauffenster für Kampagnenumsatz (Tage)', 'lindenweg16' ), 'number' ),

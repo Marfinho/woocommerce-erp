@@ -103,6 +103,11 @@ class HashChain {
 
 			$ok = false !== $wpdb->insert( $table_full, array_merge( $data, $extra ) );
 
+			if ( $ok && 'audit_log' === $table_key ) {
+				// Das Ereignisprotokoll hört mit, damit jede protokollierte Änderung dort erscheint.
+				do_action( 'lw16_audit_written', $data );
+			}
+
 			return $ok ? (int) $wpdb->insert_id : 0;
 		} finally {
 			if ( $gesperrt ) {
