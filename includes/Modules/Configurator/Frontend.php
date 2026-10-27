@@ -146,6 +146,9 @@ class Frontend {
 		return array(
 			'katalog' => $catalog,
 			'symbole' => $icons,
+			'urls'    => array(
+				'lage' => Assets::url( 'assets/js/konfigurator-lage.js' ),
+			),
 			'texte'   => array(
 				'entfernen'    => __( 'Entfernen', 'lindenweg16' ),
 				'kein_platz'   => __( 'Für dieses Modul ist kein Platz mehr frei.', 'lindenweg16' ),

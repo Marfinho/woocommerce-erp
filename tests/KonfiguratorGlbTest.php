@@ -7,6 +7,7 @@
 
 use Lindenweg16\Modules\Configurator\GlbMeasure;
 use Lindenweg16\Modules\Configurator\Layout;
+use Lindenweg16\Modules\Configurator\ModelPlacement;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -169,5 +170,72 @@ class KonfiguratorGlbTest extends TestCase {
 
 		$this->assertSame( 900.0, (float) ( $lang[1]['from'] - $lang[0]['from'] ) );
 		$this->assertSame( 125.0, (float) $lang[0]['from'] );
+	}
+
+	/**
+	 * Ohne Drehung ist die Matrix die Einheitsmatrix.
+	 */
+	public function test_ohne_drehung_einheitsmatrix() {
+		$this->assertEquals(
+			array( 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ),
+			array_map( 'round', ModelPlacement::rotation_matrix( array( 0, 0, 0 ) ) )
+		);
+	}
+
+	/**
+	 * 90 Grad um X stellt ein liegendes Teil auf: Z wird zu Y.
+	 */
+	public function test_drehung_um_x_stellt_auf() {
+		$m = array_map(
+			static function ( $v ) {
+				return round( $v, 6 ) + 0.0;
+			},
+			ModelPlacement::rotation_matrix( array( 90, 0, 0 ) )
+		);
+
+		// Spalte 2 (Bild der Z-Achse) ist nach 90° um X die negative Y-Achse.
+		$this->assertEquals( array( 0, -1, 0 ), array_slice( $m, 8, 3 ) );
+		// Spalte 1 (Bild der Y-Achse) ist die Z-Achse.
+		$this->assertEquals( array( 0, 0, 1 ), array_slice( $m, 4, 3 ) );
+	}
+
+	/**
+	 * Eine Drehung vor dem Messen vertauscht Höhe und Tiefe.
+	 */
+	public function test_messen_mit_drehung() {
+		$json = wp_json_encode(
+			array(
+				'scenes'    => array( array( 'nodes' => array( 0 ) ) ),
+				'nodes'     => array( array( 'mesh' => 0 ) ),
+				'meshes'    => array( array( 'primitives' => array( array( 'attributes' => array( 'POSITION' => 0 ) ) ) ) ),
+				'accessors' => array(
+					array(
+						'min' => array( 0, 0, 0 ),
+						'max' => array( 0.02, 0.05, 0.1 ),
+					),
+				),
+			)
+		);
+
+		$this->assertSame( 50.0, GlbMeasure::measure_json( $json )['height'] );
+		$this->assertSame( 100.0, GlbMeasure::measure_json( $json, array( 90, 0, 0 ) )['height'] );
+	}
+
+	/**
+	 * Die Lage aus dem Formular: Komma, Grenzen, unbekannte Ausrichtung.
+	 */
+	public function test_lage_aus_formular() {
+		$lage = ModelPlacement::from_input(
+			array(
+				'model_align' => 'quatsch',
+				'model_rot_x' => '90,5',
+				'model_off_z' => '99999',
+			)
+		);
+
+		$this->assertSame( 'auto', $lage['model_align'] );
+		$this->assertSame( 90.5, $lage['model_rot_x'] );
+		$this->assertSame( 0.0, $lage['model_rot_y'] );
+		$this->assertSame( 5000.0, $lage['model_off_z'] );
 	}
 }

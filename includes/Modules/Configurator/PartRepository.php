@@ -139,6 +139,7 @@ class PartRepository {
 				'sort_order'    => (int) $row['sort_order'],
 				'is_active'     => $active ? 1 : 0,
 				'wc_product_id' => (int) $article['wc_product_id'],
+				'placement'     => ModelPlacement::for_browser( $row ),
 			);
 
 			$zones[ $article_id ] = isset( $blocks[ (int) $row['id'] ] ) ? $blocks[ (int) $row['id'] ] : array();
@@ -192,6 +193,9 @@ class PartRepository {
 			'is_active'   => empty( $input['is_active'] ) ? 0 : 1,
 			'teaser'      => isset( $input['teaser'] ) ? sanitize_text_field( $input['teaser'] ) : null,
 		);
+
+		// Lage des Modells an der Stange: Drehung, Verschiebung, Ausrichtung.
+		$data = array_merge( $data, ModelPlacement::from_input( $input ) );
 
 		// Das Modell kennt seine Maße. Eingetragen werden müssen sie nur,
 		// wenn es kein Modell gibt oder die Datei keine hergibt.

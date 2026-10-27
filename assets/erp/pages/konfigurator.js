@@ -317,6 +317,141 @@
 			return box;
 		}
 
+		/* ---------- Vorschau der Lage ---------- */
+
+		function importMap(v) {
+			if (document.querySelector('script[data-lw16-konf-map]')) { return; }
+			var map = document.createElement('script');
+			map.type = 'importmap';
+			map.setAttribute('data-lw16-konf-map', '1');
+			var imports = { three: v.three };
+			imports['three/addons/'] = v.addons;
+			map.textContent = JSON.stringify({ imports: imports });
+			document.head.appendChild(map);
+		}
+
+		/*
+		 * Die Vorschau zeigt das Modell an der Wand und an der Stange, gerechnet mit
+		 * derselben Datei wie die Ansicht im Shop (assets/js/konfigurator-lage.js).
+		 * Ziehen dreht die Ansicht, das Mausrad zoomt.
+		 */
+		function Preview(viewer) {
+			var wrap = h('div', { class: 'kf-preview' });
+			var note = h('p', { class: 'kf-preview-msg' }, 'Vorschau wird geladen …');
+			wrap.appendChild(note);
+			var st = { libs: null, raw: null, rawUrl: '', obj: null, az: 0.6, el: 0.12, dist: 0.5, target: null, req: 0, dead: false, want: null };
+
+			function libs() {
+				if (!st.libs) {
+					importMap(viewer);
+					st.libs = Promise.all([import(viewer.three), import(viewer.addons + 'loaders/GLTFLoader.js'), import(viewer.lage)]).then(function (m) {
+						return { THREE: m[0], Loader: m[1].GLTFLoader, lage: m[2] };
+					});
+				}
+				return st.libs;
+			}
+
+			function build(L) {
+				var T = L.THREE;
+				st.renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
+				st.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+				wrap.insertBefore(st.renderer.domElement, note);
+				st.scene = new T.Scene();
+				st.camera = new T.PerspectiveCamera(32, 1, 0.01, 20);
+				st.scene.add(new T.HemisphereLight(0xffffff, 0x8a8478, 1.5));
+				var sun = new T.DirectionalLight(0xffffff, 2.2);
+				sun.position.set(-0.6, 1.2, 1.4);
+				st.scene.add(sun);
+
+				var wall = new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshStandardMaterial({ color: 0xddd4c4, roughness: 0.95 }));
+				wall.position.set(0, 0.5, -0.001);
+				st.scene.add(wall);
+
+				// Die Stange: Ø 20 mm, Achse 45 mm von der Wand. Sie zeigt, wohin das Teil gehört.
+				var r = viewer.rod_diameter / 2000;
+				st.rod = new T.Mesh(new T.CylinderGeometry(r, r, 1, 32), new T.MeshStandardMaterial({ color: 0xc9a57a, roughness: 0.7 }));
+				st.rod.position.set(0, 0.5, viewer.rod_depth / 1000);
+				st.scene.add(st.rod);
+
+				var down = null;
+				var el = st.renderer.domElement;
+				el.addEventListener('pointerdown', function (e) { down = { x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); });
+				el.addEventListener('pointermove', function (e) {
+					if (!down) { return; }
+					st.az -= (e.clientX - down.x) * 0.01;
+					st.el = Math.max(-0.6, Math.min(1.2, st.el + (e.clientY - down.y) * 0.01));
+					down = { x: e.clientX, y: e.clientY };
+					draw();
+				});
+				el.addEventListener('pointerup', function () { down = null; });
+				el.addEventListener('wheel', function (e) { e.preventDefault(); st.dist = Math.max(0.1, Math.min(4, st.dist * (e.deltaY > 0 ? 1.1 : 0.9))); draw(); }, { passive: false });
+			}
+
+			function draw() {
+				if (st.req) { return; }
+				st.req = requestAnimationFrame(function () {
+					st.req = 0;
+					if (!st.renderer || st.dead) { return; }
+					if (!document.body.contains(wrap)) { st.dead = true; st.renderer.dispose(); return; }
+					var w = wrap.clientWidth || 1;
+					var hgt = wrap.clientHeight || 1;
+					st.renderer.setSize(w, hgt, false);
+					st.camera.aspect = w / hgt;
+					st.camera.updateProjectionMatrix();
+					var t = st.target || { x: 0, y: 0.1, z: 0.03 };
+					st.camera.position.set(
+						t.x + st.dist * Math.sin(st.az) * Math.cos(st.el),
+						t.y + st.dist * Math.sin(st.el),
+						t.z + st.dist * Math.cos(st.az) * Math.cos(st.el));
+					st.camera.lookAt(t.x, t.y, t.z);
+					st.renderer.render(st.scene, st.camera);
+				});
+			}
+
+			function place(L, o) {
+				if (st.obj) { st.scene.remove(st.obj); st.obj = null; }
+				var T = L.THREE;
+				var raw = st.raw.clone(true);
+				raw.updateMatrixWorld(true);
+				var box = new T.Box3().setFromObject(raw);
+				// Ohne Höhenangabe: Einheit raten wie PHP (über 20 Einheiten = Millimeter).
+				var ext = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
+				if (ext > 20) { raw.scale.setScalar(0.001); }
+				st.obj = L.lage.platziere(T, raw, o.height, o.lage);
+				st.scene.add(st.obj);
+
+				var fit = new T.Box3().setFromObject(st.obj);
+				var top = Math.max(fit.max.y, 0.05);
+				var len = top + 0.06;
+				st.rod.scale.y = len + 0.04;
+				st.rod.position.y = (len - 0.04) / 2;
+				st.target = { x: 0, y: top / 2, z: 0.03 };
+				st.dist = Math.max(0.12, top * 2.6);
+				note.hidden = true;
+				draw();
+			}
+
+			return {
+				el: wrap,
+				show: function (o) {
+					st.want = o;
+					note.hidden = false;
+					note.textContent = o.url ? 'Vorschau wird geladen …' : (o.empty || 'Kein Modell gewählt.');
+					if (!o.url) { if (st.obj) { st.scene.remove(st.obj); st.obj = null; draw(); } return; }
+					libs().then(function (L) {
+						if (!st.renderer) { build(L); }
+						if (st.rawUrl === o.url && st.raw) { place(L, o); return; }
+						new L.Loader().loadAsync(o.url).then(function (g) {
+							if (st.want !== o && st.want.url !== o.url) { return; }
+							st.raw = g.scene;
+							st.rawUrl = o.url;
+							place(L, st.want);
+						}, function () { note.hidden = false; note.textContent = 'Die Modelldatei ließ sich nicht laden.'; });
+					}, function () { note.hidden = false; note.textContent = 'Die Vorschau lässt sich in diesem Browser nicht anzeigen.'; });
+				}
+			};
+		}
+
 		/* ---------- Anlegen und ändern ---------- */
 
 		function openForm(p) {
@@ -394,6 +529,73 @@
 			file.addEventListener('change', syncModel);
 			syncModel();
 
+			/* Lage des Modells an der Stange */
+			var cp = cur.placement || { align: 'auto', rot: [0, 0, 0], off: [0, 0, 0] };
+			var align = h('select', { class: 'field', 'aria-label': 'Ausrichtung' },
+				h('option', { value: 'auto' }, 'Automatisch: auf die Unterkante, mittig, Rückseite an die Wand'),
+				h('option', { value: 'asis' }, 'Wie konstruiert (nur auf die Unterkante stellen)'));
+			align.value = cp.align === 'asis' ? 'asis' : 'auto';
+			function axisInput(v, label) {
+				return h('input', { class: 'field', type: 'text', inputmode: 'decimal', autocomplete: 'off', value: String(v || 0).replace('.', ','), 'aria-label': label });
+			}
+			var rot = [axisInput(cp.rot[0], 'Drehung um X in Grad'), axisInput(cp.rot[1], 'Drehung um Y in Grad'), axisInput(cp.rot[2], 'Drehung um Z in Grad')];
+			var off = [axisInput(cp.off[0], 'Verschiebung X in Millimetern'), axisInput(cp.off[1], 'Verschiebung Y in Millimetern'), axisInput(cp.off[2], 'Verschiebung Z in Millimetern')];
+			var preview = null;
+			var objUrl = '';
+			var objFile = null;
+			var timer2 = null;
+
+			function nums(list) { return list.map(function (i) { var n = parseFloat(String(i.value).replace(',', '.')); return isFinite(n) ? n : 0; }); }
+			function turnBtn(i) {
+				return h('button', { class: 'btn', type: 'button', onclick: function () {
+					var n = (nums([rot[i]])[0] + 90) % 360;
+					rot[i].value = String(n).replace('.', ',');
+					refresh();
+				} }, '+ 90°');
+			}
+			function modelUrl() {
+				var f = file.files && file.files[0];
+				if (f) {
+					if (objFile !== f) { if (objUrl) { URL.revokeObjectURL(objUrl); } objUrl = URL.createObjectURL(f); objFile = f; }
+					return objUrl;
+				}
+				if (choice.value.indexOf('demo:') === 0) {
+					var hit = meta.demos.filter(function (d) { return d.value === choice.value; })[0];
+					return hit ? hit.url : '';
+				}
+				if (cur.model_kind === 'upload' && choice.value === '') { return cur.model_url || ''; }
+				return '';
+			}
+			function ownModel() { return hasModel() && !(role() === 'basis' && !(file.files && file.files[0])); }
+			function refresh() {
+				placeSet.hidden = !ownModel();
+				if (placeSet.hidden) { return; }
+				if (!preview) { preview = Preview(meta.viewer); previewBox.appendChild(preview.el); }
+				var hv = parseFloat(String(height.value).replace(',', '.'));
+				preview.show({ url: modelUrl(), height: hv > 0 ? hv : 0, lage: { align: align.value, rot: nums(rot), off: nums(off) }, empty: 'Kein Modell gewählt.' });
+			}
+			function later() { clearTimeout(timer2); timer2 = setTimeout(refresh, 120); }
+			rot.concat(off).concat([height]).forEach(function (i) { i.addEventListener('input', later); });
+			align.addEventListener('change', refresh);
+			choice.addEventListener('change', refresh);
+			file.addEventListener('change', refresh);
+			roleInputs.forEach(function (i) { i.addEventListener('change', refresh); });
+			var previewBox = h('div', null);
+			function axisRow(label, list, extra) {
+				return h('div', { class: 'kf-field' }, h('span', { class: 'kf-lab' }, label),
+					h('div', { class: 'kf-axis' }, list.map(function (inp, i) {
+						return h('div', { class: 'kf-axis-cell' }, h('span', { class: 'kf-hint' }, ['X', 'Y', 'Z'][i]), inp, extra ? extra(i) : null);
+					})));
+			}
+			var placeSet = h('fieldset', { class: 'kf-set' }, h('legend', null, '5 · Lage an der Stange'),
+				h('p', { class: 'kf-hint' }, 'Die Datei bringt ihr eigenes Koordinatensystem mit. Hier stellst du ein, was oben ist und wo das Teil an die Stange gehört. Die Vorschau zeigt die Wand (beige) und die Holzstange; ziehen dreht die Ansicht.'),
+				previewBox,
+				field('Ausrichtung', align, 'Automatisch passt für die meisten Modelle. Danach nur noch drehen und verschieben.'),
+				axisRow('Drehung in Grad (X, Y, Z)', rot, turnBtn),
+				axisRow('Verschiebung in Millimetern (X nach rechts, Y nach oben, Z von der Wand weg)', off),
+				h('p', { class: 'kf-hint' }, 'Die Stangenachse liegt bei X 0 und Z ' + meta.viewer.rod_depth + ' mm (Ø ' + meta.viewer.rod_diameter + ' mm). Ein Teil, das die Stange umgreift, braucht dort seine Öffnung.'));
+			placeSet.hidden = true;
+
 			var save = h('button', { class: 'btn primary', type: 'submit' }, p ? 'Teil speichern' : 'Teil anlegen');
 			var back = h('button', { class: 'btn', type: 'button', onclick: function () { if (p) { openPart(p.id); } else { closeDialog(); } } }, 'Abbrechen');
 
@@ -414,6 +616,7 @@
 				h('fieldset', { class: 'kf-set' }, h('legend', null, '4 · Schaumodell'),
 					field('Modell wählen', choice, 'Die Demo-Modelle gehören zum Plugin und zeigen nicht den Haster Haken. Sie sind zum Einrichten da – vor dem Verkauf gehört das eigene Modell hierher.'),
 					field('Eigenes Modell hochladen (.glb, höchstens ' + mb(meta.max_bytes) + ')', file, (cur.model_kind === 'upload' ? 'Hinterlegt: ' + cur.model_file + '. ' : '') + 'Ursprung an der Unterkante der Montagefläche, Y nach oben. Die Einheit ist gleichgültig – die Ansicht skaliert das Modell auf die gepflegte Höhe. Eine hochgeladene Datei sticht die Auswahl darüber.')),
+				placeSet,
 				msg,
 				h('div', { class: 'kf-actions' }, save, back));
 
@@ -442,6 +645,11 @@
 				fd.append('sort_order', sort.value);
 				fd.append('teaser', teaser.value);
 				if (fromModel.checked && hasModel()) { fd.append('measure_from_model', '1'); }
+				fd.append('model_align', align.value);
+				['x', 'y', 'z'].forEach(function (a, i) {
+					fd.append('model_rot_' + a, rot[i].value);
+					fd.append('model_off_' + a, off[i].value);
+				});
 				if (active.checked) { fd.append('is_active', '1'); }
 				fd.append('model_choice', choice.value);
 				if (f) { fd.append('model', f, f.name); }
@@ -458,6 +666,7 @@
 			});
 
 			body.appendChild(form);
+			refresh();
 		}
 
 		chips();

@@ -26,6 +26,7 @@ use Lindenweg16\Modules\Configurator\BlockRepository;
 use Lindenweg16\Modules\Configurator\Catalog;
 use Lindenweg16\Modules\Configurator\Frontend;
 use Lindenweg16\Modules\Configurator\Layout;
+use Lindenweg16\Modules\Configurator\ModelPlacement;
 use Lindenweg16\Modules\Configurator\PartRepository;
 use Lindenweg16\Modules\Configurator\GlbMeasure;
 use Lindenweg16\Modules\Configurator\WebModel;
@@ -272,7 +273,8 @@ class Konfigurator {
 		$zones   = isset( $blocks[ (int) $row['id'] ] ) ? $blocks[ (int) $row['id'] ] : array();
 		$url     = 'none' === $kind ? '' : WebModel::url( $file );
 		$shop    = Catalog::shop_facts( $article ? (int) $article['wc_product_id'] : 0 );
-		$size    = 'none' === $kind ? null : WebModel::measure( $file );
+		$place   = ModelPlacement::for_browser( $row );
+		$size    = 'none' === $kind ? null : WebModel::measure( $file, $place['rot'] );
 
 		return array(
 			'id'             => (int) $row['id'],
@@ -294,6 +296,7 @@ class Konfigurator {
 			'shop_price'     => $shop['price'],
 			'shop_in_stock'  => $shop['in_stock'],
 			'model_measure'  => $size,
+			'placement'      => $place,
 			'model_kind'     => $kind,
 			'model_file'     => $file,
 			'model_demo'     => 'demo' === $kind && isset( $demos[ WebModel::demo_key( $file ) ] ) ? $demos[ WebModel::demo_key( $file ) ] : '',
@@ -378,7 +381,11 @@ class Konfigurator {
 
 		$demos = array();
 		foreach ( WebModel::demo_models() as $key => $label ) {
-			$demos[] = array( 'value' => WebModel::DEMO_PREFIX . $key, 'label' => $label );
+			$demos[] = array(
+				'value' => WebModel::DEMO_PREFIX . $key,
+				'label' => $label,
+				'url'   => WebModel::url( WebModel::DEMO_PREFIX . $key ),
+			);
 		}
 
 		$roles = array();
@@ -396,6 +403,13 @@ class Konfigurator {
 				'max_modules' => (int) Layout::MAX_MODULES,
 				'max_bytes'   => min( (int) WebModel::MAX_BYTES, (int) wp_max_upload_size() ),
 				'shortcode'   => '[' . Frontend::SHORTCODE . ']',
+				'viewer'      => array(
+					'three'          => \Lindenweg16\Core\Assets::url( 'assets/vendor/three/three.module.min.js' ),
+					'addons'         => LW16_PLUGIN_URL . 'assets/vendor/three/jsm/',
+					'lage'           => \Lindenweg16\Core\Assets::url( 'assets/js/konfigurator-lage.js' ),
+					'rod_depth'      => ModelPlacement::ROD_DEPTH,
+					'rod_diameter'   => ModelPlacement::ROD_DIAMETER,
+				),
 			)
 		);
 	}
@@ -433,6 +447,8 @@ class Konfigurator {
 			}
 		}
 
+		$place    = ModelPlacement::from_input( $input );
+		$rotation = array( $place['model_rot_x'], $place['model_rot_y'], $place['model_rot_z'] );
 		$choice   = isset( $input['model_choice'] ) ? sanitize_text_field( (string) $input['model_choice'] ) : '';
 		$plan     = self::model_plan( $choice, (bool) $file );
 		$existing = $id ? PartRepository::find( $id ) : null;
@@ -441,11 +457,11 @@ class Konfigurator {
 		$measured = null;
 
 		if ( 'upload' === $plan['action'] ) {
-			$measured = GlbMeasure::measure_file( (string) $file['tmp_name'] );
+			$measured = GlbMeasure::measure_file( (string) $file['tmp_name'], $rotation );
 		} elseif ( 'demo' === $plan['action'] ) {
-			$measured = WebModel::measure( $plan['value'] );
+			$measured = WebModel::measure( $plan['value'], $rotation );
 		} elseif ( 'keep' === $plan['action'] && $existing ) {
-			$measured = WebModel::measure( (string) $existing['model_file'] );
+			$measured = WebModel::measure( (string) $existing['model_file'], $rotation );
 		}
 
 		$result = PartRepository::validate( $input, $id ? $id : null, $measured );

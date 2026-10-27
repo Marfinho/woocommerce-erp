@@ -133,6 +133,7 @@ class Catalog {
 			'depth'   => (float) $part['depth_mm'],
 			'model'   => WebModel::url( $file ),
 			'construction' => $standard ? WebModel::STANDARD_KEY : '',
+			'placement' => $part['placement'],
 			'prices'  => $prices,
 			'sold_out' => $offer['sold_out'],
 		);
