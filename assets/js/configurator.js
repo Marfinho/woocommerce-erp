@@ -200,6 +200,8 @@ class Konfigurator {
 		this.liste = wurzel.querySelector( '[data-lw16-modulliste]' );
 		this.angebot = wurzel.querySelector( '[data-lw16-angebot]' );
 		this.preis = wurzel.querySelector( '[data-lw16-preis]' );
+		this.lieferHinweis = wurzel.querySelector( '[data-lw16-liefer]' );
+		this.knopfKaufen = wurzel.querySelector( '.lw16-haken__kaufen' );
 		this.meldung = wurzel.querySelector( '[data-lw16-meldung]' );
 		this.buehne = wurzel.querySelector( '[data-lw16-ansicht]' );
 		this.hinweis = wurzel.querySelector( '[data-lw16-ansicht-hinweis]' );
@@ -311,6 +313,7 @@ class Konfigurator {
 
 		this.felderFarbe.forEach( ( feld ) => feld.addEventListener( 'change', () => {
 			this.zustand.farbe = this.wertVon( this.felderFarbe );
+			this.zeichneListe();
 			this.aktualisiere();
 
 			if ( this.ansicht ) {
@@ -346,6 +349,11 @@ class Konfigurator {
 		const teil = this.module.get( artikel );
 
 		if ( ! teil ) {
+			return;
+		}
+
+		if ( this.nichtLieferbar( teil ) ) {
+			this.sageAn( this.texte.modul_nicht_lieferbar );
 			return;
 		}
 
@@ -491,6 +499,10 @@ class Konfigurator {
 				zeile.classList.add( 'is-aktiv' );
 			}
 
+			if ( this.nichtLieferbar( teil ) ) {
+				zeile.classList.add( 'is-ausverkauft' );
+			}
+
 			const auswahl = document.createElement( 'select' );
 			auswahl.name = 'modul[]';
 			auswahl.setAttribute( 'aria-label', teil.name );
@@ -541,7 +553,22 @@ class Konfigurator {
 			weg.setAttribute( 'aria-label', this.texte.entfernen + ': ' + teil.name );
 			weg.addEventListener( 'click', () => this.entferne( eintrag.uid ) );
 
-			zeile.append( auswahl, feld, einheit, weg );
+			const symbol = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			symbol.setAttribute( 'viewBox', '0 0 32 32' );
+			symbol.setAttribute( 'class', 'lw16-haken__zeilensymbol' );
+			symbol.setAttribute( 'aria-hidden', 'true' );
+			const verweis = document.createElementNS( 'http://www.w3.org/2000/svg', 'use' );
+			verweis.setAttribute( 'href', '#lw16-sym-' + ( ( DATEN.symbole && DATEN.symbole[ eintrag.artikel ] ) || 'modul' ) );
+			symbol.appendChild( verweis );
+
+			zeile.append( symbol, auswahl, feld, einheit, weg );
+
+			if ( this.nichtLieferbar( teil ) ) {
+				const marke = document.createElement( 'span' );
+				marke.className = 'lw16-haken__status';
+				marke.textContent = this.texte.nicht_lieferbar;
+				zeile.appendChild( marke );
+			}
 			zeile.addEventListener( 'pointerdown', () => {
 				this.waehle( eintrag.uid );
 			} );
@@ -587,6 +614,27 @@ class Konfigurator {
 		this.feldCode.value = this.code();
 		this.zeichnePreis();
 		this.zeichneChip();
+		this.zeichneModulpreise();
+	}
+
+	/**
+	 * Preis eines Moduls in der gewählten Farbe auf den Modulkarten.
+	 */
+	zeichneModulpreise() {
+		const format = new Intl.NumberFormat( document.documentElement.lang || 'de-DE', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		} );
+
+		this.angebot.querySelectorAll( '[data-lw16-modulpreis]' ).forEach( ( feld ) => {
+			const teil = this.module.get( parseInt( feld.dataset.lw16Modulpreis, 10 ) );
+			const preis = teil ? this.preisVon( teil ) : null;
+			const karte = feld.closest( '.lw16-haken__modulknopf' );
+
+			feld.textContent = null === preis ? this.texte.nicht_lieferbar : format.format( preis ) + ' ' + this.katalog.currency;
+			karte.classList.toggle( 'is-ausverkauft', null === preis );
+			karte.setAttribute( 'aria-disabled', null === preis ? 'true' : 'false' );
+		} );
 	}
 
 	/**
@@ -636,25 +684,46 @@ class Konfigurator {
 	}
 
 	/**
+	 * Ist das Teil in der gewählten Farbe gerade nicht lieferbar?
+	 *
+	 * Etwas anderes als „gibt es nicht in dieser Farbe": Hier wird das Teil
+	 * angeboten, ist aber ausverkauft.
+	 *
+	 * @param {object} teil Katalogeintrag.
+	 * @returns {boolean}
+	 */
+	nichtLieferbar( teil ) {
+		return null === this.preisVon( teil );
+	}
+
+	/**
 	 * Preis anzeigen.
 	 */
 	zeichnePreis() {
-		let summe = this.preisVon( this.basis() );
-		let vollstaendig = null !== summe;
+		let summe = this.preisVon( this.basis() ) || 0;
+		const fehlt = [];
+
+		if ( this.nichtLieferbar( this.basis() ) ) {
+			fehlt.push( this.basis().name );
+		}
 
 		this.zustand.module.forEach( ( eintrag ) => {
 			const teil = this.module.get( eintrag.artikel );
 			const preis = teil ? this.preisVon( teil ) : null;
 
 			if ( null === preis ) {
-				vollstaendig = false;
+				if ( teil && ! fehlt.includes( teil.name ) ) {
+					fehlt.push( teil.name );
+				}
 				return;
 			}
 
 			summe += preis;
 		} );
 
-		if ( ! vollstaendig ) {
+		this.zeichneLieferstand( fehlt );
+
+		if ( fehlt.length ) {
 			this.preis.textContent = '';
 			return;
 		}
@@ -665,6 +734,29 @@ class Konfigurator {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		} ).format( gesamt ) + ' ' + this.katalog.currency;
+	}
+
+	/**
+	 * Hinweis unter dem Preis und Zustand des Warenkorb-Knopfs.
+	 *
+	 * @param {string[]} fehlt Namen der Teile, die gerade nicht lieferbar sind.
+	 */
+	zeichneLieferstand( fehlt ) {
+		if ( this.lieferHinweis ) {
+			this.lieferHinweis.textContent = fehlt.length ? this.texte.nicht_lieferbar_liste.replace( '%s', fehlt.join( ', ' ) ) : '';
+		}
+
+		if ( this.knopfKaufen ) {
+			this.knopfKaufen.disabled = fehlt.length > 0;
+		}
+
+		this.wurzel.querySelectorAll( '[data-lw16-basis-status]' ).forEach( ( feld ) => {
+			const basis = this.basen.get( parseInt( feld.dataset.lw16BasisStatus, 10 ) );
+			const aus = basis && this.nichtLieferbar( basis );
+
+			feld.textContent = aus ? this.texte.nicht_lieferbar : '';
+			feld.closest( '.lw16-haken__option' ).classList.toggle( 'is-ausverkauft', !! aus );
+		} );
 	}
 
 	/**
@@ -765,22 +857,219 @@ class Ansicht {
 		this.gruppe = new THREE.Group();
 		this.szene.add( this.gruppe );
 
-		// Die Wand: Sie fängt den Schatten auf und gibt dem Teil einen Ort.
-		this.wand = new THREE.Mesh(
-			new THREE.PlaneGeometry( 6, 6 ),
-			new THREE.ShadowMaterial( { opacity: 0.16 } )
-		);
-		this.wand.receiveShadow = true;
-		this.szene.add( this.wand );
+		this.baueRaum();
 
 		const licht = new THREE.DirectionalLight( 0xffffff, 1.7 );
 		licht.position.set( -1.2, 2.2, 2.4 );
+		licht.target.position.set( 0, 0.2, 0 );
 		licht.castShadow = true;
-		licht.shadow.mapSize.set( 1024, 1024 );
+		licht.shadow.mapSize.set( 2048, 2048 );
+		licht.shadow.camera.left = -2.2;
+		licht.shadow.camera.right = 2.2;
+		licht.shadow.camera.top = 2.2;
+		licht.shadow.camera.bottom = -2.2;
+		licht.shadow.camera.near = 0.5;
+		licht.shadow.camera.far = 9;
 		licht.shadow.radius = 3;
 		licht.shadow.bias = -0.0008;
 		this.szene.add( licht );
+		this.szene.add( licht.target );
 		this.licht = licht;
+	}
+
+	/**
+	 * Eine Fläche aus gezeichneten Pixeln.
+	 *
+	 * Putz, Dielen und Bilder entstehen auf einer Zeichenfläche statt aus
+	 * Bilddateien: Es muss nichts nachgeladen werden, und die Farben sind
+	 * die des Shops.
+	 *
+	 * @param {number}   breite  Breite in Pixeln.
+	 * @param {number}   hoehe   Höhe in Pixeln.
+	 * @param {Function} zeichne Zeichnet auf den 2D-Kontext.
+	 * @returns {object} Textur.
+	 */
+	textur( breite, hoehe, zeichne ) {
+		const THREE = this.THREE;
+		const flaeche = document.createElement( 'canvas' );
+
+		flaeche.width = breite;
+		flaeche.height = hoehe;
+		zeichne( flaeche.getContext( '2d' ), breite, hoehe );
+
+		const textur = new THREE.CanvasTexture( flaeche );
+		textur.colorSpace = THREE.SRGBColorSpace;
+		textur.anisotropy = 4;
+
+		return textur;
+	}
+
+	/**
+	 * Der Raum um den Haken: eine Wand mit Sockel, Dielenboden, zwei Bildern
+	 * und einer Kommode darunter.
+	 *
+	 * Das Basismodul wird an eine Wand geschraubt und schwebt nicht im
+	 * Raum. Die Wand liegt deshalb bündig an der Rückseite der Montage-
+	 * platte (z = 0), die Schatten fallen auf sie. Bilder und Kommode
+	 * geben Maßstab: Man sieht, wie hoch der Haken im Flur hängt.
+	 *
+	 * Null liegt an der Unterkante des Basismoduls; der Boden liegt knapp
+	 * einen Meter darunter, die Kommode steht mit 18 cm Abstand unter dem
+	 * Haken.
+	 */
+	baueRaum() {
+		const THREE = this.THREE;
+		const boden = -0.96;
+		const raum = new THREE.Group();
+
+		const stoff = ( farbe, rauheit = 0.85, extra = {} ) => new THREE.MeshStandardMaterial( { color: farbe, roughness: rauheit, metalness: 0, ...extra } );
+		const kasten = ( b, h, t, material, x, y, z, schatten = true ) => {
+			const koerper = new THREE.Mesh( new THREE.BoxGeometry( b, h, t ), material );
+
+			koerper.position.set( x, y, z );
+			koerper.castShadow = schatten;
+			koerper.receiveShadow = true;
+			raum.add( koerper );
+
+			return koerper;
+		};
+
+		// Wand: gebrochenes Weiß mit feinem Putzkorn.
+		const putz = this.textur( 256, 256, ( c, b, h ) => {
+			c.fillStyle = '#ddd4c4';
+			c.fillRect( 0, 0, b, h );
+
+			for ( let i = 0; i < 7000; i++ ) {
+				c.fillStyle = Math.random() < 0.5 ? 'rgba(80,60,30,0.035)' : 'rgba(255,255,255,0.06)';
+				c.fillRect( Math.random() * b, Math.random() * h, 1.5, 1.5 );
+			}
+		} );
+		putz.wrapS = putz.wrapT = THREE.RepeatWrapping;
+		putz.repeat.set( 4, 2.5 );
+
+		const wand = new THREE.Mesh( new THREE.PlaneGeometry( 8, 5 ), stoff( 0xffffff, 0.95, { map: putz } ) );
+		wand.position.set( 0, boden + 2.5, -0.002 );
+		wand.receiveShadow = true;
+		raum.add( wand );
+
+		// Boden: Dielen mit leicht wechselndem Ton.
+		const dielen = this.textur( 512, 512, ( c, b, h ) => {
+			const breiteDiele = 64;
+
+			for ( let x = 0; x < b; x += breiteDiele ) {
+				const helligkeit = 168 + Math.floor( Math.random() * 22 );
+
+				c.fillStyle = 'rgb(' + helligkeit + ',' + ( helligkeit - 20 ) + ',' + ( helligkeit - 50 ) + ')';
+				c.fillRect( x, 0, breiteDiele, h );
+				c.fillStyle = 'rgba(60,40,20,0.35)';
+				c.fillRect( x, 0, 2, h );
+			}
+		} );
+		dielen.wrapS = dielen.wrapT = THREE.RepeatWrapping;
+		dielen.repeat.set( 3, 2 );
+
+		const bodenflaeche = new THREE.Mesh( new THREE.PlaneGeometry( 8, 4 ), stoff( 0xffffff, 0.7, { map: dielen } ) );
+		bodenflaeche.rotation.x = -Math.PI / 2;
+		bodenflaeche.position.set( 0, boden, 2 );
+		bodenflaeche.receiveShadow = true;
+		raum.add( bodenflaeche );
+
+		kasten( 8, 0.09, 0.02, stoff( 0xf7f5f0, 0.6 ), 0, boden + 0.045, 0.01 );
+
+		// Bilder: Rahmen, Passepartout, Motiv.
+		const bild = ( x, y, b, h, rahmenFarbe, motiv ) => {
+			const gruppe = new THREE.Group();
+			const rand = 0.025;
+			const rahmen = new THREE.Mesh( new THREE.BoxGeometry( b, h, 0.03 ), stoff( rahmenFarbe, 0.5 ) );
+			const passe = new THREE.Mesh( new THREE.PlaneGeometry( b - rand * 2, h - rand * 2 ), stoff( 0xfbf9f4, 0.9 ) );
+			const kunst = new THREE.Mesh(
+				new THREE.PlaneGeometry( ( b - rand * 2 ) * 0.72, ( h - rand * 2 ) * 0.72 ),
+				stoff( 0xffffff, 0.85, { map: this.textur( 256, Math.round( 256 * h / b ), motiv ) } )
+			);
+
+			rahmen.castShadow = true;
+			rahmen.receiveShadow = true;
+			passe.position.z = 0.0155;
+			kunst.position.z = 0.0165;
+			gruppe.add( rahmen, passe, kunst );
+			gruppe.position.set( x, y, 0.015 );
+			raum.add( gruppe );
+		};
+
+		bild( -0.5, 0.5, 0.36, 0.5, 0x2b323a, ( c, b, h ) => {
+			c.fillStyle = '#f3ede2';
+			c.fillRect( 0, 0, b, h );
+			c.fillStyle = '#a86f38';
+			c.beginPath();
+			c.arc( b * 0.5, h * 0.36, b * 0.2, 0, Math.PI * 2 );
+			c.fill();
+			[ [ '#e7c78f', 0.62 ], [ '#c8d2d7', 0.74 ], [ '#e8b9a1', 0.86 ] ].forEach( ( [ farbe, hoehe ] ) => {
+				c.fillStyle = farbe;
+				c.beginPath();
+				c.moveTo( 0, h );
+				c.lineTo( 0, h * hoehe );
+				c.quadraticCurveTo( b * 0.5, h * ( hoehe - 0.2 ), b, h * hoehe );
+				c.lineTo( b, h );
+				c.fill();
+			} );
+		} );
+
+		bild( 0.5, 0.72, 0.3, 0.3, 0xc4a37a, ( c, b, h ) => {
+			c.fillStyle = '#f3ede2';
+			c.fillRect( 0, 0, b, h );
+			[ [ '#e8b9a1', 0, 0 ], [ '#c8d2d7', 1, 0 ], [ '#e7c78f', 0, 1 ], [ '#3a424c', 1, 1 ] ].forEach( ( [ farbe, spalte, zeile ] ) => {
+				c.fillStyle = farbe;
+				c.beginPath();
+				c.arc( spalte * b * 0.5 + b * 0.25, zeile * h * 0.5 + h * 0.25, b * 0.2, 0, Math.PI * 2 );
+				c.fill();
+			} );
+		} );
+
+		// Kommode: Eiche, drei Schübe, Beine.
+		const eiche = stoff( 0xc9a57a, 0.65 );
+		const eicheDunkel = stoff( 0xb48a5d, 0.65 );
+		const breite = 1.3;
+		const tiefe = 0.42;
+		const beinHoehe = 0.12;
+		const korpus = 0.66;
+		const oben = boden + beinHoehe + korpus;
+
+		kasten( breite, korpus, tiefe, eiche, 0, boden + beinHoehe + korpus / 2, tiefe / 2 );
+		kasten( breite + 0.04, 0.025, tiefe + 0.02, eicheDunkel, 0, oben + 0.0125, tiefe / 2 + 0.01 );
+
+		[ -1, 1 ].forEach( ( sx ) => {
+			[ 0.07, tiefe - 0.07 ].forEach( ( z ) => {
+				const bein = new THREE.Mesh( new THREE.CylinderGeometry( 0.02, 0.014, beinHoehe, 12 ), eicheDunkel );
+
+				bein.position.set( sx * ( breite / 2 - 0.07 ), boden + beinHoehe / 2, z );
+				bein.castShadow = true;
+				raum.add( bein );
+			} );
+		} );
+
+		const griff = stoff( 0x3a424c, 0.4, { metalness: 0.4 } );
+
+		[ 0.11, 0.33, 0.55 ].forEach( ( y ) => {
+			kasten( breite - 0.05, 0.19, 0.012, eicheDunkel, 0, boden + beinHoehe + y, tiefe + 0.006, false );
+			kasten( 0.16, 0.012, 0.018, griff, 0, boden + beinHoehe + y + 0.03, tiefe + 0.02, false );
+		} );
+
+		// Etwas darauf: eine Vase und eine Schale.
+		const vase = new THREE.Mesh( new THREE.CylinderGeometry( 0.045, 0.06, 0.24, 24 ), stoff( 0xf2efe9, 0.35 ) );
+
+		vase.position.set( -0.4, oben + 0.025 + 0.12, 0.2 );
+		vase.castShadow = true;
+		raum.add( vase );
+
+		const schale = new THREE.Mesh( new THREE.SphereGeometry( 0.07, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2 ), stoff( 0xa86f38, 0.5 ) );
+
+		schale.position.set( 0.38, oben + 0.025 + 0.07, 0.22 );
+		schale.castShadow = true;
+		raum.add( schale );
+
+		this.szene.add( raum );
+		this.raum = raum;
+		this.bodenHoehe = boden;
 	}
 
 	/**
@@ -864,23 +1153,32 @@ class Ansicht {
 
 		const umriss = new THREE.Box3().setFromObject( this.gruppe );
 
-		if ( ! umriss.isEmpty() ) {
-			hoehe = umriss.max.y - umriss.min.y;
-			breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
-			this.mitte = ( umriss.min.y + umriss.max.y ) / 2;
-
-			// Gedreht wird um die Mitte des Umrisses, nicht um die Achse
-			// des Basismoduls: Module bauen nach vorn, und wer um die
-			// Achse dreht, schiebt den Haken aus dem Bild.
-			umriss.getCenter( this.ziel );
+		// Solange noch nichts geladen ist, gilt der Umriss des Basismoduls.
+		if ( umriss.isEmpty() ) {
+			umriss.set( new THREE.Vector3( -breite / 2, 0, 0 ), new THREE.Vector3( breite / 2, hoehe, 0.06 ) );
 		}
 
-		const luft = 1.2;
+		// Nach unten reicht der Ausschnitt bis zur Kommode und seitlich bis
+		// zu den Bildern: Der Haken soll im Raum hängen, nicht allein im
+		// Bild stehen.
+		umriss.min.y = Math.min( umriss.min.y, -0.4 );
+		umriss.min.x = Math.min( umriss.min.x, -0.7 );
+		umriss.max.x = Math.max( umriss.max.x, 0.7 );
+
+		hoehe = umriss.max.y - umriss.min.y;
+		breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
+		this.mitte = ( umriss.min.y + umriss.max.y ) / 2;
+
+		// Gedreht wird um die Mitte des Umrisses, nicht um die Achse des
+		// Basismoduls: Module bauen nach vorn, und wer um die Achse dreht,
+		// schiebt den Haken aus dem Bild.
+		umriss.getCenter( this.ziel );
+
+		const luft = 1.04;
 		const senkrecht = ( hoehe * luft / 2 ) / Math.tan( winkel / 2 );
 		const waagerecht = ( breite * luft / 2 ) / ( Math.tan( winkel / 2 ) * this.kamera.aspect );
 
 		this.abstand = Math.max( senkrecht, waagerecht );
-		this.wand.position.set( 0, this.mitte, -0.06 );
 	}
 
 	/**
@@ -900,6 +1198,11 @@ class Ansicht {
 			if ( teil.model ) {
 				try {
 					const geladen = await this.lader.loadAsync( teil.model );
+
+					if ( 'holzstange' === teil.construction ) {
+						return this.holzstange( geladen.scene, teil );
+					}
+
 					return this.richteAus( geladen.scene, teil );
 				} catch ( fehler ) {
 					// Ein fehlendes Modell darf die Bestellung nicht aufhalten.
@@ -957,6 +1260,79 @@ class Ansicht {
 
 		const huelle = new THREE.Group();
 		huelle.add( objekt );
+
+		return huelle;
+	}
+
+	/**
+	 * Die Holzstange mit ihren zwei Haltern.
+	 *
+	 * Das Modell ist ein einzelner Halter (zwanzig Millimeter breit, fünfzig
+	 * hoch, fünfundvierzig tief, Rückseite an der Wand). Die Stange – ein
+	 * Rundholz von zwanzig Millimetern – liegt in der Rille an seiner
+	 * Vorderseite, ihre Achse also fünfundvierzig Millimeter von der Wand.
+	 * Die beiden Halter sitzen im Abstand von neunhundert Millimetern
+	 * mittig auf der Stange; ist die Stange kürzer als tausend Millimeter,
+	 * rücken sie zusammen. Dieselben Zahlen rechnet PHP für die
+	 * Sperrbereiche (Layout::holder_zones).
+	 *
+	 * @param {object} objekt Szene mit einem Halter.
+	 * @param {object} teil   Katalogeintrag mit der Länge der Stange.
+	 * @returns {object}
+	 */
+	holzstange( objekt, teil ) {
+		const THREE = this.THREE;
+		const laenge = teil.height / MM;
+		const halterHoehe = 0.05;
+		const abstand = Math.min( 0.9, laenge - 2 * halterHoehe );
+		const erster = ( laenge - abstand ) / 2;
+
+		objekt.updateMatrixWorld( true );
+
+		// Das Modell kann in Millimetern oder in Metern vorliegen: Alles,
+		// was größer als zwanzig Einheiten ist, sind Millimeter.
+		const roh = new THREE.Box3().setFromObject( objekt );
+		const faktor = Math.max( roh.max.x - roh.min.x, roh.max.y - roh.min.y, roh.max.z - roh.min.z ) > 20 ? 0.001 : 1;
+
+		objekt.scale.setScalar( faktor );
+		objekt.updateMatrixWorld( true );
+
+		const kasten = new THREE.Box3().setFromObject( objekt );
+		const mitte = kasten.getCenter( new THREE.Vector3() );
+
+		// Mitte der Breite auf die Stange, Rückseite an die Wand, Mitte der
+		// Höhe auf null – das Setzen auf die Stelle folgt unten.
+		objekt.position.x -= mitte.x;
+		objekt.position.y -= mitte.y;
+		objekt.position.z -= kasten.min.z;
+		objekt.traverse( ( knoten ) => {
+			if ( knoten.isMesh ) {
+				knoten.castShadow = true;
+				knoten.receiveShadow = true;
+			}
+		} );
+
+		const tiefe = kasten.max.z - kasten.min.z;
+		const huelle = new THREE.Group();
+
+		[ erster, erster + abstand ].forEach( ( stelle ) => {
+			const halter = new THREE.Group();
+
+			halter.add( objekt.clone( true ) );
+			halter.position.y = stelle;
+			huelle.add( halter );
+		} );
+
+		const stange = new THREE.Mesh(
+			new THREE.CylinderGeometry( 0.01, 0.01, laenge, 32 ),
+			new THREE.MeshStandardMaterial( { color: 0xc9a57a, roughness: 0.7, metalness: 0 } )
+		);
+
+		stange.position.set( 0, laenge / 2, tiefe );
+		stange.castShadow = true;
+		stange.receiveShadow = true;
+		stange.userData.festeFarbe = true;
+		huelle.add( stange );
 
 		return huelle;
 	}
@@ -1044,6 +1420,7 @@ class Ansicht {
 		this.setzePositionen();
 		this.faerbe();
 		this.hebeHervor( this.k.ausgewaehlt );
+		this.richteKameraAus();
 	}
 
 	/**
@@ -1077,6 +1454,17 @@ class Ansicht {
 		basis.blocks.forEach( ( block ) => {
 			const hoehe = ( block.to - block.from ) / MM;
 			const mitte = ( block.from / MM ) + hoehe / 2;
+
+			// An der Holzstange liegt die Sperre als roter Schleier um den
+			// Halter selbst – dort wird verschraubt, dort sitzt nichts.
+			if ( 'holzstange' === basis.construction ) {
+				const schleier = new THREE.Mesh( new THREE.BoxGeometry( 0.034, hoehe, 0.056 ), stoff );
+
+				schleier.position.set( 0, mitte, 0.0225 );
+				schleier.userData.istSperre = true;
+				this.sperren.add( schleier );
+				return;
+			}
 
 			[ -1, 1 ].forEach( ( seite ) => {
 				const marke = new THREE.Mesh(
@@ -1115,7 +1503,7 @@ class Ansicht {
 		const wert = new THREE.Color( farbe );
 
 		this.gruppe.traverse( ( knoten ) => {
-			if ( ! knoten.isMesh || knoten.userData.istSperre ) {
+			if ( ! knoten.isMesh || knoten.userData.istSperre || knoten.userData.festeFarbe ) {
 				return;
 			}
 

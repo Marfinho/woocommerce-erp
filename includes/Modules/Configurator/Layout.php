@@ -327,6 +327,49 @@ class Layout {
 	}
 
 	/**
+	 * Abstand der beiden Halter an der Holzstange.
+	 */
+	const HOLDER_SPACING = 900;
+
+	/**
+	 * Höhe eines Halters (entlang der Stange).
+	 */
+	const HOLDER_HEIGHT = 50;
+
+	/**
+	 * Wo die beiden Halter der Holzstange sitzen.
+	 *
+	 * Zwei Halter im Abstand von 900 mm, mittig auf der Stange. Ist die
+	 * Stange kürzer als 1000 mm, rücken sie zusammen (100 mm Rand
+	 * insgesamt), damit sie nie über das Ende hinausragen. An den Haltern
+	 * kann kein Modul sitzen – das sind die Sperrbereiche.
+	 *
+	 * @param float $length Länge der Stange in Millimetern.
+	 * @return array Liste aus {from, to} je Halter, von unten nach oben.
+	 */
+	public static function holder_zones( $length ) {
+		$length = (float) $length;
+
+		if ( $length < self::HOLDER_HEIGHT * 3 ) {
+			return array();
+		}
+
+		$spacing = min( (float) self::HOLDER_SPACING, $length - 2 * self::HOLDER_HEIGHT );
+		$first   = ( $length - $spacing ) / 2;
+		$half    = self::HOLDER_HEIGHT / 2;
+		$zones   = array();
+
+		foreach ( array( $first, $first + $spacing ) as $center ) {
+			$zones[] = array(
+				'from' => round( max( 0.0, $center - $half ), 2 ),
+				'to'   => round( min( $length, $center + $half ), 2 ),
+			);
+		}
+
+		return $zones;
+	}
+
+	/**
 	 * Millimeterangabe ohne überflüssige Nullen.
 	 *
 	 * @param float $value Wert.

@@ -23,9 +23,11 @@ use Lindenweg16\Erp\ProductFile;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Configurator\BlockRepository;
+use Lindenweg16\Modules\Configurator\Catalog;
 use Lindenweg16\Modules\Configurator\Frontend;
 use Lindenweg16\Modules\Configurator\Layout;
 use Lindenweg16\Modules\Configurator\PartRepository;
+use Lindenweg16\Modules\Configurator\GlbMeasure;
 use Lindenweg16\Modules\Configurator\WebModel;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -269,6 +271,8 @@ class Konfigurator {
 		$demos   = WebModel::demo_models();
 		$zones   = isset( $blocks[ (int) $row['id'] ] ) ? $blocks[ (int) $row['id'] ] : array();
 		$url     = 'none' === $kind ? '' : WebModel::url( $file );
+		$shop    = Catalog::shop_facts( $article ? (int) $article['wc_product_id'] : 0 );
+		$size    = 'none' === $kind ? null : WebModel::measure( $file );
 
 		return array(
 			'id'             => (int) $row['id'],
@@ -285,6 +289,11 @@ class Konfigurator {
 			'sort_order'     => (int) $row['sort_order'],
 			'is_active'      => (int) $row['is_active'],
 			'teaser'         => (string) $row['teaser'],
+			'teaser_shop'    => $shop['short'],
+			'shop_found'     => $shop['found'],
+			'shop_price'     => $shop['price'],
+			'shop_in_stock'  => $shop['in_stock'],
+			'model_measure'  => $size,
 			'model_kind'     => $kind,
 			'model_file'     => $file,
 			'model_demo'     => 'demo' === $kind && isset( $demos[ WebModel::demo_key( $file ) ] ) ? $demos[ WebModel::demo_key( $file ) ] : '',
@@ -406,12 +415,6 @@ class Konfigurator {
 
 		$input = self::params( $request );
 
-		$result = PartRepository::validate( $input, $id ? $id : null );
-
-		if ( $result['errors'] ) {
-			return self::fail( implode( ' ', $result['errors'] ) );
-		}
-
 		$file = null;
 		$all  = $request->get_file_params();
 
@@ -430,6 +433,27 @@ class Konfigurator {
 			}
 		}
 
+		$choice   = isset( $input['model_choice'] ) ? sanitize_text_field( (string) $input['model_choice'] ) : '';
+		$plan     = self::model_plan( $choice, (bool) $file );
+		$existing = $id ? PartRepository::find( $id ) : null;
+
+		// Das Modell, das nach dem Speichern gilt, kennt die Maße.
+		$measured = null;
+
+		if ( 'upload' === $plan['action'] ) {
+			$measured = GlbMeasure::measure_file( (string) $file['tmp_name'] );
+		} elseif ( 'demo' === $plan['action'] ) {
+			$measured = WebModel::measure( $plan['value'] );
+		} elseif ( 'keep' === $plan['action'] && $existing ) {
+			$measured = WebModel::measure( (string) $existing['model_file'] );
+		}
+
+		$result = PartRepository::validate( $input, $id ? $id : null, $measured );
+
+		if ( $result['errors'] ) {
+			return self::fail( implode( ' ', $result['errors'] ) );
+		}
+
 		if ( $id ) {
 			PartRepository::update( $id, $result['data'] );
 		} else {
@@ -440,10 +464,7 @@ class Konfigurator {
 			}
 		}
 
-		$choice = isset( $input['model_choice'] ) ? sanitize_text_field( (string) $input['model_choice'] ) : '';
-		$plan   = self::model_plan( $choice, (bool) $file );
-		$before = PartRepository::find( $id );
-		$old    = $before ? (string) $before['model_file'] : '';
+		$old = $existing ? (string) $existing['model_file'] : '';
 
 		if ( 'upload' === $plan['action'] ) {
 			$article = ArticleRepository::find( (int) $result['data']['article_id'] );
@@ -472,7 +493,53 @@ class Konfigurator {
 			$message = __( 'Teil gespeichert.', 'lindenweg16' );
 		}
 
+		$message .= self::default_zones( $id );
+
 		return self::done( $message, array( 'id' => $id, 'part' => self::row_of( $id ) ) );
+	}
+
+	/**
+	 * Sperrbereiche für die Halter der Holzstange anlegen.
+	 *
+	 * Ein Basismodul mit dem Standardmodell hat zwei Halter, an denen kein
+	 * Modul sitzen kann. Gibt es noch keinen Sperrbereich, entstehen sie
+	 * hier aus der Länge. Vorhandene bleiben unangetastet.
+	 *
+	 * @param int $id Teil.
+	 * @return string Anhang für die Rückmeldung, leer wenn nichts geschah.
+	 */
+	protected static function default_zones( $id ) {
+		$part = PartRepository::find( $id );
+
+		if ( ! $part || 'basis' !== $part['role'] || BlockRepository::for_part( $id ) ) {
+			return '';
+		}
+
+		$file = (string) $part['model_file'];
+
+		if ( '' !== $file && WebModel::demo_key( $file ) !== WebModel::STANDARD_KEY ) {
+			return '';
+		}
+
+		$made = 0;
+
+		foreach ( Layout::holder_zones( (float) $part['height_mm'] ) as $zone ) {
+			$result = BlockRepository::create(
+				$id,
+				array(
+					'from_mm' => $zone['from'],
+					'to_mm'   => $zone['to'],
+					'label'   => __( 'Halter', 'lindenweg16' ),
+				),
+				(float) $part['height_mm']
+			);
+
+			if ( $result['id'] ) {
+				++$made;
+			}
+		}
+
+		return $made ? ' ' . __( 'Die Sperrbereiche für die beiden Halter sind angelegt.', 'lindenweg16' ) : '';
 	}
 
 	/**
