@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
 use Lindenweg16\Core\Log;
 
 /**
@@ -26,6 +27,21 @@ class StockRepository {
 	public static function table() {
 		global $wpdb;
 		return $wpdb->prefix . 'lw16_stock_movements';
+	}
+
+	/**
+	 * Option: Die mitlaufende Summe ist aufgebaut und wird fortgeschrieben.
+	 */
+	const BALANCE_READY = 'lw16_stock_balance_ready';
+
+	/**
+	 * Tabellenname der mitlaufenden Summe.
+	 *
+	 * @return string
+	 */
+	public static function balance_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'lw16_stock_balance';
 	}
 
 	/**
@@ -73,13 +89,26 @@ class StockRepository {
 			$row['color'] = ColorRegistry::default_color();
 		}
 
-		if ( false === $wpdb->insert( self::table(), $row ) ) {
-			Log::error( 'lager', 'Bewegung konnte nicht geschrieben werden: ' . $wpdb->last_error, array( 'article_id' => $row['article_id'], 'qty' => $row['qty'] ) );
+		// Bewegung und Summe gehören zusammen: Fällt eines aus, gilt keins.
+		$id = (int) Db::transaction(
+			function () use ( $wpdb, $row ) {
+				if ( false === $wpdb->insert( self::table(), $row ) ) {
+					Log::error( 'lager', 'Bewegung konnte nicht geschrieben werden: ' . $wpdb->last_error, array( 'article_id' => $row['article_id'], 'qty' => $row['qty'] ) );
 
+					return 0;
+				}
+
+				$new_id = (int) $wpdb->insert_id;
+				self::add_to_balance( $row );
+
+				return $new_id;
+			}
+		);
+
+		if ( ! $id ) {
 			return 0;
 		}
 
-		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'stock_movements', $id, null, $row, isset( $data['void_reason'] ) ? $data['void_reason'] : '' );
 
 		// Der Shop zieht nach (siehe WooStockSync).
@@ -88,6 +117,82 @@ class StockRepository {
 		self::maybe_announce_replenished( (int) $row['article_id'], (float) $row['qty'] );
 
 		return $id;
+	}
+
+	/**
+	 * Eine Bewegung in die mitlaufende Summe einrechnen.
+	 *
+	 * Ist die Summe noch nicht aufgebaut (erster Aufruf nach dem Update),
+	 * wird sie jetzt aus allen Bewegungen gebaut - die neue steht bereits drin.
+	 *
+	 * @param array $row Bewegung (article_id, color, location, qty).
+	 */
+	protected static function add_to_balance( array $row ) {
+		global $wpdb;
+
+		if ( ! get_option( self::BALANCE_READY ) ) {
+			self::rebuild_balances();
+
+			return;
+		}
+
+		$table = self::balance_table();
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$table} (article_id, color, location, qty) VALUES (%d, %s, %s, %f) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $row['article_id'],
+				(string) $row['color'],
+				(string) $row['location'],
+				(float) $row['qty']
+			)
+		);
+	}
+
+	/**
+	 * Die mitlaufende Summe aus den Bewegungen neu aufbauen.
+	 *
+	 * Auch das Mittel, wenn die Systemprüfung eine Abweichung meldet.
+	 *
+	 * @return int Anzahl Zeilen.
+	 */
+	public static function rebuild_balances() {
+		global $wpdb;
+
+		$balance = self::balance_table();
+		$moves   = self::table();
+
+		$wpdb->query( "DELETE FROM {$balance}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( "INSERT INTO {$balance} (article_id, color, location, qty) SELECT article_id, COALESCE(color, ''), location, SUM(qty) FROM {$moves} GROUP BY article_id, COALESCE(color, ''), location" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		update_option( self::BALANCE_READY, 1, false );
+
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$balance}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * Bestände als Verschachtelung: Artikel, Farbe, Lagerort.
+	 *
+	 * Dasselbe wie StockLedger::balances() über alle Bewegungen, nur aus der
+	 * mitlaufenden Summe gelesen statt aus dem ganzen Konto errechnet.
+	 *
+	 * @param int $article_id Optional auf einen Artikel begrenzen.
+	 * @return array article_id => color => location => Menge.
+	 */
+	public static function balances( $article_id = 0 ) {
+		global $wpdb;
+
+		if ( ! get_option( self::BALANCE_READY ) ) {
+			self::rebuild_balances();
+		}
+
+		$table = self::balance_table();
+
+		$rows = $article_id
+			? $wpdb->get_results( $wpdb->prepare( "SELECT article_id, color, location, qty FROM {$table} WHERE article_id = %d", (int) $article_id ), ARRAY_A ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			: $wpdb->get_results( "SELECT article_id, color, location, qty FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return StockLedger::from_rows( (array) $rows );
 	}
 
 	/**
@@ -108,9 +213,8 @@ class StockRepository {
 			return;
 		}
 
-		$movements = self::all( $article_id );
-		$balances  = StockLedger::balances( $movements );
-		$after     = 0.0;
+		$balances = self::balances( $article_id );
+		$after    = 0.0;
 
 		foreach ( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() as $locations ) {
 			$after += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;

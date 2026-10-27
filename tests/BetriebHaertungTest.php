@@ -149,4 +149,43 @@ class BetriebHaertungTest extends TestCase {
 		$this->assertCount( 1, Consistency::check_shop_stock_job( $jetzt - 4 * 3600, $jetzt, true ) );
 		$this->assertStringContainsString( 'noch nie', Consistency::check_shop_stock_job( 0, $jetzt, true )[0]['text'] );
 	}
+
+	/**
+	 * Summen aus der Tabelle haben dieselbe Form wie die aus den Bewegungen.
+	 */
+	public function test_summen_aus_zeilen_wie_aus_bewegungen() {
+		$aus_bewegungen = StockLedger::balances(
+			array(
+				array( 'article_id' => 1, 'color' => 'anthrazit', 'location' => 'lager', 'qty' => 10 ),
+				array( 'article_id' => 1, 'color' => 'anthrazit', 'location' => 'lager', 'qty' => -3 ),
+				array( 'article_id' => 1, 'color' => 'anthrazit', 'location' => 'kommission', 'qty' => 2 ),
+				array( 'article_id' => 2, 'color' => '', 'location' => 'lager', 'qty' => 4 ),
+			)
+		);
+
+		$aus_zeilen = StockLedger::from_rows(
+			array(
+				array( 'article_id' => 1, 'color' => 'anthrazit', 'location' => 'lager', 'qty' => '7.000' ),
+				array( 'article_id' => 1, 'color' => 'anthrazit', 'location' => 'kommission', 'qty' => '2.000' ),
+				array( 'article_id' => 2, 'color' => '', 'location' => 'lager', 'qty' => '4.000' ),
+			)
+		);
+
+		$this->assertEquals( $aus_bewegungen, $aus_zeilen );
+		$this->assertSame( array(), Consistency::check_balance_drift( $aus_bewegungen, $aus_zeilen ) );
+	}
+
+	/**
+	 * Eine abweichende Summe ist ein Fehler, der auf das Bewegungskonto verweist.
+	 */
+	public function test_abweichende_summe_wird_gemeldet() {
+		$erwartet = array( 1 => array( 'anthrazit' => array( 'lager' => 7.0 ) ) );
+		$ist      = array( 1 => array( 'anthrazit' => array( 'lager' => 9.0 ) ), 2 => array( 'kupfer' => array( 'lager' => 1.0 ) ) );
+
+		$befunde = Consistency::check_balance_drift( $erwartet, $ist );
+
+		$this->assertCount( 1, $befunde );
+		$this->assertSame( 'fehler', $befunde[0]['level'] );
+		$this->assertStringContainsString( '2 Bestandszeilen', $befunde[0]['text'] );
+	}
 }

@@ -81,6 +81,7 @@ class ResetTool {
 					'print_jobs',
 					'batches',
 					'stock_movements',
+					'stock_balance',
 					'work_orders',
 					'picklists',
 					'picklist_items',

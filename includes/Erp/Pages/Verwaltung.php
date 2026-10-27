@@ -399,6 +399,7 @@ class Verwaltung {
 			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'meldungen' ), 'permission_callback' => $einstellungen ),
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'meldungen_leeren' ), 'permission_callback' => $einstellungen ),
 		) );
+		register_rest_route( $ns, '/erp/einstellungen/lager/saldo-neu', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'saldo_neu' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/protokoll', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'protokoll' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/systempruefung', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'systempruefung' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/plugin', array(
@@ -1428,6 +1429,17 @@ class Verwaltung {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Mitlaufende Bestandssummen aus dem Bewegungskonto neu aufbauen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function saldo_neu() {
+		$n = \Lindenweg16\Modules\Betrieb\StockRepository::rebuild_balances();
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => sprintf( /* translators: %d: Zeilen. */ __( 'Bestandssummen neu berechnet (%d Zeilen).', 'lindenweg16' ), $n ) ) );
 	}
 
 	/**

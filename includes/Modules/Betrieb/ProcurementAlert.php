@@ -84,7 +84,7 @@ class ProcurementAlert {
 		$sourcing = SourcingRepository::all_valid_at();
 		// Einmal summieren statt je Artikel erneut: Die Bewegungstabelle ist
 		// die größte des Moduls.
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 
 		foreach ( ArticleRepository::selectable() as $article ) {
 			// Gedruckte Rohlinge und montierte Halbzeuge werden gefertigt,

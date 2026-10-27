@@ -92,7 +92,7 @@ class Consistency {
 		// Minus dort wäre also echt und würde in einer Gesamtsumme
 		// verschwinden.
 		$stock    = array();
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 
 		foreach ( $balances as $article_id => $colors ) {
 			$summe = 0.0;
@@ -155,6 +155,8 @@ class Consistency {
 		return array(
 			'articles'    => $articles,
 			'legacy_products' => $legacy,
+			'balance_expected' => StockLedger::balances( StockRepository::all() ),
+			'balance_actual'   => $balances,
 			'shop_stock'  => WooStockSync::is_active() ? WooStockSync::deviations() : array(),
 			'shop_stock_last' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
 			'shop_stock_active' => WooStockSync::is_active(),
@@ -229,6 +231,7 @@ class Consistency {
 			self::check_bins( $articles, isset( $ctx['bins'] ) ? (array) $ctx['bins'] : array() ),
 			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() ),
 			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() ),
+			self::check_balance_drift( isset( $ctx['balance_expected'] ) ? (array) $ctx['balance_expected'] : array(), isset( $ctx['balance_actual'] ) ? (array) $ctx['balance_actual'] : array() ),
 			self::check_shop_stock( isset( $ctx['shop_stock'] ) ? (array) $ctx['shop_stock'] : array() ),
 			self::check_shop_stock_job( isset( $ctx['shop_stock_last'] ) ? (int) $ctx['shop_stock_last'] : null, time(), ! empty( $ctx['shop_stock_active'] ) ),
 			self::check_orphan_orders( isset( $ctx['orphan_orders'] ) ? (array) $ctx['orphan_orders'] : array() )
@@ -613,6 +616,58 @@ class Consistency {
 					? __( 'Der stündliche Bestandsabgleich in den Shop lief seit über drei Stunden nicht.', 'lindenweg16' )
 					: __( 'Der stündliche Bestandsabgleich in den Shop ist noch nie gelaufen.', 'lindenweg16' ),
 				__( 'Läuft der WordPress-Cron (Action Scheduler) nicht? Unter WooCommerce → Status → Geplante Aktionen nachsehen. Bis dahin hilft „Bestand jetzt in den Shop übertragen".', 'lindenweg16' )
+			),
+		);
+	}
+
+	/**
+	 * Stimmt die mitlaufende Summe mit dem Bewegungskonto überein?
+	 *
+	 * @param array $expected Aus den Bewegungen errechnet (StockLedger::balances()).
+	 * @param array $actual   Aus der mitlaufenden Summe gelesen (StockRepository::balances()).
+	 * @return array
+	 */
+	public static function check_balance_drift( array $expected, array $actual ) {
+		$flat = static function ( array $balances ) {
+			$out = array();
+			foreach ( $balances as $article => $colors ) {
+				foreach ( $colors as $color => $locations ) {
+					foreach ( $locations as $location => $qty ) {
+						$out[ $article . '|' . $color . '|' . $location ] = (float) $qty;
+					}
+				}
+			}
+
+			return $out;
+		};
+
+		$a    = $flat( $expected );
+		$b    = $flat( $actual );
+		$diff = 0;
+
+		foreach ( array_unique( array_merge( array_keys( $a ), array_keys( $b ) ) ) as $key ) {
+			$x = isset( $a[ $key ] ) ? $a[ $key ] : 0.0;
+			$y = isset( $b[ $key ] ) ? $b[ $key ] : 0.0;
+
+			if ( abs( $x - $y ) > 0.0005 ) {
+				$diff++;
+			}
+		}
+
+		if ( ! $diff ) {
+			return array();
+		}
+
+		return array(
+			self::finding(
+				'fehler',
+				__( 'Lager', 'lindenweg16' ),
+				sprintf(
+					/* translators: %d: Anzahl. */
+					_n( 'Bei %d Bestandszeile weicht die mitlaufende Summe vom Bewegungskonto ab.', 'Bei %d Bestandszeilen weicht die mitlaufende Summe vom Bewegungskonto ab.', $diff, 'lindenweg16' ),
+					$diff
+				),
+				__( 'Die Bewegungen sind maßgeblich. Unter Verwaltung → Einstellungen → Farben & Lager „Bestandssummen neu berechnen" drücken.', 'lindenweg16' )
 			),
 		);
 	}

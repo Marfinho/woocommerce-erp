@@ -351,6 +351,18 @@ class Schema {
 			KEY moved_at (moved_at)
 		) {$charset_collate};";
 
+		// Mitlaufende Summe des Bewegungskontos. Es bleibt dabei: Die Wahrheit
+		// sind die Bewegungen. Diese Tabelle ist nur ihr Zwischenstand, damit
+		// nicht jede Seite das ganze Konto durchrechnen muss - und lässt sich
+		// jederzeit aus den Bewegungen neu aufbauen.
+		$t[] = "CREATE TABLE {$p}stock_balance (
+			article_id BIGINT UNSIGNED NOT NULL,
+			color VARCHAR(50) NOT NULL DEFAULT '',
+			location VARCHAR(20) NOT NULL DEFAULT 'lager',
+			qty DECIMAL(14,3) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (article_id, color, location)
+		) {$charset_collate};";
+
 		$t[] = "CREATE TABLE {$p}picklists (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			code VARCHAR(32) NOT NULL,

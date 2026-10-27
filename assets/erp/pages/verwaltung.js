@@ -631,6 +631,14 @@
 				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Bestand im Shop'),
 					h('p', { class: 'muted' }, 'Der Bestand wird nach jeder Buchung und jedem Statuswechsel einer Bestellung übertragen, zusätzlich stündlich. Dieser Knopf gleicht alle Artikel sofort ab – etwa nach der Umstellung.'),
 					sync));
+
+				var saldo = h('button', { class: 'btn', type: 'button' }, 'Bestandssummen neu berechnen');
+				saldo.addEventListener('click', function () {
+					run(saldo, function () { return post('einstellungen/lager/saldo-neu', {}); }, function (r) { ui.toast(r.message); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Bestandssummen'),
+					h('p', { class: 'muted' }, 'Die Bestände werden bei jeder Buchung mitgerechnet, damit die Seiten schnell bleiben. Maßgeblich bleiben die Bewegungen. Meldet die Systemprüfung eine Abweichung, baut dieser Knopf die Summen aus den Bewegungen neu auf.'),
+					saldo));
 			}).catch(fail);
 		}
 

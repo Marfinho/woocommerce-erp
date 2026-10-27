@@ -247,8 +247,7 @@ class WooStockSync {
 		self::$running = true;
 
 		try {
-			$movements = count( $article_ids ) === 1 ? StockRepository::all( (int) reset( $article_ids ) ) : StockRepository::all();
-			$balances  = StockLedger::balances( $movements );
+			$balances  = count( $article_ids ) === 1 ? StockRepository::balances( (int) reset( $article_ids ) ) : StockRepository::balances();
 			$lines     = WooIntegration::open_order_lines();
 			$articles  = ArticleRepository::all_by_id();
 
@@ -285,7 +284,7 @@ class WooStockSync {
 	 * @return int
 	 */
 	public static function available_for_article( $article_id ) {
-		$balances = StockLedger::balances( StockRepository::all( (int) $article_id ) );
+		$balances = StockRepository::balances( (int) $article_id );
 		$stock    = ShopStock::stock_by_color( isset( $balances[ (int) $article_id ] ) ? $balances[ (int) $article_id ] : array() );
 		$reserved = ShopStock::reserved_by_color( WooIntegration::open_order_lines(), (int) $article_id );
 
@@ -382,7 +381,7 @@ class WooStockSync {
 			return $rows;
 		}
 
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 		$lines    = WooIntegration::open_order_lines();
 
 		foreach ( ArticleRepository::all_by_id() as $article_id => $article ) {

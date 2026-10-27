@@ -114,6 +114,24 @@ class StockLedger {
 	}
 
 	/**
+	 * Aus fertigen Summen (Artikel, Farbe, Ort, Menge) dieselbe Verschachtelung bauen wie balances().
+	 *
+	 * @param array $rows Zeilen mit article_id, color, location, qty.
+	 * @return array article_id => color => location => Menge.
+	 */
+	public static function from_rows( array $rows ) {
+		$balances = array();
+
+		foreach ( $rows as $row ) {
+			$article = (int) $row['article_id'];
+			$color   = isset( $row['color'] ) && '' !== $row['color'] ? (string) $row['color'] : ColorRegistry::UNRESOLVED;
+			$balances[ $article ][ $color ][ (string) $row['location'] ] = (float) $row['qty'];
+		}
+
+		return $balances;
+	}
+
+	/**
 	 * Bestand eines Artikels in einer Farbe.
 	 *
 	 * @param array  $movements Bewegungen.

@@ -83,8 +83,11 @@ class Installer {
 	 *
 	 * DB_VERSION 41: Tabelle kurzlinks_stats (anonyme Tageszähler der Kurzlinks) und
 	 * die drei Startlinks montage, bewerten, freunde, siehe Modules\Kurzlinks.
+	 *
+	 * DB_VERSION 43: Tabelle stock_balance - mitlaufende Summe des Bewegungskontos,
+	 * siehe Modules\Betrieb\StockRepository::balances().
 	 */
-	const DB_VERSION = '42';
+	const DB_VERSION = '43';
 
 	/**
 	 * Aktivierungsroutine.
