@@ -536,7 +536,7 @@ class Konfigurator {
 
 		$file = (string) $part['model_file'];
 
-		if ( '' !== $file && WebModel::demo_key( $file ) !== WebModel::STANDARD_KEY ) {
+		if ( ! WebModel::base_uses_standard( $file ) ) {
 			return '';
 		}
 

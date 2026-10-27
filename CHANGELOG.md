@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.41.1] – 2026-10-27
+
+- **Konfigurator: Holzstange auch bei der alten Demo-Schiene.** Ein Basismodul, das noch die Demo-Schiene als Modell hatte (die Vorlage von vor der Holzstange), zeigte weiter die flache weiße Platte statt der Stange. Jetzt gilt für Basismodule ohne eigenes hochgeladenes Modell immer die Holzstange mit den zwei Haltern, auch beim Anlegen der Sperrbereiche. „Sperrbereiche der Halter neu berechnen“ gibt es auch für solche Basismodule.
+
 ## [0.41.0] – 2026-10-27
 
 ### Lage des Modells an der Stange (DB_VERSION 42)
