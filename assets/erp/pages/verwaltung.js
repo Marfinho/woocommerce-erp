@@ -600,6 +600,7 @@
 				var attr = input('text', d.attribute, { autocapitalize: 'none' });
 				var def = input('text', d['default']);
 				var hoheit = h('input', { type: 'checkbox', checked: d.hoheit });
+				var shop = h('input', { type: 'checkbox', checked: d.shop_bestand });
 				var mail = h('input', { type: 'checkbox', checked: d.wochenmail });
 				var layout = select([['theme', 'In das Website-Design einbetten'], ['schlicht', 'Schlichte eigene Seite mit Logo']], d.layout);
 				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
@@ -613,14 +614,23 @@
 					field('Farbattribut (Taxonomie)', attr, 'Globales Produktattribut, üblicherweise pa_farbe.'),
 					field('Standardfarbe', def, 'Gilt für jede Position ohne eigene Farbe.'),
 					h('label', { class: 'vw-check' }, hoheit, h('span', null, 'Lagerhoheit: Betrieb bucht die Lagerabgänge der ihm bekannten Artikel. Ist sie aus, bucht das Lager-Modul alle Abgänge und die Bestände im Betrieb stimmen nicht.')),
+					h('label', { class: 'vw-check' }, shop, h('span', null, 'Bestand im Shop: Das ERP führt den Bestand und überträgt ihn (Lager minus offene Bestellungen) in die Shop-Produkte; der Lagerabzug von WooCommerce ruht für diese Produkte. Wirkt nur bei aktiver Lagerhoheit.')),
 					field('Nachbestellseite', layout, 'Schlicht ist die Rückfallebene, falls das Theme mit dem Formular nicht zurechtkommt.'),
 					h('label', { class: 'vw-check' }, mail, h('span', null, 'Wöchentliche Zusammenfassung per E-Mail senden')),
 					go);
 				form.addEventListener('submit', function (e) {
 					e.preventDefault();
-					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
+					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, shop_bestand: shop.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
 				});
 				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Lagerhoheit und Farbsystem'), form));
+
+				var sync = h('button', { class: 'btn', type: 'button' }, 'Bestand jetzt in den Shop übertragen');
+				sync.addEventListener('click', function () {
+					run(sync, function () { return post('einstellungen/lager/shop-bestand', {}); }, function (r) { ui.toast(r.message); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Bestand im Shop'),
+					h('p', { class: 'muted' }, 'Der Bestand wird nach jeder Buchung und jedem Statuswechsel einer Bestellung übertragen, zusätzlich stündlich. Dieser Knopf gleicht alle Artikel sofort ab – etwa nach der Umstellung.'),
+					sync));
 			}).catch(fail);
 		}
 

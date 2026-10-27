@@ -425,6 +425,12 @@ auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie über
 den Filter `lw16_inventory_skip_product`. Alles andere bleibt beim Lager-Modul.
 Abschaltbar unter *Betrieb → Einstellungen → Farben & Lagerhoheit*.
 
+**Bestand im Shop:** Das Bewegungskonto ist die einzige Wahrheit; WooCommerce bekommt eine Kopie.
+Das ERP schreibt Lager minus offene Bestellungen (Reservierung ab „in Bearbeitung“) nach jeder Buchung
+und jedem Statuswechsel in die Shop-Produkte (Varianten nach Farbe), stündlich zusätzlich komplett
+(`WooStockSync`, `ShopStock`). WooCommerces eigener Lagerabzug ruht für diese Produkte. Manuell im
+Produkt-Editor eingetragene Mengen werden überschrieben. Schalter *Bestand im Shop* an gleicher Stelle.
+
 **Nachbestell-Link**
 
 Kein B2B-Portal: Jeder Händler bekommt unter `/nachbestellen/{token}/` einen

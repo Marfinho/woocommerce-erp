@@ -7,6 +7,18 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.44.0] – 2026-10-27
+
+### Das ERP führt den Bestand im Shop
+- **Bisher** lagen die wahren Bestände nur im ERP (Bewegungskonto); in die Shop-Produkte wurde nichts geschrieben. Der Shop zeigte, was WooCommerce selbst wusste.
+- **Jetzt** schreibt das ERP den verfügbaren Bestand in WooCommerce: **Lager minus offene Bestellungen** (Status „in Bearbeitung“ und „wartend“, noch nicht gebucht). Die Reservierung beginnt damit beim Bestelleingang, nicht erst beim Abschluss – so wird nichts überverkauft. Nur der Lagerort „Lager“ zählt, nicht Kommission oder unterwegs; es zählen ganze Stück, nie unter null.
+- **Einfache Produkte** bekommen die Summe aller Farben, **variable Produkte** den Bestand je Variante nach Farbe (Farbattribut aus den Einstellungen; Variante ohne Farbe = Standardfarbe). Die Lagerverwaltung wird dabei eingeschaltet, „Nachbestellung erlauben“ aus, der Bestand am Elternprodukt aus.
+- **WooCommerces eigener Lagerabzug ruht** für Produkte mit ERP-Artikel (Filter `woocommerce_prevent_adjust_line_item_product_stock`, Abzug wie Rückbuchung), damit nichts doppelt abgezogen wird. Produkte ohne ERP-Artikel bleiben unberührt.
+- **Wann übertragen wird:** nach jeder Buchung im Bewegungskonto (`lw16_betrieb_stock_booked`) und nach jedem Statuswechsel einer Bestellung, gesammelt am Ende der Anfrage (ein Artikel einmal, auch bei vielen Positionen); zusätzlich stündlich für alle Artikel (`lw16_shop_bestand_abgleichen`).
+- **Einstellungen:** *Bestand im Shop* (Standard an) unter ERP → Verwaltung → Einstellungen → Lagerhoheit und Farbsystem sowie Betrieb → Einstellungen. Wirkt nur bei aktiver Lagerhoheit. Der Knopf **„Bestand jetzt in den Shop übertragen“** gleicht alle Artikel sofort ab – nach dem Einspielen dieser Version einmal drücken.
+- **Wichtig:** Eine von Hand im Produkt-Editor von WooCommerce eingetragene Menge wird beim nächsten Abgleich überschrieben. Bestandskorrekturen gehören ins ERP.
+- Tests: `BetriebShopStockTest`.
+
 ## [0.43.0] – 2026-10-27
 
 ### AR-Ansicht aus dem Konfigurator

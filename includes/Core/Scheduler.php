@@ -63,6 +63,11 @@ class Scheduler {
 	// AR-Ansicht aus dem Konfigurator: abgelegte Konfigurationen nach sieben Tagen löschen.
 	const HOOK_AR_MODEL_CLEANUP = 'lw16_ar_modell_aufraeumen';
 
+	/**
+	 * Bestand aus dem ERP in die Shop-Produkte übertragen (Sicherheitsnetz).
+	 */
+	const HOOK_SHOP_STOCK = 'lw16_shop_bestand_abgleichen';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -93,6 +98,7 @@ class Scheduler {
 			self::HOOK_MAIL_SYNC,
 			self::HOOK_MAIL_SERVER_OP,
 			self::HOOK_AR_MODEL_CLEANUP,
+			self::HOOK_SHOP_STOCK,
 		);
 	}
 
@@ -135,6 +141,7 @@ class Scheduler {
 			self::HOOK_SLICING_MAINTENANCE   => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_MAIL_SYNC             => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_AR_MODEL_CLEANUP      => DAY_IN_SECONDS,
+			self::HOOK_SHOP_STOCK            => HOUR_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

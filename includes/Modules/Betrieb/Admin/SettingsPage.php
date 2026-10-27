@@ -283,6 +283,7 @@ class SettingsPage {
 		$attribute = isset( $_POST['betrieb_color_attribute'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_color_attribute'] ) ) : 'pa_farbe';
 		$default   = isset( $_POST['betrieb_default_color'] ) ? sanitize_text_field( wp_unslash( $_POST['betrieb_default_color'] ) ) : 'anthrazit';
 		$hoheit    = empty( $_POST['betrieb_lagerhoheit'] ) ? 0 : 1;
+		$shop      = empty( $_POST['betrieb_shop_bestand'] ) ? 0 : 1;
 		$mail      = empty( $_POST['betrieb_wochenmail'] ) ? 0 : 1;
 		$layout    = isset( $_POST['betrieb_reorder_layout'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_reorder_layout'] ) ) : 'theme';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
@@ -292,6 +293,7 @@ class SettingsPage {
 				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
 				'betrieb_default_color'   => ColorRegistry::normalize( $default ),
 				'betrieb_lagerhoheit'     => $hoheit,
+				'betrieb_shop_bestand'    => $shop,
 				'betrieb_wochenmail'      => $mail,
 				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
@@ -367,6 +369,14 @@ class SettingsPage {
 			esc_html__( 'Lagerhoheit', 'lindenweg16' ),
 			checked( StockOwnership::is_active(), true, false ),
 			esc_html__( 'Betrieb bucht die Lagerabgänge der ihm bekannten Artikel', 'lindenweg16' )
+		);
+
+		printf(
+			'<tr><th scope="row">%s</th><td><label><input type="checkbox" name="betrieb_shop_bestand" value="1"%s /> %s</label><p class="description">%s</p></td></tr>',
+			esc_html__( 'Bestand im Shop', 'lindenweg16' ),
+			checked( (bool) Settings::get( 'betrieb_shop_bestand', 1 ), true, false ),
+			esc_html__( 'Das ERP führt den Bestand und überträgt ihn in die Shop-Produkte', 'lindenweg16' ),
+			esc_html__( 'Lager minus offene Bestellungen wird nach jeder Buchung in WooCommerce geschrieben, WooCommerces eigener Lagerabzug ruht für diese Produkte. Wirkt nur bei aktiver Lagerhoheit.', 'lindenweg16' )
 		);
 
 		$layout = Settings::get( 'betrieb_reorder_layout' );

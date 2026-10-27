@@ -78,6 +78,9 @@ class StockRepository {
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'stock_movements', $id, null, $row, isset( $data['void_reason'] ) ? $data['void_reason'] : '' );
 
+		// Der Shop zieht nach (siehe WooStockSync).
+		do_action( 'lw16_betrieb_stock_booked', (int) $row['article_id'], $row['color'] );
+
 		self::maybe_announce_replenished( (int) $row['article_id'], (float) $row['qty'] );
 
 		return $id;

@@ -40,6 +40,7 @@ use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\Stopwatch;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
+use Lindenweg16\Modules\Betrieb\WooStockSync;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\TimerState;
 use Lindenweg16\Modules\Betrieb\UserActivity;
@@ -391,6 +392,7 @@ class Verwaltung {
 			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'lager' ), 'permission_callback' => $einstellungen ),
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'lager_speichern' ), 'permission_callback' => $einstellungen ),
 		) );
+		register_rest_route( $ns, '/erp/einstellungen/lager/shop-bestand', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'shop_bestand_abgleichen' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/protokoll', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'protokoll' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/systempruefung', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'systempruefung' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/plugin', array(
@@ -1363,6 +1365,7 @@ class Verwaltung {
 				'default'    => ColorRegistry::default_color(),
 				'colors'     => $colors,
 				'hoheit'     => (bool) StockOwnership::is_active(),
+				'shop_bestand' => (bool) Settings::get( 'betrieb_shop_bestand', 1 ),
 				'wochenmail' => (bool) Settings::get( 'betrieb_wochenmail', 1 ),
 				'layout'     => 'schlicht' === Settings::get( 'betrieb_reorder_layout' ) ? 'schlicht' : 'theme',
 			)
@@ -1386,12 +1389,39 @@ class Verwaltung {
 				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
 				'betrieb_default_color'   => ColorRegistry::normalize( '' === $default ? 'anthrazit' : $default ),
 				'betrieb_lagerhoheit'     => empty( $p['hoheit'] ) ? 0 : 1,
+				'betrieb_shop_bestand'    => empty( $p['shop_bestand'] ) ? 0 : 1,
 				'betrieb_wochenmail'      => empty( $p['wochenmail'] ) ? 0 : 1,
 				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
 		);
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Bestand aller Artikel jetzt in den Shop übertragen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function shop_bestand_abgleichen() {
+		if ( ! WooStockSync::is_active() ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Die Bestandsübergabe an den Shop ist aus (oder die Lagerhoheit).', 'lindenweg16' ) ), 400 );
+		}
+
+		$r = WooStockSync::sync_all();
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'message' => sprintf(
+					/* translators: 1: geprüfte Artikel, 2: geänderte Produkte, 3: Artikel ohne Shop-Produkt. */
+					__( '%1$d Artikel geprüft, %2$d Shop-Einträge geändert, %3$d Artikel ohne auffindbares Shop-Produkt.', 'lindenweg16' ),
+					$r['geprueft'],
+					$r['geaendert'],
+					$r['ohne_produkt']
+				),
+			)
+		);
 	}
 
 	/**
