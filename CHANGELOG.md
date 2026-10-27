@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.40.1] – 2026-10-27
+
+- **Sperrbereiche der Halter ändern und neu berechnen.** In der Teile-Verwaltung (Basismodul) lässt sich jeder Sperrbereich ändern, nicht nur anlegen und löschen. „Sperrbereiche der Halter neu berechnen“ ersetzt sie durch die berechneten (zwei Halter à 50 mm im Abstand von 900 mm, mittig). Die Berechnung entsteht beim Speichern nur, wenn noch kein Sperrbereich existiert – bestehende Basismodule behalten ihre eigenen.
+- In der Ansicht sind die Sperrbereiche kein Rot mehr, sondern Kupfer aus dem Design.
+
 ## [0.40.0] – 2026-10-27
 
 ### Konfigurator-Einstellungen überarbeitet, Wand und Holzstange in der Ansicht

@@ -129,6 +129,61 @@ class BlockRepository {
 	}
 
 	/**
+	 * Sperrbereich ändern.
+	 *
+	 * @param int   $id    ID.
+	 * @param array $input Eingaben mit from_mm, to_mm, label.
+	 * @param float $rail  Länge des Basismoduls, zur Prüfung.
+	 * @return array {errors}
+	 */
+	public static function update( $id, array $input, $rail ) {
+		global $wpdb;
+
+		$before = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', (int) $id ), // phpcs:ignore WordPress.DB.PreparedSQL
+			ARRAY_A
+		);
+
+		if ( ! $before ) {
+			return array( 'errors' => array( __( 'Diesen Sperrbereich gibt es nicht (mehr). Bitte die Seite neu laden.', 'lindenweg16' ) ) );
+		}
+
+		$from  = self::measure( $input, 'from_mm' );
+		$to    = self::measure( $input, 'to_mm' );
+		$label = isset( $input['label'] ) ? sanitize_text_field( $input['label'] ) : '';
+
+		if ( $to <= $from ) {
+			return array( 'errors' => array( __( 'Der Sperrbereich braucht ein Ende oberhalb seines Anfangs.', 'lindenweg16' ) ) );
+		}
+
+		if ( $rail > 0 && $to > $rail ) {
+			return array(
+				'errors' => array(
+					sprintf(
+						/* translators: %s: Länge des Basismoduls in Millimetern. */
+						__( 'Der Sperrbereich liegt außerhalb des Basismoduls – es ist %s mm lang.', 'lindenweg16' ),
+						Layout::format_mm( $rail )
+					),
+				),
+			);
+		}
+
+		$data = array(
+			'from_mm' => $from,
+			'to_mm'   => $to,
+			'label'   => '' === $label ? null : $label,
+		);
+
+		if ( false === $wpdb->update( self::table(), $data, array( 'id' => (int) $id ) ) ) {
+			return array( 'errors' => array( __( 'Der Sperrbereich ließ sich nicht speichern.', 'lindenweg16' ) ) );
+		}
+
+		BetriebAudit::record( 'update', 'config_blocks', (int) $id, $before, $data );
+
+		return array( 'errors' => array() );
+	}
+
+	/**
 	 * Sperrbereich löschen.
 	 *
 	 * @param int $id ID.
