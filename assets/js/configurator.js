@@ -26,6 +26,20 @@ const DATEN = window.LW16_HAKEN || null;
 const MM = 1000;
 const EPSILON = 0.01;
 
+/**
+ * Wandfarben zur Wahl. Die erste gilt, bis der Kunde etwas anderes nimmt;
+ * die Wahl bleibt im Browser erhalten (localStorage, wenn verfügbar).
+ */
+const WANDFARBEN = [
+	{ name: 'Anthrazit', hex: '#676b71' },
+	{ name: 'Hellgrau', hex: '#c4c7cb' },
+	{ name: 'Greige', hex: '#b5ab9d' },
+	{ name: 'Salbei', hex: '#8a9a8c' },
+	{ name: 'Nachtblau', hex: '#3f4b5f' },
+	{ name: 'Weiß', hex: '#e6e4df' },
+];
+const WAND_SCHLUESSEL = 'lw16_wand';
+
 /* ------------------------------------------------------------------ */
 /* Regeln                                                              */
 /* ------------------------------------------------------------------ */
@@ -864,14 +878,15 @@ class Ansicht {
 		licht.target.position.set( 0, 0.2, 0 );
 		licht.castShadow = true;
 		licht.shadow.mapSize.set( 2048, 2048 );
-		licht.shadow.camera.left = -2.2;
-		licht.shadow.camera.right = 2.2;
-		licht.shadow.camera.top = 2.2;
-		licht.shadow.camera.bottom = -2.2;
+		licht.shadow.camera.left = -3;
+		licht.shadow.camera.right = 3;
+		licht.shadow.camera.top = 3;
+		licht.shadow.camera.bottom = -3;
 		licht.shadow.camera.near = 0.5;
 		licht.shadow.camera.far = 9;
 		licht.shadow.radius = 3;
 		licht.shadow.bias = -0.0008;
+		licht.shadow.normalBias = 0.002;
 		this.szene.add( licht );
 		this.szene.add( licht.target );
 		this.licht = licht;
@@ -880,7 +895,7 @@ class Ansicht {
 	/**
 	 * Eine Fläche aus gezeichneten Pixeln.
 	 *
-	 * Putz, Dielen und Bilder entstehen auf einer Zeichenfläche statt aus
+	 * Dielen und Bilder entstehen auf einer Zeichenfläche statt aus
 	 * Bilddateien: Es muss nichts nachgeladen werden, und die Farben sind
 	 * die des Shops.
 	 *
@@ -905,22 +920,25 @@ class Ansicht {
 	}
 
 	/**
-	 * Der Raum um den Haken: eine Wand mit Sockel, Dielenboden, zwei Bildern
-	 * und einer Kommode darunter.
+	 * Der Raum um den Haken: eine Wand in wählbarer Farbe, Boden, Sockel, ein
+	 * Möbel darunter und Bilder daneben.
 	 *
 	 * Das Basismodul wird an eine Wand geschraubt und schwebt nicht im
 	 * Raum. Die Wand liegt deshalb bündig an der Rückseite der Montage-
-	 * platte (z = 0), die Schatten fallen auf sie. Bilder und Kommode
-	 * geben Maßstab: Man sieht, wie hoch der Haken im Flur hängt.
+	 * platte (z = 0), die Schatten fallen auf sie. Möbel, Deko und Bilder
+	 * werden bei jedem Aufruf neu gewürfelt: Der Kunde sieht den Haken in
+	 * wechselnder Umgebung und merkt, dass es kein festes Foto ist. Sie geben
+	 * Maßstab – man sieht, wie hoch der Haken im Flur hängt.
 	 *
 	 * Null liegt an der Unterkante des Basismoduls; der Boden liegt knapp
-	 * einen Meter darunter, die Kommode steht mit 18 cm Abstand unter dem
-	 * Haken.
+	 * einen Meter darunter.
 	 */
 	baueRaum() {
 		const THREE = this.THREE;
 		const boden = -0.96;
 		const raum = new THREE.Group();
+		const eins = ( liste ) => liste[ Math.floor( Math.random() * liste.length ) ];
+		const zwischen = ( von, bis ) => von + Math.random() * ( bis - von );
 
 		const stoff = ( farbe, rauheit = 0.85, extra = {} ) => new THREE.MeshStandardMaterial( { color: farbe, roughness: rauheit, metalness: 0, ...extra } );
 		const kasten = ( b, h, t, material, x, y, z, schatten = true ) => {
@@ -933,42 +951,56 @@ class Ansicht {
 
 			return koerper;
 		};
+		const walze = ( r1, r2, h, material, x, y, z ) => {
+			const koerper = new THREE.Mesh( new THREE.CylinderGeometry( r1, r2, h, 24 ), material );
 
-		// Wand: gebrochenes Weiß mit feinem Putzkorn.
-		const putz = this.textur( 256, 256, ( c, b, h ) => {
-			c.fillStyle = '#ddd4c4';
-			c.fillRect( 0, 0, b, h );
+			koerper.position.set( x, y, z );
+			koerper.castShadow = true;
+			koerper.receiveShadow = true;
+			raum.add( koerper );
 
-			for ( let i = 0; i < 7000; i++ ) {
-				c.fillStyle = Math.random() < 0.5 ? 'rgba(80,60,30,0.035)' : 'rgba(255,255,255,0.06)';
-				c.fillRect( Math.random() * b, Math.random() * h, 1.5, 1.5 );
-			}
-		} );
-		putz.wrapS = putz.wrapT = THREE.RepeatWrapping;
-		putz.repeat.set( 4, 2.5 );
+			return koerper;
+		};
+		const kugel = ( r, material, x, y, z ) => {
+			const koerper = new THREE.Mesh( new THREE.SphereGeometry( r, 20, 14 ), material );
 
-		const wand = new THREE.Mesh( new THREE.PlaneGeometry( 8, 5 ), stoff( 0xffffff, 0.95, { map: putz } ) );
-		wand.position.set( 0, boden + 2.5, -0.002 );
+			koerper.position.set( x, y, z );
+			koerper.castShadow = true;
+			raum.add( koerper );
+
+			return koerper;
+		};
+
+		// Wand: eine ruhige Fläche. Lambert statt Standard, damit kein
+		// Reflex als heller Fleck auf ihr liegt.
+		const wand = new THREE.Mesh( new THREE.PlaneGeometry( 12, 8 ), new THREE.MeshLambertMaterial( { color: WANDFARBEN[ 0 ].hex } ) );
+
+		wand.position.set( 0, 1, -0.002 );
 		wand.receiveShadow = true;
 		raum.add( wand );
+		this.wand = wand;
+
+		// Die Wand bekommt kein Umgebungslicht; ohne diese Füllung wären
+		// ihre Schatten schwarz statt grau.
+		this.szene.add( new THREE.AmbientLight( 0xffffff, 0.75 ) );
 
 		// Boden: Dielen mit leicht wechselndem Ton.
+		const ton = zwischen( 150, 185 );
 		const dielen = this.textur( 512, 512, ( c, b, h ) => {
-			const breiteDiele = 64;
+			for ( let x = 0; x < b; x += 64 ) {
+				const hell = ton + Math.floor( Math.random() * 18 );
 
-			for ( let x = 0; x < b; x += breiteDiele ) {
-				const helligkeit = 168 + Math.floor( Math.random() * 22 );
-
-				c.fillStyle = 'rgb(' + helligkeit + ',' + ( helligkeit - 20 ) + ',' + ( helligkeit - 50 ) + ')';
-				c.fillRect( x, 0, breiteDiele, h );
-				c.fillStyle = 'rgba(60,40,20,0.35)';
+				c.fillStyle = 'rgb(' + hell + ',' + ( hell - 22 ) + ',' + ( hell - 52 ) + ')';
+				c.fillRect( x, 0, 64, h );
+				c.fillStyle = 'rgba(60,40,20,0.3)';
 				c.fillRect( x, 0, 2, h );
 			}
 		} );
 		dielen.wrapS = dielen.wrapT = THREE.RepeatWrapping;
 		dielen.repeat.set( 3, 2 );
 
-		const bodenflaeche = new THREE.Mesh( new THREE.PlaneGeometry( 8, 4 ), stoff( 0xffffff, 0.7, { map: dielen } ) );
+		const bodenflaeche = new THREE.Mesh( new THREE.PlaneGeometry( 8, 4 ), stoff( 0xffffff, 0.75, { map: dielen } ) );
+
 		bodenflaeche.rotation.x = -Math.PI / 2;
 		bodenflaeche.position.set( 0, boden, 2 );
 		bodenflaeche.receiveShadow = true;
@@ -976,11 +1008,193 @@ class Ansicht {
 
 		kasten( 8, 0.09, 0.02, stoff( 0xf7f5f0, 0.6 ), 0, boden + 0.045, 0.01 );
 
-		// Bilder: Rahmen, Passepartout, Motiv.
-		const bild = ( x, y, b, h, rahmenFarbe, motiv ) => {
+		// Möbel: eines von vieren. Jedes meldet seine Oberkante und die
+		// halbe Breite, damit die Deko darauf sitzen kann.
+		const holz = eins( [ 0xc9a57a, 0xd8c3a0, 0xa97c50, 0xe8e1d4 ] );
+		const holzFlaeche = stoff( holz, 0.65 );
+		const holzDunkel = stoff( new THREE.Color( holz ).multiplyScalar( 0.88 ), 0.65 );
+		const griff = stoff( 0x3a424c, 0.4, { metalness: 0.4 } );
+
+		const moebel = {
+			kommode: () => {
+				const b = 1.3;
+				const t = 0.42;
+				const bein = 0.12;
+				const korpus = 0.66;
+				const oben = boden + bein + korpus + 0.025;
+
+				kasten( b, korpus, t, holzFlaeche, 0, boden + bein + korpus / 2, t / 2 );
+				kasten( b + 0.04, 0.025, t + 0.02, holzDunkel, 0, oben - 0.0125, t / 2 + 0.01 );
+				[ -1, 1 ].forEach( ( sx ) => [ 0.07, t - 0.07 ].forEach( ( z ) => walze( 0.02, 0.014, bein, holzDunkel, sx * ( b / 2 - 0.07 ), boden + bein / 2, z ) ) );
+				[ 0.11, 0.33, 0.55 ].forEach( ( y ) => {
+					kasten( b - 0.05, 0.19, 0.012, holzDunkel, 0, boden + bein + y, t + 0.006, false );
+					kasten( 0.16, 0.012, 0.018, griff, 0, boden + bein + y + 0.03, t + 0.02, false );
+				} );
+
+				return { oben, halb: b / 2, tiefe: t };
+			},
+			sideboard: () => {
+				const b = 1.5;
+				const t = 0.38;
+				const bein = 0.14;
+				const korpus = 0.5;
+				const oben = boden + bein + korpus + 0.02;
+
+				kasten( b, korpus, t, holzFlaeche, 0, boden + bein + korpus / 2, t / 2 );
+				kasten( b + 0.03, 0.02, t + 0.02, holzDunkel, 0, oben - 0.01, t / 2 + 0.01 );
+				[ -1, 1 ].forEach( ( sx ) => [ 0.06, t - 0.06 ].forEach( ( z ) => kasten( 0.04, bein, 0.04, holzDunkel, sx * ( b / 2 - 0.06 ), boden + bein / 2, z ) ) );
+				[ -1, 1 ].forEach( ( sx ) => {
+					kasten( b / 2 - 0.04, korpus - 0.08, 0.012, holzDunkel, sx * ( b / 4 ), boden + bein + korpus / 2, t + 0.006, false );
+					kasten( 0.012, 0.14, 0.018, griff, sx * 0.04, boden + bein + korpus / 2, t + 0.02, false );
+				} );
+
+				return { oben, halb: b / 2, tiefe: t };
+			},
+			konsole: () => {
+				const b = 1.15;
+				const t = 0.3;
+				const hoehe = 0.8;
+				const oben = boden + hoehe;
+
+				kasten( b, 0.03, t, holzFlaeche, 0, oben - 0.015, t / 2 );
+				kasten( b - 0.1, 0.025, t - 0.06, holzDunkel, 0, boden + 0.28, t / 2 );
+				[ -1, 1 ].forEach( ( sx ) => [ 0.04, t - 0.04 ].forEach( ( z ) => kasten( 0.035, hoehe - 0.03, 0.035, griff, sx * ( b / 2 - 0.05 ), boden + ( hoehe - 0.03 ) / 2, z ) ) );
+
+				return { oben, halb: b / 2, tiefe: t };
+			},
+			bank: () => {
+				const b = 1.1;
+				const t = 0.38;
+				const sitz = 0.45;
+				const oben = boden + sitz;
+
+				kasten( b, 0.05, t, holzFlaeche, 0, oben - 0.025, t / 2 );
+				kasten( b - 0.1, 0.02, t - 0.08, holzDunkel, 0, boden + 0.16, t / 2 );
+				[ -1, 1 ].forEach( ( sx ) => kasten( 0.04, sitz - 0.05, t - 0.04, holzDunkel, sx * ( b / 2 - 0.05 ), boden + ( sitz - 0.05 ) / 2, t / 2 ) );
+				kasten( b - 0.2, 0.07, t - 0.08, stoff( eins( [ 0xe8b9a1, 0xc8d2d7, 0xe7c78f, 0x3a424c ] ), 0.95 ), 0, oben + 0.035, t / 2 );
+
+				return { oben: oben + 0.07, halb: b / 2, tiefe: t };
+			},
+		};
+
+		const art = eins( Object.keys( moebel ) );
+		const platte = moebel[ art ]();
+
+		// Deko auf der Fläche: zwei Dinge, weit genug von der Mitte, wo der
+		// Haken hängt.
+		const farbe = () => eins( [ 0xf2efe9, 0xa86f38, 0xc8d2d7, 0xe8b9a1, 0xe7c78f, 0x3a424c ] );
+		const deko = {
+			vase: ( x, z ) => walze( 0.045, 0.06, 0.24, stoff( farbe(), 0.35 ), x, platte.oben + 0.12, z ),
+			schale: ( x, z ) => {
+				const halbkugel = new THREE.Mesh( new THREE.SphereGeometry( 0.07, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2 ), stoff( farbe(), 0.5 ) );
+
+				halbkugel.position.set( x, platte.oben + 0.07, z );
+				halbkugel.castShadow = true;
+				raum.add( halbkugel );
+			},
+			buecher: ( x, z ) => {
+				let hoehe = 0;
+
+				[ 0.2, 0.18, 0.16 ].forEach( ( b ) => {
+					const d = 0.035 + Math.random() * 0.015;
+
+					kasten( b, d, 0.14, stoff( farbe(), 0.8 ), x + zwischen( -0.01, 0.01 ), platte.oben + hoehe + d / 2, z );
+					hoehe += d;
+				} );
+			},
+			lampe: ( x, z ) => {
+				walze( 0.04, 0.05, 0.03, stoff( 0x3a424c, 0.4 ), x, platte.oben + 0.015, z );
+				walze( 0.012, 0.012, 0.26, stoff( 0x3a424c, 0.4 ), x, platte.oben + 0.16, z );
+				walze( 0.07, 0.1, 0.15, stoff( 0xf3ede2, 0.9, { emissive: 0xf3ede2, emissiveIntensity: 0.25 } ), x, platte.oben + 0.34, z );
+			},
+			pflanze: ( x, z ) => {
+				walze( 0.07, 0.05, 0.12, stoff( farbe(), 0.7 ), x, platte.oben + 0.06, z );
+
+				for ( let i = 0; i < 5; i++ ) {
+					kugel( 0.05 + Math.random() * 0.03, stoff( 0x4f7a55, 0.8 ), x + zwischen( -0.05, 0.05 ), platte.oben + 0.17 + Math.random() * 0.14, z + zwischen( -0.04, 0.04 ) );
+				}
+			},
+		};
+		const dinge = Object.keys( deko ).sort( () => Math.random() - 0.5 );
+		const links = -zwischen( 0.28, platte.halb - 0.12 );
+		const rechts = zwischen( 0.28, platte.halb - 0.12 );
+
+		deko[ dinge[ 0 ] ]( links, platte.tiefe * 0.5 );
+		deko[ dinge[ 1 ] ]( rechts, platte.tiefe * 0.5 );
+
+		// Bilder: Rahmen, Passepartout, Motiv – zwei oder drei, links und
+		// rechts vom Haken, in wechselnder Größe und Farbe.
+		const farben = [ '#a86f38', '#e7c78f', '#c8d2d7', '#e8b9a1', '#3a424c', '#f3ede2' ];
+		const motive = [
+			( c, b, h ) => {
+				c.fillStyle = '#f3ede2';
+				c.fillRect( 0, 0, b, h );
+				c.fillStyle = eins( farben.slice( 0, 4 ) );
+				c.beginPath();
+				c.arc( b * 0.5, h * 0.36, b * 0.2, 0, Math.PI * 2 );
+				c.fill();
+				[ 0.62, 0.74, 0.86 ].forEach( ( hoehe ) => {
+					c.fillStyle = eins( farben );
+					c.beginPath();
+					c.moveTo( 0, h );
+					c.lineTo( 0, h * hoehe );
+					c.quadraticCurveTo( b * 0.5, h * ( hoehe - 0.2 ), b, h * hoehe );
+					c.lineTo( b, h );
+					c.fill();
+				} );
+			},
+			( c, b, h ) => {
+				c.fillStyle = '#f3ede2';
+				c.fillRect( 0, 0, b, h );
+				[ [ 0, 0 ], [ 1, 0 ], [ 0, 1 ], [ 1, 1 ] ].forEach( ( [ sp, ze ] ) => {
+					c.fillStyle = eins( farben );
+					c.beginPath();
+					c.arc( sp * b * 0.5 + b * 0.25, ze * h * 0.5 + h * 0.25, Math.min( b, h ) * 0.2, 0, Math.PI * 2 );
+					c.fill();
+				} );
+			},
+			( c, b, h ) => {
+				c.fillStyle = '#f3ede2';
+				c.fillRect( 0, 0, b, h );
+				for ( let i = 0; i < 6; i++ ) {
+					c.fillStyle = eins( farben );
+					c.fillRect( 0, ( h / 6 ) * i, b, h / 6 - 3 );
+				}
+			},
+			( c, b, h ) => {
+				c.fillStyle = eins( [ '#f3ede2', '#e8e0cf' ] );
+				c.fillRect( 0, 0, b, h );
+				[ 0.9, 0.62, 0.36 ].forEach( ( r ) => {
+					c.fillStyle = eins( farben );
+					c.beginPath();
+					c.arc( b * 0.5, h * 0.95, b * r * 0.55, Math.PI, 0 );
+					c.fill();
+				} );
+			},
+			( c, b, h ) => {
+				c.fillStyle = '#f3ede2';
+				c.fillRect( 0, 0, b, h );
+				c.strokeStyle = eins( farben.slice( 0, 5 ) );
+				c.lineWidth = Math.max( 3, b * 0.025 );
+				c.lineCap = 'round';
+				c.beginPath();
+				c.moveTo( b * 0.5, h * 0.9 );
+				c.bezierCurveTo( b * 0.3, h * 0.6, b * 0.7, h * 0.4, b * 0.5, h * 0.1 );
+				c.stroke();
+				for ( let i = 0; i < 5; i++ ) {
+					c.fillStyle = eins( farben.slice( 0, 5 ) );
+					c.beginPath();
+					c.ellipse( b * ( 0.35 + Math.random() * 0.3 ), h * ( 0.2 + i * 0.14 ), b * 0.08, b * 0.04, Math.random() * 3, 0, Math.PI * 2 );
+					c.fill();
+				}
+			},
+		];
+		const rahmenFarben = [ 0xc9a57a, 0xf1eee8, 0xa86f38, 0xd5d8db, 0x23272c ];
+		const bild = ( x, y, b, h ) => {
 			const gruppe = new THREE.Group();
 			const rand = 0.025;
-			const rahmen = new THREE.Mesh( new THREE.BoxGeometry( b, h, 0.03 ), stoff( rahmenFarbe, 0.5 ) );
+			const motiv = eins( motive );
+			const rahmen = new THREE.Mesh( new THREE.BoxGeometry( b, h, 0.03 ), stoff( eins( rahmenFarben ), 0.5 ) );
 			const passe = new THREE.Mesh( new THREE.PlaneGeometry( b - rand * 2, h - rand * 2 ), stoff( 0xfbf9f4, 0.9 ) );
 			const kunst = new THREE.Mesh(
 				new THREE.PlaneGeometry( ( b - rand * 2 ) * 0.72, ( h - rand * 2 ) * 0.72 ),
@@ -995,81 +1209,97 @@ class Ansicht {
 			gruppe.position.set( x, y, 0.015 );
 			raum.add( gruppe );
 		};
+		const format = () => eins( [ [ 0.36, 0.5 ], [ 0.3, 0.3 ], [ 0.5, 0.36 ], [ 0.28, 0.4 ], [ 0.4, 0.4 ] ] );
+		const [ lb, lh ] = format();
+		const [ rb, rh ] = format();
 
-		bild( -0.5, 0.5, 0.36, 0.5, 0x2b323a, ( c, b, h ) => {
-			c.fillStyle = '#f3ede2';
-			c.fillRect( 0, 0, b, h );
-			c.fillStyle = '#a86f38';
-			c.beginPath();
-			c.arc( b * 0.5, h * 0.36, b * 0.2, 0, Math.PI * 2 );
-			c.fill();
-			[ [ '#e7c78f', 0.62 ], [ '#c8d2d7', 0.74 ], [ '#e8b9a1', 0.86 ] ].forEach( ( [ farbe, hoehe ] ) => {
-				c.fillStyle = farbe;
-				c.beginPath();
-				c.moveTo( 0, h );
-				c.lineTo( 0, h * hoehe );
-				c.quadraticCurveTo( b * 0.5, h * ( hoehe - 0.2 ), b, h * hoehe );
-				c.lineTo( b, h );
-				c.fill();
-			} );
-		} );
+		bild( -zwischen( 0.46, 0.58 ), zwischen( 0.3, 0.7 ), lb, lh );
+		bild( zwischen( 0.46, 0.58 ), zwischen( 0.35, 0.8 ), rb, rh );
 
-		bild( 0.5, 0.72, 0.3, 0.3, 0xc4a37a, ( c, b, h ) => {
-			c.fillStyle = '#f3ede2';
-			c.fillRect( 0, 0, b, h );
-			[ [ '#e8b9a1', 0, 0 ], [ '#c8d2d7', 1, 0 ], [ '#e7c78f', 0, 1 ], [ '#3a424c', 1, 1 ] ].forEach( ( [ farbe, spalte, zeile ] ) => {
-				c.fillStyle = farbe;
-				c.beginPath();
-				c.arc( spalte * b * 0.5 + b * 0.25, zeile * h * 0.5 + h * 0.25, b * 0.2, 0, Math.PI * 2 );
-				c.fill();
-			} );
-		} );
-
-		// Kommode: Eiche, drei Schübe, Beine.
-		const eiche = stoff( 0xc9a57a, 0.65 );
-		const eicheDunkel = stoff( 0xb48a5d, 0.65 );
-		const breite = 1.3;
-		const tiefe = 0.42;
-		const beinHoehe = 0.12;
-		const korpus = 0.66;
-		const oben = boden + beinHoehe + korpus;
-
-		kasten( breite, korpus, tiefe, eiche, 0, boden + beinHoehe + korpus / 2, tiefe / 2 );
-		kasten( breite + 0.04, 0.025, tiefe + 0.02, eicheDunkel, 0, oben + 0.0125, tiefe / 2 + 0.01 );
-
-		[ -1, 1 ].forEach( ( sx ) => {
-			[ 0.07, tiefe - 0.07 ].forEach( ( z ) => {
-				const bein = new THREE.Mesh( new THREE.CylinderGeometry( 0.02, 0.014, beinHoehe, 12 ), eicheDunkel );
-
-				bein.position.set( sx * ( breite / 2 - 0.07 ), boden + beinHoehe / 2, z );
-				bein.castShadow = true;
-				raum.add( bein );
-			} );
-		} );
-
-		const griff = stoff( 0x3a424c, 0.4, { metalness: 0.4 } );
-
-		[ 0.11, 0.33, 0.55 ].forEach( ( y ) => {
-			kasten( breite - 0.05, 0.19, 0.012, eicheDunkel, 0, boden + beinHoehe + y, tiefe + 0.006, false );
-			kasten( 0.16, 0.012, 0.018, griff, 0, boden + beinHoehe + y + 0.03, tiefe + 0.02, false );
-		} );
-
-		// Etwas darauf: eine Vase und eine Schale.
-		const vase = new THREE.Mesh( new THREE.CylinderGeometry( 0.045, 0.06, 0.24, 24 ), stoff( 0xf2efe9, 0.35 ) );
-
-		vase.position.set( -0.4, oben + 0.025 + 0.12, 0.2 );
-		vase.castShadow = true;
-		raum.add( vase );
-
-		const schale = new THREE.Mesh( new THREE.SphereGeometry( 0.07, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2 ), stoff( 0xa86f38, 0.5 ) );
-
-		schale.position.set( 0.38, oben + 0.025 + 0.07, 0.22 );
-		schale.castShadow = true;
-		raum.add( schale );
+		if ( Math.random() < 0.35 ) {
+			bild( zwischen( -0.2, 0.2 ), zwischen( 1.12, 1.25 ), 0.26, 0.26 );
+		}
 
 		this.szene.add( raum );
 		this.raum = raum;
-		this.bodenHoehe = boden;
+		this.moebel = art;
+		this.setzeWand( this.gewaehlteWand() );
+	}
+
+	/**
+	 * Die Wandfarbe, die der Kunde zuletzt gewählt hat.
+	 *
+	 * @returns {string} Hexwert.
+	 */
+	gewaehlteWand() {
+		try {
+			const gespeichert = window.localStorage.getItem( WAND_SCHLUESSEL );
+
+			if ( WANDFARBEN.some( ( f ) => f.hex === gespeichert ) ) {
+				return gespeichert;
+			}
+		} catch ( fehler ) {
+			// Ohne Speicher gilt die erste Farbe – die Wahl bleibt dann nur
+			// bis zum nächsten Laden der Seite.
+		}
+
+		return WANDFARBEN[ 0 ].hex;
+	}
+
+	/**
+	 * Die Wand färben und die Auswahl nachziehen.
+	 *
+	 * @param {string} hex Hexwert aus WANDFARBEN.
+	 */
+	setzeWand( hex ) {
+		this.wand.material.color.set( hex );
+		this.wandHex = hex;
+
+		if ( this.wandWahl ) {
+			this.wandWahl.querySelectorAll( 'button' ).forEach( ( knopf ) => {
+				knopf.setAttribute( 'aria-pressed', String( knopf.dataset.hex === hex ) );
+			} );
+		}
+	}
+
+	/**
+	 * Die Auswahl der Wandfarbe unter dem Bild.
+	 */
+	baueWandWahl() {
+		const zeile = document.createElement( 'div' );
+		const name = document.createElement( 'span' );
+
+		zeile.className = 'lw16-haken__wandwahl';
+		zeile.setAttribute( 'role', 'group' );
+		zeile.setAttribute( 'aria-label', 'Wandfarbe' );
+		name.className = 'lw16-haken__wandname';
+		name.textContent = 'Wand';
+		zeile.appendChild( name );
+
+		WANDFARBEN.forEach( ( farbe ) => {
+			const knopf = document.createElement( 'button' );
+
+			knopf.type = 'button';
+			knopf.className = 'lw16-haken__wandpunkt';
+			knopf.dataset.hex = farbe.hex;
+			knopf.style.setProperty( '--punkt', farbe.hex );
+			knopf.setAttribute( 'aria-label', farbe.name );
+			knopf.title = farbe.name;
+			knopf.addEventListener( 'click', () => {
+				this.setzeWand( farbe.hex );
+
+				try {
+					window.localStorage.setItem( WAND_SCHLUESSEL, farbe.hex );
+				} catch ( fehler ) {
+					// Nicht speichern zu können ist kein Fehler.
+				}
+			} );
+			zeile.appendChild( knopf );
+		} );
+
+		this.behaelter.insertAdjacentElement( 'afterend', zeile );
+		this.wandWahl = zeile;
+		this.setzeWand( this.wandHex );
 	}
 
 	/**
@@ -1092,6 +1322,8 @@ class Ansicht {
 	verdrahte() {
 		const leinwand = this.renderer.domElement;
 		const THREE = this.THREE;
+
+		this.baueWandWahl();
 
 		this.strahl = new THREE.Raycaster();
 		this.zeiger = new THREE.Vector2();
@@ -1158,12 +1390,12 @@ class Ansicht {
 			umriss.set( new THREE.Vector3( -breite / 2, 0, 0 ), new THREE.Vector3( breite / 2, hoehe, 0.06 ) );
 		}
 
-		// Nach unten reicht der Ausschnitt bis zur Kommode und seitlich bis
-		// zu den Bildern: Der Haken soll im Raum hängen, nicht allein im
-		// Bild stehen.
-		umriss.min.y = Math.min( umriss.min.y, -0.4 );
-		umriss.min.x = Math.min( umriss.min.x, -0.7 );
-		umriss.max.x = Math.max( umriss.max.x, 0.7 );
+		// Nach unten reicht der Ausschnitt bis zum Möbel und seitlich bis zu
+		// den Bildern: Der Haken soll im Raum hängen, nicht allein im Bild
+		// stehen.
+		umriss.min.y = Math.min( umriss.min.y, -0.5 );
+		umriss.min.x = Math.min( umriss.min.x, -0.75 );
+		umriss.max.x = Math.max( umriss.max.x, 0.75 );
 
 		hoehe = umriss.max.y - umriss.min.y;
 		breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
@@ -1207,7 +1439,13 @@ class Ansicht {
 
 					return lage.platziere( this.THREE, geladen.scene, teil.height, teil.placement );
 				} catch ( fehler ) {
-					// Ein fehlendes Modell darf die Bestellung nicht aufhalten.
+					// Ein fehlendes Modell darf die Bestellung nicht aufhalten –
+					// der Grund gehört trotzdem in die Konsole, sonst sucht
+					// man ihn lange.
+					if ( window.console ) {
+						window.console.error( 'Konfigurator: Modell konnte nicht aufgebaut werden', teil.model, fehler );
+					}
+
 					return this.ersatzkoerper( teil );
 				}
 			}
@@ -1233,6 +1471,79 @@ class Ansicht {
 		}
 
 		return this.lageVersprechen;
+	}
+
+	/**
+	 * Die Holzstange mit ihren zwei Haltern.
+	 *
+	 * Das Modell ist ein einzelner Halter (zwanzig Millimeter breit, fünfzig
+	 * hoch, fünfundvierzig tief, Rückseite an der Wand). Die Stange – ein
+	 * Rundholz von zwanzig Millimetern – liegt in der Rille an seiner
+	 * Vorderseite, ihre Achse also fünfundvierzig Millimeter von der Wand.
+	 * Die beiden Halter sitzen im Abstand von neunhundert Millimetern
+	 * mittig auf der Stange; ist die Stange kürzer als tausend Millimeter,
+	 * rücken sie zusammen. Dieselben Zahlen rechnet PHP für die
+	 * Sperrbereiche (Layout::holder_zones).
+	 *
+	 * @param {object} objekt Szene mit einem Halter.
+	 * @param {object} teil   Katalogeintrag mit der Länge der Stange.
+	 * @returns {object}
+	 */
+	holzstange( objekt, teil ) {
+		const THREE = this.THREE;
+		const laenge = teil.height / MM;
+		const halterHoehe = 0.05;
+		const abstand = Math.min( 0.9, laenge - 2 * halterHoehe );
+		const erster = ( laenge - abstand ) / 2;
+
+		objekt.updateMatrixWorld( true );
+
+		// Das Modell kann in Millimetern oder in Metern vorliegen: Alles,
+		// was größer als zwanzig Einheiten ist, sind Millimeter.
+		const roh = new THREE.Box3().setFromObject( objekt );
+		const faktor = Math.max( roh.max.x - roh.min.x, roh.max.y - roh.min.y, roh.max.z - roh.min.z ) > 20 ? 0.001 : 1;
+
+		objekt.scale.setScalar( faktor );
+		objekt.updateMatrixWorld( true );
+
+		const kasten = new THREE.Box3().setFromObject( objekt );
+		const mitte = kasten.getCenter( new THREE.Vector3() );
+
+		// Mitte der Breite auf die Stange, Rückseite an die Wand, Mitte der
+		// Höhe auf null – das Setzen auf die Stelle folgt unten.
+		objekt.position.x -= mitte.x;
+		objekt.position.y -= mitte.y;
+		objekt.position.z -= kasten.min.z;
+		objekt.traverse( ( knoten ) => {
+			if ( knoten.isMesh ) {
+				knoten.castShadow = true;
+				knoten.receiveShadow = true;
+			}
+		} );
+
+		const tiefe = kasten.max.z - kasten.min.z;
+		const huelle = new THREE.Group();
+
+		[ erster, erster + abstand ].forEach( ( stelle ) => {
+			const halter = new THREE.Group();
+
+			halter.add( objekt.clone( true ) );
+			halter.position.y = stelle;
+			huelle.add( halter );
+		} );
+
+		const stange = new THREE.Mesh(
+			new THREE.CylinderGeometry( 0.01, 0.01, laenge, 32 ),
+			new THREE.MeshStandardMaterial( { color: 0xc9a57a, roughness: 0.7, metalness: 0 } )
+		);
+
+		stange.position.set( 0, laenge / 2, tiefe );
+		stange.castShadow = true;
+		stange.receiveShadow = true;
+		stange.userData.festeFarbe = true;
+		huelle.add( stange );
+
+		return huelle;
 	}
 
 	/**
@@ -1278,8 +1589,6 @@ class Ansicht {
 		this.basisKoerper = vorlageBasis.clone( true );
 		this.gruppe.add( this.basisKoerper );
 
-		this.zeichneSperrbereiche( basis );
-
 		// Module: alles entfernen, was nicht mehr da ist, und alles
 		// nachladen, was dazugekommen ist.
 		const vorhanden = new Set( this.k.zustand.module.map( ( m ) => m.uid ) );
@@ -1319,65 +1628,6 @@ class Ansicht {
 		this.faerbe();
 		this.hebeHervor( this.k.ausgewaehlt );
 		this.richteKameraAus();
-	}
-
-	/**
-	 * Die Sperrbereiche als Band auf der Schiene.
-	 *
-	 * @param {object} basis Basismodul.
-	 */
-	zeichneSperrbereiche( basis ) {
-		const THREE = this.THREE;
-
-		if ( this.sperren ) {
-			this.gruppe.remove( this.sperren );
-		}
-
-		this.sperren = new THREE.Group();
-
-		// Zwei Marken links und rechts am Umriss statt einer Fläche vor dem
-		// Teil: Eine Fläche schwebt bei jedem Profil irgendwo in der Luft,
-		// sobald das Basismodul nicht durchgehend gleich breit ist. Marken
-		// am Rand sitzen immer an der Silhouette und bleiben auch gedreht
-		// sichtbar.
-		const halb = ( ( basis.width || 60 ) / MM ) / 2;
-		const tiefe = ( basis.depth || 20 ) / MM;
-		const stoff = new THREE.MeshBasicMaterial( {
-			// Kupfer aus dem Design, kein Warnrot: Die Halter sind kein Fehler.
-			color: 0xa86f38,
-			transparent: true,
-			opacity: 0.45,
-			depthWrite: false,
-		} );
-
-		basis.blocks.forEach( ( block ) => {
-			const hoehe = ( block.to - block.from ) / MM;
-			const mitte = ( block.from / MM ) + hoehe / 2;
-
-			// An der Holzstange liegt die Sperre als roter Schleier um den
-			// Halter selbst – dort wird verschraubt, dort sitzt nichts.
-			if ( 'holzstange' === basis.construction ) {
-				const schleier = new THREE.Mesh( new THREE.BoxGeometry( 0.034, hoehe, 0.056 ), stoff );
-
-				schleier.position.set( 0, mitte, 0.0225 );
-				schleier.userData.istSperre = true;
-				this.sperren.add( schleier );
-				return;
-			}
-
-			[ -1, 1 ].forEach( ( seite ) => {
-				const marke = new THREE.Mesh(
-					new THREE.BoxGeometry( halb * 0.14, hoehe, tiefe * 0.9 ),
-					stoff
-				);
-
-				marke.position.set( seite * ( halb + halb * 0.12 ), mitte, tiefe / 2 );
-				marke.userData.istSperre = true;
-				this.sperren.add( marke );
-			} );
-		} );
-
-		this.gruppe.add( this.sperren );
 	}
 
 	/**

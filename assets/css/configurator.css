@@ -673,6 +673,46 @@
 	}
 }
 
+/* Wandfarbe wählen --------------------------------------------------- */
+
+.lw16-haken__wandwahl {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5rem 0.6rem;
+	margin-top: 0.75rem;
+}
+
+.lw16-haken__wandname {
+	margin-right: 0.2rem;
+	font-family: var(--lw16-mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__wandpunkt {
+	width: 1.7rem;
+	height: 1.7rem;
+	padding: 0;
+	border: 1px solid color-mix(in srgb, var(--punkt) 55%, #000);
+	border-radius: 50%;
+	background: var(--punkt);
+	cursor: pointer;
+	box-shadow: 0 0 0 0 var(--lw16-akzent);
+	transition: transform var(--lw16-mittel) var(--lw16-feder), box-shadow var(--lw16-mittel) var(--lw16-glatt);
+}
+
+.lw16-haken__wandpunkt:hover {
+	transform: scale(1.12);
+}
+
+.lw16-haken__wandpunkt[aria-pressed="true"] {
+	transform: scale(1.06);
+	box-shadow: 0 0 0 3px var(--lw16-karte), 0 0 0 5px var(--lw16-akzent);
+}
+
 /* Nicht lieferbar ---------------------------------------------------- */
 
 .lw16-haken__status {
