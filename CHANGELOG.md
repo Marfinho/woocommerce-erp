@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.49.1] – 2026-10-27
+
+- **„Heute“ auf dem Handy: nichts läuft mehr über den rechten Rand.** Lange Hinweise unter einer Aufgabe (etwa „7 h Druck – am besten ab 20:00 starten, dann läuft sie über Nacht“) machten die Spalte breiter als den Bildschirm: Die Karten und „Rüsten starten“ wurden abgeschnitten. Die Spalten haben jetzt eine feste Breite (`minmax(0, 1fr)`), die Hinweise brechen um statt abzuschneiden. Im Browser mit 390 px Breite geprüft: keine seitliche Verschiebung.
+
 ## [0.49.0] – 2026-10-27
 
 ### Lange Platten über Nacht: „Dein Nächstes“ richtet sich nach der Uhrzeit
