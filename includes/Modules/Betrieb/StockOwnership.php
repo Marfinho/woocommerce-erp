@@ -130,6 +130,39 @@ class StockOwnership {
 	}
 
 	/**
+	 * Produkte der alten Lagerverwaltung, die Betrieb schon übernommen hat.
+	 *
+	 * Ihr Bestand dort ist seit der Übernahme eingefroren. Wer ihn noch
+	 * anzeigt - Warnungen, Vorschläge, Wunschliste -, zeigt eine falsche Zahl.
+	 *
+	 * @return array legacy_produkt_id => article_id.
+	 */
+	public static function legacy_map() {
+		global $wpdb;
+
+		$table = ArticleRepository::table();
+		$rows  = $wpdb->get_results( "SELECT id, legacy_produkt_id FROM {$table} WHERE legacy_produkt_id > 0", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$out   = array();
+
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row['legacy_produkt_id'] ] = (int) $row['id'];
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Ein Produkt der alten Verwaltung weglassen, wenn Betrieb es führt?
+	 *
+	 * @param int   $legacy_id Produkt-ID der alten Verwaltung.
+	 * @param array $map       Ergebnis von legacy_map() (einmal laden, nicht je Produkt).
+	 * @return bool
+	 */
+	public static function superseded( $legacy_id, array $map ) {
+		return self::is_active() && isset( $map[ (int) $legacy_id ] );
+	}
+
+	/**
 	 * Eine Bewegung an die zuständige Lagerverwaltung geben.
 	 *
 	 * Gemeinsame Weiche für alle Stellen außerhalb des Shops – heute Kasse,

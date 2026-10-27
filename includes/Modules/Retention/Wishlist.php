@@ -11,6 +11,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Assets;
 
+use Lindenweg16\Modules\Betrieb\StockOwnership;
+use Lindenweg16\Modules\Betrieb\WooStockSync;
 use Lindenweg16\Modules\Inventory\Repository;
 
 /**
@@ -183,9 +185,19 @@ class Wishlist {
 			if ( ! $wc ) {
 				continue;
 			}
-			$produkt   = Repository::get_by_woo_id( $row->woo_product_id );
-			$bestand   = $produkt ? Repository::get_stock( $produkt->id ) : null;
-			$verfuegbar = null === $bestand ? $wc->is_in_stock() : ( $bestand > 0 );
+			// Zuständig ist, wer das Produkt führt: Betrieb für seine Artikel, die
+			// alte Verwaltung nur noch für den Rest. Deren Bestand ist für
+			// übernommene Produkte eingefroren.
+			$article_id = StockOwnership::article_for_product( (int) $row->woo_product_id );
+			$produkt    = Repository::get_by_woo_id( $row->woo_product_id );
+
+			if ( $article_id ) {
+				$verfuegbar = WooStockSync::available_for_article( $article_id ) > 0;
+			} elseif ( $produkt ) {
+				$verfuegbar = Repository::get_stock( $produkt->id ) > 0;
+			} else {
+				$verfuegbar = $wc->is_in_stock();
+			}
 
 			echo '<div class="lw16-wishlist-card">';
 			echo '<a href="' . esc_url( get_permalink( $row->woo_product_id ) ) . '">' . $wc->get_image( 'woocommerce_thumbnail' ) . '</a>'; // phpcs:ignore WordPress.Security.EscapeOutput

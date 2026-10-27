@@ -155,6 +155,9 @@ class Consistency {
 		return array(
 			'articles'    => $articles,
 			'legacy_products' => $legacy,
+			'shop_stock'  => WooStockSync::is_active() ? WooStockSync::deviations() : array(),
+			'shop_stock_last' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
+			'shop_stock_active' => WooStockSync::is_active(),
 			'bom_parents' => $bom_parents,
 			'revisions'   => $revisions,
 			'wc_missing'  => $wc_missing,
@@ -226,6 +229,8 @@ class Consistency {
 			self::check_bins( $articles, isset( $ctx['bins'] ) ? (array) $ctx['bins'] : array() ),
 			self::check_open_orders( $articles, isset( $ctx['open_orders'] ) ? (array) $ctx['open_orders'] : array() ),
 			self::check_legacy_stock( isset( $ctx['legacy_products'] ) ? (array) $ctx['legacy_products'] : array() ),
+			self::check_shop_stock( isset( $ctx['shop_stock'] ) ? (array) $ctx['shop_stock'] : array() ),
+			self::check_shop_stock_job( isset( $ctx['shop_stock_last'] ) ? (int) $ctx['shop_stock_last'] : null, time(), ! empty( $ctx['shop_stock_active'] ) ),
 			self::check_orphan_orders( isset( $ctx['orphan_orders'] ) ? (array) $ctx['orphan_orders'] : array() )
 		);
 
@@ -534,6 +539,82 @@ class Consistency {
 		}
 
 		return $out;
+	}
+
+	/**
+	 * Zeigt der Shop einen anderen Bestand als das ERP rechnet?
+	 *
+	 * @param array $deviations Zeilen von WooStockSync::deviations().
+	 * @return array
+	 */
+	public static function check_shop_stock( array $deviations ) {
+		if ( ! $deviations ) {
+			return array();
+		}
+
+		$namen = array();
+
+		foreach ( array_slice( $deviations, 0, 5 ) as $row ) {
+			$namen[] = sprintf(
+				/* translators: 1: Name, 2: ERP-Menge, 3: Shop-Menge. */
+				__( '%1$s (ERP %2$d, Shop %3$s)', 'lindenweg16' ),
+				'' !== (string) $row['name'] ? $row['name'] : '#' . (int) $row['product_id'],
+				(int) $row['expected'],
+				null === $row['shop'] ? __( 'ohne Lagerverwaltung', 'lindenweg16' ) : (int) $row['shop']
+			);
+		}
+
+		$liste = implode( ', ', $namen );
+
+		if ( count( $deviations ) > 5 ) {
+			/* translators: 1: Namen, 2: Anzahl weiterer. */
+			$liste = sprintf( __( '%1$s und %2$d weitere', 'lindenweg16' ), $liste, count( $deviations ) - 5 );
+		}
+
+		return array(
+			self::finding(
+				'warnung',
+				__( 'Shop-Bestand', 'lindenweg16' ),
+				sprintf(
+					/* translators: 1: Anzahl, 2: Liste. */
+					__( '%1$d Shop-Einträge zeigen einen anderen Bestand als das ERP: %2$s.', 'lindenweg16' ),
+					count( $deviations ),
+					$liste
+				),
+				__( 'Unter Verwaltung → Einstellungen → Lagerhoheit „Bestand jetzt in den Shop übertragen" drücken. Kehrt die Abweichung wieder, ändert jemand den Bestand von Hand im Shop oder der stündliche Abgleich läuft nicht (siehe Systemmeldungen).', 'lindenweg16' )
+			),
+		);
+	}
+
+	/**
+	 * Läuft der stündliche Abgleich in den Shop noch?
+	 *
+	 * @param int|null $last   Zeitpunkt des letzten Laufs; null = noch nie.
+	 * @param int      $now    Jetzt.
+	 * @param bool     $active Ist die Übergabe eingeschaltet?
+	 * @return array
+	 */
+	public static function check_shop_stock_job( $last, $now, $active ) {
+		if ( ! $active ) {
+			return array();
+		}
+
+		$grenze = 3 * 3600;
+
+		if ( $last && ( (int) $now - (int) $last ) <= $grenze ) {
+			return array();
+		}
+
+		return array(
+			self::finding(
+				'warnung',
+				__( 'Shop-Bestand', 'lindenweg16' ),
+				$last
+					? __( 'Der stündliche Bestandsabgleich in den Shop lief seit über drei Stunden nicht.', 'lindenweg16' )
+					: __( 'Der stündliche Bestandsabgleich in den Shop ist noch nie gelaufen.', 'lindenweg16' ),
+				__( 'Läuft der WordPress-Cron (Action Scheduler) nicht? Unter WooCommerce → Status → Geplante Aktionen nachsehen. Bis dahin hilft „Bestand jetzt in den Shop übertragen".', 'lindenweg16' )
+			),
+		);
 	}
 
 	/**

@@ -188,7 +188,12 @@ class Dashboard {
 	protected function render_low_stock_warning() {
 		$produkte = Repository::get_products();
 		$warnings = array();
+		$map      = \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_map();
 		foreach ( $produkte as $p ) {
+			// Von Betrieb geführte Produkte: Ihr alter Bestand ist eingefroren.
+			if ( \Lindenweg16\Modules\Betrieb\StockOwnership::superseded( (int) $p->id, $map ) ) {
+				continue;
+			}
 			$ampel = StockManager::ampel( $p );
 			if ( 'gruen' !== $ampel ) {
 				$warnings[] = array(

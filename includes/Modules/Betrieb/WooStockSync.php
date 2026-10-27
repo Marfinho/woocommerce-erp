@@ -18,6 +18,7 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Log;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\Settings;
 
@@ -25,6 +26,11 @@ use Lindenweg16\Core\Settings;
  * Schreibt den verfügbaren Bestand in die Shop-Produkte.
  */
 class WooStockSync {
+
+	/**
+	 * Option mit dem Zeitpunkt des letzten vollständigen Abgleichs.
+	 */
+	const LAST_RUN = 'lw16_shop_bestand_lauf';
 
 	/**
 	 * Artikel, die am Ende der Anfrage abgeglichen werden.
@@ -49,6 +55,13 @@ class WooStockSync {
 		add_action( 'woocommerce_trash_order', array( $this, 'on_order_status_changed' ), 10, 1 );
 		add_filter( 'woocommerce_prevent_adjust_line_item_product_stock', array( $this, 'prevent_woo_adjustment' ), 10, 2 );
 		add_action( Scheduler::HOOK_SHOP_STOCK, array( __CLASS__, 'sync_all' ) );
+
+		if ( is_admin() ) {
+			// Von Hand im Produkt-Editor geändert? Dann gleich zurückstellen.
+			add_action( 'woocommerce_process_product_meta', array( $this, 'on_product_edited' ), 99, 1 );
+			add_action( 'woocommerce_save_product_variation', array( $this, 'on_variation_edited' ), 99, 1 );
+			add_action( 'admin_footer', array( $this, 'lock_editor_fields' ) );
+		}
 		add_action( 'shutdown', array( __CLASS__, 'flush' ) );
 	}
 
@@ -101,6 +114,62 @@ class WooStockSync {
 	}
 
 	/**
+	 * Ein Produkt wurde im Editor gespeichert.
+	 *
+	 * @param int $product_id Produkt.
+	 */
+	public function on_product_edited( $product_id ) {
+		if ( self::$running || ! self::is_active() ) {
+			return;
+		}
+
+		$article_id = StockOwnership::article_for_product( (int) $product_id );
+		if ( $article_id ) {
+			self::queue( $article_id );
+		}
+	}
+
+	/**
+	 * Eine Variante wurde im Editor gespeichert.
+	 *
+	 * @param int $variation_id Variante.
+	 */
+	public function on_variation_edited( $variation_id ) {
+		$parent = (int) wp_get_post_parent_id( (int) $variation_id );
+
+		if ( $parent ) {
+			$this->on_product_edited( $parent );
+		}
+	}
+
+	/**
+	 * Bestandsfelder im Produkt-Editor sperren und erklären, warum.
+	 *
+	 * Eine von Hand eingetragene Menge würde beim nächsten Abgleich ohnehin
+	 * überschrieben; besser, sie lässt sich gar nicht erst eintragen.
+	 */
+	public function lock_editor_fields() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( ! self::is_active() || ! $screen || 'product' !== $screen->post_type || 'post' !== $screen->base ) {
+			return;
+		}
+
+		global $post;
+
+		if ( ! $post || ! StockOwnership::article_for_product( (int) $post->ID ) ) {
+			return;
+		}
+
+		$hinweis = esc_js( __( 'Der Bestand wird im ERP geführt und hier automatisch übernommen. Änderungen bitte im ERP unter Lager vornehmen.', 'lindenweg16' ) );
+
+		echo '<script>jQuery(function($){var m="' . $hinweis . '";' // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			. 'function lock(){$("#_manage_stock,#_stock,#_backorders,#_low_stock_amount,.variable_manage_stock,.variable_stock,.variable_backorders").prop("disabled",true).attr("title",m);'
+			. 'if(!$("#lw16-bestand-hinweis").length){$("#inventory_product_data").prepend("<p id=\"lw16-bestand-hinweis\" style=\"margin:1em;padding:.6em;background:#fff8e5;border-left:4px solid #dba617\">"+$("<div>").text(m).html()+"</p>");}}'
+			. 'lock();$(document).on("woocommerce_variations_loaded",lock);});</script>';
+	}
+
+	/**
 	 * WooCommerces Lagerabzug für Produkte mit ERP-Artikel überspringen.
 	 *
 	 * Gilt für Abzug und Rückbuchung gleichermaßen.
@@ -129,7 +198,11 @@ class WooStockSync {
 		self::$queue = array();
 
 		if ( self::is_active() ) {
-			self::sync( $ids );
+			try {
+				self::sync( $ids );
+			} catch ( \Throwable $e ) {
+				Log::error( 'shop-bestand', 'Abgleich fehlgeschlagen: ' . $e->getMessage() );
+			}
 		}
 	}
 
@@ -150,7 +223,12 @@ class WooStockSync {
 			}
 		}
 
-		return self::sync( $ids );
+		$result = self::sync( $ids );
+
+		// Lebenszeichen: Die Systemprüfung schlägt an, wenn es ausbleibt.
+		update_option( self::LAST_RUN, time(), false );
+
+		return $result;
 	}
 
 	/**
@@ -198,16 +276,39 @@ class WooStockSync {
 	}
 
 	/**
-	 * Bestand in ein Shop-Produkt schreiben.
+	 * Verfügbare Menge eines Artikels: Lager minus offene Bestellungen.
+	 *
+	 * Dieselbe Rechnung wie beim Übertragen in den Shop - für alle, die
+	 * „ist das lieferbar?" beantworten, ohne WooCommerce zu fragen.
+	 *
+	 * @param int $article_id Artikel.
+	 * @return int
+	 */
+	public static function available_for_article( $article_id ) {
+		$balances = StockLedger::balances( StockRepository::all( (int) $article_id ) );
+		$stock    = ShopStock::stock_by_color( isset( $balances[ (int) $article_id ] ) ? $balances[ (int) $article_id ] : array() );
+		$reserved = ShopStock::reserved_by_color( WooIntegration::open_order_lines(), (int) $article_id );
+
+		return ShopStock::simple_quantity( $stock, $reserved );
+	}
+
+	/**
+	 * Sollmengen eines Shop-Produkts: bei einfachen Produkten es selbst,
+	 * bei variablen jede Variante nach ihrer Farbe.
 	 *
 	 * @param \WC_Product $product  Produkt.
 	 * @param array       $stock    color => Lagerbestand.
 	 * @param array       $reserved color => reservierte Menge.
-	 * @return int Anzahl geänderter Produkte beziehungsweise Varianten.
+	 * @return array Produkt-ID => array( product => Objekt, qty => Stück ).
 	 */
-	protected static function write_product( $product, array $stock, array $reserved ) {
+	protected static function targets( $product, array $stock, array $reserved ) {
 		if ( ! $product->is_type( 'variable' ) ) {
-			return self::write_quantity( $product, ShopStock::simple_quantity( $stock, $reserved ) ) ? 1 : 0;
+			return array(
+				$product->get_id() => array(
+					'product' => $product,
+					'qty'     => ShopStock::simple_quantity( $stock, $reserved ),
+				),
+			);
 		}
 
 		$taxonomy   = ColorRegistry::taxonomy();
@@ -220,31 +321,99 @@ class WooStockSync {
 				continue;
 			}
 
-			$attributes             = $variation->get_attributes();
+			$attributes              = $variation->get_attributes();
 			$variations[ $child_id ] = ColorRegistry::normalize( isset( $attributes[ $taxonomy ] ) ? $attributes[ $taxonomy ] : '' );
-			$objects[ $child_id ]   = $variation;
+			$objects[ $child_id ]    = $variation;
 		}
 
-		$quantities = ShopStock::per_variation( $variations, ShopStock::available( $stock, $reserved ), ColorRegistry::default_color() );
-		$changed    = 0;
+		$out = array();
 
-		// Der Bestand liegt an den Varianten; ein eigener am Elternprodukt
-		// würde ihn überlagern.
-		if ( $product->get_manage_stock() ) {
+		foreach ( ShopStock::per_variation( $variations, ShopStock::available( $stock, $reserved ), ColorRegistry::default_color() ) as $child_id => $qty ) {
+			$out[ $child_id ] = array(
+				'product' => $objects[ $child_id ],
+				'qty'     => $qty,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Bestand in ein Shop-Produkt schreiben.
+	 *
+	 * @param \WC_Product $product  Produkt.
+	 * @param array       $stock    color => Lagerbestand.
+	 * @param array       $reserved color => reservierte Menge.
+	 * @return int Anzahl geänderter Produkte beziehungsweise Varianten.
+	 */
+	protected static function write_product( $product, array $stock, array $reserved ) {
+		$changed = 0;
+
+		// Bei variablen Produkten liegt der Bestand an den Varianten; ein
+		// eigener am Elternprodukt würde ihn überlagern.
+		if ( $product->is_type( 'variable' ) && $product->get_manage_stock() ) {
 			$product->set_manage_stock( false );
 			$product->save();
 			$changed++;
 		}
 
-		foreach ( $quantities as $child_id => $qty ) {
-			$changed += self::write_quantity( $objects[ $child_id ], $qty ) ? 1 : 0;
+		foreach ( self::targets( $product, $stock, $reserved ) as $target ) {
+			$changed += self::write_quantity( $target['product'], $target['qty'] ) ? 1 : 0;
 		}
 
-		if ( $changed && class_exists( '\WC_Product_Variable' ) ) {
+		if ( $changed && $product->is_type( 'variable' ) && class_exists( '\WC_Product_Variable' ) ) {
 			\WC_Product_Variable::sync( $product->get_id() );
 		}
 
 		return $changed;
+	}
+
+	/**
+	 * Wo weicht der Shop vom ERP ab?
+	 *
+	 * Nur lesend. Grundlage der Prüfung unter „Systemprüfung".
+	 *
+	 * @return array Zeilen: article_id, product_id, name, expected, shop (null = Lagerverwaltung aus).
+	 */
+	public static function deviations() {
+		$rows = array();
+
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			return $rows;
+		}
+
+		$balances = StockLedger::balances( StockRepository::all() );
+		$lines    = WooIntegration::open_order_lines();
+
+		foreach ( ArticleRepository::all_by_id() as $article_id => $article ) {
+			$wc_id   = (int) $article['wc_product_id'];
+			$product = $wc_id ? wc_get_product( $wc_id ) : null;
+
+			if ( ! $product ) {
+				continue;
+			}
+
+			$stock    = ShopStock::stock_by_color( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() );
+			$reserved = ShopStock::reserved_by_color( $lines, $article_id );
+
+			foreach ( self::targets( $product, $stock, $reserved ) as $target ) {
+				$shop = $target['product']->get_manage_stock() ? (int) $target['product']->get_stock_quantity() : null;
+
+				if ( null !== $shop && $shop === (int) $target['qty'] ) {
+					continue;
+				}
+
+				$rows[] = array(
+					'article_id' => (int) $article_id,
+					'product_id' => (int) $target['product']->get_id(),
+					'name'       => (string) $target['product']->get_name(),
+					'expected'   => (int) $target['qty'],
+					'shop'       => $shop,
+				);
+			}
+		}
+
+		return $rows;
 	}
 
 	/**

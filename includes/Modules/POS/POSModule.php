@@ -15,6 +15,7 @@ use Lindenweg16\Modules\Accounting\KassenbuchRepository;
 use Lindenweg16\Modules\Inventory\Repository as LagerRepository;
 use Lindenweg16\Modules\Inventory\StockManager;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Core\Lock;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 
 /**
@@ -274,7 +275,12 @@ class POSModule {
 						<td><?php echo esc_html( number_format( (float) $pos->betrag, 2, ',', '.' ) ); ?> &euro;</td>
 						<td>
 							<?php if ( ! $pos->storniert ) : ?>
-								<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=lw16_pos_storno&id=' . $pos->id ), 'lw16_pos_storno_' . $pos->id ) ); ?>" onclick="return confirm('<?php esc_attr_e( 'Verkauf stornieren?', 'lindenweg16' ); ?>')"><?php esc_html_e( 'Storno', 'lindenweg16' ); ?></a>
+								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline" onsubmit="return confirm('<?php esc_attr_e( 'Verkauf stornieren?', 'lindenweg16' ); ?>')">
+									<input type="hidden" name="action" value="lw16_pos_storno" />
+									<input type="hidden" name="id" value="<?php echo (int) $pos->id; ?>" />
+									<?php wp_nonce_field( 'lw16_pos_storno_' . $pos->id ); ?>
+									<button type="submit" class="button-link"><?php esc_html_e( 'Storno', 'lindenweg16' ); ?></button>
+								</form>
 							<?php else : ?>
 								<?php esc_html_e( 'storniert', 'lindenweg16' ); ?>
 							<?php endif; ?>
@@ -505,7 +511,6 @@ class POSModule {
 		$produkte = self::sale_options();
 		$sell_url = admin_url( 'admin-post.php' );
 		$close_url = admin_url( 'admin-post.php' );
-		$storno_base = admin_url( 'admin-post.php?action=lw16_pos_storno' );
 		?>
 		<!DOCTYPE html>
 		<html lang="de">
@@ -629,7 +634,13 @@ class POSModule {
 					<div>
 						<span class="pos-item-price"><?php echo esc_html( number_format( (float) $pos->betrag, 2, ',', '.' ) ); ?> &euro;</span>
 						<?php if ( ! $pos->storniert ) : ?>
-							<a href="<?php echo esc_url( wp_nonce_url( $storno_base . '&id=' . $pos->id . '&_wp_http_referer=' . rawurlencode( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ), 'lw16_pos_storno_' . $pos->id ) ); ?>" class="pos-item-storno" onclick="return confirm('<?php esc_attr_e( 'Stornieren?', 'lindenweg16' ); ?>')">&times;</a>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline;margin:0" onsubmit="return confirm('<?php esc_attr_e( 'Stornieren?', 'lindenweg16' ); ?>')">
+								<input type="hidden" name="action" value="lw16_pos_storno" />
+								<input type="hidden" name="id" value="<?php echo (int) $pos->id; ?>" />
+								<input type="hidden" name="_wp_http_referer" value="<?php echo esc_attr( add_query_arg( array( 'page' => 'lw16-kasse', 'view' => 'mobil' ), admin_url( 'admin.php' ) ) ); ?>" />
+								<?php wp_nonce_field( 'lw16_pos_storno_' . $pos->id ); ?>
+								<button type="submit" class="pos-item-storno">&times;</button>
+							</form>
 						<?php endif; ?>
 					</div>
 				</div>
@@ -1000,38 +1011,53 @@ class POSModule {
 		if ( ! current_user_can( 'lw16_mod_kasse' ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );
 		}
-		$id = (int) ( $_GET['id'] ?? 0 );
+		// Nur per POST: Ein Link, der storniert und Lagerbestand zurückbucht,
+		// darf nicht von einer Vorabruf-Funktion des Browsers ausgelöst werden.
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+			wp_die( esc_html__( 'Ungültige Anfrage.', 'lindenweg16' ), '', array( 'response' => 405 ) );
+		}
+
+		$id = (int) ( $_POST['id'] ?? 0 );
 		check_admin_referer( 'lw16_pos_storno_' . $id );
 
-		$pos = POSRepository::get_position( $id );
-		if ( $pos && ! $pos->storniert ) {
-			POSRepository::update_position( $id, array( 'storniert' => 1 ) );
+		// Ein Doppelklick oder zwei Geräte zugleich dürfen nicht zweimal zurückbuchen.
+		if ( ! Lock::acquire( 'pos_storno_' . $id, 5 ) ) {
+			$this->redirect_back( __( 'Der Storno läuft gerade.', 'lindenweg16' ) );
+		}
 
-			// Lagerbestand zurückbuchen – über dieselbe Weiche wie der
-			// Verkauf, sonst landet der Storno im anderen Lager als der
-			// Verkauf und beide stehen dauerhaft falsch.
-			if ( $pos->produkt_id || ! empty( $pos->article_id ) ) {
-				$tag      = POSRepository::get_tag( $pos->tag_id );
-				$referenz = sprintf( /* translators: %s: Marktname. */ __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag ? $tag->markt_name : '' );
+		try {
+			$pos = POSRepository::get_position( $id );
+			if ( $pos && ! $pos->storniert ) {
+				POSRepository::update_position( $id, array( 'storniert' => 1 ) );
 
-				$booked = StockOwnership::book(
-					array(
-						'article_id'        => isset( $pos->article_id ) ? (int) $pos->article_id : 0,
-						'legacy_produkt_id' => (int) $pos->produkt_id,
-					),
-					abs( (int) $pos->menge ),
-					'retoure',
-					array(
-						'ref_type' => 'kasse',
-						'ref_id'   => (int) $pos->tag_id,
-						'note'     => $referenz,
-					)
-				);
+				// Lagerbestand zurückbuchen – über dieselbe Weiche wie der
+				// Verkauf, sonst landet der Storno im anderen Lager als der
+				// Verkauf und beide stehen dauerhaft falsch.
+				if ( $pos->produkt_id || ! empty( $pos->article_id ) ) {
+					$tag      = POSRepository::get_tag( $pos->tag_id );
+					$referenz = sprintf( /* translators: %s: Marktname. */ __( 'Storno Marktverkauf %s', 'lindenweg16' ), $tag ? $tag->markt_name : '' );
 
-				if ( 'betrieb' !== $booked && $pos->produkt_id ) {
-					StockManager::record_movement( (int) $pos->produkt_id, abs( (int) $pos->menge ), 'retoure', array( 'referenz' => $referenz ) );
+					$booked = StockOwnership::book(
+						array(
+							'article_id'        => isset( $pos->article_id ) ? (int) $pos->article_id : 0,
+							'legacy_produkt_id' => (int) $pos->produkt_id,
+						),
+						abs( (int) $pos->menge ),
+						'retoure',
+						array(
+							'ref_type' => 'kasse',
+							'ref_id'   => (int) $pos->tag_id,
+							'note'     => $referenz,
+						)
+					);
+
+					if ( 'betrieb' !== $booked && $pos->produkt_id ) {
+						StockManager::record_movement( (int) $pos->produkt_id, abs( (int) $pos->menge ), 'retoure', array( 'referenz' => $referenz ) );
+					}
 				}
 			}
+		} finally {
+			Lock::release( 'pos_storno_' . $id );
 		}
 
 		$this->redirect_back( __( 'Verkauf storniert.', 'lindenweg16' ) );

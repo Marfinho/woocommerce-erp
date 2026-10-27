@@ -509,7 +509,7 @@
 		ui.view().appendChild(bar);
 		ui.view().appendChild(box);
 
-		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['plugin', 'Plugin (Firma, DHL, …)']];
+		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Systemmeldungen'], ['plugin', 'Plugin (Firma, DHL, …)']];
 
 		function tabs() {
 			bar.textContent = '';
@@ -521,7 +521,7 @@
 		function show() {
 			box.textContent = '';
 			box.appendChild(loading());
-			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, plugin: plugin })[tab]();
+			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, meldungen: meldungen, plugin: plugin })[tab]();
 		}
 
 		function stichtagForm(d) {
@@ -657,6 +657,23 @@
 					card.appendChild(table(['Schwere', 'Bereich', 'Befund', 'Was zu tun ist'], d.findings.map(function (f) { return [h('span', { class: 'tag vw-' + (f.level === 'fehler' ? 'rot' : 'gelb') }, f.level === 'fehler' ? 'Fehler' : 'Warnung'), f.area, f.text, f.fix]; })));
 				}
 				box.appendChild(card);
+			}).catch(fail);
+		}
+
+		function meldungen() {
+			ui.api('einstellungen/meldungen').then(function (d) {
+				box.textContent = '';
+				var hooks = Object.keys(d.failed);
+				var sync = d.last_sync ? 'Letzter vollständiger Bestandsabgleich in den Shop: ' + ui.when(d.last_sync) + '.' : 'Der stündliche Bestandsabgleich in den Shop ist noch nicht gelaufen.';
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Hintergrundjobs'),
+					h('p', { class: 'muted' }, sync),
+					hooks.length ? h('div', { class: 'notice warn' }, 'Fehlgeschlagene Aufträge: ' + hooks.map(function (k) { return k + ' (' + d.failed[k] + ')'; }).join(', ') + '. Details unter WooCommerce → Status → Geplante Aktionen.')
+						: h('div', { class: 'notice' }, 'Keine fehlgeschlagenen Aufträge.')));
+				var clear = h('button', { class: 'btn', type: 'button' }, 'Meldungen löschen');
+				clear.addEventListener('click', function () { run(clear, function () { return post('einstellungen/meldungen', {}); }, function (r) { ui.toast(r.message); meldungen(); }); });
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Letzte Meldungen'),
+					d.entries.length ? table(['Zeit', 'Stufe', 'Bereich', 'Meldung'], d.entries.map(function (e) { return [ui.when(e.time), e.level === 'error' ? 'Fehler' : 'Warnung', e.area, e.message]; })) : h('p', { class: 'muted' }, 'Keine Meldungen.'),
+					d.entries.length ? clear : null));
 			}).catch(fail);
 		}
 

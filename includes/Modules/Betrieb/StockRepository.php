@@ -9,6 +9,8 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Log;
+
 /**
  * Zugriff auf das Bewegungskonto.
  */
@@ -72,6 +74,8 @@ class StockRepository {
 		}
 
 		if ( false === $wpdb->insert( self::table(), $row ) ) {
+			Log::error( 'lager', 'Bewegung konnte nicht geschrieben werden: ' . $wpdb->last_error, array( 'article_id' => $row['article_id'], 'qty' => $row['qty'] ) );
+
 			return 0;
 		}
 
@@ -202,6 +206,31 @@ class StockRepository {
 		return $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$table} WHERE ref_type = %s AND ref_id = %d AND reverses_id IS NULL ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $ref_type,
+				(int) $ref_id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Wirksame Bewegungen zu einer Herkunft: Originale ohne Gegenbuchung.
+	 *
+	 * Anders als by_ref() fehlen hier auch die Bewegungen, die schon
+	 * storniert wurden. Das ist die Grundlage dafür, eine Bestellung nicht
+	 * doppelt zu buchen und nach einem Storno trotzdem neu buchen zu können.
+	 *
+	 * @param string $ref_type Herkunftsart.
+	 * @param int    $ref_id   Herkunft.
+	 * @return array
+	 */
+	public static function active_by_ref( $ref_type, $ref_id ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT m.* FROM {$table} m LEFT JOIN {$table} r ON r.reverses_id = m.id WHERE m.ref_type = %s AND m.ref_id = %d AND m.reverses_id IS NULL AND r.id IS NULL ORDER BY m.id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(string) $ref_type,
 				(int) $ref_id
 			),

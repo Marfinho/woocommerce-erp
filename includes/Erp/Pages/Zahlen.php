@@ -562,8 +562,14 @@ class Zahlen {
 	 */
 	protected static function low_stock() {
 		$out = array();
+		$map = \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_map();
 
 		foreach ( \Lindenweg16\Modules\Inventory\Repository::get_products() as $p ) {
+			// Von Betrieb geführte Produkte: Ihr alter Bestand ist eingefroren.
+			if ( \Lindenweg16\Modules\Betrieb\StockOwnership::superseded( (int) $p->id, $map ) ) {
+				continue;
+			}
+
 			$ampel = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p );
 
 			if ( 'gruen' === $ampel ) {

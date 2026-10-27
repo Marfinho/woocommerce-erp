@@ -14,7 +14,9 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
 use Lindenweg16\Core\Lock;
+use Lindenweg16\Core\Log;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
 
@@ -82,7 +84,22 @@ class WooIntegration {
 		}
 
 		try {
-			$this->book_stock_locked( (int) $order_id );
+			// Alles oder nichts: Bricht die Buchung mittendrin ab, bleibt
+			// die Bestellung ungebucht und der nächste Versuch beginnt sauber.
+			Db::transaction(
+				function () use ( $order_id ) {
+					$this->book_stock_locked( (int) $order_id );
+				}
+			);
+		} catch ( \Throwable $e ) {
+			// Die Bestellabwicklung darf daran nicht scheitern - aber es muss auffallen.
+			Log::error( 'lager', 'Lagerbuchung einer Bestellung fehlgeschlagen: ' . $e->getMessage(), array( 'order_id' => (int) $order_id ) );
+
+			$order = wc_get_order( (int) $order_id );
+			if ( $order ) {
+				$order->add_order_note( __( 'Betrieb: Lagerbuchung fehlgeschlagen und zurückgerollt - bitte den Status erneut auf „abgeschlossen" setzen oder die Bestellung im Lager prüfen.', 'lindenweg16' ) );
+				$order->save();
+			}
 		} finally {
 			Lock::release( 'wc_stock_' . (int) $order_id );
 		}
@@ -181,6 +198,11 @@ class WooIntegration {
 		$bins      = PicklistRepository::bins_for_order( (int) $order_id );
 		$zuordnung = StockOwnership::article_map();
 
+		// Erst alle Positionen sammeln, dann gegen das Konto rechnen: Was für
+		// diese Bestellung schon als Verkauf gebucht ist, wird nicht noch
+		// einmal gebucht (Wiederaufnahme nach einem abgebrochenen Lauf).
+		$lines = array();
+
 		foreach ( $order->get_items() as $item ) {
 			$product_id = (int) $item->get_product_id();
 			$article_id = isset( $zuordnung[ $product_id ] ) ? $zuordnung[ $product_id ] : 0;
@@ -190,17 +212,33 @@ class WooIntegration {
 				continue;
 			}
 
-			$color = ColorRegistry::resolve_order_item( $item );
-			$qty   = (float) $item->get_quantity();
+			$color   = ColorRegistry::resolve_order_item( $item );
+			$lines[] = array(
+				'article_id' => $article_id,
+				'color'      => $color['color'],
+				'resolved'   => $color['resolved_from'],
+				'qty'        => (float) $item->get_quantity(),
+			);
+		}
 
-			if ( ColorRegistry::UNRESOLVED === $color['color'] ) {
+		$open = StockLedger::unbooked( StockRepository::active_by_ref( 'wc_order', (int) $order_id ), $lines );
+
+		foreach ( $lines as $i => $line ) {
+			$article_id = $line['article_id'];
+			$qty        = $open[ $i ];
+
+			if ( $qty <= 0 ) {
+				continue;
+			}
+
+			if ( ColorRegistry::UNRESOLVED === $line['color'] ) {
 				$unresolved++;
 			}
 
-			StockRepository::book(
+			$id = StockRepository::book(
 				array(
 					'article_id'    => $article_id,
-					'color'         => $color['color'],
+					'color'         => $line['color'],
 					'qty'           => -1 * $qty,
 					'movement_type' => 'verkauf',
 					'location'      => 'lager',
@@ -210,16 +248,20 @@ class WooIntegration {
 					'note'          => sprintf(
 						/* translators: %s: Quelle der Farbzuordnung. */
 						__( 'Farbe ermittelt aus: %s', 'lindenweg16' ),
-						$color['resolved_from']
+						$line['resolved']
 					),
 				)
 			);
+
+			if ( ! $id ) {
+				throw new \RuntimeException( 'Bewegung konnte nicht geschrieben werden (Artikel ' . (int) $article_id . ').' );
+			}
 
 			ComponentConsumption::consume_for_sale( $article_id, $qty, 'wc_order', (int) $order_id );
 
 			ComponentConsumption::book_assemblies(
 				ComponentConsumption::assemblies_at_sale( $article_id, $qty, $ctx ),
-				$color['color'],
+				$line['color'],
 				'wc_order',
 				(int) $order_id
 			);
@@ -253,13 +295,25 @@ class WooIntegration {
 			return array();
 		}
 
-		$orders = wc_get_orders(
-			array(
-				'status' => array( 'processing', 'on-hold' ),
-				'limit'  => 200,
-				'return' => 'objects',
-			)
-		);
+		// In Seiten, damit auch bei vielen offenen Bestellungen keine fehlt:
+		// Eine übersehene Bestellung reserviert nichts und der Shop verkauft
+		// ihre Ware ein zweites Mal.
+		$orders = array();
+		$page   = 1;
+
+		do {
+			$batch = wc_get_orders(
+				array(
+					'status' => array( 'processing', 'on-hold' ),
+					'limit'  => 200,
+					'paged'  => $page,
+					'return' => 'objects',
+				)
+			);
+
+			$orders = array_merge( $orders, (array) $batch );
+			$page++;
+		} while ( count( (array) $batch ) >= 200 && $page <= 50 );
 
 		$lines = array();
 

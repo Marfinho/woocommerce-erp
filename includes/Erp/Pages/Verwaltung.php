@@ -23,6 +23,8 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Admin\SettingsPage as PluginSettingsPage;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Log;
+use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
@@ -393,6 +395,10 @@ class Verwaltung {
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'lager_speichern' ), 'permission_callback' => $einstellungen ),
 		) );
 		register_rest_route( $ns, '/erp/einstellungen/lager/shop-bestand', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'shop_bestand_abgleichen' ), 'permission_callback' => $einstellungen ) );
+		register_rest_route( $ns, '/erp/einstellungen/meldungen', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'meldungen' ), 'permission_callback' => $einstellungen ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'meldungen_leeren' ), 'permission_callback' => $einstellungen ),
+		) );
 		register_rest_route( $ns, '/erp/einstellungen/protokoll', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'protokoll' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/systempruefung', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'systempruefung' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/plugin', array(
@@ -1422,6 +1428,52 @@ class Verwaltung {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Systemmeldungen: Fehler aus Hintergrundjobs und Buchungen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function meldungen() {
+		$failed = array();
+
+		if ( function_exists( 'as_get_scheduled_actions' ) ) {
+			foreach ( as_get_scheduled_actions( array( 'status' => 'failed', 'per_page' => 20, 'orderby' => 'date', 'order' => 'DESC' ), 'OBJECT' ) as $action ) {
+				if ( Scheduler::is_ours( $action->get_hook() ) ) {
+					$failed[] = (string) $action->get_hook();
+				}
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'entries' => array_map(
+					static function ( $e ) {
+						return array(
+							'time'    => (int) $e['time'],
+							'level'   => (string) $e['level'],
+							'area'    => (string) $e['area'],
+							'message' => (string) $e['message'],
+						);
+					},
+					Log::recent( 100 )
+				),
+				'failed'  => array_count_values( $failed ),
+				'last_sync' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
+			)
+		);
+	}
+
+	/**
+	 * Systemmeldungen leeren.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function meldungen_leeren() {
+		Log::clear();
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Meldungen gelöscht.', 'lindenweg16' ) ) );
 	}
 
 	/**
