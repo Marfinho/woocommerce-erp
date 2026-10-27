@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.39.0] – 2026-10-27
+
+### Konfigurator im Look von lindenweg16
+- Der Konfigurator im Shop (`[lw16_konfigurator]`) übernimmt Farben, Schriften, Rundungen, Schatten und Bewegung des Themes: Karten für Länge, Farbe und Module, Sticker-Plus auf den Modulkarten, Glas-Leiste mit Preis, Menge und Warenkorb-Knopf, die unten am Bildschirm mitläuft.
+- Länge und Farbe sind Optionsfelder (Längenkarten, runde Farbmuster) statt Auswahllisten. Gibt es nur eine Länge oder nur eine Farbe, erscheint sie als feste Angabe oben und wird still mitgeschickt – eine Wahl wird nur gezeigt, wenn es etwas zu wählen gibt.
+- Über dem Bild steht ein Kurzüberblick (Länge und Zahl der Module). Ohne JavaScript bleibt das Formular vollständig nutzbar.
+
 ## [0.38.1] – 2026-10-26
 
 - **Lager: „Soll festlegen“.** Ein Sollbestand lässt sich jetzt auch für Artikel setzen, die noch nicht in der Lagerliste stehen (z. B. fertige Module mit Bestand 0). Der Artikel erscheint danach mit Soll im Lager und löst Bedarf aus.

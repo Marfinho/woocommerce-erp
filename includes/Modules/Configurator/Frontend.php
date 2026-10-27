@@ -294,11 +294,51 @@ class Frontend {
 	 * @param array $config  Vorbelegung.
 	 */
 	protected function render_form( array $catalog, array $config ) {
-		$colors = $catalog['colors'];
-		$code   = ConfigCodec::encode( $config );
+		$colors  = $catalog['colors'];
+		$bases   = $catalog['bases'];
+		$code    = ConfigCodec::encode( $config );
+		$max_len = max( 1, (float) max( wp_list_pluck( $bases, 'height' ) ) );
+
+		// Länge und Farbe sind nur dann eine Wahl, wenn es mehr als eine gibt.
+		// Mit nur einer Länge oder Farbe stehen sie als feste Angabe da und
+		// werden still mitgeschickt.
+		$many_bases  = count( $bases ) > 1;
+		$many_colors = count( $colors ) > 1;
+		$fixed       = array();
+
+		if ( ! $many_bases ) {
+			$fixed[] = array(
+				'label' => __( 'Länge', 'lindenweg16' ),
+				'value' => Layout::format_mm( $bases[0]['height'] ) . ' mm',
+				'hex'   => '',
+			);
+		}
+
+		if ( ! $many_colors ) {
+			$only    = $colors ? $colors[0] : array(
+				'name' => '',
+				'hex'  => '',
+			);
+			$fixed[] = array(
+				'label' => __( 'Farbe', 'lindenweg16' ),
+				'value' => (string) $only['name'],
+				'hex'   => (string) $only['hex'],
+			);
+		}
 		?>
 		<div class="lw16-haken" data-lw16-haken>
 			<div class="lw16-haken__buehne">
+				<div class="lw16-haken__kopf">
+					<span class="lw16-haken__chip" data-lw16-chip></span>
+					<div class="lw16-haken__werkzeuge">
+						<button type="button" class="lw16-haken__knopf" data-lw16-ansicht-zuruecksetzen hidden>
+							<?php esc_html_e( 'Ansicht zurücksetzen', 'lindenweg16' ); ?>
+						</button>
+						<button type="button" class="lw16-haken__knopf" data-lw16-teilen hidden>
+							<?php esc_html_e( 'Link zu dieser Konfiguration kopieren', 'lindenweg16' ); ?>
+						</button>
+					</div>
+				</div>
 				<div class="lw16-haken__ansicht" data-lw16-ansicht>
 					<p class="lw16-haken__hinweis" data-lw16-ansicht-hinweis>
 						<?php
@@ -310,15 +350,7 @@ class Frontend {
 						?>
 					</p>
 				</div>
-				<div class="lw16-haken__werkzeuge">
-					<button type="button" class="lw16-haken__knopf" data-lw16-ansicht-zuruecksetzen hidden>
-						<?php esc_html_e( 'Ansicht zurücksetzen', 'lindenweg16' ); ?>
-					</button>
-					<button type="button" class="lw16-haken__knopf" data-lw16-teilen hidden>
-						<?php esc_html_e( 'Link zu dieser Konfiguration kopieren', 'lindenweg16' ); ?>
-					</button>
-					<span class="lw16-haken__meldung" role="status" data-lw16-meldung></span>
-				</div>
+				<p class="lw16-haken__meldung" role="status" data-lw16-meldung></p>
 			</div>
 
 			<form class="lw16-haken__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-lw16-form>
@@ -327,75 +359,95 @@ class Frontend {
 				<input type="hidden" name="rueckkehr" value="<?php echo esc_attr( $this->current_url() ); ?>">
 				<input type="hidden" name="code" value="<?php echo esc_attr( $code ); ?>" data-lw16-code>
 
-				<h3 class="lw16-haken__titel"><?php esc_html_e( '1. Basismodul', 'lindenweg16' ); ?></h3>
-				<label class="lw16-haken__feld">
-					<span class="screen-reader-text"><?php esc_html_e( 'Basismodul', 'lindenweg16' ); ?></span>
-					<select name="basis" data-lw16-basis>
-						<?php foreach ( $catalog['bases'] as $base ) : ?>
-							<option value="<?php echo esc_attr( $base['article'] ); ?>" <?php selected( (int) $base['article'], (int) $config['base'] ); ?>>
-								<?php
-								printf(
-									/* translators: 1: Bezeichnung, 2: Länge in Millimetern. */
-									esc_html__( '%1$s (%2$s mm)', 'lindenweg16' ),
-									esc_html( $base['name'] ),
-									esc_html( Layout::format_mm( $base['height'] ) )
-								);
-								?>
-							</option>
+				<?php if ( $fixed ) : ?>
+					<ul class="lw16-haken__fest">
+						<?php foreach ( $fixed as $item ) : ?>
+							<li>
+								<span class="lw16-haken__festname"><?php echo esc_html( $item['label'] ); ?></span>
+								<?php if ( '' !== $item['hex'] ) : ?>
+									<span class="lw16-haken__punkt" style="--punkt: <?php echo esc_attr( $item['hex'] ); ?>"></span>
+								<?php endif; ?>
+								<strong><?php echo esc_html( $item['value'] ); ?></strong>
+							</li>
 						<?php endforeach; ?>
-					</select>
-				</label>
+					</ul>
+				<?php endif; ?>
 
-				<?php if ( count( $colors ) > 1 ) : ?>
-					<h3 class="lw16-haken__titel"><?php esc_html_e( '2. Farbe', 'lindenweg16' ); ?></h3>
-					<label class="lw16-haken__feld">
-						<span class="screen-reader-text"><?php esc_html_e( 'Farbe', 'lindenweg16' ); ?></span>
-						<select name="farbe" data-lw16-farbe>
-							<?php foreach ( $colors as $color ) : ?>
-								<option value="<?php echo esc_attr( $color['slug'] ); ?>" <?php selected( $color['slug'], $config['color'] ); ?>>
-									<?php echo esc_html( $color['name'] ); ?>
-								</option>
+				<?php if ( $many_bases ) : ?>
+					<section class="lw16-haken__block">
+						<h3 class="lw16-haken__titel"><?php esc_html_e( 'Länge', 'lindenweg16' ); ?></h3>
+						<div class="lw16-haken__optionen" role="radiogroup" aria-label="<?php esc_attr_e( 'Basismodul', 'lindenweg16' ); ?>">
+							<?php foreach ( $bases as $base ) : ?>
+								<label class="lw16-haken__option">
+									<input type="radio" name="basis" value="<?php echo esc_attr( $base['article'] ); ?>" data-lw16-basis <?php checked( (int) $base['article'], (int) $config['base'] ); ?>>
+									<span class="lw16-haken__optionskarte">
+										<strong><?php echo esc_html( Layout::format_mm( $base['height'] ) ); ?> mm</strong>
+										<span><?php echo esc_html( $base['name'] ); ?></span>
+										<i style="--laenge: <?php echo esc_attr( round( 100 * (float) $base['height'] / $max_len ) ); ?>"></i>
+									</span>
+								</label>
 							<?php endforeach; ?>
-						</select>
-					</label>
+						</div>
+					</section>
+				<?php else : ?>
+					<input type="hidden" name="basis" value="<?php echo esc_attr( $bases[0]['article'] ); ?>" data-lw16-basis>
+				<?php endif; ?>
+
+				<?php if ( $many_colors ) : ?>
+					<section class="lw16-haken__block">
+						<h3 class="lw16-haken__titel"><?php esc_html_e( 'Farbe', 'lindenweg16' ); ?></h3>
+						<div class="lw16-haken__farben" role="radiogroup" aria-label="<?php esc_attr_e( 'Farbe', 'lindenweg16' ); ?>">
+							<?php foreach ( $colors as $color ) : ?>
+								<label class="lw16-haken__farbe">
+									<input type="radio" name="farbe" value="<?php echo esc_attr( $color['slug'] ); ?>" data-lw16-farbe <?php checked( $color['slug'], $config['color'] ); ?>>
+									<span class="lw16-haken__punkt" style="--punkt: <?php echo esc_attr( $color['hex'] ); ?>"></span>
+									<span class="lw16-haken__farbname"><?php echo esc_html( $color['name'] ); ?></span>
+								</label>
+							<?php endforeach; ?>
+						</div>
+					</section>
 				<?php else : ?>
 					<input type="hidden" name="farbe" value="<?php echo esc_attr( $config['color'] ); ?>" data-lw16-farbe>
 				<?php endif; ?>
 
-				<h3 class="lw16-haken__titel"><?php esc_html_e( 'Module', 'lindenweg16' ); ?></h3>
-				<p class="lw16-haken__erklaerung">
-					<?php esc_html_e( 'Module lassen sich am Basismodul frei in der Höhe verschieben – im Bild mit der Maus oder dem Finger, hier über die Millimeterangabe. Gesperrte Bereiche sind die Stellen, an denen der Haken an der Wand verschraubt wird.', 'lindenweg16' ); ?>
-				</p>
+				<section class="lw16-haken__block">
+					<h3 class="lw16-haken__titel"><?php esc_html_e( 'Module', 'lindenweg16' ); ?></h3>
+					<p class="lw16-haken__erklaerung">
+						<?php esc_html_e( 'Module lassen sich am Basismodul frei in der Höhe verschieben – im Bild mit der Maus oder dem Finger, hier über die Millimeterangabe. Gesperrte Bereiche sind die Stellen, an denen der Haken an der Wand verschraubt wird.', 'lindenweg16' ); ?>
+					</p>
 
-				<div class="lw16-haken__module" data-lw16-modulliste>
-					<?php $this->render_module_rows( $catalog, $config ); ?>
-				</div>
+					<div class="lw16-haken__auswahl" data-lw16-angebot hidden>
+						<?php foreach ( $catalog['modules'] as $module ) : ?>
+							<button type="button" class="lw16-haken__modulknopf" data-lw16-hinzufuegen="<?php echo esc_attr( $module['article'] ); ?>">
+								<span class="lw16-haken__plus" aria-hidden="true">+</span>
+								<span class="lw16-haken__modulname"><?php echo esc_html( $module['name'] ); ?></span>
+								<span class="lw16-haken__modulmass">
+									<?php
+									printf(
+										/* translators: %s: Bauhöhe in Millimetern. */
+										esc_html__( '%s mm hoch', 'lindenweg16' ),
+										esc_html( Layout::format_mm( $module['height'] ) )
+									);
+									?>
+								</span>
+							</button>
+						<?php endforeach; ?>
+					</div>
 
-				<div class="lw16-haken__auswahl" data-lw16-angebot hidden>
-					<?php foreach ( $catalog['modules'] as $module ) : ?>
-						<button type="button" class="lw16-haken__modulknopf" data-lw16-hinzufuegen="<?php echo esc_attr( $module['article'] ); ?>">
-							<span class="lw16-haken__modulname"><?php echo esc_html( $module['name'] ); ?></span>
-							<span class="lw16-haken__modulmass">
-								<?php
-								printf(
-									/* translators: %s: Bauhöhe in Millimetern. */
-									esc_html__( '%s mm hoch', 'lindenweg16' ),
-									esc_html( Layout::format_mm( $module['height'] ) )
-								);
-								?>
-							</span>
-						</button>
-					<?php endforeach; ?>
-				</div>
-
-				<h3 class="lw16-haken__titel"><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></h3>
-				<label class="lw16-haken__feld">
-					<span class="screen-reader-text"><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></span>
-					<input type="number" name="menge" value="<?php echo esc_attr( $config['qty'] ); ?>" min="1" max="<?php echo esc_attr( Layout::MAX_QTY ); ?>" step="1" data-lw16-menge>
-				</label>
+					<div class="lw16-haken__module" data-lw16-modulliste>
+						<?php $this->render_module_rows( $catalog, $config ); ?>
+					</div>
+				</section>
 
 				<div class="lw16-haken__abschluss">
-					<p class="lw16-haken__preis" data-lw16-preis></p>
+					<div class="lw16-haken__summe">
+						<span class="lw16-haken__summenname"><?php esc_html_e( 'Gesamt', 'lindenweg16' ); ?></span>
+						<p class="lw16-haken__preis" data-lw16-preis></p>
+					</div>
+					<label class="lw16-haken__menge">
+						<span><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></span>
+						<input type="number" name="menge" value="<?php echo esc_attr( $config['qty'] ); ?>" min="1" max="<?php echo esc_attr( Layout::MAX_QTY ); ?>" step="1" data-lw16-menge>
+					</label>
 					<button type="submit" class="lw16-haken__kaufen button alt">
 						<?php esc_html_e( 'In den Warenkorb', 'lindenweg16' ); ?>
 					</button>
