@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.42.1] – 2026-10-27
+
+- **Konfigurator: geteilter Link behält die Positionen der Module.** Beim Öffnen eines Links schrieb das Formular Positionen mit Dezimalstellen mit Komma („512,4“) in ein Zahlenfeld, das nur Punkt annimmt. Das Feld blieb leer, die Position galt als 0, und alle Module saßen unten. Der Wert steht jetzt mit Punkt im Feld (und das Feld akzeptiert Dezimalwerte), ein Test sichert das.
+
 ## [0.42.0] – 2026-10-27
 
 - **Konfigurator: wechselnde Einrichtung und wählbare Wandfarbe.** Die Einrichtung ist zurück und wird bei jedem Aufruf neu gewürfelt: eines von vier Möbeln (Kommode, Sideboard, Konsole, Bank) in wechselndem Holzton, zwei Dinge darauf (Vase, Schale, Bücher, Lampe, Pflanze) und zwei bis drei Bilder in anderer Größe, Rahmenfarbe und Motiv. Die Wand bleibt eine ruhige einfarbige Fläche, kein Putzkorn mehr.
