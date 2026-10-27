@@ -914,6 +914,16 @@ html.lw16-ar-offen {
 	box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.5);
 }
 
+.lw16-ar__start--link {
+	position: static;
+	transform: none;
+	align-self: center;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	text-decoration: none;
+}
+
 .lw16-ar__status {
 	margin: 0;
 	text-align: center;

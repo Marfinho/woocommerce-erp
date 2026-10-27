@@ -314,6 +314,7 @@ foreach ( array(
 	'Layout',
 	'ConfigCodec',
 	'ArLink',
+	'ArModelStore',
 	'ColorHex',
 	'ModelPlacement',
 	'GlbMeasure',

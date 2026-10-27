@@ -155,6 +155,8 @@ class Frontend {
 				'viewer'   => LW16_PLUGIN_URL . 'assets/vendor/model-viewer/model-viewer.min.js',
 				'exporter' => Assets::url( 'assets/vendor/three/jsm/exporters/GLTFExporter.js' ),
 				'qr'       => rest_url( 'lw16/v1/ar-qr' ),
+				'nonce'    => rest_url( 'lw16/v1/ar-nonce' ),
+				'upload'   => rest_url( 'lw16/v1/ar-modell' ),
 				'seite'    => $this->current_url(),
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nur ein Hinweis, die AR-Ansicht zu öffnen.
 				'auto'     => isset( $_GET[ ArLink::QUERY_VAR ] ),
@@ -176,6 +178,8 @@ class Frontend {
 				'ar_anleitung' => __( 'Halte das Telefon an die Wand, auf die der Haken soll. Er erscheint in Originalgröße; mit dem Finger schiebst du ihn an die Stelle.', 'lindenweg16' ),
 				'ar_desktop'   => __( 'Am Rechner lässt sich der Haken nicht an die Wand stellen. Scanne den Code mit dem Telefon – dort öffnet sich dieselbe Konfiguration.', 'lindenweg16' ),
 				'ar_fehler'    => __( 'Die Ansicht ließ sich nicht vorbereiten. Bitte lade die Seite neu und versuche es noch einmal.', 'lindenweg16' ),
+				'ar_kein_ar'   => __( 'Dein Gerät oder dein Browser kann AR nicht starten. Auf dem iPhone öffnest du die Seite in Safari, auf Android in Chrome. Den Haken kannst du hier trotzdem drehen und ansehen.', 'lindenweg16' ),
+				'ar_app'       => __( 'Du bist in einem App-Browser (zum Beispiel von Instagram oder Facebook). Dort geht AR oft nicht. Öffne die Seite in Safari (iPhone) oder Chrome (Android).', 'lindenweg16' ),
 				'ar_schliessen' => __( 'Schließen', 'lindenweg16' ),
 				'ar_qr_alt'    => __( 'QR-Code zu deiner Konfiguration', 'lindenweg16' ),
 				'ar_drehen'    => __( 'Ziehen dreht den Haken.', 'lindenweg16' ),

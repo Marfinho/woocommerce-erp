@@ -7,9 +7,11 @@
  * Besuchers: auf Android über WebXR, auf dem iPhone über AR Quick Look (die
  * USDZ-Datei erzeugt `<model-viewer>` selbst aus der Szene).
  *
- * Bewusst ohne den Scene Viewer von Google: Er lädt die Datei von einer
- * Adresse im Netz, hier gibt es aber nur die Datei im Speicher des Browsers –
- * und keine Server-Ablage für Konfigurationen, die jemand konfiguriert hat.
+ * Wo der Browser kein WebXR kann (Firefox, Samsung Internet, ältere Geräte),
+ * springt Android auf Googles Scene Viewer. Der lädt die Datei selbst von
+ * einer Internetadresse; deshalb wird die Konfiguration dann – und nur dann –
+ * kurz auf dem Server abgelegt (ArModelStore, sieben Tage). Für alles andere
+ * bleibt sie im Browser.
  *
  * Am Rechner geht AR nicht. Dort zeigt die Ansicht einen QR-Code, der die
  * Seite mit derselben Konfiguration am Telefon öffnet.
@@ -59,6 +61,73 @@ async function alsGlb( ansicht, THREE, url ) {
 }
 
 /**
+ * Ist das ein Telefon oder Tablet?
+ *
+ * @returns {boolean}
+ */
+function istMobil() {
+	const ua = window.navigator.userAgent || '';
+
+	// iPadOS meldet sich als Mac, hat aber einen Touchscreen.
+	return /Android|iPhone|iPad|iPod/i.test( ua ) || ( /Macintosh/i.test( ua ) && window.navigator.maxTouchPoints > 1 );
+}
+
+/**
+ * Läuft die Seite in einem App-Browser (Instagram, Facebook …)?
+ *
+ * Dort fehlt AR meist, auch wenn das Gerät es kann.
+ *
+ * @returns {boolean}
+ */
+function istAppBrowser() {
+	return /FBAN|FBAV|Instagram|Line\/|MicroMessenger|Snapchat|TikTok|Pinterest|; wv\)/i.test( window.navigator.userAgent || '' );
+}
+
+/**
+ * Die Datei für den Scene Viewer auf dem Server ablegen.
+ *
+ * @param {Blob}   blob Die .glb.
+ * @param {object} ar   Einstellungen (Adressen der Schnittstelle).
+ * @returns {Promise<string>} Adresse der abgelegten Datei, leer bei einem Fehler.
+ */
+async function legeAb( blob, ar ) {
+	const abbruch = new window.AbortController();
+	const frist = window.setTimeout( () => abbruch.abort(), 15000 );
+
+	try {
+		const nonce = await window.fetch( ar.nonce, { credentials: 'omit', cache: 'no-store', signal: abbruch.signal } ).then( ( r ) => ( r.ok ? r.json() : {} ) );
+		const antwort = await window.fetch( ar.upload, {
+			method: 'POST',
+			credentials: 'omit',
+			signal: abbruch.signal,
+			headers: { 'Content-Type': 'model/gltf-binary', 'X-LW16-Nonce': ( nonce && nonce.nonce ) || '' },
+			body: blob,
+		} );
+		const json = antwort.ok ? await antwort.json() : null;
+
+		return json && json.url ? json.url : '';
+	} catch ( fehler ) {
+		return '';
+	} finally {
+		window.clearTimeout( frist );
+	}
+}
+
+/**
+ * Link, der auf Android den Scene Viewer von Google öffnet.
+ *
+ * @param {string} datei Adresse der .glb.
+ * @param {string} titel Name, den der Scene Viewer zeigt.
+ * @returns {string}
+ */
+function szenenLink( datei, titel ) {
+	const parameter = 'file=' + encodeURIComponent( datei ) + '&mode=ar_preferred&enable_vertical_placement=true&resizable=false&title=' + encodeURIComponent( titel );
+	const ausweich = 'https://arvr.google.com/scene-viewer?' + parameter;
+
+	return 'intent://arvr.google.com/scene-viewer/1.0?' + parameter + '#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;S.browser_fallback_url=' + encodeURIComponent( ausweich ) + ';end;';
+}
+
+/**
  * Element mit Eigenschaften und Kindern.
  *
  * @param {string} name       Tag.
@@ -95,9 +164,12 @@ export async function oeffne( konfigurator, ansicht, THREE ) {
 	const ar = konfigurator.ar;
 	const davor = document.activeElement;
 	let blobUrl = '';
+	let glb = null;
+	const blobHolen = () => glb;
 
 	const status = el( 'p', { class: 'lw16-ar__status', role: 'status', text: texte.ar_laedt } );
 	const startKnopf = el( 'button', { type: 'button', slot: 'ar-button', class: 'lw16-ar__start', text: texte.ar_start } );
+	const szenenKnopf = el( 'a', { class: 'lw16-ar__start lw16-ar__start--link', href: '#', hidden: '', text: texte.ar_start } );
 	const qr = el( 'div', { class: 'lw16-ar__qr' } );
 	const desktop = el( 'div', { class: 'lw16-ar__desktop', hidden: '' }, [ el( 'p', { text: texte.ar_desktop } ), qr ] );
 	const zu = el( 'button', { type: 'button', class: 'lw16-ar__zu', 'aria-label': texte.ar_schliessen, text: '×' } );
@@ -106,6 +178,7 @@ export async function oeffne( konfigurator, ansicht, THREE ) {
 	const ueberlagerung = el( 'div', { class: 'lw16-ar', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'lw16-ar-titel' }, [
 		el( 'div', { class: 'lw16-ar__kopf' }, [ titel, zu ] ),
 		buehne,
+		szenenKnopf,
 		status,
 		desktop,
 		el( 'p', { class: 'lw16-ar__anleitung', text: texte.ar_anleitung + ' ' + texte.ar_drehen } ),
@@ -139,6 +212,7 @@ export async function oeffne( konfigurator, ansicht, THREE ) {
 	try {
 		const [ , blob ] = await Promise.all( [ import( ar.viewer ), alsGlb( ansicht, THREE, ar.exporter ) ] );
 
+		glb = blob;
 		blobUrl = URL.createObjectURL( blob );
 
 		const viewer = document.createElement( 'model-viewer' );
@@ -159,11 +233,39 @@ export async function oeffne( konfigurator, ansicht, THREE ) {
 		viewer.addEventListener( 'load', () => {
 			status.hidden = true;
 
-			if ( ! viewer.canActivateAR ) {
-				startKnopf.hidden = true;
+			if ( viewer.canActivateAR ) {
+				return;
+			}
+
+			startKnopf.hidden = true;
+
+			if ( ! istMobil() ) {
 				desktop.hidden = false;
 				zeigeQr( konfigurator, ar, qr, texte );
+				return;
 			}
+
+			// Ein Telefon, aber kein WebXR und kein Quick Look. Auf Android
+			// bleibt der Scene Viewer; dafür muss die Datei im Netz liegen.
+			if ( /Android/i.test( window.navigator.userAgent ) && ! istAppBrowser() ) {
+				status.hidden = false;
+				status.textContent = texte.ar_laedt;
+
+				legeAb( blobHolen(), ar ).then( ( datei ) => {
+					if ( datei ) {
+						status.hidden = true;
+						szenenKnopf.href = szenenLink( datei, texte.ar_titel );
+						szenenKnopf.hidden = false;
+					} else {
+						status.textContent = texte.ar_kein_ar;
+					}
+				} );
+
+				return;
+			}
+
+			status.hidden = false;
+			status.textContent = istAppBrowser() ? texte.ar_app : texte.ar_kein_ar;
 		} );
 
 		viewer.addEventListener( 'error', () => {

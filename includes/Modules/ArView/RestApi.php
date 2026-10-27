@@ -26,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\QrCode;
 use Lindenweg16\Modules\Configurator\ArLink;
+use Lindenweg16\Modules\Configurator\ArModelStore;
 
 /**
  * REST-Routen der AR-Ansicht.
@@ -77,6 +78,18 @@ class RestApi {
 						'sanitize_callback' => 'esc_url_raw',
 					),
 				),
+			)
+		);
+
+		// Die Konfiguration kurz ablegen, damit Googles Scene Viewer (Android
+		// ohne WebXR) sie von einer Internetadresse laden kann.
+		register_rest_route(
+			self::REST_NS,
+			'/ar-modell',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'modell' ),
+				'permission_callback' => array( $this, 'check_nonce' ),
 			)
 		);
 
@@ -139,6 +152,41 @@ class RestApi {
 				'ok'  => true,
 				'url' => $link,
 				'svg' => QrCode::svg( $link, 220, 'M' ),
+			)
+		);
+	}
+
+	/**
+	 * Eine Konfiguration (.glb im Anfragekörper) ablegen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response
+	 */
+	public function modell( $request ) {
+		if ( ! Options::enabled() ) {
+			return $this->uncached( array( 'ok' => false ), 404 );
+		}
+
+		if ( ! ArModelStore::allow() ) {
+			return $this->uncached( array( 'ok' => false ), 429 );
+		}
+
+		$result = ArModelStore::store( (string) $request->get_body() );
+
+		if ( '' === $result['url'] ) {
+			return $this->uncached(
+				array(
+					'ok'    => false,
+					'error' => $result['error'],
+				),
+				400
+			);
+		}
+
+		return $this->uncached(
+			array(
+				'ok'  => true,
+				'url' => $result['url'],
 			)
 		);
 	}

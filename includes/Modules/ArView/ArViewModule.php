@@ -35,6 +35,8 @@ class ArViewModule {
 		( new Banner() )->register();
 		( new Viewer() )->register();
 
+		add_action( \Lindenweg16\Core\Scheduler::HOOK_AR_MODEL_CLEANUP, array( \Lindenweg16\Modules\Configurator\ArModelStore::class, 'cleanup' ) );
+
 		if ( is_admin() ) {
 			( new ProductMeta() )->register();
 			( new ArViewPage() )->register();
