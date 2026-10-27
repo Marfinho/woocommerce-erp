@@ -1445,9 +1445,10 @@ class Ansicht {
 		const halb = ( ( basis.width || 60 ) / MM ) / 2;
 		const tiefe = ( basis.depth || 20 ) / MM;
 		const stoff = new THREE.MeshBasicMaterial( {
-			color: 0xb6262a,
+			// Kupfer aus dem Design, kein Warnrot: Die Halter sind kein Fehler.
+			color: 0xa86f38,
 			transparent: true,
-			opacity: 0.5,
+			opacity: 0.45,
 			depthWrite: false,
 		} );
 

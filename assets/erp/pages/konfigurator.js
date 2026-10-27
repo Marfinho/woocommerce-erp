@@ -286,10 +286,54 @@
 						});
 					});
 				});
-				box.appendChild(h('div', { class: 'kf-block' },
-					h('div', null, h('strong', null, mm(b.from_mm) + ' bis ' + mm(b.to_mm)), b.label ? h('div', { class: 'muted' }, b.label) : null),
-					edit ? del : null));
+				var row = h('div', { class: 'kf-block' });
+				row.appendChild(h('div', null, h('strong', null, mm(b.from_mm) + ' bis ' + mm(b.to_mm)), b.label ? h('div', { class: 'muted' }, b.label) : null));
+				if (edit) { row.appendChild(h('div', { class: 'kf-actions' }, changeBtn(b, row), del)); }
+				box.appendChild(row);
 			});
+
+			function changeBtn(b, row) {
+				var btn = h('button', { class: 'btn', type: 'button' }, 'Ändern');
+				btn.addEventListener('click', function () {
+					var f = h('input', { class: 'field', type: 'text', inputmode: 'decimal', autocomplete: 'off', value: String(b.from_mm).replace('.', ','), 'aria-label': 'Von (mm)' });
+					var t = h('input', { class: 'field', type: 'text', inputmode: 'decimal', autocomplete: 'off', value: String(b.to_mm).replace('.', ','), 'aria-label': 'Bis (mm)' });
+					var l = h('input', { class: 'field', type: 'text', maxlength: '120', value: b.label || '', 'aria-label': 'Bezeichnung' });
+					var ok = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
+					var no = h('button', { class: 'btn', type: 'button', onclick: function () { openPart(p.id); } }, 'Abbrechen');
+					var form = h('form', { class: 'kf-form kf-blockform' },
+						h('div', { class: 'kf-grid' },
+							h('label', { class: 'kf-field' }, h('span', { class: 'kf-lab' }, 'Von (mm)'), f),
+							h('label', { class: 'kf-field' }, h('span', { class: 'kf-lab' }, 'Bis (mm)'), t)),
+						h('label', { class: 'kf-field' }, h('span', { class: 'kf-lab' }, 'Bezeichnung (optional)'), l),
+						h('div', { class: 'kf-actions' }, ok, no));
+					form.addEventListener('submit', function (e) {
+						e.preventDefault();
+						if (!f.value.trim() || !t.value.trim()) { say(msg, 'Bitte Anfang und Ende des Sperrbereichs in Millimetern eintragen.', true); return; }
+						run(ok, msg, function () {
+							return post('konfigurator/teile/' + p.id + '/sperrbereiche/' + b.id, { from_mm: f.value, to_mm: t.value, label: l.value }).then(function (r) {
+								return load().then(function () { openPart(p.id, r.message); });
+							});
+						});
+					});
+					row.textContent = '';
+					row.appendChild(form);
+				});
+				return btn;
+			}
+
+			if (edit && p.model_kind !== 'upload' && p.model_file !== 'demo:schiene' && p.model_file !== 'demo:haken' && p.model_file !== 'demo:ablage' && p.height_mm >= 150) {
+				var holders = h('button', { class: 'btn', type: 'button' }, 'Sperrbereiche der Halter neu berechnen');
+				holders.addEventListener('click', function () {
+					if (p.blocks.length && !window.confirm('Alle vorhandenen Sperrbereiche dieses Basismoduls werden durch die berechneten ersetzt: zwei Halter (je 50 mm hoch) im Abstand von 900 mm, mittig auf der Stange. Fortfahren?')) { return; }
+					run(holders, msg, function () {
+						return post('konfigurator/teile/' + p.id + '/halter').then(function (r) {
+							return load().then(function () { openPart(p.id, r.message); });
+						});
+					});
+				});
+				box.appendChild(h('p', { class: 'muted' }, 'Mit dem Standardmodell (Holzstange) sitzen zwei Halter im Abstand von 900 mm mittig auf der Stange, je 50 mm hoch. Daraus berechnet das Plugin die Sperrbereiche. Du kannst sie danach einzeln ändern.'));
+				box.appendChild(h('p', null, holders));
+			}
 
 			if (edit) {
 				var from = h('input', { class: 'field', type: 'text', inputmode: 'decimal', autocomplete: 'off', 'aria-label': 'Von (mm)' });
