@@ -24,6 +24,8 @@ use Lindenweg16\Admin\SettingsPage as PluginSettingsPage;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Log;
+use Lindenweg16\Core\Rollback;
+use Lindenweg16\Core\Updater;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Erp\Access;
@@ -400,6 +402,14 @@ class Verwaltung {
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'meldungen_leeren' ), 'permission_callback' => $einstellungen ),
 		) );
 		register_rest_route( $ns, '/erp/einstellungen/lager/saldo-neu', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'saldo_neu' ), 'permission_callback' => $einstellungen ) );
+		$updates = static function () {
+			return current_user_can( 'update_plugins' );
+		};
+		register_rest_route( $ns, '/erp/einstellungen/updates', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'updates' ), 'permission_callback' => $updates ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'updates_speichern' ), 'permission_callback' => $updates ),
+		) );
+		register_rest_route( $ns, '/erp/einstellungen/updates/zurueck', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'updates_zurueck' ), 'permission_callback' => $updates ) );
 		register_rest_route( $ns, '/erp/einstellungen/protokoll', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'protokoll' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/systempruefung', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'systempruefung' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/plugin', array(
@@ -1440,6 +1450,53 @@ class Verwaltung {
 		$n = \Lindenweg16\Modules\Betrieb\StockRepository::rebuild_balances();
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => sprintf( /* translators: %d: Zeilen. */ __( 'Bestandssummen neu berechnet (%d Zeilen).', 'lindenweg16' ), $n ) ) );
+	}
+
+	/**
+	 * Update-Kanal und Sicherungen der Plugin-Dateien.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function updates() {
+		return new WP_REST_Response(
+			array(
+				'kanal'     => Updater::channel(),
+				'version'   => LW16_VERSION,
+				'sicherung' => class_exists( '\ZipArchive' ),
+				'liste'     => Rollback::all(),
+			)
+		);
+	}
+
+	/**
+	 * Update-Kanal speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function updates_speichern( WP_REST_Request $request ) {
+		$p = self::body( $request );
+
+		Settings::update( array( 'update_kanal' => 'release' === self::str( $p, 'kanal' ) ? 'release' : 'main' ) );
+		delete_site_transient( Updater::CACHE );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Update-Kanal gespeichert.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Plugin auf eine gesicherte Fassung zurücksetzen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function updates_zurueck( WP_REST_Request $request ) {
+		$result = Rollback::restore( self::str( self::body( $request ), 'datei' ) );
+
+		if ( true !== $result ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => $result ), 400 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Zurückgesetzt. Seite neu laden.', 'lindenweg16' ) ) );
 	}
 
 	/**

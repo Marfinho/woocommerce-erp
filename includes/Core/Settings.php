@@ -61,6 +61,7 @@ class Settings {
 			'betrieb_default_color'     => 'anthrazit',
 			'betrieb_lagerhoheit'       => 1,
 			'betrieb_shop_bestand'      => 1,
+			'update_kanal'              => 'main',
 			'betrieb_wochenmail'        => 1,
 			'betrieb_reorder_layout'    => 'theme',
 			'gebuehren_automatisch'     => 1,

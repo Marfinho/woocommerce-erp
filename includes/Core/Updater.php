@@ -48,6 +48,8 @@ class Updater {
 		add_filter( 'pre_set_site_transient_update_themes', array( $this, 'inject_theme' ) );
 		add_filter( 'plugins_api', array( $this, 'plugin_info' ), 20, 3 );
 		add_filter( 'upgrader_source_selection', array( $this, 'fix_folder' ), 10, 4 );
+		// Vor dem Überschreiben die installierte Fassung sichern (Weg zurück).
+		add_filter( 'upgrader_pre_install', array( Rollback::class, 'before_update' ), 10, 2 );
 		add_action( 'upgrader_process_complete', array( $this, 'flush' ), 10, 0 );
 
 		if ( is_admin() ) {
@@ -60,13 +62,66 @@ class Updater {
 	}
 
 	/**
-	 * Adresse einer Datei im Branch (raw).
+	 * Aus welchem Kanal wird aktualisiert? „main" (jeder Stand des Branches)
+	 * oder „release" (nur getaggte Veröffentlichungen).
 	 *
-	 * @param string $path Pfad im Repository.
 	 * @return string
 	 */
-	public static function raw_url( $path ) {
-		return 'https://raw.githubusercontent.com/' . self::REPO . '/' . self::BRANCH . '/' . ltrim( $path, '/' );
+	public static function channel() {
+		return 'release' === Settings::get( 'update_kanal', 'main' ) ? 'release' : 'main';
+	}
+
+	/**
+	 * Stand im Repository, aus dem gelesen wird: der Branch oder, im
+	 * Release-Kanal, das zuletzt gelesene Release-Tag.
+	 *
+	 * @return string
+	 */
+	public static function ref() {
+		if ( 'release' === self::channel() ) {
+			$cached = get_site_transient( self::CACHE );
+
+			if ( is_array( $cached ) && ! empty( $cached['tag'] ) && self::is_tag( $cached['tag'] ) ) {
+				return $cached['tag'];
+			}
+		}
+
+		return self::BRANCH;
+	}
+
+	/**
+	 * Sieht ein Name wie ein Versions-Tag aus? Reine Regel.
+	 *
+	 * Das Tag landet in einer Download-Adresse; nur Versionsnummern kommen durch.
+	 *
+	 * @param string $tag Tag.
+	 * @return bool
+	 */
+	public static function is_tag( $tag ) {
+		return 1 === preg_match( '/^v?\d+\.\d+\.\d+$/', (string) $tag );
+	}
+
+	/**
+	 * Neuestes Release-Tag bei GitHub.
+	 *
+	 * @return string Tag oder '' bei Fehler.
+	 */
+	protected static function latest_tag() {
+		$body = json_decode( self::fetch( 'https://api.github.com/repos/' . self::REPO . '/releases/latest' ), true );
+		$tag  = is_array( $body ) && isset( $body['tag_name'] ) ? (string) $body['tag_name'] : '';
+
+		return self::is_tag( $tag ) ? $tag : '';
+	}
+
+	/**
+	 * Adresse einer Datei im gewählten Stand (raw).
+	 *
+	 * @param string $path Pfad im Repository.
+	 * @param string $ref  Stand; leer = gewählter Kanal.
+	 * @return string
+	 */
+	public static function raw_url( $path, $ref = '' ) {
+		return 'https://raw.githubusercontent.com/' . self::REPO . '/' . ( '' !== $ref ? $ref : self::ref() ) . '/' . ltrim( $path, '/' );
 	}
 
 	/**
@@ -76,7 +131,9 @@ class Updater {
 	 * @return string
 	 */
 	public static function plugin_package() {
-		return 'https://github.com/' . self::REPO . '/archive/refs/heads/' . self::BRANCH . '.zip';
+		$ref = self::ref();
+
+		return 'https://github.com/' . self::REPO . '/archive/refs/' . ( self::BRANCH === $ref ? 'heads/' : 'tags/' ) . $ref . '.zip';
 	}
 
 	/**
@@ -125,10 +182,15 @@ class Updater {
 			return $cached;
 		}
 
+		// Im Release-Kanal zuerst das neueste Tag; gibt es keins, bleibt es beim Branch.
+		$tag = 'release' === self::channel() ? self::latest_tag() : '';
+		$ref = '' !== $tag ? $tag : self::BRANCH;
+
 		$data = array(
-			'plugin'  => self::parse_version( self::fetch( self::raw_url( 'lindenweg16.php' ) ) ),
-			'theme'   => self::parse_version( self::fetch( self::raw_url( 'block-theme/' . self::THEME . '/style.css' ) ) ),
+			'plugin'  => self::parse_version( self::fetch( self::raw_url( 'lindenweg16.php', $ref ) ) ),
+			'theme'   => self::parse_version( self::fetch( self::raw_url( 'block-theme/' . self::THEME . '/style.css', $ref ) ) ),
 			'checked' => time(),
+			'tag'     => $tag,
 		);
 
 		// Ist GitHub nicht erreichbar, nur kurz merken – sonst fehlt das Update stundenlang.
@@ -224,7 +286,7 @@ class Updater {
 		$item   = array(
 			'theme'        => self::THEME,
 			'new_version'  => '' !== $remote['theme'] ? $remote['theme'] : (string) $theme->get( 'Version' ),
-			'url'          => 'https://github.com/' . self::REPO . '/tree/' . self::BRANCH . '/block-theme',
+			'url'          => 'https://github.com/' . self::REPO . '/tree/' . self::ref() . '/block-theme',
 			'package'      => self::theme_package(),
 			'requires_php' => '7.4',
 		);

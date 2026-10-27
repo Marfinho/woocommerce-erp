@@ -188,4 +188,29 @@ class BetriebHaertungTest extends TestCase {
 		$this->assertSame( 'fehler', $befunde[0]['level'] );
 		$this->assertStringContainsString( '2 Bestandszeilen', $befunde[0]['text'] );
 	}
+
+	/**
+	 * Nur Versions-Tags dürfen in eine Download-Adresse.
+	 */
+	public function test_nur_versionstags_sind_gueltig() {
+		$this->assertTrue( \Lindenweg16\Core\Updater::is_tag( '0.44.0' ) );
+		$this->assertTrue( \Lindenweg16\Core\Updater::is_tag( 'v1.2.3' ) );
+		$this->assertFalse( \Lindenweg16\Core\Updater::is_tag( '../../evil' ) );
+		$this->assertFalse( \Lindenweg16\Core\Updater::is_tag( 'main' ) );
+		$this->assertFalse( \Lindenweg16\Core\Updater::is_tag( '1.2' ) );
+	}
+
+	/**
+	 * Sicherungsnamen: nur eigene Dateien, kein Ausbrechen aus dem Ordner.
+	 */
+	public function test_sicherungsnamen() {
+		$name = \Lindenweg16\Core\Rollback::file_name( '0.44.0', 86400 );
+
+		$this->assertSame( 'lindenweg16-0.44.0-19700102-000000.zip', $name );
+		$this->assertTrue( \Lindenweg16\Core\Rollback::is_valid_name( $name ) );
+		$this->assertFalse( \Lindenweg16\Core\Rollback::is_valid_name( '../wp-config.php' ) );
+		$this->assertFalse( \Lindenweg16\Core\Rollback::is_valid_name( 'lindenweg16-1-20200101-000000.zip/../x' ) );
+		$this->assertTrue( \Lindenweg16\Core\Rollback::skip( 'vendor/phpunit/x.php' ) );
+		$this->assertFalse( \Lindenweg16\Core\Rollback::skip( 'includes/Core/Log.php' ) );
+	}
 }

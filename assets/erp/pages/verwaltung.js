@@ -509,7 +509,7 @@
 		ui.view().appendChild(bar);
 		ui.view().appendChild(box);
 
-		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Systemmeldungen'], ['plugin', 'Plugin (Firma, DHL, …)']];
+		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Systemmeldungen'], ['updates', 'Updates'], ['plugin', 'Plugin (Firma, DHL, …)']];
 
 		function tabs() {
 			bar.textContent = '';
@@ -521,7 +521,7 @@
 		function show() {
 			box.textContent = '';
 			box.appendChild(loading());
-			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, meldungen: meldungen, plugin: plugin })[tab]();
+			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, meldungen: meldungen, updates: updates, plugin: plugin })[tab]();
 		}
 
 		function stichtagForm(d) {
@@ -682,6 +682,38 @@
 				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Letzte Meldungen'),
 					d.entries.length ? table(['Zeit', 'Stufe', 'Bereich', 'Meldung'], d.entries.map(function (e) { return [ui.when(e.time), e.level === 'error' ? 'Fehler' : 'Warnung', e.area, e.message]; })) : h('p', { class: 'muted' }, 'Keine Meldungen.'),
 					d.entries.length ? clear : null));
+			}).catch(fail);
+		}
+
+		function updates() {
+			ui.api('einstellungen/updates').then(function (d) {
+				box.textContent = '';
+				var kanal = select([['main', 'Jeder Stand von main (sofort)'], ['release', 'Nur getaggte Veröffentlichungen (Release)']], d.kanal);
+				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
+				var form = h('form', { class: 'vw-form' },
+					field('Update-Kanal', kanal, 'Im Kanal „Release“ kommt ein Update erst an, wenn auf GitHub eine Veröffentlichung (Tag, z. B. 0.44.0) angelegt wurde – so geht nicht jeder Zwischenstand sofort in den Shop. Gibt es noch keine Veröffentlichung, bleibt es bei main.'),
+					go);
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					run(go, function () { return post('einstellungen/updates', { kanal: kanal.value }); }, function (r) { ui.toast(r.message); updates(); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Update-Kanal'), h('p', { class: 'muted' }, 'Installierte Version: ' + d.version), form));
+
+				var card = h('section', { class: 'card' }, h('h3', null, 'Sicherungen vor Updates'),
+					h('p', { class: 'muted' }, 'Vor jedem Update legt das System ein ZIP der bisherigen Plugin-Dateien an; die letzten zwei bleiben liegen. Zurückgesetzt werden nur die Programmdateien, nie deine Daten.'));
+				if (!d.sicherung) { card.appendChild(h('div', { class: 'notice warn' }, 'Auf diesem Server fehlt die ZIP-Erweiterung (ZipArchive) – es werden keine Sicherungen angelegt.')); }
+				else if (!d.liste.length) { card.appendChild(h('p', { class: 'muted' }, 'Noch keine Sicherung – sie entsteht beim nächsten Update.')); }
+				else {
+					card.appendChild(table(['Version', 'Angelegt', 'Größe', ''], d.liste.map(function (b) {
+						var back = h('button', { class: 'btn', type: 'button' }, 'Zurück auf diese Fassung');
+						back.addEventListener('click', function () {
+							if (!window.confirm('Die Programmdateien werden durch Version ' + b.version + ' ersetzt. Fortfahren?')) { return; }
+							run(back, function () { return post('einstellungen/updates/zurueck', { datei: b.file }); }, function (r) { ui.toast(r.message); updates(); });
+						});
+						return [b.version, ui.when(b.time), fmt(b.size / 1048576, 1) + ' MB', back];
+					})));
+				}
+				box.appendChild(card);
 			}).catch(fail);
 		}
 
