@@ -22,6 +22,16 @@
 	display: none !important;
 }
 
+/*
+ * Die Hülle misst die Breite, die der Konfigurator wirklich hat. Eine
+ * Seite mit schmalem Inhaltsbereich bekommt so eine Spalte, auch auf einem
+ * breiten Bildschirm – zwei Spalten in 650 px ergäben ein Bild so breit
+ * wie ein Daumen.
+ */
+.lw16-haken-huelle {
+	container-type: inline-size;
+}
+
 .lw16-haken {
 	--lw16-rand: var(--lw-line, var(--wp--preset--color--line, #d9d4cb));
 	--lw16-flaeche: var(--lw-surface-muted, var(--wp--preset--color--surface-muted, #eae6df));
@@ -56,7 +66,7 @@
 	box-sizing: border-box;
 }
 
-@media (min-width: 60em) {
+@container (min-width: 56em) {
 	.lw16-haken {
 		grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.95fr);
 		align-items: start;
@@ -106,10 +116,13 @@
 
 .lw16-haken__ansicht {
 	position: relative;
-	aspect-ratio: 3 / 4;
-	/* Deutlich abgesetzt vom Teil: Der Haken ist heute weiß, und weiß auf
-	   fast weiß ist kein Bild, sondern ein Suchbild. */
-	background: radial-gradient(circle at 50% 28%, var(--lw16-karte) 0%, var(--lw16-flaeche) 62%, color-mix(in srgb, var(--lw16-flaeche) 82%, var(--lw16-text)) 100%);
+	width: 100%;
+	height: min(72vh, 640px);
+	min-height: 22rem;
+	/* Eine mittlere Wand: Der Haken ist weiß oder anthrazit, und beides
+	   muss sich abheben. Hell auf hell ist ein Suchbild, dunkel auf dunkel
+	   ebenso. Gemischt aus den Theme-Farben, damit sie im Dark Mode mitgeht. */
+	background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--lw16-flaeche) 60%, var(--lw16-gedaempft)) 0%, color-mix(in srgb, var(--lw16-flaeche) 38%, var(--lw16-gedaempft)) 100%);
 	border: 1px solid var(--lw16-rand);
 	border-radius: calc(var(--lw16-r-karte) - 8px);
 	overflow: hidden;
@@ -320,8 +333,9 @@
 .lw16-haken__farbe {
 	display: grid;
 	justify-items: center;
-	gap: 0.3rem;
+	gap: 0.55rem;
 	min-width: 3.4rem;
+	padding: 5px 0 0;
 }
 
 .lw16-haken__punkt {
@@ -379,7 +393,7 @@
 
 .lw16-haken__zeile {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 6rem auto auto;
+	grid-template-columns: minmax(8rem, 1fr) 5.5rem auto auto;
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.45rem 0.6rem;
@@ -455,15 +469,17 @@
 
 .lw16-haken__auswahl {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
 	gap: 0.6rem;
 }
 
 .lw16-haken__modulknopf {
 	position: relative;
-	display: flex;
-	flex-direction: column;
-	gap: 0.15rem;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	column-gap: 0.5rem;
+	row-gap: 0.1rem;
 	padding: 0.75rem 0.9rem;
 	background: var(--lw16-flaeche);
 	border: 1px solid transparent;
@@ -487,9 +503,8 @@
 }
 
 .lw16-haken__plus {
-	position: absolute;
-	top: 0.55rem;
-	right: 0.65rem;
+	grid-column: 2;
+	grid-row: 1 / span 2;
 	display: grid;
 	place-items: center;
 	width: 26px;
@@ -507,7 +522,8 @@
 }
 
 .lw16-haken__modulname {
-	padding-right: 1.8rem;
+	min-width: 0;
+	overflow-wrap: anywhere;
 	font-family: var(--lw16-kopf);
 	font-weight: 700;
 	font-size: 1rem;
@@ -606,6 +622,16 @@
 	}
 }
 
+@container (max-width: 30em) {
+	.lw16-haken__zeile {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.lw16-haken__zeile select {
+		grid-column: 1 / -1;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.lw16-haken *,
 	.lw16-haken *::before,
@@ -613,4 +639,8 @@
 		transition: none !important;
 		animation: none !important;
 	}
+}
+
+.lw16-haken__meldung:empty {
+	display: none;
 }
