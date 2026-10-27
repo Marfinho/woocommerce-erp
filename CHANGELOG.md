@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.50.2] – 2026-10-27
+
+- **Druckzeit der Platten folgt dem Drucker sofort.** Start und Ende eines Drucks wurden bisher erst beim Öffnen der Werkstatt-Seite erkannt; als Druckende stand dann der Moment des Hinsehens, und Druckzeit und Betriebsstunden waren zu lang. Jetzt gleicht jede Statusmeldung des Druckers (höchstens alle 15 Sekunden) die Platten ab.
+- **Fehlgeschlagene Drucke** (Bambu-Status „failed“) beenden die Druckzeit der Platte genauso wie ein erfolgreicher; sie lief bisher weiter, bis jemand meldete.
+- Nicht mit einem echten Drucker getestet.
+
 ## [0.50.1] – 2026-10-27
 
 - **Betriebsstunden des Druckers stimmten nicht mit der gestempelten Druckzeit überein.** Eine Platte buchte ihr Journal auf das Gerät, das beim Freigeben galt; wurde der Bambu-Drucker danach mit einem anderen Gerät verknüpft, standen die Stunden beim alten Gerät und fehlten in der Druckerakte. Jetzt gilt beim Melden die aktuelle Verknüpfung, und die Druckerakte zählt die Stunden früherer Platten dieses Druckers, die auf einem anderen Gerät landeten, mit.

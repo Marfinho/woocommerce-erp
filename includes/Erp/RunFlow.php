@@ -251,6 +251,29 @@ class RunFlow {
 	}
 
 	/**
+	 * Meldet der Drucker, dass er druckt oder gleich druckt (Bambu: gcode_state)?
+	 *
+	 * @param string $status Status des Druckers.
+	 * @return bool
+	 */
+	public static function printer_started( $status ) {
+		return in_array( strtolower( (string) $status ), array( 'running', 'prepare' ), true );
+	}
+
+	/**
+	 * Meldet der Drucker das Ende eines Drucks – fertig oder abgebrochen/fehlgeschlagen?
+	 *
+	 * Ein fehlgeschlagener Druck gehört dazu: Sonst liefe die Druckzeit der Platte
+	 * weiter, bis jemand sie meldet, und die Betriebsstunden stimmten nicht.
+	 *
+	 * @param string $status Status des Druckers.
+	 * @return bool
+	 */
+	public static function printer_ended( $status ) {
+		return in_array( strtolower( (string) $status ), array( 'finish', 'failed' ), true );
+	}
+
+	/**
 	 * Ist-Meldung prüfen.
 	 *
 	 * Pro Position: gut ≥ 0, gut ≤ Soll; was fehlt, ist Ausschuss. Fehlt

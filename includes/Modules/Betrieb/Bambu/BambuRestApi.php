@@ -562,6 +562,18 @@ class BambuRestApi {
 
 		BambuPrinterRepository::apply_status( (int) $printer->id, $update );
 
+		// Die Platten der Werkstatt folgen dem Drucker sofort, nicht erst, wenn jemand die Seite öffnet –
+		// sonst steht als Druckende der Moment des Hinsehens und die Druckzeit stimmt nicht.
+		// Höchstens alle 15 Sekunden: Der Heartbeat kommt viel öfter.
+		if ( class_exists( '\\Lindenweg16\\Erp\\Workflow' ) && ! get_transient( 'lw16_sync_printers' ) ) {
+			set_transient( 'lw16_sync_printers', 1, 15 );
+			try {
+				\Lindenweg16\Erp\Workflow::sync_printers();
+			} catch ( \Throwable $e ) { // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- Der Heartbeat darf daran nie scheitern.
+				unset( $e );
+			}
+		}
+
 		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 

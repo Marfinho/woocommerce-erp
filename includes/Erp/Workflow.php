@@ -857,9 +857,9 @@ class Workflow {
 
 			$status = strtolower( (string) $printer->status );
 
-			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && in_array( $status, array( 'running', 'prepare' ), true ) ) {
+			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && RunFlow::printer_started( $status ) ) {
 				self::act( $run['id'], 'druckstart', array(), 0 );
-			} elseif ( RunFlow::DRUCKT === $run['status'] && 'finish' === $status && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
+			} elseif ( RunFlow::DRUCKT === $run['status'] && RunFlow::printer_ended( $status ) && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
 				self::act( $run['id'], 'druckende', array(), 0 );
 			}
 		}
