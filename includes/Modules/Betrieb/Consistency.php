@@ -47,6 +47,64 @@ class Consistency {
 	}
 
 	/**
+	 * Shop-Produkte, die noch die alte Lagerverwaltung bucht.
+	 *
+	 * Das Maß dafür, wie weit der Umzug ist: Ist die Liste leer, bucht nur
+	 * noch Betrieb, und das alte Lager-Modul lässt sich stilllegen.
+	 *
+	 * @param array|null $articles Artikel (sonst werden sie geladen).
+	 * @return array Zeilen mit id und name.
+	 */
+	public static function legacy_products( $articles = null ) {
+		$articles = null === $articles ? ArticleRepository::all_by_id() : $articles;
+
+		// Welche verkauften Produkte kennt der Artikelstamm nicht? Genau die
+		// bucht noch die alte Lagerverwaltung.
+		$bekannt = array();
+		foreach ( $articles as $article ) {
+			if ( ! empty( $article['wc_product_id'] ) ) {
+				$bekannt[ (int) $article['wc_product_id'] ] = true;
+			}
+		}
+
+		$legacy = array();
+
+		if ( function_exists( 'wc_get_products' ) ) {
+			$produkte = wc_get_products(
+				array(
+					'status' => 'publish',
+					'limit'  => 200,
+					'type'   => array( 'simple', 'variable' ),
+				)
+			);
+
+			foreach ( (array) $produkte as $produkt ) {
+				if ( ! is_object( $produkt ) || ! method_exists( $produkt, 'get_id' ) ) {
+					continue;
+				}
+
+				// Nur was tatsaechlich ein Lager braucht.
+				if ( method_exists( $produkt, 'is_virtual' ) && $produkt->is_virtual() ) {
+					continue;
+				}
+
+				$id = (int) $produkt->get_id();
+
+				if ( isset( $bekannt[ $id ] ) ) {
+					continue;
+				}
+
+				$legacy[] = array(
+					'id'   => $id,
+					'name' => method_exists( $produkt, 'get_name' ) ? (string) $produkt->get_name() : '',
+				);
+			}
+		}
+
+		return $legacy;
+	}
+
+	/**
 	 * Zustand aus der Datenbank einsammeln.
 	 *
 	 * Getrennt von check(), damit die Regeln ohne Datenbank prüfbar sind.
@@ -109,48 +167,7 @@ class Consistency {
 			$bins[ (int) $bin['id'] ] = ! empty( $bin['is_active'] );
 		}
 
-		// Welche verkauften Produkte kennt der Artikelstamm nicht? Genau die
-		// bucht noch die alte Lagerverwaltung.
-		$bekannt = array();
-		foreach ( $articles as $article ) {
-			if ( ! empty( $article['wc_product_id'] ) ) {
-				$bekannt[ (int) $article['wc_product_id'] ] = true;
-			}
-		}
-
-		$legacy = array();
-
-		if ( function_exists( 'wc_get_products' ) ) {
-			$produkte = wc_get_products(
-				array(
-					'status' => 'publish',
-					'limit'  => 200,
-					'type'   => array( 'simple', 'variable' ),
-				)
-			);
-
-			foreach ( (array) $produkte as $produkt ) {
-				if ( ! is_object( $produkt ) || ! method_exists( $produkt, 'get_id' ) ) {
-					continue;
-				}
-
-				// Nur was tatsaechlich ein Lager braucht.
-				if ( method_exists( $produkt, 'is_virtual' ) && $produkt->is_virtual() ) {
-					continue;
-				}
-
-				$id = (int) $produkt->get_id();
-
-				if ( isset( $bekannt[ $id ] ) ) {
-					continue;
-				}
-
-				$legacy[] = array(
-					'id'   => $id,
-					'name' => method_exists( $produkt, 'get_name' ) ? (string) $produkt->get_name() : '',
-				);
-			}
-		}
+		$legacy = self::legacy_products( $articles );
 
 		return array(
 			'articles'    => $articles,

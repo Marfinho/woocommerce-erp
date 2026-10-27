@@ -62,6 +62,7 @@ class Settings {
 			'betrieb_lagerhoheit'       => 1,
 			'betrieb_shop_bestand'      => 1,
 			'update_kanal'              => 'main',
+			'lager_altmodul_aus'        => 0,
 			'betrieb_wochenmail'        => 1,
 			'betrieb_reorder_layout'    => 'theme',
 			'gebuehren_automatisch'     => 1,

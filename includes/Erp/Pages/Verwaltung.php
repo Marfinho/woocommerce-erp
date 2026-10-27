@@ -1383,6 +1383,8 @@ class Verwaltung {
 				'colors'     => $colors,
 				'hoheit'     => (bool) StockOwnership::is_active(),
 				'shop_bestand' => (bool) Settings::get( 'betrieb_shop_bestand', 1 ),
+				'altmodul_aus' => StockOwnership::legacy_disabled(),
+				'altmodul_offen' => array_slice( StockOwnership::open_legacy_products(), 0, 20 ),
 				'wochenmail' => (bool) Settings::get( 'betrieb_wochenmail', 1 ),
 				'layout'     => 'schlicht' === Settings::get( 'betrieb_reorder_layout' ) ? 'schlicht' : 'theme',
 			)
@@ -1401,8 +1403,18 @@ class Verwaltung {
 		$default   = sanitize_text_field( self::str( $p, 'default' ) );
 		$layout    = sanitize_key( self::str( $p, 'layout' ) );
 
+		// Das alte Lager-Modul lässt sich nur stilllegen, wenn Betrieb alle seine
+		// Produkte übernommen hat - sonst bucht für den Rest niemand mehr.
+		$altmodul = ! empty( $p['altmodul_aus'] ) ? 1 : 0;
+		$hinweis  = '';
+		if ( $altmodul && StockOwnership::open_legacy_products() ) {
+			$altmodul = 0;
+			$hinweis  = ' ' . __( 'Das alte Lager-Modul bleibt an: Es gibt noch nicht übernommene Produkte.', 'lindenweg16' );
+		}
+
 		Settings::update(
 			array(
+				'lager_altmodul_aus'      => $altmodul,
 				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
 				'betrieb_default_color'   => ColorRegistry::normalize( '' === $default ? 'anthrazit' : $default ),
 				'betrieb_lagerhoheit'     => empty( $p['hoheit'] ) ? 0 : 1,
@@ -1412,7 +1424,7 @@ class Verwaltung {
 			)
 		);
 
-		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) ) );
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) . $hinweis ) );
 	}
 
 	/**

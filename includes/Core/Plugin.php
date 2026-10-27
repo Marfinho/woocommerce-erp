@@ -125,7 +125,13 @@ class Plugin {
 			'kurzlinks'  => new KurzlinksModule(),
 		);
 
-		foreach ( $this->modules as $module ) {
+		foreach ( $this->modules as $key => $module ) {
+			// Das alte Lager-Modul ist stillgelegt, sobald Betrieb alle seine
+			// Produkte übernommen hat (Verwaltung → Farben & Lager).
+			if ( 'inventory' === $key && \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_disabled() ) {
+				continue;
+			}
+
 			if ( method_exists( $module, 'register' ) ) {
 				$module->register();
 			}

@@ -601,6 +601,7 @@
 				var def = input('text', d['default']);
 				var hoheit = h('input', { type: 'checkbox', checked: d.hoheit });
 				var shop = h('input', { type: 'checkbox', checked: d.shop_bestand });
+				var alt = h('input', { type: 'checkbox', checked: d.altmodul_aus, disabled: d.altmodul_offen.length > 0 && !d.altmodul_aus });
 				var mail = h('input', { type: 'checkbox', checked: d.wochenmail });
 				var layout = select([['theme', 'In das Website-Design einbetten'], ['schlicht', 'Schlichte eigene Seite mit Logo']], d.layout);
 				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
@@ -615,12 +616,14 @@
 					field('Standardfarbe', def, 'Gilt für jede Position ohne eigene Farbe.'),
 					h('label', { class: 'vw-check' }, hoheit, h('span', null, 'Lagerhoheit: Betrieb bucht die Lagerabgänge der ihm bekannten Artikel. Ist sie aus, bucht das Lager-Modul alle Abgänge und die Bestände im Betrieb stimmen nicht.')),
 					h('label', { class: 'vw-check' }, shop, h('span', null, 'Bestand im Shop: Das ERP führt den Bestand und überträgt ihn (Lager minus offene Bestellungen) in die Shop-Produkte; der Lagerabzug von WooCommerce ruht für diese Produkte. Wirkt nur bei aktiver Lagerhoheit.')),
+					h('label', { class: 'vw-check' }, alt, h('span', null, 'Altes Lager-Modul stilllegen: Es bucht keine Abgänge mehr und zeigt nichts mehr an. Geht erst, wenn alle Produkte der alten Verwaltung ins ERP übernommen sind.')),
+					d.altmodul_offen.length ? h('div', { class: 'notice warn' }, 'Noch nicht übernommen (' + d.altmodul_offen.length + (d.altmodul_offen.length >= 20 ? '+' : '') + '): ' + d.altmodul_offen.map(function (p) { return p.name; }).join(', ') + '. Übernahme unter Verwaltung → Import.') : null,
 					field('Nachbestellseite', layout, 'Schlicht ist die Rückfallebene, falls das Theme mit dem Formular nicht zurechtkommt.'),
 					h('label', { class: 'vw-check' }, mail, h('span', null, 'Wöchentliche Zusammenfassung per E-Mail senden')),
 					go);
 				form.addEventListener('submit', function (e) {
 					e.preventDefault();
-					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, shop_bestand: shop.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
+					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, shop_bestand: shop.checked, altmodul_aus: alt.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
 				});
 				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Lagerhoheit und Farbsystem'), form));
 

@@ -152,6 +152,39 @@ class StockOwnership {
 	}
 
 	/**
+	 * Produkte der alten Lagerverwaltung, die Betrieb noch nicht übernommen hat.
+	 *
+	 * Solange hier etwas steht, braucht der Betrieb das alte Lager-Modul noch.
+	 * Ist die Liste leer, lässt es sich stilllegen.
+	 *
+	 * @return array Zeilen mit id und name.
+	 */
+	public static function open_legacy_products() {
+		$map = self::legacy_map();
+		$out = array();
+
+		foreach ( \Lindenweg16\Modules\Inventory\Repository::get_products() as $product ) {
+			if ( ! isset( $map[ (int) $product->id ] ) ) {
+				$out[] = array(
+					'id'   => (int) $product->id,
+					'name' => (string) $product->name,
+				);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Ist das alte Lager-Modul stillgelegt?
+	 *
+	 * @return bool
+	 */
+	public static function legacy_disabled() {
+		return (bool) Settings::get( 'lager_altmodul_aus', 0 );
+	}
+
+	/**
 	 * Ein Produkt der alten Verwaltung weglassen, wenn Betrieb es führt?
 	 *
 	 * @param int   $legacy_id Produkt-ID der alten Verwaltung.
