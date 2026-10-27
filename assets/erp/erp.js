@@ -1994,7 +1994,10 @@
 				h('span', { class: 'tag' + (r.status === 'in_benutzung' ? ' now' : '') }, ROLL_STATUS[r.status] || r.status),
 				h('span', { class: 'roll-bar small', role: 'img', 'aria-label': r.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, r.percent)) + '%' })),
 				h('span', null, qty(r.remaining_g) + ' g'),
-				r.label_url ? h('a', { href: r.label_url, target: '_blank', rel: 'noopener' }, 'Etikett') : null,
+				r.label_url ? h('button', { class: 'btn', type: 'button', onclick: function (e) {
+					e.target.disabled = true;
+					api('material/spule/etikett', { method: 'POST', body: { code: r.code } }).then(function (x) { toast(x.message); e.target.disabled = false; }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+				} }, 'Etikett drucken') : null,
 				h('button', { class: 'btn', type: 'button', onclick: function (e) {
 					if (!window.confirm('Rolle ' + r.code + ' ist leer? Sie wird aus dem Bestand genommen.')) { return; }
 					e.target.disabled = true;
@@ -2020,9 +2023,45 @@
 		h('button', { class: 'btn primary', type: 'submit' }, 'Speichern'));
 	}
 
+	// Spule erfassen: Material, Farbe, Menge – neu oder angebrochen (dann wird gewogen). Ein Etikett je Spule.
+	function spoolDialog(d, reload) {
+		var sp = d.spule;
+		var mode = h('select', { class: 'field', 'aria-label': 'Zustand' }, h('option', { value: 'neu' }, 'Neue, ungeöffnete Rolle'), h('option', { value: 'angebrochen' }, 'Angebrochene Rolle (wird gewogen)'));
+		var mat = h('select', { class: 'field', 'aria-label': 'Material' }, sp.materials.map(function (m) { return h('option', { value: m }, m); }));
+		var color = h('select', { class: 'field', 'aria-label': 'Farbe' }, sp.colors.map(function (c) { return h('option', { value: c.slug }, c.label); }));
+		var grams = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(d.rolls.roll_g), 'aria-label': 'Menge in Gramm' });
+		var gross = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: 'Gewicht samt Spule (g)', 'aria-label': 'Gewicht samt Spule in Gramm' });
+		var tare = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(d.rolls.tare_g), 'aria-label': 'Gewicht der leeren Spule in Gramm' });
+		var print = h('input', { type: 'checkbox', checked: sp.can_label, disabled: !sp.can_label });
+		var err = h('div', { 'aria-live': 'polite' });
+		var save = h('button', { class: 'btn primary', type: 'submit' }, 'Spule anlegen');
+		var rNew = h('label', { class: 'roll-f' }, h('span', null, 'Filament auf der Rolle (g)'), grams);
+		var rOld = h('div', { hidden: true },
+			h('label', { class: 'roll-f' }, h('span', null, 'Gewicht der Rolle auf der Waage (g)'), gross),
+			h('label', { class: 'roll-f' }, h('span', null, 'abzüglich leere Spule (g)'), tare));
+		mode.addEventListener('change', function () { var old = mode.value === 'angebrochen'; rNew.hidden = old; rOld.hidden = !old; });
+
+		var form = h('form', { class: 'lg-form' },
+			h('label', { class: 'roll-f' }, h('span', null, 'Zustand'), mode),
+			h('label', { class: 'roll-f' }, h('span', null, 'Material'), mat),
+			h('label', { class: 'roll-f' }, h('span', null, 'Farbe'), color),
+			rNew, rOld,
+			sp.can_label ? h('label', { class: 'chk' }, print, ' Etikett gleich drucken') : null,
+			err, h('div', { class: 'lg-actions' }, save));
+		var dialog = dlg('Spule erfassen', h('div', { class: 'sheet-body' }, form));
+		form.addEventListener('submit', function (e) {
+			e.preventDefault();
+			save.disabled = true;
+			err.textContent = '';
+			api('material/spule', { method: 'POST', body: { mode: mode.value, material: mat.value, color: color.value, grams: grams.value, gross_g: gross.value, tare_g: tare.value, print: print.checked } })
+				.then(function (r) { toast(r.message); dialog.close(); reload(); })
+				.catch(function (er) { save.disabled = false; err.appendChild(h('div', { class: 'notice warn', role: 'alert' }, er.message)); });
+		});
+	}
+
 	// Material: eine Karte je Filamentfarbe, mit Rollen, Bestellungen und Bestellformular.
 	function viewMaterial(item) {
-		pageHead('Material', 'Filament nach Farbe: was da ist, wie lange es reicht, was unterwegs ist.', classicBtn(item));
+		pageHead('Material', 'Filament nach Farbe: Spulen, was da ist, wie lange es reicht, was unterwegs ist.', classicBtn(item));
 		el.view.classList.add('broad');
 		var box = h('div', { class: 'mat-grid' });
 		el.view.appendChild(box);
@@ -2033,7 +2072,12 @@
 
 		function paint(d) {
 			box.textContent = '';
-			if (!d.colors.length) { box.appendChild(h('div', { class: 'notice' }, 'Noch kein Filament im Lager. Der erste Wareneingang legt die Farbe an.')); return; }
+			if (d.spule && d.spule.can) {
+				box.appendChild(h('div', { class: 'card', style: 'display:flex;gap:12px;align-items:center;flex-wrap:wrap' },
+					h('button', { class: 'btn primary', type: 'button', onclick: function () { spoolDialog(d, load); } }, 'Spule erfassen'),
+					h('small', { class: 'muted' }, 'Material, Farbe, Menge – mit Etikett. Leer melden: Code auf der Spule scannen.')));
+			}
+			if (!d.colors.length) { box.appendChild(h('div', { class: 'notice' }, 'Noch keine Spule im Lager. „Spule erfassen“ legt die erste an.')); return; }
 
 			box.appendChild(rollSettings(d.rolls, load));
 			d.colors.forEach(function (c) {

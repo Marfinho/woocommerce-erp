@@ -189,6 +189,26 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/material/spule',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'material_spule' ),
+				'permission_callback' => $this->needs( array( 'lager.material', 'lager.buchen' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/material/spule/etikett',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'material_spule_etikett' ),
+				'permission_callback' => $this->needs( array( 'lager.material', 'verwaltung.etiketten' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/produkte',
 			array(
 				'methods'             => 'GET',
@@ -595,6 +615,18 @@ class RestApi {
 					'roll_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_roll_g(),
 					'tare_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_tare_g(),
 				),
+				'spule'   => array(
+					'can'       => Access::can( 'lager.buchen' ),
+					'can_label' => Access::can( 'verwaltung.etiketten' ),
+					'materials' => Spools::MATERIALS,
+					'colors'    => array_map(
+						static function ( $slug, $label ) {
+							return array( 'slug' => (string) $slug, 'label' => (string) $label );
+						},
+						array_keys( \Lindenweg16\Modules\Betrieb\ColorRegistry::all() ),
+						array_values( \Lindenweg16\Modules\Betrieb\ColorRegistry::all() )
+					),
+				),
 				'order'   => Access::can( 'lager.einkauf' ),
 				'receive' => Access::can( 'lager.einkauf' ) && Access::can( 'lager.buchen' ),
 			)
@@ -625,6 +657,32 @@ class RestApi {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Spule erfassen (Material, Farbe, Menge), auf Wunsch gleich mit Etikett.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function material_spule( WP_REST_Request $request ) {
+		$in          = (array) $request->get_json_params();
+		$in['print'] = ! empty( $in['print'] ) && Access::can( 'verwaltung.etiketten' );
+		$res         = Spools::create( $in );
+
+		return new WP_REST_Response( $res, $res['ok'] ? 200 : 400 );
+	}
+
+	/**
+	 * Etikett einer Spule drucken.
+	 *
+	 * @param WP_REST_Request $request Anfrage mit code.
+	 * @return WP_REST_Response
+	 */
+	public function material_spule_etikett( WP_REST_Request $request ) {
+		$res = Spools::print_label( (string) $request->get_param( 'code' ) );
+
+		return new WP_REST_Response( $res, $res['ok'] ? 200 : 400 );
 	}
 
 	/**

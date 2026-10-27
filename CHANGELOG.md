@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.50.0] – 2026-10-27
+
+### Spulenverwaltung im ERP
+- **Material → „Spule erfassen“:** Material, Farbe, Menge – neue Rolle (meist 1000 g) oder angebrochene, die gewogen wird (Gewicht samt Spule abzüglich der leeren Spule). Eine Spule ist genau eine Rolle mit eigenem Code; die Charge dahinter bleibt unsichtbar.
+- **Etikett aus dem Etikettendrucker:** wahlweise gleich beim Erfassen oder später je Spule („Etikett drucken“), über dieselbe Druckwarteschlange wie die Plattenetiketten.
+- Leer melden wie bisher: Code scannen → „Rolle ist leer“.
+- Noch nicht in echtem WordPress oder mit echtem Drucker getestet.
+
 ## [0.49.1] – 2026-10-27
 
 - **„Heute“ auf dem Handy: nichts läuft mehr über den rechten Rand.** Lange Hinweise unter einer Aufgabe (etwa „7 h Druck – am besten ab 20:00 starten, dann läuft sie über Nacht“) machten die Spalte breiter als den Bildschirm: Die Karten und „Rüsten starten“ wurden abgeschnitten. Die Spalten haben jetzt eine feste Breite (`minmax(0, 1fr)`), die Hinweise brechen um statt abzuschneiden. Im Browser mit 390 px Breite geprüft: keine seitliche Verschiebung.
