@@ -3,7 +3,7 @@
  * Title: Über uns (Template)
  * Slug: lindenweg16/hidden-ueber-uns
  * Inserter: no
- * Description: Inhalt des Templates „Über uns“: Hero mit Foto (Beitragsbild), Text-Laufband, Geschichte (Seiteninhalt), Werkstatt als Liste, Entstehung als senkrechte Zeitleiste und eine Abschlusszeile zu Shop und Anfragen.
+ * Description: Inhalt des Templates „Über uns“: Hero mit Foto (Beitragsbild), Text-Laufband, Geschichte (Seiteninhalt, erste Überschrift links, Text rechts), Werkstatt als Liste und eine Abschlusszeile zu Shop und Anfragen.
  *
  * Die Geschichte ist der Inhalt der Seite selbst und bleibt im Seiten-Editor
  * bearbeitbar; das Foto im Hero ist das Beitragsbild der Seite. Ohne
@@ -39,25 +39,6 @@ $lindenweg16_crafts = array(
 	array(
 		'title' => __( 'Plotten', 'lindenweg16' ),
 		'text'  => __( 'Folie für Shirts, Mützen, Schirme und mehr – nach deinem Motiv.', 'lindenweg16' ),
-	),
-);
-
-$lindenweg16_steps = array(
-	array(
-		'title' => __( 'Entwurf', 'lindenweg16' ),
-		'text'  => __( 'Jedes Modul ist für ein Teil konstruiert: Helm, Brille, Flasche oder Schuhe.', 'lindenweg16' ),
-	),
-	array(
-		'title' => __( '3D-Druck', 'lindenweg16' ),
-		'text'  => __( 'Gedruckt wird in unserer Werkstatt in Haste, Schicht für Schicht.', 'lindenweg16' ),
-	),
-	array(
-		'title' => __( 'Montage', 'lindenweg16' ),
-		'text'  => __( 'Messing-Gewindeeinsätze setzen wir von Hand ein – so lassen sich die Module immer wieder versetzen.', 'lindenweg16' ),
-	),
-	array(
-		'title' => __( 'Versand', 'lindenweg16' ),
-		'text'  => __( 'Verpackt in Papier und Karton, mit DHL zu dir.', 'lindenweg16' ),
 	),
 );
 ?>
@@ -137,7 +118,7 @@ $lindenweg16_steps = array(
 </section>
 <!-- /wp:group -->
 
-<!-- wp:group {"tagName":"section","anchor":"geschichte","align":"wide","className":"lw16-section lw16-about-story","layout":{"type":"constrained","contentSize":"720px"}} -->
+<!-- wp:group {"tagName":"section","anchor":"geschichte","align":"wide","className":"lw16-section lw16-about-story","layout":{"type":"default"}} -->
 <section class="wp-block-group alignwide lw16-section lw16-about-story" id="geschichte">
 	<!-- wp:group {"className":"lw16-about-story__inner","layout":{"type":"default"}} -->
 	<div class="wp-block-group lw16-about-story__inner">
@@ -183,52 +164,6 @@ $lindenweg16_steps = array(
 <?php endforeach; ?>
 	</div>
 	<!-- /wp:group -->
-</section>
-<!-- /wp:group -->
-
-<!-- wp:group {"tagName":"section","align":"wide","className":"lw16-section lw16-about-process","layout":{"type":"default"}} -->
-<section class="wp-block-group alignwide lw16-section lw16-about-process">
-	<!-- wp:columns {"className":"lw16-about-process__columns"} -->
-	<div class="wp-block-columns lw16-about-process__columns">
-		<!-- wp:column {"width":"40%","className":"lw16-about-process__head"} -->
-		<div class="wp-block-column lw16-about-process__head" style="flex-basis:40%">
-			<!-- wp:paragraph {"className":"is-style-eyebrow"} -->
-			<p class="is-style-eyebrow"><?php esc_html_e( 'Handgemacht', 'lindenweg16' ); ?></p>
-			<!-- /wp:paragraph -->
-			<!-- wp:heading -->
-			<h2 class="wp-block-heading"><?php esc_html_e( 'Wie ein Haster Haken entsteht', 'lindenweg16' ); ?></h2>
-			<!-- /wp:heading -->
-			<!-- wp:paragraph {"textColor":"text-muted"} -->
-			<p class="has-text-muted-color has-text-color"><?php esc_html_e( 'Vom ersten Entwurf bis zum Paket – alles passiert bei uns am Lindenweg 16.', 'lindenweg16' ); ?></p>
-			<!-- /wp:paragraph -->
-		</div>
-		<!-- /wp:column -->
-
-		<!-- wp:column {"width":"60%"} -->
-		<div class="wp-block-column" style="flex-basis:60%">
-			<!-- wp:group {"className":"lw16-timeline","layout":{"type":"default"}} -->
-			<div class="wp-block-group lw16-timeline">
-<?php foreach ( $lindenweg16_steps as $lindenweg16_i => $lindenweg16_step ) : ?>
-				<!-- wp:group {"className":"lw16-timeline__item","layout":{"type":"default"}} -->
-				<div class="wp-block-group lw16-timeline__item">
-					<!-- wp:paragraph {"className":"lw16-timeline__number"} -->
-					<p class="lw16-timeline__number"><?php echo esc_html( sprintf( '%02d', $lindenweg16_i + 1 ) ); ?></p>
-					<!-- /wp:paragraph -->
-					<!-- wp:heading {"level":3,"className":"lw16-timeline__title"} -->
-					<h3 class="wp-block-heading lw16-timeline__title"><?php echo esc_html( $lindenweg16_step['title'] ); ?></h3>
-					<!-- /wp:heading -->
-					<!-- wp:paragraph {"textColor":"text-muted"} -->
-					<p class="has-text-muted-color has-text-color"><?php echo esc_html( $lindenweg16_step['text'] ); ?></p>
-					<!-- /wp:paragraph -->
-				</div>
-				<!-- /wp:group -->
-<?php endforeach; ?>
-			</div>
-			<!-- /wp:group -->
-		</div>
-		<!-- /wp:column -->
-	</div>
-	<!-- /wp:columns -->
 </section>
 <!-- /wp:group -->
 
