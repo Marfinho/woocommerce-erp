@@ -88,8 +88,11 @@ class Installer {
 	 * siehe Modules\Betrieb\StockRepository::balances().
 	 *
 	 * DB_VERSION 44: Tabelle event_log - das Ereignisprotokoll, siehe Core\Log.
+	 *
+	 * DB_VERSION 45: Tabelle filament_rolls - einzelne Rollen einer Filamentcharge mit
+	 * Etikett, siehe Modules\Betrieb\FilamentRolls.
 	 */
-	const DB_VERSION = '44';
+	const DB_VERSION = '45';
 
 	/**
 	 * Aktivierungsroutine.

@@ -79,6 +79,33 @@ class LabelPdf {
 	 * @param bool $only_active Nur Geräte, die produzieren.
 	 * @return array
 	 */
+	public static function roll_labels( $only_active = true, $lot_id = 0 ) {
+		$out = array();
+
+		foreach ( FilamentRepository::all() as $lot ) {
+			if ( $lot_id && (int) $lot['id'] !== (int) $lot_id ) {
+				continue;
+			}
+
+			foreach ( FilamentRolls::described_for_lot( (int) $lot['id'], (bool) $only_active ) as $roll ) {
+				$name = trim( $roll['color_label'] . ' ' . $roll['material'] );
+
+				$out[] = array(
+					'code'    => $roll['code'],
+					'name'    => ( '' !== $name ? $name : $roll['code'] ) . ' · ' . number_format_i18n( $roll['start_g'] / 1000, 2 ) . ' kg',
+					'payload' => ScanResolver::PREFIX_ROLL . $roll['code'],
+					'kind'    => sprintf(
+						/* translators: %s: Chargencode. */
+						__( 'Filament · Charge %s', 'lindenweg16' ),
+						$roll['lot_code']
+					),
+				);
+			}
+		}
+
+		return $out;
+	}
+
 	public static function printer_labels( $only_active = true ) {
 		$out = array();
 

@@ -232,6 +232,7 @@ foreach ( array(
 	'IsoWeek',
 	'StockLedger',
 	'ShopStock',
+	'RollAllocator',
 	'ForecastModel',
 	'ForecastKpi',
 	'Promise',

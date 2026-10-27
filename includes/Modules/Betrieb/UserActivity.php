@@ -54,6 +54,7 @@ class UserActivity {
 			'components'         => __( 'Komponente', 'lindenweg16' ),
 			'bundles'            => __( 'Bestellart', 'lindenweg16' ),
 			'stock_movements'    => __( 'Lagerbuchung', 'lindenweg16' ),
+			'filament_rolls'     => __( 'Filamentrolle', 'lindenweg16' ),
 			'stock_targets'      => __( 'Sollbestand', 'lindenweg16' ),
 			'storage_bins'       => __( 'Lagerplatz', 'lindenweg16' ),
 			'picklists'          => __( 'Pickliste', 'lindenweg16' ),

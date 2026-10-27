@@ -63,6 +63,8 @@ class Settings {
 			'betrieb_shop_bestand'      => 1,
 			'update_kanal'              => 'main',
 			'lager_altmodul_aus'        => 0,
+			'filament_rolle_g'          => 1000,
+			'filament_spule_g'          => 250,
 			'erp_klassisch_umleiten'    => 0,
 			'betrieb_wochenmail'        => 1,
 			'betrieb_reorder_layout'    => 'theme',

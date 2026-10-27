@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.47.0] – 2026-10-27
+
+### Filamentrollen mit Etikett, Leer-Scan und Schwund (DB_VERSION 45)
+- **Eine Lieferung (Charge) besteht jetzt aus einzelnen Rollen.** Beim Wareneingang entstehen die Rollen automatisch (Standard 1000 g, einstellbar: `filament_rolle_g`); eine Lieferung von 4,25 kg ergibt drei volle Rollen und eine mit 250 g. Alte Chargen bekommen ihre Rollen unter Lager → Material mit „Rollen anlegen“ (mit Gewicht je Rolle); was rechnerisch schon aufgebraucht ist, wird gleich als leer geführt.
+- **Etikett je Rolle** (QR-Code `LW16R:R-00012`, dazu Rollencode, Farbe, Material, Gewicht und Charge) über die vorhandene Etikettenfunktion: Material → „Etiketten dieser Charge drucken“ bzw. „Etikett“ je Rolle, Rollenformat wie bei Lagerplätzen und Artikeln.
+- **Leer scannen.** Wer eine leere Rolle scannt (Lager → Scannen, Handscanner oder Kamera), sieht die Rolle mit Farbe, Charge und Rest und tippt auf **„Rolle ist leer“**: Sie verschwindet aus dem Bestand, in der Materialübersicht sinkt der Bestand dieser Farbe, die Reichweite und die Nachbestellwarnung folgen. Zweimal scannen schreibt nicht zweimal ab; ein Fehlscan lässt sich mit „Rückgängig“ zurücknehmen.
+- **Schwund wird festgehalten.** Die Druckjobs schätzen den Verbrauch (geplante Teile mal Bauteilgewicht), die leere Spule weiß es genau. Was die Rechnung der Rolle noch zugeschrieben hatte, steht als Schwund an der Rolle und im Ereignisprotokoll; ab 15 % der Rolle als „Aufmerksamkeit“ (meist: Ausschuss nicht gemeldet, Bauteilgewicht der Revision zu niedrig, Spülmenge fehlt).
+- **Wiegen:** Beim Scan lässt sich die Rolle wiegen (Gewicht samt Spule, Leerspule standardmäßig 250 g, `filament_spule_g`); das Restgewicht richtet sich danach, weiterer Verbrauch zählt davon ab. **In Benutzung nehmen** markiert die Rolle im Drucker: Der Verbrauch wird zuerst ihr angerechnet.
+- Verbrauch einer Charge wird der Reihe nach auf ihre Rollen angerechnet (`RollAllocator`): zuerst die im Drucker, dann die neuen. Chargen ohne Rollen laufen unverändert (geliefert minus Verbrauch). Jede Änderung steht im Änderungsprotokoll (`filament_rolls`) und im Ereignisprotokoll (Bereich „filament“).
+- Tests: `BetriebFilamentRollsTest`.
+
 ## [0.46.0] – 2026-10-27
 
 ### Prognose & Planung
