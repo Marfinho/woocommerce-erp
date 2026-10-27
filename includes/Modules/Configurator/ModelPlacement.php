@@ -152,6 +152,6 @@ class ModelPlacement {
 
 		$value = str_replace( ',', '.', trim( (string) $input[ $key ] ) );
 
-		return max( -$limit, min( $limit, round( (float) $value, 2 ) ) );
+		return (float) max( -$limit, min( $limit, round( (float) $value, 2 ) ) );
 	}
 }
