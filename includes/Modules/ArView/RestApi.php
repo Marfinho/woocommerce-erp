@@ -24,6 +24,10 @@ namespace Lindenweg16\Modules\ArView;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Modules\Betrieb\QrCode;
+use Lindenweg16\Modules\Configurator\ArLink;
+use Lindenweg16\Modules\Configurator\ArModelStore;
+
 /**
  * REST-Routen der AR-Ansicht.
  */
@@ -51,6 +55,41 @@ class RestApi {
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'nonce' ),
 				'permission_callback' => '__return_true',
+			)
+		);
+
+		// QR-Code für die AR-Ansicht aus dem Konfigurator: Am Rechner lässt
+		// sich nichts an die Wand stellen, der Code öffnet dieselbe
+		// Konfiguration am Telefon.
+		register_rest_route(
+			self::REST_NS,
+			'/ar-qr',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'qr' ),
+				'permission_callback' => '__return_true',
+				'args'                => array(
+					'code'  => array(
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'seite' => array(
+						'required'          => true,
+						'sanitize_callback' => 'esc_url_raw',
+					),
+				),
+			)
+		);
+
+		// Die Konfiguration kurz ablegen, damit Googles Scene Viewer (Android
+		// ohne WebXR) sie von einer Internetadresse laden kann.
+		register_rest_route(
+			self::REST_NS,
+			'/ar-modell',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'modell' ),
+				'permission_callback' => array( $this, 'check_nonce' ),
 			)
 		);
 
@@ -89,6 +128,67 @@ class RestApi {
 		$response->header( 'Pragma', 'no-cache' );
 
 		return $response;
+	}
+
+	/**
+	 * QR-Code zu einer Konfiguration.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response
+	 */
+	public function qr( $request ) {
+		if ( ! Options::enabled() ) {
+			return $this->uncached( array( 'ok' => false ), 404 );
+		}
+
+		$link = ArLink::build( (string) $request->get_param( 'seite' ), (string) $request->get_param( 'code' ), home_url( '/' ) );
+
+		if ( '' === $link ) {
+			return $this->uncached( array( 'ok' => false ), 400 );
+		}
+
+		return $this->uncached(
+			array(
+				'ok'  => true,
+				'url' => $link,
+				'svg' => QrCode::svg( $link, 220, 'M' ),
+			)
+		);
+	}
+
+	/**
+	 * Eine Konfiguration (.glb im Anfragekörper) ablegen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage.
+	 * @return \WP_REST_Response
+	 */
+	public function modell( $request ) {
+		if ( ! Options::enabled() ) {
+			return $this->uncached( array( 'ok' => false ), 404 );
+		}
+
+		if ( ! ArModelStore::allow() ) {
+			return $this->uncached( array( 'ok' => false ), 429 );
+		}
+
+		$result = ArModelStore::store( (string) $request->get_body() );
+
+		if ( '' === $result['url'] ) {
+			return $this->uncached(
+				array(
+					'ok'    => false,
+					'error' => $result['error'],
+				),
+				400
+			);
+		}
+
+		return $this->uncached(
+			array(
+				'ok'  => true,
+				'url' => $result['url'],
+			)
+		);
 	}
 
 	/**

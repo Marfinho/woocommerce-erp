@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.43.0] – 2026-10-27
+
+### AR-Ansicht aus dem Konfigurator
+- Neuer Knopf **„An meiner Wand ansehen (AR)“** im Konfigurator (sichtbar, wenn unter Verwaltung → AR-Ansicht die Funktion eingeschaltet ist und die räumliche Ansicht läuft). Er schreibt die aktuelle Konfiguration – Stange, Halter und Module in ihrer Farbe an ihren Positionen, ohne Wand und Möbel – als .glb und zeigt sie in `<model-viewer>`; von dort aus wird der Haken in Originalgröße an die Wand des Besuchers gestellt (Android: WebXR, iPhone: AR Quick Look mit einer von model-viewer aus der Szene erzeugten USDZ-Datei).
+- **Am Rechner** geht AR nicht: Dort erscheint ein QR-Code, der die Seite mit derselben Konfiguration am Telefon öffnet und die AR-Ansicht gleich startet (`?haken=…&ar=1`). Der Link wird serverseitig gebaut (`lw16/v1/ar-qr`, `Configurator\ArLink`) und zeigt nur auf die eigene Seite; der Code muss ein gültiger Konfigurationscode sein.
+- Der Konfigurator lädt `konfigurator-ar.js`, model-viewer und den Exporter (`GLTFExporter`, three r169, nach `assets/vendor/three/jsm/exporters/`) erst beim Antippen des Knopfs; ohne Antippen ändert sich an der Seite nichts. Es gibt keinen Aufruf an Dritte.
+- **Möglichst viele Geräte:** iPhone/iPad über AR Quick Look (Safari und andere Browser mit Quick-Look-Unterstützung), Android mit Chrome über WebXR, alle anderen Android-Geräte (Firefox, Samsung Internet, ältere Chrome-Versionen) über Googles Scene Viewer. Der Scene Viewer lädt die Datei selbst von einer Internetadresse; deshalb wird die Konfiguration **nur in diesem Fall** kurz auf dem Server abgelegt (`lw16-ar/` im Upload-Ordner, Name = Hash des Inhalts, nur glTF-Binärdateien mit eingebetteten Daten bis 6 MB, höchstens 12 Ablagen je Besucher und Stunde, höchstens 300 Dateien, täglicher Job `lw16_ar_modell_aufraeumen` löscht nach sieben Tagen). Auf Geräten ohne AR und in App-Browsern (Instagram, Facebook …) erscheint ein Hinweis, wie es doch klappt; der Haken lässt sich dort weiter drehen und ansehen.
+- Nicht dabei: ein Zähler „AR gestartet“ für Konfigurationen (die Statistik zählt Produkte mit AR-Modell).
+- Tests: `KonfiguratorArTest`, `KonfiguratorArModelStoreTest`.
+
 ## [0.42.1] – 2026-10-27
 
 - **Konfigurator: geteilter Link behält die Positionen der Module.** Beim Öffnen eines Links schrieb das Formular Positionen mit Dezimalstellen mit Komma („512,4“) in ein Zahlenfeld, das nur Punkt annimmt. Das Feld blieb leer, die Position galt als 0, und alle Module saßen unten. Der Wert steht jetzt mit Punkt im Feld (und das Feld akzeptiert Dezimalwerte), ein Test sichert das.

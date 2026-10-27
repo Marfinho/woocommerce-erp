@@ -221,6 +221,8 @@ class Konfigurator {
 		this.hinweis = wurzel.querySelector( '[data-lw16-ansicht-hinweis]' );
 		this.knopfZuruecksetzen = wurzel.querySelector( '[data-lw16-ansicht-zuruecksetzen]' );
 		this.knopfTeilen = wurzel.querySelector( '[data-lw16-teilen]' );
+		this.knopfAr = wurzel.querySelector( '[data-lw16-ar]' );
+		this.ar = DATEN.ar || null;
 
 		this.zustand = this.zustandAusFormular();
 		this.ausgewaehlt = null;
@@ -1911,6 +1913,37 @@ function kannWebGl() {
 }
 
 /**
+ * Den Knopf „An meiner Wand ansehen“ anschließen.
+ *
+ * Die AR-Ansicht liegt in einer eigenen Datei und wird erst geladen, wenn
+ * jemand den Knopf antippt. Sie braucht die räumliche Ansicht: Aus ihr
+ * entsteht die Datei, die an die Wand gestellt wird.
+ *
+ * @param {Konfigurator} konfigurator Konfigurator.
+ * @param {object}       THREE        Die Bibliothek.
+ */
+function verdrahteAr( konfigurator, THREE ) {
+	if ( ! konfigurator.knopfAr || ! konfigurator.ar || ! konfigurator.ar.an ) {
+		return;
+	}
+
+	const oeffne = async () => {
+		const modul = await import( DATEN.urls.ar );
+
+		await modul.oeffne( konfigurator, konfigurator.ansicht, THREE );
+	};
+
+	konfigurator.knopfAr.hidden = false;
+	konfigurator.knopfAr.addEventListener( 'click', oeffne );
+
+	// Ein Link vom QR-Code öffnet die AR-Ansicht gleich. Gestartet wird AR
+	// erst durch den Knopf darin: Das verlangt der Browser als Nutzergeste.
+	if ( konfigurator.ar.auto ) {
+		oeffne();
+	}
+}
+
+/**
  * Alles starten.
  */
 async function start() {
@@ -1944,6 +1977,8 @@ async function start() {
 
 			konfigurator.hinweis.hidden = true;
 			konfigurator.ansicht = new Ansicht( konfigurator, THREE, loader.GLTFLoader, umgebung.RoomEnvironment );
+
+			verdrahteAr( konfigurator, THREE );
 		} catch ( fehler ) {
 			// Die Bibliothek fehlt oder ist blockiert: Das Formular bleibt.
 			konfigurator.hinweis.textContent = konfigurator.texte.kein_webgl;

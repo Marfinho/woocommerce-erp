@@ -148,6 +148,18 @@ class Frontend {
 			'symbole' => $icons,
 			'urls'    => array(
 				'lage' => Assets::url( 'assets/js/konfigurator-lage.js' ),
+				'ar'   => Assets::url( 'assets/js/konfigurator-ar.js' ),
+			),
+			'ar'      => array(
+				'an'       => $this->ar_enabled(),
+				'viewer'   => LW16_PLUGIN_URL . 'assets/vendor/model-viewer/model-viewer.min.js',
+				'exporter' => Assets::url( 'assets/vendor/three/jsm/exporters/GLTFExporter.js' ),
+				'qr'       => rest_url( 'lw16/v1/ar-qr' ),
+				'nonce'    => rest_url( 'lw16/v1/ar-nonce' ),
+				'upload'   => rest_url( 'lw16/v1/ar-modell' ),
+				'seite'    => $this->current_url(),
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nur ein Hinweis, die AR-Ansicht zu öffnen.
+				'auto'     => isset( $_GET[ ArLink::QUERY_VAR ] ),
 			),
 			'texte'   => array(
 				'entfernen'    => __( 'Entfernen', 'lindenweg16' ),
@@ -160,6 +172,17 @@ class Frontend {
 				'position'     => __( '%s mm von unten', 'lindenweg16' ),
 				'kopiert'      => __( 'Link kopiert.', 'lindenweg16' ),
 				'ansicht_neu'  => __( 'Ansicht zurückgesetzt.', 'lindenweg16' ),
+				'ar_titel'     => __( 'Dein Haken an deiner Wand', 'lindenweg16' ),
+				'ar_laedt'     => __( 'Dein Haken wird für die Ansicht vorbereitet …', 'lindenweg16' ),
+				'ar_start'     => __( 'An meiner Wand platzieren', 'lindenweg16' ),
+				'ar_anleitung' => __( 'Halte das Telefon an die Wand, auf die der Haken soll. Er erscheint in Originalgröße; mit dem Finger schiebst du ihn an die Stelle.', 'lindenweg16' ),
+				'ar_desktop'   => __( 'Am Rechner lässt sich der Haken nicht an die Wand stellen. Scanne den Code mit dem Telefon – dort öffnet sich dieselbe Konfiguration.', 'lindenweg16' ),
+				'ar_fehler'    => __( 'Die Ansicht ließ sich nicht vorbereiten. Bitte lade die Seite neu und versuche es noch einmal.', 'lindenweg16' ),
+				'ar_kein_ar'   => __( 'Dein Gerät oder dein Browser kann AR nicht starten. Auf dem iPhone öffnest du die Seite in Safari, auf Android in Chrome. Den Haken kannst du hier trotzdem drehen und ansehen.', 'lindenweg16' ),
+				'ar_app'       => __( 'Du bist in einem App-Browser (zum Beispiel von Instagram oder Facebook). Dort geht AR oft nicht. Öffne die Seite in Safari (iPhone) oder Chrome (Android).', 'lindenweg16' ),
+				'ar_schliessen' => __( 'Schließen', 'lindenweg16' ),
+				'ar_qr_alt'    => __( 'QR-Code zu deiner Konfiguration', 'lindenweg16' ),
+				'ar_drehen'    => __( 'Ziehen dreht den Haken.', 'lindenweg16' ),
 				'nicht_lieferbar'       => __( 'Nicht lieferbar', 'lindenweg16' ),
 				'nicht_lieferbar_liste' => __( 'Gerade nicht lieferbar: %s. Nimm es heraus oder wähle eine andere Farbe oder Länge.', 'lindenweg16' ),
 				'modul_nicht_lieferbar' => __( 'Dieses Modul ist gerade nicht lieferbar.', 'lindenweg16' ),
@@ -215,6 +238,15 @@ class Frontend {
 		$svg .= '</defs></svg>';
 
 		return $svg;
+	}
+
+	/**
+	 * Ist die AR-Ansicht eingeschaltet (Verwaltung → AR-Ansicht)?
+	 *
+	 * @return bool
+	 */
+	protected function ar_enabled() {
+		return class_exists( '\\Lindenweg16\\Modules\\ArView\\Options' ) && \Lindenweg16\Modules\ArView\Options::enabled();
 	}
 
 	/**
@@ -391,6 +423,11 @@ class Frontend {
 				<div class="lw16-haken__kopf">
 					<span class="lw16-haken__chip" data-lw16-chip></span>
 					<div class="lw16-haken__werkzeuge">
+						<?php if ( $this->ar_enabled() ) : ?>
+							<button type="button" class="lw16-haken__knopf lw16-haken__knopf--ar" data-lw16-ar hidden>
+								<?php esc_html_e( 'An meiner Wand ansehen (AR)', 'lindenweg16' ); ?>
+							</button>
+						<?php endif; ?>
 						<button type="button" class="lw16-haken__knopf" data-lw16-ansicht-zuruecksetzen hidden>
 							<?php esc_html_e( 'Ansicht zurücksetzen', 'lindenweg16' ); ?>
 						</button>

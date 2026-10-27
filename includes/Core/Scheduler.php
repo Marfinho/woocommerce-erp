@@ -60,6 +60,9 @@ class Scheduler {
 	const HOOK_MAIL_SYNC      = 'lw16_mail_sync';
 	const HOOK_MAIL_SERVER_OP = 'lw16_mail_server_op';
 
+	// AR-Ansicht aus dem Konfigurator: abgelegte Konfigurationen nach sieben Tagen löschen.
+	const HOOK_AR_MODEL_CLEANUP = 'lw16_ar_modell_aufraeumen';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -89,6 +92,7 @@ class Scheduler {
 			self::HOOK_SLICING_MAINTENANCE,
 			self::HOOK_MAIL_SYNC,
 			self::HOOK_MAIL_SERVER_OP,
+			self::HOOK_AR_MODEL_CLEANUP,
 		);
 	}
 
@@ -130,6 +134,7 @@ class Scheduler {
 			self::HOOK_BAMBU_MAINTENANCE     => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_SLICING_MAINTENANCE   => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_MAIL_SYNC             => 5 * MINUTE_IN_SECONDS,
+			self::HOOK_AR_MODEL_CLEANUP      => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {
