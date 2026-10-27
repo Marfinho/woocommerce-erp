@@ -69,6 +69,23 @@ class WebModel {
 	const STANDARD_KEY = 'holzstange';
 
 	/**
+	 * Zeigt ein Basismodul mit diesem Modell die Holzstange?
+	 *
+	 * Ja ohne Modell, mit dem Standardmodell selbst und mit der alten
+	 * Demo-Schiene: Sie war die Vorlage, bevor es die Holzstange gab, und
+	 * wer sie nie gegen ein eigenes Modell getauscht hat, hat sie nur aus
+	 * Versehen stehen. Ein eigenes hochgeladenes Modell bleibt, wie es ist.
+	 *
+	 * @param string $file Wert aus model_file.
+	 * @return bool
+	 */
+	public static function base_uses_standard( $file ) {
+		$file = (string) $file;
+
+		return '' === $file || self::demo_key( $file ) === self::STANDARD_KEY || self::demo_key( $file ) === 'schiene';
+	}
+
+	/**
 	 * Die mitgelieferten Modelle.
 	 *
 	 * Das Standardmodell der Holzstange steht zuerst. Die Demo-Modelle

@@ -113,7 +113,7 @@
 
 		function modelText(p) {
 			if (p.model_kind === 'upload') { return 'Eigenes Modell'; }
-			if (p.model_kind === 'demo') { return p.model_file === 'demo:holzstange' ? 'Standardmodell' : 'Demo-Modell'; }
+			if (p.model_kind === 'demo') { return p.model_file === 'demo:holzstange' || (p.role === 'basis' && p.model_file === 'demo:schiene') ? 'Standardmodell' : 'Demo-Modell'; }
 			return p.role === 'basis' ? 'Standardmodell' : 'Ersatzkörper';
 		}
 
@@ -233,7 +233,7 @@
 				kv('Preis im Shop', p.shop_found ? p.shop_price + (p.shop_in_stock ? '' : ' – gerade nicht lieferbar') : 'Kein Shop-Produkt verknüpft'),
 				kv('Kurzbeschreibung', p.teaser ? p.teaser : (p.teaser_shop ? p.teaser_shop + ' (aus dem Shop-Produkt)' : '–')),
 				p.model_measure ? kv('Das Modell misst', mm(p.model_measure.width) + ' breit × ' + mm(p.model_measure.height) + ' hoch × ' + mm(p.model_measure.depth) + ' tief') : null,
-				kv('Schaumodell', p.model_kind === 'demo' ? p.model_demo : (p.model_kind === 'upload' ? 'Eigene Datei: ' + p.model_file : (p.role === 'basis' ? 'Standard: Holzstange mit zwei Haltern' : 'Keines – maßhaltiger Ersatzkörper'))));
+				kv('Schaumodell', p.model_kind === 'demo' ? (p.role === 'basis' && p.model_file === 'demo:schiene' ? 'Standard: Holzstange mit zwei Haltern (die Demo-Schiene ersetzt sie)' : p.model_demo) : (p.model_kind === 'upload' ? 'Eigene Datei: ' + p.model_file : (p.role === 'basis' ? 'Standard: Holzstange mit zwei Haltern' : 'Keines – maßhaltiger Ersatzkörper'))));
 			body.appendChild(info);
 
 			if (p.model_url) {
@@ -321,7 +321,7 @@
 				return btn;
 			}
 
-			if (edit && p.model_kind !== 'upload' && p.model_file !== 'demo:schiene' && p.model_file !== 'demo:haken' && p.model_file !== 'demo:ablage' && p.height_mm >= 150) {
+			if (edit && p.model_kind !== 'upload' && p.height_mm >= 150) {
 				var holders = h('button', { class: 'btn', type: 'button' }, 'Sperrbereiche der Halter neu berechnen');
 				holders.addEventListener('click', function () {
 					if (p.blocks.length && !window.confirm('Alle vorhandenen Sperrbereiche dieses Basismoduls werden durch die berechneten ersetzt: zwei Halter (je 50 mm hoch) im Abstand von 900 mm, mittig auf der Stange. Fortfahren?')) { return; }

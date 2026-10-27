@@ -117,7 +117,7 @@ class Catalog {
 		// Ein Basismodul ohne eigenes Modell zeigt die Holzstange mit ihren
 		// zwei Haltern. Die Ansicht setzt sie aus dem Halter-Modell und der
 		// Länge zusammen; `construction` sagt ihr, dass sie das tun soll.
-		$standard = 'basis' === $part['role'] && ( '' === $file || WebModel::demo_key( $file ) === WebModel::STANDARD_KEY );
+		$standard = 'basis' === $part['role'] && WebModel::base_uses_standard( $file );
 
 		if ( $standard ) {
 			$file = WebModel::DEMO_PREFIX . WebModel::STANDARD_KEY;
