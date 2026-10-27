@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.39.2] – 2026-10-27
+
+- **Konfigurator: Symbole und Preise an den Modulen.** Modulkarten und Modulzeilen zeigen ein Symbol (Haken, Ablage, Leiste; andere Module ein neutrales Bausteinsymbol, Zuordnung nach Modulname) und auf den Karten den Preis in der gewählten Farbe. Die Bildfläche der 3D-Ansicht ist im Beige des Designs.
+
 ## [0.39.1] – 2026-10-27
 
 - **Konfigurator: Feinschliff.** Die Spaltenzahl richtet sich nach der Breite, die der Konfigurator auf der Seite wirklich hat (Container-Abfrage): Bei schmalem Inhaltsbereich steht das Bild über der Auswahl, statt als schmaler Streifen neben ihr. Die Bildfläche ist eine mittlere Wand, damit weiße und anthrazitfarbene Haken sich abheben, und ist in der Höhe begrenzt. Plus-Knopf der Modulkarten liegt neben dem Namen statt darüber, Farbnamen sitzen frei unter dem Auswahlring, Modulzeilen schneiden die Auswahl nicht mehr ab.

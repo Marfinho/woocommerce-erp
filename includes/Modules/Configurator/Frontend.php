@@ -136,8 +136,16 @@ class Frontend {
 	 * @return array
 	 */
 	protected function script_data() {
+		$catalog = Catalog::payload();
+		$icons   = array();
+
+		foreach ( $catalog['modules'] as $module ) {
+			$icons[ $module['article'] ] = self::icon_for( $module );
+		}
+
 		return array(
-			'katalog' => Catalog::payload(),
+			'katalog' => $catalog,
+			'symbole' => $icons,
 			'texte'   => array(
 				'entfernen'    => __( 'Entfernen', 'lindenweg16' ),
 				'kein_platz'   => __( 'Für dieses Modul ist kein Platz mehr frei.', 'lindenweg16' ),
@@ -156,6 +164,51 @@ class Frontend {
 				'zeilen'     => self::FALLBACK_ROWS,
 			),
 		);
+	}
+
+	/**
+	 * Welches Symbol gehört zu einem Modul?
+	 *
+	 * Die Zuordnung folgt dem Namen: Wer „Ablage“ heißt, bekommt die Ablage,
+	 * wer „Leiste“ heißt, die Leiste, „Haken“ den Haken. Alles andere
+	 * (Brillenhalter, Schlüsselbrett …) bekommt ein neutrales Bausteinsymbol –
+	 * ein falsches Bild wäre schlimmer als ein allgemeines.
+	 *
+	 * @param array $module Katalogeintrag.
+	 * @return string haken|ablage|leiste|modul
+	 */
+	public static function icon_for( array $module ) {
+		$text = strtolower( ( isset( $module['name'] ) ? $module['name'] : '' ) . ' ' . ( isset( $module['sku'] ) ? $module['sku'] : '' ) );
+
+		if ( preg_match( '/ablage|brett|regal|tablett|schale/', $text ) ) {
+			return 'ablage';
+		}
+
+		if ( preg_match( '/leiste|schl(ü|ue)ssel/u', $text ) ) {
+			return 'leiste';
+		}
+
+		if ( preg_match( '/haken|garderobe|bügel|buegel/u', $text ) ) {
+			return 'haken';
+		}
+
+		return 'modul';
+	}
+
+	/**
+	 * Symbolsammlung für Modulkarten und -zeilen, einmal pro Formular.
+	 *
+	 * @return string
+	 */
+	protected function icon_sprite() {
+		$svg  = '<svg class="lw16-haken__symbole" width="0" height="0" aria-hidden="true" focusable="false"><defs>';
+		$svg .= '<symbol id="lw16-sym-haken" viewBox="0 0 32 32"><path d="M10 5h12M16 5v14a5 5 0 0 0 10 0v-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>';
+		$svg .= '<symbol id="lw16-sym-ablage" viewBox="0 0 32 32"><rect x="3" y="12" width="26" height="9" rx="3" fill="currentColor"/><rect x="3" y="12" width="26" height="3" rx="1.5" fill="#fff" opacity=".35"/></symbol>';
+		$svg .= '<symbol id="lw16-sym-leiste" viewBox="0 0 32 32"><rect x="3" y="5" width="26" height="9" rx="4" fill="currentColor"/><path d="M8 14v8a2.5 2.5 0 0 0 5 0v-3M19 14v8a2.5 2.5 0 0 0 5 0v-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>';
+		$svg .= '<symbol id="lw16-sym-modul" viewBox="0 0 32 32"><rect x="5" y="5" width="22" height="22" rx="6" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16 11v10M11 16h10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>';
+		$svg .= '</defs></svg>';
+
+		return $svg;
 	}
 
 	/**
@@ -355,6 +408,7 @@ class Frontend {
 			</div>
 
 			<form class="lw16-haken__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-lw16-form>
+				<?php echo $this->icon_sprite(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- feste Zeichenkette. ?>
 				<?php wp_nonce_field( self::NONCE ); ?>
 				<input type="hidden" name="action" value="<?php echo esc_attr( self::ACTION ); ?>">
 				<input type="hidden" name="rueckkehr" value="<?php echo esc_attr( $this->current_url() ); ?>">
@@ -420,8 +474,10 @@ class Frontend {
 					<div class="lw16-haken__auswahl" data-lw16-angebot hidden>
 						<?php foreach ( $catalog['modules'] as $module ) : ?>
 							<button type="button" class="lw16-haken__modulknopf" data-lw16-hinzufuegen="<?php echo esc_attr( $module['article'] ); ?>">
+								<span class="lw16-haken__symbol" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#lw16-sym-<?php echo esc_attr( self::icon_for( $module ) ); ?>"></use></svg></span>
 								<span class="lw16-haken__plus" aria-hidden="true">+</span>
 								<span class="lw16-haken__modulname"><?php echo esc_html( $module['name'] ); ?></span>
+								<span class="lw16-haken__modulpreis" data-lw16-modulpreis="<?php echo esc_attr( $module['article'] ); ?>"></span>
 								<span class="lw16-haken__modulmass">
 									<?php
 									printf(

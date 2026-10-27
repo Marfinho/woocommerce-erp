@@ -119,10 +119,9 @@
 	width: 100%;
 	height: min(72vh, 640px);
 	min-height: 22rem;
-	/* Eine mittlere Wand: Der Haken ist weiß oder anthrazit, und beides
-	   muss sich abheben. Hell auf hell ist ein Suchbild, dunkel auf dunkel
-	   ebenso. Gemischt aus den Theme-Farben, damit sie im Dark Mode mitgeht. */
-	background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--lw16-flaeche) 60%, var(--lw16-gedaempft)) 0%, color-mix(in srgb, var(--lw16-flaeche) 38%, var(--lw16-gedaempft)) 100%);
+	/* Das Beige des Designs: Seitenbeige in der Mitte, zum Rand hin die
+	   Linienfarbe. Aus Theme-Farben gemischt, damit der Dark Mode mitgeht. */
+	background: radial-gradient(circle at 50% 30%, var(--lw-bg, var(--wp--preset--color--background, #f4f2ee)) 0%, var(--lw16-flaeche) 60%, var(--lw16-rand) 100%);
 	border: 1px solid var(--lw16-rand);
 	border-radius: calc(var(--lw16-r-karte) - 8px);
 	overflow: hidden;
@@ -393,7 +392,7 @@
 
 .lw16-haken__zeile {
 	display: grid;
-	grid-template-columns: minmax(8rem, 1fr) 5.5rem auto auto;
+	grid-template-columns: 1.7rem minmax(7rem, 1fr) 5.5rem auto auto;
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.45rem 0.6rem;
@@ -476,10 +475,11 @@
 .lw16-haken__modulknopf {
 	position: relative;
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-areas: "symbol name plus" "symbol mass mass" "symbol preis preis";
 	align-items: center;
-	column-gap: 0.5rem;
-	row-gap: 0.1rem;
+	column-gap: 0.7rem;
+	row-gap: 0.05rem;
 	padding: 0.75rem 0.9rem;
 	background: var(--lw16-flaeche);
 	border: 1px solid transparent;
@@ -489,6 +489,45 @@
 	text-align: left;
 	cursor: pointer;
 	transition: transform var(--lw16-mittel) var(--lw16-feder), box-shadow var(--lw16-mittel) var(--lw16-glatt), background var(--lw16-schnell), border-color var(--lw16-schnell);
+}
+
+.lw16-haken__symbol {
+	grid-area: symbol;
+	display: grid;
+	place-items: center;
+	width: 2.6rem;
+	height: 2.6rem;
+	border-radius: 12px;
+	background: var(--lw16-karte);
+	color: var(--lw16-akzent);
+}
+
+.lw16-haken__symbol svg {
+	width: 1.7rem;
+	height: 1.7rem;
+	display: block;
+}
+
+.lw16-haken__zeilensymbol {
+	width: 1.7rem;
+	height: 1.7rem;
+	color: var(--lw16-akzent);
+}
+
+.lw16-haken__symbole {
+	position: absolute;
+}
+
+.lw16-haken__modulpreis {
+	grid-area: preis;
+	font-family: var(--lw16-mono);
+	font-size: 0.82rem;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haken__modulpreis:empty {
+	display: none;
 }
 
 .lw16-haken__modulknopf:hover {
@@ -503,8 +542,7 @@
 }
 
 .lw16-haken__plus {
-	grid-column: 2;
-	grid-row: 1 / span 2;
+	grid-area: plus;
 	display: grid;
 	place-items: center;
 	width: 26px;
@@ -522,6 +560,7 @@
 }
 
 .lw16-haken__modulname {
+	grid-area: name;
 	min-width: 0;
 	overflow-wrap: anywhere;
 	font-family: var(--lw16-kopf);
@@ -530,6 +569,7 @@
 }
 
 .lw16-haken__modulmass {
+	grid-area: mass;
 	font-family: var(--lw16-mono);
 	font-size: 0.78rem;
 	color: var(--lw16-gedaempft);
@@ -624,11 +664,11 @@
 
 @container (max-width: 30em) {
 	.lw16-haken__zeile {
-		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-columns: 1.7rem minmax(0, 1fr) auto;
 	}
 
 	.lw16-haken__zeile select {
-		grid-column: 1 / -1;
+		grid-column: 2 / -1;
 	}
 }
 

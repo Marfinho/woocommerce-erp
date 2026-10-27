@@ -541,7 +541,15 @@ class Konfigurator {
 			weg.setAttribute( 'aria-label', this.texte.entfernen + ': ' + teil.name );
 			weg.addEventListener( 'click', () => this.entferne( eintrag.uid ) );
 
-			zeile.append( auswahl, feld, einheit, weg );
+			const symbol = document.createElementNS( 'http://www.w3.org/2000/svg', 'svg' );
+			symbol.setAttribute( 'viewBox', '0 0 32 32' );
+			symbol.setAttribute( 'class', 'lw16-haken__zeilensymbol' );
+			symbol.setAttribute( 'aria-hidden', 'true' );
+			const verweis = document.createElementNS( 'http://www.w3.org/2000/svg', 'use' );
+			verweis.setAttribute( 'href', '#lw16-sym-' + ( ( DATEN.symbole && DATEN.symbole[ eintrag.artikel ] ) || 'modul' ) );
+			symbol.appendChild( verweis );
+
+			zeile.append( symbol, auswahl, feld, einheit, weg );
 			zeile.addEventListener( 'pointerdown', () => {
 				this.waehle( eintrag.uid );
 			} );
@@ -587,6 +595,24 @@ class Konfigurator {
 		this.feldCode.value = this.code();
 		this.zeichnePreis();
 		this.zeichneChip();
+		this.zeichneModulpreise();
+	}
+
+	/**
+	 * Preis eines Moduls in der gewählten Farbe auf den Modulkarten.
+	 */
+	zeichneModulpreise() {
+		const format = new Intl.NumberFormat( document.documentElement.lang || 'de-DE', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		} );
+
+		this.angebot.querySelectorAll( '[data-lw16-modulpreis]' ).forEach( ( feld ) => {
+			const teil = this.module.get( parseInt( feld.dataset.lw16Modulpreis, 10 ) );
+			const preis = teil ? this.preisVon( teil ) : null;
+
+			feld.textContent = null === preis ? '' : format.format( preis ) + ' ' + this.katalog.currency;
+		} );
 	}
 
 	/**
