@@ -86,7 +86,7 @@ class Exporter {
 
 		if ( in_array( 'rolls', $was, true ) ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- die Aufrufer prüfen die Nonce vorher.
-			$labels = array_merge( $labels, LabelPdf::roll_labels( ! $alle, isset( $_GET['lot'] ) ? (int) $_GET['lot'] : 0 ) );
+			$labels = array_merge( $labels, LabelPdf::roll_labels( ! $alle, isset( $_GET['lot'] ) ? (int) $_GET['lot'] : 0, isset( $_GET['color'] ) ? sanitize_key( wp_unslash( $_GET['color'] ) ) : '' ) );
 		}
 
 		if ( in_array( 'printers', $was, true ) ) {
@@ -424,13 +424,12 @@ class Exporter {
 			'p',
 			$dossier['lot']
 				? sprintf(
-					/* translators: 1: Charge, 2: Hersteller, 3: Material. */
-					__( 'Filamentcharge %1$s · %2$s · %3$s', 'lindenweg16' ),
-					$dossier['lot']['lot_code'],
-					$dossier['lot']['manufacturer'],
-					$dossier['lot']['material']
+					/* translators: 1: Material, 2: Farbe. */
+					__( 'Filament: %1$s · %2$s', 'lindenweg16' ),
+					$dossier['lot']['material'],
+					ColorRegistry::label( (string) $dossier['lot']['color'] )
 				)
-				: __( 'Keine Filamentcharge hinterlegt.', 'lindenweg16' ),
+				: __( 'Kein Filament hinterlegt.', 'lindenweg16' ),
 		);
 
 		$lines[] = array( 'h2', __( 'Umfang', 'lindenweg16' ) );

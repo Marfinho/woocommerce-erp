@@ -476,14 +476,12 @@ class SimplePages {
 		// phpcs:disable WordPress.Security.NonceVerification
 		$view  = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : 'chargen';
 		$batch = isset( $_GET['batch'] ) ? (int) $_GET['batch'] : 0;
-		$lot   = isset( $_GET['lot'] ) ? (int) $_GET['lot'] : 0;
 		// phpcs:enable WordPress.Security.NonceVerification
 
 		$base = admin_url( 'admin.php?page=lw16-betrieb-qualitaet' );
 		echo '<nav class="lw16-tabs">';
 		foreach ( array(
-			'chargen'         => __( 'Chargenbuch', 'lindenweg16' ),
-			'rueckverfolgung' => __( 'Rückverfolgung', 'lindenweg16' ),
+			'chargen' => __( 'Chargenbuch', 'lindenweg16' ),
 		) as $key => $label ) {
 			printf(
 				'<a href="%s" class="%s">%s</a> ',
@@ -494,11 +492,7 @@ class SimplePages {
 		}
 		echo '</nav>';
 
-		if ( 'rueckverfolgung' === $view ) {
-			$this->trace( $lot, $batch );
-		} else {
-			$this->batches( $batch );
-		}
+		$this->batches( $batch );
 
 		echo '</div>';
 	}
@@ -590,7 +584,7 @@ class SimplePages {
 			array( __( 'Artikel', 'lindenweg16' ), $dossier['article'] ? $dossier['article']['sku'] . ' – ' . $dossier['article']['name'] : '' ),
 			array( __( 'Revision', 'lindenweg16' ), $dossier['revision'] ? $dossier['revision']['version'] : '—' ),
 			array( __( 'Material', 'lindenweg16' ), $dossier['revision'] ? $dossier['revision']['material'] : '—' ),
-			array( __( 'Filamentcharge', 'lindenweg16' ), $dossier['lot'] ? $dossier['lot']['lot_code'] : '—' ),
+			array( __( 'Farbe', 'lindenweg16' ), $dossier['lot'] ? trim( ColorRegistry::label( (string) $dossier['lot']['color'] ) . ' ' . (string) $dossier['lot']['material'] ) : '—' ),
 			array( __( 'Drucker', 'lindenweg16' ), $dossier['printer'] ? $dossier['printer']['code'] : '—' ),
 			array( __( 'Stückzahl', 'lindenweg16' ), number_format_i18n( (float) $dossier['batch']['qty'], 0 ) ),
 			array( __( 'Betroffene Bestellungen', 'lindenweg16' ), sprintf( '%d', count( $dossier['orders'] ) ) ),
@@ -598,95 +592,6 @@ class SimplePages {
 			printf( '<tr><td>%s</td><td><strong>%s</strong></td></tr>', esc_html( $row[0] ), esc_html( $row[1] ) );
 		}
 		echo '</tbody></table>';
-	}
-
-	/**
-	 * Rückverfolgung in beide Richtungen.
-	 *
-	 * @param int $lot_id   Filamentcharge.
-	 * @param int $batch_id Charge.
-	 */
-	protected function trace( $lot_id, $batch_id ) {
-		echo '<h2>' . esc_html__( 'Rückverfolgung', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Von einer Filamentcharge zu allen betroffenen Chargen und Bestellungen – und umgekehrt.', 'lindenweg16' ) . '</p>';
-
-		echo '<form method="get" style="margin:12px 0">';
-		echo '<input type="hidden" name="page" value="lw16-betrieb-qualitaet" />';
-		echo '<input type="hidden" name="view" value="rueckverfolgung" />';
-		echo '<select name="lot"><option value="0">' . esc_html__( '– Filamentcharge wählen –', 'lindenweg16' ) . '</option>';
-
-		foreach ( FilamentRepository::all() as $lot ) {
-			printf(
-				'<option value="%d"%s>%s – %s</option>',
-				(int) $lot['id'],
-				selected( $lot_id, (int) $lot['id'], false ),
-				esc_html( $lot['lot_code'] ),
-				esc_html( (string) $lot['material'] )
-			);
-		}
-
-		echo '</select> <button class="button">' . esc_html__( 'Verfolgen', 'lindenweg16' ) . '</button></form>';
-
-		if ( ! $lot_id ) {
-			return;
-		}
-
-		$trace    = Traceability::forward_from_lot( $lot_id );
-		$articles = ArticleRepository::all_by_id();
-
-		printf(
-			'<h3>%s</h3>',
-			esc_html( sprintf( /* translators: %s: Chargencode. */ __( 'Aus Filamentcharge %s entstanden', 'lindenweg16' ), $trace['lot']['lot_code'] ) )
-		);
-
-		printf(
-			'<p>%s</p>',
-			esc_html(
-				sprintf(
-					/* translators: 1: Druckjobs, 2: Chargen, 3: Bestellungen. */
-					__( '%1$d Druckjobs, %2$d Chargen, %3$d betroffene Bestellungen.', 'lindenweg16' ),
-					count( $trace['jobs'] ),
-					count( $trace['batches'] ),
-					count( $trace['orders'] )
-				)
-			)
-		);
-
-		if ( $trace['batches'] ) {
-			$this->thead(
-				array(
-					__( 'Chargencode', 'lindenweg16' ),
-					__( 'Produziert', 'lindenweg16' ),
-					__( 'Artikel', 'lindenweg16' ),
-					__( 'Stück', 'lindenweg16' ),
-				)
-			);
-			foreach ( $trace['batches'] as $batch ) {
-				echo '<tr>';
-				printf( '<td><code>%s</code></td>', esc_html( $batch['batch_code'] ) );
-				printf( '<td>%s</td>', esc_html( mysql2date( 'd.m.Y', $batch['produced_on'] ) ) );
-				printf(
-					'<td>%s</td>',
-					esc_html( isset( $articles[ (int) $batch['article_id'] ] ) ? $articles[ (int) $batch['article_id'] ]['sku'] : '' )
-				);
-				printf( '<td>%s</td>', esc_html( number_format_i18n( (float) $batch['qty'], 0 ) ) );
-				echo '</tr>';
-			}
-			echo '</tbody></table>';
-		}
-
-		if ( $trace['orders'] ) {
-			echo '<h3>' . esc_html__( 'Betroffene Bestellungen', 'lindenweg16' ) . '</h3>';
-			$this->thead( array( __( 'Herkunft', 'lindenweg16' ), __( 'Datum', 'lindenweg16' ), __( 'Menge', 'lindenweg16' ) ) );
-			foreach ( $trace['orders'] as $order ) {
-				echo '<tr>';
-				printf( '<td>%s #%d</td>', esc_html( $order['ref_type'] ), (int) $order['ref_id'] );
-				printf( '<td>%s</td>', esc_html( mysql2date( 'd.m.Y', $order['moved_at'] ) ) );
-				printf( '<td>%s</td>', esc_html( number_format_i18n( abs( (float) $order['qty'] ), 0 ) ) );
-				echo '</tr>';
-			}
-			echo '</tbody></table>';
-		}
 	}
 
 	/* ====================================================================

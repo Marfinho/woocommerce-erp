@@ -73,7 +73,7 @@ class ImportPage {
 					'printer_code'   => __( 'Drucker (Pflicht)', 'lindenweg16' ),
 					'sku'            => __( 'Art.-Nr (Pflicht)', 'lindenweg16' ),
 					'color'          => __( 'Farbe', 'lindenweg16' ),
-					'lot_code'       => __( 'Material-Charge', 'lindenweg16' ),
+					'lot_code'       => __( 'Material-Charge (nicht mehr nötig)', 'lindenweg16' ),
 					'parts_planned'  => __( 'Teile geplant', 'lindenweg16' ),
 					'parts_ok'       => __( 'Teile i.O.', 'lindenweg16' ),
 					'failure_reason' => __( 'Ursache', 'lindenweg16' ),
@@ -84,7 +84,7 @@ class ImportPage {
 			'filament'     => array(
 				'label'  => __( '06 Filament', 'lindenweg16' ),
 				'fields' => array(
-					'lot_code'     => __( 'Charge (Pflicht)', 'lindenweg16' ),
+					'lot_code'     => __( 'Charge (optional, wird sonst vergeben)', 'lindenweg16' ),
 					'received_on'  => __( 'Zugang am', 'lindenweg16' ),
 					'material'     => __( 'Typ', 'lindenweg16' ),
 					'manufacturer' => __( 'Hersteller', 'lindenweg16' ),

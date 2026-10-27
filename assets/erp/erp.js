@@ -1217,8 +1217,8 @@
 	function rollPanel(roll, reload) {
 		var info = h('div', { class: 'roll-info' },
 			h('span', { class: 'tag' + (roll.status === 'in_benutzung' ? ' now' : (roll.status === 'leer' ? ' later' : '')) }, ROLL_STATUS[roll.status] || roll.status),
-			h('span', null, [roll.manufacturer, roll.material].filter(Boolean).join(' ')),
-			h('span', { class: 'muted' }, 'Charge ' + roll.lot_code + (roll.location ? ' · ' + roll.location : '')));
+			h('span', null, [roll.color_label, roll.material].filter(Boolean).join(' ')),
+			h('span', { class: 'muted' }, roll.code + (roll.location ? ' · ' + roll.location : '')));
 		var bar = h('div', { class: 'roll-bar', role: 'img', 'aria-label': roll.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, roll.percent)) + '%' }));
 		var panel = h('div', { class: 'roll' }, info,
 			h('p', { class: 'roll-rest' }, roll.status === 'leer' ? 'Aus dem Bestand genommen' + (roll.written_off_g !== null && roll.written_off_g !== undefined ? ' · Schwund ' + qty(roll.written_off_g) + ' g gegenüber den Druckjobs' : '') : [h('b', null, qty(roll.remaining_g) + ' g'), ' von ' + qty(roll.start_g) + ' g übrig (rechnerisch)']),
@@ -1239,13 +1239,13 @@
 		var use = roll.status === 'neu' ? h('button', { class: 'btn', type: 'button', onclick: function (e) { e.target.disabled = true; rollAction(roll, { aktion: 'einsetzen' }, reload); } }, 'In Benutzung nehmen') : null;
 
 		var gross = h('input', { class: 'field', type: 'number', min: '1', step: '1', inputmode: 'numeric', placeholder: 'Gewicht samt Spule (g)', 'aria-label': 'Gewicht in Gramm', style: 'max-width:200px' });
+		var tare = h('input', { class: 'field', type: 'number', min: '0', step: '1', inputmode: 'numeric', value: String(roll.tare_g), 'aria-label': 'Gewicht der leeren Spule in Gramm', style: 'max-width:90px' });
 		var weigh = h('form', { class: 'roll-weigh', onsubmit: function (e) {
 			e.preventDefault();
 			var g = parseFloat(gross.value);
 			if (!(g > 0)) { toast('Bitte das Gewicht in Gramm eintragen.', true); return; }
-			rollAction(roll, { aktion: 'wiegen', gross_g: g }, reload);
-		} }, gross, h('button', { class: 'btn', type: 'submit' }, 'Wiegen'),
-		h('small', { class: 'muted' }, 'Leere Spule wird mit ' + roll.tare_g + ' g abgezogen.'));
+			rollAction(roll, { aktion: 'wiegen', gross_g: g, tare_g: parseFloat(tare.value) || 0 }, reload);
+		} }, gross, h('label', { class: 'roll-tare' }, 'abzüglich leere Spule (g)', tare), h('button', { class: 'btn', type: 'submit' }, 'Wiegen'));
 
 		panel.appendChild(h('div', { class: 'roll-actions' }, empty, use));
 		panel.appendChild(weigh);
@@ -1900,7 +1900,6 @@
 	// Wareneingang zu einer offenen Bestellung.
 	function receiveForm(p, reload) {
 		var qtyIn = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: num(p.qty), 'aria-label': 'Gelieferte Menge in ' + p.unit, style: 'max-width:90px' });
-		var lot = p.type === 'filament' ? h('input', { class: 'field', type: 'text', placeholder: 'Chargencode (leer = automatisch)', 'aria-label': 'Chargencode' }) : null;
 		var mat = p.type === 'filament' ? h('select', { class: 'field', 'aria-label': 'Material' }, ['PETG', 'PLA', 'ASA', 'ABS', 'TPU'].map(function (m) { return h('option', { value: m }, m); })) : null;
 
 		return h('form', {
@@ -1908,11 +1907,11 @@
 				e.preventDefault();
 				var btn = e.target.querySelector('button[type=submit]');
 				btn.disabled = true;
-				api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, lot_code: lot ? lot.value : '', material: mat ? mat.value : '' } })
+				api('einkauf/' + p.id + '/eingang', { method: 'POST', body: { qty: qtyIn.value, material: mat ? mat.value : '' } })
 					.then(function (r) { toast(r.message); reload(); })
 					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
 			}
-		}, qtyIn, h('small', null, p.unit), mat, lot, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'));
+		}, qtyIn, h('small', null, p.unit), mat, h('button', { class: 'btn primary', type: 'submit' }, 'Eingegangen ✓'));
 	}
 
 	function viewProcurement() {
@@ -1972,26 +1971,26 @@
 
 	var LEVEL_TEXT = { ok: 'reicht', bald: 'bald nachbestellen', knapp: 'jetzt nachbestellen', leer: 'leer' };
 
-	// Rollen einer Charge: Etikett, Rest, Leermelden. Alte Chargen ohne Rollen bekommen sie auf Knopfdruck.
-	function lotRolls(l, reload) {
+	// Rollen einer Farbe: Etikett, Rest, Leermelden. Alter Bestand ohne einzelne Rollen wird auf Knopfdruck aufgeteilt.
+	function colorRolls(c, reload) {
 		var box = h('div', { class: 'rolls' });
 
-		if (!l.has_rolls) {
+		c.legacy.forEach(function (l) {
 			var grams = h('input', { class: 'field', type: 'number', min: '100', step: '50', value: String(l.roll_g), 'aria-label': 'Gewicht je Rolle in Gramm', style: 'max-width:110px' });
 			box.appendChild(h('div', { class: 'roll-create' },
-				h('small', { class: 'muted' }, 'Noch ohne einzelne Rollen. Gewicht je Rolle (g): '), grams,
+				h('small', { class: 'muted' }, num(l.remaining) + ' kg ohne einzelne Rollen – Gewicht je Rolle (g): '), grams,
 				h('button', { class: 'btn', type: 'button', onclick: function (e) {
 					e.target.disabled = true;
 					api('filament/charge/rollen', { root: true, method: 'POST', body: { lot_id: l.id, roll_g: parseInt(grams.value, 10) || 0 } }).then(function (r) { toast(r.message); reload(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
-				} }, 'Rollen anlegen')));
-			return box;
-		}
+				} }, 'In Rollen aufteilen')));
+		});
 
-		if (l.label_url) { box.appendChild(h('a', { class: 'btn', href: l.label_url, target: '_blank', rel: 'noopener' }, 'Etiketten dieser Charge drucken')); }
+		if (c.label_url) { box.appendChild(h('a', { class: 'btn', href: c.label_url, target: '_blank', rel: 'noopener' }, 'Etiketten dieser Farbe drucken')); }
 
-		l.rolls.forEach(function (r) {
+		c.rolls.forEach(function (r) {
 			box.appendChild(h('div', { class: 'roll-row' },
 				h('b', null, r.code),
+				h('span', null, r.material),
 				h('span', { class: 'tag' + (r.status === 'in_benutzung' ? ' now' : '') }, ROLL_STATUS[r.status] || r.status),
 				h('span', { class: 'roll-bar small', role: 'img', 'aria-label': r.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, r.percent)) + '%' })),
 				h('span', null, qty(r.remaining_g) + ' g'),
@@ -2003,8 +2002,22 @@
 				} }, 'Leer')));
 		});
 
-		if (!l.rolls.length) { box.appendChild(h('small', { class: 'muted' }, 'Alle Rollen dieser Charge sind leer gemeldet.')); }
 		return box;
+	}
+
+	// Einstellungen der Rollen: Standardgewicht einer Rolle und der leeren Spule.
+	function rollSettings(rolls, reload) {
+		var roll = h('input', { class: 'field', type: 'number', min: '100', step: '50', value: String(rolls.roll_g), 'aria-label': 'Gewicht je Rolle in Gramm', style: 'max-width:110px' });
+		var tare = h('input', { class: 'field', type: 'number', min: '0', step: '1', value: String(rolls.tare_g), 'aria-label': 'Gewicht der leeren Spule in Gramm', style: 'max-width:110px' });
+		return h('form', { class: 'card roll-settings', onsubmit: function (e) {
+			e.preventDefault();
+			api('material/rollen', { method: 'POST', body: { roll_g: parseInt(roll.value, 10), tare_g: parseInt(tare.value, 10) } }).then(function (r) { toast(r.message); reload(); }).catch(function (er) { toast(er.message, true); });
+		} },
+		h('h3', { style: 'margin-top:0' }, 'Rollen'),
+		h('label', { class: 'roll-f' }, h('span', null, 'Filament je Rolle (g)'), roll),
+		h('label', { class: 'roll-f' }, h('span', null, 'Leere Spule (g)'), tare,
+			h('small', { class: 'muted' }, 'Vorgabe 37 g: der Pappkern einer Bambu-Lab-Refill-Rolle (Nutzer wiegen 35 bis 38 g, Bambu nennt keinen offiziellen Wert). Mit Kunststoffspule sind es etwa 215 bis 260 g. Am besten einmal einen leeren Kern wiegen. Beim Wiegen einer Rolle lässt sich der Wert auch einzeln ändern.')),
+		h('button', { class: 'btn primary', type: 'submit' }, 'Speichern'));
 	}
 
 	// Material: eine Karte je Filamentfarbe, mit Rollen, Bestellungen und Bestellformular.
@@ -2022,6 +2035,7 @@
 			box.textContent = '';
 			if (!d.colors.length) { box.appendChild(h('div', { class: 'notice' }, 'Noch kein Filament im Lager. Der erste Wareneingang legt die Farbe an.')); return; }
 
+			box.appendChild(rollSettings(d.rolls, load));
 			d.colors.forEach(function (c) {
 				var pct = c.coverage === null ? 100 : Math.max(4, Math.min(100, Math.round(c.coverage / (c.threshold * 2) * 100)));
 				var card = h('article', { class: 'card mat lv-' + c.level },
@@ -2031,15 +2045,8 @@
 					h('div', { class: 'muted', style: 'font-size:13px' }, c.coverage === null ? 'Kein Verbrauch in den letzten 4 Wochen.' : 'reicht noch ' + Math.floor(c.coverage) + ' Tage · Grenze ' + c.threshold + ' · ' + num(c.daily * 1000) + ' g pro Tag')
 				);
 
-				if (c.lots.length) {
-					card.appendChild(h('ul', { class: 'lots' }, c.lots.map(function (l) {
-						return h('li', null,
-							h('b', null, l.code), h('span', null, l.material + ' · ' + num(l.remaining) + ' kg'),
-							l.dry === false ? h('span', { class: 'tag later' }, 'trocknen') : null,
-							l.location ? h('small', { class: 'muted' }, l.location) : null,
-							lotRolls(l, load));
-					})));
-				}
+				card.appendChild(h('div', { class: 'muted', style: 'font-size:13px' }, (c.materials.length ? c.materials.join(' / ') : 'Material unbekannt') + (c.needs_drying ? ' · ' : ''), c.needs_drying ? h('span', { class: 'tag later' }, 'trocknen') : null));
+				if (c.rolls.length || c.legacy.length) { card.appendChild(colorRolls(c, load)); }
 
 				c.open.forEach(function (p) {
 					card.appendChild(h('div', { class: 'incoming' },
@@ -2296,12 +2303,11 @@
 
 	function materialRows(rows) {
 		return h('div', { class: 'matrows' }, rows.map(function (m) {
-			var lot = m.lots.filter(function (l) { return l.id === m.suggested; })[0];
 			return h('div', { class: 'matrow' + (m.ok ? '' : ' bad') },
 				h('b', null, m.label),
 				h('span', null, kgTxt(m.needed_kg) + ' nötig'),
 				h('span', { class: 'muted' }, m.ok
-					? (lot ? 'Rolle ' + lot.code + ' · Rest ' + kgTxt(lot.remaining_kg) : 'im Lager ' + kgTxt(m.available_kg))
+					? 'im Lager ' + kgTxt(m.available_kg)
 					: (m.available_kg > 0 ? 'nur ' + kgTxt(m.available_kg) + ' im Lager – es fehlen ' + kgTxt(m.missing_kg) : 'keine Rolle in dieser Farbe im Lager'))
 			);
 		}));
@@ -2796,14 +2802,9 @@
 				var mrow = (run.material || []).filter(function (m) { return m.color === item.ckey; })[0];
 				var rollBox = null;
 				if (item.kg) {
-					if (mrow && mrow.lots.length) {
-						lotPick[key] = mrow.suggested || mrow.lots[0].id;
-						var sel = h('select', { class: 'field', 'aria-label': 'Rolle für ' + item.name, onchange: function (e) { lotPick[key] = parseInt(e.target.value, 10); } },
-							mrow.lots.map(function (l) { return h('option', { value: String(l.id), selected: l.id === lotPick[key] }, l.code + ' · Rest ' + kgTxt(l.remaining_kg)); }));
-						rollBox = h('div', null, h('div', { class: 'eyebrow' }, 'Rolle · Verbrauch ca. ' + kgTxt(item.kg)), sel);
-					} else {
-						rollBox = h('div', { class: 'notice warn small' }, 'Keine Rolle in dieser Farbe im Lager – der Verbrauch (ca. ' + kgTxt(item.kg) + ') wird nicht abgezogen.');
-					}
+					rollBox = mrow && mrow.available_kg > 0
+						? h('div', { class: 'muted small' }, 'Filament · Verbrauch ca. ' + kgTxt(item.kg) + ' – wird von der Farbe im Lager abgezogen (im Lager ' + kgTxt(mrow.available_kg) + ').')
+						: h('div', { class: 'notice warn small' }, 'Kein Filament in dieser Farbe im Lager – der Verbrauch (ca. ' + kgTxt(item.kg) + ') wird nicht abgezogen.');
 				}
 
 				form.appendChild(h('div', { class: 'rf-item' },

@@ -233,6 +233,7 @@ foreach ( array(
 	'StockLedger',
 	'ShopStock',
 	'RollAllocator',
+	'FilamentRolls',
 	'ForecastModel',
 	'ForecastKpi',
 	'Promise',

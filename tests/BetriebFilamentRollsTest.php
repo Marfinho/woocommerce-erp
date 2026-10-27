@@ -134,4 +134,21 @@ class BetriebFilamentRollsTest extends TestCase {
 		$this->assertSame( 'attention', RollAllocator::shrinkage_level( 150, 1000 ) );
 		$this->assertSame( 'normal', RollAllocator::shrinkage_level( 0, 0 ) );
 	}
+
+	/**
+	 * Rolleneinstellungen bleiben in sinnvollen Grenzen; Standard der Leerspule ist der Pappkern (37 g).
+	 */
+	public function test_rolleneinstellungen() {
+		$s = \Lindenweg16\Modules\Betrieb\FilamentRolls::sanitize( array( 'roll_g' => '750', 'tare_g' => '215' ) );
+		$this->assertSame( 750, $s['roll_g'] );
+		$this->assertSame( 215, $s['tare_g'] );
+
+		$grenzen = \Lindenweg16\Modules\Betrieb\FilamentRolls::sanitize( array( 'roll_g' => 5, 'tare_g' => -4 ) );
+		$this->assertSame( 100, $grenzen['roll_g'] );
+		$this->assertSame( 0, $grenzen['tare_g'] );
+
+		$leer = \Lindenweg16\Modules\Betrieb\FilamentRolls::sanitize( array() );
+		$this->assertSame( 1000, $leer['roll_g'] );
+		$this->assertSame( 37, $leer['tare_g'] );
+	}
 }

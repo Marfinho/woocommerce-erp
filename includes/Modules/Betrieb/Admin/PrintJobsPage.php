@@ -249,20 +249,6 @@ class PrintJobsPage {
 		}
 		echo '</select></td></tr>';
 
-		$lots = FilamentRepository::all();
-		echo '<tr><th scope="row"><label for="lw16-lot">' . esc_html__( 'Filamentcharge', 'lindenweg16' ) . '</label></th><td><select name="filament_lot_id" id="lw16-lot">';
-		printf( '<option value="0">%s</option>', esc_html__( '– keine –', 'lindenweg16' ) );
-		foreach ( $lots as $lot ) {
-			printf(
-				'<option value="%d">%s – %s %s</option>',
-				(int) $lot['id'],
-				esc_html( $lot['lot_code'] ),
-				esc_html( (string) $lot['material'] ),
-				esc_html( (string) $lot['color'] )
-			);
-		}
-		echo '</select><p class="description">' . esc_html__( 'Ohne Charge ist im Ernstfall nicht rückverfolgbar, aus welchem Material ein Teil stammt.', 'lindenweg16' ) . '</p></td></tr>';
-
 		$geplant = $order ? (string) (int) $order['qty_planned'] : '';
 
 		foreach ( array(

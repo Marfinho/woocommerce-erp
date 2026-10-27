@@ -88,7 +88,7 @@ class VerfahrensDokuBetrieb {
 			'printers'          => __( 'Geräte der Druckfarm', 'lindenweg16' ),
 			'print_jobs'        => __( 'Druckjournal; Ausschuss und Quoten werden gerechnet', 'lindenweg16' ),
 			'filament_rolls'    => __( 'Einzelne Filamentrollen mit Etikett; leer gescannt fällt die Rolle aus dem Bestand, der Schwund wird festgehalten', 'lindenweg16' ),
-			'filament_lots'     => __( 'Filamentchargen; Verbrauch aus den Druckjobs', 'lindenweg16' ),
+			'filament_lots'     => __( 'Filament-Lieferungen (innerer Anker der Rollen); Verbrauch aus den Druckjobs', 'lindenweg16' ),
 			'batches'           => __( 'Chargenbuch für die Rückverfolgbarkeit', 'lindenweg16' ),
 			'stock_movements'   => __( 'Lagerbestand als Bewegungskonto; es gibt kein Bestandsfeld', 'lindenweg16' ),
 			'event_log'         => __( 'Ereignisprotokoll des Betriebs in drei Stufen (normal, Aufmerksamkeit, kritisch); wird nach Alter und Stufe aufgeräumt', 'lindenweg16' ),

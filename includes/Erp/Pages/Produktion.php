@@ -134,7 +134,6 @@ class Produktion {
 		// Qualität.
 		self::route( 'qualitaet/chargen', 'GET', 'batches', $quality );
 		self::route( 'qualitaet/chargen/(?P<id>\d+)', 'GET', 'batch', $quality );
-		self::route( 'qualitaet/rueckverfolgung', 'GET', 'trace', $quality );
 
 		// Kapazität.
 		self::route( 'kapazitaet', 'GET', 'capacity', $capacity );
@@ -900,16 +899,6 @@ class Produktion {
 			$colors[] = array( 'slug' => $slug, 'label' => $label );
 		}
 
-		$lots = array();
-		foreach ( FilamentRepository::all() as $lot ) {
-			$lots[] = array(
-				'id'       => (int) $lot['id'],
-				'code'     => $lot['lot_code'],
-				'material' => (string) $lot['material'],
-				'color'    => (string) $lot['color'],
-			);
-		}
-
 		$orders = array();
 		foreach ( WorkOrderRepository::unfinished() as $order ) {
 			if ( 'druck' !== $order['kind'] ) {
@@ -936,7 +925,6 @@ class Produktion {
 				'articles'      => $articles,
 				'colors'        => $colors,
 				'default_color' => ColorRegistry::default_color(),
-				'lots'          => $lots,
 				'orders'        => $orders,
 				'failures'      => $failures,
 				'today'         => gmdate( 'Y-m-d' ),
@@ -1581,7 +1569,7 @@ class Produktion {
 				'article'   => $dossier['article'] ? $dossier['article']['sku'] . ' – ' . $dossier['article']['name'] : '',
 				'revision'  => $dossier['revision'] ? (string) $dossier['revision']['version'] : '',
 				'material'  => $dossier['revision'] ? (string) $dossier['revision']['material'] : '',
-				'lot'       => $dossier['lot'] ? (string) $dossier['lot']['lot_code'] : '',
+				'color'     => $dossier['lot'] ? trim( ColorRegistry::label( (string) $dossier['lot']['color'] ) . ' ' . (string) $dossier['lot']['material'] ) : '',
 				'printer'   => $dossier['printer'] ? (string) $dossier['printer']['code'] : '',
 				'qty'       => (float) $dossier['batch']['qty'],
 				'inspected' => (bool) $dossier['batch']['inspected'],
@@ -1610,56 +1598,6 @@ class Produktion {
 		}
 
 		return $out;
-	}
-
-	/**
-	 * Rückverfolgung von einer Filamentcharge zu Chargen und Bestellungen.
-	 *
-	 * @param WP_REST_Request $request Anfrage.
-	 * @return WP_REST_Response
-	 */
-	public static function trace( WP_REST_Request $request ) {
-		$lots = array();
-		foreach ( FilamentRepository::all() as $lot ) {
-			$lots[] = array(
-				'id'       => (int) $lot['id'],
-				'code'     => $lot['lot_code'],
-				'material' => (string) $lot['material'],
-			);
-		}
-
-		$out    = array( 'lots' => $lots, 'trace' => null );
-		$lot_id = (int) $request->get_param( 'lot' );
-
-		if ( $lot_id ) {
-			$trace = Traceability::forward_from_lot( $lot_id );
-
-			if ( ! $trace['lot'] ) {
-				return self::fail( __( 'Diese Filamentcharge gibt es nicht (mehr).', 'lindenweg16' ), 404 );
-			}
-
-			$articles = ArticleRepository::all_by_id();
-			$batches  = array();
-			foreach ( $trace['batches'] as $batch ) {
-				$aid       = (int) $batch['article_id'];
-				$batches[] = array(
-					'id'   => (int) $batch['id'],
-					'code' => $batch['batch_code'],
-					'date' => substr( (string) $batch['produced_on'], 0, 10 ),
-					'sku'  => isset( $articles[ $aid ] ) ? $articles[ $aid ]['sku'] : '',
-					'qty'  => (float) $batch['qty'],
-				);
-			}
-
-			$out['trace'] = array(
-				'lot'     => $trace['lot']['lot_code'],
-				'jobs'    => count( $trace['jobs'] ),
-				'batches' => $batches,
-				'orders'  => self::order_rows( $trace['orders'] ),
-			);
-		}
-
-		return new WP_REST_Response( $out );
 	}
 
 	/* ====================================================================

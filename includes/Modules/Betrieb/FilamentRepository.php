@@ -57,6 +57,43 @@ class FilamentRepository {
 	}
 
 	/**
+	 * Die Charge, aus der eine Farbe gerade verbraucht wird: die älteste mit Rest.
+	 *
+	 * Die Charge ist ein innerer Anker (eine Lieferung); gesehen und gewählt
+	 * wird sie nie. Wer druckt, nennt Farbe und Material, der Verbrauch geht
+	 * von selbst auf die älteste Lieferung dieser Farbe.
+	 *
+	 * @param string $color    Farbe (Slug).
+	 * @param string $material Material, leer = egal.
+	 * @return int Charge oder 0.
+	 */
+	public static function default_lot_for_color( $color, $material = '' ) {
+		$color = ColorRegistry::normalize( $color );
+
+		if ( '' === $color ) {
+			return 0;
+		}
+
+		$lots = array_reverse( self::all() ); // älteste zuerst.
+
+		foreach ( $lots as $lot ) {
+			if ( ColorRegistry::normalize( (string) $lot['color'] ) !== $color ) {
+				continue;
+			}
+
+			if ( '' !== $material && strcasecmp( (string) $lot['material'], $material ) !== 0 ) {
+				continue;
+			}
+
+			if ( self::remaining_kg( $lot ) > 0.0005 ) {
+				return (int) $lot['id'];
+			}
+		}
+
+		return 0;
+	}
+
+	/**
 	 * Verbrauch einer Charge in Kilogramm.
 	 *
 	 * @param int $lot_id Charge.
@@ -119,6 +156,26 @@ class FilamentRepository {
 	}
 
 	/**
+	 * Interner Code für eine Lieferung, die keinen bekommen hat.
+	 *
+	 * @return string
+	 */
+	protected static function auto_code() {
+		global $wpdb;
+		$table = self::table();
+
+		for ( $i = 0; $i < 20; $i++ ) {
+			$code = 'F' . gmdate( 'ymd' ) . '-' . wp_rand( 1000, 9999 );
+
+			if ( ! $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE lot_code = %s", $code ) ) ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				return $code;
+			}
+		}
+
+		return 'F' . gmdate( 'ymdHis' );
+	}
+
+	/**
 	 * Eingaben prüfen.
 	 *
 	 * @param array    $input Eingaben.
@@ -131,9 +188,12 @@ class FilamentRepository {
 		$errors = array();
 		$code   = isset( $input['lot_code'] ) ? strtoupper( sanitize_text_field( $input['lot_code'] ) ) : '';
 
+		// Die Charge ist nur noch ein innerer Anker: Ohne Code wird einer vergeben.
 		if ( '' === $code ) {
-			$errors[] = __( 'Ein Chargencode ist Pflicht – er ist die Verbindung zwischen Material und ausgeliefertem Teil.', 'lindenweg16' );
-		} else {
+			$code = self::auto_code();
+		}
+
+		if ( '' !== $code ) {
 			$table    = self::table();
 			$existing = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id FROM {$table} WHERE lot_code = %s", $code ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
