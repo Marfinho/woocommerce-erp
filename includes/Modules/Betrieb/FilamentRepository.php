@@ -233,10 +233,11 @@ class FilamentRepository {
 	/**
 	 * Charge anlegen.
 	 *
-	 * @param array $data Geprüfte Daten.
+	 * @param array    $data   Geprüfte Daten.
+	 * @param int|null $roll_g Gewicht je Rolle in Gramm; leer = Standard.
 	 * @return int
 	 */
-	public static function insert( array $data ) {
+	public static function insert( array $data, $roll_g = null ) {
 		global $wpdb;
 
 		$data['created_at'] = current_time( 'mysql', true );
@@ -250,7 +251,7 @@ class FilamentRepository {
 		BetriebAudit::record( 'create', 'filament_lots', $id, null, $data );
 
 		// Jede Lieferung bekommt gleich ihre Rollen - mit Etikett zum Aufkleben.
-		FilamentRolls::create_for_lot( $id );
+		FilamentRolls::create_for_lot( $id, $roll_g );
 
 		return $id;
 	}

@@ -439,6 +439,7 @@ require $lw16_root . '/includes/Erp/Pages/Konten.php';
 require $lw16_root . '/includes/Erp/Pages/BuchBelege.php';
 require $lw16_root . '/includes/Erp/Pages/BuchAbschluss.php';
 require $lw16_root . '/includes/Erp/Push.php';
+require $lw16_root . '/includes/Erp/Spools.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
 	define( 'LW16_CAPABILITY', 'manage_lw16' );
 }
