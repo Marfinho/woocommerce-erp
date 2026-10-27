@@ -7,6 +7,22 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.46.0] – 2026-10-27
+
+### Prognose & Planung
+- **Neu: ERP → Finanzen → Prognose & Planung** (Recht `finanzen.prognose`) und **ERP → Fertigung → Tagesplan** (Recht `fertigung.tagesplan`).
+- **Prognosemodell** (`ForecastModel`): gedämpfter Trend (Holt) mit glättender Gewichtung neuerer Wochen, Saisonfaktoren erst ab zwei vollen Saisons, 80-%- und 95-%-Band, das mit dem Horizont wächst. Jede Prognose prüft sich selbst: Einschrittprognosen der letzten Wochen ergeben die Abweichung (wMAPE) und die Güte hoch/mittel/niedrig; zu kurze Reihen bekommen ein breites Band und keine Gütebehauptung.
+- **Kennzahlen mit Ziel und Wahrscheinlichkeit.** Umsatz und Bestellungen als Wochenreihe gegen das Quartalsziel: Ist bis heute plus Erwartung der restlichen Wochen, daraus die **Chance aufs Ziel**, das Quartalsende mit Band, was pro Woche noch nötig ist, und der kumulierte Quartalspfad gegen den Zielpfad. Ø-Warenkorb, B2B-Anteil, Reklamations-, Ausschuss- und Wiederkaufsquote und Auslastung als Monatsreihe mit Band gegen Ziel und Alarmgrenze (Wahrscheinlichkeit für Ziel und für das Reißen der Alarmgrenze). Die Ziele sind die vorhandenen Quartalsziele unter Berichte.
+- **Auslöser.** Täglich (und per Knopf) werden alle Kennzahlen und Artikel geprüft; Schwellen einstellbar (Standard: Aufmerksamkeit unter 50 % Chance, kritisch unter 15 % oder bei mindestens 50 % Risiko für die Alarmgrenze). Gemeldet wird **nur bei Änderung der Stufe** und im Ereignisprotokoll abgelegt (Bereich „prognose“, auch die Entspannung).
+- **Artikelbedarf** je Artikel und Farbe: Absatz mit Band, Reichweite (erwartet, schlechter und besser Fall), Sicherheitsbestand und **empfohlene Fertigungsmenge** für Vorlauf und Reichweite auf dem gewählten Dienstgrad, abzüglich Bestand, offener Bestellungen und laufender Fertigung. Stufe Aufmerksamkeit/Kritisch, wenn der Bestand voraussichtlich nicht bis zum Nachschub reicht.
+- **Fertigungsbedarf aus dem Modell.** Im Workflow ersetzt die Prognose für Artikel mit mindestens acht Wochen Verlauf das bisherige „Wochenmittel mal Reichweite“ (abschaltbar; für alle anderen bleibt das Wochenmittel).
+- **Geplante Ereignisse** (Märkte, Aktionen, Messen) heben den erwarteten Absatz der betroffenen Wochen anteilig nach Tagen an - in der Kennzahlen- und in der Artikelprognose. Als Anhaltspunkt steht der Durchschnitt der Kassentage der letzten 12 Monate daneben.
+- **Lieferzusage.** Artikel und Menge eingeben: sofort lieferbar oder Spanne „frühestens zwischen … und …“, begrenzt durch Druck- oder Arbeitszeit, nach Abzug dessen, was vorher in der Fertigung ansteht (späte Kante mit 70 % Kapazität). Zukaufartikel nennen die Abhängigkeit vom Lieferanten, statt ein Datum zu erfinden.
+- **Lieferzeit im Shop** (einschaltbar, Standard aus): Produktseiten zeigen „Auf Lager“, „Nur noch 2 auf Lager“ oder „lieferbar in ca. 9 Tagen“.
+- **Tagesplan.** Aus dem Bedarf werden Platten; lange (ab 4 Stunden) gehen bevorzugt in die Nacht, kurze in den Tag, begrenzt durch die Handarbeit des Tages (Plattenwechsel). Dazu Montage und Zukauf, Engpässe, offene Bestellungen und die Ereignisse des Tages.
+- Nicht dabei: eine Filament-Reichweite je Sorte (dafür gibt es die Beschaffungswarnung) und das automatische Anlegen von Fertigungsaufträgen aus dem Tagesplan - der Plan ist ein Vorschlag.
+- Tests: `BetriebPrognoseTest`.
+
 ## [0.45.0] – 2026-10-27
 
 ### Ereignisprotokoll in drei Stufen (DB_VERSION 44)

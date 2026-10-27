@@ -120,6 +120,7 @@ class Permissions {
 			'fertigung.artikel'       => self::def( 'fertigung', __( 'Artikel & Revisionen', 'lindenweg16' ), __( 'Artikel, Revisionen und Stücklisten.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.konfigurator'  => self::def( 'fertigung', __( 'Konfigurator', 'lindenweg16' ), __( 'Produktkonfigurator pflegen.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.sollist'       => self::def( 'fertigung', __( 'Soll gegen Ist', 'lindenweg16' ), __( 'Gestempelte Druck- und Rüstzeiten gegen die Planzeiten. Planzeit übernehmen braucht zusätzlich „Stammdaten ändern“, die Marge „Preise, Kosten und Löhne sehen“.', 'lindenweg16' ), array( $production ), $page ),
+			'fertigung.tagesplan'     => self::def( 'fertigung', __( 'Tagesplan', 'lindenweg16' ), __( 'Was heute auf welchem Drucker läuft, welche Platten in die Nacht gehören und was am Tag zu bestücken ist.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.kapazitaet'    => self::def( 'fertigung', __( 'Kapazität', 'lindenweg16' ), __( 'Auslastung und Planung.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.qualitaet'     => self::def( 'fertigung', __( 'Qualität', 'lindenweg16' ), __( 'Chargen, Prüfungen, Reklamationen.', 'lindenweg16' ), array( $capture ), $page ),
 			'fertigung.druckjournal'  => self::def( 'fertigung', __( 'Druckjournal', 'lindenweg16' ), __( 'Drucke protokollieren und nachsehen.', 'lindenweg16' ), array( $capture ), $page ),
@@ -141,6 +142,7 @@ class Permissions {
 
 			// Finanzen.
 			'finanzen.berichte'       => self::def( 'finanzen', __( 'Berichte', 'lindenweg16' ), __( 'Kennzahlen und Auswertungen.', 'lindenweg16' ), array( $reports ), $page ),
+			'finanzen.prognose'       => self::def( 'finanzen', __( 'Prognose & Planung', 'lindenweg16' ), __( 'Umsatz, Bestellungen und Quoten mit Prognoseband gegen Ziele, Bedarfsprognose je Artikel, Lieferzusage und Auslöser.', 'lindenweg16' ), array( $reports ), $page ),
 			'finanzen.buchhaltung'    => self::def( 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), __( 'Belege, Buchungen, EÜR, GoBD.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 			'finanzen.reporting'      => self::def( 'finanzen', __( 'Reporting', 'lindenweg16' ), __( 'Berichte des Buchhaltungsmoduls.', 'lindenweg16' ), array( 'lw16_mod_reporting' ), $page ),
 			'finanzen.dashboard'      => self::def( 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), __( 'Steuer-Rücklage und Übersicht.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
@@ -325,7 +327,7 @@ class Permissions {
 			'fertigung'   => array(
 				'label' => __( 'Fertigung', 'lindenweg16' ),
 				'hint'  => __( 'Wie Werkstatt, dazu Stammdaten, Material, Bedarf und Berichte – aber kein Geld.', 'lindenweg16' ),
-				'keys'  => array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.sollist', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.einkauf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
+				'keys'  => array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.sollist', 'fertigung.tagesplan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit', 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.einkauf', 'lager.buchen', 'finanzen.berichte', 'verwaltung.zeit' ),
 			),
 			'leitung'     => array(
 				'label' => __( 'Betriebsleitung', 'lindenweg16' ),
@@ -333,9 +335,9 @@ class Permissions {
 				'keys'  => array_merge(
 					$shop,
 					array( 'verkauf.orders', 'verkauf.orders.status', 'verkauf.versand', 'verkauf.versand.etikett', 'verkauf.picken', 'verkauf.kontakte' ),
-					array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.sollist', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
+					array( 'fertigung.workflow', 'fertigung.workflow.plan', 'fertigung.sollist', 'fertigung.tagesplan', 'fertigung.artikel', 'fertigung.konfigurator', 'fertigung.kapazitaet', 'fertigung.qualitaet', 'fertigung.druckjournal', 'fertigung.drucker', 'fertigung.bambu', 'fertigung.druckfarm', 'fertigung.auftraege.start', 'fertigung.stammdaten.edit' ),
 					array( 'lager.bestand', 'lager.scannen', 'lager.lagerplaetze', 'lager.material', 'lager.bedarf', 'lager.einkauf', 'lager.buchen' ),
-					array( 'finanzen.berichte', 'finanzen.kosten', 'finanzen.export' ),
+					array( 'finanzen.berichte', 'finanzen.prognose', 'finanzen.kosten', 'finanzen.export' ),
 					array( 'verwaltung.zeit', 'verwaltung.etiketten' )
 				),
 			),

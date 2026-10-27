@@ -428,6 +428,10 @@ auf einen Artikel im Artikelstamm zeigen; das Lager-Modul überspringt sie über
 den Filter `lw16_inventory_skip_product`. Alles andere bleibt beim Lager-Modul.
 Abschaltbar unter *Betrieb → Einstellungen → Farben & Lagerhoheit*.
 
+**Prognose & Planung:** `ForecastModel` (Zeitreihe mit Band), `ForecastKpi` (Chance aufs Ziel, Ampel, Auslöser),
+`ForecastService` (Daten), `Promise` (Lieferzusage), `DayPlan` (Tagesplan). Seiten: ERP → Finanzen → Prognose &
+Planung und ERP → Fertigung → Tagesplan. Auslöser laufen täglich und melden nur Stufenwechsel ins Ereignisprotokoll.
+
 **Bestand im Shop:** Das Bewegungskonto ist die einzige Wahrheit; WooCommerce bekommt eine Kopie.
 Das ERP schreibt Lager minus offene Bestellungen (Reservierung ab „in Bearbeitung“) nach jeder Buchung
 und jedem Statuswechsel in die Shop-Produkte (Varianten nach Farbe), stündlich zusätzlich komplett

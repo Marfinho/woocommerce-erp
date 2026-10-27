@@ -81,6 +81,7 @@ class Navigation {
 			'druckfarm'        => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
 			'drucker'          => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
 			'bambu'            => array( 'produktion', __( 'Drucker', 'lindenweg16' ) ),
+			'tagesplan'        => array( 'produktion', __( 'Tagesplan', 'lindenweg16' ) ),
 			'sollist'          => array( 'produktion', __( 'Soll gegen Ist', 'lindenweg16' ) ),
 			'kapazitaet'       => array( 'produktion', __( 'Soll gegen Ist', 'lindenweg16' ) ),
 			'druckjournal'     => array( 'produktion', __( 'Journal', 'lindenweg16' ) ),
@@ -110,6 +111,7 @@ class Navigation {
 
 			'finanz-dashboard' => array( 'zahlen', __( 'Übersicht', 'lindenweg16' ) ),
 			'berichte'         => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
+			'prognose'         => array( 'zahlen', __( 'Prognose', 'lindenweg16' ) ),
 			'reporting'        => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
 			'buchhaltung'      => array( 'zahlen', __( 'Buchhaltung', 'lindenweg16' ) ),
 
@@ -218,6 +220,7 @@ class Navigation {
 
 			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
+			self::item( 'tagesplan', 'fertigung', __( 'Tagesplan', 'lindenweg16' ), 'fertigung.tagesplan', '', 'native' ),
 			self::item( 'sollist', 'fertigung', __( 'Soll gegen Ist', 'lindenweg16' ), 'fertigung.sollist', '', 'native' ),
 			self::item( 'druckjournal', 'fertigung', __( 'Druckjournal', 'lindenweg16' ), 'fertigung.druckjournal', '', 'native', '', 'lw16-betrieb-druckjournal' ),
 			self::item( 'artikel', 'fertigung', __( 'Alle Produkte', 'lindenweg16' ), 'fertigung.artikel', '', 'native', '', 'lw16-betrieb-artikel' ),
@@ -235,6 +238,7 @@ class Navigation {
 			self::item( 'einkauf', 'lager', __( 'Einkauf', 'lindenweg16' ), 'lager.einkauf', '', 'native' ),
 			self::item( 'bedarf', 'lager', __( 'Bedarf', 'lindenweg16' ), 'lager.bedarf', '', 'native', '', 'lw16-betrieb-bedarf' ),
 
+			self::item( 'prognose', 'finanzen', __( 'Prognose & Planung', 'lindenweg16' ), 'finanzen.prognose', '', 'native' ),
 			self::item( 'berichte', 'finanzen', __( 'Berichte', 'lindenweg16' ), 'finanzen.berichte', '', 'native', '', 'lw16-betrieb-berichte' ),
 			self::item( 'buchhaltung', 'finanzen', __( 'Buchhaltung', 'lindenweg16' ), 'finanzen.buchhaltung', '', 'native', '', 'lw16-buchhaltung' ),
 			self::item( 'reporting', 'finanzen', __( 'Reporting', 'lindenweg16' ), 'finanzen.reporting', '', 'native', '', 'lw16-reporting' ),

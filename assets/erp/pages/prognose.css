@@ -1,0 +1,70 @@
+/* Prognose & Planung sowie Tagesplan. Farben nur aus den Variablen der Oberfläche. */
+
+.pg-kpi { border-left: 4px solid var(--line); }
+.pg-kpi.ok { border-left-color: var(--success); }
+.pg-kpi.warn { border-left-color: var(--warning); }
+.pg-kpi.bad { border-left-color: var(--error); }
+.pg-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pg-head h3 { margin: 0; }
+.pg-sub { margin: 16px 0 4px; font-size: 14px; }
+.pg-rel { font-size: 12.5px; margin: 8px 0 0; }
+
+.pg-tag { font-size: 12px; padding: 2px 10px; border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); white-space: nowrap; }
+.pg-tag.ok { background: color-mix(in srgb, var(--success) 18%, var(--surface)); color: var(--success); }
+.pg-tag.warn { background: color-mix(in srgb, var(--warning) 16%, var(--surface)); color: var(--warning); }
+.pg-tag.bad { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); }
+
+.pg-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 12px 0; }
+.pg-fact .lab { font-size: 12px; color: var(--text-muted); }
+.pg-fact .big { font: 700 20px var(--font-head); font-variant-numeric: tabular-nums; }
+.pg-fact .muted { font-size: 12px; }
+
+.pg-meter { height: 10px; border-radius: 999px; background: var(--surface-muted); margin: 4px 0 10px; overflow: hidden; }
+.pg-meter i { display: block; height: 100%; background: var(--text-muted); }
+.pg-meter.gruen i { background: var(--success); }
+.pg-meter.gelb i { background: var(--warning); }
+.pg-meter.rot i { background: var(--error); }
+
+.pg-chart { width: 100%; min-width: 440px; height: auto; display: block; }
+.pg-chart .grid { stroke: var(--line); stroke-width: 1; }
+.pg-chart .ax { fill: var(--text-muted); font-size: 11px; }
+.pg-chart .ln { stroke-width: 2; stroke-linejoin: round; }
+.pg-chart .ln.value { stroke: var(--text); }
+.pg-chart .ln.mean { stroke: var(--accent); stroke-dasharray: 6 3; }
+.pg-chart .ln.target { stroke: var(--success); stroke-dasharray: 5 4; }
+.pg-chart .ln.alarm { stroke: var(--error); stroke-dasharray: 2 4; }
+.pg-chart .band95 { fill: color-mix(in srgb, var(--accent) 12%, transparent); }
+.pg-chart .band80 { fill: color-mix(in srgb, var(--accent) 24%, transparent); }
+.pg-chart .today { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.pg-chart .pt { fill: var(--text); stroke: var(--surface); stroke-width: 1.5; }
+.pg-chart .pt.fc { fill: var(--accent); }
+
+.pg-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; margin: 6px 0; }
+.pg-legend .k::before { content: ''; display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--text); vertical-align: middle; margin-right: 6px; }
+.pg-legend .k.mean::before { border-top: 2px dashed var(--accent); }
+.pg-legend .k.target::before { border-top: 2px dashed var(--success); }
+.pg-legend .k.alarm::before { border-top: 2px dotted var(--error); }
+.pg-legend .k.b80::before { height: 10px; border: 0; background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.pg-legend .k.b95::before { height: 10px; border: 0; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.pg-data, .pg-more { margin-top: 8px; }
+.pg-data summary, .pg-more summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; font-weight: 600; }
+
+.pg-art td, .pg-art th { white-space: nowrap; }
+.pg-art tr.pg-color td { color: var(--text-muted); font-size: 12.5px; background: var(--surface-muted); }
+
+.pg-event { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pg-event .field { min-width: 0; }
+
+/* Tagesplan */
+.tp-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.tp-printer { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 8px 0; }
+.tp-slot { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.tp-plate { background: var(--surface-muted); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.tp-night .tp-plate { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.tp-slot-h { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+
+@media (max-width: 760px) {
+	.pg-chart { min-width: 380px; }
+	.pg-facts { grid-template-columns: 1fr 1fr; }
+}

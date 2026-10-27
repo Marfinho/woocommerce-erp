@@ -68,6 +68,11 @@ class Scheduler {
 	 */
 	const HOOK_SHOP_STOCK = 'lw16_shop_bestand_abgleichen';
 
+	/**
+	 * Prognose-Auslöser prüfen (täglich).
+	 */
+	const HOOK_FORECAST = 'lw16_prognose_pruefen';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -99,6 +104,7 @@ class Scheduler {
 			self::HOOK_MAIL_SERVER_OP,
 			self::HOOK_AR_MODEL_CLEANUP,
 			self::HOOK_SHOP_STOCK,
+			self::HOOK_FORECAST,
 		);
 	}
 
@@ -206,6 +212,7 @@ class Scheduler {
 			self::HOOK_MAIL_SYNC             => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_AR_MODEL_CLEANUP      => DAY_IN_SECONDS,
 			self::HOOK_SHOP_STOCK            => HOUR_IN_SECONDS,
+			self::HOOK_FORECAST              => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {
