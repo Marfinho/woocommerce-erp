@@ -481,6 +481,9 @@ class Frontend {
 								<span class="lw16-haken__symbol" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#lw16-sym-<?php echo esc_attr( self::icon_for( $module ) ); ?>"></use></svg></span>
 								<span class="lw16-haken__plus" aria-hidden="true">+</span>
 								<span class="lw16-haken__modulname"><?php echo esc_html( $module['name'] ); ?></span>
+								<?php if ( '' !== (string) $module['teaser'] ) : ?>
+									<span class="lw16-haken__teaser"><?php echo esc_html( $module['teaser'] ); ?></span>
+								<?php endif; ?>
 								<span class="lw16-haken__modulpreis" data-lw16-modulpreis="<?php echo esc_attr( $module['article'] ); ?>"></span>
 								<span class="lw16-haken__modulmass">
 									<?php

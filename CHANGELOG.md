@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.40.0] – 2026-10-27
+
+### Konfigurator-Einstellungen überarbeitet, Wand und Holzstange in der Ansicht
+- **Maße aus dem Modell.** Höhe/Länge, Breite und Tiefe eines Teils liest der Konfigurator aus der .glb (umschließende Box aus den Positionsgrenzen, mit Knotentransformationen; Zahlen über 20 gelten als Millimeter, sonst als Meter). Die Felder bleiben leer, sobald ein Modell da ist; eingetragene Werte gelten weiter, „Maße aus dem Modell neu übernehmen“ ersetzt sie. Ohne Modell bleibt die Höhe Pflicht. Im Teil steht, was das Modell misst.
+- **Kurzbeschreibung und Preis vom Shop-Produkt.** Ist am Teil keine Kurzbeschreibung gepflegt, gilt die des Shop-Produkts; sie steht jetzt auch auf den Modulkarten. Die Teile-Verwaltung zeigt Preis und Lieferbarkeit aus dem Shop und warnt, wenn der Artikel an kein Shop-Produkt gebunden ist. Passt bei einem variablen Produkt keine Variante zur Farbe, gilt der niedrigste Variantenpreis statt gar keinem.
+- **Standardmodell Holzstange.** Basismodule ohne eigenes Modell zeigen eine Holzstange (Ø 20 mm, 45 mm von der Wand) mit zwei Haltern im Abstand von 900 mm, mittig auf der Stange (bei Stangen unter 1000 mm rücken sie zusammen). Der Halter (`assets/models/demo/holzstange.glb`) wird für jede Länge zusammengesetzt. Beim Speichern eines Basismoduls ohne Sperrbereiche entstehen die Sperrbereiche der beiden Halter selbst.
+- **Wand in der Ansicht.** Der Haken hängt an einer Putzwand (bündig an der Rückseite der Halter) mit Sockelleiste und Dielenboden, zwei Bildern und einer Kommode darunter. Schatten fallen auf die Wand; der Bildausschnitt zeigt den Haken im Raum.
+
 ## [0.39.3] – 2026-10-27
 
 - **Konfigurator: „Nicht lieferbar" ist sichtbar.** Ist ein Modul oder Basismodul im Shop ausverkauft (bei variablen Produkten je Farbe), verschwindet es nicht mehr still aus dem Angebot: Die Karte bleibt gestrichelt und gesperrt mit dem Vermerk „Nicht lieferbar". Ein schon gewähltes Modul, das durch Farbwechsel nicht mehr lieferbar ist, wird in der Liste markiert, unter dem Preis steht, was fehlt, und „In den Warenkorb" ist gesperrt. Die Prüfung beim Absenden auf dem Server bleibt unverändert.

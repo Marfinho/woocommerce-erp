@@ -60,9 +60,19 @@ class WebModel {
 	const DEMO_PREFIX = 'demo:';
 
 	/**
-	 * Die mitgelieferten Demo-Modelle.
+	 * Kennung des Standardmodells für Basismodule.
 	 *
-	 * Sie zeigen, dass Maßstab, Anordnung und Sperrbereiche zusammen-
+	 * Die Datei ist der Halter der Holzstange. Die Stange selbst und die
+	 * zweite Ausfertigung setzt die Ansicht zusammen – so passt dasselbe
+	 * Modell zu jeder Länge. Ein Basismodul ohne eigenes Modell zeigt es.
+	 */
+	const STANDARD_KEY = 'holzstange';
+
+	/**
+	 * Die mitgelieferten Modelle.
+	 *
+	 * Das Standardmodell der Holzstange steht zuerst. Die Demo-Modelle
+	 * zeigen, dass Maßstab, Anordnung und Sperrbereiche zusammen-
 	 * passen – nicht den Haster Haken. Wer sie stehen lässt, verkauft ein
 	 * Bild, das nicht zum Teil gehört; sie sind zum Einrichten da, nicht
 	 * zum Betrieb.
@@ -71,6 +81,7 @@ class WebModel {
 	 */
 	public static function demo_models() {
 		return array(
+			self::STANDARD_KEY => __( 'Standard: Holzstange mit zwei Haltern', 'lindenweg16' ),
 			'schiene' => __( 'Demo: Schiene mit zwei Schraubaugen (600 mm)', 'lindenweg16' ),
 			'haken'   => __( 'Demo: Haken (80 mm)', 'lindenweg16' ),
 			'ablage'  => __( 'Demo: Ablage (150 mm)', 'lindenweg16' ),
@@ -93,6 +104,45 @@ class WebModel {
 		$key = substr( $name, strlen( self::DEMO_PREFIX ) );
 
 		return array_key_exists( $key, self::demo_models() ) ? $key : '';
+	}
+
+	/**
+	 * Pfad einer Modelldatei auf dem Server.
+	 *
+	 * @param string $name Dateiname ohne Pfad oder `demo:`-Verweis.
+	 * @return string Leer, wenn es die Datei nicht gibt.
+	 */
+	public static function file_path( $name ) {
+		$demo = self::demo_key( $name );
+
+		if ( '' !== $demo ) {
+			$path = dirname( __DIR__, 3 ) . '/assets/models/demo/' . $demo . '.glb';
+
+			return is_readable( $path ) ? $path : '';
+		}
+
+		$name = basename( (string) $name );
+		$path = trailingslashit( self::dir() ) . $name;
+
+		return '' !== $name && is_readable( $path ) ? $path : '';
+	}
+
+	/**
+	 * Die Maße eines abgelegten Modells.
+	 *
+	 * @param string $name Dateiname oder `demo:`-Verweis.
+	 * @return array|null {width, height, depth} in Millimetern.
+	 */
+	public static function measure( $name ) {
+		// Das Standardmodell ist nur der Halter; die Maße der Stange gibt
+		// ihre Länge vor, nicht die Datei.
+		if ( self::demo_key( $name ) === self::STANDARD_KEY ) {
+			return null;
+		}
+
+		$path = self::file_path( $name );
+
+		return '' === $path ? null : GlbMeasure::measure_file( $path );
 	}
 
 	/**

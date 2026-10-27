@@ -153,11 +153,14 @@ class PartRepository {
 	/**
 	 * Eingaben prüfen.
 	 *
-	 * @param array    $input Rohe Eingaben.
-	 * @param int|null $id    Bei Bearbeitung die eigene ID.
+	 * @param array      $input    Rohe Eingaben.
+	 * @param int|null   $id       Bei Bearbeitung die eigene ID.
+	 * @param array|null $measured Maße aus dem Modell {width, height, depth}. Sie
+	 *                             füllen leere Felder; mit `maße_aus_modell` in den
+	 *                             Eingaben ersetzen sie auch eingetragene Werte.
 	 * @return array {data, errors}
 	 */
-	public static function validate( array $input, $id = null ) {
+	public static function validate( array $input, $id = null, $measured = null ) {
 		$errors = array();
 
 		$article_id = isset( $input['article_id'] ) ? (int) $input['article_id'] : 0;
@@ -190,14 +193,31 @@ class PartRepository {
 			'teaser'      => isset( $input['teaser'] ) ? sanitize_text_field( $input['teaser'] ) : null,
 		);
 
+		// Das Modell kennt seine Maße. Eingetragen werden müssen sie nur,
+		// wenn es kein Modell gibt oder die Datei keine hergibt.
+		if ( is_array( $measured ) ) {
+			$override = ! empty( $input['measure_from_model'] );
+			$keys    = array(
+				'height_mm' => 'height',
+				'width_mm'  => 'width',
+				'depth_mm'  => 'depth',
+			);
+
+			foreach ( $keys as $column => $axis ) {
+				if ( isset( $measured[ $axis ] ) && (float) $measured[ $axis ] > 0 && ( $override || $data[ $column ] <= 0 ) ) {
+					$data[ $column ] = round( (float) $measured[ $axis ], 2 );
+				}
+			}
+		}
+
 		// Die Höhe ist die einzige Angabe, ohne die nichts geht: Sie
 		// entscheidet, wie viel Platz ein Modul belegt und wie lang die
 		// Schiene ist. Breite und Tiefe dienen nur der Ersatzdarstellung,
 		// solange kein Modell hinterlegt ist.
 		if ( $data['height_mm'] <= 0 ) {
 			$errors[] = 'basis' === $role
-				? __( 'Das Basismodul braucht seine Länge in Millimetern – sie ist der Weg, auf dem die Module sitzen.', 'lindenweg16' )
-				: __( 'Das Modul braucht seine Bauhöhe in Millimetern.', 'lindenweg16' );
+				? __( 'Das Basismodul braucht seine Länge in Millimetern – sie ist der Weg, auf dem die Module sitzen. Mit einem Modell (.glb) liest der Konfigurator sie selbst aus.', 'lindenweg16' )
+				: __( 'Das Modul braucht seine Bauhöhe in Millimetern. Mit einem Modell (.glb) liest der Konfigurator sie selbst aus.', 'lindenweg16' );
 		}
 
 		if ( 'modul' === $role && $data['max_modules'] > 0 ) {

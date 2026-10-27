@@ -70,7 +70,7 @@
 			h('summary', null, 'So funktioniert es'),
 			h('p', null, 'Eingebunden wird der Konfigurator mit dem Shortcode ', h('code', { id: 'kf-code' }, '[…]'), ' auf einer Seite im Shop.'),
 			h('p', null, 'Die Modelle sind Schaustücke, keine Konstruktionsdaten: aus dem CAD als STL oder 3MF exportieren, im Netz auf wenige tausend Dreiecke reduzieren und als .glb hochladen. Innengeometrie, Gewinde und Toleranzen gehören dort nicht hinein – die Datei ist im Netz öffentlich abrufbar.'),
-			h('p', null, 'Ohne hochgeladenes Modell zeigt der Konfigurator einen maßhaltigen Ersatzkörper aus Höhe, Breite und Tiefe. Bestellen lässt sich damit alles, es sieht nur nicht nach dem Haken aus.'),
+			h('p', null, 'Höhe, Breite und Tiefe liest der Konfigurator aus dem Modell, du musst sie nicht eintragen. Preis, Lieferbarkeit und Kurzbeschreibung kommen aus dem Shop-Produkt des Artikels. Nur ohne Modell zeigt der Konfigurator einen Ersatzkörper aus den eingetragenen Maßen – bestellen lässt sich damit alles, es sieht nur nicht nach dem Haken aus.'),
 			h('p', null, 'Zum Ausprobieren liegen drei Demo-Modelle bei: eine Schiene mit zwei Schraubaugen (600 mm), ein Haken (80 mm) und eine Ablage (150 mm). Passend dazu gehören am Basismodul zwei Sperrbereiche von 40 bis 90 mm und von 500 bis 550 mm.'));
 		ui.view().appendChild(intro);
 
@@ -113,8 +113,8 @@
 
 		function modelText(p) {
 			if (p.model_kind === 'upload') { return 'Eigenes Modell'; }
-			if (p.model_kind === 'demo') { return 'Demo-Modell'; }
-			return 'Ersatzkörper';
+			if (p.model_kind === 'demo') { return p.model_file === 'demo:holzstange' ? 'Standardmodell' : 'Demo-Modell'; }
+			return p.role === 'basis' ? 'Standardmodell' : 'Ersatzkörper';
 		}
 
 		function paint(d) {
@@ -132,17 +132,18 @@
 
 			d.parts.forEach(function (p) {
 				var live = p.is_active && p.article_active;
-				var warn = !p.article_ok ? 'Artikel fehlt – das Teil erscheint im Shop nicht.' : (p.is_active && !p.article_active ? 'Der Artikel ist stillgelegt – das Teil erscheint im Shop nicht.' : '');
+				var warn = !p.article_ok ? 'Artikel fehlt – das Teil erscheint im Shop nicht.' : (p.is_active && !p.article_active ? 'Der Artikel ist stillgelegt – das Teil erscheint im Shop nicht.' : (p.is_active && !p.shop_found ? 'Der Artikel ist mit keinem Shop-Produkt verknüpft – ohne Preis erscheint das Teil im Shop nicht.' : ''));
 				var tags = h('div', { class: 'row-tags' },
 					tag(p.role === 'basis' ? 'Basismodul' : 'Modul'),
 					tag(live ? 'Angeboten' : 'Ausgeblendet', live ? 'now' : 'later'),
 					tag(modelText(p)),
+					p.shop_found && !p.shop_in_stock ? tag('Nicht lieferbar', 'later') : null,
 					p.role === 'basis' ? tag(p.blocks.length + (p.blocks.length === 1 ? ' Sperrbereich' : ' Sperrbereiche')) : null);
 				listBox.appendChild(h('button', { class: 'row-card kf-row', type: 'button', onclick: function () { openPart(p.id); } },
 					h('div', { class: 'row-main' },
 						h('strong', null, p.name || 'Artikel fehlt'),
-						h('div', { class: 'muted' }, (p.sku ? p.sku + ' · ' : '') + (p.role === 'basis' ? 'Länge ' : 'Höhe ') + mm(p.height_mm)),
-						p.teaser ? h('div', { class: 'muted' }, p.teaser) : null,
+						h('div', { class: 'muted' }, (p.sku ? p.sku + ' · ' : '') + (p.role === 'basis' ? 'Länge ' : 'Höhe ') + mm(p.height_mm) + (p.shop_price ? ' · ' + p.shop_price : '')),
+						p.teaser || p.teaser_shop ? h('div', { class: 'muted' }, p.teaser || p.teaser_shop) : null,
 						warn ? h('div', { class: 'kf-warn' }, warn) : null,
 						tags),
 					h('span', { class: 'row-num' }, ui.ico('chev'))));
@@ -229,8 +230,10 @@
 				kv('Tiefe', p.depth_mm ? mm(p.depth_mm) : '–'),
 				p.role === 'basis' ? kv('Module höchstens', p.max_modules ? String(p.max_modules) : 'so viele, wie der Platz hergibt') : null,
 				kv('Reihenfolge', String(p.sort_order)),
-				kv('Kurzbeschreibung', p.teaser || '–'),
-				kv('Schaumodell', p.model_kind === 'demo' ? p.model_demo : (p.model_kind === 'upload' ? 'Eigene Datei: ' + p.model_file : 'Keines – maßhaltiger Ersatzkörper')));
+				kv('Preis im Shop', p.shop_found ? p.shop_price + (p.shop_in_stock ? '' : ' – gerade nicht lieferbar') : 'Kein Shop-Produkt verknüpft'),
+				kv('Kurzbeschreibung', p.teaser ? p.teaser : (p.teaser_shop ? p.teaser_shop + ' (aus dem Shop-Produkt)' : '–')),
+				p.model_measure ? kv('Das Modell misst', mm(p.model_measure.width) + ' breit × ' + mm(p.model_measure.height) + ' hoch × ' + mm(p.model_measure.depth) + ' tief') : null,
+				kv('Schaumodell', p.model_kind === 'demo' ? p.model_demo : (p.model_kind === 'upload' ? 'Eigene Datei: ' + p.model_file : (p.role === 'basis' ? 'Standard: Holzstange mit zwei Haltern' : 'Keines – maßhaltiger Ersatzkörper'))));
 			body.appendChild(info);
 
 			if (p.model_url) {
@@ -352,13 +355,16 @@
 			var depth = num(cur.depth_mm, 'Tiefe in Millimetern');
 			var maxm = h('input', { class: 'field', type: 'text', inputmode: 'numeric', autocomplete: 'off', value: String(cur.max_modules || 0), 'aria-label': 'Module am Basismodul höchstens' });
 			var maxField = field('Module am Basismodul höchstens (0 = so viele, wie der Platz hergibt; bis ' + meta.max_modules + ')', maxm);
-			var teaser = h('input', { class: 'field', type: 'text', maxlength: '200', value: cur.teaser || '', 'aria-label': 'Kurzbeschreibung' });
+			var teaser = h('input', { class: 'field', type: 'text', maxlength: '200', value: cur.teaser || '', placeholder: cur.teaser_shop || '', 'aria-label': 'Kurzbeschreibung' });
+			var fromModel = h('input', { type: 'checkbox' });
+			var fromModelRow = h('label', { class: 'kf-check' }, fromModel, h('span', null, 'Maße aus dem Modell neu übernehmen (ersetzt die Angaben oben)'));
 			var sort = h('input', { class: 'field', type: 'text', inputmode: 'numeric', autocomplete: 'off', value: String(cur.sort_order || 0), 'aria-label': 'Reihenfolge' });
 			var active = h('input', { type: 'checkbox', checked: !!cur.is_active });
 
 			var heightLab = h('span', { class: 'kf-lab' }, 'Höhe bzw. Länge (mm)');
 			function syncRole() {
 				var basis = role() === 'basis';
+				if (none) { none.textContent = basis ? 'Standard: Holzstange mit zwei Haltern' : 'Kein Modell – maßhaltiger Ersatzkörper'; }
 				heightLab.textContent = basis ? 'Länge des Basismoduls (mm)' : 'Bauhöhe des Moduls (mm)';
 				maxField.hidden = !basis;
 			}
@@ -371,26 +377,38 @@
 			if (cur.model_kind === 'none') { none.selected = true; }
 			choice.appendChild(none);
 			meta.demos.forEach(function (d) {
+				if (d.value === 'demo:holzstange') { return; }
 				var o = h('option', { value: d.value }, d.label);
 				if (cur.model_kind === 'demo' && cur.model_file === d.value) { o.selected = true; }
 				choice.appendChild(o);
 			});
+			syncRole();
 			var file = h('input', { type: 'file', accept: '.glb', class: 'kf-file', 'aria-label': 'Eigenes Modell hochladen (.glb)' });
+
+			function hasModel() {
+				var f = file.files && file.files[0];
+				return !!f || choice.value.indexOf('demo:') === 0 || (cur.model_kind === 'upload' && choice.value === '');
+			}
+			function syncModel() { fromModelRow.hidden = !hasModel(); }
+			choice.addEventListener('change', syncModel);
+			file.addEventListener('change', syncModel);
+			syncModel();
 
 			var save = h('button', { class: 'btn primary', type: 'submit' }, p ? 'Teil speichern' : 'Teil anlegen');
 			var back = h('button', { class: 'btn', type: 'button', onclick: function () { if (p) { openPart(p.id); } else { closeDialog(); } } }, 'Abbrechen');
 
 			var form = h('form', { class: 'kf-form', novalidate: true },
 				h('fieldset', { class: 'kf-set' }, h('legend', null, '1 · Artikel und Rolle'),
-					field('Artikel', article, 'Nur verkäufliche, aktive Artikel. Preis und Verfügbarkeit kommen aus dem Shop, nicht von hier.'),
+					field('Artikel', article, 'Nur verkäufliche, aktive Artikel. Preis, Lieferbarkeit und Kurzbeschreibung kommen vom Shop-Produkt, das am Artikel hängt.'),
 					h('div', { class: 'kf-field' }, h('span', { class: 'kf-lab' }, 'Rolle'), roleBox)),
 				h('fieldset', { class: 'kf-set' }, h('legend', null, '2 · Maße'),
-					h('label', { class: 'kf-field' }, heightLab, height, h('span', { class: 'kf-hint' }, 'Pflicht: Sie entscheidet, wie viel Platz ein Modul belegt und wie lang die Schiene ist.')),
+					h('label', { class: 'kf-field' }, heightLab, height, h('span', { class: 'kf-hint' }, 'Leer lassen, wenn ein Modell hinterlegt ist: Dann liest der Konfigurator die Maße aus der Datei. Ohne Modell ist die Angabe Pflicht – sie entscheidet, wie viel Platz ein Modul belegt und wie lang die Schiene ist.')),
 					h('div', { class: 'kf-grid' }, field('Breite (mm)', width), field('Tiefe (mm)', depth)),
-					h('p', { class: 'kf-hint' }, 'Breite und Tiefe dienen nur dem Ersatzkörper, solange kein Modell hinterlegt ist.'),
+					h('p', { class: 'kf-hint' }, 'Breite und Tiefe braucht nur der Ersatzkörper, solange kein Modell hinterlegt ist.'),
+					fromModelRow,
 					maxField),
 				h('fieldset', { class: 'kf-set' }, h('legend', null, '3 · Darstellung'),
-					field('Kurzbeschreibung', teaser, 'Eine Zeile, die im Konfigurator unter dem Namen steht.'),
+					field('Kurzbeschreibung (optional)', teaser, 'Leer lassen: Es gilt die Kurzbeschreibung des Shop-Produkts (grau angezeigt). Ein hier eingetragener Text ersetzt sie nur im Konfigurator.'),
 					field('Reihenfolge', sort, 'Kleinere Zahlen stehen weiter vorn.'),
 					h('label', { class: 'kf-check' }, active, h('span', null, 'Im Konfigurator anbieten'))),
 				h('fieldset', { class: 'kf-set' }, h('legend', null, '4 · Schaumodell'),
@@ -406,7 +424,7 @@
 				var hv = parseFloat(String(height.value).replace(',', '.'));
 
 				if (!article.value) { err = 'Bitte einen Artikel aus dem Artikelstamm wählen.'; }
-				else if (!(hv > 0)) { err = role() === 'basis' ? 'Das Basismodul braucht seine Länge in Millimetern – sie ist der Weg, auf dem die Module sitzen.' : 'Das Modul braucht seine Bauhöhe in Millimetern.'; }
+				else if (!(hv > 0) && !hasModel()) { err = role() === 'basis' ? 'Das Basismodul braucht seine Länge in Millimetern – sie ist der Weg, auf dem die Module sitzen.' : 'Das Modul braucht seine Bauhöhe in Millimetern.'; }
 				else if (role() === 'modul' && parseInt(maxm.value, 10) > 0) { err = 'Eine Modulzahl wird am Basismodul gepflegt, nicht am Modul selbst.'; }
 				else if (f && !/\.glb$/i.test(f.name)) { err = '„' + f.name + '“ ist keine .glb-Datei. Der Konfigurator lädt ausschließlich .glb – ein glTF-Modell in einer einzigen Datei.'; }
 				else if (f && f.size > meta.max_bytes) { err = 'Die Datei ist ' + mb(f.size) + ' groß, erlaubt sind höchstens ' + mb(meta.max_bytes) + '. Für die Produktseite gehört das Modell reduziert exportiert.'; }
@@ -423,6 +441,7 @@
 				fd.append('max_modules', role() === 'basis' ? maxm.value : '0');
 				fd.append('sort_order', sort.value);
 				fd.append('teaser', teaser.value);
+				if (fromModel.checked && hasModel()) { fd.append('measure_from_model', '1'); }
 				if (active.checked) { fd.append('is_active', '1'); }
 				fd.append('model_choice', choice.value);
 				if (f) { fd.append('model', f, f.name); }
