@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.41.3] – 2026-10-27
+
+- **Konfigurator: ruhiger Hintergrund.** Die Ansicht zeigt nur noch eine einfarbige Wand in hellem Anthrazit, ohne Putzkorn, Bilder, Kommode, Boden und Sockel. Der Bildausschnitt ist wieder eng um den Haken. Schatten fallen weich auf die Wand. Gleiche Wandfarbe in der Vorschau im ERP.
+
 ## [0.41.2] – 2026-10-27
 
 - **Konfigurator: Holzstange wieder da (Fehler seit 0.40.0).** Beim Aufräumen war die Methode verloren gegangen, die die Holzstange mit den zwei Haltern zusammensetzt. Der Aufruf schlug still fehl und die Ansicht zeigte statt der Stange den flachen Ersatzkörper. Die Methode ist zurück, ein Fehler beim Aufbau eines Modells steht jetzt in der Browser-Konsole, und ein Test prüft, dass jede aufgerufene Methode der Ansicht auch existiert.

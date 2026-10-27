@@ -864,212 +864,43 @@ class Ansicht {
 		licht.target.position.set( 0, 0.2, 0 );
 		licht.castShadow = true;
 		licht.shadow.mapSize.set( 2048, 2048 );
-		licht.shadow.camera.left = -2.2;
-		licht.shadow.camera.right = 2.2;
-		licht.shadow.camera.top = 2.2;
-		licht.shadow.camera.bottom = -2.2;
+		licht.shadow.camera.left = -3;
+		licht.shadow.camera.right = 3;
+		licht.shadow.camera.top = 3;
+		licht.shadow.camera.bottom = -3;
 		licht.shadow.camera.near = 0.5;
 		licht.shadow.camera.far = 9;
 		licht.shadow.radius = 3;
 		licht.shadow.bias = -0.0008;
+		licht.shadow.normalBias = 0.002;
 		this.szene.add( licht );
 		this.szene.add( licht.target );
 		this.licht = licht;
 	}
 
 	/**
-	 * Eine Fläche aus gezeichneten Pixeln.
-	 *
-	 * Putz, Dielen und Bilder entstehen auf einer Zeichenfläche statt aus
-	 * Bilddateien: Es muss nichts nachgeladen werden, und die Farben sind
-	 * die des Shops.
-	 *
-	 * @param {number}   breite  Breite in Pixeln.
-	 * @param {number}   hoehe   Höhe in Pixeln.
-	 * @param {Function} zeichne Zeichnet auf den 2D-Kontext.
-	 * @returns {object} Textur.
-	 */
-	textur( breite, hoehe, zeichne ) {
-		const THREE = this.THREE;
-		const flaeche = document.createElement( 'canvas' );
-
-		flaeche.width = breite;
-		flaeche.height = hoehe;
-		zeichne( flaeche.getContext( '2d' ), breite, hoehe );
-
-		const textur = new THREE.CanvasTexture( flaeche );
-		textur.colorSpace = THREE.SRGBColorSpace;
-		textur.anisotropy = 4;
-
-		return textur;
-	}
-
-	/**
-	 * Der Raum um den Haken: eine Wand mit Sockel, Dielenboden, zwei Bildern
-	 * und einer Kommode darunter.
+	 * Die Wand hinter dem Haken: eine ruhige Fläche in hellem Anthrazit.
 	 *
 	 * Das Basismodul wird an eine Wand geschraubt und schwebt nicht im
 	 * Raum. Die Wand liegt deshalb bündig an der Rückseite der Montage-
-	 * platte (z = 0), die Schatten fallen auf sie. Bilder und Kommode
-	 * geben Maßstab: Man sieht, wie hoch der Haken im Flur hängt.
-	 *
-	 * Null liegt an der Unterkante des Basismoduls; der Boden liegt knapp
-	 * einen Meter darunter, die Kommode steht mit 18 cm Abstand unter dem
-	 * Haken.
+	 * platte (z = 0), die Schatten fallen auf sie. Mehr gibt es bewusst
+	 * nicht zu sehen: Der Haken soll wirken, nicht die Einrichtung.
 	 */
 	baueRaum() {
 		const THREE = this.THREE;
-		const boden = -0.96;
-		const raum = new THREE.Group();
+		const wand = new THREE.Mesh(
+			new THREE.PlaneGeometry( 12, 8 ),
+			new THREE.MeshLambertMaterial( { color: 0x676b71 } )
+		);
 
-		const stoff = ( farbe, rauheit = 0.85, extra = {} ) => new THREE.MeshStandardMaterial( { color: farbe, roughness: rauheit, metalness: 0, ...extra } );
-		const kasten = ( b, h, t, material, x, y, z, schatten = true ) => {
-			const koerper = new THREE.Mesh( new THREE.BoxGeometry( b, h, t ), material );
+		// Die Wand bekommt kein Umgebungslicht; ohne diese Füllung wären ihre
+		// Schatten schwarz statt grau.
+		this.szene.add( new THREE.AmbientLight( 0xffffff, 1.1 ) );
 
-			koerper.position.set( x, y, z );
-			koerper.castShadow = schatten;
-			koerper.receiveShadow = true;
-			raum.add( koerper );
-
-			return koerper;
-		};
-
-		// Wand: gebrochenes Weiß mit feinem Putzkorn.
-		const putz = this.textur( 256, 256, ( c, b, h ) => {
-			c.fillStyle = '#383c42';
-			c.fillRect( 0, 0, b, h );
-
-			for ( let i = 0; i < 7000; i++ ) {
-				c.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)';
-				c.fillRect( Math.random() * b, Math.random() * h, 1.5, 1.5 );
-			}
-		} );
-		putz.wrapS = putz.wrapT = THREE.RepeatWrapping;
-		putz.repeat.set( 4, 2.5 );
-
-		const wand = new THREE.Mesh( new THREE.PlaneGeometry( 8, 5 ), stoff( 0xffffff, 0.95, { map: putz } ) );
-		wand.position.set( 0, boden + 2.5, -0.002 );
+		wand.position.set( 0, 1, -0.002 );
 		wand.receiveShadow = true;
-		raum.add( wand );
-
-		// Boden: Dielen mit leicht wechselndem Ton.
-		const dielen = this.textur( 512, 512, ( c, b, h ) => {
-			const breiteDiele = 64;
-
-			for ( let x = 0; x < b; x += breiteDiele ) {
-				const helligkeit = 168 + Math.floor( Math.random() * 22 );
-
-				c.fillStyle = 'rgb(' + helligkeit + ',' + ( helligkeit - 20 ) + ',' + ( helligkeit - 50 ) + ')';
-				c.fillRect( x, 0, breiteDiele, h );
-				c.fillStyle = 'rgba(60,40,20,0.35)';
-				c.fillRect( x, 0, 2, h );
-			}
-		} );
-		dielen.wrapS = dielen.wrapT = THREE.RepeatWrapping;
-		dielen.repeat.set( 3, 2 );
-
-		const bodenflaeche = new THREE.Mesh( new THREE.PlaneGeometry( 8, 4 ), stoff( 0xffffff, 0.7, { map: dielen } ) );
-		bodenflaeche.rotation.x = -Math.PI / 2;
-		bodenflaeche.position.set( 0, boden, 2 );
-		bodenflaeche.receiveShadow = true;
-		raum.add( bodenflaeche );
-
-		kasten( 8, 0.09, 0.02, stoff( 0xf7f5f0, 0.6 ), 0, boden + 0.045, 0.01 );
-
-		// Bilder: Rahmen, Passepartout, Motiv.
-		const bild = ( x, y, b, h, rahmenFarbe, motiv ) => {
-			const gruppe = new THREE.Group();
-			const rand = 0.025;
-			const rahmen = new THREE.Mesh( new THREE.BoxGeometry( b, h, 0.03 ), stoff( rahmenFarbe, 0.5 ) );
-			const passe = new THREE.Mesh( new THREE.PlaneGeometry( b - rand * 2, h - rand * 2 ), stoff( 0xfbf9f4, 0.9 ) );
-			const kunst = new THREE.Mesh(
-				new THREE.PlaneGeometry( ( b - rand * 2 ) * 0.72, ( h - rand * 2 ) * 0.72 ),
-				stoff( 0xffffff, 0.85, { map: this.textur( 256, Math.round( 256 * h / b ), motiv ) } )
-			);
-
-			rahmen.castShadow = true;
-			rahmen.receiveShadow = true;
-			passe.position.z = 0.0155;
-			kunst.position.z = 0.0165;
-			gruppe.add( rahmen, passe, kunst );
-			gruppe.position.set( x, y, 0.015 );
-			raum.add( gruppe );
-		};
-
-		bild( -0.5, 0.5, 0.36, 0.5, 0xe9e4da, ( c, b, h ) => {
-			c.fillStyle = '#f3ede2';
-			c.fillRect( 0, 0, b, h );
-			c.fillStyle = '#a86f38';
-			c.beginPath();
-			c.arc( b * 0.5, h * 0.36, b * 0.2, 0, Math.PI * 2 );
-			c.fill();
-			[ [ '#e7c78f', 0.62 ], [ '#c8d2d7', 0.74 ], [ '#e8b9a1', 0.86 ] ].forEach( ( [ farbe, hoehe ] ) => {
-				c.fillStyle = farbe;
-				c.beginPath();
-				c.moveTo( 0, h );
-				c.lineTo( 0, h * hoehe );
-				c.quadraticCurveTo( b * 0.5, h * ( hoehe - 0.2 ), b, h * hoehe );
-				c.lineTo( b, h );
-				c.fill();
-			} );
-		} );
-
-		bild( 0.5, 0.72, 0.3, 0.3, 0xc4a37a, ( c, b, h ) => {
-			c.fillStyle = '#f3ede2';
-			c.fillRect( 0, 0, b, h );
-			[ [ '#e8b9a1', 0, 0 ], [ '#c8d2d7', 1, 0 ], [ '#e7c78f', 0, 1 ], [ '#3a424c', 1, 1 ] ].forEach( ( [ farbe, spalte, zeile ] ) => {
-				c.fillStyle = farbe;
-				c.beginPath();
-				c.arc( spalte * b * 0.5 + b * 0.25, zeile * h * 0.5 + h * 0.25, b * 0.2, 0, Math.PI * 2 );
-				c.fill();
-			} );
-		} );
-
-		// Kommode: Eiche, drei Schübe, Beine.
-		const eiche = stoff( 0xc9a57a, 0.65 );
-		const eicheDunkel = stoff( 0xb48a5d, 0.65 );
-		const breite = 1.3;
-		const tiefe = 0.42;
-		const beinHoehe = 0.12;
-		const korpus = 0.66;
-		const oben = boden + beinHoehe + korpus;
-
-		kasten( breite, korpus, tiefe, eiche, 0, boden + beinHoehe + korpus / 2, tiefe / 2 );
-		kasten( breite + 0.04, 0.025, tiefe + 0.02, eicheDunkel, 0, oben + 0.0125, tiefe / 2 + 0.01 );
-
-		[ -1, 1 ].forEach( ( sx ) => {
-			[ 0.07, tiefe - 0.07 ].forEach( ( z ) => {
-				const bein = new THREE.Mesh( new THREE.CylinderGeometry( 0.02, 0.014, beinHoehe, 12 ), eicheDunkel );
-
-				bein.position.set( sx * ( breite / 2 - 0.07 ), boden + beinHoehe / 2, z );
-				bein.castShadow = true;
-				raum.add( bein );
-			} );
-		} );
-
-		const griff = stoff( 0x3a424c, 0.4, { metalness: 0.4 } );
-
-		[ 0.11, 0.33, 0.55 ].forEach( ( y ) => {
-			kasten( breite - 0.05, 0.19, 0.012, eicheDunkel, 0, boden + beinHoehe + y, tiefe + 0.006, false );
-			kasten( 0.16, 0.012, 0.018, griff, 0, boden + beinHoehe + y + 0.03, tiefe + 0.02, false );
-		} );
-
-		// Etwas darauf: eine Vase und eine Schale.
-		const vase = new THREE.Mesh( new THREE.CylinderGeometry( 0.045, 0.06, 0.24, 24 ), stoff( 0xf2efe9, 0.35 ) );
-
-		vase.position.set( -0.4, oben + 0.025 + 0.12, 0.2 );
-		vase.castShadow = true;
-		raum.add( vase );
-
-		const schale = new THREE.Mesh( new THREE.SphereGeometry( 0.07, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2 ), stoff( 0xa86f38, 0.5 ) );
-
-		schale.position.set( 0.38, oben + 0.025 + 0.07, 0.22 );
-		schale.castShadow = true;
-		raum.add( schale );
-
-		this.szene.add( raum );
-		this.raum = raum;
-		this.bodenHoehe = boden;
+		this.szene.add( wand );
+		this.raum = wand;
 	}
 
 	/**
@@ -1158,13 +989,6 @@ class Ansicht {
 			umriss.set( new THREE.Vector3( -breite / 2, 0, 0 ), new THREE.Vector3( breite / 2, hoehe, 0.06 ) );
 		}
 
-		// Nach unten reicht der Ausschnitt bis zur Kommode und seitlich bis
-		// zu den Bildern: Der Haken soll im Raum hängen, nicht allein im
-		// Bild stehen.
-		umriss.min.y = Math.min( umriss.min.y, -0.4 );
-		umriss.min.x = Math.min( umriss.min.x, -0.7 );
-		umriss.max.x = Math.max( umriss.max.x, 0.7 );
-
 		hoehe = umriss.max.y - umriss.min.y;
 		breite = Math.max( umriss.max.x - umriss.min.x, umriss.max.z - umriss.min.z );
 		this.mitte = ( umriss.min.y + umriss.max.y ) / 2;
@@ -1174,7 +998,7 @@ class Ansicht {
 		// schiebt den Haken aus dem Bild.
 		umriss.getCenter( this.ziel );
 
-		const luft = 1.04;
+		const luft = 1.25;
 		const senkrecht = ( hoehe * luft / 2 ) / Math.tan( winkel / 2 );
 		const waagerecht = ( breite * luft / 2 ) / ( Math.tan( winkel / 2 ) * this.kamera.aspect );
 
