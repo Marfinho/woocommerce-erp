@@ -1829,65 +1829,198 @@ label {
 	border-radius: var(--lw-r-image);
 }
 
-/* Werkstatt-Kacheln: drei gleich große Kacheln mit Nummer */
-.lw16-about-crafts__grid .lw16-bento__tile {
-	justify-content: flex-start;
-	min-height: 200px;
-	color: var(--lw-text);
+/* Text-Laufband: große Wörter zwischen zwei Linien, Stern als Trenner.
+   Läuft über dasselbe Skript wie das Pillen-Laufband (.lw16-marquee). */
+.lw16-band {
+	margin-block: var(--wp--preset--spacing--50);
+	border-block: 1px solid var(--lw-line);
 }
 
-.lw16-about-crafts__number {
+.lw16-band .lw16-marquee__track {
+	gap: 0 !important;
+	padding-block: var(--wp--preset--spacing--20);
+}
+
+.lw16-band__word {
+	display: inline-flex;
+	align-items: center;
 	margin: 0;
+	font-family: var(--lw-font-heading);
+	font-size: clamp(1.75rem, 4vw, 3rem);
+	font-weight: 700;
+	letter-spacing: -0.03em;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.lw16-band__word::after {
+	content: "✦";
+	margin-inline: 0.6em;
+	color: var(--lw-accent-1);
+	font-size: 0.5em;
+}
+
+.lw16-band:not(.is-ready) .lw16-marquee__track,
+.lw16-band.is-ready .lw16-marquee__track {
+	row-gap: 0 !important;
+}
+
+/* Werkstatt als Liste: Zeilen mit Linien, Nummer – Titel – Text */
+.lw16-ledger {
+	border-top: 1px solid var(--lw-line);
+}
+
+.lw16-ledger__row {
+	display: grid;
+	grid-template-columns: 3.5rem minmax(0, 1fr);
+	column-gap: var(--wp--preset--spacing--30);
+	row-gap: 4px;
+	align-items: baseline;
+	padding-block: var(--wp--preset--spacing--30);
+	border-bottom: 1px solid var(--lw-line);
+	transition: background-color var(--lw-fast) ease;
+}
+
+.lw16-ledger__row > * {
+	margin: 0 !important;
+}
+
+.lw16-ledger__number {
+	grid-row: span 2;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	letter-spacing: 0.06em;
+	color: var(--lw-accent-1);
+}
+
+.lw16-ledger__title {
+	font-size: var(--wp--preset--font-size--x-large);
+}
+
+.lw16-ledger__text {
+	max-width: 52ch;
+}
+
+@media (min-width: 782px) {
+	.lw16-ledger__row {
+		grid-template-columns: 4rem minmax(0, 1fr) minmax(0, 1.4fr);
+		padding-block: var(--wp--preset--spacing--40);
+	}
+
+	.lw16-ledger__number {
+		grid-row: auto;
+	}
+}
+
+@media (hover: hover) {
+	.lw16-ledger__row:hover .lw16-ledger__title {
+		color: var(--lw-accent-1);
+	}
+
+	.lw16-ledger__title {
+		transition: color var(--lw-fast) ease;
+	}
+}
+
+/* Entstehung: Überschrift links, senkrechte Zeitleiste rechts */
+.lw16-about-process__columns {
+	gap: var(--wp--preset--spacing--50) !important;
+}
+
+.lw16-about-process__head > * {
+	margin-block: 0 var(--wp--preset--spacing--20);
+}
+
+@media (min-width: 782px) {
+	.lw16-about-process__head {
+		position: sticky;
+		top: calc(var(--lw-header-top) + var(--lw-header-space) + 16px);
+		align-self: flex-start;
+	}
+}
+
+.lw16-timeline {
+	position: relative;
+	margin: 0;
+	padding: 0;
+}
+
+/* Linie von Punkt zu Punkt; nach dem letzten Punkt endet sie. */
+.lw16-timeline__item:not(:last-child)::after {
+	content: "";
+	position: absolute;
+	top: 24px;
+	bottom: -4px;
+	left: 9px;
+	border-left: 2px solid var(--lw-line);
+}
+
+.lw16-timeline__item {
+	position: relative;
+	margin: 0 !important;
+	padding: 0 0 var(--wp--preset--spacing--40) 48px;
+}
+
+.lw16-timeline__item:last-child {
+	padding-bottom: 0;
+}
+
+.lw16-timeline__item::before {
+	content: "";
+	position: absolute;
+	top: 4px;
+	left: 0;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	background: var(--lw-surface);
+	border: 2px solid var(--lw-accent-1);
+	box-shadow: 0 0 0 6px var(--lw-bg);
+	transition: background-color var(--lw-fast) ease, transform var(--lw-base) var(--lw-spring);
+}
+
+.lw16-timeline__item:hover::before {
+	background: var(--lw-accent-1);
+	transform: scale(1.15);
+}
+
+.lw16-timeline__item > * {
+	margin-block: 0 6px !important;
+}
+
+.lw16-timeline__number {
 	font-family: var(--lw-font-mono);
 	font-size: var(--wp--preset--font-size--small);
 	letter-spacing: 0.06em;
 	color: var(--lw-text-muted);
 }
 
-@media (min-width: 782px) {
-	.lw16-about-crafts__grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		grid-auto-rows: auto;
-	}
+.lw16-timeline__title {
+	font-size: var(--wp--preset--font-size--large);
 }
 
-@media (max-width: 781px) {
-	.lw16-about-crafts__grid {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.lw16-about-crafts__grid .lw16-bento__tile {
-		min-height: 0;
-	}
-}
-
-/* Vier Schritte statt drei: Linie etwas weiter außen */
-@media (min-width: 782px) {
-	.lw16-about-process .lw16-steps::before {
-		left: 12.5%;
-		right: 12.5%;
-	}
-}
-
-/* Zwei Karten zum Schluss */
-.lw16-about-next__columns {
-	gap: var(--wp--preset--spacing--40);
-}
-
-.lw16-about-next__card {
+/* Abschluss: eine Zeile mit Linie oben, Text links, Knöpfe rechts */
+.lw16-about-end {
 	display: flex;
-	flex-direction: column;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--40);
+	padding-top: var(--wp--preset--spacing--50);
+	border-top: 1px solid var(--lw-line);
+}
+
+.lw16-about-end__text {
 	gap: var(--wp--preset--spacing--20);
-	height: 100%;
+	max-width: 56ch;
 }
 
-.lw16-about-next__card > * {
-	margin-block: 0;
+.lw16-about-end__text > * {
+	margin: 0;
 }
 
-.lw16-about-next__card .wp-block-buttons {
-	margin-top: auto;
-	padding-top: var(--wp--preset--spacing--20);
+.lw16-about-end__buttons {
+	gap: 10px;
 }
 
 /* --------------------------------------------------------------------------
