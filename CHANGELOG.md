@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.41.0] – 2026-10-27
+
+### Lage des Modells an der Stange (DB_VERSION 42)
+- **Warum Module nicht im Bild auftauchten.** Eine .glb bringt ihr eigenes Koordinatensystem mit (der Halter der Holzstange liegt, wie er auf dem Druckbett stand, 128 mm neben dem Ursprung). Bisher blieb die Lage „wie konstruiert“, das Teil konnte beliebig neben oder in der Stange stehen oder auf dem Kopf.
+- Pro Teil lässt sich jetzt einstellen: **Ausrichtung** (automatisch: auf die Unterkante, mittig, Rückseite an die Wand – oder wie konstruiert), **Drehung** um X, Y, Z in Grad (mit „+ 90°“-Knöpfen) und **Verschiebung** in Millimetern. Voreinstellung ist die automatische Ausrichtung, auch für bestehende Teile.
+- **Live-Vorschau** in der Teile-Maske (ERP → Konfigurator → Teil bearbeiten, Abschnitt „Lage an der Stange“): das Modell vor der beigen Wand mit der Holzstange (Ø 20 mm, Achse 45 mm von der Wand), ziehen dreht, Mausrad zoomt. Die Vorschau und der Shop rechnen mit derselben Datei (`assets/js/konfigurator-lage.js`).
+- Die Maße aus dem Modell (Höhe, Breite, Tiefe) werden nach der eingestellten Drehung gemessen: Ein liegend konstruiertes Teil wird mit 90° aufgestellt und hat dann die richtige Höhe.
+
 ## [0.40.1] – 2026-10-27
 
 - **Sperrbereiche der Halter ändern und neu berechnen.** In der Teile-Verwaltung (Basismodul) lässt sich jeder Sperrbereich ändern, nicht nur anlegen und löschen. „Sperrbereiche der Halter neu berechnen“ ersetzt sie durch die berechneten (zwei Halter à 50 mm im Abstand von 900 mm, mittig). Die Berechnung entsteht beim Speichern nur, wenn noch kein Sperrbereich existiert – bestehende Basismodule behalten ihre eigenen.
