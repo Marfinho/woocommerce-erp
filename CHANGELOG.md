@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.42.0] – 2026-10-27
+
+- **Konfigurator: wechselnde Einrichtung und wählbare Wandfarbe.** Die Einrichtung ist zurück und wird bei jedem Aufruf neu gewürfelt: eines von vier Möbeln (Kommode, Sideboard, Konsole, Bank) in wechselndem Holzton, zwei Dinge darauf (Vase, Schale, Bücher, Lampe, Pflanze) und zwei bis drei Bilder in anderer Größe, Rahmenfarbe und Motiv. Die Wand bleibt eine ruhige einfarbige Fläche, kein Putzkorn mehr.
+- Der Kunde wählt die **Wandfarbe** unter dem Bild (Anthrazit, Hellgrau, Greige, Salbei, Nachtblau, Weiß). Die Wahl bleibt im Browser erhalten; Standard ist Anthrazit.
+
 ## [0.41.3] – 2026-10-27
 
 - **Konfigurator: ruhiger Hintergrund.** Die Ansicht zeigt nur noch eine einfarbige Wand in hellem Anthrazit, ohne Putzkorn, Bilder, Kommode, Boden und Sockel. Der Bildausschnitt ist wieder eng um den Haken. Schatten fallen weich auf die Wand. Gleiche Wandfarbe in der Vorschau im ERP.
