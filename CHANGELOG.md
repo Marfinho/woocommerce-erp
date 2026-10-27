@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.49.0] – 2026-10-27
+
+### Lange Platten über Nacht: „Dein Nächstes“ richtet sich nach der Uhrzeit
+- **Bisher** standen die bereiten Platten einfach in der Reihenfolge ihrer Nummer; die Tag-und-Nacht-Verteilung gab es nur als Vorschlag im Tagesplan. Eine Platte mit 7 Stunden stand also vorn, weil sie die niedrigste Nummer hatte, nicht weil sie nachts laufen soll.
+- **Jetzt ordnet der Workflow nach Tageszeit** (`Erp\ShiftOrder`): Tagsüber kommen **die kurzen Platten zuerst** (zuerst die, die vor Feierabend noch fertig werden), die **lange zuletzt**. Ab einer Vorlaufzeit vor Feierabend (Standard 2 Stunden vor 17:00 Uhr, also ab 15:00) und nachts steht **die längste Platte vorn** – sie wird gestartet und läuft über Nacht.
+- Das gilt überall gleich: in „Dein Nächstes“ und der Aufgabenliste auf der Startseite, in der Spalte „Bereit“ des Workflows und im Vorschlag nach einer fertig gemeldeten Platte. Die lange Platte trägt den Hinweis „7 h Druck – am besten ab 15:00 starten, dann läuft sie über Nacht“ bzw. „… jetzt starten, läuft über Nacht“.
+- **Einstellbar** (Workflow-Einstellungen → Platten über Nacht): Feierabend, Vorlauf in Stunden und ab wie vielen Druckstunden eine Platte als lang gilt (Standard 4). Dieselbe Schwelle gilt im Tagesplan.
+- Die Aufgabenliste ordnet auch unter PHP 7.4 stabil: Bei gleichem Rang bleibt die gewählte Reihenfolge.
+- Tests: `ErpShiftOrderTest`.
+
 ## [0.48.0] – 2026-10-27
 
 ### Filament nur noch nach Art und Farbe, Gewicht der Leerspule einstellbar

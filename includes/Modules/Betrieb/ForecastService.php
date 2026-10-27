@@ -1086,6 +1086,7 @@ class ForecastService {
 			array(
 				'plate_min'  => $cap['plate_min'],
 				'operator_h' => $cap['operator_h'] / 5,
+				'long_h'     => (float) \Lindenweg16\Erp\Workflow::settings()['long_h'],
 			)
 		);
 

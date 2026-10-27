@@ -78,6 +78,7 @@ class DayPlan {
 				'plate_min'  => 10.0,
 				'operator_h' => 6.0,
 				'max_days'   => 14,
+				'long_h'     => self::LONG_H,
 			),
 			$opts
 		);
@@ -111,7 +112,7 @@ class DayPlan {
 				// 1. Lange Platten in die Nacht.
 				$rest = (float) $o['night_h'];
 				foreach ( $plates as $i => $plate ) {
-					if ( $plate['hours'] >= self::LONG_H && $plate['hours'] <= $rest + 0.001 && $hands >= $o['plate_min'] ) {
+					if ( $plate['hours'] >= (float) $o['long_h'] && $plate['hours'] <= $rest + 0.001 && $hands >= $o['plate_min'] ) {
 						$row['night'][] = $plate;
 						$rest          -= $plate['hours'];
 						$hands         -= $o['plate_min'];

@@ -2360,6 +2360,8 @@
 		else if (live && live.file && run.file && (run.status === 'freigegeben' || run.status === 'ruesten')) { chips.push('wartet auf ' + run.file.name); }
 		if (live && run.status === 'druckt' && live.remaining !== null) { chips.push('noch ' + minTxt(live.remaining)); }
 		if (run.status === 'zu_melden') { chips.push('wartet auf Meldung'); }
+		if (run.status === 'freigegeben' && run.hint === 'night_now') { chips.push('jetzt starten – läuft über Nacht'); }
+		else if (run.status === 'freigegeben' && run.hint === 'night_later') { chips.push('Nachtplatte – am besten kurz vor Feierabend starten'); }
 
 		var primary = run.primary && run.primary.action ? h('button', {
 			class: 'btn primary wide', type: 'button',
@@ -2619,6 +2621,9 @@
 			var hide = h('input', { type: 'checkbox', id: 'ws-hide', checked: !!s.hide_wpadmin });
 			var fLead = h('input', { class: 'field', type: 'number', id: 'ws-flead', min: '0', max: '120', value: String(s.filament_lead_days) });
 			var fSafe = h('input', { class: 'field', type: 'number', id: 'ws-fsafe', min: '0', max: '60', value: String(s.filament_safety_days) });
+			var shiftEnd = h('input', { class: 'field', type: 'time', id: 'ws-shift-end', value: s.shift_end });
+			var shiftLead = h('input', { class: 'field', type: 'number', id: 'ws-shift-lead', min: '0', max: '8', step: '0.5', value: String(s.shift_lead_h) });
+			var longH = h('input', { class: 'field', type: 'number', id: 'ws-long-h', min: '0.5', max: '48', step: '0.5', value: String(s.long_h) });
 			var weeks = h('input', { class: 'field', type: 'number', id: 'ws-weeks', min: '1', max: '26', value: String(s.weeks) });
 			var cover = h('input', { class: 'field', type: 'number', id: 'ws-cover', min: '0', max: '12', step: '0.5', value: String(s.cover_weeks) });
 
@@ -2637,6 +2642,13 @@
 			));
 			body.appendChild(fields);
 			body.appendChild(h('label', { class: 'chk', for: 'ws-auto', style: 'margin-top:10px' }, auto, ' Beim Freigeben des Plans automatisch drucken'));
+			body.appendChild(h('h4', { class: 'sec' }, 'Platten über Nacht'));
+			body.appendChild(h('div', { class: 'form-grid' },
+				h('div', null, h('label', { for: 'ws-shift-end' }, 'Feierabend'), shiftEnd),
+				h('div', null, h('label', { for: 'ws-shift-lead' }, 'Lange Platten vorn ab (Stunden vor Feierabend)'), shiftLead),
+				h('div', null, h('label', { for: 'ws-long-h' }, 'Als lang gilt ab (Stunden Druck)'), longH)
+			));
+			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Tagsüber kommen die kurzen Platten zuerst, damit du sie wechseln kannst. Ab der Vorlaufzeit vor Feierabend steht die längste vorn: Sie wird gestartet und läuft über Nacht.'));
 			body.appendChild(h('h4', { class: 'sec' }, 'Hochrechnung'));
 			body.appendChild(h('div', { class: 'form-grid' },
 				h('div', null, h('label', { for: 'ws-weeks' }, 'Verkaufsverlauf (Wochen)'), weeks),
@@ -2660,7 +2672,8 @@
 					label_printer: printer.value, label_roll: roll.value, label_copies: parseInt(copies.value, 10), label_auto: auto.checked ? 1 : 0,
 					label_fields: Object.keys(boxes).filter(function (k) { return boxes[k].checked; }),
 					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0,
-					filament_lead_days: parseInt(fLead.value, 10), filament_safety_days: parseInt(fSafe.value, 10)
+					filament_lead_days: parseInt(fLead.value, 10), filament_safety_days: parseInt(fSafe.value, 10),
+					shift_end: shiftEnd.value, shift_lead_h: parseFloat(shiftLead.value), long_h: parseFloat(longH.value)
 				} }).then(function () { toast('Gespeichert'); d.close(); }).catch(function (e) { save.disabled = false; toast(e.message, true); });
 			});
 			body.appendChild(save);
