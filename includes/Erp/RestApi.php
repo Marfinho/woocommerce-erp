@@ -179,6 +179,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/material/rollen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'material_rollen_speichern' ),
+				'permission_callback' => $this->needs( array( 'lager.material' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/produkte',
 			array(
 				'methods'             => 'GET',
@@ -581,8 +591,38 @@ class RestApi {
 		return new WP_REST_Response(
 			array(
 				'colors'  => Material::overview(),
+				'rolls'   => array(
+					'roll_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_roll_g(),
+					'tare_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_tare_g(),
+				),
 				'order'   => Access::can( 'lager.einkauf' ),
 				'receive' => Access::can( 'lager.einkauf' ) && Access::can( 'lager.buchen' ),
+			)
+		);
+	}
+
+	/**
+	 * Rolleneinstellungen speichern: Gewicht je Rolle und der leeren Spule.
+	 *
+	 * @param WP_REST_Request $request Anfrage (roll_g, tare_g).
+	 * @return WP_REST_Response
+	 */
+	public function material_rollen_speichern( WP_REST_Request $request ) {
+		\Lindenweg16\Modules\Betrieb\FilamentRolls::save_settings(
+			array(
+				'roll_g' => $request->get_param( 'roll_g' ),
+				'tare_g' => $request->get_param( 'tare_g' ),
+			)
+		);
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'message' => __( 'Gespeichert.', 'lindenweg16' ),
+				'rolls'   => array(
+					'roll_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_roll_g(),
+					'tare_g' => \Lindenweg16\Modules\Betrieb\FilamentRolls::default_tare_g(),
+				),
 			)
 		);
 	}
@@ -645,7 +685,6 @@ class RestApi {
 			(int) $request['id'],
 			(string) $request->get_param( 'qty' ),
 			array(
-				'lot_code' => sanitize_text_field( (string) $request->get_param( 'lot_code' ) ),
 				'material' => sanitize_text_field( (string) $request->get_param( 'material' ) ),
 			)
 		);

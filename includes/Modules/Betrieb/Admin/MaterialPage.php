@@ -1,6 +1,6 @@
 <?php
 /**
- * Material: Filamentchargen, Verbrauchsmaterial, Beschaffungsalarm.
+ * Material: Filament, Verbrauchsmaterial, Beschaffungsalarm.
  *
  * @package Lindenweg16
  */
@@ -60,7 +60,7 @@ class MaterialPage {
 		}
 
 		FilamentRepository::insert( $result['data'] );
-		$this->redirect( __( 'Filamentcharge erfasst.', 'lindenweg16' ), 'success' );
+		$this->redirect( __( 'Filament erfasst.', 'lindenweg16' ), 'success' );
 	}
 
 	/**
@@ -216,13 +216,12 @@ class MaterialPage {
 	protected function render_lots() {
 		$lots = FilamentRepository::all();
 
-		echo '<h2>' . esc_html__( 'Filamentchargen', 'lindenweg16' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Der Verbrauch wird aus den Druckjobs gerechnet: geplante Teile mal Bauteilgewicht der Revision.', 'lindenweg16' ) . '</p>';
+		echo '<h2>' . esc_html__( 'Filament', 'lindenweg16' ) . '</h2>';
+		echo '<p>' . esc_html__( 'Der Verbrauch wird aus den Druckjobs gerechnet: geplante Teile mal Bauteilgewicht der Revision. Rollen mit Etikett, Leer-Scan und Wiegen gibt es im ERP unter Lager → Material.', 'lindenweg16' ) . '</p>';
 
 		if ( $lots ) {
 			echo '<table class="widefat striped"><thead><tr>';
 			foreach ( array(
-				__( 'Charge', 'lindenweg16' ),
 				__( 'Zugang', 'lindenweg16' ),
 				__( 'Material', 'lindenweg16' ),
 				__( 'Farbe', 'lindenweg16' ),
@@ -243,7 +242,6 @@ class MaterialPage {
 				$rest = FilamentRepository::remaining_kg( $lot );
 
 				echo '<tr>';
-				printf( '<td><strong>%s</strong></td>', esc_html( $lot['lot_code'] ) );
 				printf( '<td>%s</td>', esc_html( $lot['received_on'] ? mysql2date( 'd.m.Y', $lot['received_on'] ) : '—' ) );
 				printf( '<td>%s</td>', esc_html( (string) $lot['material'] ) );
 				printf( '<td>%s</td>', esc_html( ColorRegistry::label( $lot['color'] ) ) );
@@ -275,15 +273,14 @@ class MaterialPage {
 
 			echo '</tbody></table>';
 		} else {
-			echo '<p>' . esc_html__( 'Noch keine Chargen erfasst.', 'lindenweg16' ) . '</p>';
+			echo '<p>' . esc_html__( 'Noch kein Filament erfasst.', 'lindenweg16' ) . '</p>';
 		}
 
-		echo '<h3>' . esc_html__( 'Charge erfassen', 'lindenweg16' ) . '</h3>';
+		echo '<h3>' . esc_html__( 'Filament erfassen', 'lindenweg16' ) . '</h3>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( self::NONCE );
 		echo '<input type="hidden" name="action" value="lw16_betrieb_save_lot" />';
 		echo '<p>';
-		printf( '<input type="text" name="lot_code" placeholder="%s" size="14" /> ', esc_attr__( 'Chargencode', 'lindenweg16' ) );
 		printf( '<input type="date" name="received_on" value="%s" /> ', esc_attr( gmdate( 'Y-m-d' ) ) );
 
 		echo '<select name="material">';

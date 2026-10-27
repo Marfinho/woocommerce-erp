@@ -64,7 +64,7 @@ class Settings {
 			'update_kanal'              => 'main',
 			'lager_altmodul_aus'        => 0,
 			'filament_rolle_g'          => 1000,
-			'filament_spule_g'          => 250,
+			'filament_leerspule_g'      => 37,
 			'erp_klassisch_umleiten'    => 0,
 			'betrieb_wochenmail'        => 1,
 			'betrieb_reorder_layout'    => 'theme',

@@ -215,7 +215,10 @@ class PrintJobRepository {
 				'article_id'          => $article_id,
 				'article_revision_id' => $revision ? (int) $revision['id'] : null,
 				'color'               => ColorRegistry::normalize( isset( $input['color'] ) ? $input['color'] : '' ),
-				'filament_lot_id'     => self::int_or( $input, 'filament_lot_id', 0 ) ? self::int_or( $input, 'filament_lot_id', 0 ) : null,
+				// Eine Charge wird nicht mehr gewählt: Der Verbrauch geht auf die älteste Lieferung dieser Farbe.
+				'filament_lot_id'     => self::int_or( $input, 'filament_lot_id', 0 )
+					? self::int_or( $input, 'filament_lot_id', 0 )
+					: ( FilamentRepository::default_lot_for_color( isset( $input['color'] ) ? (string) $input['color'] : '' ) ?: null ),
 				'parts_planned'       => $planned,
 				'parts_ok'            => $ok,
 				'failure_reason'      => $failure,

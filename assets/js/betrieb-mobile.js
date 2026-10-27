@@ -378,13 +378,6 @@
 				return c.label;
 			}, data.defaults.color );
 
-			var lots = [ { id: 0, label: '–' } ].concat( data.lots.map( function ( l ) {
-				return { id: l.id, label: l.lot_code + ' · ' + l.material + ' ' + l.color };
-			} ) );
-			fill( document.getElementById( 'lw16-lot' ), lots, 'id', function ( l ) {
-				return l.label;
-			}, data.defaults.filament_lot_id );
-
 			var contacts = data.contacts || [];
 			fill( document.getElementById( 'lw16-komm-contact' ), contacts, 'id', function ( c ) {
 				return c.name;

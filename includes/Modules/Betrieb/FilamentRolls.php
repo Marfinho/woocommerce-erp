@@ -51,12 +51,46 @@ class FilamentRolls {
 	}
 
 	/**
-	 * Gewicht der leeren Spule in Gramm.
+	 * Vorgabe für das Gewicht der leeren Spule in Gramm.
+	 *
+	 * Standard 37 g: der Pappkern einer Bambu-Lab-Refill-Rolle. Bambu nennt
+	 * kein offizielles Gewicht; Nutzer messen 35 bis 38 g. Wer Rollen mit
+	 * Kunststoffspule nutzt (etwa 215 bis 260 g), stellt den Wert um oder gibt
+	 * ihn beim Wiegen an. Am besten einmal einen leeren Kern wiegen.
 	 *
 	 * @return int
 	 */
 	public static function default_tare_g() {
-		return max( 0, (int) Settings::get( 'filament_spule_g', 250 ) );
+		return max( 0, (int) Settings::get( 'filament_leerspule_g', 37 ) );
+	}
+
+	/**
+	 * Einstellungen der Rollen speichern - Grenzen prüfen, reine Logik in sanitize().
+	 *
+	 * @param array $in Eingabe: roll_g, tare_g.
+	 */
+	public static function save_settings( array $in ) {
+		$s = self::sanitize( $in );
+
+		Settings::update(
+			array(
+				'filament_rolle_g'     => $s['roll_g'],
+				'filament_leerspule_g' => $s['tare_g'],
+			)
+		);
+	}
+
+	/**
+	 * Eingaben der Rolleneinstellungen bereinigen - reine Logik.
+	 *
+	 * @param array $in Eingabe.
+	 * @return array {roll_g, tare_g}
+	 */
+	public static function sanitize( array $in ) {
+		return array(
+			'roll_g' => min( 20000, max( 100, (int) ( isset( $in['roll_g'] ) ? $in['roll_g'] : 1000 ) ) ),
+			'tare_g' => min( 2000, max( 0, (int) ( isset( $in['tare_g'] ) ? $in['tare_g'] : 37 ) ) ),
+		);
 	}
 
 	/**

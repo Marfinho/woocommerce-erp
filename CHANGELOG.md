@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.48.0] – 2026-10-27
+
+### Filament nur noch nach Art und Farbe, Gewicht der Leerspule einstellbar
+- **Die Charge ist aus dem Filament verschwunden.** Es zählen Filamentart (Material) und Farbe; gezeigt werden die Rollen einer Farbe, nicht ihre Herkunft. Entfernt: das Chargenfeld beim Wareneingang, die Chargenauswahl beim Druckjob (ERP, Handy und wp-admin), die Rolle-wählen-Liste bei der Platte, die Charge auf den Rollenetiketten, die **Rückverfolgung von der Filamentcharge** (Reiter unter Qualität) und die Filamentcharge in der Chargenakte und im GPSR-Nachweis (dort steht jetzt „Filament: Material · Farbe“). Das Chargenbuch der gefertigten Teile bleibt.
+- **Der Verbrauch geht von selbst auf die Farbe im Lager:** Ein Druckjob ohne Chargenangabe bucht auf die älteste Lieferung dieser Farbe. Intern bleibt eine Lieferung als Anker der Rollen bestehen (ohne Code vergibt das Plugin einen); Import-Mappen mit Chargencode funktionieren weiter, er ist nur nicht mehr Pflicht.
+- **Etiketten dieser Farbe drucken:** ein PDF für alle offenen Rollen einer Farbe (zusätzlich zum Etikett je Rolle).
+- **Gewicht der leeren Spule einstellbar** (Lager → Material → Rollen) und beim Wiegen einer Rolle einzeln änderbar. **Vorgabe 37 g: der Pappkern einer Bambu-Lab-Refill-Rolle.** Bambu nennt dafür keinen offiziellen Wert; Nutzer im Bambu-Forum wiegen 35 bis 38 g, die komplette Kunststoffspule samt Pappkern etwa 215 bis 260 g. Am besten wiegst du einen leeren Kern selbst und trägst den Wert ein. Ebenso einstellbar: das Filamentgewicht je Rolle (Standard 1000 g).
+- Die frühere Einstellung `filament_spule_g` (250 g) entfällt zugunsten von `filament_leerspule_g`.
+- Alter Bestand ohne einzelne Rollen: „In Rollen aufteilen“ je Farbe (statt je Charge).
+
 ## [0.47.0] – 2026-10-27
 
 ### Filamentrollen mit Etikett, Leer-Scan und Schwund (DB_VERSION 45)

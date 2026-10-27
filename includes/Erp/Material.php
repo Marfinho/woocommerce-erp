@@ -454,27 +454,34 @@ class Material {
 			$stock    = self::available_kg( $color );
 			$kg       = isset( $used[ $color ] ) ? $used[ $color ] : 0.0;
 			$coverage = ProcurementAlert::coverage_days( $stock, $kg );
-			$lots     = array();
+			// Die Charge (Lieferung) bleibt im Hintergrund: Gezeigt werden die
+			// Rollen einer Farbe, nicht ihre Herkunft.
+			$rolls     = array();
+			$legacy    = array();
+			$materials = array();
+			$dry_check = false;
 
 			foreach ( self::lots_for( $color ) as $lot ) {
-				if ( $lot['remaining_kg'] <= 0 ) {
-					continue;
+				$source = isset( $raw[ $lot['id'] ] ) ? $raw[ $lot['id'] ] : array();
+
+				if ( FilamentRolls::lot_has_rolls( (int) $lot['id'] ) ) {
+					$rolls = array_merge( $rolls, self::rolls_for_view( (int) $lot['id'], $labels ) );
+				} elseif ( $lot['remaining_kg'] > 0 ) {
+					// Alter Bestand ohne einzelne Rollen: auf Knopfdruck in Rollen aufteilen.
+					$legacy[] = array(
+						'id'        => (int) $lot['id'],
+						'remaining' => $lot['remaining_kg'],
+						'roll_g'    => FilamentRolls::default_roll_g(),
+					);
 				}
 
-				$source = isset( $raw[ $lot['id'] ] ) ? $raw[ $lot['id'] ] : array();
-				$lots[] = array(
-					'has_rolls' => FilamentRolls::lot_has_rolls( (int) $lot['id'] ),
-					'rolls'     => self::rolls_for_view( (int) $lot['id'], $labels ),
-					'roll_g'    => FilamentRolls::default_roll_g(),
-					'label_url' => $labels ? self::label_link( array( 'lot' => (int) $lot['id'] ) ) : '',
-					'id'        => $lot['id'],
-					'code'      => $lot['code'],
-					'material'  => $lot['material'],
-					'remaining' => $lot['remaining_kg'],
-					'received'  => $lot['received_on'],
-					'dry'       => $source ? ! FilamentRepository::needs_drying( $source ) : null,
-					'location'  => $source && ! empty( $source['location'] ) ? (string) $source['location'] : '',
-				);
+				if ( $lot['remaining_kg'] > 0 ) {
+					$materials[] = (string) $lot['material'];
+
+					if ( $source && FilamentRepository::needs_drying( $source ) ) {
+						$dry_check = true;
+					}
+				}
 			}
 
 			$mine   = array_values(
@@ -502,7 +509,11 @@ class Material {
 				'coverage'  => null === $coverage ? null : round( $coverage, 1 ),
 				'threshold' => $threshold,
 				'level'     => self::level( $coverage, $threshold, $stock ),
-				'lots'      => $lots,
+				'rolls'     => $rolls,
+				'legacy'    => $legacy,
+				'materials' => array_values( array_unique( array_filter( $materials ) ) ),
+				'needs_drying' => $dry_check,
+				'label_url' => $labels && $rolls ? self::label_link( array( 'color' => $color ) ) : '',
 				'open'      => $mine,
 				'suggest'   => $suggest,
 				'qty'       => $suggest ? (float) $suggest['qty'] : (float) self::order_kg( $kg / ProcurementAlert::PERIOD_DAYS, $threshold ),

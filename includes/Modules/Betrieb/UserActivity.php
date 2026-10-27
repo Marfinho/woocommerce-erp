@@ -62,7 +62,7 @@ class UserActivity {
 			'print_jobs'         => __( 'Druckauftrag', 'lindenweg16' ),
 			'printers'           => __( 'Drucker', 'lindenweg16' ),
 			'maintenance_log'    => __( 'Wartung', 'lindenweg16' ),
-			'filament_lots'      => __( 'Filamentcharge', 'lindenweg16' ),
+			'filament_lots'      => __( 'Filament-Lieferung', 'lindenweg16' ),
 			'batches'            => __( 'Charge', 'lindenweg16' ),
 			'supplies'           => __( 'Verbrauchsmaterial', 'lindenweg16' ),
 			'time_entries'       => __( 'Zeiteintrag', 'lindenweg16' ),

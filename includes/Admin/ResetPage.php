@@ -177,7 +177,7 @@ class ResetPage {
 		echo '<ul class="ul-disc">';
 		foreach ( array(
 			__( 'Artikel, Revisionen, Stücklisten und Beschaffungsdaten', 'lindenweg16' ),
-			__( 'Komponenten, Drucker, Filamentchargen und Lagerplätze', 'lindenweg16' ),
+			__( 'Komponenten, Drucker, Filament und Lagerplätze', 'lindenweg16' ),
 			__( 'Kalkulationsannahmen, Rabattstaffel und Sollbestände', 'lindenweg16' ),
 			__( 'Kontenrahmen, Dauerbuchungen und Anlagevermögen', 'lindenweg16' ),
 			__( 'Alle Einstellungen, Rollen und WooCommerce-Produkte', 'lindenweg16' ),

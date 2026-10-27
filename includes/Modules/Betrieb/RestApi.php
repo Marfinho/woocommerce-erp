@@ -521,7 +521,6 @@ class RestApi {
 			'printer_id'      => 0,
 			'article_id'      => 0,
 			'color'           => ColorRegistry::default_color(),
-			'filament_lot_id' => 0,
 			'plate_changes'   => 1,
 		);
 
@@ -532,18 +531,7 @@ class RestApi {
 			if ( $last ) {
 				$defaults['article_id']      = (int) $last['article_id'];
 				$defaults['color']           = (string) $last['color'];
-				$defaults['filament_lot_id'] = (int) $last['filament_lot_id'];
 			}
-		}
-
-		$lots = array();
-		foreach ( FilamentRepository::all() as $lot ) {
-			$lots[] = array(
-				'id'       => (int) $lot['id'],
-				'lot_code' => $lot['lot_code'],
-				'material' => $lot['material'],
-				'color'    => $lot['color'],
-			);
 		}
 
 		// Für die Kommissionsliste: alle verkäuflichen Artikel, nicht nur die
@@ -580,7 +568,6 @@ class RestApi {
 			array(
 				'printers'   => $printers,
 				'articles'   => $articles,
-				'lots'       => $lots,
 				'colors'     => ColorRegistry::all(),
 				'categories' => TimeRepository::category_labels(),
 				'defaults'        => $defaults,

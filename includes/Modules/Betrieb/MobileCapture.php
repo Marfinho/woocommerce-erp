@@ -190,11 +190,6 @@ class MobileCapture {
 					<span><?php esc_html_e( 'Farbe', 'lindenweg16' ); ?></span>
 					<select name="color" id="lw16-color"></select>
 				</label>
-
-				<label class="lw16-field">
-					<span><?php esc_html_e( 'Filamentcharge', 'lindenweg16' ); ?></span>
-					<select name="filament_lot_id" id="lw16-lot"></select>
-				</label>
 			</details>
 
 			<button type="submit" class="lw16-submit"><?php esc_html_e( 'Buchen', 'lindenweg16' ); ?></button>

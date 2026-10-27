@@ -225,7 +225,6 @@
 			f.printer = select(opts.printers.map(function (p) { return [p.id, p.label]; }), opts.printers[0].id);
 			f.article = select(opts.articles.map(function (a) { return [a.id, a.sku + ' – ' + a.name + (a.revision ? ' (' + a.revision + ')' : ' – keine aktive Revision')]; }), opts.articles[0].id);
 			f.color = select(opts.colors.map(function (c) { return [c.slug, c.label]; }), opts.default_color);
-			f.lot = select([['0', '– keine –']].concat(opts.lots.map(function (l) { return [l.id, l.code + ' – ' + l.material + ' ' + l.color]; })), '0');
 			f.planned = input('text', '', { inputmode: 'decimal' });
 			f.ok = input('text', '', { inputmode: 'decimal' });
 			f.hours = input('text', '', { inputmode: 'decimal' });
@@ -244,7 +243,7 @@
 			var go = UI.h('button', { class: 'btn primary', type: 'button', onclick: function () {
 				post(go, 'druckjournal/erfassen', {
 					work_order_id: f.order.value, job_date: f.date.value, printer_id: f.printer.value, article_id: f.article.value, color: f.color.value,
-					filament_lot_id: f.lot.value, parts_planned: f.planned.value, parts_ok: f.ok.value, print_time_h: f.hours.value,
+					parts_planned: f.planned.value, parts_ok: f.ok.value, print_time_h: f.hours.value,
 					plate_changes: f.changes.value, failure_reason: f.failure.value, note: f.note.value
 				}, function (r) {
 					UI.toast(r.message);
@@ -260,7 +259,7 @@
 					opts.orders.length ? field('Aus Druckauftrag', f.order, 'Mit dem Buchen wird der Auftrag fertiggemeldet.') : null,
 					field('Datum', f.date), field('Drucker', f.printer),
 					field('Artikel', f.article, 'Die aktive Revision wird mitgeschrieben – sie bestimmt Gewicht und Druckzeit.'),
-					field('Farbe', f.color), field('Filamentcharge', f.lot, 'Ohne Charge ist nicht rückverfolgbar, aus welchem Material ein Teil stammt.'),
+					field('Farbe', f.color, 'Der Verbrauch geht von dieser Farbe im Lager ab.'),
 					field('Teile geplant', f.planned), field('Teile in Ordnung', f.ok), field('Druckzeit (h)', f.hours), field('Plattenwechsel', f.changes),
 					field('Fehlerursache', f.failure, 'Bei Ausschuss Pflicht – sonst lässt sich die Quote nicht auswerten.'),
 					field('Bemerkung', f.note)),
@@ -592,20 +591,13 @@
 	 * ================================================================== */
 
 	UI.pages['qualitaet'] = function (item) {
-		head(item, 'Qualität', 'Chargenbuch und Rückverfolgung: Jeder Druckjob mit guten Teilen erzeugt eine Charge, deren Code ins Bauteil geprägt wird.');
-		var tab = 'chargen';
-		var tabs = UI.h('div');
+		head(item, 'Qualität', 'Chargenbuch: Jeder Druckjob mit guten Teilen erzeugt eine Charge, deren Code ins Bauteil geprägt wird.');
 		var box = UI.h('div');
-		UI.view().appendChild(tabs);
 		UI.view().appendChild(box);
 
-		function setTab(t) { tab = t; draw(); }
-
 		function draw() {
-			tabs.textContent = '';
-			tabs.appendChild(pills([['chargen', 'Chargenbuch'], ['rueck', 'Rückverfolgung']], tab, setTab));
 			box.textContent = '';
-			if (tab === 'chargen') { batches(); } else { trace(0); }
+			batches();
 		}
 
 		function orderTable(orders) {
@@ -634,29 +626,13 @@
 					UI.h('p', { class: 'muted' }, 'Diesen Code ins Bauteil prägen und in den Slicer übernehmen.'),
 					UI.h('div', { class: 'kv' },
 						UI.h('span', null, 'Artikel'), UI.h('b', null, d.article), UI.h('span', null, 'Revision'), UI.h('b', null, d.revision || '–'),
-						UI.h('span', null, 'Material'), UI.h('b', null, d.material || '–'), UI.h('span', null, 'Filamentcharge'), UI.h('b', null, d.lot || '–'),
+						UI.h('span', null, 'Material'), UI.h('b', null, d.material || '–'), UI.h('span', null, 'Farbe'), UI.h('b', null, d.color || '–'),
 						UI.h('span', null, 'Drucker'), UI.h('b', null, d.printer || '–'), UI.h('span', null, 'Stückzahl'), UI.h('b', null, nf(d.qty, 0)),
 						UI.h('span', null, 'Produziert'), UI.h('b', null, day(d.date))),
 					d.gpsr_url ? UI.h('p', null, UI.h('a', { class: 'btn primary', href: d.gpsr_url }, UI.ico('download'), 'GPSR-Nachweis als PDF')) : null,
 					UI.h('div', { class: 'sec' }, 'Betroffene Bestellungen (' + d.orders.length + ')'), orderTable(d.orders));
 				UI.dlg('Chargenakte', body, true);
 			}).catch(function (e) { UI.toast(e.message, true); });
-		}
-
-		function trace(lot) {
-			UI.api('qualitaet/rueckverfolgung' + (lot ? '?lot=' + lot : '')).then(function (d) {
-				box.textContent = '';
-				var sel = select([['0', '– Filamentcharge wählen –']].concat(d.lots.map(function (l) { return [l.id, l.code + ' – ' + l.material]; })), lot, { 'aria-label': 'Filamentcharge' });
-				box.appendChild(UI.h('p', { class: 'muted' }, 'Von einer Filamentcharge zu allen betroffenen Chargen und Bestellungen.'));
-				box.appendChild(UI.h('div', { class: 'label-area', style: 'margin-bottom:12px' }, sel, UI.h('button', { class: 'btn primary', type: 'button', onclick: function () { trace(parseInt(sel.value, 10) || 0); } }, 'Verfolgen')));
-				if (!d.trace) { return; }
-				var t = d.trace;
-				box.appendChild(UI.h('div', { class: 'card' },
-					UI.h('h3', { style: 'margin-top:0' }, 'Aus Filamentcharge ' + t.lot + ' entstanden'),
-					UI.h('p', null, t.jobs + ' Druckjobs, ' + t.batches.length + ' Chargen, ' + t.orders.length + ' betroffene Bestellungen.'),
-					t.batches.length ? table(['Chargencode', 'Produziert', 'Artikel', 'Stück'], t.batches.map(function (b) { return [b.code, day(b.date), b.sku, nf(b.qty, 0)]; }), [3]) : null,
-					UI.h('div', { class: 'sec' }, 'Betroffene Bestellungen'), orderTable(t.orders)));
-			}).catch(function (e) { errBox(box, e); });
 		}
 
 		draw();
