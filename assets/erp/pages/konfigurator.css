@@ -36,3 +36,11 @@
 .kf-block .btn { min-height: 44px; }
 .kf-blockform { margin-top: 4px; }
 .kf-blockform .btn { min-height: 44px; }
+
+/* Lage des Modells: Vorschau und Eingaben */
+.kf-preview { position: relative; width: 100%; height: 280px; border-radius: 14px; overflow: hidden; background: radial-gradient(circle at 50% 30%, var(--surface), var(--surface-muted, var(--line))); border: 1px solid var(--line); touch-action: none; }
+.kf-preview canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+.kf-preview-msg { position: absolute; inset: auto 12px 12px; margin: 0; font-size: 13px; color: var(--text-muted); text-align: center; pointer-events: none; }
+.kf-axis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kf-axis .btn { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.kf-axis-cell { display: grid; gap: 4px; min-width: 0; }

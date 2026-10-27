@@ -37,11 +37,13 @@ class GlbMeasure {
 	/**
 	 * Die Maße einer Datei.
 	 *
-	 * @param string $path Pfad zur .glb.
+	 * @param string     $path     Pfad zur .glb.
+	 * @param array|null $rotation Drehung [x, y, z] in Grad, die vor dem Messen gilt
+	 *                             (ein liegend konstruiertes Teil wird aufgestellt).
 	 * @return array|null {width, height, depth} in Millimetern, auf 0,1 gerundet;
 	 *                    null, wenn die Datei nicht lesbar ist oder keine Maße hergibt.
 	 */
-	public static function measure_file( $path ) {
+	public static function measure_file( $path, $rotation = null ) {
 		if ( ! is_readable( $path ) ) {
 			return null;
 		}
@@ -66,16 +68,17 @@ class GlbMeasure {
 
 		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 
-		return self::measure_json( $json );
+		return self::measure_json( $json, $rotation );
 	}
 
 	/**
 	 * Die Maße aus dem JSON-Teil eines glTF.
 	 *
-	 * @param string $json Text.
+	 * @param string     $json     Text.
+	 * @param array|null $rotation Drehung [x, y, z] in Grad.
 	 * @return array|null
 	 */
-	public static function measure_json( $json ) {
+	public static function measure_json( $json, $rotation = null ) {
 		$gltf = json_decode( (string) $json, true );
 
 		if ( ! is_array( $gltf ) || empty( $gltf['nodes'] ) || empty( $gltf['meshes'] ) || empty( $gltf['accessors'] ) ) {
@@ -107,8 +110,10 @@ class GlbMeasure {
 			'max' => array( -INF, -INF, -INF ),
 		);
 
+		$start = is_array( $rotation ) && array_filter( $rotation ) ? ModelPlacement::rotation_matrix( $rotation ) : self::identity();
+
 		foreach ( $roots as $root ) {
-			self::walk( $gltf, (int) $root, self::identity(), $box, 0 );
+			self::walk( $gltf, (int) $root, $start, $box, 0 );
 		}
 
 		if ( INF === $box['min'][0] ) {

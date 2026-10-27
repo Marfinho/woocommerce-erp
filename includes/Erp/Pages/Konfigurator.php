@@ -26,6 +26,7 @@ use Lindenweg16\Modules\Configurator\BlockRepository;
 use Lindenweg16\Modules\Configurator\Catalog;
 use Lindenweg16\Modules\Configurator\Frontend;
 use Lindenweg16\Modules\Configurator\Layout;
+use Lindenweg16\Modules\Configurator\ModelPlacement;
 use Lindenweg16\Modules\Configurator\PartRepository;
 use Lindenweg16\Modules\Configurator\GlbMeasure;
 use Lindenweg16\Modules\Configurator\WebModel;
@@ -66,6 +67,8 @@ class Konfigurator {
 		$route( $part . '/loeschen', 'POST', array( __CLASS__, 'part_delete' ), $edit );
 		$route( $part . '/sperrbereiche', 'POST', array( __CLASS__, 'block_add' ), $edit );
 		$route( $part . '/sperrbereiche/(?P<bid>\d+)/loeschen', 'POST', array( __CLASS__, 'block_delete' ), $edit );
+		$route( $part . '/sperrbereiche/(?P<bid>\d+)', 'POST', array( __CLASS__, 'block_update' ), $edit );
+		$route( $part . '/halter', 'POST', array( __CLASS__, 'block_holders' ), $edit );
 	}
 
 	/* ====================================================================
@@ -272,7 +275,8 @@ class Konfigurator {
 		$zones   = isset( $blocks[ (int) $row['id'] ] ) ? $blocks[ (int) $row['id'] ] : array();
 		$url     = 'none' === $kind ? '' : WebModel::url( $file );
 		$shop    = Catalog::shop_facts( $article ? (int) $article['wc_product_id'] : 0 );
-		$size    = 'none' === $kind ? null : WebModel::measure( $file );
+		$place   = ModelPlacement::for_browser( $row );
+		$size    = 'none' === $kind ? null : WebModel::measure( $file, $place['rot'] );
 
 		return array(
 			'id'             => (int) $row['id'],
@@ -294,6 +298,7 @@ class Konfigurator {
 			'shop_price'     => $shop['price'],
 			'shop_in_stock'  => $shop['in_stock'],
 			'model_measure'  => $size,
+			'placement'      => $place,
 			'model_kind'     => $kind,
 			'model_file'     => $file,
 			'model_demo'     => 'demo' === $kind && isset( $demos[ WebModel::demo_key( $file ) ] ) ? $demos[ WebModel::demo_key( $file ) ] : '',
@@ -378,7 +383,11 @@ class Konfigurator {
 
 		$demos = array();
 		foreach ( WebModel::demo_models() as $key => $label ) {
-			$demos[] = array( 'value' => WebModel::DEMO_PREFIX . $key, 'label' => $label );
+			$demos[] = array(
+				'value' => WebModel::DEMO_PREFIX . $key,
+				'label' => $label,
+				'url'   => WebModel::url( WebModel::DEMO_PREFIX . $key ),
+			);
 		}
 
 		$roles = array();
@@ -396,6 +405,13 @@ class Konfigurator {
 				'max_modules' => (int) Layout::MAX_MODULES,
 				'max_bytes'   => min( (int) WebModel::MAX_BYTES, (int) wp_max_upload_size() ),
 				'shortcode'   => '[' . Frontend::SHORTCODE . ']',
+				'viewer'      => array(
+					'three'          => \Lindenweg16\Core\Assets::url( 'assets/vendor/three/three.module.min.js' ),
+					'addons'         => LW16_PLUGIN_URL . 'assets/vendor/three/jsm/',
+					'lage'           => \Lindenweg16\Core\Assets::url( 'assets/js/konfigurator-lage.js' ),
+					'rod_depth'      => ModelPlacement::ROD_DEPTH,
+					'rod_diameter'   => ModelPlacement::ROD_DIAMETER,
+				),
 			)
 		);
 	}
@@ -433,6 +449,8 @@ class Konfigurator {
 			}
 		}
 
+		$place    = ModelPlacement::from_input( $input );
+		$rotation = array( $place['model_rot_x'], $place['model_rot_y'], $place['model_rot_z'] );
 		$choice   = isset( $input['model_choice'] ) ? sanitize_text_field( (string) $input['model_choice'] ) : '';
 		$plan     = self::model_plan( $choice, (bool) $file );
 		$existing = $id ? PartRepository::find( $id ) : null;
@@ -441,11 +459,11 @@ class Konfigurator {
 		$measured = null;
 
 		if ( 'upload' === $plan['action'] ) {
-			$measured = GlbMeasure::measure_file( (string) $file['tmp_name'] );
+			$measured = GlbMeasure::measure_file( (string) $file['tmp_name'], $rotation );
 		} elseif ( 'demo' === $plan['action'] ) {
-			$measured = WebModel::measure( $plan['value'] );
+			$measured = WebModel::measure( $plan['value'], $rotation );
 		} elseif ( 'keep' === $plan['action'] && $existing ) {
-			$measured = WebModel::measure( (string) $existing['model_file'] );
+			$measured = WebModel::measure( (string) $existing['model_file'], $rotation );
 		}
 
 		$result = PartRepository::validate( $input, $id ? $id : null, $measured );
@@ -505,13 +523,14 @@ class Konfigurator {
 	 * Modul sitzen kann. Gibt es noch keinen Sperrbereich, entstehen sie
 	 * hier aus der Länge. Vorhandene bleiben unangetastet.
 	 *
-	 * @param int $id Teil.
+	 * @param int  $id      Teil.
+	 * @param bool $replace Vorhandene Sperrbereiche zuvor entfernen.
 	 * @return string Anhang für die Rückmeldung, leer wenn nichts geschah.
 	 */
-	protected static function default_zones( $id ) {
+	protected static function default_zones( $id, $replace = false ) {
 		$part = PartRepository::find( $id );
 
-		if ( ! $part || 'basis' !== $part['role'] || BlockRepository::for_part( $id ) ) {
+		if ( ! $part || 'basis' !== $part['role'] || ( ! $replace && BlockRepository::for_part( $id ) ) ) {
 			return '';
 		}
 
@@ -521,9 +540,19 @@ class Konfigurator {
 			return '';
 		}
 
+		$zones = Layout::holder_zones( (float) $part['height_mm'] );
+
+		if ( ! $zones ) {
+			return '';
+		}
+
+		if ( $replace ) {
+			BlockRepository::delete_for_part( $id );
+		}
+
 		$made = 0;
 
-		foreach ( Layout::holder_zones( (float) $part['height_mm'] ) as $zone ) {
+		foreach ( $zones as $zone ) {
 			$result = BlockRepository::create(
 				$id,
 				array(
@@ -618,6 +647,72 @@ class Konfigurator {
 		}
 
 		return self::done( __( 'Sperrbereich angelegt.', 'lindenweg16' ), array( 'part' => self::row_of( (int) $part['id'] ) ) );
+	}
+
+	/**
+	 * Sperrbereich ändern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function block_update( WP_REST_Request $request ) {
+		$part  = PartRepository::find( (int) $request['id'] );
+		$error = self::block_error( $part );
+
+		if ( '' !== $error ) {
+			return self::fail( $error, $part ? 422 : 404 );
+		}
+
+		$mine = false;
+		foreach ( BlockRepository::for_part( (int) $part['id'] ) as $block ) {
+			if ( (int) $block['id'] === (int) $request['bid'] ) {
+				$mine = true;
+			}
+		}
+
+		if ( ! $mine ) {
+			return self::fail( __( 'Diesen Sperrbereich gibt es nicht (mehr). Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+		}
+
+		$params = self::params( $request );
+		$input  = array(
+			'from_mm' => isset( $params['from_mm'] ) ? (string) $params['from_mm'] : '',
+			'to_mm'   => isset( $params['to_mm'] ) ? (string) $params['to_mm'] : '',
+			'label'   => isset( $params['label'] ) ? (string) $params['label'] : '',
+		);
+
+		$result = BlockRepository::update( (int) $request['bid'], $input, (float) $part['height_mm'] );
+
+		if ( $result['errors'] ) {
+			return self::fail( implode( ' ', $result['errors'] ) );
+		}
+
+		return self::done( __( 'Sperrbereich geändert.', 'lindenweg16' ), array( 'part' => self::row_of( (int) $part['id'] ) ) );
+	}
+
+	/**
+	 * Die Sperrbereiche der beiden Halter neu aus der Länge berechnen.
+	 *
+	 * Ersetzt alle vorhandenen Sperrbereiche des Basismoduls.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function block_holders( WP_REST_Request $request ) {
+		$part  = PartRepository::find( (int) $request['id'] );
+		$error = self::block_error( $part );
+
+		if ( '' !== $error ) {
+			return self::fail( $error, $part ? 422 : 404 );
+		}
+
+		$note = self::default_zones( (int) $part['id'], true );
+
+		if ( '' === $note ) {
+			return self::fail( __( 'Für dieses Basismodul gibt es keine Halter zu berechnen. Das geht nur mit dem Standardmodell (Holzstange) und einer Länge ab 150 mm.', 'lindenweg16' ) );
+		}
+
+		return self::done( trim( $note ), array( 'part' => self::row_of( (int) $part['id'] ) ) );
 	}
 
 	/**

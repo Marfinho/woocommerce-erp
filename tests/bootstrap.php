@@ -314,6 +314,7 @@ foreach ( array(
 	'Layout',
 	'ConfigCodec',
 	'ColorHex',
+	'ModelPlacement',
 	'GlbMeasure',
 	'WebModel',
 ) as $lw16_class ) {

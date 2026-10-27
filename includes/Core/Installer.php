@@ -78,10 +78,13 @@ class Installer {
 	 * DB_VERSION 38: bambu_printers um current_file (Dateiname des Jobs auf dem
 	 * Drucker) – damit ordnet der ERP-Workflow einen Druck der Platte zu.
 	 *
+	 * DB_VERSION 42: config_parts um die Lage des Modells an der Stange (model_align,
+	 * model_rot_*, model_off_*) erweitert, siehe Modules\Configurator\ModelPlacement.
+	 *
 	 * DB_VERSION 41: Tabelle kurzlinks_stats (anonyme Tageszähler der Kurzlinks) und
 	 * die drei Startlinks montage, bewerten, freunde, siehe Modules\Kurzlinks.
 	 */
-	const DB_VERSION = '41';
+	const DB_VERSION = '42';
 
 	/**
 	 * Aktivierungsroutine.

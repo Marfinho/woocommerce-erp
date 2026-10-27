@@ -130,10 +130,11 @@ class WebModel {
 	/**
 	 * Die Maße eines abgelegten Modells.
 	 *
-	 * @param string $name Dateiname oder `demo:`-Verweis.
+	 * @param string     $name     Dateiname oder `demo:`-Verweis.
+	 * @param array|null $rotation Drehung [x, y, z] in Grad vor dem Messen.
 	 * @return array|null {width, height, depth} in Millimetern.
 	 */
-	public static function measure( $name ) {
+	public static function measure( $name, $rotation = null ) {
 		// Das Standardmodell ist nur der Halter; die Maße der Stange gibt
 		// ihre Länge vor, nicht die Datei.
 		if ( self::demo_key( $name ) === self::STANDARD_KEY ) {
@@ -142,7 +143,7 @@ class WebModel {
 
 		$path = self::file_path( $name );
 
-		return '' === $path ? null : GlbMeasure::measure_file( $path );
+		return '' === $path ? null : GlbMeasure::measure_file( $path, $rotation );
 	}
 
 	/**

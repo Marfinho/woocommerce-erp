@@ -1203,7 +1203,9 @@ class Ansicht {
 						return this.holzstange( geladen.scene, teil );
 					}
 
-					return this.richteAus( geladen.scene, teil );
+					const lage = await this.lageModul();
+
+					return lage.platziere( this.THREE, geladen.scene, teil.height, teil.placement );
 				} catch ( fehler ) {
 					// Ein fehlendes Modell darf die Bestellung nicht aufhalten.
 					return this.ersatzkoerper( teil );
@@ -1219,122 +1221,18 @@ class Ansicht {
 	}
 
 	/**
-	 * Ein geladenes Modell auf Maß bringen und auf die Unterkante stellen.
+	 * Das Modul mit der Rechnung für die Lage der Modelle.
 	 *
-	 * Skaliert wird auf die gepflegte Bauhöhe. Das erspart die Frage, in
-	 * welcher Einheit jemand exportiert hat – ein Modell in Millimetern
-	 * wäre sonst tausendmal zu groß –, und stellt sicher, dass das Bild
-	 * dieselbe Höhe zeigt, mit der die Positionen gerechnet werden.
-	 * Weicht das Modell von der gepflegten Höhe ab, gewinnt die gepflegte
-	 * Höhe: Sie ist es, an der die Module hängen.
+	 * Dieselbe Datei benutzt die Vorschau im ERP.
 	 *
-	 * Die Lage in Breite und Tiefe bleibt, wie sie konstruiert wurde – ein
-	 * Haken zeigt nach vorn.
-	 *
-	 * @param {object} objekt Szene aus der Datei.
-	 * @param {object} teil   Katalogeintrag.
-	 * @returns {object}
+	 * @returns {Promise<object>}
 	 */
-	richteAus( objekt, teil ) {
-		const THREE = this.THREE;
-
-		objekt.updateMatrixWorld( true );
-
-		const kasten = new THREE.Box3().setFromObject( objekt );
-		const hoehe = kasten.max.y - kasten.min.y;
-
-		if ( hoehe > 0 && teil.height > 0 ) {
-			objekt.scale.setScalar( ( teil.height / MM ) / hoehe );
-			objekt.updateMatrixWorld( true );
+	lageModul() {
+		if ( ! this.lageVersprechen ) {
+			this.lageVersprechen = import( DATEN.urls.lage );
 		}
 
-		const skaliert = new THREE.Box3().setFromObject( objekt );
-
-		objekt.position.y -= skaliert.min.y;
-		objekt.traverse( ( knoten ) => {
-			if ( knoten.isMesh ) {
-				knoten.castShadow = true;
-				knoten.receiveShadow = true;
-			}
-		} );
-
-		const huelle = new THREE.Group();
-		huelle.add( objekt );
-
-		return huelle;
-	}
-
-	/**
-	 * Die Holzstange mit ihren zwei Haltern.
-	 *
-	 * Das Modell ist ein einzelner Halter (zwanzig Millimeter breit, fünfzig
-	 * hoch, fünfundvierzig tief, Rückseite an der Wand). Die Stange – ein
-	 * Rundholz von zwanzig Millimetern – liegt in der Rille an seiner
-	 * Vorderseite, ihre Achse also fünfundvierzig Millimeter von der Wand.
-	 * Die beiden Halter sitzen im Abstand von neunhundert Millimetern
-	 * mittig auf der Stange; ist die Stange kürzer als tausend Millimeter,
-	 * rücken sie zusammen. Dieselben Zahlen rechnet PHP für die
-	 * Sperrbereiche (Layout::holder_zones).
-	 *
-	 * @param {object} objekt Szene mit einem Halter.
-	 * @param {object} teil   Katalogeintrag mit der Länge der Stange.
-	 * @returns {object}
-	 */
-	holzstange( objekt, teil ) {
-		const THREE = this.THREE;
-		const laenge = teil.height / MM;
-		const halterHoehe = 0.05;
-		const abstand = Math.min( 0.9, laenge - 2 * halterHoehe );
-		const erster = ( laenge - abstand ) / 2;
-
-		objekt.updateMatrixWorld( true );
-
-		// Das Modell kann in Millimetern oder in Metern vorliegen: Alles,
-		// was größer als zwanzig Einheiten ist, sind Millimeter.
-		const roh = new THREE.Box3().setFromObject( objekt );
-		const faktor = Math.max( roh.max.x - roh.min.x, roh.max.y - roh.min.y, roh.max.z - roh.min.z ) > 20 ? 0.001 : 1;
-
-		objekt.scale.setScalar( faktor );
-		objekt.updateMatrixWorld( true );
-
-		const kasten = new THREE.Box3().setFromObject( objekt );
-		const mitte = kasten.getCenter( new THREE.Vector3() );
-
-		// Mitte der Breite auf die Stange, Rückseite an die Wand, Mitte der
-		// Höhe auf null – das Setzen auf die Stelle folgt unten.
-		objekt.position.x -= mitte.x;
-		objekt.position.y -= mitte.y;
-		objekt.position.z -= kasten.min.z;
-		objekt.traverse( ( knoten ) => {
-			if ( knoten.isMesh ) {
-				knoten.castShadow = true;
-				knoten.receiveShadow = true;
-			}
-		} );
-
-		const tiefe = kasten.max.z - kasten.min.z;
-		const huelle = new THREE.Group();
-
-		[ erster, erster + abstand ].forEach( ( stelle ) => {
-			const halter = new THREE.Group();
-
-			halter.add( objekt.clone( true ) );
-			halter.position.y = stelle;
-			huelle.add( halter );
-		} );
-
-		const stange = new THREE.Mesh(
-			new THREE.CylinderGeometry( 0.01, 0.01, laenge, 32 ),
-			new THREE.MeshStandardMaterial( { color: 0xc9a57a, roughness: 0.7, metalness: 0 } )
-		);
-
-		stange.position.set( 0, laenge / 2, tiefe );
-		stange.castShadow = true;
-		stange.receiveShadow = true;
-		stange.userData.festeFarbe = true;
-		huelle.add( stange );
-
-		return huelle;
+		return this.lageVersprechen;
 	}
 
 	/**
@@ -1445,9 +1343,10 @@ class Ansicht {
 		const halb = ( ( basis.width || 60 ) / MM ) / 2;
 		const tiefe = ( basis.depth || 20 ) / MM;
 		const stoff = new THREE.MeshBasicMaterial( {
-			color: 0xb6262a,
+			// Kupfer aus dem Design, kein Warnrot: Die Halter sind kein Fehler.
+			color: 0xa86f38,
 			transparent: true,
-			opacity: 0.5,
+			opacity: 0.45,
 			depthWrite: false,
 		} );
 
