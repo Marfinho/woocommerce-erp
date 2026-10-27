@@ -574,7 +574,7 @@ class Frontend {
 						);
 						?>
 					</span>
-					<input type="number" name="position[]" value="<?php echo esc_attr( Layout::format_mm( $position ) ); ?>" min="0" step="1" inputmode="numeric" data-lw16-position>
+					<input type="number" name="position[]" value="<?php echo esc_attr( (string) round( (float) $position, 2 ) ); ?>" min="0" step="any" inputmode="decimal" data-lw16-position>
 					<span class="lw16-haken__einheit">mm</span>
 				</label>
 			</div>

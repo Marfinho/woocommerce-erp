@@ -113,4 +113,19 @@ class KonfiguratorSkriptTest extends TestCase {
 			);
 		}
 	}
+
+	/**
+	 * Die Position im Zahlenfeld steht mit Punkt, nicht mit Komma.
+	 *
+	 * Ein Zahlenfeld (`type="number"`) nimmt im Attribut nur Punkt als
+	 * Dezimaltrenner. Mit „512,4“ bleibt das Feld leer, das Skript liest
+	 * null, und jedes Modul eines geteilten Links sitzt ganz unten.
+	 */
+	public function test_position_im_zahlenfeld_mit_punkt() {
+		$this->assertStringNotContainsString(
+			'esc_attr( Layout::format_mm( $position ) )',
+			$this->frontend(),
+			'format_mm schreibt ein Komma; ein Zahlenfeld verwirft es.'
+		);
+	}
 }
