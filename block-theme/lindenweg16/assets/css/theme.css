@@ -1772,6 +1772,203 @@ label {
 	font-size: var(--wp--preset--font-size--medium);
 }
 
+/* 8.10 Über uns (Template „Über uns“, Pattern hidden-ueber-uns) */
+.lw16-about-hero {
+	padding-block: var(--wp--preset--spacing--40) var(--wp--preset--spacing--20);
+}
+
+.lw16-about-hero .wp-block-column > * {
+	margin-block: 0;
+}
+
+.lw16-about-hero .wp-block-column:first-child {
+	gap: var(--wp--preset--spacing--30);
+}
+
+.lw16-about-hero .wp-block-heading {
+	max-width: 14ch;
+}
+
+/* Beitragsbild im Hero: wie das Foto auf der Startseite */
+.lw16-hero__media:has(.lw16-about-hero__photo) {
+	padding: 0 !important;
+}
+
+.lw16-about-hero__photo {
+	margin: 0;
+}
+
+.lw16-about-hero__photo img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	object-position: center 40%;
+	border-radius: var(--lw-r-xl);
+}
+
+/* Geschichte: linksbündig im selben Raster wie die Werkstatt-Liste.
+   Die erste Überschrift des Seiteninhalts („Wer wir sind“) steht links,
+   der Text rechts – an derselben Kante wie die Texte der Liste. */
+.lw16-about-story__inner > .is-style-eyebrow {
+	margin: 0 0 var(--wp--preset--spacing--30);
+}
+
+.lw16-about-story__content > * {
+	max-width: 68ch;
+	margin-block: 0 1em;
+}
+
+.lw16-about-story__content > :last-child {
+	margin-bottom: 0;
+}
+
+.lw16-about-story__content p {
+	font-size: var(--wp--preset--font-size--large);
+	line-height: 1.65;
+}
+
+.lw16-about-story__content .wp-block-image img {
+	border-radius: var(--lw-r-image);
+}
+
+@media (min-width: 782px) {
+	.lw16-about-story__content:has(> .wp-block-heading:first-child) {
+		display: grid;
+		grid-template-columns: 4rem minmax(0, 1fr) minmax(0, 1.4fr);
+		column-gap: var(--wp--preset--spacing--30);
+		align-items: start;
+	}
+
+	.lw16-about-story__content:has(> .wp-block-heading:first-child) > * {
+		grid-column: 3;
+		max-width: none;
+	}
+
+	.lw16-about-story__content:has(> .wp-block-heading:first-child) > .wp-block-heading:first-child {
+		grid-column: 1 / span 2;
+		grid-row: 1 / span 12;
+		font-size: var(--wp--preset--font-size--xx-large);
+		line-height: 1.05;
+	}
+}
+
+/* Text-Laufband: große Wörter zwischen zwei Linien, Stern als Trenner.
+   Läuft über dasselbe Skript wie das Pillen-Laufband (.lw16-marquee). */
+.lw16-band {
+	margin-block: var(--wp--preset--spacing--50);
+	border-block: 1px solid var(--lw-line);
+}
+
+.lw16-band .lw16-marquee__track {
+	gap: 0 !important;
+	padding-block: var(--wp--preset--spacing--20);
+}
+
+.lw16-band__word {
+	display: inline-flex;
+	align-items: center;
+	margin: 0;
+	font-family: var(--lw-font-heading);
+	font-size: clamp(1.75rem, 4vw, 3rem);
+	font-weight: 700;
+	letter-spacing: -0.03em;
+	line-height: 1.1;
+	white-space: nowrap;
+}
+
+.lw16-band__word::after {
+	content: "✦";
+	margin-inline: 0.6em;
+	color: var(--lw-accent-1);
+	font-size: 0.5em;
+}
+
+.lw16-band:not(.is-ready) .lw16-marquee__track,
+.lw16-band.is-ready .lw16-marquee__track {
+	row-gap: 0 !important;
+}
+
+/* Werkstatt als Liste: Zeilen mit Linien, Nummer – Titel – Text */
+.lw16-ledger {
+	border-top: 1px solid var(--lw-line);
+}
+
+.lw16-ledger__row {
+	display: grid;
+	grid-template-columns: 3.5rem minmax(0, 1fr);
+	column-gap: var(--wp--preset--spacing--30);
+	row-gap: 4px;
+	align-items: baseline;
+	padding-block: var(--wp--preset--spacing--30);
+	border-bottom: 1px solid var(--lw-line);
+	transition: background-color var(--lw-fast) ease;
+}
+
+.lw16-ledger__row > * {
+	margin: 0 !important;
+}
+
+.lw16-ledger__number {
+	grid-row: span 2;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	letter-spacing: 0.06em;
+	color: var(--lw-accent-1);
+}
+
+.lw16-ledger__title {
+	font-size: var(--wp--preset--font-size--x-large);
+}
+
+.lw16-ledger__text {
+	max-width: 52ch;
+}
+
+@media (min-width: 782px) {
+	.lw16-ledger__row {
+		grid-template-columns: 4rem minmax(0, 1fr) minmax(0, 1.4fr);
+		padding-block: var(--wp--preset--spacing--40);
+	}
+
+	.lw16-ledger__number {
+		grid-row: auto;
+	}
+}
+
+@media (hover: hover) {
+	.lw16-ledger__row:hover .lw16-ledger__title {
+		color: var(--lw-accent-1);
+	}
+
+	.lw16-ledger__title {
+		transition: color var(--lw-fast) ease;
+	}
+}
+
+/* Abschluss: eine Zeile unter der Liste, Text links, Knöpfe rechts */
+.lw16-about-end {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: var(--wp--preset--spacing--40);
+	padding-top: var(--wp--preset--spacing--30);
+}
+
+.lw16-about-end__text {
+	gap: var(--wp--preset--spacing--20);
+	max-width: 56ch;
+}
+
+.lw16-about-end__text > * {
+	margin: 0;
+}
+
+.lw16-about-end__buttons {
+	gap: 10px;
+}
+
 /* --------------------------------------------------------------------------
  * 9. Produktkarten, Preise, Badges, Bewertungen
  * ----------------------------------------------------------------------- */
