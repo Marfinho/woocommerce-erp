@@ -68,3 +68,11 @@
 	.pg-chart { min-width: 380px; }
 	.pg-facts { grid-template-columns: 1fr 1fr; }
 }
+
+/* Formulare dieser Seiten, unabhängig von anderen Seiten-Stilen */
+.pg-form { display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.pg-f { display: flex; flex-direction: column; gap: 4px; }
+.pg-f > span { font-weight: 600; }
+.pg-f small { font-size: 12px; }
+.pg-check { display: flex; gap: 8px; align-items: flex-start; }
+.pg-check input { margin-top: 3px; }

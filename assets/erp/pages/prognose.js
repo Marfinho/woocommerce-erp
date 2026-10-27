@@ -42,6 +42,15 @@
 
 	/* ---------- Diagramm: Verlauf, Prognose, Bänder, Ziel ---------- */
 
+	// Obergrenze auf eine „runde“ Zahl (1, 2, 2,5, 5 mal Zehnerpotenz), damit die Achse lesbar bleibt.
+	function niceMax(v) {
+		if (!(v > 0)) { return 1; }
+		var exp = Math.pow(10, Math.floor(Math.log(v) / Math.LN10));
+		var f = v / exp;
+		var step = f <= 1 ? 1 : (f <= 2 ? 2 : (f <= 2.5 ? 2.5 : (f <= 5 ? 5 : 10)));
+		return step * exp;
+	}
+
 	/*
 	 * points: [{label, value?, mean?, lo80?, hi80?, lo95?, hi95?, target?, alarm?}]
 	 * Verlauf = value, Prognose = mean mit Bändern. Die Skala beginnt bei null;
@@ -53,8 +62,7 @@
 		points.forEach(function (p) {
 			['value', 'mean', 'hi95', 'hi80', 'target', 'alarm', 'actual'].forEach(function (k) { if (p[k] !== null && p[k] !== undefined) { vals.push(p[k]); } });
 		});
-		var max = vals.length ? Math.max.apply(null, vals) * 1.1 : 1;
-		if (max <= 0) { max = 1; }
+		var max = vals.length ? niceMax(Math.max.apply(null, vals) * 1.05) : 1;
 		var n = points.length;
 		function x(i) { return n < 2 ? (L + W - R) / 2 : L + (W - L - R) * i / (n - 1); }
 		function y(v) { return T + (H - T - B) * (1 - Math.max(0, Math.min(v, max)) / max); }
@@ -317,10 +325,10 @@
 				var color = h('input', { class: 'field', type: 'text', placeholder: 'Farbe (optional, z. B. anthrazit)' });
 				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Wann kann ich liefern?');
 				var out = h('div');
-				var form = h('form', { class: 'vw-form' },
-					h('label', { class: 'vw-f' }, h('span', null, 'Artikel'), sel),
-					h('label', { class: 'vw-f' }, h('span', null, 'Menge'), qty),
-					h('label', { class: 'vw-f' }, h('span', null, 'Farbe'), color), go);
+				var form = h('form', { class: 'pg-form' },
+					h('label', { class: 'pg-f' }, h('span', null, 'Artikel'), sel),
+					h('label', { class: 'pg-f' }, h('span', null, 'Menge'), qty),
+					h('label', { class: 'pg-f' }, h('span', null, 'Farbe'), color), go);
 				form.addEventListener('submit', function (e) {
 					e.preventDefault();
 					go.disabled = true;
@@ -369,16 +377,16 @@
 				var useModel = h('input', { type: 'checkbox' }); useModel.checked = !!s.use_model;
 				var shopText = h('input', { type: 'checkbox' }); shopText.checked = !!s.shop_text;
 				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
-				function f(label, el, hint) { return h('label', { class: 'vw-f' }, h('span', null, label), el, hint ? h('small', { class: 'muted' }, hint) : null); }
+				function f(label, el, hint) { return h('label', { class: 'pg-f' }, h('span', null, label), el, hint ? h('small', { class: 'muted' }, hint) : null); }
 
-				var form = h('form', { class: 'vw-form' },
+				var form = h('form', { class: 'pg-form' },
 					f('Aufmerksamkeit, wenn die Chance aufs Ziel unter … % liegt', pa, 'Löst den Eintrag „Aufmerksamkeit“ im Ereignisprotokoll aus.'),
 					f('Kritisch, wenn die Chance unter … % liegt', pc, 'Außerdem kritisch: Die Alarmgrenze wird mit mindestens 50 % Wahrscheinlichkeit verletzt.'),
 					f('Dienstgrad für Fertigungsempfehlungen (%)', sl, 'Mit welcher Sicherheit der Bedarf gedeckt sein soll. 90 % heißt: Neun von zehn Wochen reicht der Bestand.'),
 					f('Vorlauf der Fertigung (Wochen)', lead, 'Wie lange es von der Entscheidung bis zur fertigen Ware dauert.'),
 					f('Reichweite nach dem Vorlauf (Wochen)', cover, ''),
-					h('label', { class: 'vw-check' }, useModel, h('span', null, 'Prognosemodell für den Fertigungsbedarf verwenden (statt Wochenmittel mal Reichweite) – gilt für Artikel mit mindestens acht Wochen Verlauf.')),
-					h('label', { class: 'vw-check' }, shopText, h('span', null, 'Verfügbarkeit und Lieferzeit im Shop anzeigen („Auf Lager“, „Nur noch 2“, „lieferbar in ca. 9 Tagen“).')),
+					h('label', { class: 'pg-check' }, useModel, h('span', null, 'Prognosemodell für den Fertigungsbedarf verwenden (statt Wochenmittel mal Reichweite) – gilt für Artikel mit mindestens acht Wochen Verlauf.')),
+					h('label', { class: 'pg-check' }, shopText, h('span', null, 'Verfügbarkeit und Lieferzeit im Shop anzeigen („Auf Lager“, „Nur noch 2“, „lieferbar in ca. 9 Tagen“).')),
 					go);
 				form.addEventListener('submit', function (e) {
 					e.preventDefault();
