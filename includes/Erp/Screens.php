@@ -181,6 +181,7 @@ class Screens {
 		$current  = null;
 		$week_min = 0.0;
 		$since    = gmdate( 'Y-m-d H:i:s', time() - 7 * DAY_IN_SECONDS );
+		$job_ids  = array();
 
 		foreach ( RunRepository::for_printer( $printer->printer_id, 25 ) as $run ) {
 			$lines = array();
@@ -193,6 +194,10 @@ class Screens {
 			}
 
 			$minutes = Variance::run_minutes( $run );
+
+			if ( ! empty( $run['print_job_ids'] ) ) {
+				$job_ids = array_merge( $job_ids, explode( ',', (string) $run['print_job_ids'] ) );
+			}
 
 			if ( $minutes && (string) $run['reported_at'] >= $since ) {
 				$week_min += $minutes['print'];
@@ -233,7 +238,8 @@ class Screens {
 			'device'   => $row ? array(
 				'code'   => (string) $row['code'],
 				'status' => (string) $row['status'],
-				'hours'  => round( PrintJobRepository::operating_hours( $device ), 1 ),
+				// Stunden des Geräts plus die der Platten dieses Druckers, die beim Melden auf einem anderen Gerät landeten.
+				'hours'  => round( PrintJobRepository::operating_hours( $device ) + PrintJobRepository::hours_elsewhere( $job_ids, $device ), 1 ),
 			) : null,
 			'linked'   => (bool) $device,
 		);

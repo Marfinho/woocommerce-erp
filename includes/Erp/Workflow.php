@@ -857,9 +857,9 @@ class Workflow {
 
 			$status = strtolower( (string) $printer->status );
 
-			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && in_array( $status, array( 'running', 'prepare' ), true ) ) {
+			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && RunFlow::printer_started( $status ) ) {
 				self::act( $run['id'], 'druckstart', array(), 0 );
-			} elseif ( RunFlow::DRUCKT === $run['status'] && 'finish' === $status && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
+			} elseif ( RunFlow::DRUCKT === $run['status'] && RunFlow::printer_ended( $status ) && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
 				self::act( $run['id'], 'druckende', array(), 0 );
 			}
 		}
@@ -979,7 +979,11 @@ class Workflow {
 			return array( 'ok' => false, 'status' => 422, 'message' => implode( ' ', $check['errors'] ) );
 		}
 
-		if ( empty( $run['printer_id'] ) || ! PrinterRepository::find( (int) $run['printer_id'] ) ) {
+		// Das Gerät gilt, wie der Bambu-Drucker jetzt verknüpft ist; die Platte kennt nur den Stand beim Freigeben.
+		$device     = ! empty( $run['bambu_printer'] ) ? self::device_for( (string) $run['bambu_printer'] ) : 0;
+		$printer_id = $device ? $device : (int) $run['printer_id'];
+
+		if ( ! $printer_id || ! PrinterRepository::find( $printer_id ) ) {
 			return array( 'ok' => false, 'status' => 422, 'message' => __( 'Dieser Platte ist kein Drucker aus dem Gerätestamm zugeordnet. Bitte beim Bambu-Drucker das Gerät verknüpfen – ohne Gerät lässt sich nichts ins Druckjournal buchen.', 'lindenweg16' ) );
 		}
 
@@ -1031,7 +1035,7 @@ class Workflow {
 			$validated = PrintJobRepository::validate(
 				array(
 					'filament_lot_id' => $lot_of[ $index ],
-					'printer_id'     => (int) $run['printer_id'],
+					'printer_id'     => $printer_id,
 					'article_id'     => $item['article_id'],
 					'color'          => $item['color'],
 					'parts_planned'  => $item['qty'],
