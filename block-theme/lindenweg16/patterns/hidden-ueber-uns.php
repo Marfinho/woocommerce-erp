@@ -3,11 +3,11 @@
  * Title: Über uns (Template)
  * Slug: lindenweg16/hidden-ueber-uns
  * Inserter: no
- * Description: Inhalt des Templates „Über uns“: Einleitung, Geschichte (Beitragsbild und Seiteninhalt), Werkstatt-Kacheln, Entstehung in vier Schritten und zwei Karten zu Shop und Anfragen.
+ * Description: Inhalt des Templates „Über uns“: Hero mit Foto (Beitragsbild), Geschichte (Seiteninhalt), drei Werkstatt-Kacheln, Entstehung in vier Schritten und zwei Karten zu Shop und Anfragen.
  *
  * Die Geschichte ist der Inhalt der Seite selbst und bleibt im Seiten-Editor
- * bearbeitbar; das Foto daneben ist das Beitragsbild der Seite. Ohne
- * Beitragsbild steht der Text allein in voller Breite.
+ * bearbeitbar; das Foto im Hero ist das Beitragsbild der Seite. Ohne
+ * Beitragsbild zeigt der Hero das Produktfoto des Themes.
  *
  * @package Lindenweg16
  */
@@ -27,11 +27,6 @@ $lindenweg16_crafts = array(
 		'color' => 'accent-4',
 		'title' => __( 'Holz', 'lindenweg16' ),
 		'text'  => __( 'Die Basis jedes Haster Hakens ist eine Holzschiene. Auf sie kommen Wandanker und Module.', 'lindenweg16' ),
-	),
-	array(
-		'color' => 'surface-muted',
-		'title' => __( 'Gips- & Betonguss', 'lindenweg16' ),
-		'text'  => __( 'Von Hand gegossen – keine zwei Stücke sehen genau gleich aus.', 'lindenweg16' ),
 	),
 	array(
 		'color' => 'surface',
@@ -63,57 +58,79 @@ $lindenweg16_steps = array(
 	),
 );
 ?>
-<!-- wp:group {"tagName":"section","align":"wide","className":"lw16-section lw16-about-intro","layout":{"type":"flex","orientation":"vertical"}} -->
-<section class="wp-block-group alignwide lw16-section lw16-about-intro">
-	<!-- wp:paragraph {"className":"is-style-sticker"} -->
-	<p class="is-style-sticker"><?php esc_html_e( 'Lindenweg 16 · Haste', 'lindenweg16' ); ?></p>
-	<!-- /wp:paragraph -->
+<!-- wp:group {"tagName":"section","align":"wide","className":"lw16-section lw16-hero lw16-about-hero","layout":{"type":"default"}} -->
+<section class="wp-block-group alignwide lw16-section lw16-hero lw16-about-hero">
+	<!-- wp:columns {"verticalAlignment":"center","className":"lw16-hero__columns"} -->
+	<div class="wp-block-columns are-vertically-aligned-center lw16-hero__columns">
+		<!-- wp:column {"verticalAlignment":"center","width":"52%","layout":{"type":"flex","orientation":"vertical"}} -->
+		<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:52%">
+			<!-- wp:paragraph {"className":"is-style-sticker"} -->
+			<p class="is-style-sticker"><?php esc_html_e( 'Über uns', 'lindenweg16' ); ?></p>
+			<!-- /wp:paragraph -->
 
-	<!-- wp:heading {"level":1,"fontSize":"hero"} -->
-	<h1 class="wp-block-heading has-hero-font-size"><?php
-		printf(
-			/* translators: %s: hervorgehobenes Wort (Ort). */
-			esc_html__( 'Zwei Radfahrer, eine Werkstatt in %s.', 'lindenweg16' ),
-			'<mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color">' . esc_html__( 'Haste', 'lindenweg16' ) . '</mark>'
-		);
-	?></h1>
-	<!-- /wp:heading -->
+			<!-- wp:heading {"level":1,"fontSize":"hero"} -->
+			<h1 class="wp-block-heading has-hero-font-size"><?php
+				printf(
+					/* translators: %s: hervorgehobenes Wort (Ort). */
+					esc_html__( 'Zwei Radfahrer, eine Werkstatt in %s.', 'lindenweg16' ),
+					'<mark style="background-color:rgba(0, 0, 0, 0)" class="has-inline-color">' . esc_html__( 'Haste', 'lindenweg16' ) . '</mark>'
+				);
+			?></h1>
+			<!-- /wp:heading -->
 
-	<!-- wp:paragraph {"textColor":"text-muted","fontSize":"large","className":"lw16-about-intro__lead"} -->
-	<p class="lw16-about-intro__lead has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Wir sind Katrin und Sven vom Lindenweg 16 in Haste bei Wunstorf. Wir fahren Rad, wir bauen gern selbst – und aus beidem ist der Haster Haken entstanden.', 'lindenweg16' ); ?></p>
-	<!-- /wp:paragraph -->
-</section>
-<!-- /wp:group -->
+			<!-- wp:paragraph {"textColor":"text-muted","fontSize":"large"} -->
+			<p class="has-text-muted-color has-text-color has-large-font-size"><?php esc_html_e( 'Wir sind Katrin und Sven vom Lindenweg 16 in Haste bei Wunstorf. Wir fahren Rad, wir bauen gern selbst – und aus beidem ist der Haster Haken entstanden.', 'lindenweg16' ); ?></p>
+			<!-- /wp:paragraph -->
 
-<!-- wp:group {"tagName":"section","align":"wide","className":"lw16-section lw16-about-story<?php echo $lindenweg16_has_photo ? '' : ' lw16-about-story--text'; ?>","layout":{"type":"default"}} -->
-<section class="wp-block-group alignwide lw16-section lw16-about-story<?php echo $lindenweg16_has_photo ? '' : ' lw16-about-story--text'; ?>">
-<?php if ( $lindenweg16_has_photo ) : ?>
-	<!-- wp:columns {"verticalAlignment":"stretch","className":"lw16-about-story__columns"} -->
-	<div class="wp-block-columns are-vertically-aligned-stretch lw16-about-story__columns">
-		<!-- wp:column {"verticalAlignment":"stretch","width":"45%"} -->
-		<div class="wp-block-column is-vertically-aligned-stretch" style="flex-basis:45%">
-			<!-- wp:post-featured-image {"className":"lw16-about-story__photo"} /-->
+			<!-- wp:buttons -->
+			<div class="wp-block-buttons">
+				<!-- wp:button {"className":"is-style-soft"} -->
+				<div class="wp-block-button is-style-soft"><a class="wp-block-button__link wp-element-button" href="#geschichte"><?php esc_html_e( 'Unsere Geschichte', 'lindenweg16' ); ?></a></div>
+				<!-- /wp:button -->
+			</div>
+			<!-- /wp:buttons -->
 		</div>
 		<!-- /wp:column -->
 
-		<!-- wp:column {"verticalAlignment":"stretch","width":"55%"} -->
-		<div class="wp-block-column is-vertically-aligned-stretch" style="flex-basis:55%">
+		<!-- wp:column {"verticalAlignment":"center","width":"48%"} -->
+		<div class="wp-block-column is-vertically-aligned-center" style="flex-basis:48%">
+			<!-- wp:group {"className":"lw16-hero__media","backgroundColor":"accent-3","layout":{"type":"default"}} -->
+			<div class="wp-block-group lw16-hero__media has-accent-3-background-color has-background">
+<?php if ( $lindenweg16_has_photo ) : ?>
+				<!-- wp:post-featured-image {"className":"lw16-about-hero__photo"} /-->
+<?php else : ?>
+				<!-- wp:image {"sizeSlug":"full","linkDestination":"none","className":"lw16-hero__image lw16-photo"} -->
+				<figure class="wp-block-image size-full lw16-hero__image lw16-photo"><img width="1400" height="933" fetchpriority="high" src="<?php echo esc_url( get_theme_file_uri( 'assets/images/haster-haken-startseite.jpg' ) ); ?>" alt="<?php esc_attr_e( 'Der Haster Haken: Holzschiene mit Sonnenbrille, Ablage für Gels und Riegel sowie Trinkflasche', 'lindenweg16' ); ?>"/></figure>
+				<!-- /wp:image -->
 <?php endif; ?>
-			<!-- wp:group {"className":"is-style-card lw16-about-story__card","layout":{"type":"default"}} -->
-			<div class="wp-block-group is-style-card lw16-about-story__card">
-				<!-- wp:paragraph {"className":"is-style-eyebrow"} -->
-				<p class="is-style-eyebrow"><?php esc_html_e( 'Unsere Geschichte', 'lindenweg16' ); ?></p>
+
+				<!-- wp:paragraph {"className":"is-style-sticker lw16-hero__sticker lw16-hero__sticker--top lw16-icon lw16-icon--heart","backgroundColor":"accent-1"} -->
+				<p class="is-style-sticker lw16-hero__sticker lw16-hero__sticker--top lw16-icon lw16-icon--heart has-accent-1-background-color has-background"><?php esc_html_e( 'Katrin & Sven', 'lindenweg16' ); ?></p>
 				<!-- /wp:paragraph -->
 
-				<!-- wp:post-content {"className":"lw16-about-story__content","layout":{"type":"default"}} /-->
+				<!-- wp:paragraph {"className":"is-style-sticker lw16-hero__sticker lw16-hero__sticker--bottom","backgroundColor":"accent-4"} -->
+				<p class="is-style-sticker lw16-hero__sticker lw16-hero__sticker--bottom has-accent-4-background-color has-background"><?php esc_html_e( 'Lindenweg 16 · Haste', 'lindenweg16' ); ?></p>
+				<!-- /wp:paragraph -->
 			</div>
 			<!-- /wp:group -->
-<?php if ( $lindenweg16_has_photo ) : ?>
 		</div>
 		<!-- /wp:column -->
 	</div>
 	<!-- /wp:columns -->
-<?php endif; ?>
+</section>
+<!-- /wp:group -->
+
+<!-- wp:group {"tagName":"section","anchor":"geschichte","align":"wide","className":"lw16-section lw16-about-story","layout":{"type":"constrained","contentSize":"720px"}} -->
+<section class="wp-block-group alignwide lw16-section lw16-about-story" id="geschichte">
+	<!-- wp:group {"className":"lw16-about-story__inner","layout":{"type":"default"}} -->
+	<div class="wp-block-group lw16-about-story__inner">
+		<!-- wp:paragraph {"className":"is-style-eyebrow"} -->
+		<p class="is-style-eyebrow"><?php esc_html_e( 'Unsere Geschichte', 'lindenweg16' ); ?></p>
+		<!-- /wp:paragraph -->
+
+		<!-- wp:post-content {"className":"lw16-about-story__content","layout":{"type":"default"}} /-->
+	</div>
+	<!-- /wp:group -->
 </section>
 <!-- /wp:group -->
 

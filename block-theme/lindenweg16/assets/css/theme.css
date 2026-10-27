@@ -1773,63 +1773,43 @@ label {
 }
 
 /* 8.10 Über uns (Template „Über uns“, Pattern hidden-ueber-uns) */
-.lw16-about-intro {
-	gap: var(--wp--preset--spacing--30);
-	padding-block: var(--wp--preset--spacing--50) var(--wp--preset--spacing--20);
+.lw16-about-hero {
+	padding-block: var(--wp--preset--spacing--40) var(--wp--preset--spacing--20);
 }
 
-.lw16-about-intro .wp-block-heading {
-	max-width: 16ch;
-	margin: 0;
-}
-
-.lw16-about-intro__lead {
-	max-width: 58ch;
-	margin: 0;
-}
-
-/* Geschichte: Foto (Beitragsbild) und Seiteninhalt */
-.lw16-about-story__columns {
-	gap: var(--wp--preset--spacing--40);
-}
-
-.lw16-about-story__photo,
-.lw16-about-story__photo a {
-	height: 100%;
-	margin: 0;
-}
-
-.lw16-about-story__photo img {
-	width: 100%;
-	height: 100%;
-	min-height: 320px;
-	object-fit: cover;
-	border-radius: var(--lw-r-card);
-	box-shadow: var(--lw-shadow-card);
-}
-
-.lw16-about-story__card {
-	display: flex;
-	flex-direction: column;
-	gap: var(--wp--preset--spacing--20);
-	height: 100%;
-}
-
-.lw16-about-story__card:hover {
-	transform: none;
-	box-shadow: var(--lw-shadow-card);
-}
-
-.lw16-about-story__card > * {
+.lw16-about-hero .wp-block-column > * {
 	margin-block: 0;
 }
 
-.lw16-about-story--text .lw16-about-story__card {
-	max-width: 880px;
+.lw16-about-hero .wp-block-column:first-child {
+	gap: var(--wp--preset--spacing--30);
 }
 
-.lw16-about-story__content > * {
-	max-width: 62ch;
+.lw16-about-hero .wp-block-heading {
+	max-width: 14ch;
+}
+
+/* Beitragsbild im Hero: wie das Foto auf der Startseite */
+.lw16-hero__media:has(.lw16-about-hero__photo) {
+	padding: 0 !important;
+}
+
+.lw16-about-hero__photo {
+	margin: 0;
+}
+
+.lw16-about-hero__photo img {
+	display: block;
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	object-position: center 40%;
+	border-radius: var(--lw-r-xl);
+}
+
+/* Geschichte: schmale Textspalte in der Mitte */
+.lw16-about-story__inner > .is-style-eyebrow {
+	margin-bottom: var(--wp--preset--spacing--20);
 }
 
 .lw16-about-story__content > :first-child {
@@ -1842,23 +1822,18 @@ label {
 
 .lw16-about-story__content p {
 	font-size: var(--wp--preset--font-size--large);
-	line-height: 1.6;
+	line-height: 1.65;
 }
 
-/* Bilder im Seiteninhalt: wie die übrigen Fotos im Shop */
 .lw16-about-story__content .wp-block-image img {
 	border-radius: var(--lw-r-image);
 }
 
-/* Werkstatt-Kacheln: vier gleich große Kacheln mit Nummer */
+/* Werkstatt-Kacheln: drei gleich große Kacheln mit Nummer */
 .lw16-about-crafts__grid .lw16-bento__tile {
 	justify-content: flex-start;
-	min-height: 220px;
+	min-height: 200px;
 	color: var(--lw-text);
-}
-
-.lw16-about-crafts__grid .lw16-bento__tile:hover {
-	transform: translateY(-4px) rotate(-0.5deg);
 }
 
 .lw16-about-crafts__number {
@@ -1871,18 +1846,18 @@ label {
 
 @media (min-width: 782px) {
 	.lw16-about-crafts__grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
 		grid-auto-rows: auto;
 	}
 }
 
 @media (max-width: 781px) {
-	.lw16-about-crafts__grid .lw16-bento__tile {
-		min-height: 0;
+	.lw16-about-crafts__grid {
+		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.lw16-about-story__photo img {
+	.lw16-about-crafts__grid .lw16-bento__tile {
 		min-height: 0;
-		aspect-ratio: 4 / 3;
 	}
 }
 
