@@ -979,7 +979,11 @@ class Workflow {
 			return array( 'ok' => false, 'status' => 422, 'message' => implode( ' ', $check['errors'] ) );
 		}
 
-		if ( empty( $run['printer_id'] ) || ! PrinterRepository::find( (int) $run['printer_id'] ) ) {
+		// Das Gerät gilt, wie der Bambu-Drucker jetzt verknüpft ist; die Platte kennt nur den Stand beim Freigeben.
+		$device     = ! empty( $run['bambu_printer'] ) ? self::device_for( (string) $run['bambu_printer'] ) : 0;
+		$printer_id = $device ? $device : (int) $run['printer_id'];
+
+		if ( ! $printer_id || ! PrinterRepository::find( $printer_id ) ) {
 			return array( 'ok' => false, 'status' => 422, 'message' => __( 'Dieser Platte ist kein Drucker aus dem Gerätestamm zugeordnet. Bitte beim Bambu-Drucker das Gerät verknüpfen – ohne Gerät lässt sich nichts ins Druckjournal buchen.', 'lindenweg16' ) );
 		}
 
@@ -1031,7 +1035,7 @@ class Workflow {
 			$validated = PrintJobRepository::validate(
 				array(
 					'filament_lot_id' => $lot_of[ $index ],
-					'printer_id'     => (int) $run['printer_id'],
+					'printer_id'     => $printer_id,
 					'article_id'     => $item['article_id'],
 					'color'          => $item['color'],
 					'parts_planned'  => $item['qty'],

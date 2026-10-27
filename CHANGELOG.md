@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.50.1] – 2026-10-27
+
+- **Betriebsstunden des Druckers stimmten nicht mit der gestempelten Druckzeit überein.** Eine Platte buchte ihr Journal auf das Gerät, das beim Freigeben galt; wurde der Bambu-Drucker danach mit einem anderen Gerät verknüpft, standen die Stunden beim alten Gerät und fehlten in der Druckerakte. Jetzt gilt beim Melden die aktuelle Verknüpfung, und die Druckerakte zählt die Stunden früherer Platten dieses Druckers, die auf einem anderen Gerät landeten, mit.
+- Nicht mit echten Daten geprüft; die Ursache ist aus dem Code abgeleitet.
+
 ## [0.50.0] – 2026-10-27
 
 ### Spulenverwaltung im ERP

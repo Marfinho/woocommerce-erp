@@ -156,6 +156,36 @@ class PrintJobRepository {
 	}
 
 	/**
+	 * Druckstunden bestimmter Journaleinträge, die auf einem anderen Gerät stehen.
+	 *
+	 * Gebraucht, wenn eine Platte beim Freigeben ein anderes Gerät kannte als das,
+	 * mit dem der Bambu-Drucker heute verknüpft ist: Ihre Stunden stehen dann beim
+	 * alten Gerät und fehlten sonst in der Betriebsstunden-Anzeige des Druckers.
+	 *
+	 * @param int[] $ids       Journaleinträge.
+	 * @param int   $printer_id Gerät, dessen Stunden schon gezählt sind.
+	 * @return float
+	 */
+	public static function hours_elsewhere( array $ids, $printer_id ) {
+		global $wpdb;
+
+		$ids = array_values( array_filter( array_map( 'intval', $ids ) ) );
+		if ( ! $ids ) {
+			return 0.0;
+		}
+
+		$table        = self::table();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+		return (float) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE( SUM( print_time_h ), 0 ) FROM {$table} WHERE id IN ({$placeholders}) AND printer_id <> %d AND voided_at IS NULL", // phpcs:ignore WordPress.DB.PreparedSQL
+				array_merge( $ids, array( (int) $printer_id ) )
+			)
+		);
+	}
+
+	/**
 	 * Eingaben prüfen.
 	 *
 	 * @param array $input Eingaben.
