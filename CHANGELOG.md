@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.41.2] – 2026-10-27
+
+- **Konfigurator: Holzstange wieder da (Fehler seit 0.40.0).** Beim Aufräumen war die Methode verloren gegangen, die die Holzstange mit den zwei Haltern zusammensetzt. Der Aufruf schlug still fehl und die Ansicht zeigte statt der Stange den flachen Ersatzkörper. Die Methode ist zurück, ein Fehler beim Aufbau eines Modells steht jetzt in der Browser-Konsole, und ein Test prüft, dass jede aufgerufene Methode der Ansicht auch existiert.
+- Die Wand ist ein helles Anthrazit (Ansicht im Shop und Vorschau im ERP), der linke Bilderrahmen hell. Die Sperrbereiche werden nicht mehr gezeichnet; sie gelten weiter beim Platzieren.
+- Ein hochgeladenes Basismodul, das weniger als halb so hoch ist wie das Basismodul lang (etwa der Halter statt der Stange), zeigt ebenfalls die Holzstange statt einer gestreckten Platte.
+
 ## [0.41.1] – 2026-10-27
 
 - **Konfigurator: Holzstange auch bei der alten Demo-Schiene.** Ein Basismodul, das noch die Demo-Schiene als Modell hatte (die Vorlage von vor der Holzstange), zeigte weiter die flache weiße Platte statt der Stange. Jetzt gilt für Basismodule ohne eigenes hochgeladenes Modell immer die Holzstange mit den zwei Haltern, auch beim Anlegen der Sperrbereiche. „Sperrbereiche der Halter neu berechnen“ gibt es auch für solche Basismodule.

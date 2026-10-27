@@ -936,11 +936,11 @@ class Ansicht {
 
 		// Wand: gebrochenes Weiß mit feinem Putzkorn.
 		const putz = this.textur( 256, 256, ( c, b, h ) => {
-			c.fillStyle = '#ddd4c4';
+			c.fillStyle = '#383c42';
 			c.fillRect( 0, 0, b, h );
 
 			for ( let i = 0; i < 7000; i++ ) {
-				c.fillStyle = Math.random() < 0.5 ? 'rgba(80,60,30,0.035)' : 'rgba(255,255,255,0.06)';
+				c.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.05)';
 				c.fillRect( Math.random() * b, Math.random() * h, 1.5, 1.5 );
 			}
 		} );
@@ -996,7 +996,7 @@ class Ansicht {
 			raum.add( gruppe );
 		};
 
-		bild( -0.5, 0.5, 0.36, 0.5, 0x2b323a, ( c, b, h ) => {
+		bild( -0.5, 0.5, 0.36, 0.5, 0xe9e4da, ( c, b, h ) => {
 			c.fillStyle = '#f3ede2';
 			c.fillRect( 0, 0, b, h );
 			c.fillStyle = '#a86f38';
@@ -1207,7 +1207,13 @@ class Ansicht {
 
 					return lage.platziere( this.THREE, geladen.scene, teil.height, teil.placement );
 				} catch ( fehler ) {
-					// Ein fehlendes Modell darf die Bestellung nicht aufhalten.
+					// Ein fehlendes Modell darf die Bestellung nicht aufhalten –
+					// der Grund gehört trotzdem in die Konsole, sonst sucht
+					// man ihn lange.
+					if ( window.console ) {
+						window.console.error( 'Konfigurator: Modell konnte nicht aufgebaut werden', teil.model, fehler );
+					}
+
 					return this.ersatzkoerper( teil );
 				}
 			}
@@ -1233,6 +1239,79 @@ class Ansicht {
 		}
 
 		return this.lageVersprechen;
+	}
+
+	/**
+	 * Die Holzstange mit ihren zwei Haltern.
+	 *
+	 * Das Modell ist ein einzelner Halter (zwanzig Millimeter breit, fünfzig
+	 * hoch, fünfundvierzig tief, Rückseite an der Wand). Die Stange – ein
+	 * Rundholz von zwanzig Millimetern – liegt in der Rille an seiner
+	 * Vorderseite, ihre Achse also fünfundvierzig Millimeter von der Wand.
+	 * Die beiden Halter sitzen im Abstand von neunhundert Millimetern
+	 * mittig auf der Stange; ist die Stange kürzer als tausend Millimeter,
+	 * rücken sie zusammen. Dieselben Zahlen rechnet PHP für die
+	 * Sperrbereiche (Layout::holder_zones).
+	 *
+	 * @param {object} objekt Szene mit einem Halter.
+	 * @param {object} teil   Katalogeintrag mit der Länge der Stange.
+	 * @returns {object}
+	 */
+	holzstange( objekt, teil ) {
+		const THREE = this.THREE;
+		const laenge = teil.height / MM;
+		const halterHoehe = 0.05;
+		const abstand = Math.min( 0.9, laenge - 2 * halterHoehe );
+		const erster = ( laenge - abstand ) / 2;
+
+		objekt.updateMatrixWorld( true );
+
+		// Das Modell kann in Millimetern oder in Metern vorliegen: Alles,
+		// was größer als zwanzig Einheiten ist, sind Millimeter.
+		const roh = new THREE.Box3().setFromObject( objekt );
+		const faktor = Math.max( roh.max.x - roh.min.x, roh.max.y - roh.min.y, roh.max.z - roh.min.z ) > 20 ? 0.001 : 1;
+
+		objekt.scale.setScalar( faktor );
+		objekt.updateMatrixWorld( true );
+
+		const kasten = new THREE.Box3().setFromObject( objekt );
+		const mitte = kasten.getCenter( new THREE.Vector3() );
+
+		// Mitte der Breite auf die Stange, Rückseite an die Wand, Mitte der
+		// Höhe auf null – das Setzen auf die Stelle folgt unten.
+		objekt.position.x -= mitte.x;
+		objekt.position.y -= mitte.y;
+		objekt.position.z -= kasten.min.z;
+		objekt.traverse( ( knoten ) => {
+			if ( knoten.isMesh ) {
+				knoten.castShadow = true;
+				knoten.receiveShadow = true;
+			}
+		} );
+
+		const tiefe = kasten.max.z - kasten.min.z;
+		const huelle = new THREE.Group();
+
+		[ erster, erster + abstand ].forEach( ( stelle ) => {
+			const halter = new THREE.Group();
+
+			halter.add( objekt.clone( true ) );
+			halter.position.y = stelle;
+			huelle.add( halter );
+		} );
+
+		const stange = new THREE.Mesh(
+			new THREE.CylinderGeometry( 0.01, 0.01, laenge, 32 ),
+			new THREE.MeshStandardMaterial( { color: 0xc9a57a, roughness: 0.7, metalness: 0 } )
+		);
+
+		stange.position.set( 0, laenge / 2, tiefe );
+		stange.castShadow = true;
+		stange.receiveShadow = true;
+		stange.userData.festeFarbe = true;
+		huelle.add( stange );
+
+		return huelle;
 	}
 
 	/**
@@ -1278,8 +1357,6 @@ class Ansicht {
 		this.basisKoerper = vorlageBasis.clone( true );
 		this.gruppe.add( this.basisKoerper );
 
-		this.zeichneSperrbereiche( basis );
-
 		// Module: alles entfernen, was nicht mehr da ist, und alles
 		// nachladen, was dazugekommen ist.
 		const vorhanden = new Set( this.k.zustand.module.map( ( m ) => m.uid ) );
@@ -1319,65 +1396,6 @@ class Ansicht {
 		this.faerbe();
 		this.hebeHervor( this.k.ausgewaehlt );
 		this.richteKameraAus();
-	}
-
-	/**
-	 * Die Sperrbereiche als Band auf der Schiene.
-	 *
-	 * @param {object} basis Basismodul.
-	 */
-	zeichneSperrbereiche( basis ) {
-		const THREE = this.THREE;
-
-		if ( this.sperren ) {
-			this.gruppe.remove( this.sperren );
-		}
-
-		this.sperren = new THREE.Group();
-
-		// Zwei Marken links und rechts am Umriss statt einer Fläche vor dem
-		// Teil: Eine Fläche schwebt bei jedem Profil irgendwo in der Luft,
-		// sobald das Basismodul nicht durchgehend gleich breit ist. Marken
-		// am Rand sitzen immer an der Silhouette und bleiben auch gedreht
-		// sichtbar.
-		const halb = ( ( basis.width || 60 ) / MM ) / 2;
-		const tiefe = ( basis.depth || 20 ) / MM;
-		const stoff = new THREE.MeshBasicMaterial( {
-			// Kupfer aus dem Design, kein Warnrot: Die Halter sind kein Fehler.
-			color: 0xa86f38,
-			transparent: true,
-			opacity: 0.45,
-			depthWrite: false,
-		} );
-
-		basis.blocks.forEach( ( block ) => {
-			const hoehe = ( block.to - block.from ) / MM;
-			const mitte = ( block.from / MM ) + hoehe / 2;
-
-			// An der Holzstange liegt die Sperre als roter Schleier um den
-			// Halter selbst – dort wird verschraubt, dort sitzt nichts.
-			if ( 'holzstange' === basis.construction ) {
-				const schleier = new THREE.Mesh( new THREE.BoxGeometry( 0.034, hoehe, 0.056 ), stoff );
-
-				schleier.position.set( 0, mitte, 0.0225 );
-				schleier.userData.istSperre = true;
-				this.sperren.add( schleier );
-				return;
-			}
-
-			[ -1, 1 ].forEach( ( seite ) => {
-				const marke = new THREE.Mesh(
-					new THREE.BoxGeometry( halb * 0.14, hoehe, tiefe * 0.9 ),
-					stoff
-				);
-
-				marke.position.set( seite * ( halb + halb * 0.12 ), mitte, tiefe / 2 );
-				marke.userData.istSperre = true;
-				this.sperren.add( marke );
-			} );
-		} );
-
-		this.gruppe.add( this.sperren );
 	}
 
 	/**

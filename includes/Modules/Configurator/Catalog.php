@@ -117,7 +117,7 @@ class Catalog {
 		// Ein Basismodul ohne eigenes Modell zeigt die Holzstange mit ihren
 		// zwei Haltern. Die Ansicht setzt sie aus dem Halter-Modell und der
 		// Länge zusammen; `construction` sagt ihr, dass sie das tun soll.
-		$standard = 'basis' === $part['role'] && WebModel::base_uses_standard( $file );
+		$standard = 'basis' === $part['role'] && ( WebModel::base_uses_standard( $file ) || self::is_accessory_model( $part ) );
 
 		if ( $standard ) {
 			$file = WebModel::DEMO_PREFIX . WebModel::STANDARD_KEY;
@@ -137,6 +137,32 @@ class Catalog {
 			'prices'  => $prices,
 			'sold_out' => $offer['sold_out'],
 		);
+	}
+
+	/**
+	 * Ist das hochgeladene Modell eines Basismoduls offensichtlich nur ein
+	 * Anbauteil – etwa der Halter statt der Stange?
+	 *
+	 * Die Ansicht streckt ein Modell auf die gepflegte Länge. Ein Halter von
+	 * 50 mm auf eine Stange von 1000 mm gestreckt wäre eine zwanzigmal zu
+	 * große beige Platte. Ist das Modell (nach der eingestellten Drehung)
+	 * weniger als halb so hoch wie das Basismodul lang, gilt deshalb die
+	 * Holzstange mit ihren Haltern.
+	 *
+	 * @param array $part Teil.
+	 * @return bool
+	 */
+	protected static function is_accessory_model( array $part ) {
+		$file = (string) $part['model_file'];
+
+		if ( '' === $file ) {
+			return false;
+		}
+
+		$rot  = isset( $part['placement']['rot'] ) ? $part['placement']['rot'] : null;
+		$size = WebModel::measure( $file, $rot );
+
+		return $size && $size['height'] > 0 && (float) $part['height_mm'] > 2 * $size['height'];
 	}
 
 	/**

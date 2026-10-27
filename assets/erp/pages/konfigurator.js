@@ -407,7 +407,7 @@
 				sun.position.set(-0.6, 1.2, 1.4);
 				st.scene.add(sun);
 
-				var wall = new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshStandardMaterial({ color: 0xddd4c4, roughness: 0.95 }));
+				var wall = new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshStandardMaterial({ color: 0x4a4f56, roughness: 0.95 }));
 				wall.position.set(0, 0.5, -0.001);
 				st.scene.add(wall);
 

@@ -90,4 +90,27 @@ class KonfiguratorSkriptTest extends TestCase {
 		$this->assertStringContainsString( 'importmap', $quelltext );
 		$this->assertStringContainsString( 'three/addons/', $quelltext );
 	}
+
+	/**
+	 * Jede Methode, die die Ansicht aufruft, gibt es auch.
+	 *
+	 * Ein Fehler hat eine Runde gekostet: Beim Aufräumen verschwand die
+	 * Methode `holzstange`, ihr Aufruf blieb. Der Aufruf steht in einem
+	 * try, dessen catch auf den Ersatzkörper ausweicht – im Browser kam
+	 * deshalb keine Fehlermeldung, nur eine flache weiße Platte statt der
+	 * Stange. Diese Prüfung hätte es gefunden.
+	 */
+	public function test_aufgerufene_methoden_der_ansicht_sind_definiert() {
+		$js = $this->skript();
+
+		preg_match_all( '/this\.(holzstange|lageModul|ersatzkoerper|vorlage|richteKameraAus|baueRaum|textur)\(/', $js, $calls );
+
+		foreach ( array_unique( $calls[1] ) as $name ) {
+			$this->assertMatchesRegularExpression(
+				'/^\t(async )?' . $name . '\([ )]/m',
+				$js,
+				'Die Methode ' . $name . ' wird aufgerufen, aber nicht definiert.'
+			);
+		}
+	}
 }
