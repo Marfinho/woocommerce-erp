@@ -326,6 +326,7 @@ class Frontend {
 			);
 		}
 		?>
+		<div class="lw16-haken-huelle">
 		<div class="lw16-haken" data-lw16-haken>
 			<div class="lw16-haken__buehne">
 				<div class="lw16-haken__kopf">
@@ -453,6 +454,7 @@ class Frontend {
 					</button>
 				</div>
 			</form>
+		</div>
 		</div>
 		<?php
 	}
