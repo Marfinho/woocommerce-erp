@@ -407,6 +407,11 @@
 			"name": "page-kontakt",
 			"title": "Kontakt",
 			"postTypes": [ "page" ]
+		},
+		{
+			"name": "page-ueber-uns",
+			"title": "Über uns",
+			"postTypes": [ "page" ]
 		}
 	]
 }

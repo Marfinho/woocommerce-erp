@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,10 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.4.0 =
+* Neues Template „Über uns“ (greift für die Seite mit dem Slug „ueber-uns“ automatisch, sonst in den Seiten-Einstellungen wählbar): Einleitung, Geschichte aus Beitragsbild und Seiteninhalt, vier Werkstatt-Kacheln, „Wie ein Haster Haken entsteht“ in vier Schritten, Karten zu Shop und Anfragen
+* Links zur Kontaktseite finden auch den alten Slug „contact-us“
 
 = 1.3.0 =
 * Neues Template „Kontakt“ (Seite mit Slug „kontakt“ automatisch, sonst in den Seiten-Einstellungen wählbar): Einleitung mit Kontakt-Chips, vier Themen-Kacheln, Formular aus dem Seiteninhalt (z. B. WPForms-Block), Direktkontakt und kurze Antworten

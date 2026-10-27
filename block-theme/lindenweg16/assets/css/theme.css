@@ -1772,6 +1772,149 @@ label {
 	font-size: var(--wp--preset--font-size--medium);
 }
 
+/* 8.10 Über uns (Template „Über uns“, Pattern hidden-ueber-uns) */
+.lw16-about-intro {
+	gap: var(--wp--preset--spacing--30);
+	padding-block: var(--wp--preset--spacing--50) var(--wp--preset--spacing--20);
+}
+
+.lw16-about-intro .wp-block-heading {
+	max-width: 16ch;
+	margin: 0;
+}
+
+.lw16-about-intro__lead {
+	max-width: 58ch;
+	margin: 0;
+}
+
+/* Geschichte: Foto (Beitragsbild) und Seiteninhalt */
+.lw16-about-story__columns {
+	gap: var(--wp--preset--spacing--40);
+}
+
+.lw16-about-story__photo,
+.lw16-about-story__photo a {
+	height: 100%;
+	margin: 0;
+}
+
+.lw16-about-story__photo img {
+	width: 100%;
+	height: 100%;
+	min-height: 320px;
+	object-fit: cover;
+	border-radius: var(--lw-r-card);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-about-story__card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--20);
+	height: 100%;
+}
+
+.lw16-about-story__card:hover {
+	transform: none;
+	box-shadow: var(--lw-shadow-card);
+}
+
+.lw16-about-story__card > * {
+	margin-block: 0;
+}
+
+.lw16-about-story--text .lw16-about-story__card {
+	max-width: 880px;
+}
+
+.lw16-about-story__content > * {
+	max-width: 62ch;
+}
+
+.lw16-about-story__content > :first-child {
+	margin-top: 0;
+}
+
+.lw16-about-story__content > :last-child {
+	margin-bottom: 0;
+}
+
+.lw16-about-story__content p {
+	font-size: var(--wp--preset--font-size--large);
+	line-height: 1.6;
+}
+
+/* Bilder im Seiteninhalt: wie die übrigen Fotos im Shop */
+.lw16-about-story__content .wp-block-image img {
+	border-radius: var(--lw-r-image);
+}
+
+/* Werkstatt-Kacheln: vier gleich große Kacheln mit Nummer */
+.lw16-about-crafts__grid .lw16-bento__tile {
+	justify-content: flex-start;
+	min-height: 220px;
+	color: var(--lw-text);
+}
+
+.lw16-about-crafts__grid .lw16-bento__tile:hover {
+	transform: translateY(-4px) rotate(-0.5deg);
+}
+
+.lw16-about-crafts__number {
+	margin: 0;
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--small);
+	letter-spacing: 0.06em;
+	color: var(--lw-text-muted);
+}
+
+@media (min-width: 782px) {
+	.lw16-about-crafts__grid {
+		grid-auto-rows: auto;
+	}
+}
+
+@media (max-width: 781px) {
+	.lw16-about-crafts__grid .lw16-bento__tile {
+		min-height: 0;
+	}
+
+	.lw16-about-story__photo img {
+		min-height: 0;
+		aspect-ratio: 4 / 3;
+	}
+}
+
+/* Vier Schritte statt drei: Linie etwas weiter außen */
+@media (min-width: 782px) {
+	.lw16-about-process .lw16-steps::before {
+		left: 12.5%;
+		right: 12.5%;
+	}
+}
+
+/* Zwei Karten zum Schluss */
+.lw16-about-next__columns {
+	gap: var(--wp--preset--spacing--40);
+}
+
+.lw16-about-next__card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--wp--preset--spacing--20);
+	height: 100%;
+}
+
+.lw16-about-next__card > * {
+	margin-block: 0;
+}
+
+.lw16-about-next__card .wp-block-buttons {
+	margin-top: auto;
+	padding-top: var(--wp--preset--spacing--20);
+}
+
 /* --------------------------------------------------------------------------
  * 9. Produktkarten, Preise, Badges, Bewertungen
  * ----------------------------------------------------------------------- */

@@ -62,3 +62,18 @@ function lindenweg16_contact_data(): array {
 	 */
 	return (array) apply_filters( 'lindenweg16_contact_data', $data );
 }
+
+/**
+ * Adresse der Kontaktseite: Slug „kontakt“, sonst „contact-us“ (alter Slug),
+ * sonst /kontakt/.
+ */
+function lindenweg16_contact_page_url(): string {
+	foreach ( array( 'kontakt', 'contact-us' ) as $path ) {
+		$page = get_page_by_path( $path );
+		if ( $page instanceof WP_Post && 'publish' === $page->post_status ) {
+			return (string) get_permalink( $page );
+		}
+	}
+
+	return home_url( '/kontakt/' );
+}
