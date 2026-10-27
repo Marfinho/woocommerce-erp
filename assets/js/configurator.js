@@ -190,8 +190,11 @@ class Konfigurator {
 		this.module = new Map( this.katalog.modules.map( ( m ) => [ m.article, m ] ) );
 
 		this.form = wurzel.querySelector( '[data-lw16-form]' );
-		this.feldBasis = wurzel.querySelector( '[data-lw16-basis]' );
-		this.feldFarbe = wurzel.querySelector( '[data-lw16-farbe]' );
+		// Länge und Farbe sind Optionsfelder, wenn es eine Wahl gibt, sonst
+		// ein verstecktes Feld. Beides wird über wertVon() gelesen.
+		this.felderBasis = wurzel.querySelectorAll( '[data-lw16-basis]' );
+		this.felderFarbe = wurzel.querySelectorAll( '[data-lw16-farbe]' );
+		this.chip = wurzel.querySelector( '[data-lw16-chip]' );
 		this.feldMenge = wurzel.querySelector( '[data-lw16-menge]' );
 		this.feldCode = wurzel.querySelector( '[data-lw16-code]' );
 		this.liste = wurzel.querySelector( '[data-lw16-modulliste]' );
@@ -230,11 +233,23 @@ class Konfigurator {
 		} );
 
 		return {
-			basis: parseInt( this.feldBasis.value, 10 ),
-			farbe: this.feldFarbe.value,
+			basis: parseInt( this.wertVon( this.felderBasis ), 10 ),
+			farbe: this.wertVon( this.felderFarbe ),
 			menge: parseInt( this.feldMenge.value, 10 ) || 1,
 			module,
 		};
+	}
+
+	/**
+	 * Der Wert eines Feldes oder einer Gruppe von Optionsfeldern.
+	 *
+	 * @param {NodeList} felder Felder mit gleichem Namen.
+	 * @returns {string}
+	 */
+	wertVon( felder ) {
+		const gewaehlt = [ ...felder ].find( ( f ) => 'radio' !== f.type || f.checked );
+
+		return gewaehlt ? gewaehlt.value : '';
 	}
 
 	/**
@@ -284,24 +299,24 @@ class Konfigurator {
 	 * Ereignisse anmelden.
 	 */
 	verdrahten() {
-		this.feldBasis.addEventListener( 'change', () => {
-			this.zustand.basis = parseInt( this.feldBasis.value, 10 );
+		this.felderBasis.forEach( ( feld ) => feld.addEventListener( 'change', () => {
+			this.zustand.basis = parseInt( this.wertVon( this.felderBasis ), 10 );
 			this.raeumeAuf();
 			this.aktualisiere();
 
 			if ( this.ansicht ) {
 				this.ansicht.neuAufbauen();
 			}
-		} );
+		} ) );
 
-		this.feldFarbe.addEventListener( 'change', () => {
-			this.zustand.farbe = this.feldFarbe.value;
+		this.felderFarbe.forEach( ( feld ) => feld.addEventListener( 'change', () => {
+			this.zustand.farbe = this.wertVon( this.felderFarbe );
 			this.aktualisiere();
 
 			if ( this.ansicht ) {
 				this.ansicht.faerbe();
 			}
-		} );
+		} ) );
 
 		this.feldMenge.addEventListener( 'input', () => {
 			const menge = parseInt( this.feldMenge.value, 10 );
@@ -571,6 +586,20 @@ class Konfigurator {
 	aktualisiere() {
 		this.feldCode.value = this.code();
 		this.zeichnePreis();
+		this.zeichneChip();
+	}
+
+	/**
+	 * Kurzüberblick über dem Bild: Länge und Zahl der Module.
+	 */
+	zeichneChip() {
+		if ( ! this.chip ) {
+			return;
+		}
+
+		const anzahl = this.zustand.module.length;
+
+		this.chip.textContent = mm( this.basis().height ) + ' mm · ' + anzahl + ( 1 === anzahl ? ' Modul' : ' Module' );
 	}
 
 	/**

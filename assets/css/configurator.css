@@ -5,8 +5,11 @@
  * Ansicht bleibt beim Blättern stehen, solange Platz dafür ist – wer
  * unten ein Modul wählt, soll oben sehen, was passiert.
  *
- * Farben kommen aus Eigenschaften mit Vorgabewert: Ein Theme kann sie
- * überschreiben, ohne diese Datei anzufassen.
+ * Das Aussehen folgt dem Theme lindenweg16 (Farben, Rundungen, Schatten,
+ * Bewegung). Alle Werte kommen aus Eigenschaften mit Vorgabewert: Das
+ * Theme liefert seine Farben über --lw-* und die WordPress-Presets, ohne
+ * Theme gelten die Werte des Themes als Rückfall. Wer etwas ändern will,
+ * überschreibt die --lw16-* Eigenschaften, ohne diese Datei anzufassen.
  */
 
 /*
@@ -20,40 +23,95 @@
 }
 
 .lw16-haken {
-	--lw16-rand: #dcdcd6;
-	--lw16-flaeche: #f6f5f2;
-	--lw16-text: #1f1f1d;
-	--lw16-gedaempft: #6b6b66;
-	--lw16-akzent: #2b4a6b;
+	--lw16-rand: var(--lw-line, var(--wp--preset--color--line, #d9d4cb));
+	--lw16-flaeche: var(--lw-surface-muted, var(--wp--preset--color--surface-muted, #eae6df));
+	--lw16-karte: var(--lw-surface, var(--wp--preset--color--surface, #ffffff));
+	--lw16-text: var(--lw-text, var(--wp--preset--color--text, #22282f));
+	--lw16-gedaempft: var(--lw-text-muted, var(--wp--preset--color--text-muted, #59626c));
+	--lw16-akzent: var(--lw-primary, var(--wp--preset--color--primary, #3a424c));
+	--lw16-auf-akzent: var(--lw-on-primary, var(--wp--preset--color--on-primary, #ffffff));
+	--lw16-sticker: var(--lw-accent-1, var(--wp--preset--color--accent-1, #e7c78f));
+	--lw16-auf-sticker: var(--lw-on-accent, var(--wp--preset--color--on-accent, #22282f));
+	--lw16-fehler: var(--lw-error, var(--wp--preset--color--error, #b3261e));
+	--lw16-r-feld: var(--lw-r-field, 14px);
+	--lw16-r-karte: var(--lw-r-card, 28px);
+	--lw16-r-pille: var(--lw-r-pill, 999px);
+	--lw16-feder: var(--lw-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+	--lw16-glatt: var(--lw-smooth, cubic-bezier(0.22, 1, 0.36, 1));
+	--lw16-schnell: var(--lw-fast, 180ms);
+	--lw16-mittel: var(--lw-base, 320ms);
+	--lw16-schatten: var(--lw-shadow-card, 0 12px 32px -16px rgba(43, 50, 58, 0.16));
+	--lw16-mono: var(--lw-font-mono, "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace);
+	--lw16-kopf: var(--wp--preset--font-family--heading, "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif);
 
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: 2rem;
+	gap: 1.5rem;
 	color: var(--lw16-text);
+}
+
+.lw16-haken *,
+.lw16-haken *::before,
+.lw16-haken *::after {
+	box-sizing: border-box;
 }
 
 @media (min-width: 60em) {
 	.lw16-haken {
-		grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+		grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 0.95fr);
 		align-items: start;
+		gap: 2rem;
 	}
 
 	.lw16-haken__buehne {
 		position: sticky;
-		top: 2rem;
+		top: var(--lw-header-top, 1rem);
 	}
 }
 
-/* Ansicht ------------------------------------------------------------ */
+/* Bühne -------------------------------------------------------------- */
+
+.lw16-haken__buehne {
+	padding: 1rem;
+	background: var(--lw16-karte);
+	border: 1px solid var(--lw16-rand);
+	border-radius: var(--lw16-r-karte);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__kopf {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.lw16-haken__chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 1.9rem;
+	padding: 0.25rem 0.8rem;
+	border-radius: var(--lw16-r-pille);
+	background: var(--lw16-flaeche);
+	font-family: var(--lw16-mono);
+	font-size: 0.78rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haken__chip:empty {
+	display: none;
+}
 
 .lw16-haken__ansicht {
 	position: relative;
 	aspect-ratio: 3 / 4;
 	/* Deutlich abgesetzt vom Teil: Der Haken ist heute weiß, und weiß auf
 	   fast weiß ist kein Bild, sondern ein Suchbild. */
-	background: radial-gradient(circle at 50% 30%, #ffffff 0%, #ebeae5 55%, #dedcd5 100%);
+	background: radial-gradient(circle at 50% 28%, var(--lw16-karte) 0%, var(--lw16-flaeche) 62%, color-mix(in srgb, var(--lw16-flaeche) 82%, var(--lw16-text)) 100%);
 	border: 1px solid var(--lw16-rand);
-	border-radius: 4px;
+	border-radius: calc(var(--lw16-r-karte) - 8px);
 	overflow: hidden;
 	touch-action: none;
 }
@@ -66,8 +124,8 @@
 }
 
 .lw16-haken__leinwand:focus-visible {
-	outline: 2px solid var(--lw16-akzent);
-	outline-offset: -2px;
+	outline: 3px solid color-mix(in srgb, var(--lw16-akzent) 55%, transparent);
+	outline-offset: -3px;
 }
 
 .lw16-haken__hinweis {
@@ -83,49 +141,258 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.5rem;
-	margin-top: 0.75rem;
-	min-height: 2rem;
+	gap: 0.4rem;
 }
 
 .lw16-haken__knopf {
-	background: none;
+	min-height: 38px;
+	padding: 0.35rem 1rem;
 	border: 1px solid var(--lw16-rand);
-	border-radius: 3px;
-	padding: 0.35rem 0.75rem;
+	border-radius: var(--lw16-r-pille);
+	background: var(--lw16-karte);
+	color: var(--lw16-text);
+	font: inherit;
 	font-size: 0.85rem;
-	color: var(--lw16-gedaempft);
+	font-weight: 500;
 	cursor: pointer;
+	transition: transform var(--lw16-mittel) var(--lw16-feder), border-color var(--lw16-schnell), box-shadow var(--lw16-mittel) var(--lw16-glatt);
 }
 
 .lw16-haken__knopf:hover {
+	transform: translateY(-1px);
 	border-color: var(--lw16-akzent);
-	color: var(--lw16-akzent);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__knopf:active {
+	transform: scale(0.97);
 }
 
 .lw16-haken__meldung {
+	min-height: 1.4em;
+	margin: 0.6rem 0 0;
 	font-size: 0.85rem;
-	color: var(--lw16-akzent);
+	color: var(--lw16-gedaempft);
 }
 
 /* Formular ----------------------------------------------------------- */
 
-.lw16-haken__titel {
-	margin: 1.5rem 0 0.5rem;
-	font-size: 1rem;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	color: var(--lw16-gedaempft);
+.lw16-haken__form {
+	display: grid;
+	gap: 1rem;
+	min-width: 0;
 }
 
-.lw16-haken__titel:first-child {
-	margin-top: 0;
+.lw16-haken__block {
+	padding: 1.1rem 1.25rem;
+	background: var(--lw16-karte);
+	border: 1px solid var(--lw16-rand);
+	border-radius: var(--lw16-r-karte);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__titel {
+	margin: 0 0 0.7rem;
+	font-family: var(--lw16-mono);
+	font-size: 0.75rem;
+	font-weight: 500;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--lw16-gedaempft);
 }
 
 .lw16-haken__erklaerung {
-	margin: 0 0 0.75rem;
+	margin: 0 0 0.9rem;
 	font-size: 0.9rem;
 	color: var(--lw16-gedaempft);
+}
+
+/* Feste Angaben: Länge und Farbe, wenn es nur eine gibt */
+.lw16-haken__fest {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.lw16-haken__fest li {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.45rem 0.95rem;
+	background: var(--lw16-karte);
+	border: 1px solid var(--lw16-rand);
+	border-radius: var(--lw16-r-pille);
+	font-size: 0.9rem;
+}
+
+.lw16-haken__festname {
+	font-family: var(--lw16-mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--lw16-gedaempft);
+}
+
+/* Länge: Optionsfelder als Karten */
+.lw16-haken__optionen {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+	gap: 0.5rem;
+}
+
+.lw16-haken__option,
+.lw16-haken__farbe {
+	position: relative;
+	display: block;
+	cursor: pointer;
+}
+
+/* Das Optionsfeld bleibt für Tastatur und Screenreader da, wird aber nicht gemalt. */
+.lw16-haken__option input,
+.lw16-haken__farbe input {
+	position: absolute;
+	opacity: 0;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	z-index: 1;
+	cursor: pointer;
+}
+
+.lw16-haken__optionskarte {
+	display: grid;
+	gap: 0.1rem;
+	padding: 0.75rem 0.95rem;
+	background: var(--lw16-flaeche);
+	border: 2px solid transparent;
+	border-radius: var(--lw16-r-feld);
+	transition: transform var(--lw16-mittel) var(--lw16-feder), background var(--lw16-schnell), border-color var(--lw16-schnell), box-shadow var(--lw16-mittel) var(--lw16-glatt);
+}
+
+.lw16-haken__optionskarte strong {
+	font-family: var(--lw16-kopf);
+	font-size: 1.15rem;
+	font-weight: 700;
+}
+
+.lw16-haken__optionskarte span {
+	font-size: 0.8rem;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__optionskarte i {
+	display: block;
+	width: calc(var(--laenge, 100) * 1%);
+	height: 6px;
+	margin-top: 0.4rem;
+	border-radius: 3px;
+	background: var(--lw16-gedaempft);
+	opacity: 0.45;
+	transition: background var(--lw16-schnell), opacity var(--lw16-schnell);
+}
+
+.lw16-haken__option:hover .lw16-haken__optionskarte {
+	transform: translateY(-2px);
+}
+
+.lw16-haken__option input:checked + .lw16-haken__optionskarte {
+	background: var(--lw16-karte);
+	border-color: var(--lw16-akzent);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__option input:checked + .lw16-haken__optionskarte i {
+	background: var(--lw16-akzent);
+	opacity: 1;
+}
+
+/* Farbe: runde Muster mit Namen */
+.lw16-haken__farben {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 0.9rem;
+}
+
+.lw16-haken__farbe {
+	display: grid;
+	justify-items: center;
+	gap: 0.3rem;
+	min-width: 3.4rem;
+}
+
+.lw16-haken__punkt {
+	flex: none;
+	display: inline-block;
+	width: 1.1rem;
+	height: 1.1rem;
+	border-radius: 50%;
+	background: var(--punkt, #d8d8d6);
+	border: 1px solid color-mix(in srgb, var(--punkt, #d8d8d6) 55%, #000);
+}
+
+.lw16-haken__farbe .lw16-haken__punkt {
+	width: 2.75rem;
+	height: 2.75rem;
+	box-shadow: 0 0 0 0 var(--lw16-akzent);
+	transition: transform var(--lw16-mittel) var(--lw16-feder), box-shadow var(--lw16-mittel) var(--lw16-glatt);
+}
+
+.lw16-haken__farbe:hover .lw16-haken__punkt {
+	transform: scale(1.1);
+}
+
+.lw16-haken__farbe input:checked ~ .lw16-haken__punkt {
+	transform: scale(1.06);
+	box-shadow: 0 0 0 3px var(--lw16-karte), 0 0 0 5px var(--lw16-akzent);
+}
+
+.lw16-haken__farbname {
+	font-size: 0.78rem;
+	font-weight: 500;
+	color: var(--lw16-gedaempft);
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
+.lw16-haken__farbe input:checked ~ .lw16-haken__farbname {
+	color: var(--lw16-text);
+}
+
+.lw16-haken__option input:focus-visible + .lw16-haken__optionskarte,
+.lw16-haken__farbe input:focus-visible ~ .lw16-haken__punkt {
+	outline: 3px solid color-mix(in srgb, var(--lw16-akzent) 55%, transparent);
+	outline-offset: 3px;
+}
+
+/* Modulliste --------------------------------------------------------- */
+
+.lw16-haken__module {
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+	margin-top: 0.9rem;
+}
+
+.lw16-haken__zeile {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 6rem auto auto;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.45rem 0.6rem;
+	border: 1px solid var(--lw16-rand);
+	border-radius: var(--lw16-r-feld);
+	background: var(--lw16-karte);
+	transition: border-color var(--lw16-schnell), box-shadow var(--lw16-schnell);
+	animation: lw16-haken-pop var(--lw16-mittel) var(--lw16-feder) both;
+}
+
+.lw16-haken__zeile.is-aktiv {
+	border-color: var(--lw16-akzent);
+	box-shadow: 0 0 0 1px var(--lw16-akzent);
 }
 
 .lw16-haken__feld {
@@ -135,58 +402,51 @@
 }
 
 .lw16-haken__feld select,
-.lw16-haken__feld input {
+.lw16-haken__feld input,
+.lw16-haken__zeile select,
+.lw16-haken__zeile input {
 	max-width: 100%;
+	min-height: 38px;
+	padding: 0.3rem 0.6rem;
+	border: 1px solid var(--lw16-rand);
+	border-radius: 10px;
+	background-color: var(--lw16-flaeche);
+	color: var(--lw16-text);
+	font: inherit;
+	font-size: 0.9rem;
+}
+
+.lw16-haken__zeile input {
+	font-family: var(--lw16-mono);
+	font-variant-numeric: tabular-nums;
 }
 
 .lw16-haken__einheit {
-	font-size: 0.85rem;
+	font-family: var(--lw16-mono);
+	font-size: 0.8rem;
 	color: var(--lw16-gedaempft);
-}
-
-/* Modulliste --------------------------------------------------------- */
-
-.lw16-haken__module {
-	display: flex;
-	flex-direction: column;
-	gap: 0.4rem;
-}
-
-.lw16-haken__zeile {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 6rem auto auto;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.4rem 0.5rem;
-	border: 1px solid var(--lw16-rand);
-	border-radius: 3px;
-	background: #fff;
-}
-
-.lw16-haken__zeile.is-aktiv {
-	border-color: var(--lw16-akzent);
-	box-shadow: inset 0 0 0 1px var(--lw16-akzent);
 }
 
 .lw16-haken__weg {
+	padding: 0.3rem 0.4rem;
+	border: 0;
 	background: none;
-	border: none;
-	padding: 0.2rem 0.4rem;
-	font-size: 0.8rem;
 	color: var(--lw16-gedaempft);
+	font: inherit;
+	font-size: 0.8rem;
 	text-decoration: underline;
 	cursor: pointer;
 }
 
 .lw16-haken__weg:hover {
-	color: #b6262a;
+	color: var(--lw16-fehler);
 }
 
 .lw16-haken__leer {
 	margin: 0;
-	padding: 0.75rem;
+	padding: 0.8rem;
 	border: 1px dashed var(--lw16-rand);
-	border-radius: 3px;
+	border-radius: var(--lw16-r-feld);
 	font-size: 0.9rem;
 	color: var(--lw16-gedaempft);
 }
@@ -196,54 +456,136 @@
 .lw16-haken__auswahl {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-	gap: 0.5rem;
-	margin-top: 0.75rem;
+	gap: 0.6rem;
 }
 
 .lw16-haken__modulknopf {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	gap: 0.15rem;
-	padding: 0.6rem;
+	padding: 0.75rem 0.9rem;
 	background: var(--lw16-flaeche);
-	border: 1px solid var(--lw16-rand);
-	border-radius: 3px;
+	border: 1px solid transparent;
+	border-radius: var(--lw16-r-feld);
+	color: var(--lw16-text);
+	font: inherit;
 	text-align: left;
 	cursor: pointer;
+	transition: transform var(--lw16-mittel) var(--lw16-feder), box-shadow var(--lw16-mittel) var(--lw16-glatt), background var(--lw16-schnell), border-color var(--lw16-schnell);
 }
 
 .lw16-haken__modulknopf:hover {
-	border-color: var(--lw16-akzent);
-	background: #fff;
+	transform: translateY(-3px);
+	background: var(--lw16-karte);
+	border-color: var(--lw16-rand);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__modulknopf:active {
+	transform: scale(0.97);
+}
+
+.lw16-haken__plus {
+	position: absolute;
+	top: 0.55rem;
+	right: 0.65rem;
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	background: var(--lw16-sticker);
+	color: var(--lw16-auf-sticker);
+	font-size: 1.1rem;
+	line-height: 1;
+	transition: transform var(--lw16-mittel) var(--lw16-feder);
+}
+
+.lw16-haken__modulknopf:hover .lw16-haken__plus {
+	transform: rotate(90deg) scale(1.1);
 }
 
 .lw16-haken__modulname {
-	font-weight: 600;
-	font-size: 0.9rem;
+	padding-right: 1.8rem;
+	font-family: var(--lw16-kopf);
+	font-weight: 700;
+	font-size: 1rem;
 }
 
 .lw16-haken__modulmass {
-	font-size: 0.8rem;
+	font-family: var(--lw16-mono);
+	font-size: 0.78rem;
 	color: var(--lw16-gedaempft);
 }
 
 /* Abschluss ---------------------------------------------------------- */
 
 .lw16-haken__abschluss {
+	position: sticky;
+	bottom: 1rem;
+	z-index: 3;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: 1rem;
-	margin-top: 1.5rem;
-	padding-top: 1rem;
-	border-top: 1px solid var(--lw16-rand);
+	gap: 0.8rem 1.2rem;
+	padding: 0.9rem 1.2rem;
+	background: color-mix(in srgb, var(--lw16-karte) 80%, transparent);
+	-webkit-backdrop-filter: blur(20px) saturate(180%);
+	backdrop-filter: blur(20px) saturate(180%);
+	border: 1px solid var(--lw16-rand);
+	border-radius: var(--lw16-r-karte);
+	box-shadow: var(--lw16-schatten);
+}
+
+.lw16-haken__summe {
+	display: grid;
+}
+
+.lw16-haken__summenname {
+	font-size: 0.72rem;
+	color: var(--lw16-gedaempft);
 }
 
 .lw16-haken__preis {
 	margin: 0;
-	font-size: 1.4rem;
+	font-family: var(--lw16-mono);
+	font-size: 1.6rem;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haken__menge {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-size: 0.85rem;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__menge input {
+	width: 4.2rem;
+	min-height: 40px;
+	padding: 0.3rem 0.5rem;
+	border: 1px solid var(--lw16-rand);
+	border-radius: 12px;
+	background: var(--lw16-flaeche);
+	color: var(--lw16-text);
+	font: inherit;
+	font-family: var(--lw16-mono);
+}
+
+.lw16-haken__kaufen {
+	min-height: 52px;
+	padding: 0.8em 1.8em;
+	border: 0;
+	border-radius: var(--lw16-r-pille);
+	background: var(--lw16-akzent);
+	color: var(--lw16-auf-akzent);
+	font: inherit;
 	font-weight: 600;
+	cursor: pointer;
 }
 
 .lw16-haken--leer {
@@ -252,8 +594,23 @@
 	color: var(--lw16-gedaempft);
 }
 
+@keyframes lw16-haken-pop {
+	from {
+		opacity: 0;
+		transform: scale(0.9);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
-	.lw16-haken * {
+	.lw16-haken *,
+	.lw16-haken *::before,
+	.lw16-haken *::after {
 		transition: none !important;
+		animation: none !important;
 	}
 }
