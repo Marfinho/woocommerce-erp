@@ -57,17 +57,29 @@ class Tasks {
 	public static function sort( array $tasks ) {
 		$ranks = self::ranks();
 
-		usort(
-			$tasks,
-			function ( $a, $b ) use ( $ranks ) {
-				$ra = isset( $ranks[ $a['kind'] ] ) ? $ranks[ $a['kind'] ] : 99;
-				$rb = isset( $ranks[ $b['kind'] ] ) ? $ranks[ $b['kind'] ] : 99;
+		// Stabil auch unter PHP 7.4: Bei gleichem Rang bleibt die Reihenfolge, in
+		// der die Aufgaben kamen (bei Platten die nach Tageszeit gewählte).
+		$indexed = array();
+		foreach ( array_values( $tasks ) as $i => $task ) {
+			$indexed[] = array( $i, $task );
+		}
 
-				return $ra <=> $rb;
+		usort(
+			$indexed,
+			function ( $a, $b ) use ( $ranks ) {
+				$ra = isset( $ranks[ $a[1]['kind'] ] ) ? $ranks[ $a[1]['kind'] ] : 99;
+				$rb = isset( $ranks[ $b[1]['kind'] ] ) ? $ranks[ $b[1]['kind'] ] : 99;
+
+				return $ra !== $rb ? $ra <=> $rb : $a[0] <=> $b[0];
 			}
 		);
 
-		return $tasks;
+		return array_map(
+			static function ( $pair ) {
+				return $pair[1];
+			},
+			$indexed
+		);
 	}
 
 	/**
@@ -91,7 +103,30 @@ class Tasks {
 		$tasks = array();
 
 		if ( Access::can( 'fertigung.workflow' ) ) {
-			foreach ( RunRepository::active() as $run ) {
+			// Bereite Platten nach Tageszeit: tagsüber die kurzen, vor Feierabend die lange.
+			$active = RunRepository::active();
+			$ready  = array();
+			foreach ( $active as $run ) {
+				if ( RunFlow::FREIGEGEBEN === $run['status'] ) {
+					$ready[] = $run;
+				}
+			}
+			$ready = Workflow::shift_order( $ready );
+			$hints = array();
+			foreach ( $ready as $i => $run ) {
+				$hints[ (int) $run['id'] ] = array( 'pos' => $i, 'text' => $run['hint_text'] );
+			}
+			usort(
+				$active,
+				static function ( $a, $b ) use ( $hints ) {
+					$pa = isset( $hints[ (int) $a['id'] ] ) ? $hints[ (int) $a['id'] ]['pos'] : -1;
+					$pb = isset( $hints[ (int) $b['id'] ] ) ? $hints[ (int) $b['id'] ]['pos'] : -1;
+
+					return $pa !== $pb ? $pa <=> $pb : (int) $a['id'] <=> (int) $b['id'];
+				}
+			);
+
+			foreach ( $active as $run ) {
 				if ( ! in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::ZU_MELDEN ), true ) ) {
 					continue;
 				}
@@ -105,7 +140,7 @@ class Tasks {
 				$tasks[] = array(
 					'kind'  => $melden ? 'melden' : 'ruesten',
 					'title' => sprintf( /* translators: 1: Nummer. */ $melden ? __( 'Platte %d melden', 'lindenweg16' ) : __( 'Platte %d rüsten', 'lindenweg16' ), (int) $run['id'] ),
-					'sub'   => implode( ', ', $lines ),
+					'sub'   => implode( ', ', $lines ) . ( ! $melden && ! empty( $hints[ (int) $run['id'] ]['text'] ) ? ' · ' . $hints[ (int) $run['id'] ]['text'] : '' ),
 					'cta'   => $melden ? __( 'Menge melden', 'lindenweg16' ) : __( 'Rüsten starten', 'lindenweg16' ),
 					'href'  => '#/platte/' . (int) $run['id'],
 				);

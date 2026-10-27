@@ -99,6 +99,10 @@ class Workflow {
 			'hide_wpadmin'  => 0,
 			'filament_lead_days'   => 10,
 			'filament_safety_days' => 5,
+			// Reihenfolge der Platten nach Tageszeit (siehe ShiftOrder).
+			'shift_end'            => '17:00',
+			'shift_lead_h'         => 2.0,
+			'long_h'               => 4.0,
 		);
 	}
 
@@ -134,6 +138,9 @@ class Workflow {
 			'hide_wpadmin'  => ! empty( $in['hide_wpadmin'] ) ? 1 : 0,
 			'filament_lead_days'   => min( 120, max( 0, (int) ( isset( $in['filament_lead_days'] ) ? $in['filament_lead_days'] : $def['filament_lead_days'] ) ) ),
 			'filament_safety_days' => min( 60, max( 0, (int) ( isset( $in['filament_safety_days'] ) ? $in['filament_safety_days'] : $def['filament_safety_days'] ) ) ),
+			'shift_end'            => preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', isset( $in['shift_end'] ) ? (string) $in['shift_end'] : '' ) ? (string) $in['shift_end'] : $def['shift_end'],
+			'shift_lead_h'         => min( 8.0, max( 0.0, (float) ( isset( $in['shift_lead_h'] ) ? $in['shift_lead_h'] : $def['shift_lead_h'] ) ) ),
+			'long_h'               => min( 48.0, max( 0.5, (float) ( isset( $in['long_h'] ) ? $in['long_h'] : $def['long_h'] ) ) ),
 		);
 
 		// Ohne irgendeinen Inhalt wäre das Etikett leer.
@@ -762,7 +769,39 @@ class Workflow {
 			$cols['erledigt'][] = self::view( $run );
 		}
 
+		$cols['freigegeben'] = self::shift_order( $cols['freigegeben'] );
+
 		return $cols;
+	}
+
+	/**
+	 * Jetzt in Minuten seit Mitternacht, in der Zeit des Shops.
+	 *
+	 * @return int
+	 */
+	public static function now_minutes() {
+		$now = new \DateTimeImmutable( 'now', wp_timezone() );
+
+		return (int) $now->format( 'G' ) * 60 + (int) $now->format( 'i' );
+	}
+
+	/**
+	 * Bereite Platten nach Tageszeit ordnen: kurze am Tag, lange über Nacht.
+	 *
+	 * @param array $runs Platten mit id und est_minutes.
+	 * @return array Platten mit zusätzlich long und hint (Code) sowie hint_text.
+	 */
+	public static function shift_order( array $runs ) {
+		$s       = self::settings();
+		$end     = ShiftOrder::minutes_of( $s['shift_end'] );
+		$ordered = ShiftOrder::order( $runs, self::now_minutes(), $end, (float) $s['shift_lead_h'], (float) $s['long_h'] );
+		$start   = $end - (int) round( (float) $s['shift_lead_h'] * 60 );
+
+		foreach ( $ordered as $i => $run ) {
+			$ordered[ $i ]['hint_text'] = ShiftOrder::hint_text( $run['hint'], (int) $run['est_minutes'], $start );
+		}
+
+		return $ordered;
 	}
 
 	/**
