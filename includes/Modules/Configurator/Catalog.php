@@ -102,9 +102,13 @@ class Catalog {
 	 * @return array|null Null, wenn das Teil nicht bestellbar ist.
 	 */
 	protected static function entry( array $part, array $colors ) {
-		$prices = self::prices( $part, $colors );
+		$offer  = self::prices( $part, $colors );
+		$prices = $offer['prices'];
 
-		if ( ! $prices ) {
+		// Ein Teil, das gerade ausverkauft ist, bleibt im Angebot: Der Kunde
+		// soll sehen, dass es das gibt und warum er es nicht wählen kann,
+		// statt dass es still verschwindet.
+		if ( ! $prices && ! $offer['sold_out'] ) {
 			return null;
 		}
 
@@ -118,6 +122,7 @@ class Catalog {
 			'depth'   => (float) $part['depth_mm'],
 			'model'   => WebModel::url( $part['model_file'] ),
 			'prices'  => $prices,
+			'sold_out' => $offer['sold_out'],
 		);
 	}
 
@@ -130,43 +135,71 @@ class Catalog {
 	 *
 	 * @param array $part   Teil.
 	 * @param array $colors Bekannte Farben.
-	 * @return array Leer, wenn das Teil gar nicht bestellbar ist.
+	 * @return array {prices, sold_out}. `prices` ist leer, wenn das Teil gar
+	 *               nicht bestellbar ist; `sold_out` nennt die Farben (oder `*`
+	 *               für alle), in denen es zwar angeboten wird, aber gerade
+	 *               nicht lieferbar ist.
 	 */
 	protected static function prices( array $part, array $colors ) {
+		$none       = array(
+			'prices'   => array(),
+			'sold_out' => array(),
+		);
 		$product_id = (int) $part['wc_product_id'];
 
 		if ( ! $product_id || ! function_exists( 'wc_get_product' ) ) {
-			return array();
+			return $none;
 		}
 
 		$product = wc_get_product( $product_id );
 
 		if ( ! $product ) {
-			return array();
+			return $none;
 		}
 
 		if ( ! $product->is_type( 'variable' ) ) {
-			if ( ! $product->is_purchasable() || ! $product->is_in_stock() ) {
-				return array();
+			if ( ! $product->is_purchasable() ) {
+				return $none;
 			}
 
-			return array( '*' => round( (float) wc_get_price_to_display( $product ), 2 ) );
+			if ( ! $product->is_in_stock() ) {
+				return array(
+					'prices'   => array(),
+					'sold_out' => array( '*' ),
+				);
+			}
+
+			return array(
+				'prices'   => array( '*' => round( (float) wc_get_price_to_display( $product ), 2 ) ),
+				'sold_out' => array(),
+			);
 		}
 
 		$taxonomy = ColorRegistry::taxonomy();
 		$key      = 'attribute_' . $taxonomy;
 		$prices   = array();
+		$sold_out = array();
 
 		foreach ( $product->get_available_variations() as $variation ) {
 			$child = wc_get_product( (int) $variation['variation_id'] );
 
-			if ( ! $child || ! $child->is_purchasable() || ! $child->is_in_stock() ) {
+			if ( ! $child || ! $child->is_purchasable() ) {
 				continue;
 			}
 
-			$price      = round( (float) wc_get_price_to_display( $child ), 2 );
 			$attributes = isset( $variation['attributes'] ) ? (array) $variation['attributes'] : array();
 			$value      = isset( $attributes[ $key ] ) ? (string) $attributes[ $key ] : '';
+
+			if ( ! $child->is_in_stock() ) {
+				if ( '' === $value ) {
+					$sold_out = array_merge( $sold_out, array_keys( $colors ) );
+				} else {
+					$sold_out[] = $value;
+				}
+				continue;
+			}
+
+			$price = round( (float) wc_get_price_to_display( $child ), 2 );
 
 			// Eine Variante ohne festgelegte Farbe gilt für alle Farben.
 			if ( '' === $value ) {
@@ -181,7 +214,14 @@ class Catalog {
 			$prices[ $value ] = $price;
 		}
 
-		return $prices;
+		// Gibt es eine Farbe als lieferbare und als ausverkaufte Variante,
+		// zählt die lieferbare.
+		$sold_out = array_values( array_diff( array_unique( $sold_out ), array_keys( $prices ) ) );
+
+		return array(
+			'prices'   => $prices,
+			'sold_out' => $sold_out,
+		);
 	}
 
 	/**

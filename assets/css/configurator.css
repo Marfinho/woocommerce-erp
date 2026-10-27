@@ -662,6 +662,80 @@
 	}
 }
 
+/* Nicht lieferbar ---------------------------------------------------- */
+
+.lw16-haken__status {
+	display: inline-flex;
+	align-items: center;
+	justify-self: start;
+	padding: 0.1rem 0.6rem;
+	border-radius: var(--lw16-r-pille);
+	background: color-mix(in srgb, var(--lw16-fehler) 12%, transparent);
+	color: var(--lw16-fehler);
+	font: 500 0.72rem var(--lw16-mono);
+	font-style: normal;
+}
+
+.lw16-haken__status:empty {
+	display: none;
+}
+
+.lw16-haken__zeile > .lw16-haken__status {
+	grid-column: 2 / -1;
+}
+
+.lw16-haken__zeile.is-ausverkauft {
+	border-color: var(--lw16-fehler);
+	border-style: dashed;
+}
+
+.lw16-haken__modulknopf.is-ausverkauft {
+	opacity: 0.7;
+	border: 1px dashed var(--lw16-rand);
+	background: transparent;
+	cursor: not-allowed;
+}
+
+.lw16-haken__modulknopf.is-ausverkauft:hover {
+	transform: none;
+	box-shadow: none;
+	background: transparent;
+}
+
+.lw16-haken__modulknopf.is-ausverkauft .lw16-haken__plus {
+	display: none;
+}
+
+.lw16-haken__modulknopf.is-ausverkauft .lw16-haken__modulpreis {
+	color: var(--lw16-fehler);
+	font-family: var(--lw16-mono);
+	font-size: 0.78rem;
+}
+
+.lw16-haken__option.is-ausverkauft .lw16-haken__optionskarte {
+	opacity: 0.65;
+	border: 2px dashed var(--lw16-rand);
+	background: transparent;
+}
+
+.lw16-haken__lieferhinweis {
+	order: 3;
+	flex: 1 0 100%;
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--lw16-fehler);
+}
+
+.lw16-haken__lieferhinweis:empty {
+	display: none;
+}
+
+.lw16-haken__kaufen:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	box-shadow: none;
+}
+
 @container (max-width: 30em) {
 	.lw16-haken__zeile {
 		grid-template-columns: 1.7rem minmax(0, 1fr) auto;

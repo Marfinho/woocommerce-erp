@@ -157,6 +157,9 @@ class Frontend {
 				'position'     => __( '%s mm von unten', 'lindenweg16' ),
 				'kopiert'      => __( 'Link kopiert.', 'lindenweg16' ),
 				'ansicht_neu'  => __( 'Ansicht zurückgesetzt.', 'lindenweg16' ),
+				'nicht_lieferbar'       => __( 'Nicht lieferbar', 'lindenweg16' ),
+				'nicht_lieferbar_liste' => __( 'Gerade nicht lieferbar: %s. Nimm es heraus oder wähle eine andere Farbe oder Länge.', 'lindenweg16' ),
+				'modul_nicht_lieferbar' => __( 'Dieses Modul ist gerade nicht lieferbar.', 'lindenweg16' ),
 			),
 			'grenzen' => array(
 				'max_module' => Layout::MAX_MODULES,
@@ -438,6 +441,7 @@ class Frontend {
 									<span class="lw16-haken__optionskarte">
 										<strong><?php echo esc_html( Layout::format_mm( $base['height'] ) ); ?> mm</strong>
 										<span><?php echo esc_html( $base['name'] ); ?></span>
+										<em class="lw16-haken__status" data-lw16-basis-status="<?php echo esc_attr( $base['article'] ); ?>"></em>
 										<i style="--laenge: <?php echo esc_attr( round( 100 * (float) $base['height'] / $max_len ) ); ?>"></i>
 									</span>
 								</label>
@@ -501,6 +505,7 @@ class Frontend {
 						<span class="lw16-haken__summenname"><?php esc_html_e( 'Gesamt', 'lindenweg16' ); ?></span>
 						<p class="lw16-haken__preis" data-lw16-preis></p>
 					</div>
+					<p class="lw16-haken__lieferhinweis" role="status" data-lw16-liefer></p>
 					<label class="lw16-haken__menge">
 						<span><?php esc_html_e( 'Menge', 'lindenweg16' ); ?></span>
 						<input type="number" name="menge" value="<?php echo esc_attr( $config['qty'] ); ?>" min="1" max="<?php echo esc_attr( Layout::MAX_QTY ); ?>" step="1" data-lw16-menge>

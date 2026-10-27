@@ -7,6 +7,10 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.39.3] – 2026-10-27
+
+- **Konfigurator: „Nicht lieferbar" ist sichtbar.** Ist ein Modul oder Basismodul im Shop ausverkauft (bei variablen Produkten je Farbe), verschwindet es nicht mehr still aus dem Angebot: Die Karte bleibt gestrichelt und gesperrt mit dem Vermerk „Nicht lieferbar". Ein schon gewähltes Modul, das durch Farbwechsel nicht mehr lieferbar ist, wird in der Liste markiert, unter dem Preis steht, was fehlt, und „In den Warenkorb" ist gesperrt. Die Prüfung beim Absenden auf dem Server bleibt unverändert.
+
 ## [0.39.2] – 2026-10-27
 
 - **Konfigurator: Symbole und Preise an den Modulen.** Modulkarten und Modulzeilen zeigen ein Symbol (Haken, Ablage, Leiste; andere Module ein neutrales Bausteinsymbol, Zuordnung nach Modulname) und auf den Karten den Preis in der gewählten Farbe. Die Bildfläche der 3D-Ansicht ist im Beige des Designs.

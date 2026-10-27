@@ -200,6 +200,8 @@ class Konfigurator {
 		this.liste = wurzel.querySelector( '[data-lw16-modulliste]' );
 		this.angebot = wurzel.querySelector( '[data-lw16-angebot]' );
 		this.preis = wurzel.querySelector( '[data-lw16-preis]' );
+		this.lieferHinweis = wurzel.querySelector( '[data-lw16-liefer]' );
+		this.knopfKaufen = wurzel.querySelector( '.lw16-haken__kaufen' );
 		this.meldung = wurzel.querySelector( '[data-lw16-meldung]' );
 		this.buehne = wurzel.querySelector( '[data-lw16-ansicht]' );
 		this.hinweis = wurzel.querySelector( '[data-lw16-ansicht-hinweis]' );
@@ -311,6 +313,7 @@ class Konfigurator {
 
 		this.felderFarbe.forEach( ( feld ) => feld.addEventListener( 'change', () => {
 			this.zustand.farbe = this.wertVon( this.felderFarbe );
+			this.zeichneListe();
 			this.aktualisiere();
 
 			if ( this.ansicht ) {
@@ -346,6 +349,11 @@ class Konfigurator {
 		const teil = this.module.get( artikel );
 
 		if ( ! teil ) {
+			return;
+		}
+
+		if ( this.nichtLieferbar( teil ) ) {
+			this.sageAn( this.texte.modul_nicht_lieferbar );
 			return;
 		}
 
@@ -491,6 +499,10 @@ class Konfigurator {
 				zeile.classList.add( 'is-aktiv' );
 			}
 
+			if ( this.nichtLieferbar( teil ) ) {
+				zeile.classList.add( 'is-ausverkauft' );
+			}
+
 			const auswahl = document.createElement( 'select' );
 			auswahl.name = 'modul[]';
 			auswahl.setAttribute( 'aria-label', teil.name );
@@ -550,6 +562,13 @@ class Konfigurator {
 			symbol.appendChild( verweis );
 
 			zeile.append( symbol, auswahl, feld, einheit, weg );
+
+			if ( this.nichtLieferbar( teil ) ) {
+				const marke = document.createElement( 'span' );
+				marke.className = 'lw16-haken__status';
+				marke.textContent = this.texte.nicht_lieferbar;
+				zeile.appendChild( marke );
+			}
 			zeile.addEventListener( 'pointerdown', () => {
 				this.waehle( eintrag.uid );
 			} );
@@ -610,8 +629,11 @@ class Konfigurator {
 		this.angebot.querySelectorAll( '[data-lw16-modulpreis]' ).forEach( ( feld ) => {
 			const teil = this.module.get( parseInt( feld.dataset.lw16Modulpreis, 10 ) );
 			const preis = teil ? this.preisVon( teil ) : null;
+			const karte = feld.closest( '.lw16-haken__modulknopf' );
 
-			feld.textContent = null === preis ? '' : format.format( preis ) + ' ' + this.katalog.currency;
+			feld.textContent = null === preis ? this.texte.nicht_lieferbar : format.format( preis ) + ' ' + this.katalog.currency;
+			karte.classList.toggle( 'is-ausverkauft', null === preis );
+			karte.setAttribute( 'aria-disabled', null === preis ? 'true' : 'false' );
 		} );
 	}
 
@@ -662,25 +684,46 @@ class Konfigurator {
 	}
 
 	/**
+	 * Ist das Teil in der gewählten Farbe gerade nicht lieferbar?
+	 *
+	 * Etwas anderes als „gibt es nicht in dieser Farbe": Hier wird das Teil
+	 * angeboten, ist aber ausverkauft.
+	 *
+	 * @param {object} teil Katalogeintrag.
+	 * @returns {boolean}
+	 */
+	nichtLieferbar( teil ) {
+		return null === this.preisVon( teil );
+	}
+
+	/**
 	 * Preis anzeigen.
 	 */
 	zeichnePreis() {
-		let summe = this.preisVon( this.basis() );
-		let vollstaendig = null !== summe;
+		let summe = this.preisVon( this.basis() ) || 0;
+		const fehlt = [];
+
+		if ( this.nichtLieferbar( this.basis() ) ) {
+			fehlt.push( this.basis().name );
+		}
 
 		this.zustand.module.forEach( ( eintrag ) => {
 			const teil = this.module.get( eintrag.artikel );
 			const preis = teil ? this.preisVon( teil ) : null;
 
 			if ( null === preis ) {
-				vollstaendig = false;
+				if ( teil && ! fehlt.includes( teil.name ) ) {
+					fehlt.push( teil.name );
+				}
 				return;
 			}
 
 			summe += preis;
 		} );
 
-		if ( ! vollstaendig ) {
+		this.zeichneLieferstand( fehlt );
+
+		if ( fehlt.length ) {
 			this.preis.textContent = '';
 			return;
 		}
@@ -691,6 +734,29 @@ class Konfigurator {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		} ).format( gesamt ) + ' ' + this.katalog.currency;
+	}
+
+	/**
+	 * Hinweis unter dem Preis und Zustand des Warenkorb-Knopfs.
+	 *
+	 * @param {string[]} fehlt Namen der Teile, die gerade nicht lieferbar sind.
+	 */
+	zeichneLieferstand( fehlt ) {
+		if ( this.lieferHinweis ) {
+			this.lieferHinweis.textContent = fehlt.length ? this.texte.nicht_lieferbar_liste.replace( '%s', fehlt.join( ', ' ) ) : '';
+		}
+
+		if ( this.knopfKaufen ) {
+			this.knopfKaufen.disabled = fehlt.length > 0;
+		}
+
+		this.wurzel.querySelectorAll( '[data-lw16-basis-status]' ).forEach( ( feld ) => {
+			const basis = this.basen.get( parseInt( feld.dataset.lw16BasisStatus, 10 ) );
+			const aus = basis && this.nichtLieferbar( basis );
+
+			feld.textContent = aus ? this.texte.nicht_lieferbar : '';
+			feld.closest( '.lw16-haken__option' ).classList.toggle( 'is-ausverkauft', !! aus );
+		} );
 	}
 
 	/**
