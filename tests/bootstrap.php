@@ -313,6 +313,7 @@ foreach ( array( 'Polygon', 'Sat', 'MeshOutline', 'BinPacker', 'Silhouette', 'Ra
 foreach ( array(
 	'Layout',
 	'ConfigCodec',
+	'ArLink',
 	'ColorHex',
 	'ModelPlacement',
 	'GlbMeasure',
