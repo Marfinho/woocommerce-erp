@@ -21,6 +21,8 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
+use Lindenweg16\Modules\Betrieb\FilamentRolls;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\ProcurementAlert;
 use Lindenweg16\Modules\Betrieb\PurchaseRepository;
@@ -382,6 +384,46 @@ class Material {
 	}
 
 	/**
+	 * Rollen einer Charge für die Anzeige, mit Etikettenlink je Rolle.
+	 *
+	 * @param int  $lot_id Charge.
+	 * @param bool $labels Darf die Person Etiketten drucken?
+	 * @return array
+	 */
+	protected static function rolls_for_view( $lot_id, $labels ) {
+		$rolls = FilamentRolls::described_for_lot( $lot_id, true );
+
+		foreach ( $rolls as $i => $roll ) {
+			$rolls[ $i ]['label_url'] = $labels ? self::label_link( array( 'code' => $roll['code'] ) ) : '';
+		}
+
+		return $rolls;
+	}
+
+	/**
+	 * Adresse für das Etiketten-PDF der Rollen.
+	 *
+	 * @param array $args lot (Charge) oder code (einzelne Rolle).
+	 * @return string
+	 */
+	public static function label_link( array $args ) {
+		return Shell::nonce_url(
+			add_query_arg(
+				array_merge(
+					array(
+						'action' => 'lw16_betrieb_labels',
+						'was[]'  => 'rolls',
+						'format' => LabelSheet::DEFAULT_ROLL,
+					),
+					$args
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'lw16_betrieb_export'
+		);
+	}
+
+	/**
 	 * Alle Farben als Karten: Bestand, Reichweite, Rollen, Bestellungen.
 	 *
 	 * @return array
@@ -405,7 +447,8 @@ class Material {
 			$raw[ (int) $lot['id'] ] = $lot;
 		}
 
-		$cards = array();
+		$cards  = array();
+		$labels = Access::can( 'verwaltung.etiketten' );
 
 		foreach ( $colors as $color ) {
 			$stock    = self::available_kg( $color );
@@ -420,6 +463,10 @@ class Material {
 
 				$source = isset( $raw[ $lot['id'] ] ) ? $raw[ $lot['id'] ] : array();
 				$lots[] = array(
+					'has_rolls' => FilamentRolls::lot_has_rolls( (int) $lot['id'] ),
+					'rolls'     => self::rolls_for_view( (int) $lot['id'], $labels ),
+					'roll_g'    => FilamentRolls::default_roll_g(),
+					'label_url' => $labels ? self::label_link( array( 'lot' => (int) $lot['id'] ) ) : '',
 					'id'        => $lot['id'],
 					'code'      => $lot['code'],
 					'material'  => $lot['material'],

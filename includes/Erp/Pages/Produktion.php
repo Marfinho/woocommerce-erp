@@ -1752,7 +1752,7 @@ class Produktion {
 		$utilisation = CapacityPlanner::utilisation( $demand['print_time_h'], $printers, (float) $settings['net_hours_per_printer'] );
 
 		// Einmal alle Bewegungen, nicht je Artikel eine eigene Abfrage.
-		$stock = self::stock_for( StockLedger::balances( StockRepository::all() ), array_keys( $demand['purchased'] ) );
+		$stock = self::stock_for( StockRepository::balances(), array_keys( $demand['purchased'] ) );
 
 		$backwards = CapacityPlanner::backwards(
 			self::per_order( $demand ),

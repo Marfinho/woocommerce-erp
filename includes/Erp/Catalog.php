@@ -87,7 +87,7 @@ class Catalog {
 	protected static function stock_by_article() {
 		$out = array();
 
-		foreach ( StockLedger::balances( StockRepository::all() ) as $article => $colors ) {
+		foreach ( StockRepository::balances() as $article => $colors ) {
 			$sum = 0.0;
 			foreach ( $colors as $locations ) {
 				$sum += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;

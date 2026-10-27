@@ -7,6 +7,73 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.47.0] – 2026-10-27
+
+### Filamentrollen mit Etikett, Leer-Scan und Schwund (DB_VERSION 45)
+- **Eine Lieferung (Charge) besteht jetzt aus einzelnen Rollen.** Beim Wareneingang entstehen die Rollen automatisch (Standard 1000 g, einstellbar: `filament_rolle_g`); eine Lieferung von 4,25 kg ergibt drei volle Rollen und eine mit 250 g. Alte Chargen bekommen ihre Rollen unter Lager → Material mit „Rollen anlegen“ (mit Gewicht je Rolle); was rechnerisch schon aufgebraucht ist, wird gleich als leer geführt.
+- **Etikett je Rolle** (QR-Code `LW16R:R-00012`, dazu Rollencode, Farbe, Material, Gewicht und Charge) über die vorhandene Etikettenfunktion: Material → „Etiketten dieser Charge drucken“ bzw. „Etikett“ je Rolle, Rollenformat wie bei Lagerplätzen und Artikeln.
+- **Leer scannen.** Wer eine leere Rolle scannt (Lager → Scannen, Handscanner oder Kamera), sieht die Rolle mit Farbe, Charge und Rest und tippt auf **„Rolle ist leer“**: Sie verschwindet aus dem Bestand, in der Materialübersicht sinkt der Bestand dieser Farbe, die Reichweite und die Nachbestellwarnung folgen. Zweimal scannen schreibt nicht zweimal ab; ein Fehlscan lässt sich mit „Rückgängig“ zurücknehmen.
+- **Schwund wird festgehalten.** Die Druckjobs schätzen den Verbrauch (geplante Teile mal Bauteilgewicht), die leere Spule weiß es genau. Was die Rechnung der Rolle noch zugeschrieben hatte, steht als Schwund an der Rolle und im Ereignisprotokoll; ab 15 % der Rolle als „Aufmerksamkeit“ (meist: Ausschuss nicht gemeldet, Bauteilgewicht der Revision zu niedrig, Spülmenge fehlt).
+- **Wiegen:** Beim Scan lässt sich die Rolle wiegen (Gewicht samt Spule, Leerspule standardmäßig 250 g, `filament_spule_g`); das Restgewicht richtet sich danach, weiterer Verbrauch zählt davon ab. **In Benutzung nehmen** markiert die Rolle im Drucker: Der Verbrauch wird zuerst ihr angerechnet.
+- Verbrauch einer Charge wird der Reihe nach auf ihre Rollen angerechnet (`RollAllocator`): zuerst die im Drucker, dann die neuen. Chargen ohne Rollen laufen unverändert (geliefert minus Verbrauch). Jede Änderung steht im Änderungsprotokoll (`filament_rolls`) und im Ereignisprotokoll (Bereich „filament“).
+- Tests: `BetriebFilamentRollsTest`.
+
+## [0.46.0] – 2026-10-27
+
+### Prognose & Planung
+- **Neu: ERP → Finanzen → Prognose & Planung** (Recht `finanzen.prognose`) und **ERP → Fertigung → Tagesplan** (Recht `fertigung.tagesplan`).
+- **Prognosemodell** (`ForecastModel`): gedämpfter Trend (Holt) mit glättender Gewichtung neuerer Wochen, Saisonfaktoren erst ab zwei vollen Saisons, 80-%- und 95-%-Band, das mit dem Horizont wächst. Jede Prognose prüft sich selbst: Einschrittprognosen der letzten Wochen ergeben die Abweichung (wMAPE) und die Güte hoch/mittel/niedrig; zu kurze Reihen bekommen ein breites Band und keine Gütebehauptung.
+- **Kennzahlen mit Ziel und Wahrscheinlichkeit.** Umsatz und Bestellungen als Wochenreihe gegen das Quartalsziel: Ist bis heute plus Erwartung der restlichen Wochen, daraus die **Chance aufs Ziel**, das Quartalsende mit Band, was pro Woche noch nötig ist, und der kumulierte Quartalspfad gegen den Zielpfad. Ø-Warenkorb, B2B-Anteil, Reklamations-, Ausschuss- und Wiederkaufsquote und Auslastung als Monatsreihe mit Band gegen Ziel und Alarmgrenze (Wahrscheinlichkeit für Ziel und für das Reißen der Alarmgrenze). Die Ziele sind die vorhandenen Quartalsziele unter Berichte.
+- **Auslöser.** Täglich (und per Knopf) werden alle Kennzahlen und Artikel geprüft; Schwellen einstellbar (Standard: Aufmerksamkeit unter 50 % Chance, kritisch unter 15 % oder bei mindestens 50 % Risiko für die Alarmgrenze). Gemeldet wird **nur bei Änderung der Stufe** und im Ereignisprotokoll abgelegt (Bereich „prognose“, auch die Entspannung).
+- **Artikelbedarf** je Artikel und Farbe: Absatz mit Band, Reichweite (erwartet, schlechter und besser Fall), Sicherheitsbestand und **empfohlene Fertigungsmenge** für Vorlauf und Reichweite auf dem gewählten Dienstgrad, abzüglich Bestand, offener Bestellungen und laufender Fertigung. Stufe Aufmerksamkeit/Kritisch, wenn der Bestand voraussichtlich nicht bis zum Nachschub reicht.
+- **Fertigungsbedarf aus dem Modell.** Im Workflow ersetzt die Prognose für Artikel mit mindestens acht Wochen Verlauf das bisherige „Wochenmittel mal Reichweite“ (abschaltbar; für alle anderen bleibt das Wochenmittel).
+- **Geplante Ereignisse** (Märkte, Aktionen, Messen) heben den erwarteten Absatz der betroffenen Wochen anteilig nach Tagen an - in der Kennzahlen- und in der Artikelprognose. Als Anhaltspunkt steht der Durchschnitt der Kassentage der letzten 12 Monate daneben.
+- **Lieferzusage.** Artikel und Menge eingeben: sofort lieferbar oder Spanne „frühestens zwischen … und …“, begrenzt durch Druck- oder Arbeitszeit, nach Abzug dessen, was vorher in der Fertigung ansteht (späte Kante mit 70 % Kapazität). Zukaufartikel nennen die Abhängigkeit vom Lieferanten, statt ein Datum zu erfinden.
+- **Lieferzeit im Shop** (einschaltbar, Standard aus): Produktseiten zeigen „Auf Lager“, „Nur noch 2 auf Lager“ oder „lieferbar in ca. 9 Tagen“.
+- **Tagesplan.** Aus dem Bedarf werden Platten; lange (ab 4 Stunden) gehen bevorzugt in die Nacht, kurze in den Tag, begrenzt durch die Handarbeit des Tages (Plattenwechsel). Dazu Montage und Zukauf, Engpässe, offene Bestellungen und die Ereignisse des Tages.
+- Nicht dabei: eine Filament-Reichweite je Sorte (dafür gibt es die Beschaffungswarnung) und das automatische Anlegen von Fertigungsaufträgen aus dem Tagesplan - der Plan ist ein Vorschlag.
+- Tests: `BetriebPrognoseTest`.
+
+## [0.45.0] – 2026-10-27
+
+### Ereignisprotokoll in drei Stufen (DB_VERSION 44)
+- **Neu: ERP → Verwaltung → Einstellungen → Ereignisprotokoll.** Alles, was im ERP geschieht, in drei Stufen: **Normal** (gewöhnlicher Lauf: Bestellung, Lagerbuchung, Änderung, Einstellung, Anmeldung eines Mitarbeitenden), **Aufmerksamkeit** (etwas weicht ab: Bestand unter null, Storno, Erstattung, fehlgeschlagene Anmeldung, E-Mail nicht gesendet, niedriger Bestand, Abweichung zum Shop, Kassen-Storno) und **Kritisch** (etwas ist nicht gelaufen: Buchung zurückgerollt, Hintergrundjob abgebrochen, PHP-Abbruch im Plugin, fünf Fehlanmeldungen in 15 Minuten).
+- Filter nach Stufe (Klick auf die Zähler der letzten 7 Tage), Bereich und Suchtext, Seitenwechsel, Wer und Wann je Eintrag. Fehlgeschlagene Action-Scheduler-Aufträge stehen darüber.
+- Gespeichert in der Tabelle `event_log`, aufgeräumt nach Stufe: Normal 90 Tage, Aufmerksamkeit ein Jahr, Kritisch drei Jahre. Das Protokoll übersteht „Daten zurücksetzen“. Fehler beim Schreiben werden verschluckt - das Protokoll bricht nie einen Vorgang ab. Aufmerksamkeit und Kritisch gehen zusätzlich in den WooCommerce-Logger (Quelle `lindenweg16`).
+- Gesammelt wird über vorhandene Ereignisse (`Core\EventLog`): jede Zeile des hashverketteten Änderungsprotokolls erscheint automatisch auch hier; dazu WooCommerce (Bestellungen, Statuswechsel, Lagerwarnungen), WordPress (Anmeldungen, Mailfehler, Updates) und PHP-Abbrüche. Kundenanmeldungen im Shop werden nicht protokolliert, Einstellungen nur mit den Namen der Felder, nie den Werten.
+- Die Systemprüfung meldet kritische Einträge der letzten 24 Stunden als Fehler.
+
+### Bestellbuchung ohne Doppelabzug (Härtung)
+- Die Lagerbuchung einer Bestellung läuft in **einer Transaktion**. Bricht sie mittendrin ab (Zeitlimit, Fehler), wird alles zurückgerollt und an der Bestellung steht eine Notiz.
+- Zusätzlich wird vor jeder Position gegen das Konto gerechnet, was für diese Bestellung schon als Verkauf gebucht ist (Stornierte zählen nicht). Ein Wiederholungslauf bucht nur den Rest, nie doppelt.
+
+### Bestandssummen mitlaufend (DB_VERSION 43)
+- Neue Tabelle `stock_balance` mit der mitlaufenden Summe je Artikel, Farbe und Lagerort. Seiten, Dashboard, Bedarfsplanung und Prüfungen lesen sie, statt bei jedem Aufruf das ganze Bewegungskonto durchzurechnen. **Maßgeblich bleiben die Bewegungen**: Die Summe baut sich beim ersten Zugriff selbst auf, die Systemprüfung vergleicht beide, und „Bestandssummen neu berechnen“ (Einstellungen → Farben & Lager) stellt sie aus den Bewegungen wieder her.
+
+### Weitere Härtung
+- **Systemprotokoll für Hintergrundjobs:** Schlägt ein Job des Plugins fehl oder überschreitet das Zeitlimit, steht er im Ereignisprotokoll (kritisch). Der stündliche Shop-Abgleich hinterlässt ein Lebenszeichen; bleibt es drei Stunden aus, meldet die Systemprüfung es.
+- **Offene Schnittstellen gedrosselt:** Besucherzähler (`/pv`, höchstens 120 je Minute und Adresse, nur vom eigenen Ursprung) und Push-Abruf (120 je Minute).
+- **Kassen-Storno** nur noch per POST (statt per Link), mit Sperre gegen Doppelklick und zwei Geräte zugleich.
+- **Shop-Bestand:** Reservierung über alle offenen Bestellungen (bisher nur die ersten 200); die Bestandsfelder im Produkt-Editor von WooCommerce sind für ERP-Produkte gesperrt, ein im Editor gespeichertes Produkt wird sofort zurückgestellt; die Systemprüfung zeigt Abweichungen zwischen ERP und Shop.
+- **Wunschliste, Lagerwarnungen, Dashboard und Vorproduktionsvorschläge** rechnen nicht mehr mit dem eingefrorenen Bestand von Produkten, die Betrieb schon übernommen hat. Die Wunschliste zeigt „lieferbar“ nach Lager minus offene Bestellungen.
+- **Updates:** Wahlweise nur getaggte Veröffentlichungen (Kanal „Release“, Einstellungen → Updates; Standard bleibt `main`). Vor jedem Update legt das System ein ZIP der bisherigen Plugin-Dateien an (die letzten zwei bleiben, `uploads/lw16-backup/`), und im ERP lässt sich darauf zurücksetzen. Nur die Programmdateien, nie die Daten.
+- **Altes Lager-Modul stilllegen:** Sobald alle Produkte der alten Verwaltung übernommen sind, lässt es sich unter Einstellungen → Farben & Lager abschalten (bucht nichts mehr, zeigt nichts mehr).
+- **Klassische Betriebsseiten im wp-admin leiten ins ERP** (Einstellung „Oberfläche“ in den Plugin-Einstellungen, Standard aus). Die klassische Ansicht im Rahmen des ERP, Ajax und Formulare bleiben unberührt; `&lw16_classic=1` an der Adresse umgeht die Umleitung.
+- Konfigurator: Grenzwert der Modelllage kommt immer als Kommazahl zurück (ein seit 0.41 roter Test ist repariert).
+- Tests: `BetriebHaertungTest`.
+
+## [0.44.0] – 2026-10-27
+
+### Das ERP führt den Bestand im Shop
+- **Bisher** lagen die wahren Bestände nur im ERP (Bewegungskonto); in die Shop-Produkte wurde nichts geschrieben. Der Shop zeigte, was WooCommerce selbst wusste.
+- **Jetzt** schreibt das ERP den verfügbaren Bestand in WooCommerce: **Lager minus offene Bestellungen** (Status „in Bearbeitung“ und „wartend“, noch nicht gebucht). Die Reservierung beginnt damit beim Bestelleingang, nicht erst beim Abschluss – so wird nichts überverkauft. Nur der Lagerort „Lager“ zählt, nicht Kommission oder unterwegs; es zählen ganze Stück, nie unter null.
+- **Einfache Produkte** bekommen die Summe aller Farben, **variable Produkte** den Bestand je Variante nach Farbe (Farbattribut aus den Einstellungen; Variante ohne Farbe = Standardfarbe). Die Lagerverwaltung wird dabei eingeschaltet, „Nachbestellung erlauben“ aus, der Bestand am Elternprodukt aus.
+- **WooCommerces eigener Lagerabzug ruht** für Produkte mit ERP-Artikel (Filter `woocommerce_prevent_adjust_line_item_product_stock`, Abzug wie Rückbuchung), damit nichts doppelt abgezogen wird. Produkte ohne ERP-Artikel bleiben unberührt.
+- **Wann übertragen wird:** nach jeder Buchung im Bewegungskonto (`lw16_betrieb_stock_booked`) und nach jedem Statuswechsel einer Bestellung, gesammelt am Ende der Anfrage (ein Artikel einmal, auch bei vielen Positionen); zusätzlich stündlich für alle Artikel (`lw16_shop_bestand_abgleichen`).
+- **Einstellungen:** *Bestand im Shop* (Standard an) unter ERP → Verwaltung → Einstellungen → Lagerhoheit und Farbsystem sowie Betrieb → Einstellungen. Wirkt nur bei aktiver Lagerhoheit. Der Knopf **„Bestand jetzt in den Shop übertragen“** gleicht alle Artikel sofort ab – nach dem Einspielen dieser Version einmal drücken.
+- **Wichtig:** Eine von Hand im Produkt-Editor von WooCommerce eingetragene Menge wird beim nächsten Abgleich überschrieben. Bestandskorrekturen gehören ins ERP.
+- Tests: `BetriebShopStockTest`.
+
 ## [0.43.0] – 2026-10-27
 
 ### AR-Ansicht aus dem Konfigurator

@@ -277,6 +277,33 @@ class Schema {
 			KEY material (material)
 		) {$charset_collate};";
 
+		// Einzelne Rollen einer Charge. Eine Lieferung (Charge) besteht aus
+		// einer oder mehreren Rollen; jede trägt ein eigenes Etikett und wird
+		// beim Leerwerden gescannt. Der Bestand einer Charge ist die Summe ihrer
+		// Rollen, siehe RollAllocator.
+		$t[] = "CREATE TABLE {$p}filament_rolls (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			roll_code VARCHAR(32) NOT NULL,
+			lot_id BIGINT UNSIGNED NOT NULL,
+			start_g INT UNSIGNED NOT NULL DEFAULT 1000,
+			tare_g INT UNSIGNED NULL,
+			corr_g DECIMAL(10,1) NOT NULL DEFAULT 0,
+			status VARCHAR(12) NOT NULL DEFAULT 'neu',
+			location VARCHAR(100) NULL,
+			opened_at DATETIME NULL,
+			emptied_at DATETIME NULL,
+			consumed_g_at_close DECIMAL(10,1) NULL,
+			written_off_g DECIMAL(10,1) NULL,
+			emptied_by BIGINT UNSIGNED NULL,
+			notes TEXT NULL,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY roll_code (roll_code),
+			KEY lot_id (lot_id),
+			KEY status (status)
+		) {$charset_collate};";
+
 		$t[] = "CREATE TABLE {$p}batches (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			batch_code VARCHAR(64) NOT NULL,
@@ -349,6 +376,18 @@ class Schema {
 			KEY contact_id (contact_id),
 			KEY ref (ref_type, ref_id),
 			KEY moved_at (moved_at)
+		) {$charset_collate};";
+
+		// Mitlaufende Summe des Bewegungskontos. Es bleibt dabei: Die Wahrheit
+		// sind die Bewegungen. Diese Tabelle ist nur ihr Zwischenstand, damit
+		// nicht jede Seite das ganze Konto durchrechnen muss - und lässt sich
+		// jederzeit aus den Bewegungen neu aufbauen.
+		$t[] = "CREATE TABLE {$p}stock_balance (
+			article_id BIGINT UNSIGNED NOT NULL,
+			color VARCHAR(50) NOT NULL DEFAULT '',
+			location VARCHAR(20) NOT NULL DEFAULT 'lager',
+			qty DECIMAL(14,3) NOT NULL DEFAULT 0,
+			PRIMARY KEY  (article_id, color, location)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}picklists (

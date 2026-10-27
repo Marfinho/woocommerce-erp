@@ -152,9 +152,7 @@ class Dashboard {
 		// Lagerwarnung heisst jetzt: Bestand unter Sollbestand im Modul
 		// Betrieb. Die alte Ampel zaehlte Produkte einer Verwaltung, die es
 		// als eigene Oberflaeche nicht mehr gibt.
-		$balances       = \Lindenweg16\Modules\Betrieb\StockLedger::balances(
-			\Lindenweg16\Modules\Betrieb\StockRepository::all()
-		);
+		$balances       = \Lindenweg16\Modules\Betrieb\StockRepository::balances();
 		$lagerwarnungen = 0;
 		foreach ( \Lindenweg16\Modules\Betrieb\StockRepository::targets() as $target ) {
 			$stock = \Lindenweg16\Modules\Betrieb\StockLedger::pick(
@@ -188,7 +186,12 @@ class Dashboard {
 	protected function render_low_stock_warning() {
 		$produkte = Repository::get_products();
 		$warnings = array();
+		$map      = \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_map();
 		foreach ( $produkte as $p ) {
+			// Von Betrieb geführte Produkte: Ihr alter Bestand ist eingefroren.
+			if ( \Lindenweg16\Modules\Betrieb\StockOwnership::superseded( (int) $p->id, $map ) ) {
+				continue;
+			}
 			$ampel = StockManager::ampel( $p );
 			if ( 'gruen' !== $ampel ) {
 				$warnings[] = array(

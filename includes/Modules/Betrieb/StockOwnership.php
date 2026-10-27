@@ -130,6 +130,72 @@ class StockOwnership {
 	}
 
 	/**
+	 * Produkte der alten Lagerverwaltung, die Betrieb schon übernommen hat.
+	 *
+	 * Ihr Bestand dort ist seit der Übernahme eingefroren. Wer ihn noch
+	 * anzeigt - Warnungen, Vorschläge, Wunschliste -, zeigt eine falsche Zahl.
+	 *
+	 * @return array legacy_produkt_id => article_id.
+	 */
+	public static function legacy_map() {
+		global $wpdb;
+
+		$table = ArticleRepository::table();
+		$rows  = $wpdb->get_results( "SELECT id, legacy_produkt_id FROM {$table} WHERE legacy_produkt_id > 0", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$out   = array();
+
+		foreach ( (array) $rows as $row ) {
+			$out[ (int) $row['legacy_produkt_id'] ] = (int) $row['id'];
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Produkte der alten Lagerverwaltung, die Betrieb noch nicht übernommen hat.
+	 *
+	 * Solange hier etwas steht, braucht der Betrieb das alte Lager-Modul noch.
+	 * Ist die Liste leer, lässt es sich stilllegen.
+	 *
+	 * @return array Zeilen mit id und name.
+	 */
+	public static function open_legacy_products() {
+		$map = self::legacy_map();
+		$out = array();
+
+		foreach ( \Lindenweg16\Modules\Inventory\Repository::get_products() as $product ) {
+			if ( ! isset( $map[ (int) $product->id ] ) ) {
+				$out[] = array(
+					'id'   => (int) $product->id,
+					'name' => (string) $product->name,
+				);
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Ist das alte Lager-Modul stillgelegt?
+	 *
+	 * @return bool
+	 */
+	public static function legacy_disabled() {
+		return (bool) Settings::get( 'lager_altmodul_aus', 0 );
+	}
+
+	/**
+	 * Ein Produkt der alten Verwaltung weglassen, wenn Betrieb es führt?
+	 *
+	 * @param int   $legacy_id Produkt-ID der alten Verwaltung.
+	 * @param array $map       Ergebnis von legacy_map() (einmal laden, nicht je Produkt).
+	 * @return bool
+	 */
+	public static function superseded( $legacy_id, array $map ) {
+		return self::is_active() && isset( $map[ (int) $legacy_id ] );
+	}
+
+	/**
 	 * Eine Bewegung an die zuständige Lagerverwaltung geben.
 	 *
 	 * Gemeinsame Weiche für alle Stellen außerhalb des Shops – heute Kasse,

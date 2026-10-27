@@ -63,6 +63,16 @@ class Scheduler {
 	// AR-Ansicht aus dem Konfigurator: abgelegte Konfigurationen nach sieben Tagen löschen.
 	const HOOK_AR_MODEL_CLEANUP = 'lw16_ar_modell_aufraeumen';
 
+	/**
+	 * Bestand aus dem ERP in die Shop-Produkte übertragen (Sicherheitsnetz).
+	 */
+	const HOOK_SHOP_STOCK = 'lw16_shop_bestand_abgleichen';
+
+	/**
+	 * Prognose-Auslöser prüfen (täglich).
+	 */
+	const HOOK_FORECAST = 'lw16_prognose_pruefen';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -93,7 +103,73 @@ class Scheduler {
 			self::HOOK_MAIL_SYNC,
 			self::HOOK_MAIL_SERVER_OP,
 			self::HOOK_AR_MODEL_CLEANUP,
+			self::HOOK_SHOP_STOCK,
+			self::HOOK_FORECAST,
 		);
+	}
+
+	/**
+	 * Fehlschläge unserer Hintergrundjobs ins Systemprotokoll schreiben.
+	 *
+	 * Action Scheduler meldet sie sonst nur in seiner eigenen Liste, die
+	 * kaum jemand ansieht.
+	 */
+	public static function watch_failures() {
+		add_action( 'action_scheduler_failed_execution', array( __CLASS__, 'log_failure' ), 10, 2 );
+		add_action( 'action_scheduler_failed_action', array( __CLASS__, 'log_timeout' ), 10, 1 );
+	}
+
+	/**
+	 * Ein Job hat eine Ausnahme geworfen.
+	 *
+	 * @param int        $action_id Auftrag.
+	 * @param \Exception $exception Fehler.
+	 */
+	public static function log_failure( $action_id, $exception ) {
+		$hook = self::hook_of( $action_id );
+
+		if ( self::is_ours( $hook ) ) {
+			Log::error( 'job', $hook . ': ' . ( is_object( $exception ) ? $exception->getMessage() : '' ), array( 'action_id' => (int) $action_id ) );
+		}
+	}
+
+	/**
+	 * Ein Job hat das Zeitlimit überschritten.
+	 *
+	 * @param int $action_id Auftrag.
+	 */
+	public static function log_timeout( $action_id ) {
+		$hook = self::hook_of( $action_id );
+
+		if ( self::is_ours( $hook ) ) {
+			Log::error( 'job', $hook . ': Zeitlimit überschritten', array( 'action_id' => (int) $action_id ) );
+		}
+	}
+
+	/**
+	 * Gehört ein Hook zu diesem Plugin? Reine Regel.
+	 *
+	 * @param string $hook Hook-Name.
+	 * @return bool
+	 */
+	public static function is_ours( $hook ) {
+		return 0 === strpos( (string) $hook, 'lw16_' );
+	}
+
+	/**
+	 * Hook-Name eines Auftrags.
+	 *
+	 * @param int $action_id Auftrag.
+	 * @return string
+	 */
+	protected static function hook_of( $action_id ) {
+		if ( ! class_exists( '\ActionScheduler' ) ) {
+			return '';
+		}
+
+		$action = \ActionScheduler::store()->fetch_action( (string) $action_id );
+
+		return $action ? (string) $action->get_hook() : '';
 	}
 
 	/**
@@ -135,6 +211,8 @@ class Scheduler {
 			self::HOOK_SLICING_MAINTENANCE   => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_MAIL_SYNC             => 5 * MINUTE_IN_SECONDS,
 			self::HOOK_AR_MODEL_CLEANUP      => DAY_IN_SECONDS,
+			self::HOOK_SHOP_STOCK            => HOUR_IN_SECONDS,
+			self::HOOK_FORECAST              => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

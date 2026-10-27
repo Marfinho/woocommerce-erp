@@ -9,6 +9,9 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Db;
+use Lindenweg16\Core\Log;
+
 /**
  * Zugriff auf das Bewegungskonto.
  */
@@ -24,6 +27,21 @@ class StockRepository {
 	public static function table() {
 		global $wpdb;
 		return $wpdb->prefix . 'lw16_stock_movements';
+	}
+
+	/**
+	 * Option: Die mitlaufende Summe ist aufgebaut und wird fortgeschrieben.
+	 */
+	const BALANCE_READY = 'lw16_stock_balance_ready';
+
+	/**
+	 * Tabellenname der mitlaufenden Summe.
+	 *
+	 * @return string
+	 */
+	public static function balance_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'lw16_stock_balance';
 	}
 
 	/**
@@ -71,16 +89,141 @@ class StockRepository {
 			$row['color'] = ColorRegistry::default_color();
 		}
 
-		if ( false === $wpdb->insert( self::table(), $row ) ) {
+		// Bewegung und Summe gehören zusammen: Fällt eines aus, gilt keins.
+		$id = (int) Db::transaction(
+			function () use ( $wpdb, $row ) {
+				if ( false === $wpdb->insert( self::table(), $row ) ) {
+					Log::error( 'lager', 'Bewegung konnte nicht geschrieben werden: ' . $wpdb->last_error, array( 'article_id' => $row['article_id'], 'qty' => $row['qty'] ) );
+
+					return 0;
+				}
+
+				$new_id = (int) $wpdb->insert_id;
+				self::add_to_balance( $row );
+
+				return $new_id;
+			}
+		);
+
+		if ( ! $id ) {
 			return 0;
 		}
 
-		$id = (int) $wpdb->insert_id;
+		self::watch_negative( $row );
+
 		BetriebAudit::record( 'create', 'stock_movements', $id, null, $row, isset( $data['void_reason'] ) ? $data['void_reason'] : '' );
+
+		// Der Shop zieht nach (siehe WooStockSync).
+		do_action( 'lw16_betrieb_stock_booked', (int) $row['article_id'], $row['color'] );
 
 		self::maybe_announce_replenished( (int) $row['article_id'], (float) $row['qty'] );
 
 		return $id;
+	}
+
+	/**
+	 * Wird durch einen Abgang das Lager negativ? Dann Aufmerksamkeit.
+	 *
+	 * Verhindert wird die Buchung nicht - die Ware ist ja schon weg -, aber
+	 * es soll auffallen, solange man noch nachsehen kann, was fehlt.
+	 *
+	 * @param array $row Gebuchte Bewegung.
+	 */
+	protected static function watch_negative( array $row ) {
+		global $wpdb;
+
+		if ( (float) $row['qty'] >= 0 || 'lager' !== $row['location'] ) {
+			return;
+		}
+
+		$stand = (float) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT qty FROM ' . self::balance_table() . ' WHERE article_id = %d AND color = %s AND location = %s', // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+				(int) $row['article_id'],
+				(string) $row['color'],
+				'lager'
+			)
+		);
+
+		if ( $stand < -0.0005 ) {
+			Log::attention( 'lager', 'Bestand unter null: Artikel #' . (int) $row['article_id'] . ' (' . $row['color'] . ') steht bei ' . $stand, array( 'article_id' => (int) $row['article_id'] ) );
+		}
+	}
+
+	/**
+	 * Eine Bewegung in die mitlaufende Summe einrechnen.
+	 *
+	 * Ist die Summe noch nicht aufgebaut (erster Aufruf nach dem Update),
+	 * wird sie jetzt aus allen Bewegungen gebaut - die neue steht bereits drin.
+	 *
+	 * @param array $row Bewegung (article_id, color, location, qty).
+	 */
+	protected static function add_to_balance( array $row ) {
+		global $wpdb;
+
+		if ( ! get_option( self::BALANCE_READY ) ) {
+			self::rebuild_balances();
+
+			return;
+		}
+
+		$table = self::balance_table();
+
+		$wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$table} (article_id, color, location, qty) VALUES (%d, %s, %s, %f) ON DUPLICATE KEY UPDATE qty = qty + VALUES(qty)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $row['article_id'],
+				(string) $row['color'],
+				(string) $row['location'],
+				(float) $row['qty']
+			)
+		);
+	}
+
+	/**
+	 * Die mitlaufende Summe aus den Bewegungen neu aufbauen.
+	 *
+	 * Auch das Mittel, wenn die Systemprüfung eine Abweichung meldet.
+	 *
+	 * @return int Anzahl Zeilen.
+	 */
+	public static function rebuild_balances() {
+		global $wpdb;
+
+		$balance = self::balance_table();
+		$moves   = self::table();
+
+		$wpdb->query( "DELETE FROM {$balance}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb->query( "INSERT INTO {$balance} (article_id, color, location, qty) SELECT article_id, COALESCE(color, ''), location, SUM(qty) FROM {$moves} GROUP BY article_id, COALESCE(color, ''), location" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		update_option( self::BALANCE_READY, 1, false );
+
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$balance}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * Bestände als Verschachtelung: Artikel, Farbe, Lagerort.
+	 *
+	 * Dasselbe wie StockLedger::balances() über alle Bewegungen, nur aus der
+	 * mitlaufenden Summe gelesen statt aus dem ganzen Konto errechnet.
+	 *
+	 * @param int $article_id Optional auf einen Artikel begrenzen.
+	 * @return array article_id => color => location => Menge.
+	 */
+	public static function balances( $article_id = 0 ) {
+		global $wpdb;
+
+		if ( ! get_option( self::BALANCE_READY ) ) {
+			self::rebuild_balances();
+		}
+
+		$table = self::balance_table();
+
+		$rows = $article_id
+			? $wpdb->get_results( $wpdb->prepare( "SELECT article_id, color, location, qty FROM {$table} WHERE article_id = %d", (int) $article_id ), ARRAY_A ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			: $wpdb->get_results( "SELECT article_id, color, location, qty FROM {$table}", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return StockLedger::from_rows( (array) $rows );
 	}
 
 	/**
@@ -101,9 +244,8 @@ class StockRepository {
 			return;
 		}
 
-		$movements = self::all( $article_id );
-		$balances  = StockLedger::balances( $movements );
-		$after     = 0.0;
+		$balances = self::balances( $article_id );
+		$after    = 0.0;
 
 		foreach ( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() as $locations ) {
 			$after += isset( $locations['lager'] ) ? (float) $locations['lager'] : 0.0;
@@ -199,6 +341,31 @@ class StockRepository {
 		return $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$table} WHERE ref_type = %s AND ref_id = %d AND reverses_id IS NULL ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $ref_type,
+				(int) $ref_id
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Wirksame Bewegungen zu einer Herkunft: Originale ohne Gegenbuchung.
+	 *
+	 * Anders als by_ref() fehlen hier auch die Bewegungen, die schon
+	 * storniert wurden. Das ist die Grundlage dafür, eine Bestellung nicht
+	 * doppelt zu buchen und nach einem Storno trotzdem neu buchen zu können.
+	 *
+	 * @param string $ref_type Herkunftsart.
+	 * @param int    $ref_id   Herkunft.
+	 * @return array
+	 */
+	public static function active_by_ref( $ref_type, $ref_id ) {
+		global $wpdb;
+		$table = self::table();
+
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT m.* FROM {$table} m LEFT JOIN {$table} r ON r.reverses_id = m.id WHERE m.ref_type = %s AND m.ref_id = %d AND m.reverses_id IS NULL AND r.id IS NULL ORDER BY m.id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(string) $ref_type,
 				(int) $ref_id
 			),

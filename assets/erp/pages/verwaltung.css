@@ -46,3 +46,5 @@
 	.vw-tier { grid-template-columns: 1fr 1fr; }
 	.vw-tier input:first-child { grid-column: 1 / -1; }
 }
+
+.vw-tiles { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }

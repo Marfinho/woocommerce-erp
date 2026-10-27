@@ -189,10 +189,25 @@ class Workflow {
 			}
 		}
 
-		$demands = array_merge(
-			$demands,
-			Forecast::demands( Forecast::sales_by_article( $settings['weeks'] ), $open, $settings['weeks'], $settings['cover_weeks'] )
-		);
+		$flat = Forecast::demands( Forecast::sales_by_article( $settings['weeks'] ), $open, $settings['weeks'], $settings['cover_weeks'] );
+
+		// Das Prognosemodell (Trend, Saison, Dienstgrad) ersetzt die einfache
+		// Hochrechnung für Artikel mit genug Verlauf; für alle anderen gilt
+		// weiter das Wochenmittel.
+		if ( \Lindenweg16\Modules\Betrieb\ForecastService::settings()['use_model'] ) {
+			$modelled = \Lindenweg16\Modules\Betrieb\ForecastService::modelled_articles();
+			$flat     = array_values(
+				array_filter(
+					$flat,
+					static function ( $row ) use ( $modelled ) {
+						return ! isset( $modelled[ (int) $row['article_id'] ] );
+					}
+				)
+			);
+			$flat = array_merge( $flat, \Lindenweg16\Modules\Betrieb\ForecastService::model_demands( $open ) );
+		}
+
+		$demands = array_merge( $demands, $flat );
 
 		$ctx    = DemandPlanner::context();
 		$plan   = DemandPlanner::plan( $demands, $ctx );

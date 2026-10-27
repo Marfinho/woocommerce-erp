@@ -390,7 +390,7 @@ class DemandPlanner {
 		}
 
 		// 2. Unterdeckung gegenüber dem Sollbestand.
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 
 		foreach ( StockRepository::targets() as $target ) {
 			$have = StockLedger::pick( $balances, (int) $target['article_id'], (string) $target['color'] );
@@ -471,7 +471,7 @@ class DemandPlanner {
 	 * @return array
 	 */
 	public static function context() {
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 
 		$stock = array();
 		foreach ( $balances as $article_id => $colors ) {

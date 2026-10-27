@@ -789,7 +789,7 @@ class SimplePages {
 			// Einmal alle Bewegungen, nicht je Artikel eine eigene Abfrage:
 			// Bei zwanzig Zukaufteilen waren das zwanzig Läufe über dieselbe
 			// Tabelle.
-			$balances = StockLedger::balances( StockRepository::all() );
+			$balances = StockRepository::balances();
 
 			foreach ( array_keys( $demand['purchased'] ) as $article_id ) {
 				$sum = 0.0;

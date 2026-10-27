@@ -81,6 +81,7 @@ class ResetTool {
 					'print_jobs',
 					'batches',
 					'stock_movements',
+					'stock_balance',
 					'work_orders',
 					'picklists',
 					'picklist_items',
@@ -217,7 +218,10 @@ class ResetTool {
 			'printers',
 			'filament_lots',
 			'storage_bins',
+			'filament_rolls',
 			'stock_targets',
+			// Das Ereignisprotokoll überlebt jeden Schnitt: Es belegt auch, dass er stattfand.
+			'event_log',
 			'calc_settings',
 			'price_tiers',
 			'user_rates',

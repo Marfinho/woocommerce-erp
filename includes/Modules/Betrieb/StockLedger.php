@@ -114,6 +114,24 @@ class StockLedger {
 	}
 
 	/**
+	 * Aus fertigen Summen (Artikel, Farbe, Ort, Menge) dieselbe Verschachtelung bauen wie balances().
+	 *
+	 * @param array $rows Zeilen mit article_id, color, location, qty.
+	 * @return array article_id => color => location => Menge.
+	 */
+	public static function from_rows( array $rows ) {
+		$balances = array();
+
+		foreach ( $rows as $row ) {
+			$article = (int) $row['article_id'];
+			$color   = isset( $row['color'] ) && '' !== $row['color'] ? (string) $row['color'] : ColorRegistry::UNRESOLVED;
+			$balances[ $article ][ $color ][ (string) $row['location'] ] = (float) $row['qty'];
+		}
+
+		return $balances;
+	}
+
+	/**
 	 * Bestand eines Artikels in einer Farbe.
 	 *
 	 * @param array  $movements Bewegungen.
@@ -245,6 +263,46 @@ class StockLedger {
 			'reverses_id'   => isset( $movement['id'] ) ? (int) $movement['id'] : null,
 			'void_reason'   => (string) $reason,
 		);
+	}
+
+	/**
+	 * Wie viel einer Bestellung ist noch zu buchen?
+	 *
+	 * Bricht eine Buchung mittendrin ab, fehlt die Marke „gebucht" an der
+	 * Bestellung, der nächste Versuch buchte alles noch einmal. Deshalb wird
+	 * vor jeder Position gegengerechnet, was für diese Bestellung schon als
+	 * Verkauf im Konto steht (Stornierte zählen nicht mehr).
+	 *
+	 * @param array $booked Wirksame Verkaufsbewegungen der Bestellung.
+	 * @param array $wanted Gewünschte Positionen: article_id, color, qty (positiv).
+	 * @return array Noch zu buchende Menge je Position, in der Reihenfolge von $wanted.
+	 */
+	public static function unbooked( array $booked, array $wanted ) {
+		$pool = array();
+
+		foreach ( $booked as $movement ) {
+			$movement = (array) $movement;
+			if ( 'verkauf' !== ( isset( $movement['movement_type'] ) ? $movement['movement_type'] : '' ) || (float) $movement['qty'] >= 0 ) {
+				continue;
+			}
+
+			$key          = (int) $movement['article_id'] . '|' . (string) $movement['color'];
+			$pool[ $key ] = ( isset( $pool[ $key ] ) ? $pool[ $key ] : 0.0 ) - (float) $movement['qty'];
+		}
+
+		$out = array();
+
+		foreach ( $wanted as $i => $line ) {
+			$key  = (int) $line['article_id'] . '|' . (string) $line['color'];
+			$need = (float) $line['qty'];
+			$have = isset( $pool[ $key ] ) ? $pool[ $key ] : 0.0;
+			$take = min( $have, $need );
+
+			$pool[ $key ] = $have - $take;
+			$out[ $i ]    = max( 0.0, $need - $take );
+		}
+
+		return $out;
 	}
 
 	/**

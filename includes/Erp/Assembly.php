@@ -184,7 +184,7 @@ class Assembly {
 	 * @return string Farbkennung.
 	 */
 	public static function suggest_color( array $parts ) {
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 		$score    = array();
 
 		foreach ( $parts as $part ) {

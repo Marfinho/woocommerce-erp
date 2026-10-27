@@ -1609,7 +1609,7 @@ class Verkauf {
 		$articles = ArticleRepository::all_by_id();
 		$stock    = array();
 
-		foreach ( StockLedger::balances( StockRepository::all() ) as $article_id => $colors ) {
+		foreach ( StockRepository::balances() as $article_id => $colors ) {
 			if ( ! isset( $articles[ $article_id ] ) || ! ArticleRepository::is_active( $articles[ $article_id ] ) ) {
 				continue;
 			}

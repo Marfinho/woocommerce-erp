@@ -509,7 +509,7 @@
 		ui.view().appendChild(bar);
 		ui.view().appendChild(box);
 
-		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['plugin', 'Plugin (Firma, DHL, …)']];
+		var TABS = [['annahmen', 'Kalkulation'], ['staffel', 'Rabattstaffel B2B'], ['lager', 'Farben & Lager'], ['protokoll', 'Protokoll'], ['systempruefung', 'Systemprüfung'], ['meldungen', 'Ereignisprotokoll'], ['updates', 'Updates'], ['plugin', 'Plugin (Firma, DHL, …)']];
 
 		function tabs() {
 			bar.textContent = '';
@@ -521,7 +521,7 @@
 		function show() {
 			box.textContent = '';
 			box.appendChild(loading());
-			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, plugin: plugin })[tab]();
+			({ annahmen: annahmen, staffel: staffel, lager: lager, protokoll: protokoll, systempruefung: systempruefung, meldungen: meldungen, updates: updates, plugin: plugin })[tab]();
 		}
 
 		function stichtagForm(d) {
@@ -600,6 +600,8 @@
 				var attr = input('text', d.attribute, { autocapitalize: 'none' });
 				var def = input('text', d['default']);
 				var hoheit = h('input', { type: 'checkbox', checked: d.hoheit });
+				var shop = h('input', { type: 'checkbox', checked: d.shop_bestand });
+				var alt = h('input', { type: 'checkbox', checked: d.altmodul_aus, disabled: d.altmodul_offen.length > 0 && !d.altmodul_aus });
 				var mail = h('input', { type: 'checkbox', checked: d.wochenmail });
 				var layout = select([['theme', 'In das Website-Design einbetten'], ['schlicht', 'Schlichte eigene Seite mit Logo']], d.layout);
 				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
@@ -613,14 +615,33 @@
 					field('Farbattribut (Taxonomie)', attr, 'Globales Produktattribut, üblicherweise pa_farbe.'),
 					field('Standardfarbe', def, 'Gilt für jede Position ohne eigene Farbe.'),
 					h('label', { class: 'vw-check' }, hoheit, h('span', null, 'Lagerhoheit: Betrieb bucht die Lagerabgänge der ihm bekannten Artikel. Ist sie aus, bucht das Lager-Modul alle Abgänge und die Bestände im Betrieb stimmen nicht.')),
+					h('label', { class: 'vw-check' }, shop, h('span', null, 'Bestand im Shop: Das ERP führt den Bestand und überträgt ihn (Lager minus offene Bestellungen) in die Shop-Produkte; der Lagerabzug von WooCommerce ruht für diese Produkte. Wirkt nur bei aktiver Lagerhoheit.')),
+					h('label', { class: 'vw-check' }, alt, h('span', null, 'Altes Lager-Modul stilllegen: Es bucht keine Abgänge mehr und zeigt nichts mehr an. Geht erst, wenn alle Produkte der alten Verwaltung ins ERP übernommen sind.')),
+					d.altmodul_offen.length ? h('div', { class: 'notice warn' }, 'Noch nicht übernommen (' + d.altmodul_offen.length + (d.altmodul_offen.length >= 20 ? '+' : '') + '): ' + d.altmodul_offen.map(function (p) { return p.name; }).join(', ') + '. Übernahme unter Verwaltung → Import.') : null,
 					field('Nachbestellseite', layout, 'Schlicht ist die Rückfallebene, falls das Theme mit dem Formular nicht zurechtkommt.'),
 					h('label', { class: 'vw-check' }, mail, h('span', null, 'Wöchentliche Zusammenfassung per E-Mail senden')),
 					go);
 				form.addEventListener('submit', function (e) {
 					e.preventDefault();
-					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
+					run(go, function () { return post('einstellungen/lager', { attribute: attr.value, 'default': def.value, hoheit: hoheit.checked, shop_bestand: shop.checked, altmodul_aus: alt.checked, wochenmail: mail.checked, layout: layout.value }); }, function (r) { ui.toast(r.message); show(); });
 				});
 				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Lagerhoheit und Farbsystem'), form));
+
+				var sync = h('button', { class: 'btn', type: 'button' }, 'Bestand jetzt in den Shop übertragen');
+				sync.addEventListener('click', function () {
+					run(sync, function () { return post('einstellungen/lager/shop-bestand', {}); }, function (r) { ui.toast(r.message); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Bestand im Shop'),
+					h('p', { class: 'muted' }, 'Der Bestand wird nach jeder Buchung und jedem Statuswechsel einer Bestellung übertragen, zusätzlich stündlich. Dieser Knopf gleicht alle Artikel sofort ab – etwa nach der Umstellung.'),
+					sync));
+
+				var saldo = h('button', { class: 'btn', type: 'button' }, 'Bestandssummen neu berechnen');
+				saldo.addEventListener('click', function () {
+					run(saldo, function () { return post('einstellungen/lager/saldo-neu', {}); }, function (r) { ui.toast(r.message); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Bestandssummen'),
+					h('p', { class: 'muted' }, 'Die Bestände werden bei jeder Buchung mitgerechnet, damit die Seiten schnell bleiben. Maßgeblich bleiben die Bewegungen. Meldet die Systemprüfung eine Abweichung, baut dieser Knopf die Summen aus den Bewegungen neu auf.'),
+					saldo));
 			}).catch(fail);
 		}
 
@@ -645,6 +666,85 @@
 				else {
 					card.appendChild(h('div', { class: 'notice warn' }, d.errors + ' Fehler, ' + d.warnings + ' Warnungen. Ein Fehler blockiert einen Vorgang; eine Warnung ist etwas, das niemand mehr braucht.'));
 					card.appendChild(table(['Schwere', 'Bereich', 'Befund', 'Was zu tun ist'], d.findings.map(function (f) { return [h('span', { class: 'tag vw-' + (f.level === 'fehler' ? 'rot' : 'gelb') }, f.level === 'fehler' ? 'Fehler' : 'Warnung'), f.area, f.text, f.fix]; })));
+				}
+				box.appendChild(card);
+			}).catch(fail);
+		}
+
+		var evState = { level: '', area: '', q: '', page: 1 };
+
+		function meldungen() {
+			var qs = 'level=' + encodeURIComponent(evState.level) + '&area=' + encodeURIComponent(evState.area) + '&q=' + encodeURIComponent(evState.q) + '&page=' + evState.page;
+			ui.api('einstellungen/ereignisse?' + qs).then(function (d) {
+				box.textContent = '';
+				var NAMES = { normal: 'Normal', attention: 'Aufmerksamkeit', critical: 'Kritisch' };
+				var CLS = { normal: 'vw-gruen', attention: 'vw-gelb', critical: 'vw-rot' };
+
+				// Übersicht der letzten sieben Tage – ein Klick filtert.
+				var tiles = h('div', { class: 'vw-tiles' });
+				['critical', 'attention', 'normal'].forEach(function (lv) {
+					var tile = h('button', { class: 'btn' + (evState.level === lv ? ' primary' : ''), type: 'button' }, NAMES[lv] + ': ' + d.counts[lv]);
+					tile.addEventListener('click', function () { evState.level = evState.level === lv ? '' : lv; evState.page = 1; meldungen(); });
+					tiles.appendChild(tile);
+				});
+				var hooks = Object.keys(d.failed);
+				var sync = d.last_sync ? 'Letzter vollständiger Bestandsabgleich in den Shop: ' + ui.when(d.last_sync) + '.' : 'Der stündliche Bestandsabgleich in den Shop ist noch nicht gelaufen.';
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Ereignisprotokoll – letzte 7 Tage'),
+					h('p', { class: 'muted' }, 'Alles, was im ERP geschieht: Normal ist der gewöhnliche Lauf (Bestellung, Buchung, Einstellung, Anmeldung). Aufmerksamkeit heißt: etwas weicht ab (Bestand unter null, Storno, fehlgeschlagene Anmeldung, Abweichung zum Shop). Kritisch heißt: etwas ist nicht gelaufen (Buchung zurückgerollt, Job abgebrochen, PHP-Fehler). Normale Einträge bleiben 90 Tage, Aufmerksamkeit ein Jahr, Kritisches drei Jahre.'),
+					tiles,
+					h('p', { class: 'muted' }, sync),
+					hooks.length ? h('div', { class: 'notice warn' }, 'Fehlgeschlagene Hintergrundaufträge: ' + hooks.map(function (k) { return k + ' (' + d.failed[k] + ')'; }).join(', ') + '. Details unter WooCommerce → Status → Geplante Aktionen.') : null));
+
+				// Filter.
+				var areaSel = select([['', 'Alle Bereiche']].concat(d.areas.map(function (a) { return [a, a]; })), evState.area);
+				var search = input('search', evState.q);
+				var filter = h('form', { class: 'vw-form' }, field('Bereich', areaSel), field('Suche in der Meldung', search), h('button', { class: 'btn', type: 'submit' }, 'Filtern'));
+				filter.addEventListener('submit', function (e) { e.preventDefault(); evState.area = areaSel.value; evState.q = search.value; evState.page = 1; meldungen(); });
+
+				var list = h('section', { class: 'card' }, h('h3', null, d.total + ' Einträge'), filter,
+					d.entries.length ? table(['Zeit', 'Stufe', 'Bereich', 'Meldung', 'Wer'], d.entries.map(function (e) {
+						return [ui.when(e.time), h('span', { class: 'tag ' + CLS[e.level] }, NAMES[e.level]), e.area, e.message, e.user || '—'];
+					})) : h('p', { class: 'muted' }, 'Keine Einträge für diese Auswahl.'));
+
+				if (d.pages > 1) {
+					var prev = h('button', { class: 'btn', type: 'button', disabled: d.page <= 1 }, '← Neuere');
+					var next = h('button', { class: 'btn', type: 'button', disabled: d.page >= d.pages }, 'Ältere →');
+					prev.addEventListener('click', function () { evState.page = d.page - 1; meldungen(); });
+					next.addEventListener('click', function () { evState.page = d.page + 1; meldungen(); });
+					list.appendChild(h('p', null, prev, ' Seite ' + d.page + ' von ' + d.pages + ' ', next));
+				}
+
+				box.appendChild(list);
+			}).catch(fail);
+		}
+
+		function updates() {
+			ui.api('einstellungen/updates').then(function (d) {
+				box.textContent = '';
+				var kanal = select([['main', 'Jeder Stand von main (sofort)'], ['release', 'Nur getaggte Veröffentlichungen (Release)']], d.kanal);
+				var go = h('button', { class: 'btn primary', type: 'submit' }, 'Speichern');
+				var form = h('form', { class: 'vw-form' },
+					field('Update-Kanal', kanal, 'Im Kanal „Release“ kommt ein Update erst an, wenn auf GitHub eine Veröffentlichung (Tag, z. B. 0.44.0) angelegt wurde – so geht nicht jeder Zwischenstand sofort in den Shop. Gibt es noch keine Veröffentlichung, bleibt es bei main.'),
+					go);
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					run(go, function () { return post('einstellungen/updates', { kanal: kanal.value }); }, function (r) { ui.toast(r.message); updates(); });
+				});
+				box.appendChild(h('section', { class: 'card' }, h('h3', null, 'Update-Kanal'), h('p', { class: 'muted' }, 'Installierte Version: ' + d.version), form));
+
+				var card = h('section', { class: 'card' }, h('h3', null, 'Sicherungen vor Updates'),
+					h('p', { class: 'muted' }, 'Vor jedem Update legt das System ein ZIP der bisherigen Plugin-Dateien an; die letzten zwei bleiben liegen. Zurückgesetzt werden nur die Programmdateien, nie deine Daten.'));
+				if (!d.sicherung) { card.appendChild(h('div', { class: 'notice warn' }, 'Auf diesem Server fehlt die ZIP-Erweiterung (ZipArchive) – es werden keine Sicherungen angelegt.')); }
+				else if (!d.liste.length) { card.appendChild(h('p', { class: 'muted' }, 'Noch keine Sicherung – sie entsteht beim nächsten Update.')); }
+				else {
+					card.appendChild(table(['Version', 'Angelegt', 'Größe', ''], d.liste.map(function (b) {
+						var back = h('button', { class: 'btn', type: 'button' }, 'Zurück auf diese Fassung');
+						back.addEventListener('click', function () {
+							if (!window.confirm('Die Programmdateien werden durch Version ' + b.version + ' ersetzt. Fortfahren?')) { return; }
+							run(back, function () { return post('einstellungen/updates/zurueck', { datei: b.file }); }, function (r) { ui.toast(r.message); updates(); });
+						});
+						return [b.version, ui.when(b.time), fmt(b.size / 1048576, 1) + ' MB', back];
+					})));
 				}
 				box.appendChild(card);
 			}).catch(fail);

@@ -372,7 +372,7 @@ class DashboardPage {
 	 * @return array
 	 */
 	protected static function below_target() {
-		$balances = StockLedger::balances( StockRepository::all() );
+		$balances = StockRepository::balances();
 		$articles = ArticleRepository::all_by_id();
 		$rows     = array();
 

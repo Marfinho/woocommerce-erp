@@ -224,7 +224,12 @@ class ProductionModule {
 			$wished = \Lindenweg16\Modules\Retention\Wishlist::most_wished( 100 );
 
 			$rows = '';
+			$map  = \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_map();
 			foreach ( $module as $m ) {
+				// Von Betrieb geführte Produkte: Ihr alter Bestand ist eingefroren.
+				if ( \Lindenweg16\Modules\Betrieb\StockOwnership::superseded( (int) $m->id, $map ) ) {
+					continue;
+				}
 				$schnitt = ProductionRepository::weekly_average( $m->id, 6, $excluded );
 
 				// Wunschlisten-Aufschlag: Wenn ein verknüpftes WC-Produkt häufig gewünscht ist, Nachfrage anteilig erhöhen.

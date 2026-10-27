@@ -75,6 +75,8 @@ class PrivacyTest extends TestCase {
 			'dauerbuchungen', 'erechnung_eingang', 'gobd_pruefung',
 			// Protokolle: Wer was geaendert hat, ist Nachweis, nicht Kundendatum.
 			'audit_log',
+			// Ereignisprotokoll des Betriebs: Mitarbeitende, keine Kundendaten; Frist je Stufe (90 Tage bis 3 Jahre).
+			'event_log',
 			// Betriebsinterne Erfassung durch Mitarbeitende, keine Kundendaten.
 			'kasse_tage', 'kasse_positionen', 'lagerbewegung', 'produktion_log',
 			'druckauftrag', 'pickliste', 'pickliste_pos',

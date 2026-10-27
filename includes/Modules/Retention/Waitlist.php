@@ -147,7 +147,7 @@ class Waitlist {
 	 * @return float
 	 */
 	protected static function article_stock( $article_id ) {
-		$balances = StockLedger::balances( StockRepository::all( (int) $article_id ) );
+		$balances = StockRepository::balances( (int) $article_id );
 		$sum      = 0.0;
 
 		foreach ( isset( $balances[ (int) $article_id ] ) ? $balances[ (int) $article_id ] : array() as $locations ) {

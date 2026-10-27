@@ -322,7 +322,7 @@ class AnalyseExport {
 		$revisions = RevisionRepository::active_by_article();
 		$ctx       = CalculationContext::build( $bis );
 		$settings  = CalcSettings::for_date( $bis );
-		$balances  = StockLedger::balances( StockRepository::all() );
+		$balances  = StockRepository::balances();
 
 		$targets = array();
 		foreach ( StockRepository::targets() as $row ) {

@@ -141,6 +141,8 @@ class BetriebModule {
 		( new MobileCapture() )->register();
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
+		( new WooStockSync() )->register();
+		( new ForecastHooks() )->register();
 		( new PriceSync() )->register();
 		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();

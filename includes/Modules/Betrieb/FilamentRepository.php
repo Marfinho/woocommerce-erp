@@ -88,6 +88,13 @@ class FilamentRepository {
 	 * @return float
 	 */
 	public static function remaining_kg( array $lot ) {
+		// Hat die Charge Rollen, zählen sie: leer gescannte fehlen im Bestand.
+		$from_rolls = FilamentRolls::remaining_kg( (int) $lot['id'] );
+
+		if ( null !== $from_rolls ) {
+			return $from_rolls;
+		}
+
 		return (float) $lot['kg_received'] - self::consumption_kg( (int) $lot['id'] );
 	}
 
@@ -181,6 +188,9 @@ class FilamentRepository {
 
 		$id = (int) $wpdb->insert_id;
 		BetriebAudit::record( 'create', 'filament_lots', $id, null, $data );
+
+		// Jede Lieferung bekommt gleich ihre Rollen - mit Etikett zum Aufkleben.
+		FilamentRolls::create_for_lot( $id );
 
 		return $id;
 	}

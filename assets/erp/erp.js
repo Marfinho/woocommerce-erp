@@ -1083,7 +1083,7 @@
 
 	/* ---------- Scannen ---------- */
 
-	var TYPES = { bin: 'Lagerplatz', article: 'Artikel', batch: 'Charge', component: 'Komponente' };
+	var TYPES = { bin: 'Lagerplatz', article: 'Artikel', batch: 'Charge', component: 'Komponente', roll: 'Filamentrolle' };
 
 	function can(key) {
 		return S.boot.user.full || S.boot.perms.indexOf(key) > -1;
@@ -1185,7 +1185,7 @@
 				showScan(out, r, scan);
 			}).catch(function (e) {
 				out.textContent = '';
-				out.appendChild(h('div', { class: 'notice warn' }, e.status === 404 ? 'Zu „' + code + '“ gibt es nichts – weder Lagerplatz noch Artikel, Charge oder Komponente.' : e.message));
+				out.appendChild(h('div', { class: 'notice warn' }, e.status === 404 ? 'Zu „' + code + '“ gibt es nichts – weder Lagerplatz noch Artikel, Charge, Filamentrolle oder Komponente.' : e.message));
 			}).then(function () { input.focus(); });
 		}
 
@@ -1202,6 +1202,54 @@
 
 	function qty(n) {
 		return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 3 }).format(n);
+	}
+
+	// Filamentrolle: einsetzen, wiegen, leer melden. Ein Scan genügt, um sie aus dem Bestand zu nehmen.
+	var ROLL_STATUS = { neu: 'Neu, ungeöffnet', in_benutzung: 'In Benutzung', leer: 'Leer' };
+
+	function rollAction(roll, body, done) {
+		return api('filament/rolle', { root: true, method: 'POST', body: Object.assign({ code: roll.code }, body) }).then(function (r) {
+			toast(r.message);
+			if (done) { done(r); }
+		}).catch(function (e) { toast(e.message, true); });
+	}
+
+	function rollPanel(roll, reload) {
+		var info = h('div', { class: 'roll-info' },
+			h('span', { class: 'tag' + (roll.status === 'in_benutzung' ? ' now' : (roll.status === 'leer' ? ' later' : '')) }, ROLL_STATUS[roll.status] || roll.status),
+			h('span', null, [roll.manufacturer, roll.material].filter(Boolean).join(' ')),
+			h('span', { class: 'muted' }, 'Charge ' + roll.lot_code + (roll.location ? ' · ' + roll.location : '')));
+		var bar = h('div', { class: 'roll-bar', role: 'img', 'aria-label': roll.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, roll.percent)) + '%' }));
+		var panel = h('div', { class: 'roll' }, info,
+			h('p', { class: 'roll-rest' }, roll.status === 'leer' ? 'Aus dem Bestand genommen' + (roll.written_off_g !== null && roll.written_off_g !== undefined ? ' · Schwund ' + qty(roll.written_off_g) + ' g gegenüber den Druckjobs' : '') : [h('b', null, qty(roll.remaining_g) + ' g'), ' von ' + qty(roll.start_g) + ' g übrig (rechnerisch)']),
+			roll.status === 'leer' ? null : bar);
+
+		if (roll.status === 'leer') {
+			panel.appendChild(h('div', { class: 'roll-actions' }, h('button', { class: 'btn', type: 'button', onclick: function (e) {
+				e.target.disabled = true; rollAction(roll, { aktion: 'rueckgaengig' }, reload);
+			} }, 'Rückgängig – Rolle ist doch nicht leer')));
+			return panel;
+		}
+
+		var empty = h('button', { class: 'btn primary roll-empty', type: 'button', onclick: function (e) {
+			if (!window.confirm('Rolle ' + roll.code + ' (' + roll.color_label + ') ist leer? Sie wird aus dem Bestand genommen.')) { return; }
+			e.target.disabled = true;
+			rollAction(roll, { aktion: 'leer' }, reload);
+		} }, 'Rolle ist leer');
+		var use = roll.status === 'neu' ? h('button', { class: 'btn', type: 'button', onclick: function (e) { e.target.disabled = true; rollAction(roll, { aktion: 'einsetzen' }, reload); } }, 'In Benutzung nehmen') : null;
+
+		var gross = h('input', { class: 'field', type: 'number', min: '1', step: '1', inputmode: 'numeric', placeholder: 'Gewicht samt Spule (g)', 'aria-label': 'Gewicht in Gramm', style: 'max-width:200px' });
+		var weigh = h('form', { class: 'roll-weigh', onsubmit: function (e) {
+			e.preventDefault();
+			var g = parseFloat(gross.value);
+			if (!(g > 0)) { toast('Bitte das Gewicht in Gramm eintragen.', true); return; }
+			rollAction(roll, { aktion: 'wiegen', gross_g: g }, reload);
+		} }, gross, h('button', { class: 'btn', type: 'submit' }, 'Wiegen'),
+		h('small', { class: 'muted' }, 'Leere Spule wird mit ' + roll.tare_g + ' g abgezogen.'));
+
+		panel.appendChild(h('div', { class: 'roll-actions' }, empty, use));
+		panel.appendChild(weigh);
+		return panel;
 	}
 
 	function showScan(out, r, rescan) {
@@ -1235,6 +1283,8 @@
 		}
 
 		if (r.type === 'component') { card.appendChild(h('p', { class: 'muted' }, 'Komponenten werden unter „Material“ gepflegt.')); }
+
+		if (r.type === 'roll' && r.extra) { card.appendChild(rollPanel(r.extra, function () { rescan(r.code); })); }
 
 		// Wareneingang: Liegt zu diesem Teil eine offene Bestellung, genügt ein Tippen.
 		if ((r.type === 'article' || r.type === 'component') && can('lager.einkauf')) {
@@ -1922,6 +1972,41 @@
 
 	var LEVEL_TEXT = { ok: 'reicht', bald: 'bald nachbestellen', knapp: 'jetzt nachbestellen', leer: 'leer' };
 
+	// Rollen einer Charge: Etikett, Rest, Leermelden. Alte Chargen ohne Rollen bekommen sie auf Knopfdruck.
+	function lotRolls(l, reload) {
+		var box = h('div', { class: 'rolls' });
+
+		if (!l.has_rolls) {
+			var grams = h('input', { class: 'field', type: 'number', min: '100', step: '50', value: String(l.roll_g), 'aria-label': 'Gewicht je Rolle in Gramm', style: 'max-width:110px' });
+			box.appendChild(h('div', { class: 'roll-create' },
+				h('small', { class: 'muted' }, 'Noch ohne einzelne Rollen. Gewicht je Rolle (g): '), grams,
+				h('button', { class: 'btn', type: 'button', onclick: function (e) {
+					e.target.disabled = true;
+					api('filament/charge/rollen', { root: true, method: 'POST', body: { lot_id: l.id, roll_g: parseInt(grams.value, 10) || 0 } }).then(function (r) { toast(r.message); reload(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+				} }, 'Rollen anlegen')));
+			return box;
+		}
+
+		if (l.label_url) { box.appendChild(h('a', { class: 'btn', href: l.label_url, target: '_blank', rel: 'noopener' }, 'Etiketten dieser Charge drucken')); }
+
+		l.rolls.forEach(function (r) {
+			box.appendChild(h('div', { class: 'roll-row' },
+				h('b', null, r.code),
+				h('span', { class: 'tag' + (r.status === 'in_benutzung' ? ' now' : '') }, ROLL_STATUS[r.status] || r.status),
+				h('span', { class: 'roll-bar small', role: 'img', 'aria-label': r.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, r.percent)) + '%' })),
+				h('span', null, qty(r.remaining_g) + ' g'),
+				r.label_url ? h('a', { href: r.label_url, target: '_blank', rel: 'noopener' }, 'Etikett') : null,
+				h('button', { class: 'btn', type: 'button', onclick: function (e) {
+					if (!window.confirm('Rolle ' + r.code + ' ist leer? Sie wird aus dem Bestand genommen.')) { return; }
+					e.target.disabled = true;
+					rollAction(r, { aktion: 'leer' }, reload);
+				} }, 'Leer')));
+		});
+
+		if (!l.rolls.length) { box.appendChild(h('small', { class: 'muted' }, 'Alle Rollen dieser Charge sind leer gemeldet.')); }
+		return box;
+	}
+
 	// Material: eine Karte je Filamentfarbe, mit Rollen, Bestellungen und Bestellformular.
 	function viewMaterial(item) {
 		pageHead('Material', 'Filament nach Farbe: was da ist, wie lange es reicht, was unterwegs ist.', classicBtn(item));
@@ -1951,7 +2036,8 @@
 						return h('li', null,
 							h('b', null, l.code), h('span', null, l.material + ' · ' + num(l.remaining) + ' kg'),
 							l.dry === false ? h('span', { class: 'tag later' }, 'trocknen') : null,
-							l.location ? h('small', { class: 'muted' }, l.location) : null);
+							l.location ? h('small', { class: 'muted' }, l.location) : null,
+							lotRolls(l, load));
 					})));
 				}
 

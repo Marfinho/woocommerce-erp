@@ -119,6 +119,26 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/filament/rolle',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'roll_action' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/filament/charge/rollen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'create_rolls' ),
+				'permission_callback' => array( $this, 'can_produce' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/picklisten/position',
 			array(
 				'methods'             => 'POST',
@@ -154,6 +174,79 @@ class RestApi {
 		}
 
 		return new WP_REST_Response( $result, 'none' === $result['type'] ? 404 : 200 );
+	}
+
+	/**
+	 * Eine Filamentrolle bearbeiten: einsetzen, wiegen, leer melden, zurücknehmen.
+	 *
+	 * Das Leermelden ist der Weg, eine Rolle aus dem Bestand zu nehmen -
+	 * ein Scan genügt.
+	 *
+	 * @param \WP_REST_Request $request Anfrage: code, aktion (+ gross_g, tare_g, printer).
+	 * @return WP_REST_Response
+	 */
+	public function roll_action( $request ) {
+		$roll = FilamentRolls::find_by_code( (string) $request->get_param( 'code' ) );
+
+		if ( ! $roll ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Diese Rolle gibt es nicht.', 'lindenweg16' ) ), 404 );
+		}
+
+		$id = (int) $roll['id'];
+
+		switch ( (string) $request->get_param( 'aktion' ) ) {
+			case 'leer':
+				$r = FilamentRolls::empty_roll( $id );
+				break;
+			case 'einsetzen':
+				$r = FilamentRolls::start_use( $id, (string) $request->get_param( 'printer' ) );
+				break;
+			case 'wiegen':
+				$tare = $request->get_param( 'tare_g' );
+				$r    = FilamentRolls::measure( $id, (float) $request->get_param( 'gross_g' ), null === $tare || '' === $tare ? null : (float) $tare );
+				break;
+			case 'rueckgaengig':
+				$r = FilamentRolls::undo_empty( $id );
+				break;
+			default:
+				return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Unbekannte Aktion.', 'lindenweg16' ) ), 400 );
+		}
+
+		$r['roll'] = FilamentRolls::describe( FilamentRolls::find( $id ) );
+
+		return new WP_REST_Response( $r, $r['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Rollen für eine Charge anlegen.
+	 *
+	 * @param \WP_REST_Request $request Anfrage: lot_id, roll_g.
+	 * @return WP_REST_Response
+	 */
+	public function create_rolls( $request ) {
+		$lot = FilamentRepository::find( (int) $request->get_param( 'lot_id' ) );
+
+		if ( ! $lot ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Diese Charge gibt es nicht.', 'lindenweg16' ) ), 404 );
+		}
+
+		if ( FilamentRolls::lot_has_rolls( (int) $lot['id'] ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Diese Charge hat schon Rollen.', 'lindenweg16' ) ), 422 );
+		}
+
+		$grams = (int) $request->get_param( 'roll_g' );
+		$ids   = FilamentRolls::create_for_lot( (int) $lot['id'], $grams > 0 ? min( 20000, $grams ) : null );
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => (bool) $ids,
+				'message' => $ids
+					/* translators: %d: Anzahl. */
+					? sprintf( _n( '%d Rolle angelegt.', '%d Rollen angelegt.', count( $ids ), 'lindenweg16' ), count( $ids ) )
+					: __( 'Es konnten keine Rollen angelegt werden.', 'lindenweg16' ),
+			),
+			$ids ? 200 : 422
+		);
 	}
 
 	/**

@@ -1,0 +1,13 @@
+/* Filamentrollen: Scan-Karte und Rollenliste im Material. */
+.roll { margin-top: 12px; }
+.roll-info { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.roll-rest { margin: 8px 0 4px; }
+.roll-bar { display: block; height: 12px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.roll-bar i { display: block; height: 100%; background: var(--accent); }
+.roll-bar.small { display: inline-block; width: 80px; height: 8px; vertical-align: middle; }
+.roll-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.roll-empty { min-height: 52px; font-size: 17px; padding: 0 22px; }
+.roll-weigh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.rolls { margin: 8px 0 4px; display: flex; flex-direction: column; gap: 6px; }
+.roll-row { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--line); }
+.roll-create { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

@@ -23,6 +23,10 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Admin\SettingsPage as PluginSettingsPage;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\MailTemplate;
+use Lindenweg16\Core\Log;
+use Lindenweg16\Core\Rollback;
+use Lindenweg16\Core\Updater;
+use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
@@ -40,6 +44,7 @@ use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\Stopwatch;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
+use Lindenweg16\Modules\Betrieb\WooStockSync;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\TimerState;
 use Lindenweg16\Modules\Betrieb\UserActivity;
@@ -391,6 +396,17 @@ class Verwaltung {
 			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'lager' ), 'permission_callback' => $einstellungen ),
 			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'lager_speichern' ), 'permission_callback' => $einstellungen ),
 		) );
+		register_rest_route( $ns, '/erp/einstellungen/lager/shop-bestand', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'shop_bestand_abgleichen' ), 'permission_callback' => $einstellungen ) );
+		register_rest_route( $ns, '/erp/einstellungen/ereignisse', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'ereignisse' ), 'permission_callback' => $einstellungen ) );
+		register_rest_route( $ns, '/erp/einstellungen/lager/saldo-neu', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'saldo_neu' ), 'permission_callback' => $einstellungen ) );
+		$updates = static function () {
+			return current_user_can( 'update_plugins' );
+		};
+		register_rest_route( $ns, '/erp/einstellungen/updates', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'updates' ), 'permission_callback' => $updates ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'updates_speichern' ), 'permission_callback' => $updates ),
+		) );
+		register_rest_route( $ns, '/erp/einstellungen/updates/zurueck', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'updates_zurueck' ), 'permission_callback' => $updates ) );
 		register_rest_route( $ns, '/erp/einstellungen/protokoll', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'protokoll' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/systempruefung', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'systempruefung' ), 'permission_callback' => $einstellungen ) );
 		register_rest_route( $ns, '/erp/einstellungen/plugin', array(
@@ -1363,6 +1379,9 @@ class Verwaltung {
 				'default'    => ColorRegistry::default_color(),
 				'colors'     => $colors,
 				'hoheit'     => (bool) StockOwnership::is_active(),
+				'shop_bestand' => (bool) Settings::get( 'betrieb_shop_bestand', 1 ),
+				'altmodul_aus' => StockOwnership::legacy_disabled(),
+				'altmodul_offen' => array_slice( StockOwnership::open_legacy_products(), 0, 20 ),
 				'wochenmail' => (bool) Settings::get( 'betrieb_wochenmail', 1 ),
 				'layout'     => 'schlicht' === Settings::get( 'betrieb_reorder_layout' ) ? 'schlicht' : 'theme',
 			)
@@ -1381,17 +1400,174 @@ class Verwaltung {
 		$default   = sanitize_text_field( self::str( $p, 'default' ) );
 		$layout    = sanitize_key( self::str( $p, 'layout' ) );
 
+		// Das alte Lager-Modul lässt sich nur stilllegen, wenn Betrieb alle seine
+		// Produkte übernommen hat - sonst bucht für den Rest niemand mehr.
+		$altmodul = ! empty( $p['altmodul_aus'] ) ? 1 : 0;
+		$hinweis  = '';
+		if ( $altmodul && StockOwnership::open_legacy_products() ) {
+			$altmodul = 0;
+			$hinweis  = ' ' . __( 'Das alte Lager-Modul bleibt an: Es gibt noch nicht übernommene Produkte.', 'lindenweg16' );
+		}
+
 		Settings::update(
 			array(
+				'lager_altmodul_aus'      => $altmodul,
 				'betrieb_color_attribute' => $attribute ? $attribute : 'pa_farbe',
 				'betrieb_default_color'   => ColorRegistry::normalize( '' === $default ? 'anthrazit' : $default ),
 				'betrieb_lagerhoheit'     => empty( $p['hoheit'] ) ? 0 : 1,
+				'betrieb_shop_bestand'    => empty( $p['shop_bestand'] ) ? 0 : 1,
 				'betrieb_wochenmail'      => empty( $p['wochenmail'] ) ? 0 : 1,
 				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
 		);
 
-		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) ) );
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) . $hinweis ) );
+	}
+
+	/**
+	 * Bestand aller Artikel jetzt in den Shop übertragen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function shop_bestand_abgleichen() {
+		if ( ! WooStockSync::is_active() ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Die Bestandsübergabe an den Shop ist aus (oder die Lagerhoheit).', 'lindenweg16' ) ), 400 );
+		}
+
+		$r = WooStockSync::sync_all();
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'message' => sprintf(
+					/* translators: 1: geprüfte Artikel, 2: geänderte Produkte, 3: Artikel ohne Shop-Produkt. */
+					__( '%1$d Artikel geprüft, %2$d Shop-Einträge geändert, %3$d Artikel ohne auffindbares Shop-Produkt.', 'lindenweg16' ),
+					$r['geprueft'],
+					$r['geaendert'],
+					$r['ohne_produkt']
+				),
+			)
+		);
+	}
+
+	/**
+	 * Mitlaufende Bestandssummen aus dem Bewegungskonto neu aufbauen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function saldo_neu() {
+		$n = \Lindenweg16\Modules\Betrieb\StockRepository::rebuild_balances();
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => sprintf( /* translators: %d: Zeilen. */ __( 'Bestandssummen neu berechnet (%d Zeilen).', 'lindenweg16' ), $n ) ) );
+	}
+
+	/**
+	 * Update-Kanal und Sicherungen der Plugin-Dateien.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function updates() {
+		return new WP_REST_Response(
+			array(
+				'kanal'     => Updater::channel(),
+				'version'   => LW16_VERSION,
+				'sicherung' => class_exists( '\ZipArchive' ),
+				'liste'     => Rollback::all(),
+			)
+		);
+	}
+
+	/**
+	 * Update-Kanal speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function updates_speichern( WP_REST_Request $request ) {
+		$p = self::body( $request );
+
+		Settings::update( array( 'update_kanal' => 'release' === self::str( $p, 'kanal' ) ? 'release' : 'main' ) );
+		delete_site_transient( Updater::CACHE );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Update-Kanal gespeichert.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Plugin auf eine gesicherte Fassung zurücksetzen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function updates_zurueck( WP_REST_Request $request ) {
+		$result = Rollback::restore( self::str( self::body( $request ), 'datei' ) );
+
+		if ( true !== $result ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => $result ), 400 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Zurückgesetzt. Seite neu laden.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Ereignisprotokoll: alles, was im ERP geschieht, in drei Stufen.
+	 *
+	 * @param WP_REST_Request $request Anfrage (level, area, q, page).
+	 * @return WP_REST_Response
+	 */
+	public static function ereignisse( WP_REST_Request $request ) {
+		$page   = max( 1, (int) $request->get_param( 'page' ) );
+		$result = Log::query(
+			array(
+				'level'    => sanitize_key( (string) $request->get_param( 'level' ) ),
+				'area'     => sanitize_key( (string) $request->get_param( 'area' ) ),
+				'q'        => sanitize_text_field( (string) $request->get_param( 'q' ) ),
+				'page'     => $page,
+				'per_page' => 50,
+			)
+		);
+
+		$users = array();
+		$rows  = array();
+
+		foreach ( $result['rows'] as $row ) {
+			$uid = (int) $row['user_id'];
+			if ( $uid && ! isset( $users[ $uid ] ) ) {
+				$user          = get_userdata( $uid );
+				$users[ $uid ] = $user ? $user->display_name : '#' . $uid;
+			}
+
+			$rows[] = array(
+				'time'    => strtotime( $row['created_at'] . ' UTC' ),
+				'level'   => Log::normalize_level( $row['level'] ),
+				'area'    => (string) $row['area'],
+				'message' => (string) $row['message'],
+				'user'    => $uid ? $users[ $uid ] : '',
+			);
+		}
+
+		$failed = array();
+
+		if ( function_exists( 'as_get_scheduled_actions' ) ) {
+			foreach ( as_get_scheduled_actions( array( 'status' => 'failed', 'per_page' => 20, 'orderby' => 'date', 'order' => 'DESC' ), 'OBJECT' ) as $action ) {
+				if ( Scheduler::is_ours( $action->get_hook() ) ) {
+					$failed[] = (string) $action->get_hook();
+				}
+			}
+		}
+
+		return new WP_REST_Response(
+			array(
+				'entries'   => $rows,
+				'total'     => $result['total'],
+				'pages'     => (int) max( 1, ceil( $result['total'] / 50 ) ),
+				'page'      => $page,
+				'levels'    => Log::levels(),
+				'counts'    => Log::counts( 7 ),
+				'areas'     => Log::areas(),
+				'failed'    => array_count_values( $failed ),
+				'last_sync' => (int) get_option( WooStockSync::LAST_RUN, 0 ),
+			)
+		);
 	}
 
 	/**

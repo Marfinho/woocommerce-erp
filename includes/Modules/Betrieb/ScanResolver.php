@@ -40,6 +40,11 @@ class ScanResolver {
 	const PREFIX_BATCH = 'LW16C:';
 
 	/**
+	 * Präfix eigener Filamentrollen-Etiketten.
+	 */
+	const PREFIX_ROLL = 'LW16R:';
+
+	/**
 	 * Rohen Scan säubern.
 	 *
 	 * Scanner hängen gern ein Zeilenende an, und manche Kameras liefern
@@ -68,6 +73,7 @@ class ScanResolver {
 			self::PREFIX_BIN     => 'bin',
 			self::PREFIX_ARTICLE => 'article',
 			self::PREFIX_BATCH   => 'batch',
+			self::PREFIX_ROLL    => 'roll',
 		);
 
 		foreach ( $map as $prefix => $kind ) {
@@ -122,7 +128,18 @@ class ScanResolver {
 			return self::as_batch( BatchRepository::find_by_code( $split['value'] ) );
 		}
 
+		if ( 'roll' === $split['kind'] ) {
+			return self::as_roll( FilamentRolls::find_by_code( $split['value'] ) );
+		}
+
 		// Freie Suche: eigene Codes zuerst, dann fremde Barcodes.
+		if ( preg_match( '/^R-\d{4,}$/i', $code ) ) {
+			$roll = FilamentRolls::find_by_code( $code );
+			if ( $roll ) {
+				return self::as_roll( $roll );
+			}
+		}
+
 		$bin = BinRepository::find_by_code( $code );
 		if ( $bin ) {
 			return self::as_bin( $bin );
@@ -210,6 +227,28 @@ class ScanResolver {
 			'code'  => (string) $article['sku'],
 			'label' => (string) $article['name'],
 			'extra' => array(),
+		);
+	}
+
+	/**
+	 * Filamentrolle als Ergebnis.
+	 *
+	 * @param array|null $roll Rolle.
+	 * @return array
+	 */
+	protected static function as_roll( $roll ) {
+		if ( ! $roll ) {
+			return self::nothing();
+		}
+
+		$d = FilamentRolls::describe( $roll );
+
+		return array(
+			'type'  => 'roll',
+			'id'    => (int) $roll['id'],
+			'code'  => (string) $roll['roll_code'],
+			'label' => trim( $d['color_label'] . ' ' . $d['material'] ),
+			'extra' => $d,
 		);
 	}
 

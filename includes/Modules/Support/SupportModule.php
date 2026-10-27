@@ -609,7 +609,11 @@ class SupportModule {
 	protected function lager_warnungen() {
 		$produkte = \Lindenweg16\Modules\Inventory\Repository::get_products();
 		$lines    = array();
+		$map      = \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_map();
 		foreach ( $produkte as $p ) {
+			if ( \Lindenweg16\Modules\Betrieb\StockOwnership::superseded( (int) $p->id, $map ) ) {
+				continue;
+			}
 			$ampel = \Lindenweg16\Modules\Inventory\StockManager::ampel( $p );
 			if ( 'gruen' === $ampel ) {
 				continue;

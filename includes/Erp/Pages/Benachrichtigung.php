@@ -15,6 +15,7 @@ namespace Lindenweg16\Erp\Pages;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Throttle;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\Push;
 use Lindenweg16\Erp\RestApi;
@@ -149,6 +150,11 @@ class Benachrichtigung {
 	 * @return WP_REST_Response
 	 */
 	public static function abruf( WP_REST_Request $request ) {
+		// Offener Endpunkt: pro Adresse begrenzen, bevor die Datenbank gefragt wird.
+		if ( ! Throttle::hit( 'push-abruf', 120 ) ) {
+			return new WP_REST_Response( array( 'meldungen' => array() ), 429 );
+		}
+
 		$msgs = Push::take_inbox( (string) $request->get_param( 'endpoint' ) );
 		$resp = new WP_REST_Response( array( 'meldungen' => $msgs ) );
 		$resp->header( 'Cache-Control', 'no-store' );

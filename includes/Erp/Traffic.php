@@ -18,6 +18,8 @@
 
 namespace Lindenweg16\Erp;
 
+use Lindenweg16\Core\Throttle;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
@@ -84,6 +86,15 @@ class Traffic {
 	 */
 	public function collect( \WP_REST_Request $request ) {
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+
+		// Offener Endpunkt: pro Adresse höchstens 120 Meldungen je Minute (das
+		// reicht für jeden Menschen), und nur vom eigenen Ursprung.
+		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? (string) wp_unslash( $_SERVER['HTTP_ORIGIN'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$fremd  = '' !== $origin && wp_parse_url( $origin, PHP_URL_HOST ) !== wp_parse_url( home_url(), PHP_URL_HOST );
+
+		if ( $fremd || ! Throttle::hit( 'pv', 120 ) ) {
+			return new \WP_REST_Response( null, 204 );
+		}
 
 		if ( ! self::is_bot( $ua ) ) {
 			$body = json_decode( (string) $request->get_body(), true );

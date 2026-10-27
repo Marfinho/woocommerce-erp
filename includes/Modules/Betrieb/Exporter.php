@@ -84,6 +84,11 @@ class Exporter {
 			$labels = array_merge( $labels, LabelPdf::article_labels( ! $alle ) );
 		}
 
+		if ( in_array( 'rolls', $was, true ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- die Aufrufer prüfen die Nonce vorher.
+			$labels = array_merge( $labels, LabelPdf::roll_labels( ! $alle, isset( $_GET['lot'] ) ? (int) $_GET['lot'] : 0 ) );
+		}
+
 		if ( in_array( 'printers', $was, true ) ) {
 			$labels = array_merge( $labels, LabelPdf::printer_labels( ! $alle ) );
 		}
