@@ -386,7 +386,7 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
-			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|druckstart|druckende|melden|abbrechen|etikett)',
+			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|druckstart|druckende|melden|abbrechen|etikett|platte-frei)',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'run_act' ),
@@ -938,6 +938,12 @@ class RestApi {
 			$result = Workflow::print_labels( array( $id ) );
 
 			return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+		}
+
+		if ( 'platte-frei' === $action ) {
+			$result = Workflow::clear_bed( $id );
+
+			return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
 		}
 
 		// Abbrechen vernichtet Arbeit: nur, wer auch den Plan freigibt.

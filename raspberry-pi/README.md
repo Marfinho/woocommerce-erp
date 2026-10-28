@@ -396,11 +396,24 @@ cd raspberry-pi
 Wer lieber jeden Schritt einzeln nachvollziehen (oder das Skript nicht
 nutzen) möchte, findet ihn im Folgenden unverändert von Hand beschrieben.
 
-### 1. Am Drucker: LAN-Modus aktivieren
+### 1. Am Drucker: LAN-Modus und Entwicklermodus aktivieren
 
 Am Display: Einstellungen → LAN-Modus (bzw. „LAN Only Mode") aktivieren.
 Notiert werden IP-Adresse, Zugangscode und Seriennummer – alle drei
 stehen dort auf einem Bildschirm.
+
+**Zusätzlich den Entwicklermodus („Developer Mode“) einschalten.** Seit
+der Firmware mit Bambus Autorisierungssystem (X1-Serie ab 01.08.03.00,
+P1/A1 mit späteren Updates) nimmt der Drucker Druckstarts von Fremdsoftware
+nur noch im Entwicklermodus an. Ohne ihn liest die Bridge zwar den Status,
+aber jeder Auftrag scheitert mit „Drucker hat den Druck nicht begonnen“
+bzw. einer Ablehnung des Startkommandos.
+
+Folgen des LAN- und Entwicklermodus: **Bambu Cloud und die Bambu Handy App
+funktionieren nicht mehr**, Bambu leistet für diesen Modus keinen Support.
+Bambu Studio im selben Netz funktioniert weiter (LAN-Druck). Drucke aus
+der Ferne laufen dann über das ERP (Bambu-Lab-Drucker → Aufträge →
+Datei hochladen).
 
 Eine feste IP-Reservierung im Router (DHCP-Reservierung anhand der
 MAC-Adresse des Druckers) verhindert, dass sich die Adresse nach einem
@@ -409,9 +422,14 @@ Neustart des Druckers ändert und die `.env.bambu` dadurch veraltet.
 ### 2. Im WordPress-Backend: Drucker anlegen
 
 Unter **Lindenweg16 → Betrieb → Bambu-Lab-Drucker** einen Drucker
-anlegen (Drucker-ID, Name, IP, Zugangscode, Seriennummer wie in Schritt 1
-notiert). Das dabei angezeigte Token wird **nur einmalig** angezeigt –
-sofort übernehmen.
+anlegen (Drucker-ID, Name, IP, Seriennummer wie in Schritt 1 notiert).
+Das dabei angezeigte Token wird **nur einmalig** angezeigt – sofort
+übernehmen.
+
+Den **LAN-Zugangscode speichert WordPress nicht** (ab Version 0.53.0;
+ältere, früher gespeicherte Codes löscht das Update). Er gehört nur in
+die `.env.bambu` auf dem Pi – der Server braucht ihn nie, und bei einem
+kompromittierten Webhoster läge er sonst mit in der Datenbank.
 
 ### 3. Python-Abhängigkeiten installieren
 
@@ -601,9 +619,93 @@ Aufträge, Bedarf → „Direkt drucken"), steht – sofern der Drucker
 gerade eine AMS-Belegung meldet – eine zusätzliche Auswahl „welches
 Filament" zur Verfügung. Sie gilt für den **gesamten** Druckauftrag
 (ein Material für die ganze Platte, kein Mehrfarb-/Mehrmaterial-Mapping
-pro Bauteil – dafür weiterhin manuell in Bambu Studio slicen). Ohne
-Auswahl verhält sich die Bridge wie bisher: der Drucker nutzt das
-gerade eingelegte bzw. externe Filament, ohne AMS-Beteiligung.
+pro Bauteil – dafür weiterhin manuell in Bambu Studio slicen).
+
+Ohne Auswahl sucht die Bridge das Fach selbst: Sie liest Filament-ID
+**und Farbe** aus der Druckdatei und nimmt das passende, nicht leere
+Fach (bei mehreren das vollste). Die Filament-ID allein reicht nicht – sie
+steht für die Sorte (z. B. „Bambu PLA Matte“) und ist für alle Farben
+gleich. Liegt das Filament nicht im AMS oder ist die Wahl nicht eindeutig,
+startet der Druck **nicht**; der Auftrag scheitert mit einer Meldung, was
+fehlt. Nur ohne Filament-Angabe in der Datei oder ohne AMS am Drucker
+druckt der Drucker wie bisher mit dem eingelegten bzw. externen Filament.
+
+### Sicherer Ablauf: Platte frei, unklare Aufträge, Neustart
+
+- **„Platte ist frei“:** Sobald der Drucker einen Druck beginnt – auch
+  einen privaten, am Display oder aus Bambu Studio gestarteten –, gilt
+  seine Platte als belegt. Die Warteschlange liefert dann keinen Auftrag
+  aus, bis jemand die Platte geräumt und im ERP bestätigt hat (Knopf
+  „Platte ist frei“ an der Druckerkarte unter Bambu-Lab-Drucker oder beim
+  Rüsten einer Werkstatt-Platte). Ein neu angelegter Drucker muss einmal
+  freigegeben werden.
+- **„Unklar“:** Weiß niemand sicher, wie ein Druck ausging (Bridge lange
+  ohne Lebenszeichen, Drucker nach einem Neustart im Leerlauf), wird der
+  Auftrag „unklar“ statt erneut gedruckt. Er sperrt die Warteschlange
+  dieses Druckers, bis die Bridge ihn doch noch abschließt oder jemand ihn
+  unter Bambu-Lab-Drucker → Aufträge klärt („Als fertig buchen“ bzw. „Als
+  fehlgeschlagen markieren“).
+- **Neustart der Bridge/des Pi mitten im Druck:** Die Bridge merkt sich
+  den laufenden Auftrag in `/var/lib/bambu-bridge/active-job.json` und
+  gleicht ihn beim Start mit dem Drucker ab: läuft er noch, verfolgt sie
+  ihn weiter; ist er fertig, meldet sie ihn ab; passt nichts, wird er
+  unklar.
+- **Endmeldungen gehen nicht verloren:** „Fertig“, „fehlgeschlagen“ und
+  „unklar“ landen zuerst in `/var/lib/bambu-bridge/outbox.json` und
+  werden wiederholt, bis WordPress sie annimmt.
+- **Startbestätigung:** Lehnt der Drucker das Startkommando ab, scheitert
+  der Auftrag sofort mit dem Grund des Druckers. Vor jedem Auftrag fordert
+  die Bridge einen frischen Statusbericht an; ohne Verbindung zum Drucker
+  nimmt sie keinen Auftrag an.
+
+Neue, optionale Einstellungen in `.env.bambu` (Standardwerte genügen):
+`START_ACK_TIMEOUT` (30), `STALE_REPORT_SECONDS` (120),
+`FRESH_REPORT_TIMEOUT` (15), `PROGRESS_HEARTBEAT_SECONDS` (300),
+`IDLE_GRACE_SECONDS` (120).
+
+Die Logik ist mit Tests abgedeckt (ohne Drucker, ohne paho-mqtt):
+
+```bash
+pip install pytest requests
+python3 -m pytest tests
+```
+
+### Zertifikat des Druckers
+
+Der Drucker weist sich mit einem Zertifikat aus, das sich gegen keine
+öffentliche CA prüfen lässt. Die Bridge merkt sich deshalb beim ersten
+Kontakt den Fingerabdruck je Dienst (MQTT, FTPS, Kamera) in
+`/var/lib/bambu-bridge/printer-cert.json` und verweigert danach jedes
+andere Zertifikat – bevor der Zugangscode gesendet wird. Ein Gerät im
+Netz, das sich als Drucker ausgibt, bekommt ihn so nicht.
+
+Im Log steht beim ersten Start „Zertifikat des Druckers (mqtt)
+festgeschrieben: …“. Meldet die Bridge später „legt ein anderes
+Zertifikat vor als bekannt“, ist das entweder ein Angriff oder ein neues
+Gerät bzw. ein Firmware-Update, das das Zertifikat erneuert hat. Wenn
+sicher ist, dass der Drucker der richtige ist:
+
+```bash
+sudo rm /var/lib/bambu-bridge/printer-cert.json
+sudo systemctl restart bambu-bridge
+```
+
+Wer den Fingerabdruck lieber fest vorgibt, trägt ihn als
+`BAMBU_CERT_FINGERPRINT` in `.env.bambu` ein (dann wird nichts gemerkt).
+
+Für die Kamera ruft die Bridge `ffmpeg` auf, das selbst kein Zertifikat
+festschreiben kann. Die Bridge prüft das Zertifikat auf Port 322 deshalb
+vorher selbst. Bekannte Einschränkung: Der Zugangscode steht in der
+Kommandozeile von ffmpeg und ist für andere Benutzer auf dem Pi per `ps`
+sichtbar. Auf einem Pi, der nur für die Bridge da ist, ist das
+unkritisch; sonst `CAMERA_ENABLED=false` setzen.
+
+### Druckermodell
+
+Die Bridge leitet das Modell aus der Seriennummer ab (z. B. `00M…` =
+X1C, `01P…` = P1S) und meldet es mit. WordPress übernimmt es nur, wenn
+beim Drucker noch kein Modell eingetragen ist – ein eingetragenes hat
+Vorrang, weil die Slicing-Profile am genauen Wortlaut hängen.
 
 ### Unsicherheiten des LAN-Protokolls
 

@@ -137,6 +137,8 @@ else
 	PRINTER_ID="$REPLY_VALUE"
 
 	info "Am Drucker: Einstellungen → LAN-Modus – dort stehen IP, Zugangscode und Seriennummer."
+	info "Dort auch den Entwicklermodus (Developer Mode) einschalten – ohne ihn nimmt aktuelle Firmware keine Druckstarts an."
+	info "Der Zugangscode bleibt nur hier auf dem Pi (.env.bambu); WordPress speichert ihn nicht."
 	prompt_required "Bambu-Drucker IP-Adresse" ""
 	BAMBU_IP="$REPLY_VALUE"
 

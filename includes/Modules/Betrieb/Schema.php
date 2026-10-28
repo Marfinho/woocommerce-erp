@@ -912,6 +912,12 @@ class Schema {
 		 * Live-Anbindung dazu.
 		 * ------------------------------------------------------------- */
 
+		// bed_clear: Ist die Druckplatte leer? Wird auf 0 gesetzt, sobald der
+		// Drucker einen Druck beginnt (jeder Druck, auch ein privater), und
+		// nur von Hand („Platte ist frei“) wieder auf 1. Solange 0, liefert
+		// die Warteschlange keinen Job aus – sonst druckte der nächste Job
+		// auf die fertigen Teile des letzten (siehe BambuRestApi::get_jobs()).
+		// Standard 0: Ein neu angelegter Drucker muss einmal freigegeben werden.
 		// bed_width_mm/bed_height_mm: Druckbett-Innenmass. Leer gelassen,
 		// greift die Plattenanordnung auf eine Schätzung nach Druckermodell
 		// zurück (siehe Bambu\BedSizeLookup) – hier eingetragen, hat das
@@ -940,6 +946,8 @@ class Schema {
 			bed_temp DECIMAL(5,1) NULL,
 			last_error TEXT NULL,
 			current_file VARCHAR(255) NULL,
+			bed_clear TINYINT(1) NOT NULL DEFAULT 0,
+			bed_cleared_at DATETIME NULL,
 			last_status_at DATETIME NULL,
 			ams_json LONGTEXT NULL,
 			snapshot_at DATETIME NULL,

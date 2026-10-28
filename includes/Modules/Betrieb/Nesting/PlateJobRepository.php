@@ -21,6 +21,18 @@ class PlateJobRepository {
 	 */
 	const STATUSES = array( 'entworfen', 'wird_geslict', 'geslict', 'fehlgeschlagen' );
 
+	/**
+	 * Nach so vielen Tagen verschwindet eine nie freigegebene, nie geslicte
+	 * Vorschau-Platte samt Datei. Jede Vorschau im Workflow legt sofort
+	 * Plattendateien an; wer sie verwirft, ließ sie bisher für immer liegen.
+	 */
+	const DRAFT_RETENTION_DAYS = 14;
+
+	/**
+	 * Präfix der Plattendateien im Dokumentenordner (siehe PlateService).
+	 */
+	const FILE_PREFIX = 'Platte-';
+
 	/* -----------------------------------------------------------------
 	 * Reine Logik – ohne Datenbank, deshalb ohne WordPress testbar.
 	 * ------------------------------------------------------------- */
@@ -138,5 +150,59 @@ class PlateJobRepository {
 		$data = array_merge( array( 'status' => $status, 'updated_at' => current_time( 'mysql', true ) ), $extra );
 
 		return false !== $wpdb->update( self::table(), $data, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Verworfene Vorschau-Platten aufräumen: Status „entworfen“, älter als
+	 * DRAFT_RETENTION_DAYS und von keiner Werkstatt-Platte (runs) benutzt.
+	 * Eine solche Platte wurde nie geslict und nie freigegeben – an ihr
+	 * hängt nichts. Gelöscht wird die Datei nur im Dokumentenordner und nur
+	 * mit dem Plattenpräfix.
+	 *
+	 * @param string $runs_table Tabelle der Werkstatt-Platten.
+	 * @param string $docs_dir   Dokumentenordner.
+	 * @return int Anzahl gelöschter Platten.
+	 */
+	public static function cleanup_drafts( $runs_table, $docs_dir ) {
+		global $wpdb;
+
+		$grenze = gmdate( 'Y-m-d H:i:s', time() - self::DRAFT_RETENTION_DAYS * DAY_IN_SECONDS );
+
+		$alte = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT p.id, p.file_path FROM ' . self::table() . ' p LEFT JOIN ' . $runs_table . " r ON r.plate_job_id = p.id WHERE p.status = 'entworfen' AND p.created_at < %s AND r.id IS NULL LIMIT 200", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$grenze
+			)
+		);
+
+		$geloescht = 0;
+
+		foreach ( (array) $alte as $plate ) {
+			if ( self::is_own_file( (string) $plate->file_path, $docs_dir ) ) {
+				wp_delete_file( realpath( (string) $plate->file_path ) );
+			}
+			$geloescht += (int) $wpdb->delete( self::table(), array( 'id' => (int) $plate->id ) );
+		}
+
+		return $geloescht;
+	}
+
+	/**
+	 * Liegt die Datei im Dokumentenordner und trägt das Plattenpräfix? Reine
+	 * Pfadentscheidung, damit prüfbar – sie entscheidet über einen Löschvorgang.
+	 *
+	 * @param string $file_path Pfad.
+	 * @param string $docs_dir  Dokumentenordner.
+	 * @return bool
+	 */
+	public static function is_own_file( $file_path, $docs_dir ) {
+		$real = '' !== (string) $file_path ? realpath( (string) $file_path ) : false;
+		$docs = realpath( (string) $docs_dir );
+
+		if ( ! $real || ! $docs || ! is_file( $real ) ) {
+			return false;
+		}
+
+		return 0 === strpos( $real, rtrim( $docs, '/\\' ) . DIRECTORY_SEPARATOR ) && 0 === strpos( basename( $real ), self::FILE_PREFIX );
 	}
 }

@@ -91,8 +91,14 @@ class Installer {
 	 *
 	 * DB_VERSION 45: Tabelle filament_rolls - einzelne Rollen einer Filamentcharge mit
 	 * Etikett, siehe Modules\Betrieb\FilamentRolls.
+	 *
+	 * DB_VERSION 46: bambu_printers um bed_clear/bed_cleared_at (Sperre „Platte
+	 * ist frei“, siehe Bambu\BambuPrinterRepository::mark_bed_clear()).
+	 *
+	 * DB_VERSION 47: kein Tabellenwechsel – das Upgrade löscht die bisher in
+	 * bambu_printers.access_code gespeicherten LAN-Zugangscodes.
 	 */
-	const DB_VERSION = '45';
+	const DB_VERSION = '47';
 
 	/**
 	 * Aktivierungsroutine.
@@ -144,6 +150,10 @@ class Installer {
 			Roles::add_role();
 			self::protect_belege_directory();
 			update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+
+			// Früher gespeicherte LAN-Zugangscodes der Bambu-Drucker entfernen –
+			// WordPress braucht sie nicht (siehe BambuPrinterRepository::create()).
+			\Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository::forget_access_codes();
 
 			// Neue Hintergrundjobs (z. B. der Mailabruf) sofort einplanen, nicht erst
 			// nach Ablauf des Stunden-Merkers in Scheduler::ensure_recurring().

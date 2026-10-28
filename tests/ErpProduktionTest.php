@@ -192,11 +192,14 @@ class ErpProduktionTest extends TestCase {
 		$this->assertStringContainsString( "'lw16_mod_produktion'", $src );
 	}
 
-	public function test_zugangscode_wird_nie_ausgegeben() {
+	public function test_zugangscode_wird_weder_angenommen_noch_ausgegeben() {
 		$src = $this->src( 'includes/Erp/Pages/Produktion.php' );
+		$js  = $this->src( 'assets/erp/pages/produktion.js' );
 
-		$this->assertStringNotContainsString( "=> (string) \$printer->access_code", $src );
-		$this->assertStringContainsString( "'has_code'", $src );
+		// WordPress speichert den LAN-Zugangscode nicht mehr – er steht nur in
+		// der .env.bambu der Bridge.
+		$this->assertStringNotContainsString( 'access_code', $src );
+		$this->assertStringNotContainsString( 'access_code', $js );
 	}
 
 	public function test_jede_seite_ist_in_der_oberflaeche_angemeldet() {

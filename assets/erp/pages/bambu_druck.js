@@ -260,16 +260,38 @@
 
 			var main = h('div', { class: 'row-main' },
 				h('b', null, j.file),
-				h('div', { class: 'row-tags' }, h('span', { class: 'tag ' + (GROUP_TAG[j.group] || '') }, j.text)),
+				h('div', { class: 'row-tags' }, h('span', { class: 'tag ' + (j.status === 'unklar' ? 'later' : (GROUP_TAG[j.group] || '')) }, j.text)),
 				h('small', { class: 'muted' }, meta.join(' · ')));
 
 			if (j.progress !== null && j.group === 'laeuft') {
 				main.appendChild(h('div', { class: 'bar', role: 'progressbar', 'aria-valuenow': j.progress, 'aria-valuemin': 0, 'aria-valuemax': 100 }, h('i', { style: 'width:' + j.progress + '%' })));
 				main.appendChild(h('small', null, j.progress + ' %' + (j.remaining !== null ? ' · noch ' + UI.minTxt(j.remaining) : '')));
 			}
-			if (j.error) { main.appendChild(h('div', { class: 'notice warn' }, 'Fehler: ' + j.error)); }
+			if (j.status === 'unklar') {
+				main.appendChild(h('div', { class: 'notice warn' }, (j.error ? j.error + ' ' : '') + 'Bitte am Drucker nachsehen, wie der Druck ausging, und den Auftrag klären. Bis dahin druckt dieser Drucker keinen weiteren Auftrag aus der Warteschlange.'));
+			} else if (j.error) { main.appendChild(h('div', { class: 'notice warn' }, 'Fehler: ' + j.error)); }
 
 			var row = h('div', { class: 'row-card' }, main);
+			if (j.can_resolve) {
+				var hint = j.status === 'unklar' ? '' : '\n\nAchtung: Die Bridge verfolgt diesen Auftrag womöglich noch. Nur klären, wenn sie sich nicht mehr meldet.';
+				var okBtn = h('button', { class: 'btn', type: 'button', onclick: function () {
+					if (!window.confirm('Auftrag #' + j.id + ' als fertig buchen? Das bucht wie ein normaler Abschluss (Ist-Druckzeit, ggf. Druckjournal).' + hint)) { return; }
+					post(okBtn, 'bambu/auftraege/' + j.id + '/klaeren', { outcome: 'completed' }, function (r) { UI.toast(r.message); }).then(function () { load(true); });
+				} }, 'Als fertig buchen');
+				var failBtn = h('button', { class: 'btn', type: 'button', onclick: function () {
+					var note = window.prompt('Auftrag #' + j.id + ' als fehlgeschlagen markieren. Was ist passiert? (optional)' + hint, '');
+					if (note === null) { return; }
+					post(failBtn, 'bambu/auftraege/' + j.id + '/klaeren', { outcome: 'failed', note: note }, function (r) { UI.toast(r.message); }).then(function () { load(true); });
+				} }, 'Als fehlgeschlagen markieren');
+				row.appendChild(h('div', { class: 'label-area' }, okBtn, failBtn));
+			}
+			if (j.can_requeue) {
+				var again = h('button', { class: 'btn', type: 'button', onclick: function () {
+					if (!window.confirm('Auftrag #' + j.id + ' mit derselben Datei erneut einreihen?')) { return; }
+					post(again, 'bambu/auftraege/' + j.id + '/erneut', {}, function (r) { UI.toast(r.message); }).then(function () { load(true); });
+				} }, 'Erneut einreihen');
+				row.appendChild(again);
+			}
 			if (j.can_cancel) {
 				var cancel = h('button', { class: 'btn', type: 'button', onclick: function () {
 					if (!window.confirm('Diesen wartenden Auftrag abbrechen? Die hochgeladene Datei wird gelöscht.')) { return; }

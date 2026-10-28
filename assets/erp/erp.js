@@ -2430,7 +2430,7 @@
 			chips.length ? h('div', { class: 'chips' }, chips.map(function (c) { return h('span', { class: 'chip' }, c); })) : null,
 			h('div', { style: 'display:flex;gap:8px;margin-top:11px;flex-wrap:wrap' },
 				primary,
-				run.file && run.status === 'freigegeben' ? h('a', { class: 'btn', href: run.file.url }, ico('download'), '3MF') : null
+				run.file && (run.status === 'freigegeben' || run.status === 'ruesten' || run.status === 'druckt') ? h('a', { class: 'btn', href: run.file.url }, ico('download'), '3MF') : null
 			)
 		);
 	}
@@ -2775,6 +2775,14 @@
 			if (run.status === 'freigegeben' || run.status === 'ruesten') {
 				var lay = layoutBlock(run.layout, false);
 				if (lay) { box.appendChild(lay); }
+				// Ohne bestätigt leere Platte schickt die Warteschlange keinen Druck an den Drucker.
+				if (run.bed && !run.bed.clear) {
+					var freeBtn = h('button', { class: 'btn primary', type: 'button', onclick: function () {
+						freeBtn.disabled = true;
+						api('runs/' + id + '/platte-frei', { method: 'POST' }).then(function (r) { toast(r.message); if (r.run) { run = r.run; run.fetched = Math.floor(Date.now() / 1000); } paint(); }).catch(function (e) { freeBtn.disabled = false; toast(e.message, true); });
+					} }, 'Platte ist frei');
+					box.appendChild(h('div', { class: 'card' }, h('b', null, 'Platte am Drucker räumen'), h('div', { class: 'muted small', style: 'margin:4px 0 8px' }, 'Der letzte Druck liegt womöglich noch auf dem Bett. Erst nach dem Bestätigen startet ein Auftrag aus der Warteschlange.'), freeBtn));
+				}
 			}
 
 			if (run.status === 'freigegeben') {
@@ -2787,6 +2795,7 @@
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
 			} else if (run.status === 'ruesten') {
 				box.appendChild(timeCard([['Rüstzeit', clock(nowTs() - run.setup), 'läuft']]));
+				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck gestartet ▶', function () { act('druckstart'); }), h('div', { class: 'muted small center' }, 'Wird automatisch erkannt, wenn der Drucker verbunden ist')));
 			} else if (run.status === 'druckt') {
 				var live = run.live;
@@ -2800,6 +2809,7 @@
 					h('div', { class: 'muted small' }, live ? 'Live vom Drucker (Bambu)' : 'Schätzung nach Zeit – der Drucker meldet nichts')
 				));
 				box.appendChild(timeCard([['Rüstzeit', clock(run.print - run.setup), 'beendet'], ['Druckzeit', clock(nowTs() - run.print), 'läuft']]));
+				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck fertig ▶', function () { act('druckende'); }), h('button', { class: 'btn wide', type: 'button', onclick: function () { report = true; run.status = 'zu_melden'; paint(); } }, 'Direkt Ist-Menge melden')));
 			} else if (run.status === 'zu_melden') {
 				box.appendChild(timeCard([['Rüstzeit', clock((run.print || run.print_end || nowTs()) - (run.setup || run.print || nowTs())), 'beendet'], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), 'beendet']]));
