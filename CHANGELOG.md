@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.57.0] – 2026-10-28
+
+### Punkte und Guthaben in der Block-Kasse einlösen
+- **Einlösen in Block-Warenkorb und -Kasse:** Unter der Summe wählen angemeldete Kunden „Guthaben einsetzen“ und wie viele Punkte sie einlösen (mit „Alle“ und Euro-Vorschau). Der Wunsch geht über die Store-API, der Rabatt erscheint sofort als „Guthaben/Punkte eingelöst“. Bisher gab es das Einlösen nur in der klassischen Kasse – in der Block-Kasse des Themes fehlte es.
+- **Abbuchen nach Block-Bestellungen:** Punkte und Guthaben werden jetzt auch nach einer Bestellung über die Block-Kasse abgezogen, genau einmal je Bestellung.
+
+### Behoben
+- **Zu viel abgebucht bei gedeckeltem Rabatt:** War Guthaben plus Punkte mehr wert als der Warenkorb, wurde der Rabatt zwar auf die Summe begrenzt, abgebucht aber alles. Jetzt nur, was der Rabatt wirklich ausmacht – zuerst Guthaben, dann Punkte.
+- Der Rabatt richtet sich nach dem aktuellen Kontostand, nicht nach dem beim Anwenden gemerkten (z. B. nach Verfall oder einer Bestellung in einem anderen Tab).
+
 ## [0.56.0] – 2026-10-28
 
 ### Prämienprogramm: Stufen, Verfall, Profil, Jahrestag, Punkte im Warenkorb

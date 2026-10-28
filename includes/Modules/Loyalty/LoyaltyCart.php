@@ -98,11 +98,78 @@ class LoyaltyCart {
 			array(
 				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CartSchema::IDENTIFIER,
 				'namespace'       => 'lw16',
-				'data_callback'   => array( __CLASS__, 'estimate' ),
+				'data_callback'   => array( __CLASS__, 'store_data' ),
 				'schema_callback' => array( $this, 'schema' ),
 				'schema_type'     => ARRAY_A,
 			)
 		);
+
+		// Einlösen in der Block-Kasse: Das Skript schickt den Wunsch über
+		// extensionCartUpdate, die Store-API rechnet den Warenkorb danach neu.
+		if ( function_exists( 'woocommerce_store_api_register_update_callback' ) ) {
+			woocommerce_store_api_register_update_callback(
+				array(
+					'namespace' => 'lw16-redeem',
+					'callback'  => array( __CLASS__, 'store_update' ),
+				)
+			);
+		}
+	}
+
+	/**
+	 * Daten für Block-Warenkorb und -Kasse: Punkte dieser Bestellung und, für
+	 * Angemeldete mit Punkten oder Guthaben, was sich einlösen lässt.
+	 *
+	 * @return array
+	 */
+	public static function store_data() {
+		$data           = self::estimate();
+		$data['redeem'] = self::redeem_data();
+		return $data;
+	}
+
+	/**
+	 * Einlöse-Stand des angemeldeten Kunden.
+	 *
+	 * @return array
+	 */
+	public static function redeem_data() {
+		$user_id = get_current_user_id();
+		$off     = array( 'available' => false );
+		if ( ! $user_id || ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return $off;
+		}
+		$credit = LoyaltyRepository::get_credit( $user_id );
+		$points = LoyaltyRepository::get_points( $user_id );
+		if ( $credit <= 0 && $points <= 0 ) {
+			return $off;
+		}
+		$step = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
+		$use  = LoyaltyFrontend::current_redeem( $user_id );
+
+		return array(
+			'available'      => true,
+			'credit_balance' => round( $credit, 2 ),
+			'points_balance' => $points,
+			'step'           => $step,
+			'use_credit'     => $use['credit'] > 0,
+			'use_points'     => $use['points'],
+			'currency'       => get_woocommerce_currency(),
+		);
+	}
+
+	/**
+	 * Einlösewunsch aus der Block-Kasse übernehmen.
+	 *
+	 * @param array $data credit (bool), points (int).
+	 */
+	public static function store_update( $data ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return;
+		}
+		$data = is_array( $data ) ? $data : array();
+		LoyaltyFrontend::set_redeem( $user_id, ! empty( $data['credit'] ), isset( $data['points'] ) ? absint( $data['points'] ) : 0 );
 	}
 
 	/**
@@ -115,6 +182,7 @@ class LoyaltyCart {
 			'points' => array( 'description' => __( 'Prämienpunkte für den Warenkorb', 'lindenweg16' ), 'type' => 'integer', 'readonly' => true ),
 			'text'   => array( 'description' => __( 'Hinweistext', 'lindenweg16' ), 'type' => 'string', 'readonly' => true ),
 			'detail' => array( 'description' => __( 'Aktionen und Stufe', 'lindenweg16' ), 'type' => 'string', 'readonly' => true ),
+			'redeem' => array( 'description' => __( 'Punkte und Guthaben zum Einlösen', 'lindenweg16' ), 'type' => 'object', 'readonly' => true ),
 		);
 	}
 

@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.7.0
+Stable tag: 1.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,9 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.8.0 =
+* Feld „Punkte und Guthaben einlösen“ in Block-Warenkorb und -Kasse (ERP-Plugin 0.57.0)
 
 = 1.7.0 =
 * Prämienprogramm (ERP-Plugin 0.56.0): Stufen-Leiste in der Prämienkarte, Hinweis „Mit dieser Bestellung sammelst du …“ in Warenkorb und Kasse

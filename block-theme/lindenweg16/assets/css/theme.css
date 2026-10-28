@@ -6343,3 +6343,105 @@ tr.lw16-cart-points td {
 	padding-top: 12px;
 	font-size: var(--wp--preset--font-size--small);
 }
+
+/* Punkte und Guthaben einlösen (Block-Warenkorb und -Kasse) */
+.lw16-redeem-box {
+	display: grid;
+	gap: 10px;
+	margin: 12px 0 4px;
+	padding: 14px;
+	border: 1px solid var(--lw-line);
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.lw16-redeem-box__title {
+	margin: 0;
+	font-weight: 700;
+}
+
+.lw16-redeem-box__check {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	min-height: 44px;
+	cursor: pointer;
+}
+
+.lw16-redeem-box__check input {
+	width: 20px;
+	height: 20px;
+	accent-color: var(--lw-ink);
+}
+
+.lw16-redeem-box__points {
+	display: grid;
+	gap: 6px;
+}
+
+.lw16-redeem-box__points small {
+	color: var(--lw-text-muted);
+}
+
+.lw16-redeem-box__row {
+	display: flex;
+	gap: 8px;
+}
+
+.lw16-redeem-box__row input {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 44px;
+	padding: 0 12px;
+	border: 1.5px solid transparent;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--medium);
+}
+
+.lw16-redeem-box__row input:focus {
+	border-color: var(--lw-primary);
+	outline: none;
+	box-shadow: var(--lw-ring);
+}
+
+.lw16-redeem-box :is(.lw16-redeem-box__all, .lw16-redeem-box__apply, .lw16-redeem-box__remove) {
+	min-height: 44px;
+	padding: 0 16px;
+	border-radius: var(--lw-r-pill);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.lw16-redeem-box__all,
+.lw16-redeem-box__remove {
+	border: 1px solid var(--lw-line);
+	background: var(--lw-surface);
+	color: var(--lw-text);
+}
+
+.lw16-redeem-box__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.lw16-redeem-box__apply {
+	border: 0;
+	background: var(--lw-ink);
+	color: var(--lw-on-ink);
+}
+
+.lw16-redeem-box :is(button):disabled {
+	opacity: 0.6;
+	cursor: wait;
+}
+
+.lw16-redeem-box__error {
+	margin: 0;
+	color: var(--lw-error);
+	font-weight: 600;
+}

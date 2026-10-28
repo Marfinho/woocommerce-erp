@@ -406,6 +406,50 @@ class LoyaltyRules {
 	}
 
 	/**
+	 * Einlösewunsch begrenzen: Guthaben ganz oder gar nicht, Punkte zwischen
+	 * 0 und dem Kontostand.
+	 *
+	 * @param bool  $want_credit    Guthaben einsetzen?
+	 * @param mixed $want_points    Gewünschte Punkte.
+	 * @param float $credit_balance Verfügbares Guthaben.
+	 * @param int   $points_balance Verfügbare Punkte.
+	 * @return array{credit:float,points:int}
+	 */
+	public static function redeem_request( $want_credit, $want_points, $credit_balance, $points_balance ) {
+		return array(
+			'credit' => $want_credit ? round( max( 0, (float) $credit_balance ), 2 ) : 0.0,
+			'points' => max( 0, min( (int) $points_balance, (int) $want_points ) ),
+		);
+	}
+
+	/**
+	 * Was tatsächlich abgebucht wird, wenn der Rabatt auf die Bestellsumme
+	 * gedeckelt ist: zuerst Guthaben, dann Punkte für den Rest. Ohne Deckel
+	 * bleibt alles, wie gewünscht.
+	 *
+	 * @param float $credit Eingesetztes Guthaben.
+	 * @param int   $points Eingesetzte Punkte.
+	 * @param int   $step   Punkte für 1 €.
+	 * @param float $cap    Höchster Rabatt (Zwischensumme).
+	 * @return array{credit:float,points:int,euro:float}
+	 */
+	public static function redeem_split( $credit, $points, $step, $cap ) {
+		$step   = max( 1, (int) $step );
+		$credit = max( 0, (float) $credit );
+		$points = max( 0, (int) $points );
+		$cap    = max( 0, (float) $cap );
+		$euro   = $credit + floor( $points / $step * 100 ) / 100;
+
+		if ( $euro <= $cap ) {
+			return array( 'credit' => round( $credit, 2 ), 'points' => $points, 'euro' => round( $euro, 2 ) );
+		}
+		$use_credit = min( $credit, $cap );
+		$rest       = round( $cap - $use_credit, 2 );
+		$use_points = min( $points, (int) ceil( round( $rest * $step, 6 ) ) );
+		return array( 'credit' => round( $use_credit, 2 ), 'points' => $use_points, 'euro' => round( $cap, 2 ) );
+	}
+
+	/**
 	 * Ist heute der Geburtstag (Monat-Tag)? Wer am 29. Februar Geburtstag hat,
 	 * feiert in Nicht-Schaltjahren am 28.
 	 *
