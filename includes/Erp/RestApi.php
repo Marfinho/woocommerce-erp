@@ -42,7 +42,7 @@ class RestApi {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( $this, 'bootstrap' ),
-				'permission_callback' => array( $this, 'can_use' ),
+				'permission_callback' => array( LiveViewer::class, 'can_open' ),
 			)
 		);
 

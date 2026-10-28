@@ -16,12 +16,22 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Datenbank:** Tabelle `articles` bekommt `pos_only` und `image_id` (DB_VERSION 48; das Upgrade läuft beim nächsten Seitenaufruf).
 - Nicht in echtem WordPress geprüft; vor allem Kamera am Handy und Foto-Upload bitte einmal von Hand durchspielen.
 
-## [0.59.0] – 2026-10-28
-
 ### Kasse: ins ERP umgezogen, raus aus dem wp-admin
 - **Die Marktkasse ist eine eigene ERP-Seite** (Verkauf → Kasse): Kassatag starten, Kacheln antippen, freier Betrag, Storno, Tagesabschluss und die Liste der abgeschlossenen Tage mit Details. Die Seite ist für Handy und Rechner dieselbe; die getrennte „Mobile Kasse“ entfällt.
 - **Entfernt:** die wp-admin-Seite „Kasse“ samt Menüeintrag, die `admin-post`-Handler (`lw16_pos_*`) und die alte Produktsuche per Ajax. Fachlogik und Daten bleiben unverändert (`POSModule::start_tag/book_sale/storno_position/close_tag`): gleiche Lagerweiche, gleicher Beleg und Kassenbucheintrag beim Abschluss.
 - **Neu abgesichert:** Der Tagesabschluss ist gegen Doppelklick und zwei Geräte zugleich gesperrt (vorher konnte er zweimal gebucht werden); Startdatum und Markt werden geprüft.
+
+## [0.59.1] – 2026-10-28
+
+### Warenkorb-Erinnerungen
+- **Keine Erinnerung mehr nach dem Kauf in der Block-Kasse.** Der Warenkorb wurde dort nie als „umgewandelt“ markiert; wer bestellt hatte, bekam trotzdem die Mails. Zusätzlich prüft der Versand jetzt vor jeder Mail, ob seit dem Warenkorb eine Bestellung mit derselben E-Mail vorliegt.
+- **Keine Dauerschleife mehr:** Jeder Seitenaufruf setzte den Erinnerungs-Timer zurück, sodass die Mails immer wieder neu rausgingen. Ein unveränderter, schon erinnerter Warenkorb bleibt jetzt, wie er ist.
+
+## [0.59.0] – 2026-10-28
+
+### Live-Ansicht: Nutzer für den Bildschirm, der nicht abläuft
+- **Neue Rolle „Lindenweg16 Live-Anzeige“.** Ein Konto mit nur dieser Rolle sieht ausschließlich die Live-Seite (alle Blöcke), landet nach der Anmeldung direkt in der Vollbild-Ansicht und bleibt **ein Jahr** angemeldet statt zwei bzw. vierzehn Tage. Das Konto legst du in WordPress unter Benutzer an; Haken bei „Angemeldet bleiben“ beim ersten Login.
+- **Abgelaufenes Seiten-Token wird automatisch erneuert.** Das Token, mit dem die Oberfläche den Server fragt, gilt nur 12–24 Stunden – auch bei gültiger Anmeldung. Bisher blieb ein dauernd offener Bildschirm dann auf „Die Sitzung ist abgelaufen“ stehen; jetzt holt die Seite ein neues und wiederholt die Anfrage einmal. Das gilt für das ganze ERP.
 - Nicht in echtem WordPress geprüft.
 
 ## [0.58.0] – 2026-10-28

@@ -150,7 +150,17 @@
 		return 'Das hat nicht geklappt.';
 	}
 
+	// Das Token der Seite gilt nur 12 bis 24 Stunden, auch bei gültiger
+	// Anmeldung. Wird es abgelehnt, holt die Seite ein neues und versucht es
+	// einmal erneut – sonst bliebe ein dauernd offener Bildschirm hängen.
 	function request(path, opts) {
+		return send(path, opts).catch(function (err) {
+			if (err.code !== 'rest_cookie_invalid_nonce') { throw err; }
+			return refreshNonce().then(function () { return send(path, opts); }, function () { throw err; });
+		});
+	}
+
+	function send(path, opts) {
 		opts = opts || {};
 		var headers = { 'X-WP-Nonce': C.nonce };
 		if (opts.body) { headers['Content-Type'] = 'application/json'; }
