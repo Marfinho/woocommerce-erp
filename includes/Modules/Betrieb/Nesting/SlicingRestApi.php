@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Betrieb\Nesting;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -309,7 +310,48 @@ class SlicingRestApi {
 			return new WP_Error( 'lw16_slicing_missing_file', __( 'Profildatei nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
 		}
 
+		// Druckerprofil: Sperrzonen am vorderen Bettrand ergänzen (Lade- und
+		// Kalibrierlinien der X1/P1, siehe BedKeepOut). OrcaSlicer ordnet beim
+		// Slicen selbst an (--arrange 1) und kennt aus dem Profil sonst nur
+		// die kleine Sperrecke – die Teile landeten dann vorn links auf der Linie.
+		if ( 'printer' === $kind ) {
+			return $this->serve_printer_profile( $path, $job );
+		}
+
 		return $this->serve_file( $path, basename( $path ), 'application/json' );
+	}
+
+	/**
+	 * Druckerprofil mit Sperrzonen ausliefern.
+	 *
+	 * @param string $path Pfad der hochgeladenen Profildatei.
+	 * @param object $job  Slicing-Auftrag.
+	 * @return WP_Error|void
+	 */
+	protected function serve_printer_profile( $path, $job ) {
+		$groesse = filesize( $path );
+
+		if ( false === $groesse || $groesse > self::MAX_FILE_BYTES ) {
+			return new WP_Error( 'lw16_slicing_file_too_large', __( 'Datei ist unerwartet gross.', 'lindenweg16' ), array( 'status' => 500 ) );
+		}
+
+		$model = '';
+		$width = 0;
+		$plate = PlateJobRepository::find( (int) $job->plate_job_id );
+		if ( $plate ) {
+			$printer = BambuPrinterRepository::find_by_printer_id( $plate->printer_id );
+			$model   = $printer ? (string) $printer->printer_model : '';
+			$width   = $plate->plate_width_mm ? (int) $plate->plate_width_mm : 0;
+		}
+
+		$body = BedKeepOut::apply_to_profile( (string) file_get_contents( $path ), $model, $width ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+		nocache_headers();
+		header( 'Content-Type: application/json' );
+		header( 'Content-Disposition: attachment; filename="' . rawurlencode( basename( $path ) ) . '"' );
+		header( 'Content-Length: ' . strlen( $body ) );
+		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON-Datei für den Worker.
+		exit;
 	}
 
 	/**
