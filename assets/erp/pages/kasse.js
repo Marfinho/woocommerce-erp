@@ -156,6 +156,38 @@
 		}
 		document.addEventListener('fullscreenchange', onFullscreenChange);
 
+		// Kassenprodukte pflegen, ohne dass ein Tag offen ist (am Schreibtisch vorbereiten).
+		function paintProdukte(d) {
+			var panelBox = h('div');
+			var newProd = h('button', { class: 'btn', type: 'button' }, '+ Neues Produkt');
+			newProd.addEventListener('click', function () {
+				panelBox.textContent = '';
+				panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }));
+			});
+
+			var rows = h('tbody');
+			if (!d.optionen.length) { rows.appendChild(h('tr', null, h('td', { colspan: '4' }, 'Noch keine Kassenprodukte.'))); }
+			d.optionen.forEach(function (o) {
+				var bild = h('span', { class: 'ks-bild ks-mini' }, o.bild ? h('img', { src: o.bild, alt: '', loading: 'lazy' }) : o.kuerzel);
+				var edit = h('button', { class: 'btn', type: 'button' }, 'Ändern');
+				edit.addEventListener('click', function () {
+					panelBox.textContent = '';
+					panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }, o));
+					panelBox.scrollIntoView({ block: 'nearest' });
+				});
+				rows.appendChild(h('tr', null, h('td', null, bild), h('td', null, o.name, h('div', { class: 'ks-sku' }, o.sku)),
+					h('td', { class: 'num' }, o.preis === '' ? 'Preis offen' : eur(parseFloat(o.preis))), h('td', { class: 'num' }, edit)));
+			});
+
+			box.appendChild(h('div', { class: 'card ks-form', style: 'margin-top:14px' },
+				h('h3', null, 'Kassenprodukte'),
+				h('p', { class: 'muted' }, 'Nur für die Kasse, nicht im Shop. Hier legst du sie vorab an, ändern und ausblenden geht auch ohne offenen Kassatag.'),
+				h('div', { style: 'margin-bottom:10px' }, newProd), panelBox,
+				h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th'), h('th', null, 'Produkt'), h('th', { class: 'num' }, 'Preis'), h('th'))),
+					rows))));
+		}
+
 		/* ---------- Offener Tag ---------- */
 
 		function paintTag(d) {
@@ -409,7 +441,7 @@
 		function load() {
 			return ui.api('kasse').then(function (d) {
 				box.textContent = '';
-				if (d.tag) { paintTag(d); } else { paintStart(d); }
+				if (d.tag) { paintTag(d); } else { paintStart(d); paintProdukte(d); }
 				paintTage(d);
 			}).catch(function (e) {
 				box.textContent = '';
