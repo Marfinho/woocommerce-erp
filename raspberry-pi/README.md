@@ -601,9 +601,56 @@ Aufträge, Bedarf → „Direkt drucken"), steht – sofern der Drucker
 gerade eine AMS-Belegung meldet – eine zusätzliche Auswahl „welches
 Filament" zur Verfügung. Sie gilt für den **gesamten** Druckauftrag
 (ein Material für die ganze Platte, kein Mehrfarb-/Mehrmaterial-Mapping
-pro Bauteil – dafür weiterhin manuell in Bambu Studio slicen). Ohne
-Auswahl verhält sich die Bridge wie bisher: der Drucker nutzt das
-gerade eingelegte bzw. externe Filament, ohne AMS-Beteiligung.
+pro Bauteil – dafür weiterhin manuell in Bambu Studio slicen).
+
+Ohne Auswahl sucht die Bridge das Fach selbst: Sie liest Filament-ID
+**und Farbe** aus der Druckdatei und nimmt das passende, nicht leere
+Fach (bei mehreren das vollste). Die Filament-ID allein reicht nicht – sie
+steht für die Sorte (z. B. „Bambu PLA Matte“) und ist für alle Farben
+gleich. Liegt das Filament nicht im AMS oder ist die Wahl nicht eindeutig,
+startet der Druck **nicht**; der Auftrag scheitert mit einer Meldung, was
+fehlt. Nur ohne Filament-Angabe in der Datei oder ohne AMS am Drucker
+druckt der Drucker wie bisher mit dem eingelegten bzw. externen Filament.
+
+### Sicherer Ablauf: Platte frei, unklare Aufträge, Neustart
+
+- **„Platte ist frei“:** Sobald der Drucker einen Druck beginnt – auch
+  einen privaten, am Display oder aus Bambu Studio gestarteten –, gilt
+  seine Platte als belegt. Die Warteschlange liefert dann keinen Auftrag
+  aus, bis jemand die Platte geräumt und im ERP bestätigt hat (Knopf
+  „Platte ist frei“ an der Druckerkarte unter Bambu-Lab-Drucker oder beim
+  Rüsten einer Werkstatt-Platte). Ein neu angelegter Drucker muss einmal
+  freigegeben werden.
+- **„Unklar“:** Weiß niemand sicher, wie ein Druck ausging (Bridge lange
+  ohne Lebenszeichen, Drucker nach einem Neustart im Leerlauf), wird der
+  Auftrag „unklar“ statt erneut gedruckt. Er sperrt die Warteschlange
+  dieses Druckers, bis die Bridge ihn doch noch abschließt oder jemand ihn
+  unter Bambu-Lab-Drucker → Aufträge klärt („Als fertig buchen“ bzw. „Als
+  fehlgeschlagen markieren“).
+- **Neustart der Bridge/des Pi mitten im Druck:** Die Bridge merkt sich
+  den laufenden Auftrag in `/var/lib/bambu-bridge/active-job.json` und
+  gleicht ihn beim Start mit dem Drucker ab: läuft er noch, verfolgt sie
+  ihn weiter; ist er fertig, meldet sie ihn ab; passt nichts, wird er
+  unklar.
+- **Endmeldungen gehen nicht verloren:** „Fertig“, „fehlgeschlagen“ und
+  „unklar“ landen zuerst in `/var/lib/bambu-bridge/outbox.json` und
+  werden wiederholt, bis WordPress sie annimmt.
+- **Startbestätigung:** Lehnt der Drucker das Startkommando ab, scheitert
+  der Auftrag sofort mit dem Grund des Druckers. Vor jedem Auftrag fordert
+  die Bridge einen frischen Statusbericht an; ohne Verbindung zum Drucker
+  nimmt sie keinen Auftrag an.
+
+Neue, optionale Einstellungen in `.env.bambu` (Standardwerte genügen):
+`START_ACK_TIMEOUT` (30), `STALE_REPORT_SECONDS` (120),
+`FRESH_REPORT_TIMEOUT` (15), `PROGRESS_HEARTBEAT_SECONDS` (300),
+`IDLE_GRACE_SECONDS` (120).
+
+Die Logik ist mit Tests abgedeckt (ohne Drucker, ohne paho-mqtt):
+
+```bash
+pip install pytest requests
+python3 -m pytest tests
+```
 
 ### Unsicherheiten des LAN-Protokolls
 

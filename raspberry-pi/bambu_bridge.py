@@ -45,6 +45,7 @@ Konfiguration ausschließlich über Umgebungsvariablen / .env (siehe
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 import os
@@ -149,6 +150,28 @@ class Config:
     # gewartet wird, bevor der Job als fehlgeschlagen gilt. Der Drucker
     # prüft die Datei, fährt hoch und nivelliert - das dauert.
     PRINT_START_TIMEOUT = int(os.environ.get("PRINT_START_TIMEOUT", "300"))
+
+    # Wie lange auf die Antwort des Druckers auf das Startkommando gewartet
+    # wird. Kommt keine (ältere Firmware antwortet nicht immer), gilt wie
+    # bisher allein der Druckzustand - nur eine ausdrückliche Ablehnung
+    # lässt den Auftrag sofort scheitern.
+    START_ACK_TIMEOUT = int(os.environ.get("START_ACK_TIMEOUT", "30"))
+
+    # Ein MQTT-Bericht, der älter ist, gilt nicht mehr als aktueller
+    # Druckerzustand. Vor dem Annehmen eines Auftrags fordert die Bridge
+    # deshalb einen frischen Bericht an und wartet höchstens FRESH_REPORT_
+    # TIMEOUT Sekunden darauf.
+    STALE_REPORT_SECONDS = int(os.environ.get("STALE_REPORT_SECONDS", "120"))
+    FRESH_REPORT_TIMEOUT = int(os.environ.get("FRESH_REPORT_TIMEOUT", "15"))
+
+    # Fortschritt wird bei jeder Prozent-Änderung gemeldet, sonst aber
+    # spätestens alle so vielen Sekunden - das hält das Lease auf dem Server
+    # am Leben, auch wenn der Druck lange pausiert (Filament leer).
+    PROGRESS_HEARTBEAT_SECONDS = int(os.environ.get("PROGRESS_HEARTBEAT_SECONDS", "300"))
+
+    # Meldet der Drucker nach Druckbeginn so lange "IDLE", ohne dass ein
+    # FINISH/FAILED kam (Strom weg, Neustart), wird der Auftrag "unklar".
+    IDLE_GRACE_SECONDS = int(os.environ.get("IDLE_GRACE_SECONDS", "120"))
 
     # Höchstgröße einer heruntergeladenen 3MF - dieselbe Grenze, die der
     # Server beim Einreihen setzt (BambuService::MAX_FILE_BYTES).
@@ -265,6 +288,16 @@ def _safe_float(wert) -> Optional[float]:
 # FINISH auch wirklich das Ende DIESES Jobs (siehe warte_auf_druckstart).
 DRUCKT_ZUSTAENDE = ("PREPARE", "RUNNING", "PAUSE", "SLICING")
 
+# print_error-Code, den die Firmware beim Abbrechen am Display meldet
+# (0x0300400C, "Druckauftrag abgebrochen") - so in den bekannten Bambu-
+# Integrationen hinterlegt; am X1C zu bestätigen. Ein anderer Code führt
+# einfach zur allgemeinen FAILED-Meldung, also kein Risiko.
+ABGEBROCHEN_FEHLERCODES = (50348044,)
+
+# Endmeldungen, die die Bridge bei Verbindungsproblemen puffert und
+# wiederholt (siehe Outbox).
+ENDMELDUNGEN = ("complete", "failed", "unclear")
+
 # Nur zum einmaligen Loggen, ob/wie der AMS-Report erkannt wird (siehe
 # _on_mqtt_message) - kein State, der irgendwo sonst gebraucht wird.
 _AMS_LOG_STATE = {"erkannt": False, "unerwartetes_format": False}
@@ -292,6 +325,14 @@ class PrinterState:
         # _on_mqtt_message(). None solange noch kein AMS-Report kam (z. B.
         # Drucker ohne AMS), dann bleibt es auch dauerhaft None.
         self.ams: Optional[list] = None
+        # Zeitpunkt (time.monotonic) des letzten MQTT-Berichts - ohne ihn
+        # ließe sich ein veralteter Zustand nicht von einem aktuellen
+        # unterscheiden (z. B. nach einem Verbindungsabbruch).
+        self.last_report_at: Optional[float] = None
+        self.print_error_code: Optional[int] = None
+        # Antworten des Druckers auf eigene Kommandos: sequence_id ->
+        # (Ergebnis in Großbuchstaben, Grund).
+        self.command_results: dict = {}
 
     def update(self, **kwargs) -> None:
         with self._lock:
@@ -311,7 +352,33 @@ class PrinterState:
                 "last_error": self.last_error,
                 "current_file": self.current_file,
                 "ams": self.ams,
+                "print_error_code": self.print_error_code,
+                "report_age": None if self.last_report_at is None else time.monotonic() - self.last_report_at,
             }
+
+    def record_command_result(self, sequence_id: str, result: str, reason: str) -> None:
+        with self._lock:
+            self.command_results[sequence_id] = (result, reason)
+            # Nicht endlos wachsen lassen - es zählt nur das letzte Kommando.
+            if len(self.command_results) > 20:
+                for key in list(self.command_results)[:-20]:
+                    del self.command_results[key]
+
+    def last_report_time(self) -> Optional[float]:
+        with self._lock:
+            return self.last_report_at
+
+    def command_result(self, sequence_id: str) -> Optional[tuple]:
+        with self._lock:
+            return self.command_results.get(sequence_id)
+
+
+def is_fresh(snap: dict, max_age: Optional[float] = None) -> bool:
+    """Beschreibt dieser Schnappschuss den aktuellen Druckerzustand?
+    Nur mit MQTT-Verbindung und einem Bericht jünger als max_age."""
+    max_age = Config.STALE_REPORT_SECONDS if max_age is None else max_age
+    age = snap.get("report_age")
+    return bool(snap.get("connected")) and age is not None and age <= max_age
 
 
 STATE = PrinterState()
@@ -355,7 +422,16 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
     if not isinstance(printer, dict):
         return
 
-    updates: dict = {}
+    updates: dict = {"last_report_at": time.monotonic()}
+
+    # Antwort auf ein eigenes Kommando (z. B. project_file): Die Firmware
+    # schickt dieselbe sequence_id mit einem "result" zurück.
+    if printer.get("command") == "project_file" and "result" in printer:
+        STATE.record_command_result(
+            str(printer.get("sequence_id", "")),
+            str(printer.get("result") or "").strip().upper(),
+            str(printer.get("reason") or "").strip(),
+        )
 
     if "gcode_state" in printer:
         updates["gcode_state"] = str(printer["gcode_state"]).upper()
@@ -390,6 +466,8 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
 
     # print_error ist bei Bambu ein numerischer Fehlercode, 0 = kein Fehler.
     fehler_code = printer.get("print_error")
+    if "print_error" in printer:
+        updates["print_error_code"] = _safe_int(fehler_code)
     if fehler_code:
         updates["last_error"] = f"Fehlercode {fehler_code}"
     elif "gcode_state" in printer and str(printer["gcode_state"]).upper() not in ("FAILED",):
@@ -421,13 +499,12 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
                         "type": str(fach.get("tray_type") or "").strip(),
                         "color": str(fach.get("tray_color") or "").strip(),
                         "remain": _safe_int(fach.get("remain")),
-                        # Bambus eigene Filament-ID (z. B. "GFA01" fuer
-                        # "PLA MATTE Haster Haken") - dieselbe ID, die auch
-                        # in Metadata/project_settings.config der Druckdatei
-                        # als "filament_ids" steht. Genauer als ein
-                        # Typ/Farbe-Abgleich (siehe find_ams_tray_for_filament()),
-                        # weil zwei Filamente zufaellig dieselbe Farbe haben
-                        # koennen.
+                        # Bambus eigene Filament-ID (z. B. "GFA01") -
+                        # dieselbe ID, die auch in Metadata/project_settings.
+                        # config der Druckdatei als "filament_ids" steht. Sie
+                        # bezeichnet die Sorte, nicht die Farbe; die
+                        # Fach-Erkennung vergleicht deshalb beides (siehe
+                        # choose_ams_tray()).
                         "tray_info_idx": str(fach.get("tray_info_idx") or "").strip(),
                     }
                 )
@@ -482,61 +559,134 @@ def start_mqtt_client() -> "mqtt.Client":
     return client
 
 
-def read_target_filament_id(local_path: Path) -> Optional[str]:
-    """Bambu-eigene Filament-ID (z. B. "GFA01") lesen, die der
-    Slicing-Worker beim Erzeugen dieser Druckdatei in
-    Metadata/project_settings.config ("filament_ids") hinterlegt hat -
-    Grundlage für die automatische AMS-Fach-Erkennung in
-    find_ams_tray_for_filament(). None bei einer nicht lesbaren/nicht von
-    uns geslicten Datei oder ohne dieses Feld (z. B. manueller Upload
-    einer fremden Druckdatei ohne unser Profil-Handling)."""
+def normalize_rgb(wert) -> str:
+    """Farbe auf sechs Hex-Ziffern (RRGGBB, Großbuchstaben) bringen.
+
+    Der MQTT-Report liefert "RRGGBBAA" (z. B. "000000FF"), die Druckdatei
+    "#RRGGBB" oder "#RRGGBBAA" - verglichen wird nur der Farbanteil.
+    """
+    text = "".join(ch for ch in str(wert or "") if ch in "0123456789abcdefABCDEF")
+    return text[:6].upper() if len(text) >= 6 else ""
+
+
+def read_target_filament(local_path: Path) -> tuple[Optional[str], str]:
+    """Bambu-Filament-ID (z. B. "GFA01") und Farbe des ersten Filaments,
+    wie der Slicing-Worker sie in Metadata/project_settings.config
+    hinterlegt hat ("filament_ids", "filament_colour").
+
+    Grundlage für die automatische AMS-Fach-Erkennung in choose_ams_tray().
+    (None, "") bei einer nicht lesbaren Datei oder ohne diese Felder (z. B.
+    eine fremde Druckdatei ohne unser Profil-Handling)."""
     try:
         with zipfile.ZipFile(local_path) as zf:
             config = json.loads(zf.read("Metadata/project_settings.config").decode("utf-8", errors="replace"))
     except (OSError, KeyError, ValueError, zipfile.BadZipFile):
-        return None
+        return None, ""
 
-    ids = config.get("filament_ids") if isinstance(config, dict) else None
-    if isinstance(ids, list) and ids and isinstance(ids[0], str) and ids[0].strip():
-        return ids[0].strip()
-    return None
+    if not isinstance(config, dict):
+        return None, ""
+
+    ids = config.get("filament_ids")
+    filament_id = ids[0].strip() if isinstance(ids, list) and ids and isinstance(ids[0], str) and ids[0].strip() else None
+
+    farben = config.get("filament_colour")
+    farbe = normalize_rgb(farben[0]) if isinstance(farben, list) and farben else ""
+
+    return filament_id, farbe
 
 
-def find_ams_tray_for_filament(ams_snapshot: Optional[list], filament_id: str) -> Optional[int]:
+def choose_ams_tray(ams_snapshot: Optional[list], filament_id: str, farbe: str = "") -> tuple[Optional[int], str]:
     """Physisches AMS-Fach (globale Nummer: Einheit * 4 + Fach-Index,
-    dieselbe Zählweise wie ams_mapping) suchen, das laut dem zuletzt per
-    MQTT empfangenen AMS-Report gerade die gegebene Bambu-Filament-ID
-    trägt.
+    dieselbe Zählweise wie ams_mapping) für das Filament der Druckdatei
+    wählen - der automatische Ersatz für das, was Bambu Studio beim
+    manuellen Drucken per RFID-Erkennung macht.
 
-    Das ist der automatische Ersatz für das, was Bambu Studio beim
-    manuellen Drucken selbst per RFID-Erkennung macht: dort wählt man nie
-    "Fach 3", sondern die Software erkennt automatisch, in welchem Fach
-    das passende Filament liegt. Ohne diesen Abgleich schickte
-    send_print_command() für automatisch geslicte Aufträge bisher immer
-    use_ams=false, obwohl die Druckdatei ein AMS-Filamentprofil nutzt (mit
-    entsprechendem Toolchange-Gcode) - der Drucker konnte die dafür
-    nötige AMS-Zuordnungstabelle dann nicht auflösen ("Die Zuordnungstabelle
-    des AMS konnte nicht abgerufen werden").
+    Die Filament-ID (tray_info_idx) bezeichnet nur die Sorte, z. B. "Bambu
+    PLA Matte" - sie ist für alle Farben dieser Sorte gleich. Deshalb wird
+    zusätzlich die Farbe verglichen; ohne Farbe in der Datei ist die Wahl
+    nur eindeutig, wenn alle passenden Fächer dieselbe Farbe tragen. Leere
+    Fächer (Restmenge 0) scheiden aus; unter mehreren gleichwertigen gewinnt
+    das vollste.
 
-    None, wenn noch kein AMS-Report vorliegt oder keines der Fächer
-    passt (Filament nicht eingelegt oder AMS-Bestückung seit dem letzten
-    Report geändert) - der Aufrufer fällt dann auf das alte Verhalten
-    zurück."""
-    if not ams_snapshot or not filament_id:
-        return None
-
-    for einheit in ams_snapshot:
+    Rückgabe (Fach, ""), oder (None, Begründung), wenn kein Fach passt oder
+    die Wahl nicht eindeutig ist - der Aufrufer lässt den Auftrag dann mit
+    dieser Begründung scheitern, statt mit dem falschen Filament zu drucken.
+    """
+    kandidaten = []
+    for einheit in ams_snapshot or []:
         einheit_id = einheit.get("id")
         if einheit_id is None:
             continue
         for fach in einheit.get("trays", []) or []:
-            if fach.get("id") is not None and fach.get("tray_info_idx") == filament_id:
-                return einheit_id * 4 + fach["id"]
+            if fach.get("id") is None or fach.get("tray_info_idx") != filament_id:
+                continue
+            if fach.get("remain") == 0:
+                continue
+            kandidaten.append((einheit_id * 4 + fach["id"], normalize_rgb(fach.get("color")), fach.get("remain")))
 
-    return None
+    beschreibung = filament_id + (f" in Farbe #{farbe}" if farbe else "")
+
+    if farbe:
+        kandidaten = [k for k in kandidaten if k[1] == farbe]
+    elif len({k[1] for k in kandidaten}) > 1:
+        return None, (
+            f"Filament {filament_id} liegt in mehreren Farben im AMS, und die Druckdatei nennt keine Farbe - "
+            "bitte beim Einreihen das AMS-Fach wählen."
+        )
+
+    if not kandidaten:
+        return None, (
+            f"Filament {beschreibung} liegt in keinem AMS-Fach (oder das Fach ist leer). "
+            "Bitte einlegen oder beim Einreihen ein Fach wählen."
+        )
+
+    def fuellstand(kandidat) -> int:
+        rest = kandidat[2]
+        return rest if isinstance(rest, int) and rest >= 0 else -1
+
+    return max(kandidaten, key=fuellstand)[0], ""
 
 
-def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id: Optional[int] = None) -> None:
+def decide_ams_tray(job: dict, ams_snapshot: Optional[list], local_path: Path) -> tuple[Optional[int], str]:
+    """AMS-Fach für den Start eines Auftrags festlegen.
+
+    - Ein beim Einreihen in WordPress gewähltes Fach gilt immer.
+    - Sonst automatisch über die Filament-ID der Druckdatei (choose_ams_tray()).
+    - Ohne Filament-ID in der Datei oder ohne AMS am Drucker startet der
+      Druck wie bisher mit dem eingelegten/externen Filament (None, "").
+
+    Rückgabe (Fach oder None, Fehlermeldung). Eine Fehlermeldung heißt:
+    nicht starten.
+    """
+    manuell = job.get("ams_tray_id")
+    if manuell is not None:
+        return _safe_int(manuell), ""
+
+    filament_id, farbe = read_target_filament(local_path)
+    if not filament_id or ams_snapshot is None:
+        return None, ""
+
+    return choose_ams_tray(ams_snapshot, filament_id, farbe)
+
+
+_SEQUENZ = itertools.count(int(time.time()) % 1_000_000 * 100)
+
+
+def next_sequence_id() -> str:
+    """Eigene, fortlaufende sequence_id je Kommando - nur so lässt sich die
+    Antwort des Druckers genau diesem Kommando zuordnen."""
+    return str(next(_SEQUENZ))
+
+
+def request_pushall(client: "mqtt.Client") -> None:
+    """Den Drucker um einen vollständigen Statusbericht bitten."""
+    client.publish(
+        f"device/{Config.BAMBU_SERIAL}/request",
+        json.dumps({"pushing": {"sequence_id": next_sequence_id(), "command": "pushall"}}),
+    )
+
+
+def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id: Optional[int] = None, sequence_id: str = "0") -> None:
     """Druck der zuvor per FTPS hochgeladenen Datei anstoßen.
 
     "project_file" ist das von Bambu Studio selbst verwendete Kommando,
@@ -544,8 +694,8 @@ def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id:
     starten.
 
     ams_tray_id ist entweder das beim Einreihen in WordPress manuell
-    gewählte AMS-Fach, oder (siehe find_ams_tray_for_filament()) das
-    automatisch anhand der Filament-ID der Druckdatei erkannte Fach -
+    gewählte AMS-Fach, oder das automatisch anhand der Filament-ID der Druckdatei erkannte Fach (siehe
+    decide_ams_tray()) -
     "globale" Fach-Nummer: AMS-Einheit * 4 + Fach-Index, dieselbe
     Zählweise, die ams_mapping selbst erwartet. Bleibt es None (weder
     manuell gewählt noch automatisch erkannt), startet der Druck wie
@@ -562,7 +712,7 @@ def send_print_command(client: "mqtt.Client", remote_filename: str, ams_tray_id:
     """
     command = {
         "print": {
-            "sequence_id": "0",
+            "sequence_id": sequence_id,
             "command": "project_file",
             "param": "Metadata/plate_1.gcode",
             "project_id": "0",
@@ -891,13 +1041,42 @@ class ApiClient:
             data={"progress_percent": progress_percent, "remaining_minutes": remaining_minutes},
         )
 
-    def complete(self, job_id: int) -> bool:
-        r = self._post(f"jobs/{job_id}/complete")
+    def send_final(self, job_id: int, action: str, message: str = "") -> Optional[int]:
+        """Endmeldung (complete/failed/unclear) senden. Gibt den HTTP-Status
+        zurück, None bei Netzwerkfehler - die Outbox entscheidet damit, ob
+        wiederholt werden muss."""
+        data = {"message": message[:500]} if action != "complete" else None
+        r = self._post(f"jobs/{job_id}/{action}", data=data)
+        return None if r is None else r.status_code
+
+    def release(self, job_id: int) -> bool:
+        """Angenommenen, aber nie gestarteten Auftrag zurück in die
+        Warteschlange geben (Drucker doch belegt, keine Verbindung)."""
+        r = self._post(f"jobs/{job_id}/release")
         return r is not None and r.status_code == 200
 
-    def fail(self, job_id: int, message: str) -> bool:
-        r = self._post(f"jobs/{job_id}/failed", data={"message": message[:500]})
-        return r is not None and r.status_code == 200
+    def get_active(self) -> tuple[bool, Optional[dict]]:
+        """Den Auftrag, der diesen Drucker laut Server belegt.
+        (True, Auftrag oder None) bei einer Antwort, (False, None) ohne."""
+        try:
+            r = self.session.get(
+                f"{self.base}/jobs/active",
+                params={"printer_id": Config.PRINTER_ID, "_": int(time.time() * 1000)},
+                timeout=Config.REQUEST_TIMEOUT,
+            )
+        except requests.RequestException as exc:
+            log.warning("Netzwerkfehler bei GET /jobs/active: %s", redact(str(exc)))
+            return False, None
+
+        if r.status_code == 204:
+            return True, None
+        if r.status_code == 200:
+            try:
+                return True, r.json().get("job")
+            except ValueError:
+                return False, None
+        log.warning("GET /jobs/active: unerwarteter Status %s", r.status_code)
+        return False, None
 
     def post_status(self) -> None:
         snap = STATE.snapshot()
@@ -1031,8 +1210,155 @@ def safe_local_name(filename: str, job_id: int) -> str:
     return name
 
 
-def warte_auf_druckstart() -> tuple[bool, str]:
+def file_belongs_to_job(dateiname: str, job_id: int) -> bool:
+    """Gehört der vom Drucker gemeldete Dateiname zu diesem Auftrag? Die
+    Bridge legt jede Druckdatei als "lw16-<Job-ID>-<Name>" auf den Drucker
+    und startet sie unter diesem Namen (siehe process_job()) - dasselbe
+    Merkmal prüft der Server (BambuJobRepository::file_belongs_to_job())."""
+    name = os.path.basename(str(dateiname or "").replace("\\", "/")).strip().lower()
+    return job_id > 0 and name.startswith(f"lw16-{job_id}-")
+
+
+# ---------------------------------------------------------------------
+# Dauerhafter Zustand auf dem Pi: aktiver Auftrag und gepufferte
+# Endmeldungen. Beides überlebt einen Neustart der Bridge oder des Pi -
+# vorher hielt die Bridge den laufenden Auftrag nur im Speicher und
+# vergaß ihn beim Neustart.
+# ---------------------------------------------------------------------
+
+
+def _write_json_atomic(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data), encoding="utf-8")
+    tmp.replace(path)
+
+
+def _read_json(path: Path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return default
+
+
+class ActiveJobStore:
+    """Merkt sich den Auftrag, den die Bridge gerade bearbeitet, samt
+    Phase ("claimed", "starting", "printing"). "starting" heißt: Das
+    Startkommando kann schon beim Drucker angekommen sein - nach einem
+    Neustart darf der Auftrag dann nicht einfach zurück in die
+    Warteschlange."""
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+
+    def save(self, job_id: int, phase: str) -> None:
+        _write_json_atomic(self.path, {"job_id": job_id, "phase": phase})
+
+    def load(self) -> Optional[dict]:
+        data = _read_json(self.path, None)
+        return data if isinstance(data, dict) and isinstance(data.get("job_id"), int) else None
+
+    def clear(self) -> None:
+        try:
+            self.path.unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("Zustandsdatei %s konnte nicht gelöscht werden: %s", self.path, exc)
+
+
+class Outbox:
+    """Endmeldungen (fertig, fehlgeschlagen, unklar), die bei WordPress
+    ankommen MÜSSEN. Vorher ging ein "fertig" verloren, wenn WordPress im
+    Moment des Druckendes nicht erreichbar war - der Auftrag blieb dann
+    "printing" und lief später womöglich ein zweites Mal. Jetzt wird jede
+    Endmeldung erst auf der SD-Karte abgelegt und so lange wiederholt, bis
+    der Server sie annimmt (200) oder endgültig ablehnt (404/409: Auftrag
+    gibt es nicht mehr oder er wurde inzwischen von Hand geklärt)."""
+
+    ENDGUELTIG = (200, 404, 409)
+
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._lock = threading.Lock()
+
+    def _load(self) -> list:
+        data = _read_json(self.path, [])
+        return [e for e in data if isinstance(e, dict) and e.get("action") in ENDMELDUNGEN] if isinstance(data, list) else []
+
+    def pending(self) -> list:
+        with self._lock:
+            return self._load()
+
+    def add(self, job_id: int, action: str, message: str = "") -> None:
+        with self._lock:
+            events = [e for e in self._load() if e.get("job_id") != job_id]
+            events.append({"job_id": job_id, "action": action, "message": message})
+            _write_json_atomic(self.path, events)
+
+    def flush(self, api: "ApiClient") -> bool:
+        """Alle gepufferten Meldungen senden. True, wenn danach nichts mehr
+        offen ist."""
+        with self._lock:
+            events = self._load()
+            rest = []
+            for event in events:
+                status = api.send_final(int(event["job_id"]), event["action"], event.get("message", ""))
+                if status in self.ENDGUELTIG:
+                    if status != 200:
+                        log.warning(
+                            "Endmeldung %s für Job %s vom Server abgelehnt (HTTP %s) - verworfen.",
+                            event["action"], event["job_id"], status,
+                        )
+                    continue
+                rest.append(event)
+            if rest != events:
+                _write_json_atomic(self.path, rest)
+            return not rest
+
+
+def report_final(api: "ApiClient", outbox: Outbox, job_id: int, action: str, message: str = "") -> None:
+    """Endmeldung puffern und sofort zu senden versuchen."""
+    if action == "complete":
+        log.info("Job %s: fertig.", job_id)
+    elif action == "failed":
+        log.error("Job %s: fehlgeschlagen - %s", job_id, message)
+    else:
+        log.warning("Job %s: unklar - %s", job_id, message)
+    outbox.add(job_id, action, message)
+    if not outbox.flush(api):
+        log.warning("WordPress nicht erreichbar - Endmeldung für Job %s wird wiederholt.", job_id)
+
+
+# ---------------------------------------------------------------------
+# Druckerzustand prüfen
+# ---------------------------------------------------------------------
+
+
+def ensure_fresh_state(client: "mqtt.Client", timeout: Optional[float] = None) -> bool:
+    """Einen frischen Statusbericht anfordern und darauf warten. Ohne
+    MQTT-Verbindung oder ohne Antwort innerhalb von timeout Sekunden: False -
+    dann ist der zuletzt gelesene Zustand nicht verlässlich (z. B. ein
+    altes "FINISH", obwohl am Gerät längst etwas anderes läuft)."""
+    timeout = Config.FRESH_REPORT_TIMEOUT if timeout is None else timeout
+    if not STATE.snapshot()["connected"]:
+        return False
+
+    anfrage = time.monotonic()
+    request_pushall(client)
+    deadline = anfrage + timeout
+
+    while time.monotonic() < deadline:
+        time.sleep(0.5)
+        zuletzt = STATE.last_report_time()
+        if zuletzt is not None and zuletzt >= anfrage:
+            return True
+
+    return False
+
+
+def warte_auf_druckstart(job_id: int, sequence_id: str) -> tuple[str, str]:
     """Warten, bis der Drucker den Druck tatsächlich begonnen hat.
+
+    Rückgabe ("started", ""), ("failed", Grund) oder ("unclear", Grund).
 
     Wichtig, weil der zuletzt gelesene gcode_state nach einem vorherigen
     Druck noch auf FINISH steht: Würde die Fortschrittsschleife direkt
@@ -1041,32 +1367,179 @@ def warte_auf_druckstart() -> tuple[bool, str]:
     automatischer Ist-Zeit- und Bestandsbuchung auf der WordPress-Seite.
     Erst wenn der Drucker einen laufenden Zustand meldet, ist ein
     späteres FINISH/FAILED auch wirklich das dieses Jobs.
+
+    Lehnt der Drucker das Startkommando ausdrücklich ab, scheitert der
+    Auftrag sofort mit dessen Begründung. Bleibt die Antwort aus, zählt wie
+    bisher allein der Druckzustand. Ist beim Timeout die Verbindung zum
+    Drucker weg, ist offen, ob er doch gestartet hat - dann "unclear".
     """
-    deadline = time.monotonic() + Config.PRINT_START_TIMEOUT
+    start = time.monotonic()
+    deadline = start + Config.PRINT_START_TIMEOUT
+    bestaetigt = False
 
     while time.monotonic() < deadline:
         time.sleep(2)
+        antwort = STATE.command_result(sequence_id)
+        if antwort and not bestaetigt:
+            ergebnis, grund = antwort
+            if ergebnis in ("SUCCESS", "OK"):
+                bestaetigt = True
+                log.info("Job %s: Drucker hat das Startkommando angenommen.", job_id)
+            elif ergebnis:
+                return "failed", f"Drucker hat den Start abgelehnt ({ergebnis}{': ' + grund if grund else ''})."
+
         snap = STATE.snapshot()
-
         if snap["gcode_state"] in DRUCKT_ZUSTAENDE:
-            return True, ""
+            if snap["current_file"] and not file_belongs_to_job(snap["current_file"], job_id):
+                return "failed", f"Am Drucker wurde stattdessen ein anderer Druck gestartet ({snap['current_file']})."
+            return "started", ""
 
-    return False, (
+        if not bestaetigt and antwort is None and time.monotonic() - start > Config.START_ACK_TIMEOUT:
+            # Keine Antwort auf das Kommando - kein Fehler, manche Firmware
+            # antwortet nicht. Nur einmal ins Log.
+            bestaetigt = True
+            log.info("Job %s: keine Antwort auf das Startkommando - warte auf den Druckzustand.", job_id)
+
+    if not is_fresh(STATE.snapshot()):
+        return "unclear", (
+            "Keine Verbindung zum Drucker, als der Druck hätte beginnen sollen - "
+            "ob er gestartet wurde, ist unbekannt. Bitte am Drucker nachsehen."
+        )
+
+    return "failed", (
         "Drucker hat den Druck nicht begonnen (kein laufender Zustand "
         f"innerhalb von {Config.PRINT_START_TIMEOUT}s) - Druckdatei oder "
         "Druckerzustand am Gerät prüfen."
     )
 
 
-def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
+class MonitorTracker:
+    """Entscheidet während eines laufenden Drucks anhand des MQTT-Berichts,
+    wie es weitergeht - ohne Seiteneffekte, damit es testbar ist.
+
+    step() liefert ("wait", ""), ("complete", ""), ("failed", Grund) oder
+    ("unclear", Grund). Früher kannte die Schleife nur FINISH und FAILED
+    und hing bei allem anderen (Drucker nach Stromausfall im Leerlauf,
+    anderer Druck am Display gestartet, Verbindung weg) für immer fest.
+    """
+
+    def __init__(self, job_id: int) -> None:
+        self.job_id = job_id
+        self.idle_since: Optional[float] = None
+        self.last_progress_value: Optional[int] = None
+        self.last_progress_at: Optional[float] = None
+        self.last_pushall_at: Optional[float] = None
+
+    def progress_due(self, snap: dict, now: float) -> bool:
+        if not is_fresh(snap) or snap["progress_percent"] is None:
+            return False
+        if snap["progress_percent"] != self.last_progress_value:
+            return True
+        return self.last_progress_at is None or now - self.last_progress_at >= Config.PROGRESS_HEARTBEAT_SECONDS
+
+    def mark_progress(self, snap: dict, now: float) -> None:
+        self.last_progress_value = snap["progress_percent"]
+        self.last_progress_at = now
+
+    def pushall_due(self, snap: dict, now: float) -> bool:
+        """Bei veraltetem Bericht trotz Verbindung höchstens alle 5 Minuten
+        einen vollständigen Bericht anfordern."""
+        if not snap["connected"] or is_fresh(snap):
+            return False
+        if self.last_pushall_at is not None and now - self.last_pushall_at < 300:
+            return False
+        self.last_pushall_at = now
+        return True
+
+    def step(self, snap: dict, now: float) -> tuple[str, str]:
+        if not is_fresh(snap):
+            # Kein aktueller Zustand: abwarten statt den letzten bekannten
+            # für bare Münze zu nehmen. Der Druck läuft am Gerät weiter;
+            # nach dem Wiederverbinden entscheidet der frische Bericht.
+            # idle_since bleibt stehen: Ein Drucker im Leerlauf sendet oft
+            # nur auf Anfrage (pushall) - sonst liefe die Schonfrist nie ab.
+            return "wait", ""
+
+        state = snap["gcode_state"]
+        datei = snap["current_file"]
+        fremd = bool(datei) and not file_belongs_to_job(datei, self.job_id)
+
+        if state in DRUCKT_ZUSTAENDE:
+            self.idle_since = None
+            if fremd:
+                return "failed", f"Am Drucker läuft inzwischen ein anderer Druck ({datei}) - dieser Auftrag wurde abgebrochen oder ersetzt."
+            return "wait", ""
+
+        if state == "FINISH":
+            if fremd:
+                return "unclear", f"Drucker meldet das Ende eines anderen Drucks ({datei}) - Ausgang dieses Auftrags unbekannt."
+            return "complete", ""
+
+        if state == "FAILED":
+            if snap.get("print_error_code") in ABGEBROCHEN_FEHLERCODES:
+                return "failed", "Druck am Drucker abgebrochen."
+            return "failed", snap["last_error"] or "Drucker meldet FAILED (Fehlercode siehe Druckerdisplay)."
+
+        # IDLE oder leer: Der Drucker druckt nicht mehr, hat aber kein Ende
+        # gemeldet (Strom weg, Neustart). Kurz abwarten - Zustandswechsel
+        # kommen nicht immer in einem Bericht -, dann "unklar".
+        if self.idle_since is None:
+            self.idle_since = now
+        if now - self.idle_since >= Config.IDLE_GRACE_SECONDS:
+            return "unclear", (
+                f"Drucker steht im Leerlauf ({state or 'kein Zustand'}), ohne das Ende dieses Drucks gemeldet zu haben - "
+                "etwa nach einem Stromausfall oder Neustart. Bitte am Drucker nachsehen."
+            )
+        return "wait", ""
+
+
+def monitor_job(api: "ApiClient", outbox: Outbox, mqtt_client: "mqtt.Client", job_id: int) -> None:
+    """Laufenden Druck verfolgen, bis er endet - kein fester Timeout, ein
+    3D-Druck kann viele Stunden dauern."""
+    tracker = MonitorTracker(job_id)
+    war_veraltet = False
+
+    while True:
+        time.sleep(5)
+        snap = STATE.snapshot()
+        now = time.monotonic()
+
+        if tracker.pushall_due(snap, now):
+            request_pushall(mqtt_client)
+
+        veraltet = not is_fresh(snap)
+        if veraltet and not war_veraltet:
+            log.warning("Job %s: kein aktueller Druckerzustand (MQTT getrennt oder still) - warte.", job_id)
+        elif war_veraltet and not veraltet:
+            log.info("Job %s: Druckerzustand wieder aktuell.", job_id)
+        war_veraltet = veraltet
+
+        if tracker.progress_due(snap, now):
+            api.report_progress(job_id, snap["progress_percent"], snap["remaining_minutes"] or 0)
+            tracker.mark_progress(snap, now)
+
+        action, message = tracker.step(snap, now)
+        if action != "wait":
+            report_final(api, outbox, job_id, action, message)
+            return
+
+
+def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict, outbox: Outbox, store: ActiveJobStore) -> None:
     job_id = int(job["id"])
     filename = safe_local_name(job.get("filename") or "", job_id)
 
+    # Vor der Annahme muss der Druckerzustand aktuell sein - sonst hielte
+    # die Bridge einen Drucker für frei, den sie gar nicht erreicht, holte
+    # sich den Auftrag, lüde die Datei hoch und liefe erst nach Minuten in
+    # einen Timeout.
+    if not ensure_fresh_state(mqtt_client):
+        log.warning("Kein aktueller Druckerzustand (MQTT) - Job %s bleibt in der Warteschlange.", job_id)
+        time.sleep(10)
+        return
+
     # Druckt das Gerät gerade schon - etwa von Hand am Display gestartet -,
     # wird der Auftrag gar nicht erst angenommen: Er bleibt in der
-    # Warteschlange stehen und kommt beim nächsten freien Drucker dran.
-    # (Nach dem Claim wäre die einzige Möglichkeit, ihn scheitern zu
-    # lassen; unangetastet in der Warteschlange ist er besser aufgehoben.)
+    # Warteschlange stehen.
     laeuft = STATE.snapshot()["gcode_state"]
 
     if laeuft in DRUCKT_ZUSTAENDE:
@@ -1081,17 +1554,14 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
         time.sleep(2)
         return
 
+    store.save(job_id, "claimed")
     local_path = Config.DOWNLOAD_DIRECTORY / filename
 
     try:
         if not api.download_file(job_id, local_path):
-            # Der Job muss hier ausdrücklich als fehlgeschlagen gemeldet
-            # werden. Bliebe er "claimed", sperrte er serverseitig die
-            # gesamte Warteschlange dieses Druckers, bis die Wartung ihn
-            # nach LOCK_TIMEOUT_MINUTES freigibt - und liefe danach in
-            # genau denselben Fehler.
-            log.error("3MF-Download für Job %s fehlgeschlagen.", job_id)
-            api.fail(job_id, "3MF-Datei konnte nicht von WordPress geladen werden.")
+            # Ausdrücklich melden: Bliebe der Job "claimed", sperrte er die
+            # Warteschlange dieses Druckers.
+            report_final(api, outbox, job_id, "failed", "3MF-Datei konnte nicht von WordPress geladen werden.")
             return
 
         api.mark_uploading(job_id)
@@ -1115,97 +1585,149 @@ def process_job(api: ApiClient, mqtt_client: "mqtt.Client", job: dict) -> None:
                 time.sleep(Config.FTPS_UPLOAD_RETRY_DELAY)
 
         if not ok:
-            log.error("Upload für Job %s endgültig fehlgeschlagen nach %s Versuchen: %s", job_id, Config.FTPS_UPLOAD_RETRIES, message)
-            api.fail(job_id, message)
+            report_final(api, outbox, job_id, "failed", message)
             return
 
         # Zweite Prüfung kurz vor dem Startkommando: Zwischen Annahme und
         # hier liegen Download und Übertragung, in denen jemand am Display
-        # einen eigenen Druck gestartet haben kann. Ohne diese Prüfung
-        # sähe die Bridge den fremden laufenden Druck als "gestartet" an
-        # und meldete dessen FINISH als Ende unseres Jobs - mit falscher
-        # Ist-Zeit und Bestandsbuchung.
-        laeuft = STATE.snapshot()["gcode_state"]
-
-        if laeuft in DRUCKT_ZUSTAENDE:
-            meldung = f"Drucker ist bereits beschäftigt (Zustand {laeuft}) - Auftrag nicht gestartet."
-            log.error("Job %s: %s", job_id, meldung)
-            api.fail(job_id, meldung)
+        # einen eigenen Druck gestartet haben kann. Der Auftrag hat den
+        # Drucker dann nie erreicht und geht zurück in die Warteschlange.
+        if not ensure_fresh_state(mqtt_client) or STATE.snapshot()["gcode_state"] in DRUCKT_ZUSTAENDE:
+            grund = STATE.snapshot()["gcode_state"] or "kein aktueller Zustand"
+            log.warning("Job %s: Drucker vor dem Start nicht frei (%s) - zurück in die Warteschlange.", job_id, grund)
+            if not api.release(job_id):
+                report_final(api, outbox, job_id, "failed", f"Drucker vor dem Start nicht frei ({grund}) - Auftrag nicht gestartet.")
             return
 
-        ams_tray_id = job.get("ams_tray_id")
-        if ams_tray_id is None:
-            # Kein manuell in WordPress gewähltes Fach - automatisch anhand
-            # der Filament-ID der Druckdatei erkennen (siehe
-            # find_ams_tray_for_filament()), statt ohne AMS zu drucken.
-            filament_id = read_target_filament_id(local_path)
-            if filament_id:
-                auto_tray = find_ams_tray_for_filament(STATE.snapshot()["ams"], filament_id)
-                if auto_tray is not None:
-                    log.info(
-                        "Job %s: AMS-Fach %s automatisch anhand Filament-ID %s erkannt.",
-                        job_id, auto_tray, filament_id,
-                    )
-                    ams_tray_id = auto_tray
-                else:
-                    log.warning(
-                        "Job %s: kein AMS-Fach mit Filament-ID %s gefunden (Filament nicht eingelegt oder "
-                        "AMS-Bestückung geändert) - Druck startet ohne AMS-Auswahl.",
-                        job_id, filament_id,
-                    )
+        ams_tray_id, ams_fehler = decide_ams_tray(job, STATE.snapshot()["ams"], local_path)
+        if ams_fehler:
+            report_final(api, outbox, job_id, "failed", ams_fehler)
+            return
+        if ams_tray_id is not None and job.get("ams_tray_id") is None:
+            log.info("Job %s: AMS-Fach %s automatisch erkannt.", job_id, ams_tray_id)
 
-        STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="")
-        send_print_command(mqtt_client, remote_filename, ams_tray_id)
+        sequence_id = next_sequence_id()
+        store.save(job_id, "starting")
+        STATE.update(gcode_state="", progress_percent=0, remaining_minutes=None, last_error="", current_file="", print_error_code=None)
+        send_print_command(mqtt_client, remote_filename, ams_tray_id, sequence_id)
+
+        ergebnis, fehler = warte_auf_druckstart(job_id, sequence_id)
+
+        if ergebnis != "started":
+            report_final(api, outbox, job_id, ergebnis, fehler)
+            return
+
+        # Erst jetzt, mit bestätigtem Druckbeginn: Ab hier ist die Platte
+        # belegt (der Server sperrt die Warteschlange bis "Platte ist frei").
         api.mark_printing(job_id)
-
-        gestartet, fehler = warte_auf_druckstart()
-
-        if not gestartet:
-            log.error("Job %s: %s", job_id, fehler)
-            api.fail(job_id, fehler)
-            return
-
+        store.save(job_id, "printing")
         log.info("Job %s: Druck läuft, verfolge Fortschritt über MQTT.", job_id)
 
-        # Fortschritt aus dem MQTT-Report ablesen, bis der Drucker FINISH
-        # oder FAILED meldet. Kein fester Timeout - ein 3D-Druck kann viele
-        # Stunden dauern; die Bridge bleibt so lange dran, wie der Drucker
-        # verbunden bleibt (fällt die Verbindung dauerhaft aus, gibt die
-        # Wartung auf der WordPress-Seite den Job nach LOCK_TIMEOUT_MINUTES
-        # wieder frei).
-        last_reported = -1
-        while True:
-            time.sleep(5)
-            snap = STATE.snapshot()
-            state = snap["gcode_state"]
-
-            if snap["progress_percent"] is not None and snap["progress_percent"] != last_reported:
-                api.report_progress(job_id, snap["progress_percent"], snap["remaining_minutes"] or 0)
-                last_reported = snap["progress_percent"]
-
-            if state == "FINISH":
-                log.info("Job %s: Drucker meldet FINISH.", job_id)
-                api.complete(job_id)
-                return
-
-            if state == "FAILED":
-                fehler = snap["last_error"] or "Drucker meldet FAILED (Fehlercode siehe Druckerdisplay)."
-                log.error("Job %s: Drucker meldet FAILED – %s", job_id, fehler)
-                api.fail(job_id, fehler)
-                return
+        monitor_job(api, outbox, mqtt_client, job_id)
     finally:
+        store.clear()
         # Die 3MF liegt jetzt auf dem Drucker; die lokale Kopie auf dem Pi
-        # wird nicht mehr gebraucht. Ohne dieses Aufräumen füllt sich die
-        # SD-Karte des Pi mit jedem Druck weiter (3MF-Projekte sind groß).
+        # wird nicht mehr gebraucht.
         try:
             local_path.unlink(missing_ok=True)
         except OSError as exc:
             log.warning("Temporäre Datei %s konnte nicht gelöscht werden: %s", local_path, exc)
 
 
-# ---------------------------------------------------------------------
-# Hauptschleife
-# ---------------------------------------------------------------------
+def recovery_decision(job: dict, snap: dict, local_phase: Optional[str]) -> tuple[str, str]:
+    """Was mit einem laut Server aktiven Auftrag nach einem Neustart der
+    Bridge geschieht - reine Entscheidung, ohne Seiteneffekte.
+
+    Rückgabe: ("monitor", ""), ("complete", ""), ("failed", Grund),
+    ("unclear", Grund), ("release", "") oder ("leave", "").
+    """
+    job_id = int(job["id"])
+    status = str(job.get("status") or "")
+    state = snap["gcode_state"]
+    unserer = file_belongs_to_job(snap["current_file"], job_id)
+
+    if unserer and state in DRUCKT_ZUSTAENDE:
+        return "monitor", ""
+    if unserer and state == "FINISH":
+        return "complete", ""
+    if unserer and state == "FAILED":
+        if snap.get("print_error_code") in ABGEBROCHEN_FEHLERCODES:
+            return "failed", "Druck am Drucker abgebrochen."
+        return "failed", snap["last_error"] or "Drucker meldet FAILED (Fehlercode siehe Druckerdisplay)."
+
+    if status == "unklar":
+        # Schon zur Klärung markiert, und der Drucker sagt nichts Neues dazu.
+        return "leave", ""
+
+    if status in ("claimed", "uploading") and local_phase != "starting":
+        # Das Startkommando ist nie rausgegangen - der Auftrag hat den
+        # Drucker nicht erreicht und darf zurück in die Warteschlange.
+        return "release", ""
+
+    return "unclear", (
+        f"Nach einem Neustart der Bridge meldet der Drucker {state or 'keinen Zustand'}"
+        + (f" mit der Datei {snap['current_file']}" if snap["current_file"] else "")
+        + " - wie dieser Druck ausging, ist unbekannt. Bitte am Drucker nachsehen."
+    )
+
+
+def recover_active_job(api: ApiClient, mqtt_client: "mqtt.Client", outbox: Outbox, store: ActiveJobStore) -> None:
+    """Nach dem Start der Bridge einen laut Server noch aktiven Auftrag
+    wieder aufnehmen. Vorher vergaß die Bridge ihn - und der Server gab ihn
+    nach drei Stunden erneut aus, obwohl er womöglich fertig auf der
+    Platte lag."""
+    outbox.flush(api)
+    backoff = 1
+
+    while True:
+        beantwortet, job = api.get_active()
+        if beantwortet:
+            break
+        time.sleep(backoff)
+        backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
+
+    lokal = store.load()
+
+    if not job:
+        store.clear()
+        return
+
+    job_id = int(job["id"])
+    if any(int(e.get("job_id", 0)) == job_id for e in outbox.pending()):
+        # Die Endmeldung liegt schon im Puffer und wird zugestellt.
+        store.clear()
+        return
+
+    log.info("Job %s ist laut Server noch aktiv (%s) - gleiche mit dem Drucker ab …", job_id, job.get("status"))
+
+    gemeldet = False
+    while not ensure_fresh_state(mqtt_client, timeout=Config.FRESH_REPORT_TIMEOUT):
+        if not gemeldet:
+            log.warning("Job %s: Drucker nicht erreichbar - warte auf eine MQTT-Verbindung, bevor es weitergeht.", job_id)
+            gemeldet = True
+        time.sleep(10)
+
+    phase = lokal.get("phase") if lokal and lokal.get("job_id") == job_id else None
+    action, message = recovery_decision(job, STATE.snapshot(), phase)
+    log.info("Job %s: Wiederaufnahme -> %s.", job_id, action)
+
+    if action == "monitor":
+        store.save(job_id, "printing")
+        if job.get("status") != "printing":
+            api.mark_printing(job_id)
+        try:
+            monitor_job(api, outbox, mqtt_client, job_id)
+        finally:
+            store.clear()
+        return
+
+    if action == "release":
+        if not api.release(job_id):
+            report_final(api, outbox, job_id, "failed", "Bridge wurde vor dem Druckstart neu gestartet.")
+    elif action in ENDMELDUNGEN:
+        report_final(api, outbox, job_id, action, message)
+
+    store.clear()
 
 
 def run() -> None:
@@ -1233,8 +1755,23 @@ def run() -> None:
         Config.LONG_POLL_ENABLED,
     )
 
+    outbox = Outbox(Config.DOWNLOAD_DIRECTORY / "outbox.json")
+    store = ActiveJobStore(Config.DOWNLOAD_DIRECTORY / "active-job.json")
+
     try:
+        # Einen Auftrag, der beim letzten Beenden noch lief, zuerst wieder
+        # aufnehmen - erst danach neue abholen.
+        recover_active_job(api, mqtt_client, outbox, store)
+
         while True:
+            # Offene Endmeldungen zuerst zustellen. Solange eine fehlt, hält
+            # der Server den Auftrag für aktiv und liefert ohnehin nichts Neues.
+            if outbox.pending() and not outbox.flush(api):
+                log.info("Endmeldung noch nicht zugestellt – erneuter Versuch in %ss.", backoff)
+                time.sleep(backoff)
+                backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
+                continue
+
             wait = Config.LONG_POLL_TIMEOUT if Config.LONG_POLL_ENABLED else Config.SHORT_POLL_WAIT
             response = api.get_jobs(wait)
 
@@ -1253,7 +1790,7 @@ def run() -> None:
                     jobs = []
 
                 for job in jobs:
-                    process_job(api, mqtt_client, job)
+                    process_job(api, mqtt_client, job, outbox, store)
 
                 # Sofort die nächste Anfrage stellen - im Long-Poll-Modus,
                 # weil das der normale Betrieb ist; im klassischen

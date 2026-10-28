@@ -29,6 +29,77 @@ class BambuPrinterRepository {
 	const ONLINE_THRESHOLD_SECONDS = 120;
 
 	/**
+	 * Druckerzustände (gcode_state, kleingeschrieben), in denen ein Druck
+	 * läuft oder vorbereitet wird – ab hier ist die Platte belegt.
+	 */
+	const PRINTING_STATES = array( 'prepare', 'running', 'pause', 'slicing' );
+
+	/**
+	 * Meldet dieser Zustand einen laufenden Druck?
+	 *
+	 * @param string $status Zustand laut Bridge.
+	 * @return bool
+	 */
+	public static function is_printing_status( $status ) {
+		return in_array( strtolower( trim( (string) $status ) ), self::PRINTING_STATES, true );
+	}
+
+	/**
+	 * Ist die Platte als frei bestätigt? Nur dann liefert die Warteschlange
+	 * einen Job aus.
+	 *
+	 * @param object|null $printer Datensatz.
+	 * @return bool
+	 */
+	public static function bed_is_clear( $printer ) {
+		return $printer && ! empty( $printer->bed_clear );
+	}
+
+	/**
+	 * Platte als belegt markieren – sobald ein Druck beginnt.
+	 *
+	 * @param string $printer_id Stabiler Schlüssel.
+	 */
+	public static function mark_bed_busy( $printer_id ) {
+		global $wpdb;
+
+		$wpdb->update( self::table(), array( 'bed_clear' => 0 ), array( 'printer_id' => (string) $printer_id ) );
+	}
+
+	/**
+	 * „Platte ist frei“: Jemand hat am Drucker nachgesehen und die Platte
+	 * geräumt. Abgelehnt, solange der Drucker einen laufenden Druck meldet –
+	 * die nächste Statusmeldung setzte die Sperre ohnehin sofort zurück.
+	 *
+	 * @param int $id Datensatz-ID.
+	 * @return array {ok, error} error: not_found oder printing.
+	 */
+	public static function mark_bed_clear( $id ) {
+		global $wpdb;
+
+		$printer = self::find( $id );
+
+		if ( ! $printer ) {
+			return array( 'ok' => false, 'error' => 'not_found' );
+		}
+
+		if ( self::is_online( $printer ) && self::is_printing_status( $printer->status ) ) {
+			return array( 'ok' => false, 'error' => 'printing' );
+		}
+
+		$wpdb->update(
+			self::table(),
+			array(
+				'bed_clear'      => 1,
+				'bed_cleared_at' => current_time( 'mysql', true ),
+			),
+			array( 'id' => (int) $id )
+		);
+
+		return array( 'ok' => true, 'error' => '' );
+	}
+
+	/**
 	 * Tabellenname.
 	 *
 	 * @return string
@@ -352,6 +423,12 @@ class BambuPrinterRepository {
 		// zu zeigen.
 		if ( array_key_exists( 'status', $data ) ) {
 			$update['status'] = substr( sanitize_key( (string) $data['status'] ), 0, 20 );
+
+			// Jeder Druck belegt die Platte – auch einer, der von Hand am
+			// Gerät, aus Bambu Studio oder der App gestartet wurde.
+			if ( self::is_printing_status( $update['status'] ) ) {
+				$update['bed_clear'] = 0;
+			}
 		}
 		if ( array_key_exists( 'progress_percent', $data ) && null !== $data['progress_percent'] ) {
 			$update['progress_percent'] = max( 0, min( 100, (int) $data['progress_percent'] ) );

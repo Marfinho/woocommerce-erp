@@ -510,6 +510,18 @@
 				if (p.snapshot) { card.appendChild(UI.h('img', { src: p.snapshot, alt: 'Kamera-Standbild von ' + p.name, class: 'pf-snap' })); }
 				card.appendChild(UI.h('small', { class: 'muted' }, 'Wartende Aufträge: ' + p.queued + (p.bed ? ' · Druckbett ' + p.bed : '')));
 
+				// Ohne bestätigt leere Platte liefert die Warteschlange nichts aus.
+				if (p.unclear_job) {
+					card.appendChild(UI.h('div', { class: 'notice warn' }, UI.h('b', null, 'Auftrag #' + p.unclear_job.id + ' ist unklar. '), (p.unclear_job.message ? p.unclear_job.message + ' ' : '') + 'Im Reiter „Aufträge“ klären – bis dahin wartet die Warteschlange.'));
+				}
+				if (!p.bed_clear) {
+					var free = UI.h('button', { class: 'btn primary', type: 'button', onclick: function () {
+						if (!window.confirm('Ist die Platte von ' + p.name + ' wirklich leer? Danach startet der nächste Auftrag aus der Warteschlange.')) { return; }
+						post(free, 'bambu/drucker/' + p.id + '/platte-frei', {}, function (r) { UI.toast(r.message); load(); });
+					} }, 'Platte ist frei');
+					card.appendChild(UI.h('div', { class: 'notice' }, UI.h('div', null, UI.h('b', null, 'Platte belegt. '), p.queued ? 'Wartende Aufträge starten erst, wenn die Platte geräumt und hier bestätigt ist.' : 'Nach dem Räumen bestätigen, damit der nächste Auftrag starten darf.'), p.state === 'busy' ? null : UI.h('div', { style: 'margin-top:8px' }, free)));
+				}
+
 				// Die Verknüpfung entscheidet, ob Meldungen im Journal ankommen.
 				if (p.link === 'ok') { card.appendChild(UI.h('div', null, UI.h('span', { class: 'tag now' }, 'Gerät ' + p.device))); }
 				else if (p.link === 'missing') { card.appendChild(UI.h('div', { class: 'notice warn' }, 'Das verknüpfte Gerät gibt es nicht mehr. Bitte neu verknüpfen.')); }

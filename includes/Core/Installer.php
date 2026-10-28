@@ -91,8 +91,11 @@ class Installer {
 	 *
 	 * DB_VERSION 45: Tabelle filament_rolls - einzelne Rollen einer Filamentcharge mit
 	 * Etikett, siehe Modules\Betrieb\FilamentRolls.
+	 *
+	 * DB_VERSION 46: bambu_printers um bed_clear/bed_cleared_at (Sperre „Platte
+	 * ist frei“, siehe Bambu\BambuPrinterRepository::mark_bed_clear()).
 	 */
-	const DB_VERSION = '45';
+	const DB_VERSION = '46';
 
 	/**
 	 * Aktivierungsroutine.

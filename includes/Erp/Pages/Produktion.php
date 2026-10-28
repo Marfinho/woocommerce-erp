@@ -130,6 +130,7 @@ class Produktion {
 		self::route( 'bambu/drucker/(?P<id>\d+)', 'POST', 'bambu_update', $bambu_adm );
 		self::route( 'bambu/drucker/(?P<id>\d+)/token', 'POST', 'bambu_token', $bambu_adm );
 		self::route( 'bambu/drucker/(?P<id>\d+)/loeschen', 'POST', 'bambu_delete', $bambu_adm );
+		self::route( 'bambu/drucker/(?P<id>\d+)/platte-frei', 'POST', 'bambu_bed_clear', $bambu );
 
 		// Qualität.
 		self::route( 'qualitaet/chargen', 'GET', 'batches', $quality );
@@ -1316,6 +1317,8 @@ class Produktion {
 				'last_error'  => (string) $printer->last_error,
 				'model'       => (string) $printer->printer_model,
 				'queued'      => BambuJobRepository::count_queued( $printer->printer_id ),
+				'bed_clear'   => BambuPrinterRepository::bed_is_clear( $printer ),
+				'unclear_job' => self::unclear_job( $printer->printer_id ),
 				'ams'         => $online ? self::ams_trays( BambuPrinterRepository::ams_units( $printer ) ) : array(),
 				'bed'         => $bed ? $bed['width_mm'] . ' × ' . $bed['height_mm'] . ' mm' : '',
 				'link'        => $link,
@@ -1497,6 +1500,49 @@ class Produktion {
 		}
 
 		return self::done( __( 'Neues Token erzeugt. Es wird nur jetzt angezeigt.', 'lindenweg16' ), array( 'token' => $token ) );
+	}
+
+	/**
+	 * Unklarer Auftrag eines Druckers, der seine Warteschlange sperrt.
+	 *
+	 * @param string $printer_id Drucker.
+	 * @return array|null {id, file, message}
+	 */
+	protected static function unclear_job( $printer_id ) {
+		$job = BambuJobRepository::active_for_printer( $printer_id );
+
+		if ( ! $job || 'unklar' !== $job->status ) {
+			return null;
+		}
+
+		return array(
+			'id'      => (int) $job->id,
+			'file'    => (string) $job->file_name,
+			'message' => (string) $job->error_message,
+		);
+	}
+
+	/**
+	 * „Platte ist frei“: Jemand hat am Drucker die Platte geräumt. Erst
+	 * danach liefert die Warteschlange den nächsten Auftrag aus.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function bambu_bed_clear( WP_REST_Request $request ) {
+		$id     = (int) $request['id'];
+		$result = BambuPrinterRepository::mark_bed_clear( $id );
+
+		if ( ! $result['ok'] ) {
+			return 'printing' === $result['error']
+				? self::fail( __( 'Der Drucker meldet gerade einen laufenden Druck – die Platte kann noch nicht frei sein.', 'lindenweg16' ), 409 )
+				: self::fail( __( 'Diesen Drucker gibt es nicht (mehr). Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+		}
+
+		$printer = BambuPrinterRepository::find( $id );
+		\Lindenweg16\Core\AuditLog::record( 'bambu_platte_frei', 'bambu_printer', $id, array( 'drucker' => $printer ? $printer->printer_id : '' ) );
+
+		return self::done( __( 'Platte als frei bestätigt. Der nächste Auftrag wird jetzt ausgeliefert.', 'lindenweg16' ) );
 	}
 
 	/**

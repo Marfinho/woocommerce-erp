@@ -30,14 +30,29 @@ class BambuJobRepository {
 	 * FTPS auf den Drucker muss, bevor der eigentliche Druck beginnt – ein
 	 * eigener Zustand, damit im Admin sichtbar ist, woran ein hängender
 	 * Job gerade scheitert.
+	 *
+	 * "unklar" heißt: Der Job war schon auf dem Drucker, aber niemand weiß
+	 * sicher, wie er ausging (Bridge lange ohne Lebenszeichen, Drucker nach
+	 * einem Neustart der Bridge im Leerlauf). Ein solcher Job sperrt die
+	 * Warteschlange seines Druckers, bis die Bridge ihn doch noch abschließt
+	 * oder jemand ihn von Hand klärt (resolve_manually()) – automatisch
+	 * erneut drucken wäre gefährlich: die Teile liegen womöglich schon fertig
+	 * auf der Platte.
 	 */
-	const STATUSES = array( 'queued', 'claimed', 'uploading', 'printing', 'completed', 'failed', 'cancelled' );
+	const STATUSES = array( 'queued', 'claimed', 'uploading', 'printing', 'unklar', 'completed', 'failed', 'cancelled' );
+
+	/**
+	 * Status, in denen ein Job seinen Drucker belegt.
+	 */
+	const ACTIVE_STATUSES = array( 'claimed', 'uploading', 'printing', 'unklar' );
 
 	/**
 	 * Nach so vielen Minuten ohne Aktivität gilt ein Claim als verwaist.
 	 * Deutlich länger als bei Etiketten, da ein 3D-Druck Stunden dauern
-	 * kann und die Bridge währenddessen weiter Statusmeldungen schickt
-	 * (siehe touch_lock()), die das Lease erneuern.
+	 * kann. Das Lease erneuern die Fortschrittsmeldungen der Bridge (die
+	 * auch ohne Prozent-Änderung mindestens alle paar Minuten kommen) und
+	 * jeder Status-Heartbeat, der einen laufenden Druck meldet (siehe
+	 * touch_active_lease()).
 	 */
 	const LOCK_TIMEOUT_MINUTES = 180;
 
@@ -112,6 +127,50 @@ class BambuJobRepository {
 	}
 
 	/**
+	 * Gehört der vom Drucker gemeldete Dateiname zu diesem Job? Die Bridge
+	 * legt jede Druckdatei als „lw16-<Job-ID>-<Name>“ auf den Drucker und
+	 * startet sie unter diesem Namen – daran ist der Job eindeutig zu
+	 * erkennen, unabhängig vom übrigen Dateinamen.
+	 *
+	 * @param string $reported_file Dateiname laut Drucker (mit oder ohne Pfad/Endung).
+	 * @param int    $job_id        Job-ID.
+	 * @return bool
+	 */
+	public static function file_belongs_to_job( $reported_file, $job_id ) {
+		$name = strtolower( trim( basename( str_replace( '\\', '/', (string) $reported_file ) ) ) );
+
+		return (int) $job_id > 0 && 0 === strpos( $name, 'lw16-' . (int) $job_id . '-' );
+	}
+
+	/**
+	 * Wohin ein Job mit abgelaufenem Lease wechselt.
+	 *
+	 * Nur ein Job, der den Drucker sicher noch nicht erreicht hat, darf
+	 * zurück in die Warteschlange. Ein Job im Druck – oder einer, dessen
+	 * Datei der Drucker gerade meldet – wird „unklar“: Ein erneuter Druck
+	 * landete sonst auf den womöglich schon fertigen Teilen, und das spätere
+	 * „fertig“ der Bridge ginge verloren.
+	 *
+	 * @param string $status        Aktueller Status.
+	 * @param string $reported_file Dateiname laut Drucker.
+	 * @param int    $job_id        Job-ID.
+	 * @return string queued, unklar oder der unveränderte Status.
+	 */
+	public static function stale_target( $status, $reported_file, $job_id ) {
+		$status = (string) $status;
+
+		if ( 'printing' === $status ) {
+			return 'unklar';
+		}
+
+		if ( in_array( $status, array( 'claimed', 'uploading' ), true ) ) {
+			return self::file_belongs_to_job( $reported_file, $job_id ) ? 'unklar' : 'queued';
+		}
+
+		return $status;
+	}
+
+	/**
 	 * Darf ein Job aus dem gegebenen Ausgangsstatus geclaimt werden?
 	 *
 	 * @param string $status Aktueller Status.
@@ -138,7 +197,7 @@ class BambuJobRepository {
 	 * @return bool
 	 */
 	public static function can_start_printing( $status ) {
-		return in_array( (string) $status, array( 'claimed', 'uploading', 'printing' ), true );
+		return in_array( (string) $status, self::ACTIVE_STATUSES, true );
 	}
 
 	/**
@@ -149,7 +208,7 @@ class BambuJobRepository {
 	 * @return bool
 	 */
 	public static function can_complete( $status ) {
-		return in_array( (string) $status, array( 'claimed', 'uploading', 'printing', 'completed' ), true );
+		return in_array( (string) $status, array( 'claimed', 'uploading', 'printing', 'unklar', 'completed' ), true );
 	}
 
 	/**
@@ -161,7 +220,17 @@ class BambuJobRepository {
 	 * @return bool
 	 */
 	public static function can_fail( $status ) {
-		return in_array( (string) $status, array( 'claimed', 'uploading', 'printing', 'failed' ), true );
+		return in_array( (string) $status, array( 'claimed', 'uploading', 'printing', 'unklar', 'failed' ), true );
+	}
+
+	/**
+	 * Darf ein Job als „unklar“ gemeldet werden?
+	 *
+	 * @param string $status Aktueller Status.
+	 * @return bool
+	 */
+	public static function can_mark_unclear( $status ) {
+		return in_array( (string) $status, self::ACTIVE_STATUSES, true );
 	}
 
 	/**
@@ -295,7 +364,8 @@ class BambuJobRepository {
 	}
 
 	/**
-	 * Läuft gerade ein Job auf diesem Drucker (geclaimt bis druckend)?
+	 * Belegt gerade ein Job diesen Drucker (geclaimt bis druckend, oder
+	 * unklar – ein unklarer Job sperrt die Warteschlange, bis er geklärt ist)?
 	 *
 	 * @param string $printer_id Drucker.
 	 * @return object|null
@@ -304,7 +374,7 @@ class BambuJobRepository {
 		global $wpdb;
 		return $wpdb->get_row(
 			$wpdb->prepare(
-				'SELECT * FROM ' . self::table() . " WHERE printer_id = %s AND status IN ('claimed','uploading','printing') ORDER BY id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'SELECT * FROM ' . self::table() . " WHERE printer_id = %s AND status IN ('claimed','uploading','printing','unklar') ORDER BY id DESC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(string) $printer_id
 			)
 		);
@@ -361,8 +431,9 @@ class BambuJobRepository {
 	}
 
 	/**
-	 * Druckvorgang gestartet: claimed/uploading/printing → printing.
-	 * Erneuert das Lease.
+	 * Druckvorgang gestartet: claimed/uploading/printing/unklar → printing.
+	 * Erneuert das Lease. Die Bridge meldet das erst, wenn der Drucker den
+	 * Druckbeginn bestätigt hat – ab hier ist die Platte belegt.
 	 *
 	 * @param int    $id         Job-ID.
 	 * @param string $printer_id Anfragende Bridge.
@@ -373,8 +444,8 @@ class BambuJobRepository {
 
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'printing', locked_at = %s, updated_at = %s" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing')",
+				'UPDATE ' . self::table() . " SET status = 'printing', locked_at = %s, updated_at = %s, error_message = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar')",
 				current_time( 'mysql', true ),
 				current_time( 'mysql', true ),
 				(int) $id,
@@ -382,13 +453,22 @@ class BambuJobRepository {
 			)
 		);
 
+		if ( (int) $updated > 0 ) {
+			BambuPrinterRepository::mark_bed_busy( $printer_id );
+		}
+
 		return (int) $updated > 0;
 	}
 
 	/**
 	 * Laufenden Job mit Fortschritt aktualisieren und das Lease erneuern –
-	 * wird bei jeder Statusmeldung der Bridge aufgerufen, damit ein
-	 * mehrstündiger Druck nicht mitten im Vorgang als verwaist gilt.
+	 * die Bridge meldet bei jeder Prozent-Änderung und sonst mindestens alle
+	 * paar Minuten, damit ein mehrstündiger Druck nicht mitten im Vorgang
+	 * als verwaist gilt.
+	 *
+	 * Meldet die Bridge Fortschritt für einen „unklaren“ Job, läuft er
+	 * offensichtlich doch noch (etwa nach langer Funkstille zum Drucker):
+	 * Er wird wieder „printing“.
 	 *
 	 * @param int    $id                Job-ID.
 	 * @param string $printer_id        Anfragende Bridge.
@@ -400,8 +480,8 @@ class BambuJobRepository {
 
 		$wpdb->query(
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . ' SET locked_at = %s, updated_at = %s, progress_percent = %d, remaining_minutes = %d' // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing')",
+				'UPDATE ' . self::table() . " SET status = IF(status = 'unklar', 'printing', status), locked_at = %s, updated_at = %s, progress_percent = %d, remaining_minutes = %d" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar')",
 				current_time( 'mysql', true ),
 				current_time( 'mysql', true ),
 				max( 0, min( 100, (int) $progress_percent ) ),
@@ -409,6 +489,28 @@ class BambuJobRepository {
 				// mode das ganze UPDATE zurückweisen (siehe apply_status()).
 				max( 0, min( 65535, (int) $remaining_minutes ) ),
 				(int) $id,
+				(string) $printer_id
+			)
+		);
+	}
+
+	/**
+	 * Lease des aktiven Jobs eines Druckers erneuern – aus dem Status-
+	 * Heartbeat, wenn der Drucker einen laufenden Druck meldet. Damit läuft
+	 * kein Druck ab, nur weil sich der Fortschritt lange nicht ändert (etwa
+	 * eine Pause, weil nachts das Filament ausging). Ein „unklarer“ Job wird
+	 * hier bewusst nicht wiederbelebt: Dass der Drucker irgendetwas druckt,
+	 * heißt nicht, dass es dieser Job ist – das entscheidet die Bridge.
+	 *
+	 * @param string $printer_id Drucker.
+	 */
+	public static function touch_active_lease( $printer_id ) {
+		global $wpdb;
+
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE ' . self::table() . " SET locked_at = %s WHERE printer_id = %s AND status IN ('claimed','uploading','printing')", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				current_time( 'mysql', true ),
 				(string) $printer_id
 			)
 		);
@@ -450,7 +552,7 @@ class BambuJobRepository {
 		$updated = $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE ' . self::table() . " SET status = 'completed', completed_at = %s, updated_at = %s, locked_at = NULL, progress_percent = 100, remaining_minutes = 0, actual_print_minutes = %f, error_message = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing')",
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar')",
 				$completed_at,
 				$completed_at,
 				null === $ist_minuten ? 0 : $ist_minuten,
@@ -574,7 +676,7 @@ class BambuJobRepository {
 		$updated = $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE ' . self::table() . " SET status = 'failed', error_message = %s, updated_at = %s, locked_at = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','failed')",
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar','failed')",
 				sanitize_textarea_field( (string) $message ),
 				current_time( 'mysql', true ),
 				(int) $id,
@@ -586,25 +688,153 @@ class BambuJobRepository {
 	}
 
 	/**
-	 * Verwaiste Claims freigeben: claimed/uploading/printing → queued,
-	 * wenn der Lock älter als LOCK_TIMEOUT_MINUTES ist (Bridge abgestürzt
-	 * oder Netz weg, ohne dass jemals ein failed/completed ankam).
+	 * Angenommenen, aber nie gestarteten Job zurück in die Warteschlange
+	 * geben: claimed/uploading → queued. Die Bridge tut das, wenn der
+	 * Drucker kurz vor dem Start doch belegt oder nicht erreichbar ist –
+	 * das Startkommando ist dann nie rausgegangen.
 	 *
-	 * @return int Anzahl freigegebener Jobs.
+	 * @param int    $id         Job-ID.
+	 * @param string $printer_id Drucker.
+	 * @return bool
+	 */
+	public static function release( $id, $printer_id ) {
+		global $wpdb;
+
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, started_at = NULL, updated_at = %s" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading')",
+				current_time( 'mysql', true ),
+				(int) $id,
+				(string) $printer_id
+			)
+		);
+
+		return (int) $updated > 0;
+	}
+
+	/**
+	 * Job als „unklar“ markieren: Er war auf dem Drucker, aber sein Ausgang
+	 * ist nicht sicher bekannt. Sperrt die Warteschlange des Druckers, bis
+	 * die Bridge ihn doch noch abschließt oder jemand ihn klärt.
+	 *
+	 * @param int    $id         Job-ID.
+	 * @param string $printer_id Drucker.
+	 * @param string $message    Begründung.
+	 * @return bool
+	 */
+	public static function mark_unclear( $id, $printer_id, $message ) {
+		global $wpdb;
+
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE ' . self::table() . " SET status = 'unklar', error_message = %s, updated_at = %s, locked_at = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar')",
+				sanitize_textarea_field( (string) $message ),
+				current_time( 'mysql', true ),
+				(int) $id,
+				(string) $printer_id
+			)
+		);
+
+		return (int) $updated > 0;
+	}
+
+	/**
+	 * Einen hängenden Job von Hand klären – der Weg aus „unklar“ (oder aus
+	 * einem Job, dessen Bridge sich nicht mehr meldet), ohne auf den Ablauf
+	 * des Leases zu warten.
+	 *
+	 * „completed“ bucht wie ein normaler Abschluss (Ist-Druckzeit,
+	 * Druckjournal bei „Bedarf direkt drucken“), „failed“ lässt alles offen.
+	 * Nur aktive Jobs; ein abgeschlossener Job bleibt, wie er ist.
+	 *
+	 * @param int    $id      Job-ID.
+	 * @param string $outcome completed oder failed.
+	 * @param string $note    Begründung für das Protokoll.
+	 * @return array {ok, error}
+	 */
+	public static function resolve_manually( $id, $outcome, $note = '' ) {
+		$job = self::find( $id );
+
+		if ( ! $job ) {
+			return array( 'ok' => false, 'error' => 'not_found' );
+		}
+
+		if ( ! in_array( $job->status, self::ACTIVE_STATUSES, true ) ) {
+			return array( 'ok' => false, 'error' => 'not_active' );
+		}
+
+		if ( 'completed' === $outcome ) {
+			$result = self::complete( (int) $job->id, (string) $job->printer_id );
+			return array( 'ok' => (bool) $result['ok'], 'error' => $result['ok'] ? '' : 'invalid_state' );
+		}
+
+		if ( 'failed' === $outcome ) {
+			$message = '' !== trim( (string) $note ) ? (string) $note : __( 'Von Hand als fehlgeschlagen markiert.', 'lindenweg16' );
+			$ok      = self::fail( (int) $job->id, (string) $job->printer_id, $message );
+			return array( 'ok' => $ok, 'error' => $ok ? '' : 'invalid_state' );
+		}
+
+		return array( 'ok' => false, 'error' => 'invalid_outcome' );
+	}
+
+	/**
+	 * Verwaiste Jobs behandeln, wenn ihr Lock älter als LOCK_TIMEOUT_MINUTES
+	 * ist (Bridge abgestürzt oder Netz weg, ohne dass jemals ein failed/
+	 * completed ankam): Was den Drucker sicher noch nicht erreicht hat, geht
+	 * zurück in die Warteschlange; alles andere wird „unklar“ (siehe
+	 * stale_target()).
+	 *
+	 * @return int Anzahl behandelter Jobs.
 	 */
 	public static function release_stale_locks() {
 		global $wpdb;
 
 		$grenze = gmdate( 'Y-m-d H:i:s', time() - self::LOCK_TIMEOUT_MINUTES * 60 );
 
-		return (int) $wpdb->query(
+		$stale = $wpdb->get_results(
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, started_at = NULL, updated_at = %s" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				. " WHERE status IN ('claimed','uploading','printing') AND locked_at IS NOT NULL AND locked_at < %s",
-				current_time( 'mysql', true ),
+				'SELECT id, printer_id, status FROM ' . self::table() . " WHERE status IN ('claimed','uploading','printing') AND locked_at IS NOT NULL AND locked_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$grenze
 			)
 		);
+
+		$behandelt = 0;
+
+		foreach ( (array) $stale as $job ) {
+			$printer = BambuPrinterRepository::find_by_printer_id( $job->printer_id );
+			$target  = self::stale_target( $job->status, $printer ? (string) $printer->current_file : '', (int) $job->id );
+
+			if ( 'queued' === $target ) {
+				$sql = $wpdb->prepare(
+					'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, started_at = NULL, updated_at = %s WHERE id = %d AND status = %s AND locked_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					current_time( 'mysql', true ),
+					(int) $job->id,
+					(string) $job->status,
+					$grenze
+				);
+			} elseif ( 'unklar' === $target ) {
+				$sql = $wpdb->prepare(
+					'UPDATE ' . self::table() . " SET status = 'unklar', locked_at = NULL, updated_at = %s, error_message = %s WHERE id = %d AND status = %s AND locked_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					current_time( 'mysql', true ),
+					sprintf(
+						/* translators: %d: Minuten. */
+						__( 'Seit über %d Minuten kein Lebenszeichen der Bridge zu diesem Druck. Bitte am Drucker nachsehen und den Auftrag klären.', 'lindenweg16' ),
+						self::LOCK_TIMEOUT_MINUTES
+					),
+					(int) $job->id,
+					(string) $job->status,
+					$grenze
+				);
+			} else {
+				continue;
+			}
+
+			$behandelt += (int) $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- oben vorbereitet.
+		}
+
+		return $behandelt;
 	}
 
 	/**

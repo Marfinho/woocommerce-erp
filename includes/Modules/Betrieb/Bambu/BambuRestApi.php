@@ -61,6 +61,16 @@ class BambuRestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/jobs/active',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'get_active_job' ),
+				'permission_callback' => array( $this, 'authenticate' ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/jobs/(?P<id>\d+)/file',
 			array(
 				'methods'             => 'GET',
@@ -69,7 +79,7 @@ class BambuRestApi {
 			)
 		);
 
-		foreach ( array( 'claim', 'uploading', 'printing', 'progress', 'complete', 'failed' ) as $action ) {
+		foreach ( array( 'claim', 'uploading', 'printing', 'progress', 'complete', 'failed', 'unclear', 'release' ) as $action ) {
 			register_rest_route(
 				self::NAMESPACE_V1,
 				'/jobs/(?P<id>\d+)/' . $action,
@@ -256,6 +266,9 @@ class BambuRestApi {
 		$deadline = microtime( true ) + $wait;
 
 		while ( true ) {
+			// Frisch lesen: „Platte ist frei“ kann mitten im Warten kommen.
+			$current = BambuPrinterRepository::find( (int) $printer->id );
+
 			// Ein Drucker kann immer nur einen Auftrag gleichzeitig drucken –
 			// läuft noch einer, wird kein neuer ausgeliefert, auch wenn schon
 			// mehrere in der Warteschlange stehen. Das muss INNERHALB der
@@ -264,7 +277,11 @@ class BambuRestApi {
 			// eine leere Liste zurückbekommen (statt bis `wait` Sekunden zu
 			// warten) und in eine Busy-Loop laufen – unabhängig davon, ob
 			// Long Polling aktiv ist oder die Bridge klassisch pollt.
-			if ( ! BambuJobRepository::active_for_printer( $printer->printer_id ) ) {
+			//
+			// Und ohne bestätigt leere Platte gibt es keinen neuen Job: Der
+			// letzte Druck (auch ein privater) liegt womöglich noch auf dem
+			// Bett, und der Drucker räumt es nicht selbst ab.
+			if ( BambuPrinterRepository::bed_is_clear( $current ) && ! BambuJobRepository::active_for_printer( $printer->printer_id ) ) {
 				$jobs = BambuJobRepository::queued_for_printer( $printer->printer_id, 1 );
 
 				if ( $jobs ) {
@@ -294,6 +311,7 @@ class BambuRestApi {
 		return array(
 			'id'          => (int) $job->id,
 			'printer_id'  => (string) $job->printer_id,
+			'status'      => (string) $job->status,
 			'filename'    => (string) $job->file_name,
 			'created_at'  => self::to_rfc3339( $job->created_at ),
 			// Gewähltes AMS-Fach für den gesamten Druckauftrag - null, wenn
@@ -320,6 +338,29 @@ class BambuRestApi {
 	}
 
 	/* -----------------------------------------------------------------
+	 * GET /jobs/active
+	 * ------------------------------------------------------------- */
+
+	/**
+	 * Den Job, der diesen Drucker laut Server gerade belegt – damit eine
+	 * neu gestartete Bridge einen laufenden Druck wieder aufnehmen kann,
+	 * statt ihn zu vergessen (204, wenn keiner).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function get_active_job( $request ) {
+		$printer = $this->printer_of( $request );
+		$job     = BambuJobRepository::active_for_printer( $printer->printer_id );
+
+		if ( ! $job ) {
+			return new WP_REST_Response( null, 204 );
+		}
+
+		return new WP_REST_Response( array( 'job' => $this->job_to_array( $job ) ), 200 );
+	}
+
+	/* -----------------------------------------------------------------
 	 * GET /jobs/{id}/file
 	 * ------------------------------------------------------------- */
 
@@ -339,7 +380,7 @@ class BambuRestApi {
 			return new WP_Error( 'lw16_bambu_not_found', __( 'Job nicht gefunden.', 'lindenweg16' ), array( 'status' => 404 ) );
 		}
 
-		if ( ! in_array( $job->status, array( 'claimed', 'uploading', 'printing' ), true ) ) {
+		if ( ! in_array( $job->status, array( 'claimed', 'uploading', 'printing', 'unklar' ), true ) ) {
 			return new WP_Error( 'lw16_bambu_not_claimed', __( 'Der Job muss zuerst geclaimt werden.', 'lindenweg16' ), array( 'status' => 409 ) );
 		}
 
@@ -501,6 +542,52 @@ class BambuRestApi {
 		return new WP_REST_Response( array( 'ok' => true ), 200 );
 	}
 
+	/**
+	 * Angenommenen Job unberührt zurückgeben (Drucker vor dem Start doch
+	 * belegt oder nicht erreichbar).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function action_release( $request ) {
+		$printer = $this->printer_of( $request );
+		$id      = (int) $request->get_param( 'id' );
+
+		if ( ! BambuJobRepository::release( $id, $printer->printer_id ) ) {
+			return new WP_Error( 'lw16_bambu_invalid_state', __( 'Ungültiger Statuswechsel.', 'lindenweg16' ), array( 'status' => 409 ) );
+		}
+
+		AuditLog::record( 'bambu_druckjob_zurueckgegeben', 'bambu_job', $id, array( 'drucker' => $printer->printer_id ) );
+
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
+	/**
+	 * Ausgang eines Drucks unbekannt (z. B. nach einem Neustart der Bridge
+	 * steht der Drucker im Leerlauf). Der Job sperrt dann die Warteschlange,
+	 * bis ihn jemand klärt – ein automatischer Neudruck könnte auf fertigen
+	 * Teilen landen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function action_unclear( $request ) {
+		$printer = $this->printer_of( $request );
+		$id      = (int) $request->get_param( 'id' );
+		$message = mb_substr( (string) $request->get_param( 'message' ), 0, 1000 );
+		$job     = BambuJobRepository::find_for_printer( $id, $printer->printer_id );
+
+		if ( ! $job || ! BambuJobRepository::can_mark_unclear( $job->status ) ) {
+			return new WP_Error( 'lw16_bambu_invalid_state', __( 'Ungültiger Statuswechsel (Job evtl. bereits abgeschlossen).', 'lindenweg16' ), array( 'status' => 409 ) );
+		}
+
+		BambuJobRepository::mark_unclear( $id, $printer->printer_id, $message );
+
+		AuditLog::record( 'bambu_druck_unklar', 'bambu_job', $id, array( 'drucker' => $printer->printer_id, 'meldung' => $message ) );
+
+		return new WP_REST_Response( array( 'ok' => true ), 200 );
+	}
+
 	/* -----------------------------------------------------------------
 	 * GET/POST /status
 	 * ------------------------------------------------------------- */
@@ -561,6 +648,12 @@ class BambuRestApi {
 		}
 
 		BambuPrinterRepository::apply_status( (int) $printer->id, $update );
+
+		// Druckt der Drucker, lebt der aktive Job – auch wenn sich der
+		// Fortschritt lange nicht ändert (Pause, Filamentwechsel).
+		if ( BambuPrinterRepository::is_printing_status( (string) $update['status'] ) ) {
+			BambuJobRepository::touch_active_lease( $printer->printer_id );
+		}
 
 		// Die Platten der Werkstatt folgen dem Drucker sofort, nicht erst, wenn jemand die Seite öffnet –
 		// sonst steht als Druckende der Moment des Hinsehens und die Druckzeit stimmt nicht.

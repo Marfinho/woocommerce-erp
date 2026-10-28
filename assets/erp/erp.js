@@ -2775,6 +2775,14 @@
 			if (run.status === 'freigegeben' || run.status === 'ruesten') {
 				var lay = layoutBlock(run.layout, false);
 				if (lay) { box.appendChild(lay); }
+				// Ohne bestätigt leere Platte schickt die Warteschlange keinen Druck an den Drucker.
+				if (run.bed && !run.bed.clear) {
+					var freeBtn = h('button', { class: 'btn primary', type: 'button', onclick: function () {
+						freeBtn.disabled = true;
+						api('runs/' + id + '/platte-frei', { method: 'POST' }).then(function (r) { toast(r.message); if (r.run) { run = r.run; run.fetched = Math.floor(Date.now() / 1000); } paint(); }).catch(function (e) { freeBtn.disabled = false; toast(e.message, true); });
+					} }, 'Platte ist frei');
+					box.appendChild(h('div', { class: 'card' }, h('b', null, 'Platte am Drucker räumen'), h('div', { class: 'muted small', style: 'margin:4px 0 8px' }, 'Der letzte Druck liegt womöglich noch auf dem Bett. Erst nach dem Bestätigen startet ein Auftrag aus der Warteschlange.'), freeBtn));
+				}
 			}
 
 			if (run.status === 'freigegeben') {

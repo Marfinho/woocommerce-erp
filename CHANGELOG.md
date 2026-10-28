@@ -7,6 +7,24 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.51.0] – 2026-10-28
+
+### Bambu-Anbindung gehärtet: keine Doppeldrucke, kein Druck auf belegter Platte
+- **Ein laufender Druck fällt nicht mehr zurück in die Warteschlange.** Bisher setzte die Wartung einen Auftrag nach 180 Minuten ohne Fortschrittsänderung wieder auf „wartend“ – nach einer langen Pause (Filament nachts leer), einem Neustart des Pi oder einem Ausfall von WordPress wurde er dann ein zweites Mal gedruckt, auf die fertigen Teile, und das spätere „fertig“ ging verloren. Jetzt wird ein solcher Auftrag **„unklar“**; nur ein Auftrag, der den Drucker sicher nie erreicht hat, geht zurück.
+- **„Unklar“ sperrt den Drucker**, bis die Bridge den Auftrag doch noch abschließt oder jemand ihn unter Bambu-Lab-Drucker → Aufträge klärt („Als fertig buchen“ / „Als fehlgeschlagen markieren“). Die Druckerkarte zeigt den Hinweis.
+- **„Platte ist frei“:** Jeder Druck – auch ein privater am Display oder aus Bambu Studio – belegt die Platte. Bis jemand sie räumt und bestätigt (Druckerkarte oder beim Rüsten einer Werkstatt-Platte), liefert die Warteschlange keinen Auftrag aus. Vorher startete z. B. bei „Bedarf direkt drucken“ die zweite Platte direkt auf den Teilen der ersten. Neu angelegte und bestehende Drucker müssen einmal freigegeben werden.
+- **Lebenszeichen:** Die Bridge meldet den Fortschritt auch ohne Änderung mindestens alle 5 Minuten, und jede Statusmeldung mit laufendem Druck verlängert den Auftrag.
+- **Bridge (Raspberry Pi):**
+  - nimmt nach einem Neustart den laufenden Auftrag wieder auf (neuer Endpunkt `GET /jobs/active`) statt ihn zu vergessen;
+  - puffert „fertig“, „fehlgeschlagen“ und „unklar“ auf der SD-Karte und wiederholt sie, bis WordPress sie annimmt;
+  - hängt nicht mehr fest: ein fremder Druck am Gerät, Leerlauf nach Druckbeginn (Strom weg) und eine unterbrochene Verbindung werden erkannt; ein Abbruch am Display wird als solcher gemeldet;
+  - nimmt Aufträge nur mit frischem Druckerzustand an und gibt einen Auftrag, der vor dem Start doch auf einen belegten Drucker trifft, unberührt zurück (neuer Endpunkt `POST /jobs/{id}/release`);
+  - wertet die Antwort des Druckers auf das Startkommando aus und meldet „druckt“ erst nach bestätigtem Druckbeginn;
+  - **AMS-Fach nach Sorte und Farbe:** Die Filament-ID steht nur für die Sorte; bisher konnte bei Schwarz und Weiß derselben Sorte das falsche Fach gewählt werden. Fehlt das Filament oder ist die Wahl nicht eindeutig, startet der Druck nicht.
+- Schema 46: `bambu_printers.bed_clear`, `bed_cleared_at`.
+- Neue Tests: `tests/BambuHaertungTest.php` (PHPUnit) und `raspberry-pi/tests` (pytest, 42 Tests).
+- **Nicht mit einem echten Drucker oder in echtem WordPress getestet.** Am X1C noch zu bestätigen: die Antwort auf das Startkommando (bleibt sie aus, gilt wie bisher der Druckzustand) und der Fehlercode für „am Display abgebrochen“ (sonst allgemeine Fehlermeldung).
+
 ## [0.50.2] – 2026-10-27
 
 - **Druckzeit der Platten folgt dem Drucker sofort.** Start und Ende eines Drucks wurden bisher erst beim Öffnen der Werkstatt-Seite erkannt; als Druckende stand dann der Moment des Hinsehens, und Druckzeit und Betriebsstunden waren zu lang. Jetzt gleicht jede Statusmeldung des Druckers (höchstens alle 15 Sekunden) die Platten ab.

@@ -65,6 +65,7 @@ class BambuDruck {
 		'claimed'   => 'laeuft',
 		'uploading' => 'laeuft',
 		'printing'  => 'laeuft',
+		'unklar'    => 'laeuft',
 		'completed' => 'fertig',
 		'failed'    => 'fehler',
 		'cancelled' => 'storniert',
@@ -94,6 +95,7 @@ class BambuDruck {
 		self::route( 'bambu/auftraege/hochladen', 'POST', 'job_upload', $jobs );
 		self::route( 'bambu/auftraege/modell', 'POST', 'job_model', $jobs );
 		self::route( 'bambu/auftraege/(?P<id>\d+)/abbrechen', 'POST', 'job_cancel', $jobs );
+		self::route( 'bambu/auftraege/(?P<id>\d+)/klaeren', 'POST', 'job_resolve', $jobs );
 
 		self::route( 'bambu/platten', 'GET', 'plates', $plates );
 		self::route( 'bambu/platten', 'POST', 'plate_build', $plates );
@@ -229,6 +231,7 @@ class BambuDruck {
 			'claimed'   => __( 'Von der Bridge übernommen', 'lindenweg16' ),
 			'uploading' => __( 'Wird zum Drucker übertragen', 'lindenweg16' ),
 			'printing'  => __( 'Druckt', 'lindenweg16' ),
+			'unklar'    => __( 'Unklar – bitte am Drucker prüfen', 'lindenweg16' ),
 			'completed' => __( 'Fertig', 'lindenweg16' ),
 			'failed'    => __( 'Fehlgeschlagen', 'lindenweg16' ),
 			'cancelled' => __( 'Storniert', 'lindenweg16' ),
@@ -247,6 +250,18 @@ class BambuDruck {
 	 */
 	public static function can_cancel( $status ) {
 		return 'queued' === (string) $status;
+	}
+
+	/**
+	 * Darf ein Auftrag von Hand geklärt werden? Jeder, der seinen Drucker
+	 * belegt – vor allem „unklar“, aber auch einer, dessen Bridge sich nicht
+	 * mehr meldet.
+	 *
+	 * @param string $status Status.
+	 * @return bool
+	 */
+	public static function can_resolve( $status ) {
+		return in_array( (string) $status, BambuJobRepository::ACTIVE_STATUSES, true );
 	}
 
 	/**
@@ -675,6 +690,7 @@ class BambuDruck {
 				'actual_min' => null !== $job->actual_print_minutes ? (float) $job->actual_print_minutes : null,
 				'error'      => (string) $job->error_message,
 				'can_cancel' => self::can_cancel( $job->status ),
+				'can_resolve' => self::can_resolve( $job->status ),
 			);
 		}
 
@@ -803,6 +819,43 @@ class BambuDruck {
 		AuditLog::record( 'bambu_druckjob_storniert', 'bambu_job', $id, array( 'drucker' => $job->printer_id, 'datei' => $job->file_name ) );
 
 		return self::done( __( 'Druckauftrag abgebrochen.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Hängenden Auftrag von Hand klären: als fertig buchen (wie ein normaler
+	 * Abschluss) oder als fehlgeschlagen markieren. Gibt die Warteschlange
+	 * des Druckers wieder frei – die Platte muss trotzdem noch als frei
+	 * bestätigt werden.
+	 *
+	 * @param WP_REST_Request $request Anfrage (outcome: completed|failed, note).
+	 * @return WP_REST_Response
+	 */
+	public static function job_resolve( WP_REST_Request $request ) {
+		$id      = (int) $request['id'];
+		$body    = (array) $request->get_json_params();
+		$outcome = isset( $body['outcome'] ) ? sanitize_key( (string) $body['outcome'] ) : '';
+		$note    = isset( $body['note'] ) ? mb_substr( sanitize_textarea_field( (string) $body['note'] ), 0, 500 ) : '';
+
+		if ( ! in_array( $outcome, array( 'completed', 'failed' ), true ) ) {
+			return self::fail( __( 'Bitte „fertig“ oder „fehlgeschlagen“ wählen.', 'lindenweg16' ) );
+		}
+
+		$result = BambuJobRepository::resolve_manually( $id, $outcome, $note );
+
+		if ( ! $result['ok'] ) {
+			if ( 'not_found' === $result['error'] ) {
+				return self::fail( __( 'Diesen Druckauftrag gibt es nicht (mehr). Bitte die Liste neu laden.', 'lindenweg16' ), 404 );
+			}
+			return self::fail( __( 'Dieser Auftrag ist schon abgeschlossen – bitte die Liste neu laden.', 'lindenweg16' ), 409 );
+		}
+
+		AuditLog::record( 'bambu_druckjob_geklaert', 'bambu_job', $id, array( 'ergebnis' => $outcome, 'notiz' => $note ) );
+
+		return self::done(
+			'completed' === $outcome
+				? __( 'Als fertig gebucht.', 'lindenweg16' )
+				: __( 'Als fehlgeschlagen markiert.', 'lindenweg16' )
+		);
 	}
 
 	/* ====================================================================

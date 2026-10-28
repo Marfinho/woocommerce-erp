@@ -28,6 +28,7 @@ class BambuJobsPage {
 			'claimed'   => __( 'Geclaimt', 'lindenweg16' ),
 			'uploading' => __( 'Wird übertragen', 'lindenweg16' ),
 			'printing'  => __( 'Druckt', 'lindenweg16' ),
+			'unklar'    => __( 'Unklar – bitte prüfen', 'lindenweg16' ),
 			'completed' => __( 'Fertig', 'lindenweg16' ),
 			'failed'    => __( 'Fehler', 'lindenweg16' ),
 			'cancelled' => __( 'Storniert', 'lindenweg16' ),
@@ -121,6 +122,7 @@ class BambuJobsPage {
 		$ansichten = array( '' => __( 'Alle', 'lindenweg16' ) ) + array(
 			'queued'    => __( 'Wartend', 'lindenweg16' ),
 			'printing'  => __( 'Druckt', 'lindenweg16' ),
+			'unklar'    => __( 'Unklar', 'lindenweg16' ),
 			'completed' => __( 'Fertig', 'lindenweg16' ),
 			'failed'    => __( 'Fehler', 'lindenweg16' ),
 		);

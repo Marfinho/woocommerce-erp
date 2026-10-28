@@ -683,6 +683,10 @@ class Workflow {
 			);
 		}
 
+		// Platte am Drucker frei? Solange nicht bestätigt, schickt die
+		// Warteschlange keinen Druck los (siehe BambuRestApi::get_jobs()).
+		$bed = $bambu ? array( 'clear' => BambuPrinterRepository::bed_is_clear( $bambu ) ) : null;
+
 		$file   = null;
 		$layout = null;
 		if ( ! empty( $run['plate_job_id'] ) ) {
@@ -729,6 +733,7 @@ class Workflow {
 			'reported'    => $time( $run['reported_at'] ),
 			'primary'     => $primary,
 			'live'        => $live,
+			'bed'         => $bed,
 			'file'        => $file,
 			'failure'     => (string) $run['failure_reason'],
 			'now'         => time(),
@@ -746,6 +751,32 @@ class Workflow {
 		$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
 
 		return $plate && RunFlow::file_matches( (string) $printer->current_file, (string) $plate->file_name );
+	}
+
+	/**
+	 * „Platte ist frei“ beim Rüsten: Die Platte des Bambu-Druckers dieser
+	 * Werkstatt-Platte ist geräumt, die Warteschlange darf wieder drucken.
+	 *
+	 * @param int $id Werkstatt-Platte.
+	 * @return array {ok, status, message, run}
+	 */
+	public static function clear_bed( $id ) {
+		$run     = RunRepository::find( (int) $id );
+		$printer = $run && ! empty( $run['bambu_printer'] ) ? BambuPrinterRepository::find_by_printer_id( $run['bambu_printer'] ) : null;
+
+		if ( ! $printer ) {
+			return array( 'ok' => false, 'status' => 404, 'message' => __( 'Zu dieser Platte gehört kein Bambu-Drucker.', 'lindenweg16' ) );
+		}
+
+		$result = BambuPrinterRepository::mark_bed_clear( (int) $printer->id );
+
+		if ( ! $result['ok'] ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Der Drucker meldet gerade einen laufenden Druck – die Platte kann noch nicht frei sein.', 'lindenweg16' ) );
+		}
+
+		AuditLog::record( 'bambu_platte_frei', 'bambu_printer', (int) $printer->id, array( 'drucker' => $printer->printer_id, 'platte' => (int) $id ) );
+
+		return array( 'ok' => true, 'status' => 200, 'message' => __( 'Platte als frei bestätigt.', 'lindenweg16' ), 'run' => self::view_by_id( (int) $id ) );
 	}
 
 	/**
