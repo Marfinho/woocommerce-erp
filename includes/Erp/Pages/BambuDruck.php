@@ -1,13 +1,16 @@
 <?php
 /**
- * Bambu-Lab nativ, zweiter Teil: Druckaufträge, Platten anordnen und
- * Slicing-Profile.
+ * Bambu-Lab nativ, zweiter Teil: Druckaufträge und Slicing-Profile, dazu
+ * die Bettansicht der Platten für den Workflow.
  *
- * Ergänzt Produktion.php (Status, Verbindung, Gerätezuordnung) um das, was
- * bisher nur die alten Seiten BambuJobsPage, BambuPrintersPage (Einreihen),
- * BambuPlatesPage und SlicingProfilesPage konnten. Aufgerufen werden
- * dieselben Dienste mit denselben Prüfungen (BambuService, PlateService,
- * SlicingService, SlicingProfileRepository); Protokolleinträge entstehen
+ * Platten werden ausschließlich im Workflow angeordnet, freigegeben und
+ * geslict (siehe Erp\Workflow) – nur dort entsteht eine Werkstatt-Platte,
+ * deren Ist-Meldung Lager und Druckjournal bucht. Der frühere eigene Reiter
+ * „Platten anordnen“ ist entfallen: Was dort gedruckt wurde, buchte nichts.
+ *
+ * Ergänzt Produktion.php (Status, Verbindung, Gerätezuordnung). Aufgerufen
+ * werden dieselben Dienste mit denselben Prüfungen (BambuService,
+ * SlicingProfileRepository); Protokolleinträge entstehen
  * dort. Hier stehen die Routen mit ihren Rechten, reine Regeln als
  * statische Methoden ohne Datenbank (getestet in tests/ErpBambuDruckTest.php)
  * und das Aufbereiten der Antworten.
@@ -32,9 +35,7 @@ use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateService;
 use Lindenweg16\Modules\Betrieb\Nesting\Polygon;
 use Lindenweg16\Modules\Betrieb\Nesting\Silhouette;
-use Lindenweg16\Modules\Betrieb\Nesting\SlicingJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
-use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
 use Lindenweg16\Modules\Betrieb\ModelFile;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
@@ -84,11 +85,10 @@ class BambuDruck {
 	public static function register( RestApi $api ) {
 		unset( $api );
 
-		// Wie die alten Seiten: Aufträge mit dem Erfassungsrecht, Platten und
-		// Profile mit dem Produktionsrecht; Profile ändern zusätzlich mit
-		// „Stammdaten ändern“ (siehe ActionMap).
+		// Wie die alten Seiten: Aufträge mit dem Erfassungsrecht, Profile mit
+		// dem Produktionsrecht; Profile ändern zusätzlich mit „Stammdaten
+		// ändern“ (siehe ActionMap).
 		$jobs    = self::gate( array( 'fertigung.bambu' ), 'lw16_capture' );
-		$plates  = self::gate( array( 'fertigung.bambu' ), 'lw16_manage_production' );
 		$profile = self::gate( array( 'fertigung.bambu' ), 'lw16_manage_production' );
 		$edit    = self::gate( array( 'fertigung.bambu', 'fertigung.stammdaten.edit' ), 'lw16_manage_production' );
 
@@ -98,11 +98,6 @@ class BambuDruck {
 		self::route( 'bambu/auftraege/(?P<id>\d+)/abbrechen', 'POST', 'job_cancel', $jobs );
 		self::route( 'bambu/auftraege/(?P<id>\d+)/klaeren', 'POST', 'job_resolve', $jobs );
 		self::route( 'bambu/auftraege/(?P<id>\d+)/erneut', 'POST', 'job_requeue', $jobs );
-
-		self::route( 'bambu/platten', 'GET', 'plates', $plates );
-		self::route( 'bambu/platten', 'POST', 'plate_build', $plates );
-		self::route( 'bambu/platten/(?P<id>\d+)', 'GET', 'plate', $plates );
-		self::route( 'bambu/platten/(?P<id>\d+)/slicen', 'POST', 'plate_slice', $plates );
 
 		self::route( 'bambu/slicing', 'GET', 'profiles', $profile );
 		self::route( 'bambu/slicing/profil', 'POST', 'profile_save', $edit );
@@ -178,21 +173,6 @@ class BambuDruck {
 		$body = $request->get_json_params();
 
 		return is_array( $body ) ? $body : (array) $request->get_params();
-	}
-
-	/**
-	 * Adresse eines Downloads über admin-post.php mit Nonce. Den Download
-	 * selbst liefert weiter BambuPlatesPage::handle_download() mit seinen
-	 * Prüfungen (Nonce, Produktionsrecht, Datei vorhanden).
-	 *
-	 * @param array  $args   Parameter.
-	 * @param string $action Nonce-Aktion.
-	 * @return string
-	 */
-	protected static function download_url( array $args, $action ) {
-		$args['_wpnonce'] = wp_create_nonce( $action );
-
-		return add_query_arg( $args, admin_url( 'admin-post.php' ) );
 	}
 
 	/**
@@ -771,7 +751,7 @@ class BambuDruck {
 			return self::fail( __( 'Bitte einen Drucker und eine Druckdatei wählen.', 'lindenweg16' ) );
 		}
 
-		$result = BambuService::enqueue_model( $printer_id, $datei, 0, self::clean_tray( isset( $body['ams_tray_id'] ) ? $body['ams_tray_id'] : null ) );
+		$result = BambuService::enqueue_model( $printer_id, $datei, self::clean_tray( isset( $body['ams_tray_id'] ) ? $body['ams_tray_id'] : null ) );
 
 		if ( ! $result['ok'] ) {
 			return self::fail( $result['error'] );
@@ -821,9 +801,9 @@ class BambuDruck {
 
 		AuditLog::record( 'bambu_druckjob_storniert', 'bambu_job', $id, array( 'drucker' => $job->printer_id, 'datei' => $job->file_name ) );
 
-		// Aus „Bedarf direkt drucken“: Der Fertigungsauftrag dieser Platte
-		// wird mit storniert – sonst bliebe er offen und deckte scheinbar
-		// einen Bedarf, für den nichts mehr gedruckt wird.
+		// Hängt am Auftrag noch ein Fertigungsauftrag (ältere Aufträge aus dem
+		// entfallenen „Bedarf direkt drucken“), wird er mit storniert – sonst
+		// deckte er scheinbar einen Bedarf, für den nichts mehr gedruckt wird.
 		if ( $job->work_order_id && class_exists( WorkOrderRepository::class ) ) {
 			WorkOrderRepository::cancel( (int) $job->work_order_id, __( 'Bambu-Druckauftrag storniert.', 'lindenweg16' ) );
 		}
@@ -886,186 +866,8 @@ class BambuDruck {
 	}
 
 	/* ====================================================================
-	 * Platten anordnen
+	 * Platten (Anordnung für den Workflow)
 	 * ================================================================== */
-
-	/**
-	 * Artikel, die sich anordnen lassen.
-	 *
-	 * @return array Liste {id, sku, name}.
-	 */
-	protected static function nestable_articles() {
-		$out       = array();
-		$revisions = RevisionRepository::active_by_article();
-
-		foreach ( ArticleRepository::all() as $article ) {
-			$revision = isset( $revisions[ (int) $article['id'] ] ) ? $revisions[ (int) $article['id'] ] : null;
-
-			if ( self::is_nestable( $article, $revision ) ) {
-				$out[] = array( 'id' => (int) $article['id'], 'sku' => (string) $article['sku'], 'name' => (string) $article['name'] );
-			}
-		}
-
-		return $out;
-	}
-
-	/**
-	 * Zeile einer Platte für die Liste.
-	 *
-	 * @param object $plate       Datensatz.
-	 * @param object $slicing_job Jüngster Slicing-Auftrag oder null.
-	 * @param array  $articles    Artikel nach ID.
-	 * @param array  $names       Druckername nach ID.
-	 * @return array
-	 */
-	protected static function plate_row( $plate, $slicing_job, array $articles, array $names ) {
-		$placements = json_decode( (string) $plate->placements, true );
-		$counts     = is_array( $placements ) && isset( $placements['counts_by_article'] ) && is_array( $placements['counts_by_article'] ) ? $placements['counts_by_article'] : array();
-		$parts      = array();
-		$total      = 0;
-
-		foreach ( $counts as $article_id => $count ) {
-			$article = isset( $articles[ (int) $article_id ] ) ? $articles[ (int) $article_id ] : null;
-			$total  += (int) $count;
-			$parts[] = array(
-				'article_id' => (int) $article_id,
-				'label'      => $article ? trim( $article['sku'] . ' – ' . $article['name'], ' –' ) : '#' . (int) $article_id,
-				'qty'        => (int) $count,
-			);
-		}
-
-		if ( ! $parts && is_array( $placements ) && isset( $placements['items'] ) ) {
-			$total = count( $placements['items'] );
-		}
-
-		$job = $slicing_job ? array(
-			'status'        => $slicing_job->status,
-			'error_message' => (string) $slicing_job->error_message,
-			'created_ts'    => self::ts( $slicing_job->created_at ),
-			'started_ts'    => self::ts( $slicing_job->started_at ),
-		) : null;
-
-		return array(
-			'id'         => (int) $plate->id,
-			'printer_id' => $plate->printer_id,
-			'printer'    => isset( $names[ $plate->printer_id ] ) ? $names[ $plate->printer_id ] : $plate->printer_id,
-			'width'      => (int) $plate->plate_width_mm,
-			'height'     => (int) $plate->plate_height_mm,
-			'parts'      => $parts,
-			'total'      => $total,
-			'status'     => $plate->status,
-			'text'       => self::plate_status_text( $plate->status ),
-			'note'       => self::slicing_note( $plate->status, $job ),
-			'created'    => self::ts( $plate->created_at ),
-			'can_slice'  => PlateJobRepository::can_enqueue_for_slicing( $plate->status ),
-			'queued'     => 'geslict' === $plate->status && $plate->bambu_job_id,
-			'file_ok'    => is_file( (string) $plate->file_path ),
-			'download'   => self::download_url(
-				array( 'action' => 'lw16_bambu_download_plate', 'plate_id' => (int) $plate->id ),
-				'lw16_bambu_plate'
-			),
-		);
-	}
-
-	/**
-	 * Drucker, anordenbare Artikel und bisherige Platten.
-	 *
-	 * @return WP_REST_Response
-	 */
-	public static function plates() {
-		$printers = self::printer_options();
-		$names    = array();
-		foreach ( $printers as $printer ) {
-			$names[ $printer['printer_id'] ] = $printer['name'];
-		}
-
-		$plates = PlateJobRepository::list_for_admin( '', 50 );
-		$latest = SlicingJobRepository::latest_for_plates(
-			array_map(
-				static function ( $plate ) {
-					return (int) $plate->id;
-				},
-				$plates
-			)
-		);
-
-		$articles = ArticleRepository::all_by_id();
-		$rows     = array();
-		foreach ( $plates as $plate ) {
-			$rows[] = self::plate_row( $plate, isset( $latest[ (int) $plate->id ] ) ? $latest[ (int) $plate->id ] : null, $articles, $names );
-		}
-
-		return new WP_REST_Response(
-			array(
-				'printers'  => $printers,
-				'articles'  => self::nestable_articles(),
-				'plates'    => $rows,
-				'margin'    => (float) PlateService::DEFAULT_MARGIN_MM,
-				'max_parts' => self::MAX_PARTS,
-				'now'       => time(),
-			)
-		);
-	}
-
-	/**
-	 * Platte(n) aus Artikeln und Mengen anlegen.
-	 *
-	 * @param WP_REST_Request $request Anfrage.
-	 * @return WP_REST_Response
-	 */
-	public static function plate_build( WP_REST_Request $request ) {
-		$body       = self::body( $request );
-		$printer_id = isset( $body['printer_id'] ) && is_scalar( $body['printer_id'] ) ? sanitize_key( (string) $body['printer_id'] ) : '';
-		$items      = self::plate_items( isset( $body['items'] ) ? $body['items'] : array() );
-
-		if ( '' === $printer_id ) {
-			return self::fail( __( 'Bitte einen Drucker wählen.', 'lindenweg16' ) );
-		}
-
-		if ( ! $items ) {
-			return self::fail( __( 'Bitte bei mindestens einem Artikel eine Menge größer 0 eintragen.', 'lindenweg16' ) );
-		}
-
-		if ( self::parts_total( $items ) > self::MAX_PARTS ) {
-			return self::fail(
-				sprintf(
-					/* translators: %d: Höchstzahl. */
-					__( 'Das sind zu viele Teile auf einmal (höchstens %d). Bitte die Mengen verringern und in mehreren Schritten anordnen.', 'lindenweg16' ),
-					self::MAX_PARTS
-				)
-			);
-		}
-
-		$result = PlateService::build_plates( $printer_id, $items, self::clean_margin( isset( $body['margin_mm'] ) ? $body['margin_mm'] : null ) );
-
-		if ( ! $result['ok'] ) {
-			return self::fail( $result['error'] ? $result['error'] : implode( ' ', $result['warnings'] ) );
-		}
-
-		$message = sprintf(
-			/* translators: %d: Anzahl Platten. */
-			_n( '%d Platte angeordnet.', '%d Platten angeordnet.', count( $result['plate_ids'] ), 'lindenweg16' ),
-			count( $result['plate_ids'] )
-		);
-
-		return self::done( $message, array( 'plate_ids' => array_map( 'intval', $result['plate_ids'] ), 'warnings' => array_values( $result['warnings'] ) ) );
-	}
-
-	/**
-	 * Eine Platte mit den Umrissen ihrer Teile (für die Ansicht).
-	 *
-	 * @param WP_REST_Request $request Anfrage.
-	 * @return WP_REST_Response
-	 */
-	public static function plate( WP_REST_Request $request ) {
-		$plate = PlateJobRepository::find( (int) $request['id'] );
-
-		if ( ! $plate ) {
-			return self::fail( __( 'Diese Platte gibt es nicht (mehr). Bitte die Liste neu laden.', 'lindenweg16' ), 404 );
-		}
-
-		return new WP_REST_Response( self::layout( $plate ) );
-	}
 
 	/**
 	 * Anordnung einer Platte: Bett und Umrisse der Teile.
@@ -1147,22 +949,6 @@ class BambuDruck {
 			'shapes'  => (object) $shapes,
 			'missing' => $missing,
 		);
-	}
-
-	/**
-	 * Platte zum automatischen Slicen einreihen.
-	 *
-	 * @param WP_REST_Request $request Anfrage.
-	 * @return WP_REST_Response
-	 */
-	public static function plate_slice( WP_REST_Request $request ) {
-		$result = SlicingService::enqueue_plate( (int) $request['id'] );
-
-		if ( ! $result['ok'] ) {
-			return self::fail( $result['error'] );
-		}
-
-		return self::done( __( 'Platte zum Slicen eingereiht.', 'lindenweg16' ) );
 	}
 
 	/* ====================================================================

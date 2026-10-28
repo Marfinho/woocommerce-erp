@@ -29,7 +29,6 @@ use Lindenweg16\Modules\Betrieb\Admin\StockPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintJobsPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\PrintQueuePrintersPage;
-use Lindenweg16\Modules\Betrieb\Admin\BambuPlatesPage;
 use Lindenweg16\Modules\Betrieb\Admin\BambuPrintersPage;
 use Lindenweg16\Modules\Betrieb\Admin\DruckfarmPage;
 use Lindenweg16\Modules\Betrieb\Admin\SettingsPage;
@@ -178,7 +177,6 @@ class BetriebModule {
 			// Menüpunkt (siehe PrintQueuePrintersPage::render()).
 			( new BambuPrintersPage() )->register();
 			( new DruckfarmPage() )->register();
-			( new BambuPlatesPage() )->register();
 			( new SlicingProfilesPage() )->register();
 			( new SimplePages() )->register();
 			( new ImportPage() )->register();

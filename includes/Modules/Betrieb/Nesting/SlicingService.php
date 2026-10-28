@@ -19,9 +19,9 @@ use Lindenweg16\Modules\Betrieb\RevisionRepository;
 
 /**
  * Bindeglied zwischen Plattenanordnung (Nesting\PlateService) und der
- * bestehenden Bambu-Druckwarteschlange: Eine Platte wird erst automatisch
- * geslict, dann unverändert in dieselbe Warteschlange gelegt, die auch
- * "Bedarf direkt drucken" und der manuelle Upload benutzen.
+ * Bambu-Druckwarteschlange: Eine im Workflow freigegebene Platte wird erst
+ * automatisch geslict, dann in dieselbe Warteschlange gelegt, die auch der
+ * manuelle Upload benutzt (siehe Erp\Workflow::slice()).
  */
 class SlicingService {
 

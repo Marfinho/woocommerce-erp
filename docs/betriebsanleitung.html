@@ -533,7 +533,8 @@ tr:last-child td{border-bottom:0}
 <ol class="schritte" start="5">
 	<li>Prüf Platten und Material. Reicht eine Rolle nicht, steht das als Warnung dabei.</li>
 	<li>Lass den Haken bei <strong>Etiketten drucken</strong> gesetzt, wenn ein Etikettendrucker eingerichtet ist (Kapitel D.15). Jede Platte bekommt ein Etikett mit QR-Code, das du an die Platte oder den Drucker klebst.</li>
-	<li>Klick auf <strong>Freigeben und Etiketten drucken</strong>. Die Platten stehen jetzt in der Spalte <strong>Freigegeben</strong>.</li>
+	<li>Lass den Haken bei <strong>Automatisch slicen und an den Drucker</strong> gesetzt, wenn ein Slicing-Worker läuft (Kapitel D.15): Jede Platte wird geslict und landet von selbst in der Warteschlange ihres Druckers. Gedruckt wird erst, wenn die Platte am Drucker als frei bestätigt ist. Ohne Haken slicest du später von der Plattenseite aus – automatisch oder von Hand in Bambu Studio.</li>
+	<li>Klick auf <strong>Freigeben</strong>. Die Platten stehen jetzt in der Spalte <strong>Freigegeben</strong>.</li>
 </ol>
 
 <figure>
@@ -549,11 +550,27 @@ tr:last-child td{border-bottom:0}
 <table>
 <thead><tr><th>Station</th><th>Was du siehst</th><th>Dein Knopf</th></tr></thead>
 <tbody>
-<tr><td><strong>Freigegeben</strong></td><td>Schritt 1 „Datei laden“ mit dem Knopf <em>3MF herunterladen</em>; Schritt 2 „Material bereit?“ mit der Rolle und dem Bedarf in Gramm</td><td><strong>Rüsten starten ▶</strong> – ab dem Tippen läuft die Rüstzeit</td></tr>
+<tr><td><strong>Freigegeben</strong></td><td>Schritt 1 „Datei an den Drucker“: der Knopf <em>Automatisch slicen und an den Drucker</em> bzw. der Stand von Slicen und Warteschlange (siehe unten), dazu <em>3MF herunterladen</em> für den Weg von Hand; Schritt 2 „Material bereit?“ mit der Rolle und dem Bedarf in Gramm; ggf. <em>Platte ist frei</em></td><td><strong>Rüsten starten ▶</strong> – ab dem Tippen läuft die Rüstzeit</td></tr>
 <tr><td><strong>Rüsten</strong></td><td>Die laufende Rüstzeit</td><td><strong>Druck gestartet ▶</strong> – wird automatisch erkannt, wenn der Drucker verbunden ist (Kapitel A.10)</td></tr>
 <tr><td><strong>Im Druck</strong></td><td>Fortschrittsbalken, Restzeit, Temperaturen (live vom Bambu-Drucker oder geschätzt nach Zeit), Rüst- und Druckzeit</td><td><strong>Druck fertig ▶</strong>; oder <em>Direkt Ist-Menge melden</em>, wenn du den Druck nicht mitgezählt hast</td></tr>
 <tr><td><strong>Ist melden</strong></td><td>Je Artikel die geplante Menge, daneben Zähler für <em>Gut</em> und <em>Ausschuss</em>, die Rolle mit dem geschätzten Verbrauch</td><td><strong>Melden und einlagern ✓</strong></td></tr>
 <tr><td><strong>Erledigt</strong></td><td>Bestätigung, was ins Lager gebucht wurde, und wie viel Filament abgezogen wurde</td><td>Ggf. die nächste Platte vorbereiten</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Wurde die Platte automatisch geslict, zeigt ihre Seite, was im Hintergrund passiert:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Anzeige</th><th>Bedeutung</th><th>Was du tust</th></tr></thead>
+<tbody>
+<tr><td><strong>Wird geslict</strong></td><td>Der Slicing-Worker hat die Platte (noch nicht) abgeholt; der Text sagt, welches von beiden</td><td>Warten. Passiert lange nichts, läuft der Worker nicht.</td></tr>
+<tr><td><strong>Slicen fehlgeschlagen</strong></td><td>Der Grund steht darunter (z. B. kein Slicing-Profil für das Material)</td><td>Ursache beheben, dann <strong>Erneut slicen</strong></td></tr>
+<tr><td><strong>In der Warteschlange</strong></td><td>Die Druckdatei wartet auf den Drucker – bei belegter Platte, bis sie als frei bestätigt ist</td><td>Platte räumen, <strong>Platte ist frei</strong> tippen</td></tr>
+<tr><td><strong>Wird übertragen / druckt</strong></td><td>Die Bridge hat übernommen; Druckstart und -ende schalten die Platte von selbst weiter</td><td>Nichts</td></tr>
+<tr><td><strong>Druck fehlgeschlagen</strong></td><td>Der Drucker hat den Start abgelehnt, etwa weil das Filament nicht im AMS liegt; der Grund steht darunter</td><td>Ursache beheben, dann <strong>Erneut in die Warteschlange</strong></td></tr>
+<tr><td><strong>Unklar</strong></td><td>Niemand weiß sicher, wie der Druck ausging</td><td>Am Drucker nachsehen und unter <em>Bambu-Lab-Drucker → Aufträge</em> klären</td></tr>
 </tbody>
 </table>
 </div>
@@ -585,7 +602,9 @@ tr:last-child td{border-bottom:0}
 <ol class="schritte">
 	<li>Bei <strong>Gut</strong> steht die geplante Menge. Zähl nach und korrigiere, wenn weniger brauchbar ist.</li>
 	<li>Trag bei <strong>Ausschuss</strong> ein, wie viele Teile kaputt sind. Sobald Ausschuss da ist, verlangt das Formular eine <strong>Fehlerursache</strong>. Ohne Ursache lässt sich die Quote später nicht auswerten.</li>
-	<li>Prüf die <strong>Rolle</strong>. Der Verbrauch wird von ihr abgezogen. Hast du von einer anderen Rolle gedruckt, wähl sie aus – nur so stimmt später die Rückverfolgung (Kapitel A.13).</li>
+	<li>Prüf die <strong>Rolle</strong>. Vorgeschlagen ist die älteste mit genug Rest. Hast du von einer anderen gedruckt, wähl sie aus oder <strong>scann das Etikett der Spule</strong> ins Feld daneben – nur so stimmt später die Rückverfolgung (Kapitel A.13). Eine gescannte Spule gilt danach als in Benutzung.</li>
+	<li>Prüf <strong>Einlagern in</strong>: Vorbelegt ist der Standardplatz des Artikels. Legst du die Teile woanders hin, wähl den Platz – der Bestand je Lagerplatz stimmt dann, und die Pickliste findet sie.</li>
+	<li>Optional: eine <strong>Notiz</strong>, etwa „Haftung schlecht“. Sie steht an der Platte und im Druckjournal.</li>
 	<li>Tipp auf <strong>Melden und einlagern ✓</strong>.</li>
 </ol>
 
@@ -594,7 +613,7 @@ tr:last-child td{border-bottom:0}
 	<figcaption>Erledigt. Das ERP zeigt, was gebucht wurde: <em>+33</em> im Lager, <em>−363 g</em> von der Rolle. Darunter schlägt es die nächste Platte vor.</figcaption>
 </figure>
 
-<p>Mit dem Melden passiert in einem Rutsch: Der Lagerzugang der guten Teile wird gebucht, eine <strong>Charge</strong> für die Rückverfolgung entsteht, das Filament wird von der Rolle abgezogen, die eingebauten Kleinteile werden verbraucht, die Zeiten gehen in die Auswertung <em>Soll gegen Ist</em>, und der <strong>Ausschuss geht als Bedarf zurück in den Plan</strong>. Fehlmengen verschwinden also nicht, sie kommen wieder.</p>
+<p>Mit dem Melden passiert in einem Rutsch: Der Lagerzugang der guten Teile wird auf den gewählten Lagerplatz gebucht, eine <strong>Charge</strong> für die Rückverfolgung entsteht, das Filament wird von der Rolle abgezogen, die eingebauten Kleinteile werden verbraucht, die Zeiten gehen in die Auswertung <em>Soll gegen Ist</em>, und der <strong>Ausschuss geht als Bedarf zurück in den Plan</strong>. Fehlmengen verschwinden also nicht, sie kommen wieder.</p>
 
 <figure>
 	<img src="bilder/workflow-board-laufend.png" alt="Das Board mit einer Platte in der Spalte Im Druck und der Zeile Heute eingelagert: Platte 1 mit 33 Haster Haken">
@@ -963,50 +982,18 @@ tr:last-child td{border-bottom:0}
 
 <p>Die Bridge holt den Auftrag beim nächsten Kontakt ab, überträgt die Datei und startet den Druck. In der Liste wandert er durch die Stationen <em>Wartend → Geclaimt → Wird übertragen → Druckt → Fertig</em>. <em>Fehler</em> heißt: Der Drucker hat abgebrochen oder ist nicht angelaufen; <em>Storniert</em> heißt: jemand hat ihn zurückgezogen. Meldet der Drucker eine AMS-Belegung, kannst du außerdem wählen, mit welchem Filament gedruckt wird. Ohne Auswahl druckt das Gerät mit dem gerade eingelegten Filament.</p>
 
-<div class="kasten tipp">
-	<span class="titel">Die Ist-Druckzeit trägt sich selbst ein</span>
-	<p>Ist ein Bambu-Auftrag aus einem Auftrag oder einer Platte entstanden, bucht ein fertiger Druck seine tatsächliche Druckzeit von selbst. Die Handarbeit danach – Stützen entfernen, entgraten, verpacken – bleibt deine Eingabe; die kann kein Drucker wissen.</p>
+<div class="kasten info">
+	<span class="titel">Aufträge hier buchen nichts</span>
+	<p>Ein hier eingereihter Auftrag ist ein Einzeldruck – Muster, Ersatzteil, privat. Er bucht weder Lager noch Druckjournal. Was ins Lager soll, läuft über den <strong>Workflow</strong> (Kapitel A.3): Plan freigeben, automatisch slicen, Ist-Menge melden.</p>
 </div>
 
-<h3>Platte anordnen und automatisch slicen</h3>
+<h3>Platten slicen</h3>
 
-<p>Der Reiter <strong>Platten anordnen</strong> ist die Handarbeit-Variante des Plans aus A.3: Du sagst, welche Artikel in welcher Menge auf welchen Drucker sollen. Das ERP ordnet die Teile anhand ihrer echten Umrisse auf dem Druckbett an – nicht nur nach dem Begrenzungsrechteck – und erzeugt daraus eine oder mehrere Platten, jede als noch <em>ungeslicte</em> Projektdatei.</p>
-
-<figure>
-	<img src="bilder/bambu-platten.png" alt="Der Reiter Platten anordnen mit Drucker, Sicherheitsabstand, Suchfeld für Artikel, Mengenfeldern für Haster Haken und Haster Schiene und dem Knopf Automatisch anordnen">
-	<figcaption>Drucker wählen (sein Bettmaß steht dabei), Sicherheitsabstand prüfen (5 mm sind voreingestellt), Mengen eintragen, <strong>Automatisch anordnen</strong>. Es stehen nur Artikel zur Wahl, an deren aktiver Revision eine ungeslicte Projekt-3MF hängt.</figcaption>
-</figure>
-
-<p>Jede Platte hat zwei Knöpfe:</p>
-
-<div class="tabelle">
-<table>
-<thead><tr><th>Knopf</th><th>Was passiert</th></tr></thead>
-<tbody>
-<tr><td><strong>Projekt-3MF</strong></td><td>Lädt die angeordnete Platte herunter. Du öffnest sie in Bambu Studio, slicest wie gewohnt und reihst die fertige Druckdatei im Reiter <em>Aufträge</em> ein. Der Weg ohne Slicing-Worker.</td></tr>
-<tr><td><strong>Automatisch slicen</strong></td><td>Übergibt die Platte an den Slicing-Worker, einen Rechner im Betrieb, auf dem OrcaSlicer ohne Bildschirm läuft (Kapitel D.15). Er slicet mit den hinterlegten Profilen und legt die fertige Druckdatei von selbst in die Warteschlange des Druckers.</td></tr>
-</tbody>
-</table>
-</div>
-
-<p>Der Status der Platte sagt dir, wo sie steht:</p>
-
-<div class="tabelle">
-<table>
-<thead><tr><th>Status</th><th>Bedeutung</th><th>Was du tust</th></tr></thead>
-<tbody>
-<tr><td><strong>Entworfen</strong></td><td>Angeordnet, noch nicht gesliced</td><td>Herunterladen oder automatisch slicen lassen</td></tr>
-<tr><td><strong>Wird gesliced</strong> – „wartet seit … auf den Slicing-Worker“</td><td>Der Auftrag liegt bereit, aber kein Worker hat ihn abgeholt</td><td>Nach ein paar Minuten: der Verwaltung sagen, dass der Worker nicht läuft</td></tr>
-<tr><td><strong>Wird gesliced</strong> – „Worker hat die Platte um … übernommen“</td><td>Der Slicer arbeitet; eine volle Platte kann einige Minuten dauern</td><td>Warten</td></tr>
-<tr><td><strong>Gesliced</strong> – „in der Bambu-Warteschlange“</td><td>Fertig; die Druckdatei steht im Reiter <em>Aufträge</em></td><td>Nichts – der Drucker holt sie</td></tr>
-<tr><td><strong>Fehlgeschlagen</strong></td><td>Der Slicer hat abgebrochen. Der Grund steht in rot direkt unter dem Status – ein Klartext plus Fehlercode</td><td>Grund lesen, Ursache beheben oder weitergeben, dann <strong>Erneut slicen</strong>. Die Platte muss nicht neu angeordnet werden.</td></tr>
-</tbody>
-</table>
-</div>
+<p>Platten werden nur noch im <strong>Workflow</strong> angeordnet und freigegeben (Kapitel A.3). Dort lassen sie sich gleich beim Freigeben oder später von der Seite der Platte aus automatisch slicen: Der Slicing-Worker, ein Rechner im Betrieb mit OrcaSlicer ohne Bildschirm (Kapitel D.15), slict mit den hinterlegten Profilen und legt die Druckdatei von selbst in die Warteschlange des Druckers. Den Stand – wird geslict, fehlgeschlagen samt Grund, in der Warteschlange – zeigt die Seite der Platte. Der frühere eigene Reiter <em>Platten anordnen</em> ist entfallen: Was dort gedruckt wurde, buchte nichts ins Lager.</p>
 
 <div class="kasten info">
 	<span class="titel">Eine Platte, ein Material</span>
-	<p>Die Anordnung nimmt das Material des ersten Artikels auf der Platte und sucht dazu das passende Slicing-Profil (Reiter <em>Slicing-Profile</em>, Kapitel D.15). Mehrfarbige oder Mehrmaterial-Platten mit AMS-Zuordnung je Bauteil kann der Worker nicht – dafür bleibt Bambu Studio zuständig: Projekt-3MF herunterladen, von Hand slicen, hochladen.</p>
+	<p>Das automatische Slicen nimmt das Material des ersten Artikels auf der Platte und sucht dazu das passende Slicing-Profil (Reiter <em>Slicing-Profile</em>, Kapitel D.15). Mehrfarbige oder Mehrmaterial-Platten mit AMS-Zuordnung je Bauteil kann der Worker nicht – dafür bleibt Bambu Studio zuständig: auf der Plattenseite die Projekt-3MF herunterladen, von Hand slicen und am Drucker starten; der Workflow erkennt den Druck am Dateinamen.</p>
 </div>
 
 <h2 id="prod-artikel"><span class="nr">A.12</span> Produkte: Stammdaten, Revisionen und Stückliste</h2>
@@ -1074,7 +1061,7 @@ tr:last-child td{border-bottom:0}
 
 <div class="kasten merke">
 	<span class="titel">Projektdatei oder fertige Druckdatei?</span>
-	<p>Hängt an der Revision eine <strong>ungeslicte Projektdatei</strong>, kann das ERP sie für den Plan (A.3) und für <em>Platten anordnen</em> (A.11) verwenden. Hängt dort eine <strong>geslicte Druckdatei</strong>, kann der Drucker sie direkt ausführen. Das Produkt wird in beiden Fällen als <em>mit 3MF</em> gezählt.</p>
+	<p>Hängt an der Revision eine <strong>ungeslicte Projektdatei</strong>, kann das ERP sie für den Plan (A.3) verwenden. Hängt dort eine <strong>geslicte Druckdatei</strong>, kann der Drucker sie direkt ausführen. Das Produkt wird in beiden Fällen als <em>mit 3MF</em> gezählt.</p>
 </div>
 
 <h3>Stückliste</h3>
@@ -2848,7 +2835,7 @@ tr:last-child td{border-bottom:0}
 	<li>Das <strong>Worker-Token</strong> erzeugst du noch in der Klassischen Ansicht (<em>Klassische Ansicht → Slicing</em>) und trägst es in die <code>.env.slicing</code> des Workers ein.</li>
 	<li>In OrcaSlicer oder Bambu Studio für jede Kombination aus Material und Druckermodell die drei Profile exportieren – Druckerprofil, Filamentprofil, Prozessprofil (Rechtsklick auf das Profil → <em>Export</em>). Das ergibt drei JSON-Dateien. Es dürfen Benutzerprofile sein, die von einem Systemprofil abgeleitet sind – die Vererbung löst der Worker selbst gegen die Profile seiner OrcaSlicer-Version auf.</li>
 	<li>Im Auswahlknopf <strong>Slicing-Profile</strong> Material (z.&nbsp;B. PETG) und Druckermodell eintragen und die drei Dateien hochladen. Das Druckermodell muss im gemeldeten Modellnamen des Druckers vorkommen: „P1S“ trifft auf „Bambu Lab P1S“.</li>
-	<li>Eine kleine Testplatte anordnen und <strong>Automatisch slicen</strong> klicken. Das Ergebnis erscheint im Bereich <em>Aufträge</em>; öffne die Druckdatei einmal in Bambu Studio und sieh dir die Druckvorschau an, bevor du ihr blind vertraust.</li>
+	<li>Im Workflow eine kleine Testplatte freigeben und auf ihrer Seite <strong>Automatisch slicen und an den Drucker</strong> tippen. Das Ergebnis erscheint im Bereich <em>Aufträge</em>; öffne die Druckdatei einmal in Bambu Studio und sieh dir die Druckvorschau an, bevor du ihr blind vertraust.</li>
 </ol>
 
 <div class="kasten merke">

@@ -9,9 +9,6 @@ namespace Lindenweg16\Modules\Betrieb\Bambu;
 
 defined( 'ABSPATH' ) || exit;
 
-use Lindenweg16\Modules\Betrieb\PrintJobRepository;
-use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
-use Lindenweg16\Modules\Production\ProductionModule;
 
 /**
  * Verwaltet die Warteschlange der 3MF-Druckaufträge: anlegen, abholen,
@@ -559,9 +556,11 @@ class BambuJobRepository {
 	 * completed. Idempotent – ein wiederholter Aufruf für einen bereits
 	 * abgeschlossenen Job bleibt erfolgreich, ohne ihn erneut anzustoßen.
 	 *
-	 * Trägt bei Erfolg außerdem – sofern der Job aus einem Fertigungs-
-	 * auftrag entstanden ist – die Ist-Druckzeit automatisch in die
-	 * Ist-vs-Plan-Auswertung ein (siehe ProductionModule::complete_job()).
+	 * Bucht selbst nichts: Lagerzugang, Druckjournal und Zeiten entstehen
+	 * allein bei der Ist-Meldung der Werkstatt-Platte (siehe
+	 * Erp\Workflow::report()) – mit Gut/Ausschuss statt „alles gut“. Die
+	 * früheren Automatikbuchungen („Bedarf direkt drucken“, Ist-Druckzeit
+	 * alter Druckaufträge) sind entfallen.
 	 *
 	 * @param int    $id         Job-ID.
 	 * @param string $printer_id Anfragende Bridge.
@@ -599,98 +598,7 @@ class BambuJobRepository {
 			)
 		);
 
-		$ok = (int) $updated > 0;
-
-		if ( $ok && $job->druckauftrag_id && null !== $ist_minuten && class_exists( ProductionModule::class ) ) {
-			// Reine Ist-Druckzeit-Übernahme – die Ist-Arbeitszeit (Verpacken,
-			// Entfernen von Stützstrukturen …) lässt sich aus einem
-			// automatischen Statuswechsel nicht ableiten und bleibt daher
-			// weiterhin eine manuelle Eingabe im Druckjournal.
-			ProductionModule::complete_job( (int) $job->druckauftrag_id, $ist_minuten / 60, 0 );
-		}
-
-		if ( $ok && $job->work_order_id ) {
-			self::book_work_order_completion( $job, $ist_minuten );
-		}
-
-		return array( 'ok' => $ok, 'already' => false );
-	}
-
-	/**
-	 * Nach einem erfolgreich abgeschlossenen Druck aus "Bedarf direkt
-	 * drucken" (siehe BambuService::dispatch_from_demand()) automatisch
-	 * einen Druckjournal-Eintrag buchen und den Fertigungsauftrag
-	 * schliessen – dieselbe Buchung, die sonst von Hand über
-	 * Admin\PrintJobsPage liefe.
-	 *
-	 * Gebucht wird ausschliesslich bei einem sauberen "completed" (der
-	 * Drucker hat FINISH gemeldet) und mit der vollen geplanten Menge als
-	 * gute Teile: Der Bambu-Status allein sagt nicht, ob z. B. ein
-	 * einzelnes Teil auf der Platte sich gelöst hat, obwohl der Rest fertig
-	 * wurde – genau deshalb bucht ein fehlgeschlagener Druck (siehe fail())
-	 * nichts automatisch, sondern bleibt zur manuellen Prüfung offen.
-	 *
-	 * Schlägt die Buchung fehl (Auftrag inzwischen storniert, Artikel
-	 * gelöscht o. Ä.), bleibt der Job selbst dennoch "completed" – nur die
-	 * Folgebuchung unterbleibt, mit einer Protokollzeile, damit das
-	 * auffällt, statt einen fertigen Druck stillschweigend zu verlieren.
-	 *
-	 * @param object     $job         Job-Datensatz (vor dieser Methode bereits "completed").
-	 * @param float|null $ist_minuten Ist-Druckzeit in Minuten, oder null.
-	 */
-	protected static function book_work_order_completion( $job, $ist_minuten ) {
-		if ( ! class_exists( WorkOrderRepository::class ) || ! class_exists( PrintJobRepository::class ) ) {
-			return;
-		}
-
-		$order = WorkOrderRepository::find( (int) $job->work_order_id );
-
-		if ( ! $order || 'druck' !== $order['kind'] || ! in_array( $order['status'], WorkOrderRepository::OPEN_STATES, true ) ) {
-			// Auftrag längst geschlossen/storniert oder gar kein Druckauftrag
-			// (mehrfache Statusmeldung, Bridge-Wiederholung o. Ä.) – nichts zu tun.
-			return;
-		}
-
-		// PrintJobRepository::validate() ermittelt article_revision_id selbst
-		// über RevisionRepository::current_for_article() – also die zu diesem
-		// Zeitpunkt AKTUELLE Revision, nicht zwingend die, mit der tatsächlich
-		// gedruckt wurde (job->article_revision_id, beim Einreihen
-		// festgehalten). Weicht das je auseinander (Revision zwischen
-		// Druckstart und -ende gewechselt), bucht das Journal auf die neuere
-		// Revision – ein bewusst hingenommener Randfall, statt den
-		// gemeinsamen Buchungsweg von Hand- und Automatikbuchung zu
-		// verzweigen.
-		$parts = (int) $job->parts_planned > 0 ? (int) $job->parts_planned : max( 1, (int) $order['qty_planned'] );
-
-		$result = PrintJobRepository::validate(
-			array(
-				'printer_id'     => $order['printer_id'],
-				'article_id'     => $order['article_id'],
-				'color'          => $order['color'],
-				'parts_planned'  => $parts,
-				'parts_ok'       => $parts,
-				'failure_reason' => 'keine',
-				'print_time_h'   => null === $ist_minuten ? 0 : round( $ist_minuten / 60, 3 ),
-				'plate_changes'  => 1,
-				'note'           => __( 'Automatisch über die Bambu-Lab-Anbindung gebucht (Bedarf → direkt drucken).', 'lindenweg16' ),
-			)
-		);
-
-		if ( $result['errors'] || ! $order['printer_id'] ) {
-			// Fehlt z. B. der Drucker (kein verknüpftes Kalkulationsgerät)
-			// oder die Revision wurde inzwischen entfernt: nicht raten,
-			// sondern den Auftrag offen lassen – er taucht dann weiterhin im
-			// Bedarf auf und wird von Hand über das Druckjournal geschlossen.
-			return;
-		}
-
-		$print_job_id = PrintJobRepository::insert( $result['data'] );
-
-		if ( ! $print_job_id ) {
-			return;
-		}
-
-		WorkOrderRepository::close_by_print_job( (int) $order['id'], $print_job_id, (float) $parts );
+		return array( 'ok' => (int) $updated > 0, 'already' => false );
 	}
 
 	/**
@@ -783,8 +691,9 @@ class BambuJobRepository {
 	 * einem Job, dessen Bridge sich nicht mehr meldet), ohne auf den Ablauf
 	 * des Leases zu warten.
 	 *
-	 * „completed“ bucht wie ein normaler Abschluss (Ist-Druckzeit,
-	 * Druckjournal bei „Bedarf direkt drucken“), „failed“ lässt alles offen.
+	 * „completed“ schließt den Auftrag ab wie die Bridge (gebucht wird erst
+	 * bei der Ist-Meldung der Werkstatt-Platte), „failed“ markiert ihn als
+	 * fehlgeschlagen.
 	 * Nur aktive Jobs; ein abgeschlossener Job bleibt, wie er ist.
 	 *
 	 * @param int    $id      Job-ID.

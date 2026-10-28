@@ -444,7 +444,7 @@
 		UI.view().appendChild(box);
 		UI.view().appendChild(other);
 
-		// Die weiteren Reiter (Aufträge, Platten, Profile) stehen in bambu_druck.js.
+		// Die weiteren Reiter (Aufträge, Profile) stehen in bambu_druck.js.
 		function setTab(t) {
 			tab = t;
 			other.textContent = '';
@@ -458,7 +458,7 @@
 
 		function drawTabs() {
 			tabs.textContent = '';
-			tabs.appendChild(pills([['drucker', 'Drucker'], ['auftraege', 'Aufträge'], ['platten', 'Platten anordnen'], ['profile', 'Slicing-Profile']], tab, setTab));
+			tabs.appendChild(pills([['drucker', 'Drucker'], ['auftraege', 'Aufträge'], ['profile', 'Slicing-Profile']], tab, setTab));
 		}
 		drawTabs();
 		var data = null;

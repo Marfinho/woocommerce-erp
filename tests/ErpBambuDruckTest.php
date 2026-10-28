@@ -214,11 +214,12 @@ class ErpBambuDruckTest extends TestCase {
 		$php = $this->src( 'includes/Erp/Pages/BambuDruck.php' );
 
 		$this->assertStringContainsString( "gate( array( 'fertigung.bambu' ), 'lw16_capture' )", $php, 'Aufträge: Erfassungsrecht wie BambuJobsPage' );
-		$this->assertStringContainsString( "gate( array( 'fertigung.bambu' ), 'lw16_manage_production' )", $php, 'Platten: Produktionsrecht wie BambuPlatesPage' );
 		$this->assertStringContainsString( "gate( array( 'fertigung.bambu', 'fertigung.stammdaten.edit' ), 'lw16_manage_production' )", $php, 'Profile ändern: wie ActionMap' );
 		$this->assertStringContainsString( "'bambu/slicing/profil', 'POST', 'profile_save', \$edit", $php );
 		$this->assertStringContainsString( "'bambu/slicing/profil/(?P<id>\\d+)/loeschen', 'POST', 'profile_delete', \$edit", $php );
-		$this->assertStringContainsString( "'bambu/platten', 'POST', 'plate_build', \$plates", $php );
+		// Platten werden nur noch im Workflow angeordnet und geslict – nur dort
+		// entsteht eine Werkstatt-Platte, deren Ist-Meldung bucht.
+		$this->assertStringNotContainsString( "'bambu/platten'", $php );
 	}
 
 	public function test_zugangsdaten_stehen_nirgends_in_den_antworten() {
@@ -232,7 +233,7 @@ class ErpBambuDruckTest extends TestCase {
 		$this->assertStringNotContainsString( 'innerHTML', $js );
 		$this->assertStringNotContainsString( 'insertAdjacentHTML', $js );
 		$this->assertStringContainsString( "UI.bambuTabs['auftraege']", $js );
-		$this->assertStringContainsString( "UI.bambuTabs['platten']", $js );
+		$this->assertStringNotContainsString( "UI.bambuTabs['platten']", $js );
 		$this->assertStringContainsString( "UI.bambuTabs['profile']", $js );
 	}
 
@@ -240,8 +241,9 @@ class ErpBambuDruckTest extends TestCase {
 		$js = $this->src( 'assets/erp/pages/produktion.js' );
 
 		$this->assertStringContainsString( 'UI.bambuTabs', $js );
-		foreach ( array( 'auftraege', 'platten', 'profile' ) as $tab ) {
+		foreach ( array( 'auftraege', 'profile' ) as $tab ) {
 			$this->assertStringContainsString( "'" . $tab . "'", $js );
 		}
+		$this->assertStringNotContainsString( "['platten', 'Platten anordnen']", $js );
 	}
 }

@@ -267,10 +267,11 @@ class PrintJobRepository {
 	 * eine Filamentcharge angegeben ist – einen Chargeneintrag für die
 	 * Rückverfolgung.
 	 *
-	 * @param array $data Geprüfte Daten.
+	 * @param array $data   Geprüfte Daten.
+	 * @param int   $bin_id Lagerplatz für den Lagerzugang (0 = ohne Platz).
 	 * @return int Neue ID oder 0.
 	 */
-	public static function insert( array $data ) {
+	public static function insert( array $data, $bin_id = 0 ) {
 		global $wpdb;
 
 		if ( '' === $data['color'] ) {
@@ -303,6 +304,7 @@ class PrintJobRepository {
 					'qty'           => (float) $data['parts_ok'],
 					'movement_type' => 'produktion',
 					'location'      => 'lager',
+					'bin_id'        => (int) $bin_id,
 					'ref_type'      => 'print_job',
 					'ref_id'        => $id,
 					'moved_at'      => $data['job_date'] . ' 12:00:00',
