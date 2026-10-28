@@ -36,6 +36,7 @@
 		ui.api('loyalty/regeln').then(function (d) {
 			box.textContent = '';
 			var inputs = {};
+			var tierRows = [];
 			var form = h('form', { class: 'lr-form', novalidate: true });
 
 			if (!d.can_edit) {
@@ -67,7 +68,6 @@
 			});
 
 			// Stufen: Name, ab welchem Umsatz (12 Monate), Punkte-Faktor.
-			var tierRows = [];
 			function tierEditor() {
 				var list = h('div', { class: 'lr-tiers' });
 				var add = h('button', { class: 'btn', type: 'button', disabled: !d.can_edit }, 'Stufe hinzufügen');
