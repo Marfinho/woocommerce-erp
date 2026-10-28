@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.53.0] – 2026-10-28
+
+### Bambu: Sicherheit und Betrieb
+- **Zertifikat des Druckers festgeschrieben.** Die Bridge prüfte das Zertifikat des Druckers bisher gar nicht – ein Gerät im selben Netz, das sich als Drucker ausgibt, hätte den Zugangscode abgreifen können. Jetzt merkt sie sich beim ersten Kontakt den Fingerabdruck je Dienst (MQTT, FTPS, Kamera) und verweigert danach jedes andere Zertifikat, bevor der Zugangscode rausgeht. Optional fest vorgebbar (`BAMBU_CERT_FINGERPRINT`). Bei einer Abweichung zeigt die Druckerkarte den Grund.
+- **WordPress speichert den LAN-Zugangscode nicht mehr.** Er wurde nie gebraucht (die Bridge hat ihn in ihrer `.env.bambu`), lag aber im Klartext in der Datenbank. Die Formularfelder sind weg; das Update (Schema 47) löscht früher gespeicherte Codes.
+- **Druckermodell automatisch:** Die Bridge leitet es aus der Seriennummer ab (X1C, X1E, P1P, P1S, A1, A1 mini). WordPress übernimmt es nur, wenn kein Modell eingetragen ist – ein eingetragenes hat Vorrang, weil die Slicing-Profile am Wortlaut hängen.
+- **Speicher aufräumen:** Geslicte Druckdateien verschwinden jetzt mit ihrem Auftrag (nach der Aufbewahrungsfrist), sofern kein anderer Auftrag sie nutzt. Verworfene Vorschau-Platten (nie freigegeben, nie geslict) samt Datei nach 14 Tagen.
+- **Nur auf aktive Drucker einreihen:** Ein Auftrag für einen deaktivierten Drucker wurde angenommen, aber nie abgeholt.
+- `.env.bambu.example`: `SHORT_POLL_WAIT=0` (bisher 5 – band je Abfrage einen PHP-Worker); neue Optionen dokumentiert.
+- README: Entwicklermodus am Drucker (nötig seit Bambus Autorisierungs-Firmware; Handy-App und Cloud entfallen), Zertifikat, Modell. Das Installationsskript weist auf den Entwicklermodus hin.
+- Bekannte Einschränkung, dokumentiert: Für das Kamerabild steht der Zugangscode in der Kommandozeile von ffmpeg.
+- Tests: weitere PHPUnit-Fälle, pytest jetzt 49 Fälle (inkl. echtem TLS-Handshake gegen ein selbstsigniertes Zertifikat).
+- Nicht mit einem echten Drucker getestet. Am X1C zu beobachten: dass beim ersten Start drei Zertifikate festgeschrieben werden (mqtt, ftps, rtsps) und Druck und Kamera danach laufen.
+
 ## [0.52.0] – 2026-10-28
 
 ### Bambu: Werkstatt folgt dem Druckauftrag, Fehldrucke lassen sich wiederholen

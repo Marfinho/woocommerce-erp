@@ -50,6 +50,13 @@ class BambuService {
 	const UPLOAD_PREFIX = 'bambu-upload-';
 
 	/**
+	 * Präfix der vom Slicing-Worker gelieferten Druckdateien (siehe
+	 * SlicingService). Auch sie gehören allein dem Bambu-Job und vergehen
+	 * mit ihm – bisher blieben sie für immer liegen.
+	 */
+	const SLICED_PREFIX = 'bambu-sliced-';
+
+	/**
 	 * Geslicte Druckdatei aus der Modellablage in die Warteschlange eines
 	 * Bambu-Druckers legen.
 	 *
@@ -72,8 +79,9 @@ class BambuService {
 			return array( 'ok' => false, 'job_id' => 0, 'error' => __( 'Kein Drucker gewählt.', 'lindenweg16' ) );
 		}
 
-		if ( ! BambuPrinterRepository::find_by_printer_id( $printer_id ) ) {
-			return array( 'ok' => false, 'job_id' => 0, 'error' => __( 'Unbekannter Bambu-Drucker.', 'lindenweg16' ) );
+		$printer_error = self::printer_error( $printer_id );
+		if ( '' !== $printer_error ) {
+			return array( 'ok' => false, 'job_id' => 0, 'error' => $printer_error );
 		}
 
 		$path = ModelFile::safe_path( $model_filename );
@@ -122,6 +130,28 @@ class BambuService {
 	}
 
 	/**
+	 * Darf auf diesem Drucker eingereiht werden? Ein deaktivierter Drucker
+	 * wird von seiner Bridge nicht mehr abgefragt (sein Token gilt nicht) –
+	 * ein Job bliebe dort für immer liegen.
+	 *
+	 * @param string $printer_id Stabiler Schlüssel.
+	 * @return string Fehlermeldung oder leer.
+	 */
+	protected static function printer_error( $printer_id ) {
+		$printer = BambuPrinterRepository::find_by_printer_id( $printer_id );
+
+		if ( ! $printer ) {
+			return __( 'Unbekannter Bambu-Drucker.', 'lindenweg16' );
+		}
+
+		if ( ! (int) $printer->active ) {
+			return __( 'Dieser Bambu-Drucker ist deaktiviert – erst wieder aktivieren, dann einreihen.', 'lindenweg16' );
+		}
+
+		return '';
+	}
+
+	/**
 	 * Eine direkt hochgeladene geslicte Druckdatei (.gcode.3mf) in die
 	 * Warteschlange eines Bambu-Druckers legen – für den schnellen
 	 * Einzeldruck, ohne dass die Datei erst in die dauerhafte Modellablage
@@ -144,8 +174,9 @@ class BambuService {
 			return array( 'ok' => false, 'job_id' => 0, 'error' => __( 'Kein Drucker gewählt.', 'lindenweg16' ) );
 		}
 
-		if ( ! BambuPrinterRepository::find_by_printer_id( $printer_id ) ) {
-			return array( 'ok' => false, 'job_id' => 0, 'error' => __( 'Unbekannter Bambu-Drucker.', 'lindenweg16' ) );
+		$printer_error = self::printer_error( $printer_id );
+		if ( '' !== $printer_error ) {
+			return array( 'ok' => false, 'job_id' => 0, 'error' => $printer_error );
 		}
 
 		if ( ! is_uploaded_file( $tmp_path ) ) {
@@ -384,7 +415,9 @@ class BambuService {
 			return false;
 		}
 
-		return 0 === strpos( basename( $real ), self::UPLOAD_PREFIX );
+		$name = basename( $real );
+
+		return 0 === strpos( $name, self::UPLOAD_PREFIX ) || 0 === strpos( $name, self::SLICED_PREFIX );
 	}
 
 	/**
@@ -426,11 +459,12 @@ class BambuService {
 			return $leer;
 		}
 
-		$printer = BambuPrinterRepository::find_by_printer_id( $bambu_printer_id );
-		if ( ! $printer ) {
-			$leer['error'] = __( 'Unbekannter Bambu-Drucker.', 'lindenweg16' );
+		$printer_error = self::printer_error( $bambu_printer_id );
+		if ( '' !== $printer_error ) {
+			$leer['error'] = $printer_error;
 			return $leer;
 		}
+		$printer = BambuPrinterRepository::find_by_printer_id( $bambu_printer_id );
 
 		if ( ! $printer->geraet_id || ! PrinterRepository::find( (int) $printer->geraet_id ) ) {
 			$leer['error'] = __( 'Dieser Bambu-Drucker ist noch nicht mit einem Gerät der Kalkulation verknüpft – bitte unter „Bambu-Lab-Drucker" → Drucker verbinden.', 'lindenweg16' );
@@ -594,5 +628,9 @@ class BambuService {
 		}
 
 		BambuJobRepository::cleanup_retention( (int) Settings::get( 'bambu_aufbewahrung_tage', 90 ) );
+
+		if ( class_exists( \Lindenweg16\Erp\RunRepository::class ) ) {
+			PlateJobRepository::cleanup_drafts( \Lindenweg16\Erp\RunRepository::table(), Installer::docs_dir() );
+		}
 	}
 }

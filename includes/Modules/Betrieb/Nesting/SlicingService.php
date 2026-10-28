@@ -14,6 +14,7 @@ use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 
 /**
@@ -150,7 +151,7 @@ class SlicingService {
 
 		Installer::ensure_docs_dir();
 
-		$filename = sprintf( 'bambu-sliced-%d-%s.3mf', time(), wp_generate_password( 6, false, false ) );
+		$filename = sprintf( '%s%d-%s.3mf', BambuService::SLICED_PREFIX, time(), wp_generate_password( 6, false, false ) );
 		$target   = trailingslashit( Installer::docs_dir() ) . $filename;
 
 		if ( ! move_uploaded_file( $tmp_path, $target ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_move_uploaded_file

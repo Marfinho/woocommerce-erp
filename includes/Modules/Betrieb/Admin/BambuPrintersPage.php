@@ -77,7 +77,6 @@ class BambuPrintersPage {
 		$name         = isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '';
 		$bambu_serial = isset( $_POST['bambu_serial'] ) ? sanitize_text_field( wp_unslash( $_POST['bambu_serial'] ) ) : '';
 		$ip           = isset( $_POST['ip'] ) ? sanitize_text_field( wp_unslash( $_POST['ip'] ) ) : '';
-		$access_code  = isset( $_POST['access_code'] ) ? sanitize_text_field( wp_unslash( $_POST['access_code'] ) ) : '';
 		$geraet_id    = isset( $_POST['geraet_id'] ) ? (int) $_POST['geraet_id'] : 0;
 
 		if ( '' === $printer_id || '' === $name ) {
@@ -88,7 +87,7 @@ class BambuPrintersPage {
 			$this->back( __( 'Diese Drucker-ID gibt es schon.', 'lindenweg16' ), 0 );
 		}
 
-		$result = BambuPrinterRepository::create( $printer_id, $name, $bambu_serial, $ip, $access_code, $geraet_id );
+		$result = BambuPrinterRepository::create( $printer_id, $name, $bambu_serial, $ip, $geraet_id );
 
 		if ( ! $result['id'] ) {
 			$this->back(
@@ -121,8 +120,6 @@ class BambuPrintersPage {
 				'name'         => isset( $_POST['name'] ) ? wp_unslash( $_POST['name'] ) : '',
 				'bambu_serial' => isset( $_POST['bambu_serial'] ) ? wp_unslash( $_POST['bambu_serial'] ) : '',
 				'ip'           => isset( $_POST['ip'] ) ? wp_unslash( $_POST['ip'] ) : '',
-				'access_code'  => isset( $_POST['access_code'] ) ? wp_unslash( $_POST['access_code'] ) : '',
-				'access_code_loeschen' => ! empty( $_POST['access_code_loeschen'] ),
 				'geraet_id'    => isset( $_POST['geraet_id'] ) ? (int) $_POST['geraet_id'] : 0,
 				// Leeres Feld heißt "automatisch anhand des gemeldeten Modells"
 				// (siehe BambuPrinterRepository::effective_bed_size()) - dafür
@@ -460,7 +457,7 @@ class BambuPrintersPage {
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'LAN-Zugangscode', 'lindenweg16' ) . '</th><td>';
-		echo '<input type="text" name="access_code" class="regular-text" autocomplete="off">';
+		echo '<p class="description">' . esc_html__( 'Wird hier nicht gespeichert – nur in der .env.bambu der Bridge auf dem Raspberry Pi (BAMBU_ACCESS_CODE).', 'lindenweg16' ) . '</p>';
 		echo '</td></tr>';
 
 		echo '<tr><th scope="row">' . esc_html__( 'Bambu-Seriennummer', 'lindenweg16' ) . '</th><td>';
@@ -690,34 +687,18 @@ class BambuPrintersPage {
 		wp_nonce_field( self::NONCE );
 		printf( '<p><label>%s <input type="text" name="name" value="%s"></label></p>', esc_html__( 'Name', 'lindenweg16' ), esc_attr( $printer->name ) );
 		printf( '<p><label>%s <input type="text" name="ip" value="%s"></label></p>', esc_html__( 'IP', 'lindenweg16' ), esc_attr( (string) $printer->ip ) );
-		// Der hinterlegte Zugangscode wird bewusst nicht in die Seite
-		// geschrieben – ein leeres Feld lässt ihn unverändert, ein gefülltes
-		// ersetzt ihn (siehe BambuPrinterRepository::update()).
-		printf(
-			'<p><label>%s <input type="password" name="access_code" value="" autocomplete="new-password" placeholder="%s"></label></p>',
-			esc_html__( 'Zugangscode', 'lindenweg16' ),
-			$printer->access_code
-				? esc_attr__( 'hinterlegt – zum Ändern neu eintragen', 'lindenweg16' )
-				: esc_attr__( 'nicht hinterlegt', 'lindenweg16' )
-		);
-		if ( $printer->access_code ) {
-			printf(
-				'<p><label><input type="checkbox" name="access_code_loeschen" value="1"> %s</label></p>',
-				esc_html__( 'Hinterlegten Zugangscode entfernen', 'lindenweg16' )
-			);
-		}
 		printf( '<p><label>%s <input type="text" name="bambu_serial" value="%s"></label></p>', esc_html__( 'Seriennummer', 'lindenweg16' ), esc_attr( (string) $printer->bambu_serial ) );
-		// Nur ein Rückfallwert, falls die Bridge noch nichts gemeldet hat -
-		// wird von einer nächsten Statusmeldung der Bridge überschrieben
-		// (siehe BambuPrinterRepository::update()). Muss dann mit dem
-		// beim Slicing-Profil eingetragenen Modell übereinstimmen (exakter
-		// Vergleich, siehe SlicingProfileRepository::find_for()).
+		// Ein hier eingetragenes Modell hat Vorrang; die Bridge füllt nur ein
+		// leeres Feld (aus der Seriennummer, siehe BambuPrinterRepository::
+		// apply_status()). Muss mit dem beim Slicing-Profil eingetragenen
+		// Modell übereinstimmen (exakter Vergleich, siehe
+		// SlicingProfileRepository::find_for()).
 		printf(
 			'<p><label>%s <input type="text" name="printer_model" value="%s" placeholder="%s"></label> <span class="description">%s</span></p>',
 			esc_html__( 'Druckermodell', 'lindenweg16' ),
 			esc_attr( (string) $printer->printer_model ),
 			esc_attr__( 'z. B. X1C', 'lindenweg16' ),
-			esc_html__( 'leer = wartet auf Meldung durch die Bridge', 'lindenweg16' )
+			esc_html__( 'leer = die Bridge trägt das Modell aus der Seriennummer ein', 'lindenweg16' )
 		);
 		// Nur ein Rückfallwert, falls die Bridge kein erkennbares Modell
 		// meldet oder das eigene Gerät (z. B. ein modifiziertes Bett) von

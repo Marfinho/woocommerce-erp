@@ -545,7 +545,7 @@
 
 		function addDialog() {
 			var dlg;
-			var f = { printer_id: input('text', '', { placeholder: 'bambu_p1s_1', autocapitalize: 'off' }), name: input('text', '', { placeholder: 'P1S Werkstatt' }), ip: input('text', '', { placeholder: '192.168.1.50' }), access_code: input('text', '', { autocomplete: 'off' }), bambu_serial: input('text', '', { placeholder: '01P00A000000000' }), geraet_id: deviceSelect(0) };
+			var f = { printer_id: input('text', '', { placeholder: 'bambu_p1s_1', autocapitalize: 'off' }), name: input('text', '', { placeholder: 'P1S Werkstatt' }), ip: input('text', '', { placeholder: '192.168.1.50' }), bambu_serial: input('text', '', { placeholder: '01P00A000000000' }), geraet_id: deviceSelect(0) };
 			var go = UI.h('button', { class: 'btn primary', type: 'button', onclick: function () {
 				var body = {};
 				Object.keys(f).forEach(function (k) { body[k] = f[k].value; });
@@ -556,29 +556,26 @@
 				});
 			} }, 'Drucker anlegen');
 			dlg = UI.dlg('Bambu-Drucker anlegen', UI.h('div', { class: 'sheet-body' },
-				UI.h('p', { class: 'muted' }, 'IP-Adresse und LAN-Zugangscode stehen am Drucker unter Einstellungen → LAN-Modus (derselbe Netz wie der Raspberry Pi mit der Bridge). Die Seriennummer steht darunter.'),
+				UI.h('p', { class: 'muted' }, 'IP-Adresse und Seriennummer stehen am Drucker unter Einstellungen → LAN-Modus (dasselbe Netz wie der Raspberry Pi mit der Bridge). Den LAN-Zugangscode trägst du nur in die .env.bambu der Bridge ein – WordPress speichert ihn nicht.'),
 				UI.h('div', { class: 'form-grid' },
 					field('Drucker-ID', f.printer_id, 'Schlüssel, den die Bridge als PRINTER_ID einträgt. Kleinbuchstaben, Ziffern, _ und -.'),
-					field('Name', f.name), field('IP-Adresse', f.ip), field('LAN-Zugangscode', f.access_code), field('Bambu-Seriennummer', f.bambu_serial),
+					field('Name', f.name), field('IP-Adresse', f.ip), field('Bambu-Seriennummer', f.bambu_serial),
 					field('Verknüpftes Gerät (Kalkulation)', f.geraet_id, 'Wichtig: Ohne Verknüpfung landen Ist-Meldungen nicht im Druckjournal.')),
 				UI.h('div', { style: 'margin-top:12px' }, go)));
 		}
 
 		function editDialog(p) {
 			var dlg;
-			var code = input('password', '', { autocomplete: 'new-password', placeholder: p.has_code ? 'hinterlegt – zum Ändern neu eintragen' : 'nicht hinterlegt' });
-			var clear = UI.h('input', { type: 'checkbox' });
 			var f = { name: input('text', p.name), ip: input('text', p.ip), bambu_serial: input('text', p.serial), printer_model: input('text', p.model, { placeholder: 'z. B. X1C' }), bed_width_mm: input('number', p.bed_width_mm, { min: 1 }), bed_height_mm: input('number', p.bed_height_mm, { min: 1 }), geraet_id: deviceSelect(p.geraet_id) };
 			var go = UI.h('button', { class: 'btn primary', type: 'button', onclick: function () {
-				var body = { access_code: code.value, access_code_loeschen: clear.checked };
+				var body = {};
 				Object.keys(f).forEach(function (k) { body[k] = f[k].value; });
 				post(go, 'bambu/drucker/' + p.id, body, function (r) { dlg.close(); UI.toast(r.message); load(); });
 			} }, 'Speichern');
 			dlg = UI.dlg('Verbindung: ' + p.name, UI.h('div', { class: 'sheet-body' },
 				UI.h('div', { class: 'form-grid' },
-					field('Name', f.name), field('IP', f.ip), field('Zugangscode', code, 'Der hinterlegte Code wird nie angezeigt. Leer lassen = unverändert.'),
-					p.has_code ? UI.h('label', { class: 'chk' }, clear, 'Hinterlegten Zugangscode entfernen') : null,
-					field('Seriennummer', f.bambu_serial), field('Druckermodell', f.printer_model, 'Leer = wartet auf die Meldung der Bridge.'),
+					field('Name', f.name), field('IP', f.ip),
+					field('Seriennummer', f.bambu_serial), field('Druckermodell', f.printer_model, 'Leer = die Bridge trägt das Modell aus der Seriennummer ein. Ein eingetragener Wert hat Vorrang.'),
 					field('Druckbett Breite (mm)', f.bed_width_mm), field('Druckbett Höhe (mm)', f.bed_height_mm, 'Beide leer = automatisch nach Modell.'),
 					field('Verknüpftes Gerät', f.geraet_id, 'Ohne Verknüpfung landen Ist-Meldungen nicht im Druckjournal.')),
 				UI.h('div', { style: 'margin-top:12px' }, go)));

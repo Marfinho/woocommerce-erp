@@ -1339,7 +1339,6 @@ class Produktion {
 			if ( $manage ) {
 				$row['ip']             = (string) $printer->ip;
 				$row['serial']         = (string) $printer->bambu_serial;
-				$row['has_code']       = '' !== (string) $printer->access_code;
 				$row['geraet_id']      = (int) $printer->geraet_id;
 				$row['bed_width_mm']   = $printer->bed_width_mm ? (int) $printer->bed_width_mm : '';
 				$row['bed_height_mm']  = $printer->bed_height_mm ? (int) $printer->bed_height_mm : '';
@@ -1410,7 +1409,6 @@ class Produktion {
 			$name,
 			isset( $body['bambu_serial'] ) ? (string) $body['bambu_serial'] : '',
 			isset( $body['ip'] ) ? (string) $body['ip'] : '',
-			isset( $body['access_code'] ) ? (string) $body['access_code'] : '',
 			$geraet
 		);
 
@@ -1445,7 +1443,7 @@ class Produktion {
 		}
 
 		$data = array();
-		foreach ( array( 'name', 'ip', 'bambu_serial', 'printer_model', 'access_code' ) as $field ) {
+		foreach ( array( 'name', 'ip', 'bambu_serial', 'printer_model' ) as $field ) {
 			if ( array_key_exists( $field, $body ) ) {
 				$data[ $field ] = (string) $body[ $field ];
 			}
@@ -1453,10 +1451,6 @@ class Produktion {
 
 		if ( array_key_exists( 'name', $data ) && '' === trim( sanitize_text_field( $data['name'] ) ) ) {
 			return self::fail( __( 'Der Name darf nicht leer sein.', 'lindenweg16' ) );
-		}
-
-		if ( ! empty( $body['access_code_loeschen'] ) && filter_var( $body['access_code_loeschen'], FILTER_VALIDATE_BOOLEAN ) ) {
-			$data['access_code_loeschen'] = true;
 		}
 
 		if ( array_key_exists( 'geraet_id', $body ) ) {

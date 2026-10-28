@@ -45,10 +45,12 @@ Konfiguration ausschließlich über Umgebungsvariablen / .env (siehe
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 import logging
 import os
+import socket
 import ssl
 import subprocess
 import sys
@@ -210,6 +212,11 @@ class Config:
     # snapshot()/camera_loop()) - einfacher und robuster als ein
     # durchgehender Video-Relay-Dienst, für die Admin-Übersicht reicht das.
     CAMERA_ENABLED = _env_bool("CAMERA_ENABLED", True)
+
+    # Fingerabdruck (SHA-256, hex) des Druckerzertifikats, optional mehrere
+    # durch Komma getrennt. Leer: Die Bridge merkt sich das Zertifikat je
+    # Dienst beim ersten Kontakt (Trust on first use, siehe CertPinStore).
+    BAMBU_CERT_FINGERPRINT = os.environ.get("BAMBU_CERT_FINGERPRINT", "")
     CAMERA_SNAPSHOT_INTERVAL = int(os.environ.get("CAMERA_SNAPSHOT_INTERVAL", "10"))
 
     @classmethod
@@ -267,6 +274,24 @@ def _safe_int(wert) -> Optional[int]:
         return None
 
 
+# Modell nach den ersten drei Zeichen der Seriennummer - so in den
+# bekannten Bambu-Integrationen hinterlegt. Unbekannte Präfixe ergeben
+# einfach kein Modell; dann gilt der in WordPress eingetragene Wert.
+SERIEN_PRAEFIX_MODELL = {
+    "00M": "X1C",
+    "03W": "X1E",
+    "01S": "P1P",
+    "01P": "P1S",
+    "030": "A1 mini",
+    "039": "A1",
+}
+
+
+def model_from_serial(serial: str) -> str:
+    """Druckermodell aus der Seriennummer ableiten (leer, wenn unbekannt)."""
+    return SERIEN_PRAEFIX_MODELL.get(str(serial or "").strip().upper()[:3], "")
+
+
 def _safe_float(wert) -> Optional[float]:
     try:
         return float(wert)
@@ -314,7 +339,7 @@ class PrinterState:
         self.remaining_minutes: Optional[int] = None
         self.nozzle_temp: Optional[float] = None
         self.bed_temp: Optional[float] = None
-        self.printer_model = ""
+        self.printer_model = model_from_serial(Config.BAMBU_SERIAL)
         self.last_error = ""
         # Name der Datei, die der Drucker gerade geladen hat/druckt
         # (subtask_name bzw. gcode_file) - damit ordnet das ERP den Druck
@@ -534,19 +559,14 @@ def _on_mqtt_message(client, userdata, msg):  # noqa: ANN001 - paho-Signatur
 def start_mqtt_client() -> "mqtt.Client":
     """MQTT-Client aufbauen und im Hintergrund verbunden halten.
 
-    Der Drucker verwendet im LAN-Modus ein selbstsigniertes Zertifikat -
-    es gibt keine öffentliche CA, gegen die sich prüfen ließe. Die
-    Verbindung bleibt trotzdem auf TLS (verschlüsselt), nur die
-    Zertifikatsprüfung selbst entfällt (CERT_NONE) - dasselbe Vorgehen wie
-    bei allen bekannten Bambu-LAN-Integrationen.
+    Das Zertifikat des Druckers wird festgeschrieben (siehe CertPinStore) -
+    der Zugangscode geht erst raus, wenn der Drucker sich mit dem bekannten
+    Zertifikat ausgewiesen hat.
     """
     client = mqtt.Client(client_id=f"lw16-bambu-bridge-{Config.PRINTER_ID}", protocol=mqtt.MQTTv311)
     client.username_pw_set("bblp", Config.BAMBU_ACCESS_CODE)
 
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    client.tls_set_context(ssl_context)
+    client.tls_set_context(_printer_ssl_context("mqtt"))
 
     client.on_connect = _on_mqtt_connect
     client.on_disconnect = _on_mqtt_disconnect
@@ -824,20 +844,112 @@ class ImplicitFTP_TLS(FTP_TLS):
         return self.voidresp()
 
 
-def _printer_ssl_context() -> ssl.SSLContext:
+class CertPinStore:
+    """Festgeschriebene Zertifikate des Druckers ("Trust on first use").
+
+    Der Drucker weist sich im LAN mit einem Zertifikat aus, das sich gegen
+    keine öffentliche CA prüfen lässt. Bisher lief deshalb jede Verbindung
+    ohne Prüfung (CERT_NONE) - ein Gerät im selben Netz, das sich als
+    Drucker ausgibt, hätte den Zugangscode abgreifen können. Jetzt merkt
+    sich die Bridge beim ersten Kontakt den SHA-256-Fingerabdruck je Dienst
+    (mqtt, ftps, rtsps) und verweigert danach jedes andere Zertifikat -
+    noch bevor der Zugangscode gesendet wird.
+
+    Ist BAMBU_CERT_FINGERPRINT gesetzt, gilt nur dieser Wert (bzw. diese
+    Werte). Nach einem Druckertausch die Datei printer-cert.json löschen.
+    """
+
+    def __init__(self, path: Path, configured: str = "") -> None:
+        self.path = path
+        self.configured = {self.normalize(fp) for fp in configured.split(",") if self.normalize(fp)}
+        self._lock = threading.Lock()
+        self.last_mismatch = ""
+
+    @staticmethod
+    def normalize(fingerprint: str) -> str:
+        return "".join(ch for ch in str(fingerprint or "").lower() if ch in "0123456789abcdef")
+
+    @staticmethod
+    def fingerprint(der: bytes) -> str:
+        return hashlib.sha256(der).hexdigest()
+
+    def verify(self, service: str, der: Optional[bytes]) -> None:
+        """ssl.SSLError, wenn das Zertifikat nicht das bekannte ist."""
+        if not der:
+            raise ssl.SSLError(f"Drucker ({service}) hat kein Zertifikat vorgelegt.")
+
+        fp = self.fingerprint(der)
+
+        with self._lock:
+            if self.configured:
+                bekannt = self.configured
+            else:
+                gespeichert = _read_json(self.path, {})
+                gespeichert = gespeichert if isinstance(gespeichert, dict) else {}
+                if service not in gespeichert:
+                    gespeichert[service] = fp
+                    try:
+                        _write_json_atomic(self.path, gespeichert)
+                        log.info("Zertifikat des Druckers (%s) festgeschrieben: %s", service, fp)
+                    except OSError as exc:
+                        log.warning("Zertifikat (%s) konnte nicht gespeichert werden: %s", service, exc)
+                    return
+                bekannt = {self.normalize(gespeichert[service])}
+
+            if fp in bekannt:
+                self.last_mismatch = ""
+                return
+
+            self.last_mismatch = (
+                f"Der Drucker ({service}) legt ein anderes Zertifikat vor als bekannt ({fp}). "
+                "Verbindung verweigert. Nach einem Druckertausch /var/lib/bambu-bridge/printer-cert.json löschen."
+            )
+            log.error(self.last_mismatch)
+            raise ssl.SSLError(self.last_mismatch)
+
+
+CERT_PINS = CertPinStore(Config.DOWNLOAD_DIRECTORY / "printer-cert.json", Config.BAMBU_CERT_FINGERPRINT)
+
+
+def _pinned_socket_class(service: str) -> type:
+    """SSLSocket, der direkt nach dem Handshake das Zertifikat prüft - für
+    paho (wickelt mit do_handshake_on_connect=False und ruft do_handshake()
+    selbst auf) wie für ftplib (Handshake beim Einwickeln)."""
+
+    class PinnedSSLSocket(ssl.SSLSocket):
+        def do_handshake(self, block=False):  # noqa: ANN001 - Signatur von ssl.SSLSocket
+            super().do_handshake(block)
+            CERT_PINS.verify(service, self.getpeercert(binary_form=True))
+
+    return PinnedSSLSocket
+
+
+def _printer_ssl_context(service: str) -> ssl.SSLContext:
     """TLS-Kontext für die Verbindungen zum Drucker im LAN.
 
-    Der Drucker verwendet ein selbstsigniertes Zertifikat - es gibt keine
-    öffentliche CA, gegen die sich prüfen ließe. Verschlüsselt wird
-    trotzdem, nur die Zertifikatsprüfung entfällt. Der Kontext wird hier
-    bewusst explizit gebaut statt sich auf den ftplib-Standard zu
-    verlassen, damit diese Entscheidung im Code sichtbar ist und nicht
-    von der Python-Version abhängt.
+    Eine CA-Prüfung ist nicht möglich (siehe CertPinStore); stattdessen
+    prüft der Socket nach dem Handshake den festgeschriebenen
+    Fingerabdruck. Der Kontext wird bewusst explizit gebaut, damit diese
+    Entscheidung im Code sichtbar ist und nicht von der Python-Version
+    abhängt.
     """
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     context.check_hostname = False
     context.verify_mode = ssl.CERT_NONE
+    context.sslsocket_class = _pinned_socket_class(service)
     return context
+
+
+def verify_printer_certificate(service: str, port: int, timeout: float = 10.0) -> tuple[bool, str]:
+    """Zertifikat eines Dienstes vorab prüfen - für ffmpeg (Kamera), das
+    selbst keine Festschreibung kann: Erst wenn der Drucker auf diesem Port
+    das bekannte Zertifikat zeigt, bekommt ffmpeg den Zugangscode."""
+    try:
+        with socket.create_connection((Config.BAMBU_IP, port), timeout=timeout) as raw:
+            with _printer_ssl_context(service).wrap_socket(raw, server_hostname=None):
+                return True, ""
+    except (OSError, ssl.SSLError) as exc:
+        return False, str(exc)
 
 
 def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
@@ -849,7 +961,7 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
     """
     ftp = None
     try:
-        ftp = ImplicitFTP_TLS(context=_printer_ssl_context())
+        ftp = ImplicitFTP_TLS(context=_printer_ssl_context("ftps"))
 
         if Config.FTPS_DEBUG:
             # Schreibt den kompletten FTP-Befehlsdialog (connect/login/
@@ -908,6 +1020,9 @@ def upload_via_ftps(local_path: Path, remote_filename: str) -> tuple[bool, str]:
 
 RTSPS_SNAPSHOT_URL = "rtsps://bblp:{code}@{ip}:{port}/streaming/live/1"
 
+# Zeitpunkt der letzten erfolgreichen Zertifikatsprüfung der Kamera.
+_KAMERA_ZERTIFIKAT: dict = {"geprueft": None}
+
 
 def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
     """Ein einzelnes JPEG-Standbild vom Drucker holen.
@@ -917,6 +1032,16 @@ def capture_snapshot(timeout: float = 10.0) -> tuple[Optional[bytes], str]:
     scheiterndes Kamera-Feature aus dem Log heraus nicht diagnostizieren
     (genau das Problem, das ohne diese Rückmeldung live aufgetreten ist).
     """
+    # ffmpeg kann das Zertifikat nicht selbst prüfen - deshalb vorab (höchstens
+    # einmal pro Minute), bevor der Zugangscode in der URL an ffmpeg geht.
+    jetzt = time.monotonic()
+    if _KAMERA_ZERTIFIKAT["geprueft"] is None or jetzt - _KAMERA_ZERTIFIKAT["geprueft"] > 60:
+        ok, grund = verify_printer_certificate("rtsps", Config.CAMERA_PORT)
+        if not ok:
+            _KAMERA_ZERTIFIKAT["geprueft"] = None
+            return None, f"Zertifikatsprüfung der Kamera fehlgeschlagen: {grund}"
+        _KAMERA_ZERTIFIKAT["geprueft"] = jetzt
+
     url = RTSPS_SNAPSHOT_URL.format(
         code=Config.BAMBU_ACCESS_CODE, ip=Config.BAMBU_IP, port=Config.CAMERA_PORT
     )
@@ -1092,7 +1217,7 @@ class ApiClient:
                 "status",
                 data={
                     "status": "mqtt_getrennt",
-                    "error": "Keine MQTT-Verbindung zum Drucker (Gerät, IP und Zugangscode prüfen).",
+                    "error": CERT_PINS.last_mismatch or "Keine MQTT-Verbindung zum Drucker (Gerät, IP und Zugangscode prüfen).",
                 },
             )
             return

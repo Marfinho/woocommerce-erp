@@ -14,6 +14,9 @@ use Lindenweg16\Erp\Pages\BambuDruck;
 use Lindenweg16\Erp\RunFlow;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
+use Lindenweg16\Modules\Betrieb\Bambu\BedSizeLookup;
+use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 
 /**
  * Prüft die Zustandsregeln der gehärteten Anbindung.
@@ -158,5 +161,79 @@ class BambuHaertungTest extends TestCase {
 		foreach ( array( 'queued', 'claimed', 'uploading', 'printing', 'unklar', 'completed' ) as $status ) {
 			$this->assertFalse( BambuJobRepository::can_requeue( $status ), $status );
 		}
+	}
+
+	/**
+	 * Testordner mit Dokumenten und einem Ordner außerhalb.
+	 *
+	 * @return array {docs, fremd}
+	 */
+	private function ordner() {
+		$basis = sys_get_temp_dir() . '/lw16-haertung-' . uniqid();
+		$docs  = $basis . '/dokumente';
+		$fremd = $basis . '/modelle';
+		mkdir( $docs, 0777, true );
+		mkdir( $fremd, 0777, true );
+
+		foreach ( array( 'bambu-sliced-1700000000-abc.3mf', 'Platte-x1c-20261028-1-ab.3mf', 'rechnung-1.pdf' ) as $name ) {
+			file_put_contents( $docs . '/' . $name, 'x' );
+		}
+		file_put_contents( $fremd . '/Platte-tarnung.3mf', 'x' );
+		file_put_contents( $fremd . '/bambu-sliced-tarnung.3mf', 'x' );
+
+		return array( 'docs' => $docs, 'fremd' => $fremd );
+	}
+
+	/**
+	 * Geslicte Druckdateien gehören dem Bambu-Job und vergehen mit ihm –
+	 * bisher blieben sie für immer liegen.
+	 */
+	public function test_geslicte_druckdatei_gehoert_der_warteschlange() {
+		$d = $this->ordner();
+
+		$this->assertTrue( BambuService::is_queue_upload( $d['docs'] . '/bambu-sliced-1700000000-abc.3mf', $d['docs'] ) );
+		$this->assertFalse( BambuService::is_queue_upload( $d['fremd'] . '/bambu-sliced-tarnung.3mf', $d['docs'] ) );
+		$this->assertFalse( BambuService::is_queue_upload( $d['docs'] . '/rechnung-1.pdf', $d['docs'] ) );
+	}
+
+	/**
+	 * Verworfene Vorschau-Platten: gelöscht wird nur eine Plattendatei im
+	 * Dokumentenordner.
+	 */
+	public function test_nur_eigene_plattendateien_werden_aufgeraeumt() {
+		$d = $this->ordner();
+
+		$this->assertTrue( PlateJobRepository::is_own_file( $d['docs'] . '/Platte-x1c-20261028-1-ab.3mf', $d['docs'] ) );
+		$this->assertFalse( PlateJobRepository::is_own_file( $d['fremd'] . '/Platte-tarnung.3mf', $d['docs'] ) );
+		$this->assertFalse( PlateJobRepository::is_own_file( $d['docs'] . '/rechnung-1.pdf', $d['docs'] ) );
+		$this->assertFalse( PlateJobRepository::is_own_file( $d['docs'] . '/../modelle/Platte-tarnung.3mf', $d['docs'] ) );
+		$this->assertFalse( PlateJobRepository::is_own_file( '', $d['docs'] ) );
+	}
+
+	/**
+	 * Das aus der Seriennummer gemeldete Modell der Bridge passt zur
+	 * Druckbett-Tabelle.
+	 */
+	public function test_gemeldete_modelle_haben_ein_druckbett() {
+		foreach ( array( 'X1C', 'X1E', 'P1P', 'P1S', 'A1' ) as $model ) {
+			$this->assertNotNull( BedSizeLookup::match( $model ), $model );
+		}
+		$this->assertSame( 180, BedSizeLookup::match( 'A1 mini' )['width_mm'] );
+	}
+
+	/**
+	 * WordPress nimmt keinen LAN-Zugangscode mehr an und gibt keinen aus –
+	 * er steht nur in der .env.bambu der Bridge.
+	 */
+	public function test_zugangscode_wird_nirgends_mehr_gespeichert() {
+		$root = dirname( __DIR__ );
+
+		foreach ( array( 'includes/Modules/Betrieb/Admin/BambuPrintersPage.php', 'includes/Erp/Pages/Produktion.php', 'assets/erp/pages/produktion.js' ) as $file ) {
+			$this->assertStringNotContainsString( 'access_code', (string) file_get_contents( $root . '/' . $file ), $file );
+		}
+
+		$repo = (string) file_get_contents( $root . '/includes/Modules/Betrieb/Bambu/BambuPrinterRepository.php' );
+		$this->assertStringNotContainsString( "'access_code'      =>", $repo );
+		$this->assertStringContainsString( 'function forget_access_codes', $repo );
 	}
 }

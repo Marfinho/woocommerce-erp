@@ -205,16 +205,20 @@ class BambuPrinterRepository {
 	/**
 	 * Drucker anlegen.
 	 *
+	 * Der LAN-Zugangscode des Druckers wird bewusst NICHT in WordPress
+	 * gespeichert: Der Server braucht ihn nie – die Bridge hat ihn in ihrer
+	 * eigenen .env.bambu. Läge er in der Datenbank, wäre er bei einem
+	 * kompromittierten Webhoster mit abgegriffen.
+	 *
 	 * @param string $printer_id   Stabiler Schlüssel (z. B. bambu_p1s_1).
 	 * @param string $name         Anzeigename.
 	 * @param string $bambu_serial Bambu-Geräteseriennummer (aus der Drucker-App).
 	 * @param string $ip           LAN-IP des Druckers.
-	 * @param string $access_code  LAN-Zugangscode (vom Display des Druckers).
 	 * @param int    $geraet_id    Optionale Verknüpfung zum Geräteeintrag
 	 *                              der Kalkulation (wp_lw16_printers).
 	 * @return array {id, token} Das Token wird nur hier im Klartext zurückgegeben.
 	 */
-	public static function create( $printer_id, $name, $bambu_serial = '', $ip = '', $access_code = '', $geraet_id = 0 ) {
+	public static function create( $printer_id, $name, $bambu_serial = '', $ip = '', $geraet_id = 0 ) {
 		global $wpdb;
 
 		$token = self::generate_token();
@@ -227,13 +231,12 @@ class BambuPrinterRepository {
 				'name'             => mb_substr( sanitize_text_field( $name ), 0, 255 ),
 				'bambu_serial'     => mb_substr( sanitize_text_field( $bambu_serial ), 0, 50 ),
 				'ip'               => substr( sanitize_text_field( $ip ), 0, 45 ),
-				'access_code'      => mb_substr( sanitize_text_field( $access_code ), 0, 20 ),
 				'token_hash'       => self::hash_token( $token ),
 				'token_created_at' => current_time( 'mysql', true ),
 				'active'           => 1,
 				'created_at'       => current_time( 'mysql', true ),
 			),
-			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
+			array( '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s' )
 		);
 
 		// $wpdb->insert() scheitert standardmässig lautlos (z. B. wenn die
@@ -251,12 +254,13 @@ class BambuPrinterRepository {
 	}
 
 	/**
-	 * Verbindungsdaten eines bestehenden Druckers ändern (IP, Zugangscode,
-	 * Seriennummer, Name, Verknüpfung zum Kalkulationsgerät). Das Token
-	 * bleibt unangetastet – dafür gibt es regenerate_token().
+	 * Verbindungsdaten eines bestehenden Druckers ändern (IP, Seriennummer,
+	 * Name, Verknüpfung zum Kalkulationsgerät). Das Token bleibt unangetastet
+	 * – dafür gibt es regenerate_token(). Einen Zugangscode nimmt die Methode
+	 * nicht mehr an (siehe create()).
 	 *
 	 * @param int   $id   Datensatz-ID.
-	 * @param array $data {name, bambu_serial, ip, access_code, geraet_id,
+	 * @param array $data {name, bambu_serial, ip, geraet_id,
 	 *                      bed_width_mm, bed_height_mm, active}
 	 * @return bool
 	 */
@@ -280,16 +284,6 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'ip', $data ) ) {
 			$update['ip'] = substr( sanitize_text_field( (string) $data['ip'] ), 0, 45 );
 		}
-		// Ein leerer Zugangscode heißt "unverändert lassen", nicht "löschen":
-		// Das Bearbeitungsformular zeigt den hinterlegten Code nicht an
-		// (siehe BambuPrintersPage::render_card()), also käme er bei jedem
-		// Speichern leer zurück und würde sonst den funktionierenden Code
-		// überschreiben. Zum Entfernen dient das ausdrückliche Flag.
-		if ( array_key_exists( 'access_code', $data ) && '' !== trim( (string) $data['access_code'] ) ) {
-			$update['access_code'] = mb_substr( sanitize_text_field( (string) $data['access_code'] ), 0, 20 );
-		} elseif ( ! empty( $data['access_code_loeschen'] ) ) {
-			$update['access_code'] = '';
-		}
 		if ( array_key_exists( 'geraet_id', $data ) ) {
 			$update['geraet_id'] = $data['geraet_id'] ? (int) $data['geraet_id'] : null;
 		}
@@ -299,15 +293,12 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'bed_height_mm', $data ) ) {
 			$update['bed_height_mm'] = $data['bed_height_mm'] ? max( 1, (int) $data['bed_height_mm'] ) : null;
 		}
-		// Rückfallwert, falls die Bridge noch kein erkennbares Modell
-		// gemeldet hat (siehe effective_bed_size()) und für die
-		// Slicing-Profil-Zuordnung (SlicingService::printer_model_for(),
+		// Modell für die Druckbett-Größe (siehe effective_bed_size()) und
+		// die Slicing-Profil-Zuordnung (SlicingService::printer_model_for(),
 		// SlicingProfileRepository::find_for() - exakter String-Vergleich
-		// mit dem beim Profil-Upload eingetragenen Modell, siehe
-		// SlicingProfilesPage). Meldet die Bridge später selbst ein Modell
-		// (report_status()), überschreibt das diesen Wert wieder - dann
-		// muss das Slicing-Profil auf den gemeldeten Wortlaut umgestellt
-		// werden.
+		// mit dem beim Profil-Upload eingetragenen Modell). Ein hier
+		// eingetragener Wert hat Vorrang; die Bridge füllt nur ein leeres
+		// Feld (siehe apply_status()).
 		if ( array_key_exists( 'printer_model', $data ) ) {
 			$update['printer_model'] = '' !== trim( (string) $data['printer_model'] )
 				? mb_substr( sanitize_text_field( (string) $data['printer_model'] ), 0, 100 )
@@ -322,6 +313,17 @@ class BambuPrinterRepository {
 		}
 
 		return false !== $wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+	}
+
+	/**
+	 * Früher gespeicherte LAN-Zugangscodes löschen (Schema-Upgrade, siehe
+	 * Installer::maybe_upgrade()). Die Spalte bleibt, damit ein Downgrade
+	 * nicht scheitert – sie wird nur nicht mehr befüllt.
+	 */
+	public static function forget_access_codes() {
+		global $wpdb;
+
+		$wpdb->query( 'UPDATE ' . self::table() . " SET access_code = NULL WHERE access_code IS NOT NULL AND access_code <> ''" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 	/**
@@ -442,9 +444,7 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'bed_temp', $data ) && null !== $data['bed_temp'] ) {
 			$update['bed_temp'] = self::clamp_temp( $data['bed_temp'] );
 		}
-		if ( array_key_exists( 'printer_model', $data ) && '' !== (string) $data['printer_model'] ) {
-			$update['printer_model'] = mb_substr( sanitize_text_field( (string) $data['printer_model'] ), 0, 100 );
-		}
+
 		if ( array_key_exists( 'last_error', $data ) ) {
 			$update['last_error'] = '' === (string) $data['last_error']
 				? null
@@ -470,6 +470,20 @@ class BambuPrinterRepository {
 		}
 
 		$wpdb->update( self::table(), $update, array( 'id' => (int) $id ) );
+
+		// Das von der Bridge gemeldete Modell (aus der Seriennummer
+		// abgeleitet) füllt nur ein leeres Feld: Ein von Hand eingetragenes
+		// Modell hat Vorrang – die Slicing-Profile hängen am genauen Wortlaut
+		// (siehe SlicingProfileRepository::find_for()).
+		if ( array_key_exists( 'printer_model', $data ) && '' !== trim( (string) $data['printer_model'] ) ) {
+			$wpdb->query(
+				$wpdb->prepare(
+					'UPDATE ' . self::table() . " SET printer_model = %s WHERE id = %d AND (printer_model IS NULL OR printer_model = '')", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					mb_substr( sanitize_text_field( (string) $data['printer_model'] ), 0, 100 ),
+					(int) $id
+				)
+			);
+		}
 	}
 
 	/**

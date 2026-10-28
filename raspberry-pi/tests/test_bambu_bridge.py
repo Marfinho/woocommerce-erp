@@ -374,3 +374,124 @@ def test_schonfrist_laeuft_auch_bei_stillem_drucker_ab():
     assert tracker.step(snap(gcode_state="IDLE", report_age=9999), grace / 2) == ("wait", "")
     action, _ = tracker.step(snap(gcode_state="IDLE"), grace + 1)
     assert action == "unclear"
+
+
+# ---------------------------------------------------------------------
+# Festgeschriebenes Druckerzertifikat
+# ---------------------------------------------------------------------
+
+
+def test_erstes_zertifikat_wird_gemerkt_und_danach_verlangt(tmp_path):
+    pins = bb.CertPinStore(tmp_path / "cert.json")
+    pins.verify("mqtt", b"zertifikat-a")
+    pins.verify("mqtt", b"zertifikat-a")
+
+    with pytest.raises(bb.ssl.SSLError):
+        pins.verify("mqtt", b"zertifikat-b")
+    assert "anderes Zertifikat" in pins.last_mismatch
+
+    # Auch nach einem Neustart (neues Objekt) gilt das gemerkte.
+    with pytest.raises(bb.ssl.SSLError):
+        bb.CertPinStore(tmp_path / "cert.json").verify("mqtt", b"zertifikat-b")
+
+
+def test_jeder_dienst_hat_sein_eigenes_zertifikat(tmp_path):
+    pins = bb.CertPinStore(tmp_path / "cert.json")
+    pins.verify("mqtt", b"a")
+    pins.verify("ftps", b"b")
+    pins.verify("ftps", b"b")
+    with pytest.raises(bb.ssl.SSLError):
+        pins.verify("ftps", b"a")
+
+
+def test_eingetragener_fingerabdruck_hat_vorrang(tmp_path):
+    fp = bb.CertPinStore.fingerprint(b"richtig")
+    pins = bb.CertPinStore(tmp_path / "cert.json", ":".join(fp[i:i + 2] for i in range(0, len(fp), 2)).upper())
+    pins.verify("mqtt", b"richtig")
+    with pytest.raises(bb.ssl.SSLError):
+        pins.verify("ftps", b"falsch")
+    assert not (tmp_path / "cert.json").exists(), "Mit eingetragenem Wert wird nichts gemerkt."
+
+
+def test_ohne_zertifikat_keine_verbindung(tmp_path):
+    with pytest.raises(bb.ssl.SSLError):
+        bb.CertPinStore(tmp_path / "cert.json").verify("mqtt", None)
+
+
+@pytest.fixture
+def tls_server(tmp_path):
+    """Kleiner TLS-Server mit selbstsigniertem Zertifikat - wie der Drucker."""
+    import shutil
+    import socket
+    import subprocess
+    import threading
+
+    if not shutil.which("openssl"):
+        pytest.skip("openssl fehlt")
+
+    key, cert = tmp_path / "key.pem", tmp_path / "cert.pem"
+    subprocess.run(
+        ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out", str(cert),
+         "-days", "1", "-subj", "/CN=00M00A000000000"],
+        check=True, capture_output=True,
+    )
+    ctx = bb.ssl.SSLContext(bb.ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(str(cert), str(key))
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(5)
+    stop = threading.Event()
+
+    def serve():
+        srv.settimeout(0.2)
+        while not stop.is_set():
+            try:
+                conn, _ = srv.accept()
+            except OSError:
+                continue
+            try:
+                with ctx.wrap_socket(conn, server_side=True) as tls:
+                    tls.recv(1)
+            except OSError:
+                pass
+
+    t = threading.Thread(target=serve, daemon=True)
+    t.start()
+    der = bb.ssl.PEM_cert_to_DER_cert(cert.read_text())
+    yield srv.getsockname()[1], der
+    stop.set()
+    srv.close()
+
+
+def test_festschreibung_greift_im_echten_handshake(tls_server, tmp_path, monkeypatch):
+    port, der = tls_server
+    monkeypatch.setattr(bb.Config, "BAMBU_IP", "127.0.0.1")
+
+    monkeypatch.setattr(bb, "CERT_PINS", bb.CertPinStore(tmp_path / "cert.json", bb.CertPinStore.fingerprint(der)))
+    assert bb.verify_printer_certificate("rtsps", port) == (True, "")
+
+    monkeypatch.setattr(bb, "CERT_PINS", bb.CertPinStore(tmp_path / "cert.json", "00" * 32))
+    ok, grund = bb.verify_printer_certificate("rtsps", port)
+    assert not ok and "anderes Zertifikat" in grund
+
+
+def test_festschreibung_auch_bei_spaetem_handshake_wie_paho(tls_server, tmp_path, monkeypatch):
+    # paho wickelt mit do_handshake_on_connect=False und ruft do_handshake()
+    # selbst auf - auch dann muss die Prüfung vor dem ersten Byte greifen.
+    import socket
+
+    port, _ = tls_server
+    monkeypatch.setattr(bb, "CERT_PINS", bb.CertPinStore(tmp_path / "cert.json", "00" * 32))
+    raw = socket.create_connection(("127.0.0.1", port), timeout=5)
+    tls = bb._printer_ssl_context("mqtt").wrap_socket(raw, server_hostname=None, do_handshake_on_connect=False)
+    with pytest.raises(bb.ssl.SSLError):
+        tls.do_handshake()
+    tls.close()
+
+
+def test_modell_aus_der_seriennummer():
+    assert bb.model_from_serial("00M09A123456789") == "X1C"
+    assert bb.model_from_serial("01p00a000000000") == "P1S"
+    assert bb.model_from_serial("03000A000000000") == "A1 mini"
+    assert bb.model_from_serial("XYZ") == ""
+    assert bb.model_from_serial("") == ""
