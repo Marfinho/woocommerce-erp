@@ -47,15 +47,41 @@ class PosKasseUiTest extends TestCase {
 	public function test_freier_betrag_schickt_leere_produktauswahl() {
 		$js = $this->js();
 
-		$this->assertStringContainsString( "produkt_id: ''", $js );
+		$this->assertStringContainsString( "value: '', name: fname.value.trim()", $js, 'Ein freier Betrag darf kein Produkt tragen.' );
 		$this->assertStringContainsString( 'Freier Betrag', $js );
 	}
 
 	/**
-	 * Ein zweiter Tipp auf dieselbe Kachel hebt die Auswahl auf.
+	 * Mehrfach antippen: Jeder Tipp legt ein Stück auf den Bon, der Bon
+	 * geht als Ganzes an den Server.
 	 */
-	public function test_zweiter_tipp_hebt_die_auswahl_auf() {
-		$this->assertStringContainsString( "wahl = '';", $this->js() );
+	public function test_kachel_mehrfach_antippen_und_bon() {
+		$js = $this->js();
+
+		$this->assertStringContainsString( 'line.menge += 1', $js );
+		$this->assertStringContainsString( "post('bon'", $js );
+	}
+
+	/**
+	 * Vollbild für das Tablet: Kopf und Menü weg, wo möglich echtes Vollbild.
+	 */
+	public function test_vollbild_fuer_das_tablet() {
+		$js = $this->js();
+
+		$this->assertStringContainsString( "classList.toggle('kiosk'", $js );
+		$this->assertStringContainsString( 'requestFullscreen', $js );
+		$this->assertStringContainsString( 'kiosk-exit', $js );
+		$this->assertStringContainsString( '.erp.kiosk .ks-grid', file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.css' ) );
+	}
+
+	/**
+	 * Ein Bon wird vor dem Buchen ganz geprüft.
+	 */
+	public function test_bon_wird_serverseitig_vorab_geprueft() {
+		$php = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/POS/POSModule.php' );
+
+		$this->assertStringContainsString( 'public static function book_bon', $php );
+		$this->assertStringContainsString( 'count( $zeilen ) > 100', $php );
 	}
 
 	/**

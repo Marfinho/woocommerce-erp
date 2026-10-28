@@ -166,6 +166,65 @@ class POSModule {
 	}
 
 	/**
+	 * Einen ganzen Bon buchen: mehrere Positionen auf einmal.
+	 *
+	 * Jede Zeile läuft durch book_sale(), also mit eigener Lagerbuchung. Vorab
+	 * wird alles geprüft, damit kein halber Bon entsteht, nur weil eine Zeile
+	 * unbrauchbar ist; ein Fehler beim Buchen selbst bricht ab und sagt, wie
+	 * viele Zeilen schon durch sind.
+	 *
+	 * @param int   $tag_id Kassatag.
+	 * @param array $zeilen Je Zeile produkt_id, artikel_name, menge, einzelpreis (roh).
+	 * @return array {ok, message}
+	 */
+	public static function book_bon( $tag_id, array $zeilen ) {
+		$tag = POSRepository::get_tag( (int) $tag_id );
+		if ( ! $tag || 'offen' !== $tag->status ) {
+			return array( 'ok' => false, 'message' => __( 'Kein offener Kassatag.', 'lindenweg16' ) );
+		}
+
+		$zeilen = array_values( array_filter( $zeilen, 'is_array' ) );
+
+		if ( ! $zeilen || count( $zeilen ) > 100 ) {
+			return array( 'ok' => false, 'message' => __( 'Der Bon ist leer oder zu lang.', 'lindenweg16' ) );
+		}
+
+		foreach ( $zeilen as $zeile ) {
+			if ( self::parse_amount( $zeile['einzelpreis'] ?? '' ) <= 0 ) {
+				return array( 'ok' => false, 'message' => __( 'Jede Zeile braucht einen Preis über 0 €.', 'lindenweg16' ) );
+			}
+		}
+
+		$summe = 0.0;
+		foreach ( $zeilen as $i => $zeile ) {
+			$result = self::book_sale( $tag_id, $zeile );
+
+			if ( ! $result['ok'] ) {
+				return array(
+					'ok'      => false,
+					'message' => sprintf(
+						/* translators: 1: Anzahl gebuchter Zeilen, 2: Fehlertext. */
+						__( 'Nach %1$d Zeile(n) abgebrochen: %2$s', 'lindenweg16' ),
+						$i,
+						$result['message']
+					),
+				);
+			}
+
+			$summe += max( 1, (int) ( $zeile['menge'] ?? 1 ) ) * self::parse_amount( $zeile['einzelpreis'] ?? '' );
+		}
+
+		return array(
+			'ok'      => true,
+			'message' => sprintf(
+				/* translators: %s: Betrag. */
+				__( 'Kassiert: %s €', 'lindenweg16' ),
+				number_format( $summe, 2, ',', '.' )
+			),
+		);
+	}
+
+	/**
 	 * Verkauf stornieren und Lager zurückbuchen.
 	 *
 	 * @param int $id Position.
@@ -486,19 +545,21 @@ class POSModule {
 	/**
 	 * Verkäufliche Positionen für die Kassenauswahl.
 	 *
-	 * Führend sind die Betriebsartikel – seit der Zusammenlegung die einzige
-	 * Lagerverwaltung. Produkte der abgelösten Verwaltung erscheinen nur
-	 * noch, solange sie keinen Betriebsartikel haben; sonst stünde dieselbe
-	 * Ware zweimal in der Liste und man könnte ins falsche Lager buchen.
+	 * Nur Kassenprodukte (pos_only): Was in der Kasse steht, hat man dort
+	 * selbst angelegt. Shop-Artikel und Altprodukte der abgelösten
+	 * Verwaltung erscheinen nicht – sie kämen aus WooCommerce und nicht aus
+	 * dem ERP. Frühere Verkäufe darauf bleiben unberührt.
 	 *
-	 * @return array Einträge mit value, label, name und preis.
+	 * @return array Einträge mit value, label, name, preis, bild, id und pos.
 	 */
 	public static function sale_options() {
 		$options = array();
-		$legacy  = array();
 
 		foreach ( ArticleRepository::selectable( true ) as $article ) {
-			$wc_id = isset( $article['wc_product_id'] ) ? (int) $article['wc_product_id'] : 0;
+			if ( empty( $article['pos_only'] ) ) {
+				continue;
+			}
+
 			$preis = null === $article['price_gross'] ? '' : number_format( (float) $article['price_gross'], 2, '.', '' );
 
 			$options[] = array(
@@ -506,29 +567,10 @@ class POSModule {
 				'label' => $article['sku'] . ' – ' . $article['name'],
 				'name'  => (string) $article['name'],
 				'sku'   => (string) $article['sku'],
-				'preis' => '' === $preis ? self::product_price( $wc_id ) : $preis,
-				'bild'  => self::article_image_url( $article, $wc_id ),
+				'preis' => $preis,
+				'bild'  => self::article_image_url( $article, 0 ),
 				'id'    => (int) $article['id'],
-				'pos'   => ! empty( $article['pos_only'] ),
-			);
-
-			if ( ! empty( $article['legacy_produkt_id'] ) ) {
-				$legacy[ (int) $article['legacy_produkt_id'] ] = true;
-			}
-		}
-
-		foreach ( LagerRepository::get_products() as $product ) {
-			if ( isset( $legacy[ (int) $product->id ] ) ) {
-				continue;
-			}
-
-			$options[] = array(
-				'value' => 'p:' . (int) $product->id,
-				'label' => $product->name . ' (' . $product->typ . ')',
-				'name'  => (string) $product->name,
-				'sku'   => (string) $product->typ,
-				'preis' => self::product_price( isset( $product->woo_product_id ) ? (int) $product->woo_product_id : 0 ),
-				'bild'  => self::product_image_url( isset( $product->woo_product_id ) ? (int) $product->woo_product_id : 0 ),
+				'pos'   => true,
 			);
 		}
 

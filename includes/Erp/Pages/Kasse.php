@@ -54,7 +54,7 @@ class Kasse {
 			)
 		);
 
-		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt', 'produkt-aendern' ) as $action ) {
+		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt', 'produkt-aendern', 'bon' ) as $action ) {
 			register_rest_route(
 				$ns,
 				'/erp/kasse/' . $action,
@@ -205,6 +205,18 @@ class Kasse {
 		$body = (array) $request->get_json_params();
 
 		return self::answer( POSModule::book_sale( (int) ( $body['tag_id'] ?? 0 ), $body ) );
+	}
+
+	/**
+	 * Ganzen Bon buchen.
+	 *
+	 * @param WP_REST_Request $request Anfrage (tag_id, zeilen).
+	 * @return WP_REST_Response
+	 */
+	public static function bon( WP_REST_Request $request ) {
+		$body = (array) $request->get_json_params();
+
+		return self::answer( POSModule::book_bon( (int) ( $body['tag_id'] ?? 0 ), (array) ( $body['zeilen'] ?? array() ) ) );
 	}
 
 	/**
