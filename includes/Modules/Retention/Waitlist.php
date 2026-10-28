@@ -133,6 +133,7 @@ class Waitlist {
 					),
 					array( '%d', '%d', '%s', '%d', '%d', '%s' )
 				);
+				do_action( 'lw16_waitlist_signup', $produkt_id, $article_id );
 			}
 		}
 

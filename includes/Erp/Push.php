@@ -19,6 +19,8 @@ namespace Lindenweg16\Erp;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Scheduler;
+
 /**
  * Abonnements, Versand und Abruf.
  */
@@ -29,6 +31,8 @@ class Push {
 	const META_PREFS = 'lw16_push_prefs';
 	const INBOX_MAX  = 20;
 	const MAX_DEVICES = 8;
+	const OPT_MORNING = 'lw16_push_morgens';
+	const MORNING_HOUR = 8;
 
 	/**
 	 * Zu sendende Weckrufe, werden am Ende der Anfrage abgeschickt.
@@ -38,14 +42,39 @@ class Push {
 	protected static $queue = array();
 
 	/**
-	 * Meldungsarten: Beschriftung und nötiges ERP-Recht.
+	 * Meldungsarten: Beschriftung, nötiges ERP-Recht, Bereich und ob sie ohne
+	 * eigene Wahl an ist.
 	 *
-	 * @return array
+	 * Nur die beiden ersten sind von Anfang an an (so war es, bevor es mehr
+	 * gab); alles Weitere schaltet jede Person für sich ein.
+	 *
+	 * @return array Schlüssel => array( Beschriftung, Recht, Bereich, an ).
 	 */
 	public static function categories() {
 		return array(
-			'bestellung' => array( __( 'Neue Shop-Bestellung', 'lindenweg16' ), 'verkauf.shop_orders' ),
-			'lager'      => array( __( 'Artikel fast oder ganz ausverkauft', 'lindenweg16' ), 'lager.bestand' ),
+			// Verkauf.
+			'bestellung'      => array( __( 'Neue Shop-Bestellung', 'lindenweg16' ), 'verkauf.shop_orders', 'verkauf', true ),
+			'zahlung'         => array( __( 'Zahlung zu einer wartenden Bestellung eingegangen (z. B. Vorkasse)', 'lindenweg16' ), 'verkauf.shop_orders', 'verkauf', false ),
+			'storno'          => array( __( 'Bestellung storniert', 'lindenweg16' ), 'verkauf.shop_orders', 'verkauf', false ),
+			'erstattung'      => array( __( 'Erstattung gebucht', 'lindenweg16' ), 'verkauf.shop_orders', 'verkauf', false ),
+			'bewertung'       => array( __( 'Neue Produktbewertung', 'lindenweg16' ), 'verkauf.shop_products', 'verkauf', false ),
+			'warteliste'      => array( __( 'Kunde trägt sich in die Warteliste eines Artikels ein', 'lindenweg16' ), 'verkauf.shop_products', 'verkauf', false ),
+			'nachfassen'      => array( __( 'Wiedervorlage bei einem Kontakt fällig – nachfassen (morgens)', 'lindenweg16' ), 'verkauf.kontakte', 'verkauf', false ),
+			'etikett_fehler'  => array( __( 'Etikettendruck fehlgeschlagen', 'lindenweg16' ), 'verkauf.versand', 'verkauf', false ),
+			// Fertigung.
+			'druck_fertig'    => array( __( 'Bambu-Druck fertig – Platte abräumen', 'lindenweg16' ), 'fertigung.bambu', 'fertigung', false ),
+			'druck_fehler'    => array( __( 'Bambu-Druck fehlgeschlagen oder Ausgang unklar', 'lindenweg16' ), 'fertigung.bambu', 'fertigung', false ),
+			'slicen_fehler'   => array( __( 'Slicen einer Platte fehlgeschlagen', 'lindenweg16' ), 'fertigung.workflow', 'fertigung', false ),
+			'wartung'         => array( __( 'Drucker-Wartung neu fällig (morgens)', 'lindenweg16' ), 'fertigung.drucker', 'fertigung', false ),
+			// Lager.
+			'lager'           => array( __( 'Artikel fast oder ganz ausverkauft', 'lindenweg16' ), 'lager.bestand', 'lager', true ),
+			'wieder_da'       => array( __( 'Ausverkaufter Artikel wieder auf Lager', 'lindenweg16' ), 'lager.bestand', 'lager', false ),
+			'nachbestellen'   => array( __( 'Neu nachzubestellen: Bestand reicht nicht bis zur Lieferung (morgens)', 'lindenweg16' ), 'lager.einkauf', 'lager', false ),
+			// Finanzen.
+			'erechnung'       => array( __( 'E-Rechnung eingegangen', 'lindenweg16' ), 'finanzen.buchhaltung', 'finanzen', false ),
+			// Verwaltung.
+			'support'         => array( __( 'Neue Support-Anfrage', 'lindenweg16' ), 'verwaltung.support', 'verwaltung', false ),
+			'mail_zugewiesen' => array( __( 'Mir wurde eine Mail zugewiesen', 'lindenweg16' ), 'verwaltung.mailbox', 'verwaltung', false ),
 		);
 	}
 
@@ -55,8 +84,18 @@ class Push {
 	public static function init() {
 		add_action( 'woocommerce_checkout_order_processed', array( __CLASS__, 'on_order' ), 20, 1 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( __CLASS__, 'on_order_object' ), 20, 1 );
+		add_action( 'woocommerce_order_status_on-hold_to_processing', array( __CLASS__, 'on_paid' ), 20, 1 );
+		add_action( 'woocommerce_order_status_cancelled', array( __CLASS__, 'on_cancelled' ), 20, 1 );
+		add_action( 'woocommerce_order_refunded', array( __CLASS__, 'on_refunded' ), 20, 2 );
+		add_action( 'comment_post', array( __CLASS__, 'on_comment' ), 20, 3 );
 		add_action( 'woocommerce_low_stock', array( __CLASS__, 'on_low_stock' ), 20, 1 );
 		add_action( 'woocommerce_no_stock', array( __CLASS__, 'on_no_stock' ), 20, 1 );
+		add_action( 'lw16_stock_replenished', array( __CLASS__, 'on_product_replenished' ), 20, 1 );
+		add_action( 'lw16_betrieb_stock_replenished', array( __CLASS__, 'on_article_replenished' ), 20, 1 );
+		add_action( 'lw16_waitlist_signup', array( __CLASS__, 'on_waitlist' ), 20, 2 );
+		add_action( 'lw16_support_ticket_created', array( __CLASS__, 'on_ticket' ), 20, 2 );
+		add_action( 'lw16_audit_written', array( __CLASS__, 'on_audit' ), 20, 1 );
+		add_action( Scheduler::HOOK_SHOP_STOCK, array( __CLASS__, 'morning_check' ), 20, 0 );
 		add_action( 'shutdown', array( __CLASS__, 'flush' ), 99 );
 	}
 
@@ -310,7 +349,7 @@ class Push {
 		$saved = get_user_meta( $user_id, self::META_PREFS, true );
 		$out   = array();
 		foreach ( self::categories() as $key => $def ) {
-			$out[ $key ] = is_array( $saved ) && array_key_exists( $key, $saved ) ? (bool) $saved[ $key ] : true;
+			$out[ $key ] = is_array( $saved ) && array_key_exists( $key, $saved ) ? (bool) $saved[ $key ] : ! empty( $def[3] );
 		}
 		return $out;
 	}
@@ -340,8 +379,10 @@ class Push {
 	 * @param string $title    Titel.
 	 * @param string $body     Text.
 	 * @param string $url      Ziel in der Oberfläche, z. B. '#/seite/shop-bestellungen'.
+	 * @param int    $only     Nur an diese Person (0 = an alle).
+	 * @param int    $except   Nicht an diese Person, z. B. wer es selbst ausgelöst hat.
 	 */
-	public static function notify( $category, $title, $body, $url = '' ) {
+	public static function notify( $category, $title, $body, $url = '', $only = 0, $except = 0 ) {
 		global $wpdb;
 		$cats = self::categories();
 		if ( ! isset( $cats[ $category ] ) ) {
@@ -354,6 +395,9 @@ class Push {
 		$ok  = array();
 		foreach ( (array) $rows as $r ) {
 			$uid = (int) $r->user_id;
+			if ( ( $only && $uid !== (int) $only ) || ( $except && $uid === (int) $except ) ) {
+				continue;
+			}
 			if ( ! isset( $ok[ $uid ] ) ) {
 				$prefs      = self::prefs( $uid );
 				$ok[ $uid ] = ! empty( $prefs[ $category ] ) && Access::can( $cats[ $category ][1], $uid );
@@ -454,12 +498,52 @@ class Push {
 	 * ================================================================== */
 
 	/**
+	 * Einen Auslöser ausführen, ohne die eigentliche Anfrage zu gefährden.
+	 *
+	 * Die Auslöser hängen an Kasse, Drucker-Bridge und Postfach. Ein Fehler
+	 * beim Benachrichtigen darf dort nichts abbrechen.
+	 *
+	 * @param callable $fn Auslöser.
+	 */
+	protected static function safely( $fn ) {
+		try {
+			$fn();
+		} catch ( \Throwable $e ) {
+			error_log( 'lw16 push: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
+		}
+	}
+
+	/**
+	 * Bestellung zu einer Kennung.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return \WC_Order|null
+	 */
+	protected static function order( $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+		return is_object( $order ) ? $order : null;
+	}
+
+	/**
+	 * Betrag als Text.
+	 *
+	 * @param float $amount Betrag.
+	 * @return string
+	 */
+	protected static function money( $amount ) {
+		if ( function_exists( 'wc_price' ) ) {
+			return wp_strip_all_tags( html_entity_decode( wc_price( $amount ) ) );
+		}
+		return number_format_i18n( (float) $amount, 2 ) . ' €';
+	}
+
+	/**
 	 * Neue Bestellung (klassischer Checkout).
 	 *
 	 * @param int $order_id Bestellung.
 	 */
 	public static function on_order( $order_id ) {
-		$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+		$order = self::order( $order_id );
 		if ( $order ) {
 			self::on_order_object( $order );
 		}
@@ -479,8 +563,114 @@ class Push {
 		self::notify(
 			'bestellung',
 			sprintf( /* translators: %s: Bestellnummer */ __( 'Neue Bestellung #%s', 'lindenweg16' ), $order->get_order_number() ),
-			sprintf( /* translators: 1: Summe, 2: Anzahl Positionen */ __( '%1$s, %2$d Positionen', 'lindenweg16' ), wp_strip_all_tags( html_entity_decode( wc_price( $order->get_total() ) ) ), (int) $order->get_item_count() ),
+			sprintf( /* translators: 1: Summe, 2: Anzahl Positionen */ __( '%1$s, %2$d Positionen', 'lindenweg16' ), self::money( $order->get_total() ), (int) $order->get_item_count() ),
 			'#/seite/shop-bestellungen'
+		);
+	}
+
+	/**
+	 * Zahlung zu einer wartenden Bestellung (Vorkasse: „In Wartestellung“ → „In Bearbeitung“).
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	public static function on_paid( $order_id ) {
+		self::safely(
+			static function () use ( $order_id ) {
+				$order = self::order( $order_id );
+				if ( ! $order ) {
+					return;
+				}
+				self::notify(
+					'zahlung',
+					sprintf( /* translators: %s: Bestellnummer */ __( 'Zahlung eingegangen: #%s', 'lindenweg16' ), $order->get_order_number() ),
+					trim( self::money( $order->get_total() ) . ', ' . $order->get_formatted_billing_full_name(), ', ' ),
+					'#/seite/shop-bestellungen'
+				);
+			}
+		);
+	}
+
+	/**
+	 * Bestellung storniert. Wer selbst storniert, bekommt keine Meldung.
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	public static function on_cancelled( $order_id ) {
+		self::safely(
+			static function () use ( $order_id ) {
+				$order = self::order( $order_id );
+				if ( ! $order ) {
+					return;
+				}
+				self::notify(
+					'storno',
+					sprintf( /* translators: %s: Bestellnummer */ __( 'Bestellung #%s storniert', 'lindenweg16' ), $order->get_order_number() ),
+					trim( self::money( $order->get_total() ) . ', ' . $order->get_formatted_billing_full_name(), ', ' ),
+					'#/seite/shop-bestellungen',
+					0,
+					get_current_user_id()
+				);
+			}
+		);
+	}
+
+	/**
+	 * Erstattung gebucht. Wer sie gebucht hat, bekommt keine Meldung.
+	 *
+	 * @param int $order_id  Bestellung.
+	 * @param int $refund_id Erstattung.
+	 */
+	public static function on_refunded( $order_id, $refund_id ) {
+		self::safely(
+			static function () use ( $order_id, $refund_id ) {
+				$order  = self::order( $order_id );
+				$refund = self::order( $refund_id );
+				if ( ! $order || ! $refund ) {
+					return;
+				}
+				$reason = method_exists( $refund, 'get_reason' ) ? (string) $refund->get_reason() : '';
+				self::notify(
+					'erstattung',
+					sprintf( /* translators: %s: Bestellnummer */ __( 'Erstattung zu #%s', 'lindenweg16' ), $order->get_order_number() ),
+					trim( self::money( $refund->get_amount() ) . ( '' !== $reason ? ', ' . $reason : '' ) ),
+					'#/seite/shop-bestellungen',
+					0,
+					get_current_user_id()
+				);
+			}
+		);
+	}
+
+	/**
+	 * Neue Produktbewertung (keine Antworten, kein Spam).
+	 *
+	 * @param int        $comment_id Kommentar.
+	 * @param int|string $approved   1, 0 oder 'spam'.
+	 * @param array      $data       Kommentardaten.
+	 */
+	public static function on_comment( $comment_id, $approved, $data ) {
+		self::safely(
+			static function () use ( $comment_id, $approved, $data ) {
+				if ( 'spam' === $approved || 'trash' === $approved || ! is_array( $data ) || ! empty( $data['comment_parent'] ) ) {
+					return;
+				}
+				$post_id = isset( $data['comment_post_ID'] ) ? (int) $data['comment_post_ID'] : 0;
+				if ( ! $post_id || 'product' !== get_post_type( $post_id ) ) {
+					return;
+				}
+				$rating = (int) get_comment_meta( $comment_id, 'rating', true );
+				$stars  = $rating >= 1 && $rating <= 5 ? str_repeat( '★', $rating ) . str_repeat( '☆', 5 - $rating ) . ' ' : '';
+				$author = isset( $data['comment_author'] ) ? (string) $data['comment_author'] : '';
+				$text   = isset( $data['comment_content'] ) ? (string) $data['comment_content'] : '';
+				self::notify(
+					'bewertung',
+					$stars . sprintf( /* translators: %s: Produkt */ __( 'Bewertung zu %s', 'lindenweg16' ), get_the_title( $post_id ) ),
+					( 1 === (int) $approved ? '' : __( 'Wartet auf Freigabe. ', 'lindenweg16' ) ) . trim( $author . ': ' . $text, ': ' ),
+					'#/seite/shop-produkte',
+					0,
+					get_current_user_id()
+				);
+			}
 		);
 	}
 
@@ -504,5 +694,312 @@ class Push {
 		if ( is_object( $product ) ) {
 			self::notify( 'lager', __( 'Ausverkauft', 'lindenweg16' ), $product->get_name(), '#/seite/lager' );
 		}
+	}
+
+	/**
+	 * Name eines Shop-Produkts oder Betriebsartikels.
+	 *
+	 * @param int $produkt_id Shop-Produkt (0 = keins).
+	 * @param int $article_id Betriebsartikel (0 = keiner).
+	 * @return string
+	 */
+	protected static function item_name( $produkt_id, $article_id ) {
+		if ( $produkt_id && function_exists( 'wc_get_product' ) ) {
+			$product = wc_get_product( $produkt_id );
+			if ( $product ) {
+				return $product->get_name();
+			}
+		}
+		if ( $article_id && class_exists( '\Lindenweg16\Modules\Betrieb\ArticleRepository' ) ) {
+			$article = \Lindenweg16\Modules\Betrieb\ArticleRepository::find( $article_id );
+			if ( $article ) {
+				return trim( $article['sku'] . ' – ' . $article['name'], ' –' );
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Shop-Produkt wieder auf Lager (Bestand von 0 aufgefüllt).
+	 *
+	 * @param int $produkt_id Produkt.
+	 */
+	public static function on_product_replenished( $produkt_id ) {
+		self::safely(
+			static function () use ( $produkt_id ) {
+				$name = self::item_name( (int) $produkt_id, 0 );
+				if ( '' !== $name ) {
+					self::notify( 'wieder_da', __( 'Wieder auf Lager', 'lindenweg16' ), $name, '#/seite/lager' );
+				}
+			}
+		);
+	}
+
+	/**
+	 * Betriebsartikel wieder auf Lager (Bestand am Lagerort von 0 aufgefüllt).
+	 *
+	 * @param int $article_id Artikel.
+	 */
+	public static function on_article_replenished( $article_id ) {
+		self::safely(
+			static function () use ( $article_id ) {
+				$name = self::item_name( 0, (int) $article_id );
+				if ( '' !== $name ) {
+					self::notify( 'wieder_da', __( 'Wieder auf Lager', 'lindenweg16' ), $name, '#/seite/lager' );
+				}
+			}
+		);
+	}
+
+	/**
+	 * Neue Anmeldung auf der Warteliste.
+	 *
+	 * @param int $produkt_id Shop-Produkt (0 = keins).
+	 * @param int $article_id Betriebsartikel (0 = keiner).
+	 */
+	public static function on_waitlist( $produkt_id, $article_id ) {
+		self::safely(
+			static function () use ( $produkt_id, $article_id ) {
+				$name = self::item_name( (int) $produkt_id, (int) $article_id );
+				if ( '' !== $name ) {
+					self::notify( 'warteliste', __( 'Neu auf der Warteliste', 'lindenweg16' ), $name, '#/seite/lager' );
+				}
+			}
+		);
+	}
+
+	/**
+	 * Neue Support-Anfrage.
+	 *
+	 * @param int    $ticket_id Ticket.
+	 * @param string $betreff   Betreff.
+	 */
+	public static function on_ticket( $ticket_id, $betreff ) {
+		self::safely(
+			static function () use ( $ticket_id, $betreff ) {
+				self::notify(
+					'support',
+					sprintf( /* translators: %d: Ticketnummer */ __( 'Neue Support-Anfrage #%d', 'lindenweg16' ), (int) $ticket_id ),
+					(string) $betreff,
+					'#/seite/support'
+				);
+			}
+		);
+	}
+
+	/**
+	 * Ereignisse aus dem Änderungsprotokoll: Drucker, Slicer, Etiketten,
+	 * E-Rechnungen, zugewiesene Mails.
+	 *
+	 * @param array $data Eintrag (aktion, objekt_id, user_id, details als JSON).
+	 */
+	public static function on_audit( $data ) {
+		self::safely(
+			static function () use ( $data ) {
+				self::from_audit( is_array( $data ) ? $data : array() );
+			}
+		);
+	}
+
+	/**
+	 * Meldung zu einem Protokolleintrag.
+	 *
+	 * @param array $data Eintrag.
+	 */
+	protected static function from_audit( array $data ) {
+		$aktion  = isset( $data['aktion'] ) ? (string) $data['aktion'] : '';
+		$id      = isset( $data['objekt_id'] ) ? (int) $data['objekt_id'] : 0;
+		$details = isset( $data['details'] ) && is_string( $data['details'] ) ? json_decode( $data['details'], true ) : array();
+		$details = is_array( $details ) ? $details : array();
+		$meldung = isset( $details['meldung'] ) ? (string) $details['meldung'] : '';
+
+		switch ( $aktion ) {
+			case 'bambu_druck_erfolgreich':
+			case 'bambu_druck_fehlgeschlagen':
+			case 'bambu_druck_unklar':
+				$printer = isset( $details['drucker'] ) ? (string) $details['drucker'] : '';
+				$file    = '';
+				if ( class_exists( '\Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository' ) ) {
+					$row     = \Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository::find_by_printer_id( $printer );
+					$printer = $row && ! empty( $row->name ) ? (string) $row->name : $printer;
+					$job     = \Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository::find( $id );
+					$file    = $job && ! empty( $job->file_name ) ? (string) $job->file_name : '';
+				}
+				if ( 'bambu_druck_erfolgreich' === $aktion ) {
+					/* translators: %s: Drucker */
+					self::notify( 'druck_fertig', sprintf( __( 'Druck fertig auf %s', 'lindenweg16' ), $printer ), $file, '#/seite/druckfarm' );
+				} else {
+					$title = 'bambu_druck_unklar' === $aktion
+						/* translators: %s: Drucker */
+						? sprintf( __( 'Druck auf %s unklar – bitte klären', 'lindenweg16' ), $printer )
+						/* translators: %s: Drucker */
+						: sprintf( __( 'Druck auf %s fehlgeschlagen', 'lindenweg16' ), $printer );
+					self::notify( 'druck_fehler', $title, trim( $file . ( '' !== $meldung ? ': ' . $meldung : '' ), ': ' ), '#/seite/druckfarm' );
+				}
+				break;
+
+			case 'bambu_platte_slicen_fehlgeschlagen':
+				/* translators: %d: Platte */
+				self::notify( 'slicen_fehler', sprintf( __( 'Slicen von Platte %d fehlgeschlagen', 'lindenweg16' ), $id ), $meldung, '#/seite/workflow' );
+				break;
+
+			case 'dhl_druck_fehlgeschlagen':
+				self::notify( 'etikett_fehler', __( 'Etikett nicht gedruckt', 'lindenweg16' ), $meldung, '#/seite/etiketten' );
+				break;
+
+			case 'erechnung_empfangen':
+				$absender = isset( $details['absender'] ) ? (string) $details['absender'] : '';
+				$betrag   = isset( $details['betrag'] ) && is_numeric( $details['betrag'] ) ? self::money( (float) $details['betrag'] ) : '';
+				self::notify( 'erechnung', __( 'E-Rechnung eingegangen', 'lindenweg16' ), trim( $absender . ', ' . $betrag, ', ' ), '#/seite/buchhaltung' );
+				break;
+
+			case 'mail_zugewiesen':
+				$an    = isset( $details['an'] ) ? (int) $details['an'] : 0;
+				$actor = isset( $data['user_id'] ) ? (int) $data['user_id'] : 0;
+				if ( ! $an || $an === $actor || ! class_exists( '\Lindenweg16\Modules\Mailbox\MailRepository' ) ) {
+					break;
+				}
+				$msg  = \Lindenweg16\Modules\Mailbox\MailRepository::get_message( $id );
+				$from = $actor ? get_userdata( $actor ) : null;
+				self::notify(
+					'mail_zugewiesen',
+					$from
+						/* translators: %s: Name */
+						? sprintf( __( '%s hat dir eine Mail zugewiesen', 'lindenweg16' ), $from->display_name )
+						: __( 'Dir wurde eine Mail zugewiesen', 'lindenweg16' ),
+					$msg ? trim( $msg['from_name'] . ': ' . $msg['subject'], ': ' ) : '',
+					'#/seite/mailbox',
+					$an
+				);
+				break;
+		}
+	}
+
+	/* ====================================================================
+	 * Morgendliche Prüfung
+	 * ================================================================== */
+
+	/**
+	 * Was neu dazugekommen ist: Kennungen in $now, die nicht in $before stehen.
+	 *
+	 * @param array $now    Kennung => Beschriftung.
+	 * @param array $before Kennungen vom letzten Mal.
+	 * @return array Kennung => Beschriftung.
+	 */
+	public static function newly( array $now, array $before ) {
+		return array_diff_key( $now, array_flip( array_map( 'strval', $before ) ) );
+	}
+
+	/**
+	 * Hat irgendwer mit Gerät diese Art eingeschaltet? Erspart die teuren
+	 * Abfragen, solange niemand die Meldung will.
+	 *
+	 * @param string $category Art.
+	 * @return bool
+	 */
+	protected static function wanted( $category ) {
+		global $wpdb;
+		$users = $wpdb->get_col(
+			$wpdb->prepare( "SELECT DISTINCT user_id FROM {$wpdb->usermeta} WHERE meta_key LIKE %s", $wpdb->esc_like( self::META_PREFIX . 'dev_' ) . '%' ) // phpcs:ignore WordPress.DB.PreparedSQL
+		);
+		foreach ( (array) $users as $uid ) {
+			$prefs = self::prefs( (int) $uid );
+			if ( ! empty( $prefs[ $category ] ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Einmal am Morgen (stündlicher Lauf, ab 8 Uhr Ortszeit): neu fällige
+	 * Wartungen, neu nachzubestellende Positionen und fällige Wiedervorlagen. Was gestern schon
+	 * gemeldet wurde, kommt nicht noch einmal.
+	 */
+	public static function morning_check() {
+		$today = current_time( 'Y-m-d' );
+		if ( (int) current_time( 'G' ) < self::MORNING_HOUR ) {
+			return;
+		}
+		$seen = get_option( self::OPT_MORNING );
+		$seen = is_array( $seen ) ? $seen : array();
+		if ( isset( $seen['tag'] ) && $seen['tag'] === $today ) {
+			return;
+		}
+		// Vorher merken: Scheitert eine Prüfung, läuft sie nicht stündlich erneut.
+		$seen['tag'] = $today;
+		update_option( self::OPT_MORNING, $seen, false );
+
+		self::safely(
+			static function () use ( &$seen ) {
+				if ( ! self::wanted( 'wartung' ) || ! class_exists( '\Lindenweg16\Modules\Betrieb\MaintenanceRepository' ) ) {
+					return;
+				}
+				$due = array();
+				foreach ( \Lindenweg16\Modules\Betrieb\MaintenanceRepository::due() as $row ) {
+					if ( $row['reasons'] ) {
+						$due[ (string) $row['printer']['id'] ] = $row['printer']['code'] . ': ' . $row['reasons'][0];
+					}
+				}
+				$new             = self::newly( $due, isset( $seen['wartung'] ) ? (array) $seen['wartung'] : array() );
+				$seen['wartung'] = array_map( 'strval', array_keys( $due ) );
+				if ( $new ) {
+					self::notify(
+						'wartung',
+						1 === count( $new ) ? __( 'Drucker-Wartung fällig', 'lindenweg16' ) : sprintf( /* translators: %d: Anzahl */ __( '%d Drucker brauchen Wartung', 'lindenweg16' ), count( $new ) ),
+						implode( '; ', $new ),
+						'#/seite/drucker'
+					);
+				}
+			}
+		);
+
+		self::safely(
+			static function () use ( &$seen ) {
+				if ( ! self::wanted( 'nachbestellen' ) || ! class_exists( '\Lindenweg16\Modules\Betrieb\ProcurementAlert' ) ) {
+					return;
+				}
+				$alerts = array();
+				foreach ( \Lindenweg16\Modules\Betrieb\ProcurementAlert::all() as $a ) {
+					// Filament hat keine eigene Kennung (id 0), die Farbe steht in der Beschriftung.
+					$alerts[ $a['kind'] . ':' . $a['id'] . ':' . $a['label'] ] = $a['label'];
+				}
+				$new                   = self::newly( $alerts, isset( $seen['nachbestellen'] ) ? (array) $seen['nachbestellen'] : array() );
+				$seen['nachbestellen'] = array_map( 'strval', array_keys( $alerts ) );
+				if ( $new ) {
+					self::notify(
+						'nachbestellen',
+						1 === count( $new ) ? __( 'Nachbestellen', 'lindenweg16' ) : sprintf( /* translators: %d: Anzahl */ __( '%d Positionen nachbestellen', 'lindenweg16' ), count( $new ) ),
+						implode( ', ', $new ),
+						'#/seite/einkauf'
+					);
+				}
+			}
+		);
+
+		self::safely(
+			static function () use ( &$seen ) {
+				if ( ! self::wanted( 'nachfassen' ) || ! class_exists( '\Lindenweg16\Modules\Betrieb\ContactRepository' ) ) {
+					return;
+				}
+				$due = array();
+				foreach ( \Lindenweg16\Modules\Betrieb\ContactRepository::due_follow_ups() as $c ) {
+					// Mit Datum: Wer nach dem Nachfassen einen neuen Termin bekommt, kommt dann wieder.
+					$due[ $c['id'] . ':' . $c['follow_up_on'] ] = (string) $c['company'];
+				}
+				$new                = self::newly( $due, isset( $seen['nachfassen'] ) ? (array) $seen['nachfassen'] : array() );
+				$seen['nachfassen'] = array_map( 'strval', array_keys( $due ) );
+				if ( $new ) {
+					self::notify(
+						'nachfassen',
+						1 === count( $new ) ? __( 'Heute nachfassen', 'lindenweg16' ) : sprintf( /* translators: %d: Anzahl */ __( '%d Kontakte heute nachfassen', 'lindenweg16' ), count( $new ) ),
+						implode( ', ', $new ),
+						1 === count( $new ) ? '#/kontakt/' . (int) strtok( (string) key( $new ), ':' ) : '#/seite/kontakte'
+					);
+				}
+			}
+		);
+
+		update_option( self::OPT_MORNING, $seen, false );
 	}
 }
