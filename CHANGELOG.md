@@ -13,7 +13,8 @@ und im Abschnitt „Umsetzungsstand“ der README.
   - in der Plattenanordnung im ERP (Vorschau und Plattendatei),
   - beim automatischen Slicen: Das Druckerprofil, das der Slicing-Worker abholt, bekommt die Sperrfläche (`bed_exclude_area`), denn OrcaSlicer ordnet dort selbst an und kannte bisher nur die Ecke. Der Worker muss dafür nicht aktualisiert werden.
 - Gilt für X1C, X1, X1E, P1S und P1P (erkannt am Druckermodell oder am Profil). Tiefe des Streifens per Filter `lw16_bed_front_strip_mm` änderbar.
-- Werte aus dem Start-G-Code des offiziellen Bambu-Studio-Profils „Bambu Lab X1 Carbon 0.4 nozzle“. Nicht am echten Drucker geprüft.
+- Werte aus dem Start-G-Code des offiziellen Bambu-Studio-Profils „Bambu Lab X1 Carbon 0.4 nozzle“ (P1S: dieselbe Ladelinie). Nicht am echten Drucker geprüft.
+- **Slicing lässt keine Teile mehr weg.** Beispiel Brillenhalter (liegendes T, 155 × 200 mm): Die Plattenanordnung legte zwei ineinandergeschoben auf eine Platte, gedruckt wurde aber nur einer. Der Slicing-Worker ließ OrcaSlicer neu anordnen (`--arrange 1`), und OrcaSlicer rechnet mit der konvexen Hülle – zwei volle 155 × 200-Flächen passen nicht nebeneinander, das zweite Teil landete neben dem Bett und wurde nicht geslict, obwohl die Platte 2 Teile erwartete. Jetzt bleibt die Anordnung aus WordPress (`--arrange 0`), und der Worker prüft vor dem Slicen, dass sich keine Teile überschneiden und alle auf dem Bett außerhalb der Sperrfläche liegen; sonst scheitert der Auftrag mit einer Meldung, welches Teil das Problem ist. **Der Slicing-Worker muss dafür aktualisiert werden.** Eine eigene `SLICER_ARGS_TEMPLATE` mit `--arrange 1` in `.env.slicing` bitte anpassen. Platten, die vor diesem Update angeordnet wurden, liegen womöglich noch auf der Kalibrierlinie – der Worker lehnt sie dann ab; neu anordnen.
 
 ## [0.57.0] – 2026-10-28
 

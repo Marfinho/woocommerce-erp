@@ -732,6 +732,15 @@ Kommandozeilen-Slicer (OrcaSlicer) anhand hinterlegter Profile und lädt
 das Ergebnis zurück hoch; WordPress reiht die fertige Druckdatei danach
 automatisch in die ganz normale Bambu-Warteschlange ein.
 
+**Anordnung:** Der Worker übernimmt die Platzierung aus der
+Plattenanordnung in WordPress (`--arrange 0`). OrcaSlicer selbst ordnet
+nach der konvexen Hülle an – ineinandergeschobene T- oder L-Formen passen
+dann nicht mehr, und das überzählige Teil fiele still weg. Vor jedem
+Slicen prüft der Worker, dass sich keine Teile überschneiden und alle auf
+dem Bett außerhalb der Sperrfläche liegen (Kalibrierlinie und Sperrecke
+der X1/P1); sonst scheitert der Auftrag mit einer Meldung, welches Teil
+das Problem ist.
+
 **Wichtiger Vorbehalt:** Der Slicer-Aufruf ist gegen OrcaSlicer 2.4.2
 abgeglichen (`--load-settings` für Drucker- und Prozessprofil,
 `--load-filaments` für das Filamentprofil, `--arrange 0`, `--allow-newer-file`, siehe
