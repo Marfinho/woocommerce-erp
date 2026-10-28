@@ -224,10 +224,14 @@ class LoyaltyFrontend {
 		if ( ! function_exists( 'is_checkout' ) ) {
 			return;
 		}
+		// Gestaltung von Punkten, Einlösen und Bewertungsfotos: auch auf
+		// Produktseite und im Warenkorb.
+		if ( is_checkout() || is_account_page() || is_cart() || is_product() ) {
+			wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), Assets::version( 'assets/css/frontend.css' ) );
+		}
 		if ( ! is_checkout() && ! is_account_page() ) {
 			return;
 		}
-		wp_enqueue_style( 'lw16-frontend', LW16_PLUGIN_URL . 'assets/css/frontend.css', array(), Assets::version( 'assets/css/frontend.css' ) );
 		wp_enqueue_script( 'lw16-loyalty', LW16_PLUGIN_URL . 'assets/js/loyalty.js', array( 'jquery' ), Assets::version( 'assets/js/loyalty.js' ), true );
 		$credit_balance = 0;
 		if ( is_user_logged_in() ) {

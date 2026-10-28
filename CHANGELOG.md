@@ -16,6 +16,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ### Behoben
 - **Zu viel abgebucht bei gedeckeltem Rabatt:** War Guthaben plus Punkte mehr wert als der Warenkorb, wurde der Rabatt zwar auf die Summe begrenzt, abgebucht aber alles. Jetzt nur, was der Rabatt wirklich ausmacht – zuerst Guthaben, dann Punkte.
 - Der Rabatt richtet sich nach dem aktuellen Kontostand, nicht nach dem beim Anwenden gemerkten (z. B. nach Verfall oder einer Bestellung in einem anderen Tab).
+- **Konto-Übersicht ohne Gestaltung, solange das Theme alt ist:** Plugin und Theme werden getrennt aktualisiert. Lief schon das neue Plugin mit einem älteren Theme, stand die Übersicht als nackter Text da. Alles, was das Plugin selbst ausgibt (Übersicht, Prämienkarte, Stufen, Punkte auf Produktseite, in Warenkorb und Kasse, Einlösen, Bewertungsfotos, Geburtstagsfeld), gestaltet jetzt das Plugin (`assets/css/frontend.css`) – mit den Farben des Lindenweg16-Themes, mit jedem anderen Theme mit den CI-Farben. Mit aktuellem Theme sieht alles aus wie bisher.
 
 ## [0.56.0] – 2026-10-28
 

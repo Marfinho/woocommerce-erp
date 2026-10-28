@@ -254,7 +254,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.8.0 =
-* Feld „Punkte und Guthaben einlösen“ in Block-Warenkorb und -Kasse (ERP-Plugin 0.57.0)
+* Gestaltung der Prämien-Teile (Konto-Übersicht, Prämienkarte, Punkte in Warenkorb und Kasse, Einlösen, Bewertungsfotos, Geburtstagsfeld) liegt jetzt im ERP-Plugin 0.57.0 – sie funktioniert damit auch, wenn das Theme noch nicht aktualisiert ist; das Theme behält Menü-Seitenleiste und WooCommerce-Korrekturen
 
 = 1.7.0 =
 * Prämienprogramm (ERP-Plugin 0.56.0): Stufen-Leiste in der Prämienkarte, Hinweis „Mit dieser Bestellung sammelst du …“ in Warenkorb und Kasse
