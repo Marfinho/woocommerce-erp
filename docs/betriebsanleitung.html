@@ -418,8 +418,8 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <div class="kasten info">
-	<span class="titel">Kasse und Shop-Produkte</span>
-	<p>Zwei Seiten sind noch nicht ins ERP umgezogen und erscheinen darin eingebettet: die <strong>Kasse</strong> (Marktkasse) und die <strong>Shop-Produkte</strong>. Sie funktionieren wie bisher; über <strong>Eigener Tab</strong> öffnest du sie ohne ERP-Rahmen.</p>
+	<span class="titel">Shop-Produkte</span>
+	<p>Eine Seite ist noch nicht ins ERP umgezogen und erscheint darin eingebettet: die <strong>Shop-Produkte</strong>. Sie funktioniert wie bisher; über <strong>Eigener Tab</strong> öffnest du sie ohne ERP-Rahmen. Die Kasse gibt es nur noch im ERP, nicht mehr im wp-admin.</p>
 </div>
 
 <h2 id="grundregeln"><span class="nr">3</span> Fünf Sätze, die für alle gelten</h2>
@@ -1516,7 +1516,7 @@ tr:last-child td{border-bottom:0}
 <p>Für Barverkauf am Markt, Abholung ab Werkstatt oder eine Bestellung, die per Telefon kam, gibt es zwei Wege:</p>
 
 <ul>
-	<li><strong>Am Markt:</strong> die <strong>Kasse</strong> (<span class="weg">Verkauf → Kasse</span>). Dort startest du einen Kassatag mit Anlass, Kostenstelle, Datum und Kassenbestand zu Beginn und buchst die Verkäufe. Die Kasse ist noch nicht ins ERP umgezogen und erscheint eingebettet (Kapitel D.11).</li>
+	<li><strong>Am Markt:</strong> die <strong>Kasse</strong> (<span class="weg">Verkauf → Kasse</span>). Dort startest du einen Kassatag mit Anlass, Kostenstelle, Datum und Kassenbestand zu Beginn und buchst die Verkäufe. Die Kasse läuft im ERP, auch am Handy (Kapitel D.11).</li>
 	<li><strong>Telefon, Abholung, Händler ohne Link:</strong> ein <strong>manueller Auftrag</strong>. Den legst du in der klassischen Ansicht von <span class="weg">Verkauf → Bestellungen → Aufträge</span> an (<strong>Klassische Ansicht</strong>, unten das Formular <em>Bestellung manuell erfassen</em>): Kontakt wählen (bei Barverkauf <em>– ohne Kontakt –</em>), Datum prüfen, Kanal wählen und bei jedem Artikel die Menge eintragen.</li>
 </ul>
 
@@ -2550,17 +2550,13 @@ tr:last-child td{border-bottom:0}
 <h3>Marktkasse</h3>
 <p><span class="weg">Verkauf → Kasse</span></p>
 
-<figure>
-	<img src="bilder/kasse.png" alt="Kassenseite mit dem Formular für einen neuen Kassatag und der Liste abgeschlossener Tage">
-	<figcaption>Vor dem Markt einen Kassatag starten, am Abend abschließen. Die Kasse erscheint noch eingebettet im ERP; über <strong>Eigener Tab</strong> öffnest du sie ohne Rahmen.</figcaption>
-</figure>
-
 <ol class="schritte">
 	<li><strong>Markt / Anlass</strong> eintragen.</li>
 	<li>Eine <strong>Kostenstelle</strong> wählen, wenn zu diesem Anlass eine Marketing-Kampagne läuft – dann zählt der Tagesumsatz dort gegen die Kosten.</li>
 	<li><strong>Kassenbestand Anfang</strong> eintragen: das Wechselgeld.</li>
-	<li>Auf <strong>Neuen Kassatag starten</strong> klicken. Verkauft wird danach über die <strong>Mobile Kasse</strong> auf dem Handy.</li>
-	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz.</li>
+	<li>Auf <strong>Kassatag starten</strong> klicken. Dieselbe Seite zeigt danach die Kasse – am Handy genauso wie am Rechner, eine eigene mobile Ansicht gibt es nicht mehr.</li>
+	<li>Am Ende den Tag abschließen und den gezählten Kassenbestand eintragen. Das System zeigt die Differenz (Kasse Ende − Kasse Anfang − Umsatz) in der Liste der abgeschlossenen Tage.</li>
+	<li>Ein falsch gebuchter Verkauf lässt sich mit <strong>Storno</strong> zurücknehmen; der Bestand wird zurückgebucht.</li>
 </ol>
 
 <h4>Verkaufen am Stand</h4>

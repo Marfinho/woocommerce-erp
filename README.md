@@ -49,7 +49,7 @@ Zweiter Zugang neben wp-admin: `lindenweg16.de/erp`, Anmeldung mit dem WordPress
 Links stehen sechs Bereiche (Produktion, Verkauf, Lager, Katalog, Zahlen und „Heute“), oben Reiter,
 darunter bei Bedarf eine Auswahl innerhalb des Reiters. Mailbox und Profilmenü (Einstellungen, Benutzer &
 Rechte, Löhne, Etikettendrucker, Import, Support, Anleitungen) liegen in der Leiste bzw. am Avatar. Das Menü
-richtet sich nach den Rechten der Person; noch nicht ersetzte Seiten sind eingebettet. Die Zuordnung der Seiten
+richtet sich nach den Rechten der Person; noch nicht ersetzte Seiten sind eingebettet. Die Kasse (Verkauf → Kasse) gibt es nur hier, nicht mehr im wp-admin; Fachlogik in `Modules/POS/POSModule`, Seite in `Erp/Pages/Kasse.php` und `assets/erp/pages/kasse.js`. Die Zuordnung der Seiten
 zu Bereichen und Reitern steht in `Navigation::layout()`, getrennt von den Rechten.
 Rechte werden pro Person im Profilmenü unter **Benutzer & Rechte** vergeben (Einzelrechte und
 Vorlagen, gespeichert im Nutzermerker `lw16_erp_perms`; die sechs Betrieb-Rechte werden

@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.59.0] – 2026-10-28
+
+### Kasse: ins ERP umgezogen, raus aus dem wp-admin
+- **Die Marktkasse ist eine eigene ERP-Seite** (Verkauf → Kasse): Kassatag starten, Kacheln antippen, freier Betrag, Storno, Tagesabschluss und die Liste der abgeschlossenen Tage mit Details. Die Seite ist für Handy und Rechner dieselbe; die getrennte „Mobile Kasse“ entfällt.
+- **Entfernt:** die wp-admin-Seite „Kasse“ samt Menüeintrag, die `admin-post`-Handler (`lw16_pos_*`) und die alte Produktsuche per Ajax. Fachlogik und Daten bleiben unverändert (`POSModule::start_tag/book_sale/storno_position/close_tag`): gleiche Lagerweiche, gleicher Beleg und Kassenbucheintrag beim Abschluss.
+- **Neu abgesichert:** Der Tagesabschluss ist gegen Doppelklick und zwei Geräte zugleich gesperrt (vorher konnte er zweimal gebucht werden); Startdatum und Markt werden geprüft.
+- Nicht in echtem WordPress geprüft.
+
 ## [0.58.0] – 2026-10-28
 
 ### Workflow: ein Weg vom Bedarf bis ins Lager
