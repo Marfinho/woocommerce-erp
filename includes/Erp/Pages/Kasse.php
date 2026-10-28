@@ -139,13 +139,12 @@ class Kasse {
 			$kampagnen[] = array( 'id' => (int) $id, 'label' => $label );
 		}
 
+		// Auch ohne offenen Tag: Kassenprodukte lassen sich vorab pflegen.
 		$optionen = array();
-		if ( $offen ) {
-			foreach ( POSModule::sale_options() as $o ) {
-				$o['kuerzel'] = POSModule::initials( $o['name'] );
-				$o['suche']   = POSModule::search_key( $o['label'] );
-				$optionen[]   = $o;
-			}
+		foreach ( POSModule::sale_options() as $o ) {
+			$o['kuerzel'] = POSModule::initials( $o['name'] );
+			$o['suche']   = POSModule::search_key( $o['label'] );
+			$optionen[]   = $o;
 		}
 
 		return new WP_REST_Response(

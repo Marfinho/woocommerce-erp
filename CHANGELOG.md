@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.61.1] – 2026-10-28
+
+### Kasse: Kassenprodukte ohne offenen Tag pflegen
+- **Neuer Block „Kassenprodukte“** auf der Kassenseite, wenn kein Tag offen ist: Produkte anlegen (mit Foto), ändern und ausblenden, ohne vorher einen Kassatag zu starten.
+- Nicht in echtem WordPress geprüft.
+
 ## [0.61.0] – 2026-10-28
 
 ### Kasse: Bon mit Mehrfachtipp, Vollbild fürs Tablet, nur Kassenprodukte

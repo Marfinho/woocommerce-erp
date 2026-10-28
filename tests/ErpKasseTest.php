@@ -98,4 +98,13 @@ class ErpKasseTest extends TestCase {
 		$this->assertTrue( method_exists( \Lindenweg16\Erp\Pages\Kasse::class, 'produkt_aendern' ) );
 		$this->assertStringContainsString( "post(path, body", file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.js' ) );
 	}
+
+	public function test_produkte_auch_ohne_offenen_tag() {
+		$php = file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Kasse.php' );
+		$js  = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.js' );
+
+		$this->assertStringContainsString( 'Auch ohne offenen Tag', $php );
+		$this->assertDoesNotMatchRegularExpression( '/if \( \$offen \) \{\s*foreach \( POSModule::sale_options/', $php );
+		$this->assertStringContainsString( 'paintStart(d); paintProdukte(d);', $js );
+	}
 }
