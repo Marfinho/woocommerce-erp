@@ -208,7 +208,7 @@ class BambuPrintersPage {
 		$printer_id = isset( $_POST['printer_id'] ) ? sanitize_key( wp_unslash( $_POST['printer_id'] ) ) : '';
 		$datei      = isset( $_POST['model_file'] ) ? sanitize_file_name( wp_unslash( $_POST['model_file'] ) ) : '';
 
-		$result = BambuService::enqueue_model( $printer_id, $datei, 0, $this->read_ams_tray_id() );
+		$result = BambuService::enqueue_model( $printer_id, $datei, $this->read_ams_tray_id() );
 
 		$this->back(
 			$result['ok']
@@ -327,12 +327,6 @@ class BambuPrintersPage {
 			return;
 		}
 
-		if ( 'platte' === $tab ) {
-			$this->render_notice();
-			( new BambuPlatesPage() )->render_content();
-			return;
-		}
-
 		if ( 'slicing' === $tab ) {
 			$this->render_notice();
 			( new SlicingProfilesPage() )->render_content();
@@ -416,7 +410,6 @@ class BambuPrintersPage {
 		$tabs = array(
 			'drucker'   => __( 'Drucker', 'lindenweg16' ),
 			'auftraege' => __( 'Aufträge', 'lindenweg16' ),
-			'platte'    => __( 'Platte anordnen', 'lindenweg16' ),
 			'slicing'   => __( 'Slicing-Profile', 'lindenweg16' ),
 		);
 

@@ -1,6 +1,7 @@
 /*
  * Bambu-Lab nativ, zweiter Teil: Druckaufträge einreihen und hochladen,
- * Platten anordnen, Slicing-Profile. Die Reiter hängen an der Seite „bambu“
+ * Slicing-Profile, dazu die Bettansicht (UI.plateView) für den Workflow.
+ * Platten werden nur noch im Workflow angeordnet. Die Reiter hängen an der Seite „bambu“
  * (produktion.js) über UI.bambuTabs[<reiter>](box, ctx).
  * Server: includes/Erp/Pages/BambuDruck.php. Klassisches ES5, Daten nur als Text.
  */
@@ -275,9 +276,9 @@
 			if (j.can_resolve) {
 				var hint = j.status === 'unklar' ? '' : '\n\nAchtung: Die Bridge verfolgt diesen Auftrag womöglich noch. Nur klären, wenn sie sich nicht mehr meldet.';
 				var okBtn = h('button', { class: 'btn', type: 'button', onclick: function () {
-					if (!window.confirm('Auftrag #' + j.id + ' als fertig buchen? Das bucht wie ein normaler Abschluss (Ist-Druckzeit, ggf. Druckjournal).' + hint)) { return; }
+					if (!window.confirm('Auftrag #' + j.id + ' als fertig markieren? Gebucht wird erst bei der Ist-Meldung der Werkstatt-Platte.' + hint)) { return; }
 					post(okBtn, 'bambu/auftraege/' + j.id + '/klaeren', { outcome: 'completed' }, function (r) { UI.toast(r.message); }).then(function () { load(true); });
-				} }, 'Als fertig buchen');
+				} }, 'Als fertig markieren');
 				var failBtn = h('button', { class: 'btn', type: 'button', onclick: function () {
 					var note = window.prompt('Auftrag #' + j.id + ' als fehlgeschlagen markieren. Was ist passiert? (optional)' + hint, '');
 					if (note === null) { return; }
@@ -307,7 +308,7 @@
 	};
 
 	/* ====================================================================
-	 * Reiter „Platten“
+	 * Bettansicht der Platten (Workflow: Vorschau und Plattenseite)
 	 * ================================================================== */
 
 	var PALETTE = ['#2563eb', '#d97706', '#16a34a', '#db2777', '#7c3aed', '#0891b2', '#dc2626', '#65a30d'];
@@ -360,170 +361,6 @@
 		wrap.appendChild(ul);
 		if (d.missing) { wrap.appendChild(h('div', { class: 'notice warn' }, 'Bei ' + d.missing + ' Teil(en) ist die Form nicht auslesbar, sie sind nur als Punkt eingezeichnet.')); }
 		return wrap;
-	};
-
-	function openPlate(row) {
-		var body = h('div', { class: 'sheet-body' }, h('p', { class: 'muted' }, 'Wird geladen …'));
-		UI.dlg('Platte #' + row.id + ' · ' + row.printer, body, true);
-		UI.api('bambu/platten/' + row.id).then(function (d) {
-			body.textContent = '';
-			var s = plateSvg(d);
-			body.appendChild(h('p', { class: 'muted' }, 'Druckbett ' + d.width + ' × ' + d.height + ' mm, ' + d.items.length + ' Teile. Ursprung unten links, wie im Slicer.'));
-			body.appendChild(s.el);
-			var ul = h('ul', { class: 'pf-list' });
-			s.legend.forEach(function (l) {
-				ul.appendChild(h('li', null, h('span', { class: 'pf-swatch', style: 'background:' + PALETTE[l[0]] }), l[1]));
-			});
-			body.appendChild(ul);
-			if (d.missing) { body.appendChild(h('div', { class: 'notice warn' }, 'Bei ' + d.missing + ' Teil(en) ist die Form nicht mehr auslesbar (die Projektdatei des Artikels wurde ersetzt oder fehlt). Sie sind nur als Punkt eingezeichnet. Die Plattendatei selbst ist davon nicht betroffen.')); }
-		}).catch(function (e) { errBox(body, e); });
-	}
-
-	UI.bambuTabs['platten'] = function (host) {
-		var root = h('div');
-		host.appendChild(root);
-		var data = null;
-		var warnings = [];
-		var qtys = {};
-		var filter = '';
-		var listHost = null;
-
-		function alive() { return root.isConnected; }
-
-		// listOnly: nur die Plattenliste auffrischen, damit das Formular unberührt bleibt.
-		function load(listOnly) {
-			return UI.api('bambu/platten').then(function (d) { data = d; if (alive()) { paint(listOnly === true); } }).catch(function (e) { if (alive()) { errBox(root, e); } });
-		}
-
-		function paint(listOnly) {
-			if (listOnly && listHost && listHost.isConnected) {
-				listHost.textContent = '';
-				listHost.appendChild(listBlock());
-				return;
-			}
-			root.textContent = '';
-			if (!data.printers.length) { root.appendChild(h('div', { class: 'notice' }, 'Zuerst einen Bambu-Drucker anlegen (Reiter „Drucker“).')); return; }
-			root.appendChild(buildCard());
-			listHost = h('div', null, listBlock());
-			root.appendChild(listHost);
-		}
-
-		function buildCard() {
-			var card = h('div', { class: 'card', style: 'margin-bottom:14px' }, h('h3', { style: 'margin-top:0' }, 'Neue Platte anordnen'),
-				h('p', { class: 'muted' }, 'Artikel und Mengen wählen; sie werden automatisch auf dem Druckbett des Druckers angeordnet. Daraus entsteht eine gemeinsame, noch ungeslicte Projekt-3MF.'));
-
-			if (!data.articles.length) {
-				card.appendChild(h('div', { class: 'notice' }, 'Kein Artikel mit ungeslicter Projekt-3MF und aktiver Revision gefunden. Die Projektdatei wird beim Artikel in der Revision hochgeladen.'));
-				return card;
-			}
-
-			var printer = select(data.printers.map(function (p) { return [p.printer_id, p.name + (p.bed ? ' (' + p.bed + ')' : ' (Bettmaß unbekannt)')]; }), data.printers[0].printer_id);
-			var margin = input('text', String(data.margin).replace('.', ','), { inputmode: 'decimal' });
-			var search = input('search', filter, { placeholder: 'Artikel suchen …' });
-			var sum = h('b', null, '');
-			var list = h('div', { class: 'pf-qty' });
-			var go = h('button', { class: 'btn primary', type: 'button' }, 'Automatisch anordnen');
-
-			function total() {
-				var n = 0;
-				Object.keys(qtys).forEach(function (k) { n += qtys[k]; });
-				return n;
-			}
-
-			function refreshSum() { sum.textContent = total() + ' Teile gewählt'; }
-
-			function drawList() {
-				list.textContent = '';
-				var q = filter.toLowerCase();
-				data.articles.forEach(function (a) {
-					if (q && (a.sku + ' ' + a.name).toLowerCase().indexOf(q) < 0) { return; }
-					var qty = input('number', qtys[a.id] || '', { min: 0, step: 1, inputmode: 'numeric', placeholder: '0', 'aria-label': 'Menge ' + a.sku });
-					qty.addEventListener('input', function () {
-						var n = parseInt(qty.value, 10);
-						if (n > 0) { qtys[a.id] = n; } else { delete qtys[a.id]; }
-						refreshSum();
-					});
-					list.appendChild(h('label', { class: 'pf-qline' }, h('span', null, h('b', null, a.sku), ' ', a.name), qty));
-				});
-				if (!list.firstChild) { list.appendChild(h('small', { class: 'muted' }, 'Kein Artikel passt zur Suche.')); }
-			}
-
-			search.addEventListener('input', function () { filter = search.value; drawList(); });
-			go.addEventListener('click', function () {
-				var items = Object.keys(qtys).map(function (k) { return { article_id: parseInt(k, 10), qty: qtys[k] }; });
-				if (!items.length) { UI.toast('Bitte bei mindestens einem Artikel eine Menge eintragen.', true); return; }
-				if (total() > data.max_parts) { UI.toast('Das sind zu viele Teile auf einmal (höchstens ' + data.max_parts + ').', true); return; }
-				go.textContent = 'Wird angeordnet … das kann etwas dauern';
-				post(go, 'bambu/platten', { printer_id: printer.value, margin_mm: margin.value, items: items }, function (r) {
-					go.textContent = 'Automatisch anordnen';
-					UI.toast(r.message);
-					warnings = r.warnings || [];
-					qtys = {};
-					load().then(function () {
-						var first = null;
-						data.plates.forEach(function (p) { if (r.plate_ids.indexOf(p.id) > -1 && (!first || p.id < first.id)) { first = p; } });
-						if (first) { openPlate(first); }
-					});
-				}).then(function () { go.textContent = 'Automatisch anordnen'; });
-			});
-
-			card.appendChild(h('div', { class: 'form-grid' }, field('Drucker', printer), field('Sicherheitsabstand (mm)', margin, 'Zwischen den Teilen und zum Bettrand.')));
-			card.appendChild(h('div', { style: 'margin-top:12px' }, field('Artikel', search)));
-			card.appendChild(h('div', { style: 'margin-top:8px' }, list));
-			card.appendChild(h('div', { style: 'margin-top:12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap' }, go, sum));
-			if (warnings.length) {
-				var box = h('div', { class: 'notice warn', style: 'margin-top:12px' }, h('b', null, 'Nicht alles ließ sich anordnen:'));
-				warnings.forEach(function (w) { box.appendChild(h('p', null, w)); });
-				card.appendChild(box);
-			}
-			drawList();
-			refreshSum();
-			return card;
-		}
-
-		function listBlock() {
-			var wrap = h('div', null, h('h3', null, 'Angeordnete Platten'));
-			if (!data.plates.length) { wrap.appendChild(h('div', { class: 'notice' }, 'Noch keine Platte angeordnet.')); return wrap; }
-			var rows = h('div', { class: 'rows' });
-			data.plates.forEach(function (p) { rows.appendChild(plateRow(p)); });
-			wrap.appendChild(rows);
-			wrap.appendChild(h('small', { class: 'muted' }, 'Gezeigt werden die letzten 50 Platten. „Projekt-3MF“ ist die ungeslicte Datei zum Öffnen und Slicen in Bambu Studio.'));
-			return wrap;
-		}
-
-		function plateRow(p) {
-			var parts = h('ul', { class: 'pf-list' });
-			p.parts.forEach(function (x) { parts.appendChild(h('li', null, x.qty + ' × ' + x.label)); });
-
-			var main = h('div', { class: 'row-main' },
-				h('b', null, 'Platte #' + p.id + ' · ' + p.printer),
-				h('div', { class: 'row-tags' }, h('span', { class: 'tag ' + (p.status === 'geslict' ? 'now' : 'later') }, p.text)),
-				h('small', { class: 'muted' }, p.width + ' × ' + p.height + ' mm · ' + p.total + ' Teile · ' + UI.when(p.created)),
-				parts);
-
-			if (p.note) {
-				main.appendChild(h('div', { class: p.note.kind === 'error' ? 'notice warn' : 'notice' }, p.note.text + (p.note.since ? ' (seit ' + UI.when(p.note.since) + ')' : '')));
-			}
-			if (p.queued) { main.appendChild(h('small', { class: 'muted' }, 'Liegt in der Bambu-Warteschlange (Reiter „Aufträge“).')); }
-			if (!p.file_ok) { main.appendChild(h('div', { class: 'notice warn' }, 'Die Plattendatei liegt nicht mehr auf dem Server. Bitte die Platte neu anordnen.')); }
-
-			var actions = h('div', { class: 'label-area' }, h('button', { class: 'btn', type: 'button', onclick: function () { openPlate(p); } }, 'Ansehen'));
-			if (p.file_ok) { actions.appendChild(h('a', { class: 'btn', href: p.download }, 'Projekt-3MF')); }
-			if (p.can_slice) {
-				var slice = h('button', { class: 'btn primary', type: 'button', onclick: function () {
-					post(slice, 'bambu/platten/' + p.id + '/slicen', {}, function (r) { UI.toast(r.message); }).then(function () { load(true); });
-				} }, p.status === 'fehlgeschlagen' ? 'Erneut slicen' : 'Automatisch slicen');
-				actions.appendChild(slice);
-			}
-			return h('div', { class: 'row-card' }, main, actions);
-		}
-
-		load();
-		UI.every(function () {
-			// Nur solange eine Platte geslict wird, ändert sich von selbst etwas.
-			var running = data && data.plates.some(function (p) { return p.status === 'wird_geslict'; });
-			if (alive() && running && !document.querySelector('dialog[open]')) { load(true); }
-		}, 15000);
 	};
 
 	/* ====================================================================

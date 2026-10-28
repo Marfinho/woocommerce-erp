@@ -103,8 +103,7 @@ class PlateService {
 			// Nur die ungeslicte Projektdatei hat noch verwertbare
 			// Bauteilgeometrie samt <build>-Eintrag für BinPacker/
 			// PlateComposer - eine bereits geslicte Druckdatei (model_kind
-			// = druckdatei) ist hier fehl am Platz (dafür gibt es "Bedarf
-			// direkt drucken", siehe BambuService::dispatch_from_demand()).
+			// = druckdatei) ist hier fehl am Platz.
 			if ( 'modell' !== $revision['model_kind'] ) {
 				$warnings[] = sprintf(
 					/* translators: %s: Artikel (Nummer – Name). */

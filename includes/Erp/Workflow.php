@@ -24,8 +24,12 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Erp\Pages\BambuDruck;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\BinRepository;
+use Lindenweg16\Modules\Betrieb\FilamentRolls;
+use Lindenweg16\Modules\Betrieb\RollAllocator;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\LabelPdf;
@@ -33,6 +37,8 @@ use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\MachineRate;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\PlateService;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingJobRepository;
+use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository as QueuePrinterRepository;
@@ -460,11 +466,13 @@ class Workflow {
 	 * Vorschau freigeben: aus den angeordneten Platten werden Platten der
 	 * Werkstatt, die Etiketten werden gedruckt.
 	 *
-	 * @param int[] $plate_ids   Plattendateien aus preview().
+	 * @param int[] $plate_ids    Plattendateien aus preview().
 	 * @param bool  $print_labels Etiketten drucken.
-	 * @return array {ok, runs, label, error}
+	 * @param bool  $slice        Gleich automatisch slicen und in die
+	 *                            Warteschlange des Druckers legen.
+	 * @return array {ok, runs, label, slice, error}
 	 */
-	public static function release( array $plate_ids, $print_labels = true ) {
+	public static function release( array $plate_ids, $print_labels = true, $slice = false ) {
 		$batch = RunRepository::next_batch();
 		$runs  = array();
 
@@ -504,10 +512,26 @@ class Workflow {
 
 		$label = $print_labels ? self::print_labels( $runs ) : null;
 
+		$sliced = null;
+		if ( $slice ) {
+			$fehler = array();
+			foreach ( $runs as $run_id ) {
+				$result = self::slice( $run_id );
+				if ( ! $result['ok'] ) {
+					$fehler[] = sprintf( /* translators: 1: Plattennummer, 2: Grund. */ __( 'Platte %1$d: %2$s', 'lindenweg16' ), $run_id, $result['message'] );
+				}
+			}
+			$sliced = array(
+				'ok'      => ! $fehler,
+				'message' => $fehler ? implode( ' ', $fehler ) : __( 'Wird geslict und geht danach in die Warteschlange des Druckers.', 'lindenweg16' ),
+			);
+		}
+
 		return array(
 			'ok'    => true,
 			'runs'  => array_map( array( __CLASS__, 'view_by_id' ), $runs ),
 			'label' => $label,
+			'slice' => $sliced,
 			'error' => '',
 		);
 	}
@@ -648,7 +672,12 @@ class Workflow {
 					'suggested'    => $row['suggested'],
 					'lots'         => array_map(
 						static function ( $lot ) {
-							return array( 'id' => $lot['id'], 'code' => $lot['code'], 'remaining_kg' => $lot['remaining_kg'] );
+							return array(
+								'id'           => $lot['id'],
+								'code'         => $lot['code'],
+								'remaining_kg' => $lot['remaining_kg'],
+								'rolls'        => self::open_rolls( (int) $lot['id'] ),
+							);
 						},
 						$row['lots']
 					),
@@ -656,6 +685,40 @@ class Workflow {
 			},
 			$rows
 		);
+	}
+
+	/**
+	 * Nicht leere Rollen (Spulen mit Etikett) einer Filamentcharge – zum
+	 * Wählen oder Scannen beim Melden.
+	 *
+	 * @param int $lot_id Charge.
+	 * @return array Liste {id, code}.
+	 */
+	protected static function open_rolls( $lot_id ) {
+		$out = array();
+
+		foreach ( FilamentRolls::for_lot( $lot_id ) as $roll ) {
+			if ( RollAllocator::STATUS_EMPTY !== $roll['status'] ) {
+				$out[] = array( 'id' => (int) $roll['id'], 'code' => (string) $roll['roll_code'] );
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Aktive Lagerplätze zur Auswahl beim Einlagern.
+	 *
+	 * @return array Liste {id, code, name}.
+	 */
+	public static function bin_options() {
+		$out = array();
+
+		foreach ( BinRepository::all( true ) as $bin ) {
+			$out[] = array( 'id' => (int) $bin['id'], 'code' => (string) $bin['code'], 'name' => (string) $bin['name'] );
+		}
+
+		return $out;
 	}
 
 	/**
@@ -690,8 +753,13 @@ class Workflow {
 
 		$file   = null;
 		$layout = null;
+		$queue  = null;
 		if ( ! empty( $run['plate_job_id'] ) ) {
 			$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
+
+			if ( $plate ) {
+				$queue = self::queue_view( $run, $plate, $bambu );
+			}
 
 			if ( $plate && $detail ) {
 				$layout = BambuDruck::layout( $plate );
@@ -712,14 +780,21 @@ class Workflow {
 			$material = self::material_view( Material::check( $items ) );
 
 			foreach ( $items as $index => $item ) {
-				$items[ $index ]['kg']    = round( Material::weight_kg( $item['article_id'] ) * (float) $item['qty'], 3 );
-				$items[ $index ]['ckey']  = Material::color_of( isset( $item['color'] ) ? $item['color'] : '' );
+				$article = ArticleRepository::find( (int) $item['article_id'] );
+
+				$items[ $index ]['kg']   = round( Material::weight_kg( $item['article_id'] ) * (float) $item['qty'], 3 );
+				$items[ $index ]['ckey'] = Material::color_of( isset( $item['color'] ) ? $item['color'] : '' );
+				// Vorschlag zum Einlagern: der Standardplatz des Artikels.
+				$items[ $index ]['bin'] = $article && ! empty( $article['default_bin_id'] ) ? (int) $article['default_bin_id'] : 0;
 			}
 		}
+
+		$bins = $detail && in_array( $run['status'], array( RunFlow::DRUCKT, RunFlow::ZU_MELDEN ), true ) ? self::bin_options() : array();
 
 		return array(
 			'layout'      => $layout,
 			'material'    => $material,
+			'bins'        => $bins,
 			'id'          => (int) $run['id'],
 			'batch'       => (string) $run['batch'],
 			'status'      => $run['status'],
@@ -735,6 +810,7 @@ class Workflow {
 			'primary'     => $primary,
 			'live'        => $live,
 			'bed'         => $bed,
+			'queue'       => $queue,
 			'file'        => $file,
 			'failure'     => (string) $run['failure_reason'],
 			'now'         => time(),
@@ -752,6 +828,103 @@ class Workflow {
 		$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
 
 		return $plate && RunFlow::file_matches( (string) $printer->current_file, (string) $plate->file_name );
+	}
+
+	/**
+	 * Stand von Slicen und Warteschlange einer Platte (siehe RunFlow::queue_state()).
+	 *
+	 * @param array       $run   Platte.
+	 * @param object      $plate Plattendatei.
+	 * @param object|null $bambu Bambu-Drucker.
+	 * @return array
+	 */
+	protected static function queue_view( array $run, $plate, $bambu ) {
+		$note = null;
+
+		if ( in_array( $plate->status, array( 'wird_geslict', 'fehlgeschlagen' ), true ) ) {
+			$latest = SlicingJobRepository::latest_for_plate( (int) $plate->id );
+			$note   = BambuDruck::slicing_note(
+				$plate->status,
+				$latest ? array(
+					'status'        => $latest->status,
+					'error_message' => (string) $latest->error_message,
+					'created_ts'    => $latest->created_at ? (int) strtotime( $latest->created_at . ' UTC' ) : 0,
+					'started_ts'    => $latest->started_at ? (int) strtotime( $latest->started_at . ' UTC' ) : 0,
+				) : null
+			);
+		}
+
+		$job = ! empty( $plate->bambu_job_id ) ? BambuJobRepository::find( (int) $plate->bambu_job_id ) : null;
+
+		$state           = RunFlow::queue_state(
+			$run['status'],
+			(string) $plate->status,
+			$note,
+			$job ? array( 'status' => $job->status, 'error_message' => (string) $job->error_message ) : null,
+			$bambu ? BambuPrinterRepository::bed_is_clear( $bambu ) : null
+		);
+		$state['job_id'] = $job ? (int) $job->id : 0;
+
+		return $state;
+	}
+
+	/**
+	 * Platte automatisch slicen lassen; der Slicing-Worker legt das Ergebnis
+	 * in die Druck-Warteschlange des Bambu-Druckers. Gedruckt wird, sobald
+	 * der Drucker frei und die Platte als frei bestätigt ist.
+	 *
+	 * @param int $id Werkstatt-Platte.
+	 * @return array {ok, status, message, run}
+	 */
+	public static function slice( $id ) {
+		$run = RunRepository::find( (int) $id );
+
+		if ( ! $run || empty( $run['plate_job_id'] ) ) {
+			return array( 'ok' => false, 'status' => 404, 'message' => __( 'Zu dieser Platte gibt es keine Plattendatei.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Geslict wird nur, solange die Platte auf ihren Druck wartet.', 'lindenweg16' ) );
+		}
+
+		$result = SlicingService::enqueue_plate( (int) $run['plate_job_id'] );
+
+		if ( ! $result['ok'] ) {
+			return array( 'ok' => false, 'status' => 422, 'message' => $result['error'] );
+		}
+
+		AuditLog::record( 'erp_platte_slicen', 'run', (int) $id, array( 'slicing_job_id' => (int) $result['slicing_job_id'] ) );
+
+		return array( 'ok' => true, 'status' => 200, 'message' => __( 'Wird geslict. Danach geht die Platte von selbst in die Warteschlange des Druckers.', 'lindenweg16' ), 'run' => self::view_by_id( (int) $id ) );
+	}
+
+	/**
+	 * Fehlgeschlagenen oder stornierten Druckauftrag dieser Platte mit
+	 * derselben Druckdatei erneut einreihen (etwa nach „Filament nicht im
+	 * AMS“), solange die Platte noch auf ihren Druck wartet.
+	 *
+	 * @param int $id Werkstatt-Platte.
+	 * @return array {ok, status, message, run}
+	 */
+	public static function requeue( $id ) {
+		$run   = RunRepository::find( (int) $id );
+		$plate = $run && ! empty( $run['plate_job_id'] ) ? PlateJobRepository::find( (int) $run['plate_job_id'] ) : null;
+
+		if ( ! $plate || empty( $plate->bambu_job_id ) ) {
+			return array( 'ok' => false, 'status' => 404, 'message' => __( 'Zu dieser Platte gibt es keinen Druckauftrag.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Erneut einreihen geht nur, solange die Platte auf ihren Druck wartet.', 'lindenweg16' ) );
+		}
+
+		$result = BambuService::requeue_job( (int) $plate->bambu_job_id );
+
+		if ( ! $result['ok'] ) {
+			return array( 'ok' => false, 'status' => 422, 'message' => $result['error'] );
+		}
+
+		return array( 'ok' => true, 'status' => 200, 'message' => __( 'Erneut in die Warteschlange gelegt.', 'lindenweg16' ), 'run' => self::view_by_id( (int) $id ) );
 	}
 
 	/**
@@ -1080,12 +1253,19 @@ class Workflow {
 		}
 		$shares = RunFlow::split_hours( $print_h, $qtys );
 
-		// Welche Rolle liefert das Filament? Gewählt (Mobilseite) oder die
-		// älteste mit genug Rest – ohne Rolle würde der Verbrauch aus dem
-		// Bestand verschwinden, ohne dass jemand es merkt.
-		$chosen = isset( $input['lots'] ) && is_array( $input['lots'] ) ? $input['lots'] : array();
-		$lot_of = array();
-		$used   = array();
+		// Welche Rolle liefert das Filament? Gescannt bzw. gewählt (Spule mit
+		// Etikett oder Charge) oder die älteste mit genug Rest – ohne Rolle
+		// würde der Verbrauch aus dem Bestand verschwinden, ohne dass es
+		// jemand merkt.
+		$chosen   = isset( $input['lots'] ) && is_array( $input['lots'] ) ? $input['lots'] : array();
+		$rolls_in = isset( $input['rolls'] ) && is_array( $input['rolls'] ) ? $input['rolls'] : array();
+		$bins_in  = isset( $input['bins'] ) && is_array( $input['bins'] ) ? $input['bins'] : array();
+		$note     = isset( $input['note'] ) ? sanitize_textarea_field( (string) $input['note'] ) : '';
+		$lot_of   = array();
+		$roll_of  = array();
+		$bin_of   = array();
+		$used     = array();
+		$errors   = array();
 
 		foreach ( $check['items'] as $index => $item ) {
 			$color = Material::color_of( $item['color'] );
@@ -1093,7 +1273,35 @@ class Workflow {
 			$key   = $item['article_id'] . '|' . $item['color'];
 			$lot   = null;
 
-			if ( ! empty( $chosen[ $key ] ) ) {
+			// Eine gescannte Spule bestimmt ihre Charge – aber nur, wenn sie
+			// zur Farbe passt und nicht schon leer gemeldet ist.
+			if ( ! empty( $rolls_in[ $key ] ) ) {
+				$roll = FilamentRolls::find( (int) $rolls_in[ $key ] );
+				if ( $roll && RollAllocator::STATUS_EMPTY !== $roll['status'] ) {
+					foreach ( Material::lots_for( $color ) as $candidate ) {
+						if ( (int) $candidate['id'] === (int) $roll['lot_id'] ) {
+							$lot               = $candidate;
+							$roll_of[ $index ] = (int) $roll['id'];
+						}
+					}
+				}
+				if ( ! $lot ) {
+					$errors[] = __( 'Die gewählte Rolle passt nicht zur Farbe dieser Platte oder ist leer gemeldet.', 'lindenweg16' );
+				}
+			}
+
+			// Einlagern: gewählter Platz; er muss existieren und offen sein.
+			$bin_id = ! empty( $bins_in[ $key ] ) ? (int) $bins_in[ $key ] : 0;
+			if ( $bin_id ) {
+				$bin = BinRepository::find( $bin_id );
+				if ( ! $bin || empty( $bin['is_active'] ) ) {
+					$errors[] = __( 'Den gewählten Lagerplatz gibt es nicht (mehr) oder er ist gesperrt.', 'lindenweg16' );
+					$bin_id   = 0;
+				}
+			}
+			$bin_of[ $index ] = $bin_id;
+
+			if ( ! $lot && ! empty( $chosen[ $key ] ) ) {
 				foreach ( Material::lots_for( $color ) as $candidate ) {
 					if ( (int) $candidate['id'] === (int) $chosen[ $key ] ) {
 						$lot = $candidate;
@@ -1110,8 +1318,7 @@ class Workflow {
 		}
 
 		// 1. Alles prüfen.
-		$jobs   = array();
-		$errors = array();
+		$jobs = array();
 
 		foreach ( $check['items'] as $index => $item ) {
 			$validated = PrintJobRepository::validate(
@@ -1125,7 +1332,7 @@ class Workflow {
 					'failure_reason' => $item['scrap'] > 0 ? $reason : 'keine',
 					'print_time_h'   => $shares[ $index ],
 					'plate_changes'  => 0 === $index ? 1 : 0,
-					'note'           => sprintf( /* translators: %d: Plattennummer. */ __( 'Platte %d', 'lindenweg16' ), $run['id'] ),
+					'note'           => sprintf( /* translators: %d: Plattennummer. */ __( 'Platte %d', 'lindenweg16' ), $run['id'] ) . ( '' !== $note ? ' – ' . $note : '' ),
 				)
 			);
 
@@ -1134,21 +1341,26 @@ class Workflow {
 				continue;
 			}
 
-			$jobs[] = $validated['data'];
+			$jobs[ $index ] = $validated['data'];
 		}
 
 		if ( $errors ) {
 			return array( 'ok' => false, 'status' => 422, 'message' => implode( ' ', array_unique( $errors ) ) );
 		}
 
-		// 2. Schreiben.
+		// 2. Schreiben – der Lagerzugang landet auf dem gewählten Platz.
 		$job_ids = array();
-		foreach ( $jobs as $job ) {
-			$job_id = PrintJobRepository::insert( $job );
+		foreach ( $jobs as $index => $job ) {
+			$job_id = PrintJobRepository::insert( $job, $bin_of[ $index ] );
 
 			if ( $job_id ) {
 				$job_ids[] = $job_id;
 			}
+		}
+
+		// Gescannte Spulen sind jetzt in Benutzung (am Drucker dieser Platte).
+		foreach ( array_unique( $roll_of ) as $roll_id ) {
+			FilamentRolls::start_use( $roll_id, self::printer_name( $run ) );
 		}
 
 		Material::flush();
@@ -1178,8 +1390,9 @@ class Workflow {
 		self::book_time( 'ruestzeit', $setup_h, $description, $run['id'] );
 
 		$items = array();
-		foreach ( $check['items'] as $item ) {
-			$row = array_merge( $item, array( 'name' => '', 'sku' => '' ) );
+		foreach ( $check['items'] as $index => $item ) {
+			$bin = $bin_of[ $index ] ? BinRepository::find( $bin_of[ $index ] ) : null;
+			$row = array_merge( $item, array( 'name' => '', 'sku' => '', 'bin' => $bin ? (string) $bin['code'] : '' ) );
 
 			foreach ( $run['items'] as $source ) {
 				if ( (int) $source['article_id'] === $item['article_id'] && (string) $source['color'] === $item['color'] ) {
@@ -1199,7 +1412,7 @@ class Workflow {
 				'reported_at'    => $now,
 				'items'          => $items,
 				'failure_reason' => $reason,
-				'note'           => isset( $input['note'] ) ? sanitize_textarea_field( (string) $input['note'] ) : null,
+				'note'           => '' !== $note ? $note : null,
 				'print_job_ids'  => implode( ',', $job_ids ),
 				'worker_id'      => $run['worker_id'] ? $run['worker_id'] : ( $user_id ? $user_id : null ),
 			)

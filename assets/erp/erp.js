@@ -2401,7 +2401,8 @@
 
 		var chips = [];
 		if (run.batch) { chips.push('Plan ' + run.batch); }
-		if (run.file) { chips.push('3MF bereit'); }
+		if (run.queue && run.queue.state !== 'none' && run.queue.text && (run.status === 'freigegeben' || run.status === 'ruesten')) { chips.push(QUEUE_CHIP[run.queue.state] || run.queue.text); }
+		else if (run.file) { chips.push('3MF bereit'); }
 		if (live && live.matched && (run.status === 'ruesten' || run.status === 'druckt')) { chips.push('Datei am Drucker erkannt'); }
 		else if (live && live.file && run.file && (run.status === 'freigegeben' || run.status === 'ruesten')) { chips.push('wartet auf ' + run.file.name); }
 		if (live && run.status === 'druckt' && live.remaining !== null) { chips.push('noch ' + minTxt(live.remaining)); }
@@ -2583,7 +2584,7 @@
 			});
 		});
 
-		body.appendChild(h('p', { class: 'muted', style: 'margin-top:0' }, 'Wähle, was gebaut werden soll. Die Platten werden angeordnet, die Projekt-3MF entsteht ungeslict – geslict wird in der Werkstatt.'));
+		body.appendChild(h('p', { class: 'muted', style: 'margin-top:0' }, 'Wähle, was gebaut werden soll. Die Platten werden angeordnet; beim Freigeben lassen sie sich gleich automatisch slicen und an den Drucker schicken – oder später von der Plattenseite aus.'));
 		body.appendChild(list);
 		body.appendChild(h('div', { style: 'display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px' }, h('label', { for: 'pl-printer', class: 'muted' }, 'Drucker'), printerSel, previewBtn));
 		body.appendChild(out);
@@ -2630,13 +2631,15 @@
 		}
 
 		var lbl = h('input', { type: 'checkbox', id: 'pl-label', checked: true });
-		var release = h('button', { class: 'btn primary', type: 'button' }, 'Freigeben und Etiketten drucken');
+		var slc = h('input', { type: 'checkbox', id: 'pl-slice', checked: true });
+		var release = h('button', { class: 'btn primary', type: 'button' }, 'Freigeben');
 		release.addEventListener('click', function () {
 			release.disabled = true;
-			api('workflow/freigeben', { method: 'POST', body: { plate_ids: r.plates.map(function (p) { return p.plate_id; }), labels: lbl.checked } }).then(function (res) {
+			api('workflow/freigeben', { method: 'POST', body: { plate_ids: r.plates.map(function (p) { return p.plate_id; }), labels: lbl.checked, slice: slc.checked } }).then(function (res) {
 				var msg = res.runs.length + (res.runs.length === 1 ? ' Platte freigegeben' : ' Platten freigegeben');
 				if (res.label) { msg += ' · ' + res.label.message; }
-				toast(msg, !!(res.label && !res.label.ok));
+				if (res.slice) { msg += ' · ' + res.slice.message; }
+				toast(msg, !!(res.label && !res.label.ok) || !!(res.slice && !res.slice.ok));
 				d.close();
 				reload();
 			}).catch(function (e) { release.disabled = false; toast(e.message, true); });
@@ -2645,6 +2648,7 @@
 		out.appendChild(h('div', { style: 'display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px' },
 			h('span', { class: 'muted' }, r.plates.length + ' Platten · Druckzeit gesamt ca. ' + minTxt(total)),
 			h('label', { class: 'chk', for: 'pl-label' }, lbl, ' Etiketten drucken'),
+			h('label', { class: 'chk', for: 'pl-slice', title: 'Der Slicing-Worker slict jede Platte und legt sie in die Warteschlange des Druckers. Gedruckt wird erst, wenn die Platte am Drucker als frei bestätigt ist.' }, slc, ' Automatisch slicen und an den Drucker'),
 			release
 		));
 	}
@@ -2788,7 +2792,9 @@
 			}
 
 			if (run.status === 'freigegeben') {
-				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno' }, '1'), h('div', null, h('b', null, 'Datei laden'), h('div', { class: 'muted small' }, run.file ? 'Projekt-3MF – im Slicer öffnen und slicen' : 'Keine Datei hinterlegt'))));
+				box.appendChild(h('div', { class: 'card stepcard' }, h('div', { class: 'stepno' }, '1'), h('div', null, h('b', null, 'Datei an den Drucker'), h('div', { class: 'muted small' }, run.file ? 'Automatisch slicen lassen – oder die Projekt-3MF von Hand im Slicer öffnen' : 'Keine Datei hinterlegt'))));
+				var qc = queueCard(run.queue);
+				if (qc) { box.appendChild(qc); }
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px;min-height:52px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'card' },
 					h('div', { class: 'stepcard' }, h('div', { class: 'stepno alt' }, '2'), h('div', null, h('b', null, 'Material bereit?'), h('div', { class: 'muted small' }, 'Die Rolle wird beim Melden abgezogen'))),
@@ -2797,6 +2803,8 @@
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
 			} else if (run.status === 'ruesten') {
 				box.appendChild(timeCard([['Rüstzeit', clock(nowTs() - run.setup), 'läuft']]));
+				var qc2 = queueCard(run.queue);
+				if (qc2) { box.appendChild(qc2); }
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck gestartet ▶', function () { act('druckstart'); }), h('div', { class: 'muted small center' }, 'Wird automatisch erkannt, wenn der Drucker verbunden ist')));
 			} else if (run.status === 'druckt') {
@@ -2830,6 +2838,34 @@
 			}
 		}
 
+		// Stand von Slicen und Druck-Warteschlange, mit dem passenden nächsten Schritt.
+		function queueCard(q) {
+			if (!q) { return null; }
+			var tone = q.state === 'slice_failed' || q.state === 'print_failed' || q.state === 'unclear' ? 'notice warn' : 'card';
+			var card = h('div', { class: tone, style: 'margin-bottom:12px' });
+			if (q.state === 'none') {
+				if (!q.can_slice) { return null; }
+				card.appendChild(h('b', null, 'Automatisch slicen'));
+				card.appendChild(h('div', { class: 'muted small', style: 'margin:4px 0 8px' }, 'Der Slicing-Worker slict die Platte und legt sie in die Warteschlange des Druckers. Gedruckt wird, sobald der Drucker frei und die Platte als frei bestätigt ist.'));
+			} else {
+				card.appendChild(h('b', null, q.text));
+				if (q.error) { card.appendChild(h('div', { class: 'small', style: 'margin-top:4px' }, q.error)); }
+			}
+			var row = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px' });
+			function button(label, action) {
+				var b = h('button', { class: 'btn primary', type: 'button', onclick: function () {
+					b.disabled = true;
+					api('runs/' + id + '/' + action, { method: 'POST' }).then(function (r) { toast(r.message); if (r.run) { run = r.run; run.fetched = Math.floor(Date.now() / 1000); } paint(); }).catch(function (e) { b.disabled = false; toast(e.message, true); });
+				} }, label);
+				return b;
+			}
+			if (q.can_slice) { row.appendChild(button(q.state === 'slice_failed' ? 'Erneut slicen' : 'Automatisch slicen und an den Drucker', 'slicen')); }
+			if (q.can_requeue) { row.appendChild(button('Erneut in die Warteschlange', 'erneut')); }
+			if (q.state === 'unclear') { row.appendChild(h('a', { class: 'btn', href: '#/bambu' }, 'Zu den Aufträgen')); }
+			if (row.childNodes.length) { card.appendChild(row); }
+			return card;
+		}
+
 		function timeCard(rows) {
 			return h('div', { class: 'timegrid' }, rows.map(function (r) {
 				return h('div', { class: 'card time' }, h('div', { class: 'eyebrow' }, r[0]), h('div', { class: 'tnum' }, r[1]), h('div', { class: 'muted small' }, r[2]));
@@ -2839,6 +2875,8 @@
 		function reportForm() {
 			var ok = {};
 			var lotPick = {};
+			var rollPick = {};
+			var binPick = {};
 			run.items.forEach(function (i) { ok[i.article_id + '|' + i.color] = i.qty; });
 			var form = h('form', { class: 'card reportform' });
 			var reasonWrap = h('div', { hidden: true }, h('label', { for: 'rf-reason' }, 'Fehlerursache'));
@@ -2872,20 +2910,24 @@
 				var rollBox = null;
 				if (item.kg) {
 					rollBox = mrow && mrow.available_kg > 0
-						? h('div', { class: 'muted small' }, 'Filament · Verbrauch ca. ' + kgTxt(item.kg) + ' – wird von der Farbe im Lager abgezogen (im Lager ' + kgTxt(mrow.available_kg) + ').')
+						? rollPicker(key, item, mrow)
 						: h('div', { class: 'notice warn small' }, 'Kein Filament in dieser Farbe im Lager – der Verbrauch (ca. ' + kgTxt(item.kg) + ') wird nicht abgezogen.');
 				}
+				var binBox = binPicker(key, item);
 
 				form.appendChild(h('div', { class: 'rf-item' },
 					h('div', { class: 'row-top' }, h('b', null, item.name), h('span', { class: 'muted' }, 'Soll ' + qty(item.qty))),
 					stepper('Gut', good, function () { step(-1); }, function () { step(1); }),
 					stepper('Ausschuss', scrap, function () { step(1); }, function () { step(-1); }),
-					rollBox
+					rollBox,
+					binBox
 				));
 			});
 			sync();
 
 			form.appendChild(reasonWrap);
+			var noteField = h('textarea', { class: 'field', id: 'rf-note', rows: 2, style: 'padding:8px 12px', placeholder: 'z. B. Haftung schlecht, Filament gewechselt' });
+			form.appendChild(h('div', { style: 'margin-top:8px' }, h('label', { for: 'rf-note' }, 'Notiz (optional)'), noteField));
 			var submit = h('button', { class: 'bigbtn go', type: 'submit' }, 'Melden und einlagern ✓');
 			form.appendChild(submit);
 			form.appendChild(h('div', { class: 'muted small center' }, 'Fehlmengen gehen als Bedarf zurück in den Plan.'));
@@ -2896,20 +2938,65 @@
 				var short = run.items.some(function (i) { return ok[i.article_id + '|' + i.color] < i.qty; });
 				if (short && !reason.value) { toast('Bitte die Fehlerursache wählen.', true); return; }
 				submit.disabled = true;
-				runAct(id, 'melden', { items: items, lots: lotPick, failure_reason: short ? reason.value : 'keine' }).then(function (r) {
+				runAct(id, 'melden', { items: items, lots: lotPick, rolls: rollPick, bins: binPick, note: noteField.value, failure_reason: short ? reason.value : 'keine' }).then(function (r) {
 					if (r && r.queued) { localAdvance(run, 'melden'); run.items = run.items.map(function (i) { return Object.assign({}, i, { ok: ok[i.article_id + '|' + i.color], scrap: i.qty - ok[i.article_id + '|' + i.color] }); }); toast('Offline vorgemerkt – wird gebucht, sobald die Verbindung zurück ist.'); paint(); return; }
 					run = r.run; run.fetched = Math.floor(Date.now() / 1000); run.summary = r.summary; paint();
 				}).catch(function (er) { submit.disabled = false; toast(er.message, true); });
 			});
 
 			return form;
+
+			// Rolle: Vorschlag des Systems, oder gewählt bzw. per Etikett gescannt.
+			function rollPicker(key, item, mrow) {
+				var opts = [h('option', { value: '' }, 'automatisch (älteste mit genug Rest)')];
+				var codes = {};
+				(mrow.lots || []).forEach(function (lot) {
+					if (lot.rolls && lot.rolls.length) {
+						lot.rolls.forEach(function (r) { opts.push(h('option', { value: 'r:' + r.id }, 'Spule ' + r.code + ' · Charge ' + lot.code)); codes[String(r.code).toUpperCase()] = 'r:' + r.id; });
+					} else {
+						opts.push(h('option', { value: 'l:' + lot.id }, 'Charge ' + lot.code + ' · ' + kgTxt(lot.remaining_kg)));
+					}
+					codes[String(lot.code).toUpperCase()] = codes[String(lot.code).toUpperCase()] || (lot.rolls && lot.rolls.length ? 'r:' + lot.rolls[0].id : 'l:' + lot.id);
+				});
+				var sel = h('select', { class: 'field', 'aria-label': 'Rolle für ' + item.name });
+				opts.forEach(function (o) { sel.appendChild(o); });
+				function apply() {
+					delete rollPick[key]; delete lotPick[key];
+					if (sel.value.indexOf('r:') === 0) { rollPick[key] = parseInt(sel.value.slice(2), 10); }
+					if (sel.value.indexOf('l:') === 0) { lotPick[key] = parseInt(sel.value.slice(2), 10); }
+				}
+				sel.addEventListener('change', apply);
+				var scan = h('input', { class: 'field', type: 'text', placeholder: 'Rollen-Etikett scannen', autocapitalize: 'characters', 'aria-label': 'Rollen-Etikett scannen für ' + item.name });
+				function take() {
+					var code = scan.value.trim().toUpperCase().replace(/^.*[:\/]/, '');
+					if (!code) { return; }
+					if (codes[code]) { sel.value = codes[code]; apply(); toast('Rolle ' + code + ' gewählt'); }
+					else { toast('Rolle ' + code + ' passt nicht zu dieser Farbe oder ist leer gemeldet.', true); }
+					scan.value = '';
+				}
+				scan.addEventListener('change', take);
+				scan.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); take(); } });
+				return h('div', { class: 'small', style: 'margin-top:8px' },
+					h('div', { class: 'muted' }, 'Filament · Verbrauch ca. ' + kgTxt(item.kg) + ' (im Lager ' + kgTxt(mrow.available_kg) + ')'),
+					h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-top:4px' }, sel, scan));
+			}
+
+			// Lagerplatz: Standardplatz des Artikels vorbelegt, änderbar.
+			function binPicker(key, item) {
+				var bins = run.bins || [];
+				if (!bins.length) { return null; }
+				var sel = h('select', { class: 'field', 'aria-label': 'Lagerplatz für ' + item.name }, [h('option', { value: '' }, '– ohne Lagerplatz –')].concat(bins.map(function (b) { return h('option', { value: String(b.id) }, b.code + (b.name ? ' – ' + b.name : '')); })));
+				if (item.bin && bins.some(function (b) { return b.id === item.bin; })) { sel.value = String(item.bin); binPick[key] = item.bin; }
+				sel.addEventListener('change', function () { if (sel.value) { binPick[key] = parseInt(sel.value, 10); } else { delete binPick[key]; } });
+				return h('div', { class: 'small', style: 'margin-top:8px' }, h('div', { class: 'muted' }, 'Einlagern in'), sel);
+			}
 		}
 
 		function doneCard() {
 			var wrap = h('div');
 			var rows = h('div', { class: 'card summary' }, run.items.map(function (i) {
 				var good = i.ok !== undefined ? i.ok : i.qty;
-				return h('div', { class: 'row-top' }, h('span', null, i.name), h('b', null, '+' + qty(good) + (i.scrap ? ' · Ausschuss ' + qty(i.scrap) : '')));
+				return h('div', { class: 'row-top' }, h('span', null, i.name), h('b', null, '+' + qty(good) + (i.bin ? ' → ' + i.bin : '') + (i.scrap ? ' · Ausschuss ' + qty(i.scrap) : '')));
 			}));
 			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock((run.print || run.setup || 0) - (run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
 
@@ -2940,6 +3027,7 @@
 		}, 10000));
 	}
 
+	var QUEUE_CHIP = { slicing: 'wird geslict', slice_failed: 'Slicen fehlgeschlagen', queued: 'in der Warteschlange', sending: 'wird übertragen', printing: 'druckt', unclear: 'unklar – klären', done: 'Drucker: fertig', print_failed: 'Druck fehlgeschlagen' };
 	var RUN_STATUS = { freigegeben: 'bereit', ruesten: 'rüstet', druckt: 'druckt', zu_melden: 'Ist melden', erledigt: 'erledigt', abgebrochen: 'abgebrochen' };
 
 	/* ---------- Suche ---------- */

@@ -386,7 +386,7 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
-			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|druckstart|druckende|melden|abbrechen|etikett|platte-frei)',
+			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|druckstart|druckende|melden|abbrechen|etikett|platte-frei|slicen|erneut)',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'run_act' ),
@@ -854,7 +854,7 @@ class RestApi {
 	 */
 	public function workflow_release( WP_REST_Request $request ) {
 		$labels = null === $request->get_param( 'labels' ) ? (bool) Workflow::settings()['label_auto'] : (bool) $request->get_param( 'labels' );
-		$result = Workflow::release( array_map( 'intval', (array) $request->get_param( 'plate_ids' ) ), $labels );
+		$result = Workflow::release( array_map( 'intval', (array) $request->get_param( 'plate_ids' ) ), $labels, (bool) $request->get_param( 'slice' ) );
 
 		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
 	}
@@ -942,6 +942,12 @@ class RestApi {
 
 		if ( 'platte-frei' === $action ) {
 			$result = Workflow::clear_bed( $id );
+
+			return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
+		}
+
+		if ( 'slicen' === $action || 'erneut' === $action ) {
+			$result = 'slicen' === $action ? Workflow::slice( $id ) : Workflow::requeue( $id );
 
 			return new WP_REST_Response( $result, $result['ok'] ? 200 : $result['status'] );
 		}

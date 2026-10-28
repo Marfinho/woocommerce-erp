@@ -614,8 +614,8 @@ manuelles Neuladen.
 
 ### Filament-Auswahl beim Einreihen
 
-Überall, wo ein Druckauftrag eingereiht wird (Bambu-Lab-Drucker →
-Aufträge, Bedarf → „Direkt drucken"), steht – sofern der Drucker
+Wo ein Druckauftrag von Hand eingereiht wird (Bambu-Lab-Drucker →
+Aufträge), steht – sofern der Drucker
 gerade eine AMS-Belegung meldet – eine zusätzliche Auswahl „welches
 Filament" zur Verfügung. Sie gilt für den **gesamten** Druckauftrag
 (ein Material für die ganze Platte, kein Mehrfarb-/Mehrmaterial-Mapping
@@ -643,8 +643,9 @@ druckt der Drucker wie bisher mit dem eingelegten bzw. externen Filament.
   ohne Lebenszeichen, Drucker nach einem Neustart im Leerlauf), wird der
   Auftrag „unklar“ statt erneut gedruckt. Er sperrt die Warteschlange
   dieses Druckers, bis die Bridge ihn doch noch abschließt oder jemand ihn
-  unter Bambu-Lab-Drucker → Aufträge klärt („Als fertig buchen“ bzw. „Als
-  fehlgeschlagen markieren“).
+  unter Bambu-Lab-Drucker → Aufträge klärt („Als fertig markieren“ bzw. „Als
+  fehlgeschlagen markieren“). Gebucht wird erst bei der Ist-Meldung der
+  Werkstatt-Platte im Workflow.
 - **Neustart der Bridge/des Pi mitten im Druck:** Die Bridge merkt sich
   den laufenden Auftrag in `/var/lib/bambu-bridge/active-job.json` und
   gleicht ihn beim Start mit dem Drucker ab: läuft er noch, verfolgt sie
@@ -722,12 +723,13 @@ aktuellen Quellen dieser Projekte.
 
 Dritter, unabhängiger Dienst in diesem Ordner: `slicing_worker.py`
 schliesst die Kette **Bedarf → Plattenanordnung → automatisch slicen →
-Bambu-Warteschlange** ab. Unter „Lindenweg16 → Betrieb →
-Bambu-Lab-Drucker" lassen sich im Reiter **„Platte anordnen"** mehrere
-Artikel und Mengen automatisch auf dem virtuellen Druckbett anordnen
+Bambu-Warteschlange** ab. Im ERP-Workflow („Plan freigeben") werden
+Artikel und Mengen automatisch auf dem virtuellen Druckbett angeordnet
 (konturbasiertes Nesting anhand der tatsächlichen Bauteilform, nicht nur
-des Begrenzungsrechtecks) – das Ergebnis ist eine zusammengesetzte, noch
-ungeslicte Projekt-3MF. Dieser Worker holt sie ab, slict sie mit einem
+des Begrenzungsrechtecks) – das Ergebnis ist je Platte eine
+zusammengesetzte, noch ungeslicte Projekt-3MF. Geslict wird beim
+Freigeben („Automatisch slicen und an den Drucker") oder später von der
+Seite der Platte aus. Dieser Worker holt sie ab, slict sie mit einem
 Kommandozeilen-Slicer (OrcaSlicer) anhand hinterlegter Profile und lädt
 das Ergebnis zurück hoch; WordPress reiht die fertige Druckdatei danach
 automatisch in die ganz normale Bambu-Warteschlange ein.
@@ -834,8 +836,8 @@ journalctl -u slicing-worker -f
 
 ### 6. Test
 
-Im Reiter „Platte anordnen" eine kleine Testplatte anlegen und auf
-„Automatisch slicen" klicken. Der Worker holt sie beim nächsten Kontakt
+Im Workflow eine kleine Testplatte freigeben und auf ihrer Seite
+„Automatisch slicen und an den Drucker" tippen. Der Worker holt sie beim nächsten Kontakt
 ab; im Log (Docker: `docker compose -f docker-compose.slicing-worker.yml
 logs -f`, ohne Docker: `journalctl -u slicing-worker -f`) ist der
 Slicer-Aufruf und sein Ergebnis zu sehen. Nach Erfolg erscheint die
@@ -843,8 +845,8 @@ Platte im Reiter „Aufträge" als neuer Bambu-Druckauftrag.
 
 ### Fehlersuche
 
-Scheitert ein Slice-Lauf, steht die Platte im Reiter „Platte anordnen"
-auf **Fehlgeschlagen**, und direkt unter dem Status steht der Grund, den
+Scheitert ein Slice-Lauf, zeigt die Seite der Platte im Workflow
+**Slicen fehlgeschlagen**, und direkt darunter steht der Grund, den
 der Worker gemeldet hat (OrcaSlicer-Fehlercode mit Erklärung, dazu der
 Klartext des Slicers). Nach Behebung der Ursache genügt **„Erneut
 slicen"** – die Platte muss nicht neu angeordnet werden. Steht eine
@@ -900,8 +902,8 @@ Die entfernten Schlüssel stehen im Worker-Log.
 
 ### Ohne Worker: Plattenanordnung + manuelles Slicen
 
-Auch ohne diesen Dienst ist die Plattenanordnung nutzbar: Im Reiter
-„Platte anordnen" lässt sich die zusammengesetzte, ungeslicte
-Projekt-3MF jeder angeordneten Platte herunterladen, von Hand in Bambu
-Studio slicen und die fertige Druckdatei über den Reiter „Aufträge"
-hochladen – derselbe Weg wie beim manuellen Einzeldruck.
+Auch ohne diesen Dienst ist die Plattenanordnung nutzbar: Auf der Seite
+einer freigegebenen Platte im Workflow lässt sich die zusammengesetzte,
+ungeslicte Projekt-3MF herunterladen, von Hand in Bambu Studio slicen und
+am Drucker starten. Der Workflow erkennt den Druck am Dateinamen und
+schaltet die Platte weiter; gebucht wird bei der Ist-Meldung.

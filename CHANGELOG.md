@@ -7,6 +7,22 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.58.0] – 2026-10-28
+
+### Workflow: ein Weg vom Bedarf bis ins Lager
+- **Automatisch slicen direkt im Workflow.** Beim Freigeben eines Plans gibt es den Haken „Automatisch slicen und an den Drucker“; auf der Seite einer freigegebenen Platte den Knopf dazu. Bisher lag das Slicen in einem anderen Menü (Bambu-Lab-Drucker → Platten anordnen).
+- **Die Plattenseite zeigt, was im Hintergrund passiert:** wird geslict, Slicen fehlgeschlagen (mit Grund und „Erneut slicen“), in der Warteschlange (mit Hinweis auf „Platte ist frei“), wird übertragen, druckt, Druck fehlgeschlagen (mit „Erneut in die Warteschlange“), unklar. Die Karten im Workflow tragen den Stand als Hinweis.
+- **Melden mit Rolle:** Die Rolle lässt sich wählen oder per Spulen-Etikett scannen; vorgeschlagen bleibt die älteste mit genug Rest. Eine gescannte Spule gilt danach als in Benutzung. Der Server konnte das schon, die Oberfläche bot es nie an.
+- **Einlagern auf einen Lagerplatz:** Beim Melden ist der Standardplatz des Artikels vorbelegt und änderbar; der Lagerzugang wird auf diesen Platz gebucht. Bisher landete Fertigware „ohne Platz“.
+- **Notizfeld** beim Melden; die Notiz steht an der Platte und im Druckjournal.
+
+### Entfernt: Druckwege, die nicht oder falsch buchten
+- **Bambu-Lab-Drucker → „Platten anordnen“** (ERP-Reiter und wp-admin-Seite): Dort gedruckte Platten buchten nichts ins Lager und zählten nicht als gedeckter Bedarf. Platten entstehen nur noch im Workflow.
+- **wp-admin → Bedarf → „Direkt drucken“**: buchte bei Druckende automatisch alle Teile als gut, ohne Ausschuss. Bereits eingereihte Aufträge aus diesem Weg drucken weiter, buchen aber nicht mehr automatisch – bitte über das Druckjournal nachtragen.
+- **Automatische Ist-Druckzeit alter Druckaufträge** beim Druckende (kein Aufrufer mehr).
+- Der Reiter „Aufträge“ bleibt für Einzeldrucke (Muster, Ersatz, privat) – ausdrücklich ohne Buchung.
+- Nicht in echtem WordPress geprüft.
+
 ## [0.57.1] – 2026-10-28
 
 - **Keine Teile mehr auf der Kalibrierlinie der Bambu X1/P1.** Vor jedem Druck zieht der Drucker am vorderen Bettrand die Düsen-Ladelinie (X 18–240, Y 1–11) und – bei der X1-Serie – Kalibrierlinien (bis Y 14); vorn links liegt außerdem die offizielle Sperrecke (0–18 × 0–28 mm). Plattenanordnung und Slicer legten das erste Teil bisher genau dorthin, vorn links. Jetzt bleiben die vorderen 15 mm und die Sperrecke frei:
