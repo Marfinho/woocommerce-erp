@@ -563,7 +563,9 @@
 		syncNav();
 
 		var r = route();
-		el.view.classList.remove('wide', 'broad');
+		// Seiten hängen eigene Klassen an (lg, wide, broad) – beim Wechsel alle weg,
+		// sonst gelten z. B. die Lager-Regeln auf dem Board weiter.
+		el.view.className = 'view';
 		el.view.textContent = '';
 
 		el.sub.hidden = true;

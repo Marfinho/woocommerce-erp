@@ -39,6 +39,9 @@ class LoyaltyFrontend {
 		add_action( 'wp_ajax_nopriv_lw16_set_redeem', array( $this, 'ajax_set_redeem' ) );
 		add_action( 'woocommerce_cart_calculate_fees', array( $this, 'apply_redeem_fee' ) );
 
+		// Produktseite: Wie viele Punkte bringt das hier?
+		add_action( 'woocommerce_single_product_summary', array( $this, 'render_product_points' ), 11 );
+
 		// Verbuchung bei Bestellabschluss.
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'record_redemption' ), 10, 1 );
 	}
@@ -166,6 +169,47 @@ class LoyaltyFrontend {
 			}
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Hinweis unter dem Preis: Punkte für dieses Produkt, mit laufender Aktion.
+	 */
+	public function render_product_points() {
+		global $product;
+		if ( ! $product instanceof \WC_Product ) {
+			return;
+		}
+		$per_euro = (float) Settings::get( 'punkte_pro_euro', 1 );
+		$price    = (float) wc_get_price_including_tax( $product );
+		if ( $per_euro <= 0 || $price <= 0 ) {
+			return;
+		}
+		$cats   = array_map( 'intval', $product->get_category_ids() );
+		$active = LoyaltyCampaigns::active();
+		$result = LoyaltyRules::order_points( $price, array( array( 'total' => $price, 'cats' => $cats ) ), $per_euro, $active );
+		$factor = LoyaltyTiers::factor( get_current_user_id() );
+		if ( $factor > 1 ) {
+			$result['points'] = LoyaltyRules::apply_tier( $result['points'], $factor );
+		}
+		if ( $result['points'] <= 0 ) {
+			return;
+		}
+
+		echo '<p class="lw16-produkt-punkte' . ( $result['bonus'] > 0 ? ' is-aktion' : '' ) . '">';
+		/* translators: %s: Punkte */
+		echo '<span>' . esc_html( sprintf( __( '%s Prämienpunkte sammeln', 'lindenweg16' ), number_format_i18n( $result['points'] ) ) ) . '</span>';
+		if ( $result['bonus'] > 0 ) {
+			$until = '';
+			foreach ( $active as $c ) {
+				if ( in_array( $c['name'], $result['names'], true ) ) {
+					$until = date_i18n( 'j. F', strtotime( $c['bis'] ) );
+					break;
+				}
+			}
+			/* translators: 1: Aktionsname, 2: Datum */
+			echo ' <small>' . esc_html( sprintf( __( '%1$s – bis %2$s', 'lindenweg16' ), implode( ', ', $result['names'] ), $until ) ) . '</small>';
+		}
+		echo '</p>';
 	}
 
 	/* --------------------------------------------------------------------
@@ -324,6 +368,11 @@ class LoyaltyFrontend {
 			);
 		}
 
+		// Einlösen ist Aktivität: die Verfallsfrist beginnt neu.
+		if ( $credit > 0 || $points > 0 ) {
+			LoyaltyRepository::touch( $user_id );
+		}
+
 		// Reservierung aufheben.
 		WC()->session->set( 'lw16_redeem', array() );
 	}
@@ -374,13 +423,13 @@ class LoyaltyFrontend {
 	 * @return string
 	 */
 	protected function ledger_label( $l ) {
-		$map = array(
-			'earned'            => __( 'Bestellung', 'lindenweg16' ),
-			'redeemed'          => __( 'Eingelöst', 'lindenweg16' ),
-			'reversed'          => __( 'Storniert', 'lindenweg16' ),
-			'manual_adjustment' => __( 'Manuelle Anpassung', 'lindenweg16' ),
-		);
-		return isset( $map[ $l->type ] ) ? $map[ $l->type ] : $l->type;
+		$map = LoyaltyRepository::ledger_types();
+		$out = isset( $map[ $l->type ] ) ? $map[ $l->type ] : $l->type;
+		// Aktionsbonus steht in der Notiz („Bestellung · Herbstaktion (+40)“).
+		if ( 'earned' === $l->type && ! empty( $l->notiz ) && false !== strpos( (string) $l->notiz, '·' ) ) {
+			$out = (string) $l->notiz;
+		}
+		return $out;
 	}
 
 	/**

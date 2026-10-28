@@ -10,7 +10,7 @@ namespace Lindenweg16\Modules\Retention;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Registriert Warenkorbabbrecher, Wunschliste, Post-Purchase-Sequenz und
+ * Registriert Warenkorbabbrecher, Wunschliste, Konto-Übersicht, Post-Purchase-Sequenz und
  * die „Wieder verfügbar"-Warteliste und liefert den Meistgewünscht-Report.
  */
 class RetentionModule {
@@ -21,6 +21,7 @@ class RetentionModule {
 	public function register() {
 		( new Waitlist() )->register();
 		( new Wishlist() )->register();
+		( new AccountOverview() )->register();
 		( new CartTracking() )->register();
 		( new PostPurchase() )->register();
 

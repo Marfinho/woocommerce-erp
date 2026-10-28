@@ -33,6 +33,8 @@ use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
+use Lindenweg16\Modules\Loyalty\LoyaltyTiers;
+use Lindenweg16\Modules\Loyalty\LoyaltyTriggers;
 use Lindenweg16\Modules\Marketing\KampagnenReport;
 use Lindenweg16\Modules\Marketing\KampagnenRepository;
 use Lindenweg16\Modules\Marketing\Kampagnenrechnung;
@@ -767,10 +769,13 @@ class Verkauf {
 	 * @return string
 	 */
 	public static function ledger_label( $type, $status ) {
-		$types    = array(
-			'earned'   => __( 'Punkte gesammelt', 'lindenweg16' ),
-			'redeemed' => __( 'Punkte eingelöst', 'lindenweg16' ),
-			'reversed' => __( 'Punkte zurückgebucht', 'lindenweg16' ),
+		$types    = array_merge(
+			LoyaltyRepository::ledger_types(),
+			array(
+				'earned'   => __( 'Punkte gesammelt', 'lindenweg16' ),
+				'redeemed' => __( 'Punkte eingelöst', 'lindenweg16' ),
+				'reversed' => __( 'Punkte zurückgebucht', 'lindenweg16' ),
+			)
 		);
 		$statuses = array(
 			'pending'   => __( 'noch nicht verfügbar', 'lindenweg16' ),
@@ -2052,6 +2057,9 @@ class Verkauf {
 			);
 		}
 
+		$tier    = LoyaltyTiers::for_user( $id );
+		$expires = LoyaltyTriggers::expires_at( $id );
+
 		return new WP_REST_Response(
 			array(
 				'id'         => $id,
@@ -2060,6 +2068,8 @@ class Verkauf {
 				'credit'     => LoyaltyRepository::get_credit( $id ),
 				'points'     => LoyaltyRepository::get_points( $id ),
 				'code'       => (string) get_user_meta( $id, LoyaltyRepository::META_CODE, true ),
+				'tier'       => $tier ? $tier['tier']['name'] . ' (' . number_format_i18n( $tier['revenue'], 2 ) . ' € in 12 Monaten)' : '',
+				'expires'    => $expires ? date_i18n( 'j. F Y', $expires ) : '',
 				'ledger'     => $ledger,
 				'ledger_all' => LoyaltyRepository::ledger_count( $id ),
 				'referrals'  => $refs,

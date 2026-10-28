@@ -167,6 +167,17 @@ class Wishlist {
 	}
 
 	/**
+	 * Anzahl gemerkter Produkte eines Nutzers.
+	 *
+	 * @param int $user_id Nutzer.
+	 * @return int
+	 */
+	public static function count_for( $user_id ) {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . self::table() . ' WHERE user_id = %d', $user_id ) ); // phpcs:ignore
+	}
+
+	/**
 	 * Mein-Konto-Tab rendern.
 	 */
 	public function render_account() {
@@ -206,13 +217,15 @@ class Wishlist {
 
 			if ( $verfuegbar ) {
 				echo '<p class="lw16-instock">' . esc_html__( 'Verfügbar', 'lindenweg16' ) . '</p>';
-				echo '<a class="button" href="' . esc_url( '?add-to-cart=' . $row->woo_product_id ) . '">' . esc_html__( 'In den Warenkorb', 'lindenweg16' ) . '</a> ';
+				echo '<div class="lw16-wishlist-actions">';
+				echo '<a class="button" href="' . esc_url( '?add-to-cart=' . $row->woo_product_id ) . '">' . esc_html__( 'In den Warenkorb', 'lindenweg16' ) . '</a>';
 			} else {
 				echo '<p class="lw16-outofstock">' . esc_html__( 'Nicht auf Lager', 'lindenweg16' ) . '</p>';
-				echo '<a class="button" href="' . esc_url( get_permalink( $row->woo_product_id ) . '#lw16-waitlist' ) . '">' . esc_html__( 'Benachrichtigen', 'lindenweg16' ) . '</a> ';
+				echo '<div class="lw16-wishlist-actions">';
+				echo '<a class="button" href="' . esc_url( get_permalink( $row->woo_product_id ) . '#lw16-waitlist' ) . '">' . esc_html__( 'Benachrichtigen', 'lindenweg16' ) . '</a>';
 			}
-			echo '<button type="button" class="button lw16-wishlist-btn" data-product="' . (int) $row->woo_product_id . '" aria-pressed="true">' . esc_html__( 'Entfernen', 'lindenweg16' ) . '</button>';
-			echo '</div>';
+			echo '<button type="button" class="button lw-soft lw16-wishlist-btn" data-product="' . (int) $row->woo_product_id . '" aria-pressed="true">' . esc_html__( 'Entfernen', 'lindenweg16' ) . '</button>';
+			echo '</div></div>';
 		}
 		echo '</div>';
 	}

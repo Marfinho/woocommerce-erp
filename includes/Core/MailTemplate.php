@@ -42,6 +42,24 @@ class MailTemplate {
 				'text'        => __( "Hallo {vorname},\n\nDu hast Deine Bestellung sicher schon ausprobiert. Über eine ehrliche Bewertung würden wir uns sehr freuen – als Dankeschön schreiben wir Dir {bonus_punkte} Punkte gut, sobald Deine Bewertung online ist.\n\n{produktlinks}\n\nDanke und viele Grüße", 'lindenweg16' ),
 				'platzhalter' => '{vorname}, {bonus_punkte}, {produktlinks}',
 			),
+			'geburtstag'         => array(
+				'label'       => __( 'Geburtstag (Prämienpunkte)', 'lindenweg16' ),
+				'betreff'     => __( 'Alles Gute zum Geburtstag, {vorname}!', 'lindenweg16' ),
+				'text'        => __( "Hallo {vorname},\n\nalles Gute zum Geburtstag! Als kleines Geschenk haben wir Dir {punkte} Prämienpunkte gutgeschrieben – Du hast jetzt {punkte_gesamt} Punkte, einlösbar bei Deiner nächsten Bestellung.\n\nDein Konto: {konto_url}\n\nFeier schön!", 'lindenweg16' ),
+				'platzhalter' => '{vorname}, {punkte}, {punkte_gesamt}, {konto_url}',
+			),
+			'jahrestag'          => array(
+				'label'       => __( 'Jahrestag der ersten Bestellung (Prämienpunkte)', 'lindenweg16' ),
+				'betreff'     => __( '{jahre} Jahr(e) mit Dir, {vorname}!', 'lindenweg16' ),
+				'text'        => __( "Hallo {vorname},\n\nheute vor {jahre} Jahr(en) kam Deine erste Bestellung bei uns an. Danke, dass Du dabei bist! Als Dankeschön haben wir Dir {punkte} Prämienpunkte gutgeschrieben – Du hast jetzt {punkte_gesamt} Punkte.\n\nDein Konto: {konto_url}\n\nViele Grüße aus der Werkstatt", 'lindenweg16' ),
+				'platzhalter' => '{vorname}, {jahre}, {punkte}, {punkte_gesamt}, {konto_url}',
+			),
+			'punkte_verfall'     => array(
+				'label'       => __( 'Erinnerung: Prämienpunkte verfallen bald', 'lindenweg16' ),
+				'betreff'     => __( 'Deine {punkte} Prämienpunkte verfallen am {datum}', 'lindenweg16' ),
+				'text'        => __( "Hallo {vorname},\n\nauf Deinem Konto liegen {punkte} Prämienpunkte – das sind {wert} Rabatt. Sie verfallen am {datum}, wenn bis dahin nichts passiert.\n\nMit Deiner nächsten Bestellung löst Du sie ein und die Frist beginnt neu: {shop_url}\n\nViele Grüße", 'lindenweg16' ),
+				'platzhalter' => '{vorname}, {punkte}, {wert}, {datum}, {shop_url}',
+			),
 			'wieder_verfuegbar'  => array(
 				'label'       => __( 'Wieder verfügbar (Warteliste)', 'lindenweg16' ),
 				'betreff'     => __( '{produktname} ist wieder verfügbar', 'lindenweg16' ),

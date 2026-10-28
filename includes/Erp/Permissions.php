@@ -110,6 +110,7 @@ class Permissions {
 			'verkauf.versand.etikett' => self::def( 'verkauf', __( 'Versandetiketten erzeugen', 'lindenweg16' ), __( 'DHL-Etiketten kaufen und drucken – kostet Geld.', 'lindenweg16' ), array( $capture ), $cap, array( 'verkauf.versand' ) ),
 			'verkauf.kontakte'        => self::def( 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), __( 'Geschäftskunden, Lieferanten, Konditionen.', 'lindenweg16' ), array( $production ), $page ),
 			'verkauf.loyalty'         => self::def( 'verkauf', __( 'Loyalty', 'lindenweg16' ), __( 'Kundenbindung und Guthaben.', 'lindenweg16' ), array( 'lw16_mod_loyalty' ), $page ),
+			'verkauf.loyalty.regeln'  => self::def( 'verkauf', __( 'Loyalty-Regeln einstellen', 'lindenweg16' ), __( 'Punkte je Euro, Bonuspunkte und Aktionen festlegen – gilt sofort für alle Kunden.', 'lindenweg16' ), array( 'lw16_mod_loyalty', $settings ), $cap, array( 'verkauf.loyalty' ) ),
 			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array( 'lw16_mod_kasse' ), $page ),
 			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array( 'lw16_mod_marketing' ), $page ),
 			'verkauf.kurzlinks'       => self::def( 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), __( 'Feste Adressen für Printmaterial verwalten, Aufrufe und Bestellungen nach Herkunft sehen.', 'lindenweg16' ), array( 'manage_woocommerce' ), $page ),

@@ -31,6 +31,10 @@ class LoyaltyModule {
 		// Cookie-Tracking (nur beim ersten Aufruf setzen).
 		add_action( 'init', array( $this, 'maybe_set_referral_cookie' ) );
 
+		// Empfehlungscode beim Bestellen merken (klassische und Block-Kasse).
+		add_action( 'woocommerce_checkout_create_order', array( $this, 'remember_referral' ), 10, 1 );
+		add_action( 'woocommerce_store_api_checkout_update_order_meta', array( $this, 'remember_referral_block' ), 10, 1 );
+
 		// Bestellabschluss: schnelle, synchrone Aktionen.
 		add_action( 'woocommerce_order_status_completed', array( $this, 'on_order_completed' ), 10, 1 );
 
@@ -50,6 +54,11 @@ class LoyaltyModule {
 
 		// Frontend: Checkout-Einlösung + Mein-Konto-Tab.
 		( new LoyaltyFrontend() )->register();
+
+		// Bonuspunkte für Konto, Newsletter, Geburtstag, Bewertungen.
+		( new LoyaltyTriggers() )->register();
+		( new ReviewPhotos() )->register();
+		( new LoyaltyCart() )->register();
 	}
 
 	/* --------------------------------------------------------------------
@@ -99,30 +108,53 @@ class LoyaltyModule {
 			return;
 		}
 
-		$user_id = (int) $order->get_customer_id();
+		$user_id   = (int) $order->get_customer_id();
+		$wartezeit = (int) Settings::get( 'punkte_wartezeit_tage', 14 );
 
-		// --- Punkte: 1 Punkt pro vollem Euro (nur eingeloggte Kunden). ----
+		// --- Punkte für den Bestellwert, mit laufenden Aktionen. ----------
+		// Maßgeblich ist der Bestelltag, nicht der Tag der Fertigmeldung:
+		// Wer während einer Aktion bestellt, bekommt ihre Punkte.
 		if ( $user_id ) {
-			$punkte_pro_euro = (float) Settings::get( 'punkte_pro_euro', 1 );
-			$punkte          = Calc::points_for_amount( (float) $order->get_total(), $punkte_pro_euro );
-			if ( $punkte > 0 ) {
-				$wartezeit = (int) Settings::get( 'punkte_wartezeit_tage', 14 );
-				LoyaltyRepository::add_ledger(
-					array(
-						'user_id'      => $user_id,
-						'order_id'     => $order_id,
-						'points'       => $punkte,
-						'type'         => 'earned',
-						'status'       => 'pending',
-						'notiz'        => __( 'Bestellung', 'lindenweg16' ),
-						'available_at' => gmdate( 'Y-m-d H:i:s', time() + $wartezeit * DAY_IN_SECONDS ),
-					)
-				);
+			$day    = $order->get_date_created() ? $order->get_date_created()->date_i18n( 'Y-m-d' ) : current_time( 'Y-m-d' );
+			$result = LoyaltyRules::order_points(
+				(float) $order->get_total(),
+				$this->order_lines( $order ),
+				(float) Settings::get( 'punkte_pro_euro', 1 ),
+				LoyaltyCampaigns::active( $day )
+			);
+			$extras = array();
+			if ( $result['bonus'] > 0 ) {
+				/* translators: 1: Aktionsname(n), 2: Bonuspunkte */
+				$extras[] = sprintf( __( '%1$s (+%2$d)', 'lindenweg16' ), implode( ', ', $result['names'] ), $result['bonus'] );
+			}
+			// Stufe nach dem Umsatz vor dieser Bestellung.
+			$tier   = LoyaltyTiers::for_user( $user_id, $order_id );
+			$points = $result['points'];
+			if ( $tier && $tier['tier']['faktor'] > 1 ) {
+				$points   = LoyaltyRules::apply_tier( $result['points'], $tier['tier']['faktor'] );
+				/* translators: 1: Stufe, 2: Bonuspunkte */
+				$extras[] = sprintf( __( 'Stufe %1$s (+%2$d)', 'lindenweg16' ), $tier['tier']['name'], $points - $result['points'] );
+			}
+			$note = $extras ? __( 'Bestellung', 'lindenweg16' ) . ' · ' . implode( ' · ', $extras ) : __( 'Bestellung', 'lindenweg16' );
+			LoyaltyRepository::award( $user_id, $points, 'earned', $note, $order_id, $wartezeit );
+			LoyaltyTiers::forget( $user_id );
+
+			// Erste abgeschlossene Bestellung: einmaliger Bonus, und ihr Tag ist
+			// künftig der Jahrestag.
+			if ( 1 === $this->completed_order_count( $user_id ) ) {
+				update_user_meta( $user_id, LoyaltyTriggers::META_ERSTE_BESTELLUNG, $day );
+				LoyaltyRepository::award_once( $user_id, 'erste_bestellung', (int) Settings::get( 'punkte_erste_bestellung', 0 ), 'first_order', __( 'Bonus für die erste Bestellung', 'lindenweg16' ), $wartezeit, $order_id );
 			}
 		}
 
-		// --- Referral: Cookie auswerten. ---------------------------------
-		$this->maybe_create_referral( $order );
+		// --- Referral: Code aus der Bestellung auswerten. ------------------
+		$referral = $this->maybe_create_referral( $order );
+
+		// Willkommenspunkte für Geworbene mit Konto, nur bei der ersten Bestellung
+		// und nicht, wenn die Empfehlung erst geprüft werden muss.
+		if ( $referral && 'pending' === $referral['status'] && $user_id && 1 === $this->completed_order_count( $user_id ) ) {
+			LoyaltyRepository::award_once( $user_id, 'empfehlung_willkommen', (int) Settings::get( 'punkte_empfehlung_neukunde', 0 ), 'referral_welcome', __( 'Willkommen über eine Empfehlung', 'lindenweg16' ), $wartezeit, $order_id );
+		}
 
 		$order->update_meta_data( '_lw16_loyalty_done', current_time( 'mysql' ) );
 		$order->save();
@@ -134,13 +166,20 @@ class LoyaltyModule {
 	 * @param \WC_Order $order Bestellung.
 	 */
 	protected function maybe_create_referral( $order ) {
-		if ( empty( $_COOKIE[ self::COOKIE ] ) ) {
-			return;
+		// Der Code steht seit 0.55.0 an der Bestellung (beim Bestellen gemerkt).
+		// Fertig gemeldet wird die Bestellung meist im Backend – dort ist das
+		// Cookie das des Mitarbeiters, nicht das des Kunden. Das Cookie zählt
+		// nur noch für ältere Bestellungen ohne gemerkten Code.
+		$code = (string) $order->get_meta( '_lw16_ref_code' );
+		if ( '' === $code && ! $order->get_meta( '_lw16_ref_checked' ) && ! empty( $_COOKIE[ self::COOKIE ] ) ) {
+			$code = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
 		}
-		$code         = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
-		$referrer_id  = LoyaltyRepository::user_id_by_code( $code );
+		if ( '' === $code ) {
+			return null;
+		}
+		$referrer_id = LoyaltyRepository::user_id_by_code( $code );
 		if ( ! $referrer_id ) {
-			return;
+			return null;
 		}
 		$referred_id = (int) $order->get_customer_id();
 
@@ -148,12 +187,12 @@ class LoyaltyModule {
 		$referrer      = get_userdata( $referrer_id );
 		$referred_mail = $order->get_billing_email();
 		if ( Calc::is_self_referral( $referrer_id, $referred_id, $referrer ? $referrer->user_email : '', (string) $referred_mail ) ) {
-			return;
+			return null;
 		}
 
 		$reward = $this->calculate_reward( $order );
 		if ( $reward <= 0 ) {
-			return;
+			return null;
 		}
 
 		// --- Weiche Signale: ggf. in Review. -----------------------------
@@ -174,6 +213,84 @@ class LoyaltyModule {
 		if ( 'review' === $status ) {
 			$this->notify_review( $referral_id, $review_grund, $reward );
 		}
+
+		return array( 'id' => $referral_id, 'status' => $status );
+	}
+
+	/**
+	 * Empfehlungscode beim Bestellen an die Bestellung schreiben (klassische
+	 * Kasse und Block-Kasse), samt Zeitpunkt des Klicks für die Schnellkauf-Prüfung.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 */
+	public function remember_referral( $order ) {
+		if ( ! $order instanceof \WC_Order ) {
+			return;
+		}
+		$order->update_meta_data( '_lw16_ref_checked', 1 );
+		if ( empty( $_COOKIE[ self::COOKIE ] ) ) {
+			return;
+		}
+		$code = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
+		if ( ! LoyaltyRepository::user_id_by_code( $code ) ) {
+			return;
+		}
+		$order->update_meta_data( '_lw16_ref_code', $code );
+		if ( ! empty( $_COOKIE[ self::COOKIE . '_ts' ] ) ) {
+			$order->update_meta_data( '_lw16_ref_ts', (int) $_COOKIE[ self::COOKIE . '_ts' ] );
+		}
+		$order->update_meta_data( '_lw16_ref_order_ts', time() );
+	}
+
+	/**
+	 * Block-Kasse: wie remember_referral(), danach speichern – ob die Store-API
+	 * nach diesem Hook noch speichert, ist nicht zugesichert.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 */
+	public function remember_referral_block( $order ) {
+		$this->remember_referral( $order );
+		if ( $order instanceof \WC_Order ) {
+			$order->save();
+		}
+	}
+
+	/**
+	 * Positionen für die Aktionsrechnung: Betrag inkl. Steuer und Kategorien.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @return array
+	 */
+	protected function order_lines( $order ) {
+		$lines = array();
+		foreach ( $order->get_items() as $item ) {
+			$product_id = $item->get_product_id();
+			$cats       = $product_id ? wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'ids' ) ) : array();
+			$lines[]    = array(
+				'total' => (float) $item->get_total() + (float) $item->get_total_tax(),
+				'cats'  => is_wp_error( $cats ) ? array() : array_map( 'intval', $cats ),
+			);
+		}
+		return $lines;
+	}
+
+	/**
+	 * Wie viele abgeschlossene Bestellungen hat der Kunde?
+	 *
+	 * @param int $user_id Kunde.
+	 * @return int
+	 */
+	protected function completed_order_count( $user_id ) {
+		return count(
+			wc_get_orders(
+				array(
+					'customer_id' => $user_id,
+					'status'      => array( 'wc-completed' ),
+					'limit'       => 2,
+					'return'      => 'ids',
+				)
+			)
+		);
 	}
 
 	/**
@@ -227,9 +344,15 @@ class LoyaltyModule {
 			}
 		}
 
-		// Sehr schnelle Bestellung nach Cookie-Setzung.
-		if ( ! empty( $_COOKIE[ self::COOKIE . '_ts' ] ) ) {
-			$diff  = time() - (int) $_COOKIE[ self::COOKIE . '_ts' ];
+		// Sehr schnelle Bestellung nach Cookie-Setzung (Zeitpunkte von der
+		// Bestellung; ältere Bestellungen: Cookie wie bisher).
+		$klick = (int) $order->get_meta( '_lw16_ref_ts' );
+		$kauf  = (int) $order->get_meta( '_lw16_ref_order_ts' );
+		if ( ! $klick && ! empty( $_COOKIE[ self::COOKIE . '_ts' ] ) ) {
+			$klick = (int) $_COOKIE[ self::COOKIE . '_ts' ];
+		}
+		if ( $klick ) {
+			$diff  = ( $kauf ? $kauf : time() ) - $klick;
 			$grenze = (int) Settings::get( 'referral_schnellkauf_sek', 60 );
 			if ( $diff >= 0 && $diff < $grenze ) {
 				$gruende[] = __( 'sehr schnelle Bestellung nach Cookie-Setzung', 'lindenweg16' );
@@ -269,9 +392,28 @@ class LoyaltyModule {
 	 */
 	public function on_order_reversed( $order_id ) {
 		global $wpdb;
+
+		// Punkte der Bestellung zurücknehmen – alle Gutschriften, die an ihr
+		// hängen (Bestellpunkte, Erstbestellungs- und Willkommensbonus, Punkte
+		// des Werbers), und auch ohne Empfehlung. Bisher geschah das nur, wenn
+		// es zur Bestellung eine Empfehlung gab.
+		$order = wc_get_order( $order_id );
+		if ( $order && $order->get_customer_id() ) {
+			LoyaltyTiers::forget( (int) $order->get_customer_id() );
+		}
+
+		$lt   = LoyaltyRepository::table( 'points_ledger' );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$lt} WHERE order_id = %d AND points > 0 AND status <> 'reversed'", $order_id ) ); // phpcs:ignore
+		foreach ( $rows as $pl ) {
+			if ( 'available' === $pl->status ) {
+				LoyaltyRepository::adjust_points( (int) $pl->user_id, -1 * (int) $pl->points );
+			}
+			LoyaltyRepository::set_ledger_status( (int) $pl->id, 'reversed' );
+		}
+
 		$t   = LoyaltyRepository::table( 'referrals' );
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE referred_order_id = %d", $order_id ) ); // phpcs:ignore
-		if ( ! $row ) {
+		if ( ! $row || 'reversed' === $row->status ) {
 			return;
 		}
 		if ( 'completed' === $row->status ) {
@@ -279,16 +421,6 @@ class LoyaltyModule {
 			LoyaltyRepository::adjust_credit( (int) $row->referrer_user_id, -1 * (float) $row->reward_amount );
 		}
 		LoyaltyRepository::set_referral_status( (int) $row->id, 'reversed' );
-
-		// Punkte der Bestellung stornieren.
-		$lt   = LoyaltyRepository::table( 'points_ledger' );
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$lt} WHERE order_id = %d AND type = 'earned'", $order_id ) ); // phpcs:ignore
-		foreach ( $rows as $pl ) {
-			if ( 'available' === $pl->status ) {
-				LoyaltyRepository::adjust_points( (int) $pl->user_id, -1 * (int) $pl->points );
-			}
-			LoyaltyRepository::set_ledger_status( (int) $pl->id, 'reversed' );
-		}
 	}
 
 	/**
@@ -303,6 +435,9 @@ class LoyaltyModule {
 			// reversed gesetzt; hier nur echte pending gutschreiben.
 			LoyaltyRepository::adjust_credit( (int) $ref->referrer_user_id, (float) $ref->reward_amount );
 			LoyaltyRepository::set_referral_status( (int) $ref->id, 'completed' );
+			// Punkte für den Werber zusätzlich zum Guthaben; hängen an der
+			// Bestellung des Geworbenen und gehen bei deren Storno mit zurück.
+			LoyaltyRepository::award( (int) $ref->referrer_user_id, (int) Settings::get( 'punkte_empfehlung_werber', 0 ), 'referral_bonus', __( 'Freund geworben', 'lindenweg16' ), (int) $ref->referred_order_id );
 		}
 
 		// Punkte: pending -> available nach available_at.

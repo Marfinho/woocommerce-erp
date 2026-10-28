@@ -7,6 +7,42 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.56.0] – 2026-10-28
+
+### Prämienprogramm: Stufen, Verfall, Profil, Jahrestag, Punkte im Warenkorb
+- **Stufen** (Verkauf → Loyalty → Regeln → Stufen): Wer in den letzten 12 Monaten mehr bestellt hat, sammelt schneller. Vorschlag aus der Werkstatt: Rohling (ab 0 €, 1×), Gehobelt (ab 100 €, 1,1×), Geölt (ab 250 €, 1,25×), Meisterstück (ab 500 €, 1,5×). Namen, Schwellen und Faktoren sind einstellbar (2 bis 6 Stufen). Gezählt werden abgeschlossene Bestellungen abzüglich Erstattungen; die Stufe gilt nach dem Umsatz vor der jeweiligen Bestellung und wirkt zusammen mit Aktionen. Kunden sehen ihre Stufe als Leiste in der Konto-Übersicht samt Betrag bis zur nächsten. Standard: aus.
+- **Verfall** (einstellbar, Standard: nie): Punkte verfallen nach X Monaten ohne Aktivität; jede Gutschrift, Bestellung und jedes Einlösen setzt die Frist neu. Beim Einschalten beginnt die Frist für alle am selben Tag. Erinnerungs-Mail X Tage vorher (Vorlage „Erinnerung: Prämienpunkte verfallen bald“). Die Übersicht zeigt „Gültig bis …“.
+- **Vollständiges Profil:** einmaliger Bonus, sobald Name, Rechnungsadresse und Telefon eingetragen sind; die Übersicht nennt, was noch fehlt.
+- **Jahrestag der ersten Bestellung:** jedes Jahr Punkte und Mail. Für Kunden mit älteren Bestellungen wird der Tag im täglichen Lauf nachgetragen (500 je Tag).
+- **Punkte im Warenkorb und an der Kasse:** „Mit dieser Bestellung sammelst du X Prämienpunkte“ unter der Summe, mit Aktion und Stufe; Gäste sehen, was sie mit Konto sammeln würden. Block-Warenkorb und -Kasse über die Store-API (rechnet bei jeder Änderung neu), klassische Kasse als Zeile in der Summentabelle. Die Produktseite rechnet die Stufe mit ein.
+- ERP-Kundenansicht zeigt Stufe und Verfallsdatum.
+
+## [0.55.0] – 2026-10-28
+
+### Prämienprogramm: Regeln, Auslöser, Aktionen
+- **Regeln im ERP** (Verkauf → Loyalty → Regeln): Punkte je Euro, Einlösewert, Wartezeit und Bonuspunkte je Auslöser an einer Stelle, mit Erklärung und Vorschlagswert. Ändern braucht das neue Recht „Loyalty-Regeln einstellen“ (`verkauf.loyalty.regeln`), jede Änderung steht im Protokoll.
+- **Neue Auslöser** (0 = aus, neu angelegte stehen auf aus): Kundenkonto anlegen, Newsletter bestätigen (auch wenn die Anmeldung vor dem Konto kam), erste Bestellung, Geburtstag (freiwilliges Feld in den Kontodetails, Glückwunsch-Mail, zählt erst 30 Tage nach dem Eintragen), Foto in der Bewertung, Punkte für den Werber zusätzlich zum Guthaben, Willkommenspunkte für Geworbene.
+- **Aktionen** (Verkauf → Loyalty → Aktionen): von–bis, 1,5- bis 10-fache Punkte, optional nur für Kategorien. Es zählt der Bestelltag; überschneiden sich Aktionen, gilt je Artikel die stärkste. Kunden sehen laufende Aktionen in der Konto-Übersicht und auf der Produktseite.
+- **Fotos in Bewertungen:** Angemeldete Kunden hängen bis zu 3 Fotos an (JPG, PNG, WebP, je 8 MB; Anzahl einstellbar, 0 = aus). Geprüft wird vor dem Speichern (Typ am Dateiinhalt, Größe, Anzahl); die Fotos stehen unter der Bewertung und werden mit ihr gelöscht.
+- **Produktseite:** „X Prämienpunkte sammeln“ unter dem Preis, während einer Aktion hervorgehoben.
+- Konto-Übersicht: „So sammelst du“ folgt den Einstellungen; Erledigtes fällt weg, Offenes (Newsletter, Geburtstag) ist verlinkt.
+
+### Behoben
+- **Bewertungspunkte gab es auch für nicht freigeschaltete Bewertungen** (und für Spam). Jetzt erst, wenn die Bewertung sichtbar ist; einstellbar nur für Käufer des Produkts (Standard: an).
+- **Empfehlungen wurden beim Fertigmelden nicht erkannt:** Der Empfehlungscode wurde erst beim Abschluss der Bestellung aus dem Cookie gelesen – das ist dann meist das Cookie des Mitarbeiters im Backend. Der Code wird jetzt beim Bestellen an die Bestellung geschrieben (klassische und Block-Kasse).
+- **Punkte stornierter Bestellungen blieben stehen,** wenn es zur Bestellung keine Empfehlung gab. Jetzt werden alle Gutschriften der Bestellung zurückgenommen.
+
+## [0.54.0] – 2026-10-28
+
+### Mein Konto: Übersicht mit Prämienpunkten
+- **Neue Übersicht statt WooCommerce-Textseite.** Oben eine Prämienkarte: verfügbare Punkte, ihr Gegenwert in Euro, Fortschritt bis zum nächsten vollen Euro, noch nicht freigegebene Punkte mit Datum, wie man sammelt (Punkte je Euro, Bewertungsbonus, Empfehlungen) und der Empfehlungslink zum Kopieren. Darunter Kennzahlen (Bestellungen, in Arbeit, Guthaben, Wunschliste), die letzte Bestellung mit Status und die Adressen. Aussehen liefert das Theme (1.5.0).
+- Wunschliste: Knöpfe in einer eigenen Zeile, „Entfernen“ als zweitrangiger Knopf.
+
+### ERP: Darstellungsfehler
+- **Board und Chips nach dem Lager zu groß:** Die Lager-Seite hängt ihre Klasse an den Inhaltsbereich, beim Seitenwechsel blieb sie hängen – danach waren überall Chips und Knöpfe 44 px hoch und Board-Karten ragten aus der Spalte. Der Inhaltsbereich wird jetzt bei jedem Wechsel zurückgesetzt.
+- Board: lange Chips („Nachtplatte – am besten kurz vor Feierabend starten“) brechen um, statt die Spalte zu sprengen.
+- Heute: Karten der linken Spalte können nicht mehr unter die Kennzahlen ragen.
+
 ## [0.53.0] – 2026-10-28
 
 ### Bambu: Sicherheit und Betrieb

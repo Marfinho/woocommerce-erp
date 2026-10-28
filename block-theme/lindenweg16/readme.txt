@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,19 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.7.0 =
+* Prämienprogramm (ERP-Plugin 0.56.0): Stufen-Leiste in der Prämienkarte, Hinweis „Mit dieser Bestellung sammelst du …“ in Warenkorb und Kasse
+
+= 1.6.0 =
+* Prämienprogramm (ERP-Plugin 0.55.0): Hinweis auf laufende Aktionen in der Konto-Übersicht, „Prämienpunkte sammeln“ auf der Produktseite, Fotos unter Bewertungen und Upload-Feld im Bewertungsformular, Geburtstagsfeld in den Kontodetails
+
+= 1.5.0 =
+* Mein Konto neu: ab Tablet-Breite Menü als Seitenleiste mit Symbolen, aktiver Punkt dunkel; Inhalte als ruhige Karten mit Rand
+* Übersicht (kommt vom ERP-Plugin) gestaltet: dunkle Prämienkarte mit Punktestand, Gegenwert, Fortschritt, „So sammelst du“ und Empfehlungslink; Kennzahlen, letzte Bestellung, Adressen
+* Hinweise: Text steht wieder neben dem Symbol statt darunter; Info-Hinweise in Akzentfarbe
+* Adressen-Seite: Titel und „Bearbeiten“ in einer Zeile, Adresse aufrecht statt kursiv
+* Wunschliste: Karten im Theme-Stil, Knöpfe nebeneinander; Buttons im Konto nicht mehr unterstrichen
 
 = 1.4.0 =
 * Neues Template „Über uns“ (greift für die Seite mit dem Slug „ueber-uns“ automatisch, sonst in den Seiten-Einstellungen wählbar): Hero mit Beitragsbild (sonst Produktfoto) und Stickern, Text-Laufband, Geschichte aus dem Seiteninhalt (erste Überschrift links, Text rechts), Werkstatt als Liste mit Linien, Abschlusszeile zu Shop und Anfragen
