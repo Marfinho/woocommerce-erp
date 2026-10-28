@@ -58,6 +58,8 @@ class Schema {
 			created_at DATETIME NOT NULL,
 			updated_at DATETIME NULL,
 			created_by BIGINT UNSIGNED NULL,
+			pos_only TINYINT(1) NOT NULL DEFAULT 0,
+			image_id BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY sku (sku),
 			KEY barcode (barcode),

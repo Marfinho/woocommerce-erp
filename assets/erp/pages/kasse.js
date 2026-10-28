@@ -18,6 +18,8 @@
 
 		function eur(n) { return ui.money(n, 'EUR'); }
 		function datum(s) { var p = String(s).split('-'); return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : s; }
+		var preselect = '';     // Auswahlwert einer frisch angelegten Kachel
+
 		function field(label, input) { return h('div', null, h('label', null, label), input); }
 
 		// Eine Aktion senden, Knopf währenddessen sperren (Doppeltipp bucht sonst zweimal).
@@ -29,6 +31,61 @@
 			}).catch(function (e) {
 				ui.toast(e.message, true);
 			}).then(function () { if (btn) { btn.disabled = false; } });
+		}
+
+		// Foto verkleinern, bevor es hochgeladen wird: am Stand zählt das Mobilfunknetz.
+		function shrink(file, done) {
+			var img = new Image();
+			var url = URL.createObjectURL(file);
+			img.onload = function () {
+				var max = 800, f = Math.min(1, max / Math.max(img.width, img.height));
+				var c = document.createElement('canvas');
+				c.width = Math.round(img.width * f);
+				c.height = Math.round(img.height * f);
+				c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+				URL.revokeObjectURL(url);
+				done(c.toDataURL('image/jpeg', 0.82));
+			};
+			img.onerror = function () { URL.revokeObjectURL(url); done(''); };
+			img.src = url;
+		}
+
+		// Schnellanlage: Foto, Name, Preis, Bestand – danach ist die Kachel gleich gewählt.
+		function productPanel(onDone) {
+			var foto = '';
+			var pic = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
+			var preview = h('span', { class: 'ks-bild' }, '📷');
+			var take = h('button', { class: 'ks-kachel', type: 'button', style: 'width:120px' }, preview, h('span', { class: 'ks-name' }, 'Foto aufnehmen'));
+			take.addEventListener('click', function () { pic.click(); });
+			pic.addEventListener('change', function () {
+				if (!pic.files || !pic.files[0]) { return; }
+				shrink(pic.files[0], function (data) {
+					foto = data;
+					preview.textContent = '';
+					if (data) { preview.appendChild(h('img', { src: data, alt: '' })); } else { preview.textContent = '📷'; ui.toast('Das Foto ließ sich nicht lesen.', true); }
+				});
+			});
+			var name = h('input', { class: 'field', type: 'text', placeholder: 'z. B. Handyhalterung blau' });
+			var preis = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
+			var bestand = h('input', { class: 'field', type: 'number', min: '0', step: '1', inputmode: 'numeric', placeholder: '0' });
+			var save = h('button', { class: 'btn primary', type: 'button' }, 'Produkt anlegen');
+			save.addEventListener('click', function () {
+				if (!name.value.trim()) { ui.toast('Bitte einen Namen eintragen.', true); name.focus(); return; }
+				if (!preis.value.trim()) { ui.toast('Bitte einen Preis eintragen.', true); preis.focus(); return; }
+				post('produkt', { name: name.value, preis: preis.value, bestand: bestand.value, foto: foto }, save, function (res) {
+					preselect = res.value || '';
+					return load();
+				});
+			});
+			var cancel = h('button', { class: 'btn', type: 'button' }, 'Abbrechen');
+			cancel.addEventListener('click', onDone);
+			return h('div', { class: 'card ks-form' },
+				h('h3', null, 'Neues Produkt nur für die Kasse'),
+				h('p', { class: 'muted' }, 'Erscheint nicht im Shop. Der Bestand läuft wie bei jedem Artikel mit; verkauft die Kasse etwas, geht er ab.'),
+				pic, take,
+				field('Name', name),
+				h('div', { class: 'ks-row' }, field('Preis (€)', preis), field('Anfangsbestand (Stück)', bestand)),
+				h('div', { style: 'margin-top:14px;display:flex;gap:8px' }, save, cancel));
 		}
 
 		/* ---------- Kein offener Tag ---------- */
@@ -97,6 +154,14 @@
 				});
 				kacheln.push({ el: el, o: o });
 				grid.appendChild(el);
+				if (preselect && o.value === preselect) { preselect = ''; el.click(); }
+			});
+
+			var panelBox = h('div');
+			var newProd = h('button', { class: 'btn', type: 'button' }, '+ Neues Produkt');
+			newProd.addEventListener('click', function () {
+				panelBox.textContent = '';
+				panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }));
 			});
 
 			var sell = h('button', { class: 'btn primary', type: 'button' }, 'Verkauf buchen');
@@ -147,7 +212,8 @@
 			var left = h('div', { class: 'ks-stack' },
 				h('div', { class: 'card ks-form' },
 					h('h3', null, 'Neuer Verkauf'),
-					d.optionen.length ? [suche, grid] : h('p', { class: 'muted' }, 'Noch kein verkäuflicher Artikel angelegt – unten einen freien Betrag buchen.'),
+					h('div', { style: 'margin-bottom:10px' }, newProd), panelBox,
+					d.optionen.length ? [suche, grid] : h('p', { class: 'muted' }, 'Noch kein verkäuflicher Artikel – oben ein Produkt anlegen oder unten einen freien Betrag buchen.'),
 					field('Artikelname', name),
 					h('div', { class: 'ks-row' }, field('Menge', menge), field('Einzelpreis (€)', preis)),
 					h('div', { style: 'margin-top:14px' }, sell)),

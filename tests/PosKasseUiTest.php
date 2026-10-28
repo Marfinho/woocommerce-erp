@@ -82,7 +82,7 @@ class PosKasseUiTest extends TestCase {
 	public function test_auswahlliste_liefert_bild_und_preis() {
 		$quelle = $this->quelle();
 
-		$this->assertStringContainsString( "'bild'  => self::product_image_url(", $quelle );
+		$this->assertStringContainsString( "'bild'  => self::article_image_url(", $quelle );
 		$this->assertStringContainsString( 'ArticleRepository::selectable(', $quelle );
 	}
 

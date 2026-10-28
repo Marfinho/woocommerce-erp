@@ -54,7 +54,7 @@ class Kasse {
 			)
 		);
 
-		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss' ) as $action ) {
+		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt' ) as $action ) {
 			register_rest_route(
 				$ns,
 				'/erp/kasse/' . $action,
@@ -217,6 +217,16 @@ class Kasse {
 		$body = (array) $request->get_json_params();
 
 		return self::answer( POSModule::storno_position( (int) ( $body['id'] ?? 0 ) ) );
+	}
+
+	/**
+	 * Produkt nur für die Kasse anlegen.
+	 *
+	 * @param WP_REST_Request $request Anfrage (name, preis, bestand, foto).
+	 * @return WP_REST_Response
+	 */
+	public static function produkt( WP_REST_Request $request ) {
+		return self::answer( POSModule::create_product( (array) $request->get_json_params() ) );
 	}
 
 	/**

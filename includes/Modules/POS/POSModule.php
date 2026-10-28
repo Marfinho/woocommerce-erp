@@ -18,6 +18,7 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Core\Lock;
 use Lindenweg16\Core\Log;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
+use Lindenweg16\Modules\Betrieb\StockRepository;
 
 /**
  * Kassenfunktion für den Marktverkauf: Tagesbetrieb mit Anfangs-/Endbestand,
@@ -295,6 +296,119 @@ class POSModule {
 		);
 	}
 
+	/**
+	 * Foto aus der Kamera als Mediendatei speichern.
+	 *
+	 * Das Foto kommt als Data-URL, vom Browser schon verkleinert. Geprüft
+	 * wird am Inhalt, nicht am Namen: nur JPEG, PNG und WebP, höchstens 3 MB.
+	 *
+	 * @param string $data_url Data-URL.
+	 * @param string $title    Titel der Mediendatei.
+	 * @return int|string Mediendatei-ID oder Fehlertext.
+	 */
+	public static function save_photo( $data_url, $title ) {
+		if ( ! preg_match( '#^data:image/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=\r\n]+)$#', (string) $data_url, $m ) ) {
+			return __( 'Das Foto ist kein gültiges Bild.', 'lindenweg16' );
+		}
+
+		$bytes = base64_decode( $m[1], true );
+
+		if ( false === $bytes || '' === $bytes || strlen( $bytes ) > 3 * 1024 * 1024 ) {
+			return __( 'Das Foto ist leer oder zu groß (höchstens 3 MB).', 'lindenweg16' );
+		}
+
+		$info = @getimagesizefromstring( $bytes ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		$ext  = array(
+			IMAGETYPE_JPEG => 'jpg',
+			IMAGETYPE_PNG  => 'png',
+			IMAGETYPE_WEBP => 'webp',
+		);
+
+		if ( ! $info || ! isset( $ext[ $info[2] ] ) ) {
+			return __( 'Das Foto ist kein gültiges Bild.', 'lindenweg16' );
+		}
+
+		$upload = wp_upload_bits( 'kasse-' . gmdate( 'Ymd-His' ) . '-' . wp_rand( 100, 999 ) . '.' . $ext[ $info[2] ], null, $bytes );
+
+		if ( ! empty( $upload['error'] ) ) {
+			return __( 'Das Foto konnte nicht gespeichert werden.', 'lindenweg16' );
+		}
+
+		$attachment = wp_insert_attachment(
+			array(
+				'post_mime_type' => $info['mime'],
+				'post_title'     => sanitize_text_field( $title ),
+				'post_status'    => 'inherit',
+			),
+			$upload['file']
+		);
+
+		if ( ! $attachment || is_wp_error( $attachment ) ) {
+			return __( 'Das Foto konnte nicht gespeichert werden.', 'lindenweg16' );
+		}
+
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		wp_update_attachment_metadata( $attachment, wp_generate_attachment_metadata( $attachment, $upload['file'] ) );
+
+		return (int) $attachment;
+	}
+
+	/**
+	 * Produkt nur für die Kasse anlegen: Name, Preis, Foto, Anfangsbestand.
+	 *
+	 * @param array $data name, preis (roh), bestand (roh, optional), foto (Data-URL, optional).
+	 * @return array {ok, message, value} – value ist der Auswahlwert der neuen Kachel.
+	 */
+	public static function create_product( array $data ) {
+		$name  = sanitize_text_field( (string) ( $data['name'] ?? '' ) );
+		$preis = self::parse_amount( $data['preis'] ?? '' );
+
+		if ( '' === $name ) {
+			return array( 'ok' => false, 'message' => __( 'Bitte einen Namen eintragen.', 'lindenweg16' ) );
+		}
+		if ( $preis <= 0 ) {
+			return array( 'ok' => false, 'message' => __( 'Bitte einen Preis eintragen.', 'lindenweg16' ) );
+		}
+
+		// Erst das Foto: schlägt es fehl, ist noch nichts angelegt.
+		$image_id = 0;
+		if ( ! empty( $data['foto'] ) ) {
+			$saved = self::save_photo( (string) $data['foto'], $name );
+
+			if ( is_string( $saved ) ) {
+				return array( 'ok' => false, 'message' => $saved );
+			}
+			$image_id = $saved;
+		}
+
+		$result = ArticleRepository::create_pos_article( $name, $preis, $image_id );
+
+		if ( ! $result['success'] ) {
+			if ( $image_id ) {
+				wp_delete_attachment( $image_id, true );
+			}
+
+			return array( 'ok' => false, 'message' => $result['message'] );
+		}
+
+		$bestand = (int) round( self::parse_amount( $data['bestand'] ?? '' ) );
+		if ( $bestand > 0 ) {
+			StockRepository::book(
+				array(
+					'article_id'    => $result['id'],
+					'qty'           => $bestand,
+					'movement_type' => 'korrektur',
+					'location'      => 'lager',
+					'note'          => __( 'Anfangsbestand beim Anlegen in der Kasse', 'lindenweg16' ),
+				)
+			);
+		}
+
+		Log::normal( 'kasse', sprintf( 'Kassenprodukt angelegt: %s (%s €)', $name, number_format( $preis, 2, ',', '.' ) ), array( 'article_id' => $result['id'] ) );
+
+		return array( 'ok' => true, 'message' => __( 'Produkt angelegt.', 'lindenweg16' ), 'value' => 'a:' . $result['id'] );
+	}
+
 	/* ------------------------------------------------------------------
 	 * Auswahl und Helfer
 	 * ---------------------------------------------------------------- */
@@ -323,7 +437,7 @@ class POSModule {
 				'name'  => (string) $article['name'],
 				'sku'   => (string) $article['sku'],
 				'preis' => '' === $preis ? self::product_price( $wc_id ) : $preis,
-				'bild'  => self::product_image_url( $wc_id ),
+				'bild'  => self::article_image_url( $article, $wc_id ),
 			);
 
 			if ( ! empty( $article['legacy_produkt_id'] ) ) {
@@ -347,6 +461,27 @@ class POSModule {
 		}
 
 		return $options;
+	}
+
+	/**
+	 * Bild eines Artikels für die Kachel: erst das eigene Foto, dann das des Shop-Produkts.
+	 *
+	 * @param array $article Artikelzeile.
+	 * @param int   $wc_id   Verknüpftes Shop-Produkt oder 0.
+	 * @return string Bild-URL oder leer.
+	 */
+	protected static function article_image_url( array $article, $wc_id ) {
+		$image_id = isset( $article['image_id'] ) ? (int) $article['image_id'] : 0;
+
+		if ( $image_id && function_exists( 'wp_get_attachment_image_url' ) ) {
+			$url = (string) wp_get_attachment_image_url( $image_id, 'thumbnail' );
+
+			if ( '' !== $url ) {
+				return $url;
+			}
+		}
+
+		return self::product_image_url( $wc_id );
 	}
 
 	/**

@@ -61,4 +61,33 @@ class ErpKasseTest extends TestCase {
 
 		$this->assertSame( 20.0, POSModule::sum_positions( $rows ) );
 	}
+
+	public function test_kassenprodukt_hat_felder_im_schema_und_filter_in_den_shop_listen() {
+		$root = dirname( __DIR__ );
+
+		$schema = file_get_contents( $root . '/includes/Modules/Betrieb/Schema.php' );
+		$this->assertStringContainsString( 'pos_only TINYINT(1) NOT NULL DEFAULT 0', $schema );
+		$this->assertStringContainsString( 'image_id BIGINT UNSIGNED NULL', $schema );
+
+		$this->assertSame( 1, preg_match( "/const DB_VERSION = '(\\d+)'/", file_get_contents( $root . '/includes/Core/Installer.php' ), $m ) );
+		$this->assertGreaterThanOrEqual( 48, (int) $m[1], 'Neue Spalten brauchen eine höhere DB-Version, sonst läuft das Upgrade nicht.' );
+
+		$this->assertStringContainsString( 'selectable( true, true )', file_get_contents( $root . '/includes/Modules/Betrieb/Admin/OrdersPage.php' ) );
+		$this->assertStringContainsString( 'selectable( true, true )', file_get_contents( $root . '/includes/Modules/Configurator/Admin/ConfiguratorPage.php' ) );
+		$this->assertStringContainsString( 'selectable( true )', file_get_contents( $root . '/includes/Modules/POS/POSModule.php' ), 'Die Kasse selbst zeigt Kassenprodukte.' );
+	}
+
+	public function test_schnellanlage_nimmt_kamera_und_verkleinert() {
+		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.js' );
+
+		$this->assertStringContainsString( "capture: 'environment'", $js );
+		$this->assertStringContainsString( 'toDataURL', $js );
+		$this->assertStringContainsString( "post('produkt'", $js );
+	}
+
+	public function test_foto_nur_echte_bilder() {
+		$this->assertIsString( POSModule::save_photo( 'data:text/html;base64,PGI+', 'x' ) );
+		$this->assertIsString( POSModule::save_photo( 'data:image/png;base64,' . base64_encode( 'kein bild' ), 'x' ), 'Inhalt wird geprüft, nicht der Dateiname.' );
+		$this->assertIsString( POSModule::save_photo( 'data:image/jpeg;base64,' . base64_encode( str_repeat( 'a', 3 * 1024 * 1024 + 1 ) ), 'x' ) );
+	}
 }
