@@ -17,6 +17,7 @@ namespace Lindenweg16\Erp\Pages;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Erp\Access;
+use Lindenweg16\Erp\LiveViewer;
 use Lindenweg16\Erp\Material;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Erp\RunFlow;
@@ -56,7 +57,7 @@ class Live {
 			array(
 				'methods'             => 'GET',
 				'callback'            => array( __CLASS__, 'live' ),
-				'permission_callback' => array( $api, 'can_use' ),
+				'permission_callback' => array( LiveViewer::class, 'can_open' ),
 			)
 		);
 	}
@@ -90,20 +91,23 @@ class Live {
 	public static function live() {
 		$blocks = array();
 
-		if ( Access::can( 'verkauf.orders' ) || Access::can( 'finanzen.dashboard' ) ) {
+		// Die Live-Anzeige ist für den Bildschirm da und zeigt alle Blöcke.
+		$all = LiveViewer::is_viewer();
+
+		if ( $all || Access::can( 'verkauf.orders' ) || Access::can( 'finanzen.dashboard' ) ) {
 			$blocks['sales'] = self::cached( 'sales', 30, array( __CLASS__, 'sales' ) );
 		}
 
-		if ( Access::can( 'finanzen.berichte' ) ) {
+		if ( $all || Access::can( 'finanzen.berichte' ) ) {
 			$blocks['kpis']    = self::cached( 'kpis', 120, array( __CLASS__, 'kpis' ) );
 			$blocks['traffic'] = self::traffic();
 		}
 
-		if ( Access::can( 'fertigung.workflow' ) ) {
+		if ( $all || Access::can( 'fertigung.workflow' ) ) {
 			$blocks['production'] = self::production();
 		}
 
-		if ( Access::can( 'verkauf.marketing' ) ) {
+		if ( $all || Access::can( 'verkauf.marketing' ) ) {
 			$blocks['campaigns'] = self::cached( 'campaigns', 300, array( __CLASS__, 'campaigns' ) );
 		}
 
