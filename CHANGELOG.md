@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.54.0] – 2026-10-28
+
+### Mein Konto: Übersicht mit Prämienpunkten
+- **Neue Übersicht statt WooCommerce-Textseite.** Oben eine Prämienkarte: verfügbare Punkte, ihr Gegenwert in Euro, Fortschritt bis zum nächsten vollen Euro, noch nicht freigegebene Punkte mit Datum, wie man sammelt (Punkte je Euro, Bewertungsbonus, Empfehlungen) und der Empfehlungslink zum Kopieren. Darunter Kennzahlen (Bestellungen, in Arbeit, Guthaben, Wunschliste), die letzte Bestellung mit Status und die Adressen. Aussehen liefert das Theme (1.5.0).
+- Wunschliste: Knöpfe in einer eigenen Zeile, „Entfernen“ als zweitrangiger Knopf.
+
+### ERP: Darstellungsfehler
+- **Board und Chips nach dem Lager zu groß:** Die Lager-Seite hängt ihre Klasse an den Inhaltsbereich, beim Seitenwechsel blieb sie hängen – danach waren überall Chips und Knöpfe 44 px hoch und Board-Karten ragten aus der Spalte. Der Inhaltsbereich wird jetzt bei jedem Wechsel zurückgesetzt.
+- Board: lange Chips („Nachtplatte – am besten kurz vor Feierabend starten“) brechen um, statt die Spalte zu sprengen.
+- Heute: Karten der linken Spalte können nicht mehr unter die Kennzahlen ragen.
+
 ## [0.53.0] – 2026-10-28
 
 ### Bambu: Sicherheit und Betrieb

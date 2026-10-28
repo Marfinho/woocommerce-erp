@@ -514,7 +514,8 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .col > header { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 10px; }
 .col h3 { margin: 0; font-size: 16px; }
 .count { background: var(--surface); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 2px 10px; }
-.col-cards { display: grid; gap: 10px; }
+.col-cards { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
+.col-cards > * { min-width: 0; }
 .empty { padding: 10px 6px; font-size: 13px; }
 
 .run-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 13px; box-shadow: var(--shadow); }
@@ -524,7 +525,7 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .row-top { display: flex; justify-content: space-between; gap: 2px 8px; align-items: baseline; flex-wrap: wrap; }
 .run-title { font: 700 16px var(--font-head); text-decoration: none; white-space: nowrap; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
-.chips .chip { font-size: 11.5px; padding: 2px 9px; background: var(--bg); }
+.chips .chip { font-size: 11.5px; padding: 2px 9px; background: var(--bg); white-space: normal; overflow-wrap: anywhere; }
 .chip.warn { border-color: var(--warning); color: var(--warning); }
 .done-strip { margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; }
 .done-strip a { text-decoration: none; }
@@ -610,6 +611,7 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 @media (min-width: 1000px) { .today { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
 .today-main { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
 .today-side { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.today-main > *, .today-side > *, .tasks > * { min-width: 0; }
 .next {
 	background: var(--ink); color: var(--on-ink); border-radius: 22px; padding: 20px; display: grid; gap: 6px; box-shadow: var(--shadow);
 }

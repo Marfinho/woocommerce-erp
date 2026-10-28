@@ -215,6 +215,22 @@ class LoyaltyRepository {
 	}
 
 	/**
+	 * Noch nicht verfügbare Punkte eines Nutzers (Wartezeit nach Bestellung).
+	 *
+	 * @param int $user_id Nutzer.
+	 * @return array{points:int,next_at:?string} Summe und frühester Freigabezeitpunkt (GMT).
+	 */
+	public static function pending_points( $user_id ) {
+		global $wpdb;
+		$t   = self::table( 'points_ledger' );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT COALESCE(SUM(points), 0) AS points, MIN(available_at) AS next_at FROM {$t} WHERE user_id = %d AND type = 'earned' AND status = 'pending'", $user_id ) ); // phpcs:ignore
+		return array(
+			'points'  => $row ? (int) $row->points : 0,
+			'next_at' => $row && $row->next_at ? (string) $row->next_at : null,
+		);
+	}
+
+	/**
 	 * Punkte-Ledger-Status setzen.
 	 *
 	 * @param int    $id     Eintrag-ID.
