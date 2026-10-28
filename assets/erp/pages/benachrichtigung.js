@@ -63,7 +63,13 @@
 
 			if (st.arten.length) {
 				body.appendChild(h('h4', { style: 'margin:8px 0 0' }, 'Worüber?'));
+				body.appendChild(h('small', { style: 'opacity:.7' }, 'Deine Auswahl gilt für alle deine Geräte. Du siehst nur, wofür du die Rechte hast.'));
+				var bereich = null;
 				st.arten.forEach(function (a) {
+					if (a.bereich && a.bereich !== bereich) {
+						bereich = a.bereich;
+						body.appendChild(h('div', { style: 'margin:6px 0 -6px;font-weight:600;opacity:.8' }, bereich));
+					}
 					var cb = h('input', { type: 'checkbox', checked: a.an });
 					cb.addEventListener('change', function () {
 						var arten = {};

@@ -7,6 +7,35 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.58.0] – 2026-10-28
+
+### 16 neue Push-Benachrichtigungen, jede Person wählt selbst
+Im ERP unter Profilmenü → **Benachrichtigungen** stehen jetzt 18 Meldungsarten, nach Bereich gruppiert. Jede Person sieht nur die Arten, für die sie das Recht hat, und schaltet sie für sich ein oder aus; die Wahl gilt für alle ihre Geräte. Die neuen Arten sind zunächst **aus** – „Neue Shop-Bestellung“ und „Fast/ganz ausverkauft“ bleiben wie bisher an.
+
+| Bereich | Meldung | Recht |
+|---|---|---|
+| Verkauf | Zahlung zu einer wartenden Bestellung eingegangen (Vorkasse) | Shop-Bestellungen |
+| Verkauf | Bestellung storniert | Shop-Bestellungen |
+| Verkauf | Erstattung gebucht | Shop-Bestellungen |
+| Verkauf | Neue Produktbewertung (mit Sternen, auch „wartet auf Freigabe“) | Shop-Produkte |
+| Verkauf | Kunde trägt sich in die Warteliste ein | Shop-Produkte |
+| Verkauf | Wiedervorlage bei einem Kontakt fällig – nachfassen (morgens) | Kontakte / B2B |
+| Verkauf | Etikettendruck fehlgeschlagen | Versand |
+| Fertigung | Bambu-Druck fertig – Platte abräumen | Bambu-Lab-Drucker |
+| Fertigung | Bambu-Druck fehlgeschlagen oder Ausgang unklar | Bambu-Lab-Drucker |
+| Fertigung | Slicen einer Platte fehlgeschlagen | Workflow |
+| Fertigung | Drucker-Wartung neu fällig (morgens) | 3D-Drucker & Wartung |
+| Lager | Ausverkaufter Artikel wieder auf Lager | Lager |
+| Lager | Neu nachzubestellen (morgens) | Einkauf |
+| Finanzen | E-Rechnung eingegangen | Buchhaltung |
+| Verwaltung | Neue Support-Anfrage | Support |
+| Verwaltung | Mir wurde eine Mail zugewiesen (nur an die Person selbst) | Mailbox |
+
+- Wer eine Stornierung, Erstattung, Bewertung oder Mail-Zuweisung selbst auslöst, bekommt dazu keine Meldung.
+- Wartung, Nachbestellen und Wiedervorlagen prüft das ERP einmal am Morgen (ab 8 Uhr Ortszeit, im stündlichen Lauf) und meldet nur, was seit dem Vortag **neu** fällig ist.
+- Die neuen Auslöser laufen abgesichert: Ein Fehler beim Benachrichtigen bricht Kasse, Drucker-Bridge oder Postfach nicht ab, er landet nur im PHP-Fehlerprotokoll.
+- Neue Hooks für eigene Erweiterungen: `lw16_waitlist_signup` (Produkt, Artikel) und `lw16_support_ticket_created` (Ticket, Betreff).
+
 ## [0.57.1] – 2026-10-28
 
 - **Keine Teile mehr auf der Kalibrierlinie der Bambu X1/P1.** Vor jedem Druck zieht der Drucker am vorderen Bettrand die Düsen-Ladelinie (X 18–240, Y 1–11) und – bei der X1-Serie – Kalibrierlinien (bis Y 14); vorn links liegt außerdem die offizielle Sperrecke (0–18 × 0–28 mm). Plattenanordnung und Slicer legten das erste Teil bisher genau dorthin, vorn links. Jetzt bleiben die vorderen 15 mm und die Sperrecke frei:

@@ -91,6 +91,29 @@ class ErpPushTest extends TestCase {
 		$this->assertSame( 'lager', $m['tag'] );
 	}
 
+	public function test_meldungsarten_sind_vollstaendig() {
+		$cats  = Push::categories();
+		$areas = \Lindenweg16\Erp\Navigation::areas();
+		$this->assertCount( 18, $cats );
+		$an = array();
+		foreach ( $cats as $key => $def ) {
+			$this->assertMatchesRegularExpression( '/^[a-z_]+$/', $key );
+			$this->assertTrue( \Lindenweg16\Erp\Permissions::exists( $def[1] ), $key . ': unbekanntes Recht ' . $def[1] );
+			$this->assertArrayHasKey( $def[2], $areas, $key );
+			if ( $def[3] ) {
+				$an[] = $key;
+			}
+		}
+		// Nur die beiden alten Arten sind von selbst an; alles Neue wählt jede Person selbst.
+		$this->assertSame( array( 'bestellung', 'lager' ), $an );
+	}
+
+	public function test_morgens_nur_neues_melden() {
+		$this->assertSame( array( 'b' => 'B' ), Push::newly( array( 'a' => 'A', 'b' => 'B' ), array( 'a' ) ) );
+		$this->assertSame( array( '7' => 'X' ), Push::newly( array( '7' => 'X' ), array() ) );
+		$this->assertSame( array(), Push::newly( array( '7' => 'X' ), array( 7 ) ) );
+	}
+
 	public function test_quelltext_waechter() {
 		$push = file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Push.php' );
 		$page = file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Benachrichtigung.php' );
@@ -102,5 +125,10 @@ class ErpPushTest extends TestCase {
 		$this->assertSame( 1, substr_count( $page, "'__return_true'" ) );
 		$this->assertStringContainsString( '__PUSH_URL__', $sw );
 		$this->assertStringContainsString( 'showNotification', $sw );
+		// Ein Fehler beim Benachrichtigen darf Kasse, Bridge oder Postfach nicht abbrechen.
+		$this->assertStringContainsString( 'catch ( \\Throwable', $push );
+		// Die neuen Auslöser feuern an ihrer Quelle.
+		$this->assertStringContainsString( "do_action( 'lw16_waitlist_signup'", file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Retention/Waitlist.php' ) );
+		$this->assertStringContainsString( "do_action( 'lw16_support_ticket_created'", file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Support/SupportModule.php' ) );
 	}
 }
