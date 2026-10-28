@@ -12,6 +12,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ### Kasse: Produkte nur für die Kasse, schnell angelegt
 - **„+ Neues Produkt“ auf der Kassenseite:** Foto direkt mit der Handykamera aufnehmen, Name, Preis und optional Anfangsbestand eintragen – danach ist die Kachel da und schon gewählt. Das Foto wird im Browser auf 800 px verkleinert und als WordPress-Mediendatei gespeichert (nur JPEG, PNG, WebP, höchstens 3 MB, geprüft am Inhalt).
 - **Ein normaler Artikel mit Kennzeichen `pos_only`:** Artikelnummer automatisch (`K-0001` …), Beschaffungsweg Zukauf, verkäuflich, aktiv. Bestand, Lagerabgang und Storno laufen wie bei jedem Artikel; der Anfangsbestand wird als Korrekturbuchung gebucht. Keine Shop-Verknüpfung, und das Produkt erscheint nicht in der manuellen Auftragserfassung und im Konfigurator. In Lager, Lagerplätzen und Bedarf bleibt es sichtbar, damit sich Bestand nachbuchen lässt.
+- **Ändern an der Kachel:** Kassenprodukte tragen einen Stift (✎) – Name, Preis, neues Foto (das alte wird gelöscht) und „Ausblenden“ (Status ausgelaufen: weg aus den Kacheln, Bestand und Bücher bleiben). Normale Artikel lassen sich so nicht ändern; Bestandskorrekturen laufen im Lager.
 - **Datenbank:** Tabelle `articles` bekommt `pos_only` und `image_id` (DB_VERSION 48; das Upgrade läuft beim nächsten Seitenaufruf).
 - Nicht in echtem WordPress geprüft; vor allem Kamera am Handy und Foto-Upload bitte einmal von Hand durchspielen.
 

@@ -13,6 +13,10 @@
 .ks-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
 .ks-sku { font-size: 11px; color: var(--text-muted); }
 .ks-preis { font-size: 13px; font-weight: 700; color: var(--accent); }
+.ks-cell { position: relative; display: flex; }
+.ks-cell > .ks-kachel { flex: 1; }
+.ks-cell[hidden] { display: none; }
+.ks-edit { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text-muted); font-size: 16px; cursor: pointer; }
 .ks-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ks-form label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
 .ks-form .field { width: 100%; min-height: 44px; font-size: 16px; }

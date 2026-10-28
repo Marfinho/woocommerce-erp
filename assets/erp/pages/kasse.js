@@ -51,7 +51,7 @@
 		}
 
 		// Schnellanlage: Foto, Name, Preis, Bestand – danach ist die Kachel gleich gewählt.
-		function productPanel(onDone) {
+		function productPanel(onDone, edit) {
 			var foto = '';
 			var pic = h('input', { type: 'file', accept: 'image/*', capture: 'environment', hidden: true });
 			var preview = h('span', { class: 'ks-bild' }, '📷');
@@ -68,24 +68,40 @@
 			var name = h('input', { class: 'field', type: 'text', placeholder: 'z. B. Handyhalterung blau' });
 			var preis = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
 			var bestand = h('input', { class: 'field', type: 'number', min: '0', step: '1', inputmode: 'numeric', placeholder: '0' });
-			var save = h('button', { class: 'btn primary', type: 'button' }, 'Produkt anlegen');
+			if (edit) {
+				name.value = edit.name;
+				preis.value = edit.preis === '' ? '' : edit.preis.replace('.', ',');
+				if (edit.bild) { preview.textContent = ''; preview.appendChild(h('img', { src: edit.bild, alt: '' })); }
+			}
+			var save = h('button', { class: 'btn primary', type: 'button' }, edit ? 'Speichern' : 'Produkt anlegen');
 			save.addEventListener('click', function () {
 				if (!name.value.trim()) { ui.toast('Bitte einen Namen eintragen.', true); name.focus(); return; }
 				if (!preis.value.trim()) { ui.toast('Bitte einen Preis eintragen.', true); preis.focus(); return; }
-				post('produkt', { name: name.value, preis: preis.value, bestand: bestand.value, foto: foto }, save, function (res) {
+				var path = edit ? 'produkt-aendern' : 'produkt';
+				var body = { name: name.value, preis: preis.value, foto: foto };
+				if (edit) { body.id = edit.id; } else { body.bestand = bestand.value; }
+				post(path, body, save, function (res) {
 					preselect = res.value || '';
 					return load();
 				});
 			});
+			var hide = null;
+			if (edit) {
+				hide = h('button', { class: 'btn', type: 'button' }, 'Ausblenden');
+				hide.addEventListener('click', function () {
+					if (!window.confirm('Produkt aus der Kasse ausblenden? Bestand und bisherige Verkäufe bleiben erhalten.')) { return; }
+					post('produkt-aendern', { id: edit.id, ausblenden: true }, hide);
+				});
+			}
 			var cancel = h('button', { class: 'btn', type: 'button' }, 'Abbrechen');
 			cancel.addEventListener('click', onDone);
 			return h('div', { class: 'card ks-form' },
-				h('h3', null, 'Neues Produkt nur für die Kasse'),
-				h('p', { class: 'muted' }, 'Erscheint nicht im Shop. Der Bestand läuft wie bei jedem Artikel mit; verkauft die Kasse etwas, geht er ab.'),
+				h('h3', null, edit ? 'Kassenprodukt ändern' : 'Neues Produkt nur für die Kasse'),
+				h('p', { class: 'muted' }, edit ? 'Bestand ändern geht im Lager; ausgeblendete Produkte bleiben in den Büchern.' : 'Erscheint nicht im Shop. Der Bestand läuft wie bei jedem Artikel mit; verkauft die Kasse etwas, geht er ab.'),
 				pic, take,
 				field('Name', name),
-				h('div', { class: 'ks-row' }, field('Preis (€)', preis), field('Anfangsbestand (Stück)', bestand)),
-				h('div', { style: 'margin-top:14px;display:flex;gap:8px' }, save, cancel));
+				h('div', { class: 'ks-row' }, field('Preis (€)', preis), edit ? '' : field('Anfangsbestand (Stück)', bestand)),
+				h('div', { style: 'margin-top:14px;display:flex;gap:8px;flex-wrap:wrap' }, save, cancel, hide));
 		}
 
 		/* ---------- Kein offener Tag ---------- */
@@ -121,6 +137,7 @@
 			var wahl = '';          // Auswahlwert der Kachel (a:/p:), leer = freier Betrag
 			var kacheln = [];
 
+			var panelBox = h('div');
 			var name = h('input', { class: 'field', type: 'text', placeholder: 'Artikelbezeichnung' });
 			var menge = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: '1', inputmode: 'numeric' });
 			var preis = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
@@ -128,7 +145,7 @@
 			var suche = h('input', { class: 'field', type: 'search', placeholder: 'Artikel filtern …', autocomplete: 'off' });
 			suche.addEventListener('input', function () {
 				var q = suche.value.toLowerCase().replace(/\s+/g, ' ').trim();
-				kacheln.forEach(function (k) { k.el.hidden = q !== '' && k.o.suche.indexOf(q) === -1; });
+				kacheln.forEach(function (k) { (k.el.__cell || k.el).hidden = q !== '' && k.o.suche.indexOf(q) === -1; });
 			});
 
 			var grid = h('div', { class: 'ks-grid' });
@@ -153,11 +170,22 @@
 					if (o.preis !== '') { preis.value = o.preis.replace('.', ','); } else { preis.value = ''; preis.focus(); }
 				});
 				kacheln.push({ el: el, o: o });
-				grid.appendChild(el);
+				var cell = el;
+				if (o.pos) {
+					// Stift neben der Kachel (nicht darin: ein Button im Button ist ungültig).
+					var pen = h('button', { class: 'ks-edit', type: 'button', 'aria-label': o.name + ' ändern' }, '✎');
+					pen.addEventListener('click', function () {
+						panelBox.textContent = '';
+						panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }, o));
+						panelBox.scrollIntoView({ block: 'nearest' });
+					});
+					cell = h('div', { class: 'ks-cell' }, el, pen);
+					el.__cell = cell;
+				}
+				grid.appendChild(cell);
 				if (preselect && o.value === preselect) { preselect = ''; el.click(); }
 			});
 
-			var panelBox = h('div');
 			var newProd = h('button', { class: 'btn', type: 'button' }, '+ Neues Produkt');
 			newProd.addEventListener('click', function () {
 				panelBox.textContent = '';

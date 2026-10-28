@@ -82,12 +82,20 @@ class ErpKasseTest extends TestCase {
 
 		$this->assertStringContainsString( "capture: 'environment'", $js );
 		$this->assertStringContainsString( 'toDataURL', $js );
-		$this->assertStringContainsString( "post('produkt'", $js );
+		$this->assertStringContainsString( "'produkt-aendern' : 'produkt'", $js );
 	}
 
 	public function test_foto_nur_echte_bilder() {
 		$this->assertIsString( POSModule::save_photo( 'data:text/html;base64,PGI+', 'x' ) );
 		$this->assertIsString( POSModule::save_photo( 'data:image/png;base64,' . base64_encode( 'kein bild' ), 'x' ), 'Inhalt wird geprüft, nicht der Dateiname.' );
 		$this->assertIsString( POSModule::save_photo( 'data:image/jpeg;base64,' . base64_encode( str_repeat( 'a', 3 * 1024 * 1024 + 1 ) ), 'x' ) );
+	}
+
+	public function test_kassenprodukt_aendern_nur_fuer_pos_artikel() {
+		$php = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/POS/POSModule.php' );
+
+		$this->assertStringContainsString( "empty( \$article['pos_only'] )", $php, 'Normale Artikel dürfen nicht über die Kasse geändert werden.' );
+		$this->assertTrue( method_exists( \Lindenweg16\Erp\Pages\Kasse::class, 'produkt_aendern' ) );
+		$this->assertStringContainsString( "post(path, body", file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.js' ) );
 	}
 }

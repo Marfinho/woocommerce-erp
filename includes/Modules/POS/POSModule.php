@@ -409,6 +409,76 @@ class POSModule {
 		return array( 'ok' => true, 'message' => __( 'Produkt angelegt.', 'lindenweg16' ), 'value' => 'a:' . $result['id'] );
 	}
 
+	/**
+	 * Kassenprodukt ändern: Name, Preis, neues Foto oder ausblenden.
+	 *
+	 * Nur Produkte mit pos_only; normale Artikel pflegt man im Artikelstamm.
+	 * Ausgeblendet heißt „ausgelaufen“: Es verschwindet aus den Kacheln,
+	 * Bestand und Buchungen bleiben lesbar.
+	 *
+	 * @param int   $id   Artikel.
+	 * @param array $data name, preis (roh), foto (Data-URL, optional), ausblenden (bool).
+	 * @return array {ok, message}
+	 */
+	public static function update_product( $id, array $data ) {
+		$id      = (int) $id;
+		$article = ArticleRepository::find( $id );
+
+		if ( ! $article || empty( $article['pos_only'] ) ) {
+			return array( 'ok' => false, 'message' => __( 'Das ist kein Kassenprodukt.', 'lindenweg16' ) );
+		}
+
+		if ( ! empty( $data['ausblenden'] ) ) {
+			ArticleRepository::set_status( $id, 'ausgelaufen' );
+			Log::normal( 'kasse', 'Kassenprodukt ausgeblendet: ' . $article['name'], array( 'article_id' => $id ) );
+
+			return array( 'ok' => true, 'message' => __( 'Produkt ausgeblendet.', 'lindenweg16' ) );
+		}
+
+		$name  = sanitize_text_field( (string) ( $data['name'] ?? '' ) );
+		$preis = self::parse_amount( $data['preis'] ?? '' );
+
+		if ( '' === $name ) {
+			return array( 'ok' => false, 'message' => __( 'Bitte einen Namen eintragen.', 'lindenweg16' ) );
+		}
+		if ( $preis <= 0 ) {
+			return array( 'ok' => false, 'message' => __( 'Bitte einen Preis eintragen.', 'lindenweg16' ) );
+		}
+
+		$fields = array(
+			'name'        => $name,
+			'price_gross' => $preis,
+		);
+
+		$old_image = (int) ( $article['image_id'] ?? 0 );
+
+		if ( ! empty( $data['foto'] ) ) {
+			$saved = self::save_photo( (string) $data['foto'], $name );
+
+			if ( is_string( $saved ) ) {
+				return array( 'ok' => false, 'message' => $saved );
+			}
+			$fields['image_id'] = $saved;
+		}
+
+		if ( ! ArticleRepository::update( $id, $fields, __( 'Änderung in der Kasse', 'lindenweg16' ) ) ) {
+			if ( isset( $fields['image_id'] ) ) {
+				wp_delete_attachment( $fields['image_id'], true );
+			}
+
+			return array( 'ok' => false, 'message' => __( 'Das Produkt konnte nicht gespeichert werden.', 'lindenweg16' ) );
+		}
+
+		// Das alte Foto gehörte nur diesem Produkt.
+		if ( isset( $fields['image_id'] ) && $old_image ) {
+			wp_delete_attachment( $old_image, true );
+		}
+
+		Log::normal( 'kasse', 'Kassenprodukt geändert: ' . $name, array( 'article_id' => $id ) );
+
+		return array( 'ok' => true, 'message' => __( 'Produkt gespeichert.', 'lindenweg16' ), 'value' => 'a:' . $id );
+	}
+
 	/* ------------------------------------------------------------------
 	 * Auswahl und Helfer
 	 * ---------------------------------------------------------------- */
@@ -438,6 +508,8 @@ class POSModule {
 				'sku'   => (string) $article['sku'],
 				'preis' => '' === $preis ? self::product_price( $wc_id ) : $preis,
 				'bild'  => self::article_image_url( $article, $wc_id ),
+				'id'    => (int) $article['id'],
+				'pos'   => ! empty( $article['pos_only'] ),
 			);
 
 			if ( ! empty( $article['legacy_produkt_id'] ) ) {

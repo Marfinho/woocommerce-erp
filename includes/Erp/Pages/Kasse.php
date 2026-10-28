@@ -54,13 +54,13 @@ class Kasse {
 			)
 		);
 
-		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt' ) as $action ) {
+		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt', 'produkt-aendern' ) as $action ) {
 			register_rest_route(
 				$ns,
 				'/erp/kasse/' . $action,
 				array(
 					'methods'             => 'POST',
-					'callback'            => array( __CLASS__, $action ),
+					'callback'            => array( __CLASS__, str_replace( '-', '_', $action ) ),
 					'permission_callback' => $needs,
 				)
 			);
@@ -227,6 +227,18 @@ class Kasse {
 	 */
 	public static function produkt( WP_REST_Request $request ) {
 		return self::answer( POSModule::create_product( (array) $request->get_json_params() ) );
+	}
+
+	/**
+	 * Kassenprodukt ändern oder ausblenden.
+	 *
+	 * @param WP_REST_Request $request Anfrage (id, name, preis, foto, ausblenden).
+	 * @return WP_REST_Response
+	 */
+	public static function produkt_aendern( WP_REST_Request $request ) {
+		$body = (array) $request->get_json_params();
+
+		return self::answer( POSModule::update_product( (int) ( $body['id'] ?? 0 ), $body ) );
 	}
 
 	/**
