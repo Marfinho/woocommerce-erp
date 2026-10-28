@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.62.0] – 2026-10-28
+
+### Loyalty
+- **Pre-Sale für höhere Stufen.** Neuer Reiter Loyalty → Pre-Sale: Einzelne Produkte, ganze Kategorien oder Merkmale (Attribute wie „Farbe: Rot“, Schlagwörter) sind ab einem Starttag nur für Kunden ab einer wählbaren Stufe kaufbar, ab „für alle ab“ für jeden. Gesperrt wird auch im Warenkorb und an der Kasse; auf der Produktseite steht ein Hinweis mit dem Datum. Bei Varianten sperrt „Farbe: Rot“ nur die roten. Shop-Verwalter sind nie gesperrt.
+- **Konto: wechselnde Leiste.** Die Leiste wechselt alle paar Sekunden zwischen „Punkte bis zum nächsten Euro Rabatt“ und „Umsatz bis zur nächsten Stufe“ (hält an bei Mauszeiger/Fokus, ohne Bewegung bei reduzierter Animation).
+- **Mindestbestellwert zum Einlösen.** Neue Regel unter Loyalty → Regeln → Grundwerte: Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen, 0 = kein Mindestwert. In der Block-Kasse steht dann ein Hinweis statt der Einlösefelder.
+- **Regeln speichern:** Der Fehler „Cannot read properties of undefined (reading 'push')“ beim Öffnen von Loyalty → Regeln ist behoben.
+
 ## [0.61.1] – 2026-10-28
 
 ### Kasse: Kassenprodukte ohne offenen Tag pflegen

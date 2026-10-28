@@ -43,6 +43,13 @@
 			return null;
 		}
 
+		if ( r.below_min ) {
+			return el( 'div', { className: 'lw16-redeem-box' },
+				el( 'p', { className: 'lw16-redeem-box__title' }, 'Punkte und Guthaben einlösen' ),
+				el( 'small', null, 'Einlösen geht ab einem Warenwert von ' + money( r.min_order, r.currency ) + '.' )
+			);
+		}
+
 		var step = r.step || 100;
 		var wanted = Math.max( 0, Math.min( r.points_balance, parseInt( points[ 0 ], 10 ) || 0 ) );
 		var applied = r.use_credit || r.use_points > 0;

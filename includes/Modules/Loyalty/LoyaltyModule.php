@@ -59,6 +59,7 @@ class LoyaltyModule {
 		( new LoyaltyTriggers() )->register();
 		( new ReviewPhotos() )->register();
 		( new LoyaltyCart() )->register();
+		( new LoyaltyPresale() )->register();
 	}
 
 	/* --------------------------------------------------------------------
