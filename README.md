@@ -120,7 +120,8 @@ includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
                              EventsModule
 assets/blocks/events/        block.json des Blocks „Nächste Events"
 includes/Modules/Loyalty/    LoyaltyRepository, LoyaltyFrontend, LoyaltyModule, LoyaltyRules,
-                             LoyaltyCampaigns, LoyaltyTriggers, ReviewPhotos
+                             LoyaltyCampaigns, LoyaltyTriggers, LoyaltyTiers, LoyaltyCart,
+                             ReviewPhotos
 includes/Modules/Production/ ProductionModule, PackingSlipGenerator, DhlTracking
 includes/Modules/Retention/  Wishlist, Waitlist, CartTracking
 includes/Modules/POS/        POSModule
@@ -686,7 +687,9 @@ vorhanden ist – nicht, was geplant war.
 - **Loyalty:** Referral-Codes, Cookie-Tracking, Reward-Berechnung, Blockregeln
   mit Prüf-Warteschlange, Punktereifung, Checkout-Einlösung, Konto-Tab.
   Bonuspunkte je Auslöser (Konto, Newsletter, erste Bestellung, Geburtstag,
-  Bewertung, Foto in der Bewertung, Werber und Geworbene) und zeitlich
+  Bewertung, Foto in der Bewertung, Werber und Geworbene, vollständiges Profil,
+  Jahrestag), Stufen nach 12-Monats-Umsatz, Verfall nach Inaktivität,
+  Punkteanzeige in Warenkorb und Kasse (Store-API) und zeitlich
   begrenzte Aktionen (Faktor, optional je Kategorie) – eingestellt im ERP
   unter Verkauf → Loyalty → Regeln/Aktionen (Recht `verkauf.loyalty.regeln`).
 - **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und

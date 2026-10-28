@@ -17,6 +17,7 @@ use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Loyalty\LoyaltyCampaigns;
 use Lindenweg16\Modules\Loyalty\LoyaltyRules;
+use Lindenweg16\Modules\Loyalty\LoyaltyTiers;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -92,6 +93,7 @@ class LoyaltyRegeln {
 				'fields'     => $fields,
 				'campaigns'  => $campaigns,
 				'categories' => self::categories(),
+				'tiers'      => LoyaltyTiers::all(),
 				'today'      => $today,
 				'can_edit'   => Access::can( 'verkauf.loyalty.regeln' ),
 			)
@@ -111,16 +113,50 @@ class LoyaltyRegeln {
 		if ( $result['errors'] ) {
 			return self::fail( implode( ' ', $result['errors'] ) );
 		}
-		if ( ! $result['values'] ) {
+
+		$tiers = null;
+		if ( isset( $in['stufen'] ) && is_array( $in['stufen'] ) ) {
+			$check = LoyaltyRules::sanitize_tiers(
+				array_map(
+					function ( $row ) {
+						return is_array( $row ) ? array(
+							'name'   => sanitize_text_field( (string) ( $row['name'] ?? '' ) ),
+							'ab'     => $row['ab'] ?? 0,
+							'faktor' => $row['faktor'] ?? 1,
+						) : null;
+					},
+					$in['stufen']
+				)
+			);
+			if ( ! $check['tiers'] ) {
+				return self::fail( $check['error'] );
+			}
+			$tiers = $check['tiers'];
+		}
+		if ( ! $result['values'] && null === $tiers ) {
 			return self::fail( __( 'Es kam nichts zum Speichern an.', 'lindenweg16' ) );
 		}
 
+		$values = $result['values'];
+		// Verfall frisch eingeschaltet: Die Frist beginnt für alle heute,
+		// niemand verliert über Nacht Punkte aus der Zeit davor.
+		if ( ! empty( $values['punkte_verfall_monate'] ) && ! (int) Settings::get( 'punkte_verfall_monate', 0 ) ) {
+			$values['punkte_verfall_start'] = time();
+		}
+
 		$before = array();
-		foreach ( array_keys( $result['values'] ) as $key ) {
+		foreach ( array_keys( $values ) as $key ) {
 			$before[ $key ] = Settings::get( $key );
 		}
-		Settings::update( $result['values'] );
-		AuditLog::record( 'loyalty_regeln', 'settings', 0, array( 'vorher' => $before, 'nachher' => $result['values'] ) );
+		if ( $values ) {
+			Settings::update( $values );
+		}
+		if ( null !== $tiers ) {
+			$before['stufen'] = LoyaltyTiers::all();
+			$values['stufen'] = $tiers;
+			LoyaltyTiers::save( $tiers );
+		}
+		AuditLog::record( 'loyalty_regeln', 'settings', 0, array( 'vorher' => $before, 'nachher' => $values ) );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Regeln gespeichert. Sie gelten ab sofort.', 'lindenweg16' ) ) );
 	}

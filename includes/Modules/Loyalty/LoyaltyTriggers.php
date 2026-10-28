@@ -31,6 +31,15 @@ class LoyaltyTriggers {
 	/** Ein frisch eingetragener Geburtstag zählt erst nach so vielen Tagen. */
 	const GEBURTSTAG_KARENZ_TAGE = 30;
 
+	/** Tag der ersten abgeschlossenen Bestellung (Y-m-d, „-“ = keine). */
+	const META_ERSTE_BESTELLUNG = 'lw16_erste_bestellung';
+
+	/** Für diese Frist wurde schon an den Verfall erinnert (Unix-Zeit). */
+	const META_VERFALL_ERINNERT = 'lw16_verfall_erinnert';
+
+	/** Kunden je Tageslauf für Verfall und Nachtragen des Jahrestags. */
+	const BATCH = 500;
+
 	/**
 	 * Hooks registrieren.
 	 */
@@ -46,6 +55,14 @@ class LoyaltyTriggers {
 		add_action( 'woocommerce_edit_account_form', array( $this, 'birthday_field' ) );
 		add_action( 'woocommerce_save_account_details', array( $this, 'save_birthday' ), 10, 1 );
 		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process_birthdays' ) );
+
+		// Profil vollständig: nach dem Speichern von Kontodetails oder Adresse.
+		add_action( 'woocommerce_save_account_details', array( $this, 'check_profile' ), 20, 1 );
+		add_action( 'woocommerce_customer_save_address', array( $this, 'check_profile' ), 20, 1 );
+
+		// Jahrestag der ersten Bestellung und Verfall: täglich.
+		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process_anniversaries' ) );
+		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process_expiry' ) );
 
 		// Bewertungen: Punkte erst, wenn die Bewertung sichtbar ist. Fotos
 		// speichert ReviewPhotos vorher (Priorität 5).
@@ -237,6 +254,228 @@ class LoyaltyTriggers {
 						'{konto_url}' => function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/' ),
 					)
 				);
+			}
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Profil
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Was fehlt einem Kunden zum vollständigen Profil?
+	 *
+	 * @param int $user_id Kunde.
+	 * @return string[]
+	 */
+	public static function profile_missing( $user_id ) {
+		$c = new \WC_Customer( (int) $user_id );
+		return LoyaltyRules::profile_missing(
+			array(
+				'first_name' => $c->get_billing_first_name() ? $c->get_billing_first_name() : $c->get_first_name(),
+				'last_name'  => $c->get_billing_last_name() ? $c->get_billing_last_name() : $c->get_last_name(),
+				'address_1'  => $c->get_billing_address_1(),
+				'postcode'   => $c->get_billing_postcode(),
+				'city'       => $c->get_billing_city(),
+				'phone'      => $c->get_billing_phone(),
+			)
+		);
+	}
+
+	/**
+	 * Bonus, sobald das Profil vollständig ist (einmal).
+	 *
+	 * @param int $user_id Kunde.
+	 */
+	public function check_profile( $user_id ) {
+		$points = (int) Settings::get( 'punkte_profil', 0 );
+		if ( $points <= 0 || get_user_meta( $user_id, 'lw16_bonus_profil', true ) || self::profile_missing( $user_id ) ) {
+			return;
+		}
+		LoyaltyRepository::award_once( $user_id, 'profil', $points, 'profile', __( 'Danke fürs vollständige Profil', 'lindenweg16' ) );
+	}
+
+	/* --------------------------------------------------------------------
+	 * Jahrestag
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Täglich: Jahrestag der ersten Bestellung. Vorher werden für ältere
+	 * Kunden die Tage der ersten Bestellung nachgetragen (in Portionen).
+	 */
+	public function process_anniversaries() {
+		$this->backfill_first_orders();
+
+		$points = (int) Settings::get( 'punkte_jahrestag', 0 );
+		if ( $points <= 0 ) {
+			return;
+		}
+		$today = current_time( 'Y-m-d' );
+		$md    = substr( $today, 4 ); // „-10-28“.
+		$likes = array( $md );
+		if ( '-02-28' === $md && ! checkdate( 2, 29, (int) substr( $today, 0, 4 ) ) ) {
+			$likes[] = '-02-29';
+		}
+
+		foreach ( $likes as $like ) {
+			$users = get_users(
+				array(
+					'meta_key'     => self::META_ERSTE_BESTELLUNG, // phpcs:ignore WordPress.DB.SlowDBQuery
+					'meta_value'   => $like, // phpcs:ignore WordPress.DB.SlowDBQuery
+					'meta_compare' => 'LIKE',
+					'fields'       => 'ID',
+					'number'       => self::BATCH,
+				)
+			);
+			foreach ( $users as $user_id ) {
+				$years = LoyaltyRules::anniversary_years( (string) get_user_meta( $user_id, self::META_ERSTE_BESTELLUNG, true ), $today );
+				if ( $years < 1 ) {
+					continue;
+				}
+				/* translators: %d: Jahre */
+				$note = sprintf( _n( '%d Jahr dabei', '%d Jahre dabei', $years, 'lindenweg16' ), $years );
+				if ( ! LoyaltyRepository::award_once( $user_id, 'jahrestag_' . substr( $today, 0, 4 ), $points, 'anniversary', $note ) ) {
+					continue;
+				}
+				$user = get_userdata( $user_id );
+				if ( $user && is_email( $user->user_email ) ) {
+					MailTemplate::send(
+						$user->user_email,
+						'jahrestag',
+						array(
+							'{vorname}'       => $user->first_name ? $user->first_name : $user->display_name,
+							'{jahre}'         => (string) $years,
+							'{punkte}'        => number_format_i18n( $points ),
+							'{punkte_gesamt}' => number_format_i18n( LoyaltyRepository::get_points( $user_id ) ),
+							'{konto_url}'     => wc_get_page_permalink( 'myaccount' ),
+						)
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Tag der ersten Bestellung für Kunden nachtragen, die vor diesem Update
+	 * bestellt haben – je Tageslauf eine Portion.
+	 */
+	protected function backfill_first_orders() {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return;
+		}
+		$users = get_users(
+			array(
+				'role__in'   => array( 'customer', 'subscriber' ),
+				'meta_query' => array( array( 'key' => self::META_ERSTE_BESTELLUNG, 'compare' => 'NOT EXISTS' ) ), // phpcs:ignore WordPress.DB.SlowDBQuery
+				'fields'     => 'ID',
+				'number'     => self::BATCH,
+			)
+		);
+		foreach ( $users as $user_id ) {
+			$first = wc_get_orders(
+				array(
+					'customer_id' => $user_id,
+					'status'      => array( 'wc-completed' ),
+					'orderby'     => 'date',
+					'order'       => 'ASC',
+					'limit'       => 1,
+				)
+			);
+			$date = $first && $first[0]->get_date_created() ? $first[0]->get_date_created()->date_i18n( 'Y-m-d' ) : '-';
+			update_user_meta( $user_id, self::META_ERSTE_BESTELLUNG, $date );
+		}
+	}
+
+	/* --------------------------------------------------------------------
+	 * Verfall
+	 * ------------------------------------------------------------------ */
+
+	/**
+	 * Verfallsdatum der Punkte eines Kunden (0 = verfallen nicht).
+	 *
+	 * @param int $user_id Kunde.
+	 * @return int Unix-Zeit.
+	 */
+	public static function expires_at( $user_id ) {
+		$state = LoyaltyRules::expiry_state(
+			LoyaltyRepository::last_activity( $user_id ),
+			(int) Settings::get( 'punkte_verfall_start', 0 ),
+			(int) Settings::get( 'punkte_verfall_monate', 0 ),
+			0,
+			time()
+		);
+		return (int) $state['expires'];
+	}
+
+	/**
+	 * Täglich: erinnern und verfallen lassen.
+	 */
+	public function process_expiry() {
+		$months = (int) Settings::get( 'punkte_verfall_monate', 0 );
+		if ( $months <= 0 ) {
+			return;
+		}
+		$start = (int) Settings::get( 'punkte_verfall_start', 0 );
+		if ( ! $start ) {
+			// Eingeschaltet, aber ohne Stichtag (z. B. über die alte
+			// Einstellungsseite): Die Frist beginnt für alle heute.
+			Settings::update( array( 'punkte_verfall_start' => time() ) );
+			return;
+		}
+		$remind = (int) Settings::get( 'punkte_verfall_erinnerung_tage', 30 );
+		$now    = time();
+
+		$users = get_users(
+			array(
+				'meta_key'     => LoyaltyRepository::META_POINTS, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_value'   => 0, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_compare' => '>',
+				'meta_type'    => 'NUMERIC',
+				'fields'       => 'ID',
+				'number'       => self::BATCH * 4,
+			)
+		);
+
+		foreach ( $users as $user_id ) {
+			$points = LoyaltyRepository::get_points( $user_id );
+			if ( $points <= 0 ) {
+				continue;
+			}
+			$state = LoyaltyRules::expiry_state( LoyaltyRepository::last_activity( $user_id ), $start, $months, $remind, $now );
+
+			if ( 'expire' === $state['state'] ) {
+				LoyaltyRepository::adjust_points( $user_id, -1 * $points );
+				LoyaltyRepository::add_ledger(
+					array(
+						'user_id' => $user_id,
+						'points'  => -1 * $points,
+						'type'    => 'expired',
+						'status'  => 'available',
+						/* translators: %d: Monate */
+						'notiz'   => sprintf( __( 'Verfallen nach %d Monaten ohne Aktivität', 'lindenweg16' ), $months ),
+					)
+				);
+				delete_user_meta( $user_id, self::META_VERFALL_ERINNERT );
+				continue;
+			}
+
+			if ( 'remind' === $state['state'] && (int) get_user_meta( $user_id, self::META_VERFALL_ERINNERT, true ) !== $state['expires'] ) {
+				update_user_meta( $user_id, self::META_VERFALL_ERINNERT, $state['expires'] );
+				$user = get_userdata( $user_id );
+				if ( $user && is_email( $user->user_email ) ) {
+					$step = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
+					MailTemplate::send(
+						$user->user_email,
+						'punkte_verfall',
+						array(
+							'{vorname}'   => $user->first_name ? $user->first_name : $user->display_name,
+							'{punkte}'    => number_format_i18n( $points ),
+							'{wert}'      => html_entity_decode( wp_strip_all_tags( wc_price( Calc::points_to_euro( $points, $step ) ) ), ENT_QUOTES, 'UTF-8' ),
+							'{datum}'     => date_i18n( 'j. F Y', $state['expires'] ),
+							'{shop_url}'  => wc_get_page_permalink( 'shop' ),
+						)
+					);
+				}
 			}
 		}
 	}

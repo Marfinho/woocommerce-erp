@@ -33,3 +33,14 @@
 	.lr-two { grid-template-columns: 1fr; }
 	.row-card.lr-camp { grid-template-columns: 1fr; }
 }
+.lr-tier-box { display: grid; gap: 8px; padding-top: 6px; }
+.lr-tier-box > .btn { justify-self: start; min-height: 44px; }
+.lr-tiers { display: grid; gap: 6px; }
+.lr-tier { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 100px 44px; gap: 8px; align-items: center; }
+.lr-tier .field { min-height: 44px; width: 100%; }
+.lr-tier .btn { min-height: 44px; padding: 0; }
+.lr-tier-head { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+@media (max-width: 640px) {
+	.lr-tier { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+	.lr-tier-head { display: none; }
+}

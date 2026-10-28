@@ -187,6 +187,10 @@ class LoyaltyFrontend {
 		$cats   = array_map( 'intval', $product->get_category_ids() );
 		$active = LoyaltyCampaigns::active();
 		$result = LoyaltyRules::order_points( $price, array( array( 'total' => $price, 'cats' => $cats ) ), $per_euro, $active );
+		$factor = LoyaltyTiers::factor( get_current_user_id() );
+		if ( $factor > 1 ) {
+			$result['points'] = LoyaltyRules::apply_tier( $result['points'], $factor );
+		}
 		if ( $result['points'] <= 0 ) {
 			return;
 		}
@@ -362,6 +366,11 @@ class LoyaltyFrontend {
 					'notiz'    => __( 'Im Checkout eingelöst', 'lindenweg16' ),
 				)
 			);
+		}
+
+		// Einlösen ist Aktivität: die Verfallsfrist beginnt neu.
+		if ( $credit > 0 || $points > 0 ) {
+			LoyaltyRepository::touch( $user_id );
 		}
 
 		// Reservierung aufheben.

@@ -58,6 +58,7 @@ class LoyaltyModule {
 		// Bonuspunkte für Konto, Newsletter, Geburtstag, Bewertungen.
 		( new LoyaltyTriggers() )->register();
 		( new ReviewPhotos() )->register();
+		( new LoyaltyCart() )->register();
 	}
 
 	/* --------------------------------------------------------------------
@@ -121,14 +122,27 @@ class LoyaltyModule {
 				(float) Settings::get( 'punkte_pro_euro', 1 ),
 				LoyaltyCampaigns::active( $day )
 			);
-			$note   = $result['bonus'] > 0
+			$extras = array();
+			if ( $result['bonus'] > 0 ) {
 				/* translators: 1: Aktionsname(n), 2: Bonuspunkte */
-				? sprintf( __( 'Bestellung · %1$s (+%2$d)', 'lindenweg16' ), implode( ', ', $result['names'] ), $result['bonus'] )
-				: __( 'Bestellung', 'lindenweg16' );
-			LoyaltyRepository::award( $user_id, $result['points'], 'earned', $note, $order_id, $wartezeit );
+				$extras[] = sprintf( __( '%1$s (+%2$d)', 'lindenweg16' ), implode( ', ', $result['names'] ), $result['bonus'] );
+			}
+			// Stufe nach dem Umsatz vor dieser Bestellung.
+			$tier   = LoyaltyTiers::for_user( $user_id, $order_id );
+			$points = $result['points'];
+			if ( $tier && $tier['tier']['faktor'] > 1 ) {
+				$points   = LoyaltyRules::apply_tier( $result['points'], $tier['tier']['faktor'] );
+				/* translators: 1: Stufe, 2: Bonuspunkte */
+				$extras[] = sprintf( __( 'Stufe %1$s (+%2$d)', 'lindenweg16' ), $tier['tier']['name'], $points - $result['points'] );
+			}
+			$note = $extras ? __( 'Bestellung', 'lindenweg16' ) . ' · ' . implode( ' · ', $extras ) : __( 'Bestellung', 'lindenweg16' );
+			LoyaltyRepository::award( $user_id, $points, 'earned', $note, $order_id, $wartezeit );
+			LoyaltyTiers::forget( $user_id );
 
-			// Erste abgeschlossene Bestellung: einmaliger Bonus.
+			// Erste abgeschlossene Bestellung: einmaliger Bonus, und ihr Tag ist
+			// künftig der Jahrestag.
 			if ( 1 === $this->completed_order_count( $user_id ) ) {
+				update_user_meta( $user_id, LoyaltyTriggers::META_ERSTE_BESTELLUNG, $day );
 				LoyaltyRepository::award_once( $user_id, 'erste_bestellung', (int) Settings::get( 'punkte_erste_bestellung', 0 ), 'first_order', __( 'Bonus für die erste Bestellung', 'lindenweg16' ), $wartezeit, $order_id );
 			}
 		}
@@ -383,6 +397,11 @@ class LoyaltyModule {
 		// hängen (Bestellpunkte, Erstbestellungs- und Willkommensbonus, Punkte
 		// des Werbers), und auch ohne Empfehlung. Bisher geschah das nur, wenn
 		// es zur Bestellung eine Empfehlung gab.
+		$order = wc_get_order( $order_id );
+		if ( $order && $order->get_customer_id() ) {
+			LoyaltyTiers::forget( (int) $order->get_customer_id() );
+		}
+
 		$lt   = LoyaltyRepository::table( 'points_ledger' );
 		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$lt} WHERE order_id = %d AND points > 0 AND status <> 'reversed'", $order_id ) ); // phpcs:ignore
 		foreach ( $rows as $pl ) {

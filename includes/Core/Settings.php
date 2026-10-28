@@ -57,6 +57,12 @@ class Settings {
 			'punkte_bewertung_foto'     => 0,
 			'punkte_empfehlung_werber'  => 0,
 			'punkte_empfehlung_neukunde' => 0,
+			'punkte_profil'             => 0,
+			'punkte_jahrestag'          => 0,
+			'punkte_verfall_monate'     => 0,
+			'punkte_verfall_erinnerung_tage' => 30,
+			'punkte_verfall_start'      => 0,
+			'stufen_aktiv'              => 0,
 			'review_nur_kaeufer'        => 1,
 			'review_foto_max'           => 3,
 			// Kundenbindung.

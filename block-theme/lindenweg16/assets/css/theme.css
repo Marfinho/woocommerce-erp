@@ -6257,3 +6257,89 @@ body .woocommerce-info {
 	color: var(--lw-text-muted);
 	font-size: var(--wp--preset--font-size--small);
 }
+
+/* Stufen in der Prämienkarte: Leiste vom Rohling zum Meisterstück */
+.lw16-konto__stufe {
+	display: grid;
+	gap: 8px;
+	margin-top: 10px;
+	padding-top: 14px;
+	border-top: 1px solid color-mix(in srgb, var(--lw-on-ink) 14%, transparent);
+}
+
+.lw16-konto__stufen {
+	display: grid;
+	grid-auto-columns: minmax(0, 1fr);
+	grid-auto-flow: column;
+	gap: 4px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	counter-reset: none;
+}
+
+.lw16-konto__stufen li {
+	padding-top: 10px;
+	border-top: 4px solid color-mix(in srgb, var(--lw-on-ink) 18%, transparent);
+	font-size: var(--wp--preset--font-size--x-small);
+	font-weight: 600;
+	opacity: 0.6;
+	overflow-wrap: anywhere;
+}
+
+.lw16-konto__stufen li.is-erreicht {
+	border-top-color: color-mix(in srgb, var(--lw-accent-1) 60%, transparent);
+	opacity: 0.85;
+}
+
+.lw16-konto__stufen li.is-aktuell {
+	border-top-color: var(--lw-accent-1);
+	color: var(--lw-accent-1);
+	opacity: 1;
+}
+
+/* Punkte im Warenkorb und an der Kasse */
+.lw16-cart-points {
+	display: grid;
+	gap: 2px;
+	margin: 12px 0 4px;
+	padding: 10px 14px 10px 40px;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted) no-repeat 12px 12px / 18px;
+	position: relative;
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.lw16-cart-points::before {
+	content: "";
+	position: absolute;
+	left: 13px;
+	top: 12px;
+	width: 17px;
+	height: 17px;
+	background: var(--lw-accent-2);
+	-webkit-mask: var(--lw-icon-star) center / contain no-repeat;
+	mask: var(--lw-icon-star) center / contain no-repeat;
+}
+
+.lw16-cart-points__main {
+	font-weight: 600;
+}
+
+.lw16-cart-points small {
+	color: var(--lw-text-muted);
+}
+
+tr.lw16-cart-points {
+	display: table-row;
+	background: none;
+}
+
+tr.lw16-cart-points::before {
+	content: none;
+}
+
+tr.lw16-cart-points td {
+	padding-top: 12px;
+	font-size: var(--wp--preset--font-size--small);
+}

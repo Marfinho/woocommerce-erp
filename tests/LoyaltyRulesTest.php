@@ -127,4 +127,81 @@ class LoyaltyRulesTest extends TestCase {
 		$this->assertNotSame( '', ReviewPhotos::problem( $evil, 3, 5000 ) );
 		$this->assertSame( array(), ReviewPhotos::normalize( null ) );
 	}
+
+	public function test_default_tiers_are_valid_and_tier_lookup_works() {
+		$check = LoyaltyRules::sanitize_tiers( LoyaltyRules::default_tiers() );
+		$this->assertSame( '', $check['error'] );
+		$tiers = $check['tiers'];
+
+		$r = LoyaltyRules::tier_for( 0, $tiers );
+		$this->assertSame( 0, $r['index'] );
+		$this->assertSame( 100.0, $r['missing'] );
+
+		$r = LoyaltyRules::tier_for( 260, $tiers );
+		$this->assertSame( 'Geölt', $r['tier']['name'] );
+		$this->assertSame( 'Meisterstück', $r['next']['name'] );
+		$this->assertSame( 240.0, $r['missing'] );
+
+		$r = LoyaltyRules::tier_for( 9999, $tiers );
+		$this->assertNull( $r['next'] );
+		$this->assertSame( 0.0, $r['missing'] );
+	}
+
+	public function test_tier_validation() {
+		$t = function ( $ab, $f, $n = 'X' ) {
+			return array( 'name' => $n, 'ab' => $ab, 'faktor' => $f );
+		};
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 0, 1 ) ) )['tiers'] );
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 10, 1 ), $t( 20, 1.2 ) ) )['tiers'] );
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 0, 1 ), $t( 0, 1.2 ) ) )['tiers'] );
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 0, 1.5 ), $t( 100, 1.2 ) ) )['tiers'] );
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 0, 1 ), $t( 100, 4 ) ) )['tiers'] );
+		$this->assertNull( LoyaltyRules::sanitize_tiers( array( $t( 0, 1 ), $t( 100, 1.2, ' ' ) ) )['tiers'] );
+		$ok = LoyaltyRules::sanitize_tiers( array( $t( '0', '1' ), $t( '99,5', '1,25' ) ) );
+		$this->assertSame( 99.5, $ok['tiers'][1]['ab'] );
+		$this->assertSame( 1.25, $ok['tiers'][1]['faktor'] );
+	}
+
+	public function test_apply_tier_rounds_down() {
+		$this->assertSame( 110, LoyaltyRules::apply_tier( 100, 1.1 ) );
+		$this->assertSame( 13, LoyaltyRules::apply_tier( 9, 1.5 ) );
+		$this->assertSame( 50, LoyaltyRules::apply_tier( 50, 0.5 ) );
+	}
+
+	public function test_expiry_counts_from_last_activity_but_not_before_start() {
+		$day   = 86400;
+		$start = gmmktime( 0, 0, 0, 1, 1, 2026 );
+		$old   = gmmktime( 0, 0, 0, 1, 1, 2024 );
+
+		// Verfall frisch eingeschaltet: alte Aktivität zählt ab Start.
+		$r = LoyaltyRules::expiry_state( $old, $start, 12, 30, $start + $day );
+		$this->assertSame( 'ok', $r['state'] );
+		$this->assertSame( gmmktime( 0, 0, 0, 1, 1, 2027 ), $r['expires'] );
+
+		$this->assertSame( 'remind', LoyaltyRules::expiry_state( $old, $start, 12, 30, $r['expires'] - 10 * $day )['state'] );
+		$this->assertSame( 'ok', LoyaltyRules::expiry_state( $old, $start, 12, 0, $r['expires'] - 10 * $day )['state'] );
+		$this->assertSame( 'expire', LoyaltyRules::expiry_state( $old, $start, 12, 30, $r['expires'] )['state'] );
+
+		// Neue Aktivität verlängert.
+		$later = gmmktime( 0, 0, 0, 6, 1, 2026 );
+		$this->assertSame( gmmktime( 0, 0, 0, 6, 1, 2027 ), LoyaltyRules::expiry_state( $later, $start, 12, 30, $later )['expires'] );
+
+		$this->assertSame( 'never', LoyaltyRules::expiry_state( $old, $start, 0, 30, time() )['state'] );
+	}
+
+	public function test_profile_missing() {
+		$full = array( 'first_name' => 'Sven', 'last_name' => 'M', 'address_1' => 'Lindenweg 16', 'postcode' => '31559', 'city' => 'Haste', 'phone' => '0123' );
+		$this->assertSame( array(), LoyaltyRules::profile_missing( $full ) );
+		$full['phone'] = ' ';
+		unset( $full['city'] );
+		$this->assertSame( array( 'Ort', 'Telefon' ), LoyaltyRules::profile_missing( $full ) );
+	}
+
+	public function test_anniversary_years() {
+		$this->assertSame( 1, LoyaltyRules::anniversary_years( '2025-10-28', '2026-10-28' ) );
+		$this->assertSame( 0, LoyaltyRules::anniversary_years( '2025-10-28', '2026-10-27' ) );
+		$this->assertSame( 0, LoyaltyRules::anniversary_years( '2026-10-28', '2026-10-28' ) );
+		$this->assertSame( 2, LoyaltyRules::anniversary_years( '2024-02-29', '2026-02-28' ) );
+		$this->assertSame( 0, LoyaltyRules::anniversary_years( '-', '2026-10-28' ) );
+	}
 }

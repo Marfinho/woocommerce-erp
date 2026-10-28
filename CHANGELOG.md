@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.56.0] – 2026-10-28
+
+### Prämienprogramm: Stufen, Verfall, Profil, Jahrestag, Punkte im Warenkorb
+- **Stufen** (Verkauf → Loyalty → Regeln → Stufen): Wer in den letzten 12 Monaten mehr bestellt hat, sammelt schneller. Vorschlag aus der Werkstatt: Rohling (ab 0 €, 1×), Gehobelt (ab 100 €, 1,1×), Geölt (ab 250 €, 1,25×), Meisterstück (ab 500 €, 1,5×). Namen, Schwellen und Faktoren sind einstellbar (2 bis 6 Stufen). Gezählt werden abgeschlossene Bestellungen abzüglich Erstattungen; die Stufe gilt nach dem Umsatz vor der jeweiligen Bestellung und wirkt zusammen mit Aktionen. Kunden sehen ihre Stufe als Leiste in der Konto-Übersicht samt Betrag bis zur nächsten. Standard: aus.
+- **Verfall** (einstellbar, Standard: nie): Punkte verfallen nach X Monaten ohne Aktivität; jede Gutschrift, Bestellung und jedes Einlösen setzt die Frist neu. Beim Einschalten beginnt die Frist für alle am selben Tag. Erinnerungs-Mail X Tage vorher (Vorlage „Erinnerung: Prämienpunkte verfallen bald“). Die Übersicht zeigt „Gültig bis …“.
+- **Vollständiges Profil:** einmaliger Bonus, sobald Name, Rechnungsadresse und Telefon eingetragen sind; die Übersicht nennt, was noch fehlt.
+- **Jahrestag der ersten Bestellung:** jedes Jahr Punkte und Mail. Für Kunden mit älteren Bestellungen wird der Tag im täglichen Lauf nachgetragen (500 je Tag).
+- **Punkte im Warenkorb und an der Kasse:** „Mit dieser Bestellung sammelst du X Prämienpunkte“ unter der Summe, mit Aktion und Stufe; Gäste sehen, was sie mit Konto sammeln würden. Block-Warenkorb und -Kasse über die Store-API (rechnet bei jeder Änderung neu), klassische Kasse als Zeile in der Summentabelle. Die Produktseite rechnet die Stufe mit ein.
+- ERP-Kundenansicht zeigt Stufe und Verfallsdatum.
+
 ## [0.55.0] – 2026-10-28
 
 ### Prämienprogramm: Regeln, Auslöser, Aktionen

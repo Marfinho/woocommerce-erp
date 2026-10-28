@@ -14,6 +14,8 @@ use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Loyalty\LoyaltyCampaigns;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
+use Lindenweg16\Modules\Loyalty\LoyaltyTiers;
+use Lindenweg16\Modules\Loyalty\LoyaltyTriggers;
 
 /**
  * Ersetzt WooCommerces Text-Dashboard („Von deinem Konto aus kannst du …“)
@@ -113,6 +115,16 @@ class AccountOverview {
 				: esc_html( sprintf( __( '+%s Punkte sind unterwegs.', 'lindenweg16' ), number_format_i18n( $pending['points'] ) ) );
 			echo '</p>';
 		}
+
+		if ( $points > 0 ) {
+			$expires = LoyaltyTriggers::expires_at( $user_id );
+			if ( $expires ) {
+				/* translators: %s: Datum */
+				echo '<p class="lw16-konto__klein">' . esc_html( sprintf( __( 'Gültig bis %s – jede Bestellung verlängert.', 'lindenweg16' ), date_i18n( 'j. F Y', $expires ) ) ) . '</p>';
+			}
+		}
+
+		self::render_tier( $user_id );
 		echo '</div>';
 
 		echo '<div class="lw16-konto__sammeln">';
@@ -136,6 +148,38 @@ class AccountOverview {
 		echo '</div>';
 
 		echo '</section>';
+	}
+
+	/**
+	 * Stufe des Kunden mit Weg zur nächsten.
+	 *
+	 * @param int $user_id Kunde.
+	 */
+	protected static function render_tier( $user_id ) {
+		$info = LoyaltyTiers::for_user( $user_id );
+		if ( ! $info ) {
+			return;
+		}
+		$tiers = LoyaltyTiers::all();
+		echo '<div class="lw16-konto__stufe">';
+		echo '<ol class="lw16-konto__stufen" aria-label="' . esc_attr__( 'Stufen', 'lindenweg16' ) . '">';
+		foreach ( $tiers as $i => $t ) {
+			$cls = $i < $info['index'] ? 'is-erreicht' : ( $i === $info['index'] ? 'is-aktuell' : '' );
+			echo '<li class="' . esc_attr( $cls ) . '"' . ( $i === $info['index'] ? ' aria-current="step"' : '' ) . '>' . esc_html( $t['name'] ) . '</li>';
+		}
+		echo '</ol>';
+		$factor = (float) $info['tier']['faktor'];
+		$line   = $factor > 1
+			/* translators: 1: Stufe, 2: Faktor */
+			? sprintf( __( 'Deine Stufe: %1$s – du sammelst %2$s-fach.', 'lindenweg16' ), $info['tier']['name'], self::factor_txt( $factor ) )
+			/* translators: %s: Stufe */
+			: sprintf( __( 'Deine Stufe: %s', 'lindenweg16' ), $info['tier']['name'] );
+		if ( $info['next'] ) {
+			/* translators: 1: Betrag, 2: Stufe, 3: Faktor */
+			$line .= ' ' . sprintf( __( 'Noch %1$s Einkauf bis %2$s (%3$s-fach).', 'lindenweg16' ), self::money( $info['missing'] ), $info['next']['name'], self::factor_txt( (float) $info['next']['faktor'] ) );
+		}
+		echo '<p class="lw16-konto__klein">' . esc_html( $line ) . '</p>';
+		echo '</div>';
 	}
 
 	/**
@@ -200,6 +244,18 @@ class AccountOverview {
 		$news = (int) Settings::get( 'punkte_newsletter', 0 );
 		if ( $news > 0 && ! get_user_meta( $user_id, 'lw16_bonus_newsletter', true ) ) {
 			$ways[] = array( $pts( $news ), __( 'für die Newsletter-Anmeldung', 'lindenweg16' ), true, home_url( '/#newsletter' ) );
+		}
+		$profile = (int) Settings::get( 'punkte_profil', 0 );
+		if ( $profile > 0 && ! get_user_meta( $user_id, 'lw16_bonus_profil', true ) ) {
+			$missing = LoyaltyTriggers::profile_missing( $user_id );
+			if ( $missing ) {
+				/* translators: %s: fehlende Angaben */
+				$ways[] = array( $pts( $profile ), sprintf( __( 'fürs vollständige Profil – fehlt: %s', 'lindenweg16' ), implode( ', ', $missing ) ), true, wc_get_endpoint_url( 'edit-address', 'billing', wc_get_page_permalink( 'myaccount' ) ) );
+			}
+		}
+		$anniversary = (int) Settings::get( 'punkte_jahrestag', 0 );
+		if ( $anniversary > 0 ) {
+			$ways[] = array( $pts( $anniversary ), __( 'jedes Jahr am Tag deiner ersten Bestellung', 'lindenweg16' ), false, '' );
 		}
 		$birthday = (int) Settings::get( 'punkte_geburtstag', 0 );
 		if ( $birthday > 0 ) {
@@ -319,6 +375,17 @@ class AccountOverview {
 			echo '</section>';
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Faktor ohne überflüssige Nullen („1,1“, „1,25“, „2“).
+	 *
+	 * @param float $factor Faktor.
+	 * @return string
+	 */
+	protected static function factor_txt( $factor ) {
+		$txt = number_format_i18n( (float) $factor, 2 );
+		return false === strpbrk( $txt, ',.' ) ? $txt : rtrim( rtrim( $txt, '0' ), ',.' );
 	}
 
 	/**

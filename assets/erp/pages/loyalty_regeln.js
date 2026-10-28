@@ -62,8 +62,43 @@
 					}
 					inputs[f.key] = { el: input, type: f.type };
 				});
+				if (g.id === 'stufen') { card.appendChild(tierEditor()); }
 				form.appendChild(card);
 			});
+
+			// Stufen: Name, ab welchem Umsatz (12 Monate), Punkte-Faktor.
+			var tierRows = [];
+			function tierEditor() {
+				var list = h('div', { class: 'lr-tiers' });
+				var add = h('button', { class: 'btn', type: 'button', disabled: !d.can_edit }, 'Stufe hinzufügen');
+				function paint() {
+					list.textContent = '';
+					list.appendChild(h('div', { class: 'lr-tier lr-tier-head', 'aria-hidden': 'true' }, h('span', null, 'Name'), h('span', null, 'ab € Umsatz in 12 Monaten'), h('span', null, 'Punkte ×'), h('span')));
+					tierRows.forEach(function (row, i) {
+						var del = h('button', { class: 'btn', type: 'button', 'aria-label': 'Stufe ' + row.name.value + ' entfernen', disabled: !d.can_edit || tierRows.length <= 2 || i === 0 }, '–');
+						del.addEventListener('click', function () { tierRows.splice(i, 1); paint(); });
+						list.appendChild(h('div', { class: 'lr-tier' }, row.name, row.ab, row.faktor, del));
+					});
+					add.disabled = !d.can_edit || tierRows.length >= 6;
+				}
+				function row(t, i) {
+					return {
+						name: h('input', { class: 'field', value: t.name, maxlength: 30, 'aria-label': 'Name der Stufe ' + (i + 1), disabled: !d.can_edit }),
+						ab: h('input', { class: 'field', type: 'number', min: 0, step: 1, value: String(t.ab), 'aria-label': 'Umsatz ab, Stufe ' + (i + 1), disabled: !d.can_edit || i === 0 }),
+						faktor: h('input', { class: 'field', type: 'number', min: 1, max: 3, step: 0.05, value: String(t.faktor), 'aria-label': 'Faktor, Stufe ' + (i + 1), disabled: !d.can_edit })
+					};
+				}
+				(d.tiers || []).forEach(function (t, i) { tierRows.push(row(t, i)); });
+				add.addEventListener('click', function () {
+					var last = tierRows[tierRows.length - 1];
+					tierRows.push(row({ name: '', ab: (Number(last.ab.value) || 0) + 100, faktor: last.faktor.value }, tierRows.length));
+					paint();
+				});
+				paint();
+				return h('div', { class: 'lr-tier-box' },
+					h('p', { class: 'muted small' }, 'Zählt: abgeschlossene Bestellungen der letzten 12 Monate, abzüglich Erstattungen. Der Faktor gilt für Bestellpunkte (auch zusammen mit Aktionen).'),
+					list, add);
+			}
 
 			if (d.can_edit) {
 				var save = h('button', { class: 'btn primary', type: 'submit' }, 'Regeln speichern');
@@ -74,6 +109,7 @@
 					Object.keys(inputs).forEach(function (k) {
 						body[k] = inputs[k].type === 'bool' ? (inputs[k].el.checked ? 1 : 0) : inputs[k].el.value;
 					});
+					body.stufen = tierRows.map(function (r) { return { name: r.name.value, ab: r.ab.value, faktor: r.faktor.value }; });
 					save.disabled = true;
 					ui.api('loyalty/regeln', { method: 'POST', body: body })
 						.then(function (r) { ui.toast(r.message); })

@@ -907,6 +907,8 @@
 				var body = h('div', { class: 'vk-dlg' },
 					h('div', { class: 'grid tiles' }, tile(ui, 'Guthaben', ui.money(m.credit, 'EUR')), tile(ui, 'Punkte', ui.num(m.points))),
 					kv(ui, 'E-Mail', m.email), kv(ui, 'Empfehlungscode', m.code),
+					m.tier ? kv(ui, 'Stufe', m.tier) : null,
+					m.expires && m.points > 0 ? kv(ui, 'Punkte verfallen am', m.expires) : null,
 					h('h3', null, 'Punkteverlauf'),
 					m.ledger.length ? h('div', { class: 'rows' }, m.ledger.map(function (l) {
 						return h('div', { class: 'row-card' }, h('div', { class: 'row-main' }, h('b', null, (l.points > 0 ? '+' : '') + l.points + ' Punkte'), h('small', null, l.date + ' · ' + l.label + (l.order ? ' · Bestellung #' + l.order : ''))));

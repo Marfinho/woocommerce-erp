@@ -209,7 +209,37 @@ class LoyaltyRepository {
 		}
 
 		self::add_ledger( $row );
+		self::touch( $user_id );
 		return $points;
+	}
+
+	/** Letzte Aktivität im Prämienprogramm (Unix-Zeit) am Kunden. */
+	const META_AKTIV = 'lw16_punkte_aktiv';
+
+	/**
+	 * Aktivität vermerken – setzt die Verfallsfrist neu.
+	 *
+	 * @param int $user_id Kunde.
+	 */
+	public static function touch( $user_id ) {
+		update_user_meta( (int) $user_id, self::META_AKTIV, time() );
+	}
+
+	/**
+	 * Letzte Aktivität: vermerkt, sonst der jüngste Eintrag im Punkteverlauf.
+	 *
+	 * @param int $user_id Kunde.
+	 * @return int Unix-Zeit (0 = keine).
+	 */
+	public static function last_activity( $user_id ) {
+		$ts = (int) get_user_meta( (int) $user_id, self::META_AKTIV, true );
+		if ( $ts ) {
+			return $ts;
+		}
+		global $wpdb;
+		$t    = self::table( 'points_ledger' );
+		$last = $wpdb->get_var( $wpdb->prepare( "SELECT MAX(created_at) FROM {$t} WHERE user_id = %d AND type <> 'expired'", $user_id ) ); // phpcs:ignore
+		return $last ? (int) strtotime( get_gmt_from_date( $last ) ) : 0;
 	}
 
 	/**
@@ -252,6 +282,9 @@ class LoyaltyRepository {
 			'review_photo'      => __( 'Foto in der Bewertung', 'lindenweg16' ),
 			'referral_bonus'    => __( 'Freund geworben', 'lindenweg16' ),
 			'referral_welcome'  => __( 'Willkommen über Empfehlung', 'lindenweg16' ),
+			'profile'           => __( 'Profil vervollständigt', 'lindenweg16' ),
+			'anniversary'       => __( 'Jahrestag', 'lindenweg16' ),
+			'expired'           => __( 'Verfallen', 'lindenweg16' ),
 		);
 	}
 
