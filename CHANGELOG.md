@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.61.0] – 2026-10-28
+
+### Kasse: Bon mit Mehrfachtipp, Vollbild fürs Tablet, nur Kassenprodukte
+- **Kacheln mehrfach antippen:** Jeder Tipp legt ein Stück auf den Bon (Zähler an der Kachel). Im Bon lassen sich Menge (− / +), Einzelpreis und Zeile ändern; **Kassieren** bucht alles auf einmal (`POSModule::book_bon()`, vorab geprüft, jede Zeile mit eigener Lagerbuchung). Der freie Betrag kommt als Zeile auf den Bon. Das alte Formular „Neuer Verkauf“ entfällt.
+- **Vollbild:** Der Knopf „⛶ Vollbild“ blendet Kopf und Menü aus und nutzt, wo der Browser es kann, echtes Vollbild; Kacheln und Bon werden deutlich größer (Esc oder „Vollbild beenden“). Auf dem iPad ohne Vollbild-Schnittstelle gilt die große Ansicht trotzdem.
+- **Die Kasse zeigt nur noch Kassenprodukte.** Bisher standen dort auch ERP-Artikel mit Shop-Verknüpfung und Altprodukte der abgelösten Lagerverwaltung (oft aus WooCommerce übernommen). Frühere Verkäufe und Bestände bleiben unberührt.
+- Nicht in echtem WordPress geprüft; bitte am Tablet ausprobieren.
+
 ## [0.60.0] – 2026-10-28
 
 ### Kasse: Produkte nur für die Kasse, schnell angelegt

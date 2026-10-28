@@ -32,7 +32,7 @@ class ErpKasseTest extends TestCase {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/kasse.js' );
 
 		$this->assertStringContainsString( "UI.pages['kasse']", $js );
-		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss' ) as $route ) {
+		foreach ( array( 'start', 'bon', 'storno', 'abschluss' ) as $route ) {
 			$this->assertStringContainsString( "'" . $route . "'", $js, $route );
 		}
 	}

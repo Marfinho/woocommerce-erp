@@ -19,6 +19,7 @@
 		function eur(n) { return ui.money(n, 'EUR'); }
 		function datum(s) { var p = String(s).split('-'); return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : s; }
 		var preselect = '';     // Auswahlwert einer frisch angelegten Kachel
+		var bon = [];           // Positionen auf dem Bon; bleiben beim Neuzeichnen erhalten
 
 		function field(label, input) { return h('div', null, h('label', null, label), input); }
 
@@ -130,47 +131,145 @@
 			));
 		}
 
+		// Zahl aus einer getippten Summe (Komma oder Punkt) – nur für die Anzeige; der Server rechnet maßgeblich.
+		function num(txt) {
+			var x = String(txt).replace(/[^0-9,.\-]/g, '');
+			if (x.indexOf(',') !== -1) { x = x.replace(/\./g, '').replace(',', '.'); }
+			var n = parseFloat(x);
+			return isNaN(n) || n < 0 ? 0 : n;
+		}
+
+		// Vollbild: Kopf und Menü ausblenden (wie die Druckerfarm) und, wo der Browser es kann, echtes Vollbild.
+		function setFull(on) {
+			var app = ui.app();
+			if (!app) { return; }
+			app.classList.toggle('kiosk', on);
+			try {
+				if (on && document.documentElement.requestFullscreen) { document.documentElement.requestFullscreen(); }
+				else if (!on && document.fullscreenElement) { document.exitFullscreen(); }
+			} catch (e) { /* Das Vollbild ist nur ein Zusatz; die große Ansicht gilt auch ohne. */ }
+		}
+
+		function onFullscreenChange() {
+			if (!document.body.contains(box)) { document.removeEventListener('fullscreenchange', onFullscreenChange); return; }
+			if (!document.fullscreenElement && ui.app()) { ui.app().classList.remove('kiosk'); }
+		}
+		document.addEventListener('fullscreenchange', onFullscreenChange);
+
 		/* ---------- Offener Tag ---------- */
 
 		function paintTag(d) {
 			var t = d.tag;
-			var wahl = '';          // Auswahlwert der Kachel (a:/p:), leer = freier Betrag
 			var kacheln = [];
-
 			var panelBox = h('div');
-			var name = h('input', { class: 'field', type: 'text', placeholder: 'Artikelbezeichnung' });
-			var menge = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: '1', inputmode: 'numeric' });
-			var preis = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
 
 			var suche = h('input', { class: 'field', type: 'search', placeholder: 'Artikel filtern …', autocomplete: 'off' });
 			suche.addEventListener('input', function () {
 				var q = suche.value.toLowerCase().replace(/\s+/g, ' ').trim();
-				kacheln.forEach(function (k) { (k.el.__cell || k.el).hidden = q !== '' && k.o.suche.indexOf(q) === -1; });
+				kacheln.forEach(function (k) { k.cell.hidden = q !== '' && k.o.suche.indexOf(q) === -1; });
 			});
 
+			/* --- Bon: jeder Tipp auf eine Kachel legt ein Stück dazu --- */
+			var bonBox = h('div');
+
+			function updateBadges() {
+				kacheln.forEach(function (k) {
+					var line = bon.filter(function (l) { return l.value === k.o.value; })[0];
+					k.badge.textContent = line ? String(line.menge) : '';
+					k.badge.hidden = !line;
+				});
+			}
+
+			function addLine(o) {
+				var line = bon.filter(function (l) { return l.value === o.value; })[0];
+				if (line) { line.menge += 1; }
+				else { bon.push({ value: o.value, name: o.name, preis: o.preis === '' ? '' : o.preis.replace('.', ','), menge: 1 }); }
+				paintBon();
+			}
+
+			function paintBon() {
+				bonBox.textContent = '';
+				var sum = 0;
+				var list = h('div', { class: 'ks-lines' });
+
+				if (!bon.length) { list.appendChild(h('p', { class: 'muted' }, 'Kacheln antippen – jeder Tipp legt ein Stück auf den Bon.')); }
+
+				bon.forEach(function (l, i) {
+					var pr = h('input', { class: 'field ks-linepreis', type: 'text', inputmode: 'decimal', value: l.preis, placeholder: 'Preis', 'aria-label': 'Einzelpreis ' + l.name });
+					var sumEl = h('b', { class: 'ks-linesum' });
+					function refresh() { sumEl.textContent = eur(num(l.preis) * l.menge); }
+					pr.addEventListener('input', function () { l.preis = pr.value; refresh(); paintTotal(); });
+					refresh();
+
+					var minus = h('button', { class: 'btn ks-step', type: 'button', 'aria-label': 'ein Stück weniger' }, '−');
+					minus.addEventListener('click', function () { if (l.menge > 1) { l.menge -= 1; } else { bon.splice(i, 1); } paintBon(); });
+					var plus = h('button', { class: 'btn ks-step', type: 'button', 'aria-label': 'ein Stück mehr' }, '+');
+					plus.addEventListener('click', function () { l.menge += 1; paintBon(); });
+					var del = h('button', { class: 'btn ks-step', type: 'button', 'aria-label': l.name + ' entfernen' }, '×');
+					del.addEventListener('click', function () { bon.splice(i, 1); paintBon(); });
+
+					list.appendChild(h('div', { class: 'ks-line' },
+						h('span', { class: 'ks-linename' }, l.name),
+						h('span', { class: 'ks-qty' }, minus, h('b', null, String(l.menge)), plus),
+						pr, sumEl, del));
+				});
+
+				var total = h('b', { class: 'ks-bontotal' });
+				function paintTotal() {
+					var x = 0;
+					bon.forEach(function (l) { x += num(l.preis) * l.menge; });
+					total.textContent = eur(x);
+				}
+				paintTotal();
+
+				var pay = h('button', { class: 'btn primary ks-pay', type: 'button' }, 'Kassieren');
+				pay.disabled = !bon.length;
+				pay.addEventListener('click', function () {
+					for (var i = 0; i < bon.length; i++) {
+						if (!String(bon[i].preis).trim()) { ui.toast('Bitte bei „' + bon[i].name + '“ einen Preis eintragen.', true); return; }
+					}
+					var zeilen = bon.map(function (l) { return { produkt_id: l.value, artikel_name: l.name, menge: l.menge, einzelpreis: l.preis }; });
+					post('bon', { tag_id: t.id, zeilen: zeilen }, pay, function (res) { bon = []; return load(); });
+				});
+				var clear = h('button', { class: 'btn', type: 'button' }, 'Leeren');
+				clear.disabled = !bon.length;
+				clear.addEventListener('click', function () { bon = []; paintBon(); });
+
+				// Freier Betrag: kommt als Zeile auf den Bon, ohne Artikel, ohne Lagerabgang.
+				var fname = h('input', { class: 'field', type: 'text', placeholder: 'Freier Betrag: Bezeichnung' });
+				var fbetrag = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
+				var fadd = h('button', { class: 'btn', type: 'button' }, 'Auf den Bon');
+				fadd.addEventListener('click', function () {
+					if (!fbetrag.value.trim()) { ui.toast('Bitte einen Betrag eintragen.', true); fbetrag.focus(); return; }
+					bon.push({ value: '', name: fname.value.trim() || 'Freier Betrag', preis: fbetrag.value, menge: 1 });
+					paintBon();
+				});
+
+				bonBox.appendChild(h('div', { class: 'card ks-form ks-bon' },
+					h('h3', null, 'Bon'),
+					list,
+					h('div', { class: 'ks-bonfoot' }, h('span', null, 'Summe'), total),
+					h('div', { class: 'ks-payrow' }, pay, clear),
+					h('details', { class: 'ks-free' }, h('summary', null, 'Freier Betrag (ohne Artikel, kein Lagerabgang)'),
+						h('div', { class: 'ks-row' }, fname, fbetrag), h('div', { style: 'margin-top:8px' }, fadd))));
+				updateBadges();
+			}
+
+			/* --- Kacheln --- */
 			var grid = h('div', { class: 'ks-grid' });
 			d.optionen.forEach(function (o) {
 				var bild = o.bild
 					? h('span', { class: 'ks-bild' }, h('img', { src: o.bild, alt: '', loading: 'lazy' }))
 					: h('span', { class: 'ks-bild' }, o.kuerzel);
-				var el = h('button', { class: 'ks-kachel', type: 'button', 'aria-pressed': 'false' },
+				var el = h('button', { class: 'ks-kachel', type: 'button' },
 					bild,
 					h('span', { class: 'ks-name' }, o.name),
 					o.sku ? h('span', { class: 'ks-sku' }, o.sku) : null,
 					h('span', { class: 'ks-preis' }, o.preis === '' ? 'Preis offen' : eur(parseFloat(o.preis))));
-				el.addEventListener('click', function () {
-					// Zweiter Tipp auf dieselbe Kachel hebt die Auswahl auf – sonst hängt am
-					// nächsten freien Betrag noch das vorige Produkt und die Ware geht doppelt ab.
-					var war = el.getAttribute('aria-pressed') === 'true';
-					kacheln.forEach(function (k) { k.el.setAttribute('aria-pressed', 'false'); });
-					if (war) { wahl = ''; return; }
-					el.setAttribute('aria-pressed', 'true');
-					wahl = o.value;
-					name.value = o.name;
-					if (o.preis !== '') { preis.value = o.preis.replace('.', ','); } else { preis.value = ''; preis.focus(); }
-				});
-				kacheln.push({ el: el, o: o });
-				var cell = el;
+				el.addEventListener('click', function () { addLine(o); });
+
+				var badge = h('span', { class: 'ks-badge', hidden: true });
+				var cell = h('div', { class: 'ks-cell' }, el, badge);
 				if (o.pos) {
 					// Stift neben der Kachel (nicht darin: ein Button im Button ist ungültig).
 					var pen = h('button', { class: 'ks-edit', type: 'button', 'aria-label': o.name + ' ändern' }, '✎');
@@ -179,11 +278,10 @@
 						panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }, o));
 						panelBox.scrollIntoView({ block: 'nearest' });
 					});
-					cell = h('div', { class: 'ks-cell' }, el, pen);
-					el.__cell = cell;
+					cell.appendChild(pen);
 				}
+				kacheln.push({ el: el, cell: cell, badge: badge, o: o });
 				grid.appendChild(cell);
-				if (preselect && o.value === preselect) { preselect = ''; el.click(); }
 			});
 
 			var newProd = h('button', { class: 'btn', type: 'button' }, '+ Neues Produkt');
@@ -192,28 +290,15 @@
 				panelBox.appendChild(productPanel(function () { panelBox.textContent = ''; }));
 			});
 
-			var sell = h('button', { class: 'btn primary', type: 'button' }, 'Verkauf buchen');
-			sell.addEventListener('click', function () {
-				if (!preis.value.trim()) { ui.toast('Bitte einen Preis eintragen.', true); preis.focus(); return; }
-				post('verkauf', { tag_id: t.id, produkt_id: wahl, artikel_name: name.value, menge: parseInt(menge.value, 10) || 1, einzelpreis: preis.value }, sell);
-			});
-
-			var fname = h('input', { class: 'field', type: 'text', placeholder: 'z. B. Sonderverkauf' });
-			var fbetrag = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
-			var free = h('button', { class: 'btn', type: 'button' }, 'Betrag buchen');
-			free.addEventListener('click', function () {
-				if (!fbetrag.value.trim()) { ui.toast('Bitte einen Betrag eintragen.', true); fbetrag.focus(); return; }
-				// produkt_id bleibt leer: ein freier Betrag bucht kein Lager ab.
-				post('verkauf', { tag_id: t.id, produkt_id: '', artikel_name: fname.value, menge: 1, einzelpreis: fbetrag.value }, free);
-			});
-
+			/* --- Tagesabschluss und Liste --- */
 			var ende = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00' });
 			var notiz = h('textarea', { class: 'field', placeholder: 'Anmerkungen zum Markttag …' });
 			var close = h('button', { class: 'btn primary', type: 'button' }, 'Tag abschließen & in Buchhaltung übernehmen');
 			close.addEventListener('click', function () {
 				if (!ende.value.trim()) { ui.toast('Bitte den gezählten Kassenbestand eintragen.', true); ende.focus(); return; }
+				if (bon.length && !window.confirm('Auf dem Bon liegen noch nicht kassierte Positionen. Trotzdem abschließen?')) { return; }
 				if (!window.confirm('Kassatag abschließen? Der Umsatz wird als Beleg und Kassenbucheintrag gebucht.')) { return; }
-				post('abschluss', { tag_id: t.id, kassenbestand_ende: ende.value, notiz: notiz.value }, close);
+				post('abschluss', { tag_id: t.id, kassenbestand_ende: ende.value, notiz: notiz.value }, close, function (res) { bon = []; return load(); });
 			});
 
 			var rows = h('tbody');
@@ -233,36 +318,40 @@
 					h('td', { class: 'num' }, eur(p.betrag)), h('td', { class: 'num', style: 'text-decoration:none' }, act)));
 			});
 
+			/* --- Zusammenbau --- */
+			var full = h('button', { class: 'btn', type: 'button' }, '⛶ Vollbild');
+			full.addEventListener('click', function () { setFull(!(ui.app() && ui.app().classList.contains('kiosk'))); });
+
+			box.appendChild(h('button', { class: 'kiosk-exit btn', type: 'button', onclick: function () { setFull(false); } }, 'Vollbild beenden (Esc)'));
 			box.appendChild(h('div', { class: 'ks-total' },
 				h('span', { class: 'big' }, eur(t.umsatz)),
-				h('span', { class: 'muted' }, t.markt + ' · ' + datum(t.datum) + ' · Kassenbestand Anfang ' + eur(t.anfang))));
+				h('span', { class: 'muted' }, t.markt + ' · ' + datum(t.datum) + ' · Kassenbestand Anfang ' + eur(t.anfang)),
+				h('span', { class: 'ks-grow' }), full));
 
-			var left = h('div', { class: 'ks-stack' },
+			box.appendChild(h('div', { class: 'ks-main' },
 				h('div', { class: 'card ks-form' },
-					h('h3', null, 'Neuer Verkauf'),
 					h('div', { style: 'margin-bottom:10px' }, newProd), panelBox,
-					d.optionen.length ? [suche, grid] : h('p', { class: 'muted' }, 'Noch kein verkäuflicher Artikel – oben ein Produkt anlegen oder unten einen freien Betrag buchen.'),
-					field('Artikelname', name),
-					h('div', { class: 'ks-row' }, field('Menge', menge), field('Einzelpreis (€)', preis)),
-					h('div', { style: 'margin-top:14px' }, sell)),
-				h('div', { class: 'card ks-form' },
-					h('h3', null, 'Freier Betrag'),
-					h('p', { class: 'muted' }, 'Für alles ohne Artikel im Stamm – Restposten, Spende, Reparatur. Der Betrag geht in Umsatz und Kassenbuch, es wird kein Lagerbestand abgebucht.'),
-					h('div', { class: 'ks-row' }, field('Bezeichnung', fname), field('Betrag (€)', fbetrag)),
-					h('div', { style: 'margin-top:14px' }, free)),
+					d.optionen.length ? [suche, grid] : h('p', { class: 'muted' }, 'Noch kein Kassenprodukt – oben ein Produkt anlegen.')),
+				bonBox));
+
+			box.appendChild(h('div', { class: 'two', style: 'margin-top:14px' },
+				h('div', { class: 'card' },
+					h('h3', null, 'Heutige Verkäufe'),
+					h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' },
+						h('thead', null, h('tr', null, h('th', null, 'Zeit'), h('th', null, 'Artikel'), h('th', { class: 'num' }, 'Betrag'), h('th'))),
+						rows))),
 				h('div', { class: 'card ks-form' },
 					h('h3', null, 'Tagesabschluss'),
 					field('Kassenbestand Ende (€) – Bargeld zählen und eintragen', ende),
 					field('Notiz', notiz),
-					h('div', { style: 'margin-top:14px' }, close)));
+					h('div', { style: 'margin-top:14px' }, close))));
 
-			var right = h('div', { class: 'card' },
-				h('h3', null, 'Heutige Verkäufe'),
-				h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' },
-					h('thead', null, h('tr', null, h('th', null, 'Zeit'), h('th', null, 'Artikel'), h('th', { class: 'num' }, 'Betrag'), h('th'))),
-					rows)));
-
-			box.appendChild(h('div', { class: 'two' }, left, right));
+			paintBon();
+			if (preselect) {
+				var neu = d.optionen.filter(function (o) { return o.value === preselect; })[0];
+				preselect = '';
+				if (neu) { addLine(neu); }
+			}
 		}
 
 		/* ---------- Abgeschlossene Tage ---------- */
