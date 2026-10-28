@@ -36,6 +36,7 @@ class LoyaltyRules {
 			'punkte_pro_euro'           => $f( 'grund', __( 'Punkte je Euro Einkauf', 'lindenweg16' ), __( 'Gezählt werden volle Euro des Bestellwerts.', 'lindenweg16' ), 'float', 0, 100, 1 ),
 			'punkte_einloesewert'       => $f( 'grund', __( 'Punkte für 1 € Rabatt', 'lindenweg16' ), __( 'So viele Punkte sind an der Kasse einen Euro wert.', 'lindenweg16' ), 'int', 1, 100000, 100 ),
 			'punkte_wartezeit_tage'     => $f( 'grund', __( 'Wartezeit bis Bestellpunkte frei sind (Tage)', 'lindenweg16' ), __( 'Schützt vor Punkten aus Bestellungen, die zurückgehen.', 'lindenweg16' ), 'int', 0, 365, 14 ),
+			'einloesen_min_bestellwert' => $f( 'grund', __( 'Mindestbestellwert zum Einlösen (€)', 'lindenweg16' ), __( 'Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen.', 'lindenweg16' ), 'float', 0, 100000, 30 ),
 
 			'punkte_registrierung'      => $f( 'ausloeser', __( 'Kundenkonto anlegen', 'lindenweg16' ), __( 'Einmal, sofort verfügbar.', 'lindenweg16' ), 'int', 0, 100000, 50 ),
 			'punkte_newsletter'         => $f( 'ausloeser', __( 'Newsletter bestätigen', 'lindenweg16' ), __( 'Einmal je Konto. Wer sich vor der Registrierung anmeldet, bekommt die Punkte mit dem Konto.', 'lindenweg16' ), 'int', 0, 100000, 25 ),
@@ -58,6 +59,17 @@ class LoyaltyRules {
 
 			'stufen_aktiv'              => $f( 'stufen', __( 'Stufen einschalten', 'lindenweg16' ), __( 'Wer in den letzten 12 Monaten mehr bestellt hat, sammelt schneller. Die Stufen stehen darunter.', 'lindenweg16' ), 'bool', 0, 1, 1 ),
 		);
+	}
+
+	/**
+	 * Darf bei diesem Warenwert eingelöst werden?
+	 *
+	 * @param float $subtotal Warenwert.
+	 * @param float $min      Mindestbestellwert (0 = kein Mindestwert).
+	 * @return bool
+	 */
+	public static function redeem_allowed( $subtotal, $min ) {
+		return (float) $min <= 0 || (float) $subtotal >= (float) $min;
 	}
 
 	/**

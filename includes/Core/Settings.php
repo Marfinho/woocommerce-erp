@@ -49,6 +49,7 @@ class Settings {
 			'punkte_pro_euro'           => 1,
 			'punkte_einloesewert'       => 100, // Punkte für 1 EUR.
 			'punkte_wartezeit_tage'     => 14,
+			'einloesen_min_bestellwert' => 0, // EUR, 0 = kein Mindestwert.
 			// Auslöser für Bonuspunkte (0 = aus).
 			'punkte_registrierung'      => 0,
 			'punkte_newsletter'         => 0,

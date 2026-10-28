@@ -354,6 +354,9 @@ class LoyaltyFrontend {
 		if ( $use['credit'] <= 0 && $use['points'] <= 0 ) {
 			return;
 		}
+		if ( ! LoyaltyRules::redeem_allowed( (float) $cart->get_subtotal(), (float) Settings::get( 'einloesen_min_bestellwert', 0 ) ) ) {
+			return;
+		}
 
 		$einloesewert = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
 		$points_euro  = Calc::points_to_euro( $use['points'], $einloesewert );
@@ -401,6 +404,10 @@ class LoyaltyFrontend {
 		}
 		$use = self::current_redeem( $user_id );
 		if ( $use['credit'] <= 0 && $use['points'] <= 0 ) {
+			return;
+		}
+
+		if ( ! LoyaltyRules::redeem_allowed( (float) $order->get_subtotal(), (float) Settings::get( 'einloesen_min_bestellwert', 0 ) ) ) {
 			return;
 		}
 

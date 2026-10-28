@@ -212,6 +212,12 @@ class LoyaltyRulesTest extends TestCase {
 		$this->assertSame( array( 'credit' => 0.0, 'points' => 0 ), LoyaltyRules::redeem_request( true, 10, -3, 0 ) );
 	}
 
+	public function test_redeeming_needs_the_minimum_order_value() {
+		$this->assertTrue( LoyaltyRules::redeem_allowed( 5, 0 ) );
+		$this->assertFalse( LoyaltyRules::redeem_allowed( 29.99, 30 ) );
+		$this->assertTrue( LoyaltyRules::redeem_allowed( 30, 30 ) );
+	}
+
 	public function test_redeem_split_only_books_what_the_capped_discount_uses() {
 		// Passt in die Summe: alles wie gewünscht.
 		$this->assertSame( array( 'credit' => 5.0, 'points' => 300, 'euro' => 8.0 ), LoyaltyRules::redeem_split( 5, 300, 100, 20 ) );
