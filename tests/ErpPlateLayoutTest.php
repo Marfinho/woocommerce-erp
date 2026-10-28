@@ -20,11 +20,10 @@ class ErpPlateLayoutTest extends TestCase {
 		$this->assertStringContainsString( "'layout'      => \$layout", $src );
 	}
 
-	public function test_bambu_seite_und_workflow_teilen_die_berechnung() {
+	public function test_workflow_nutzt_die_bettansicht_der_bambu_seite() {
 		$src = $this->read( 'includes/Erp/Pages/BambuDruck.php' );
 
 		$this->assertStringContainsString( 'public static function layout( $plate )', $src );
-		$this->assertStringContainsString( 'new WP_REST_Response( self::layout( $plate ) )', $src );
 	}
 
 	public function test_oberflaeche_zeigt_die_anordnung() {

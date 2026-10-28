@@ -97,8 +97,12 @@ class Installer {
 	 *
 	 * DB_VERSION 47: kein Tabellenwechsel – das Upgrade löscht die bisher in
 	 * bambu_printers.access_code gespeicherten LAN-Zugangscodes.
+	 *
+	 * DB_VERSION 48: articles um pos_only (Produkt nur für die Kasse, nicht im Shop)
+	 * und image_id (Foto als WordPress-Mediendatei) erweitert, siehe
+	 * ArticleRepository::create_pos_article().
 	 */
-	const DB_VERSION = '47';
+	const DB_VERSION = '48';
 
 	/**
 	 * Aktivierungsroutine.

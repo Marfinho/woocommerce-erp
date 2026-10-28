@@ -187,6 +187,83 @@ class RunFlow {
 	}
 
 	/**
+	 * Stand von Slicen und Druck-Warteschlange einer Platte, für die
+	 * Plattenseite – damit sichtbar ist, was im Hintergrund passiert oder hängt.
+	 *
+	 * @param string     $run_status   Zustand der Platte.
+	 * @param string     $plate_status Status der Plattendatei (entworfen, wird_geslict, geslict, fehlgeschlagen).
+	 * @param array|null $note         Hinweis zum letzten Slicing-Lauf (siehe BambuDruck::slicing_note()).
+	 * @param array|null $job          Bambu-Auftrag {status, error_message} oder null.
+	 * @param bool|null  $bed_clear    Platte am Drucker frei? null = unbekannt.
+	 * @return array {state, text, error, can_slice, can_requeue}
+	 */
+	public static function queue_state( $run_status, $plate_status, $note, $job, $bed_clear ) {
+		$offen = in_array( $run_status, array( self::FREIGEGEBEN, self::RUESTEN ), true );
+		$out   = array( 'state' => 'none', 'text' => '', 'error' => '', 'can_slice' => false, 'can_requeue' => false );
+
+		if ( 'wird_geslict' === $plate_status ) {
+			$out['state'] = 'slicing';
+			$out['text']  = $note && ! empty( $note['text'] ) ? (string) $note['text'] : __( 'Wird geslict …', 'lindenweg16' );
+			return $out;
+		}
+
+		if ( 'fehlgeschlagen' === $plate_status ) {
+			$out['state']     = 'slice_failed';
+			$out['text']      = __( 'Slicen fehlgeschlagen.', 'lindenweg16' );
+			$out['error']     = $note && ! empty( $note['text'] ) ? (string) $note['text'] : '';
+			$out['can_slice'] = $offen;
+			return $out;
+		}
+
+		if ( 'geslict' !== $plate_status || ! is_array( $job ) ) {
+			$out['can_slice'] = $offen && in_array( $plate_status, array( 'entworfen', '' ), true );
+			return $out;
+		}
+
+		$status = isset( $job['status'] ) ? (string) $job['status'] : '';
+		$error  = isset( $job['error_message'] ) ? trim( (string) $job['error_message'] ) : '';
+
+		switch ( $status ) {
+			case 'queued':
+				$out['state'] = 'queued';
+				$out['text']  = false === $bed_clear
+					? __( 'Geslict und in der Warteschlange – startet, sobald die Platte am Drucker als frei bestätigt ist.', 'lindenweg16' )
+					: __( 'Geslict und in der Warteschlange – startet, sobald der Drucker frei ist.', 'lindenweg16' );
+				break;
+			case 'claimed':
+			case 'uploading':
+				$out['state'] = 'sending';
+				$out['text']  = __( 'Wird an den Drucker übertragen.', 'lindenweg16' );
+				break;
+			case 'printing':
+				$out['state'] = 'printing';
+				$out['text']  = __( 'Der Drucker druckt diese Platte.', 'lindenweg16' );
+				break;
+			case 'unklar':
+				$out['state'] = 'unclear';
+				$out['text']  = __( 'Unklar, wie der Druck ausging – bitte am Drucker nachsehen und unter Bambu-Lab-Drucker → Aufträge klären.', 'lindenweg16' );
+				$out['error'] = $error;
+				break;
+			case 'completed':
+				$out['state'] = 'done';
+				$out['text']  = __( 'Der Drucker meldet: fertig.', 'lindenweg16' );
+				break;
+			case 'failed':
+			case 'cancelled':
+				$out['state']       = 'print_failed';
+				$out['text']        = 'failed' === $status ? __( 'Der Druck ist fehlgeschlagen.', 'lindenweg16' ) : __( 'Der Druckauftrag wurde storniert.', 'lindenweg16' );
+				$out['error']       = $error;
+				// Nur, solange die Platte noch auf ihren Druck wartet. Scheiterte
+				// ein laufender Druck, steht sie bei „Ist melden“: Ausschuss melden,
+				// der Rest kommt als Bedarf zurück in den Plan.
+				$out['can_requeue'] = $offen;
+				break;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Spalte im Workflow für einen Zustand.
 	 *
 	 * @param string $status Zustand.

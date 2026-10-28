@@ -7,7 +7,7 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [0.58.0] – 2026-10-28
+## [0.63.0] – 2026-10-28
 
 ### 16 neue Push-Benachrichtigungen, jede Person wählt selbst
 Im ERP unter Profilmenü → **Benachrichtigungen** stehen jetzt 18 Meldungsarten, nach Bereich gruppiert. Jede Person sieht nur die Arten, für die sie das Recht hat, und schaltet sie für sich ein oder aus; die Wahl gilt für alle ihre Geräte. Die neuen Arten sind zunächst **aus** – „Neue Shop-Bestellung“ und „Fast/ganz ausverkauft“ bleiben wie bisher an.
@@ -35,6 +35,70 @@ Im ERP unter Profilmenü → **Benachrichtigungen** stehen jetzt 18 Meldungsarte
 - Wartung, Nachbestellen und Wiedervorlagen prüft das ERP einmal am Morgen (ab 8 Uhr Ortszeit, im stündlichen Lauf) und meldet nur, was seit dem Vortag **neu** fällig ist.
 - Die neuen Auslöser laufen abgesichert: Ein Fehler beim Benachrichtigen bricht Kasse, Drucker-Bridge oder Postfach nicht ab, er landet nur im PHP-Fehlerprotokoll.
 - Neue Hooks für eigene Erweiterungen: `lw16_waitlist_signup` (Produkt, Artikel) und `lw16_support_ticket_created` (Ticket, Betreff).
+## [0.62.0] – 2026-10-28
+
+### Loyalty
+- **Pre-Sale für höhere Stufen.** Neuer Reiter Loyalty → Pre-Sale: Einzelne Produkte, ganze Kategorien oder Merkmale (Attribute wie „Farbe: Rot“, Schlagwörter) sind ab einem Starttag nur für Kunden ab einer wählbaren Stufe kaufbar, ab „für alle ab“ für jeden. Gesperrt wird auch im Warenkorb und an der Kasse; auf der Produktseite steht ein Hinweis mit dem Datum. Bei Varianten sperrt „Farbe: Rot“ nur die roten. Shop-Verwalter sind nie gesperrt.
+- **Konto: wechselnde Leiste.** Die Leiste wechselt alle paar Sekunden zwischen „Punkte bis zum nächsten Euro Rabatt“ und „Umsatz bis zur nächsten Stufe“ (hält an bei Mauszeiger/Fokus, ohne Bewegung bei reduzierter Animation).
+- **Mindestbestellwert zum Einlösen.** Neue Regel unter Loyalty → Regeln → Grundwerte: Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen, 0 = kein Mindestwert. In der Block-Kasse steht dann ein Hinweis statt der Einlösefelder.
+- **Regeln speichern:** Der Fehler „Cannot read properties of undefined (reading 'push')“ beim Öffnen von Loyalty → Regeln ist behoben.
+
+## [0.61.1] – 2026-10-28
+
+### Kasse: Kassenprodukte ohne offenen Tag pflegen
+- **Neuer Block „Kassenprodukte“** auf der Kassenseite, wenn kein Tag offen ist: Produkte anlegen (mit Foto), ändern und ausblenden, ohne vorher einen Kassatag zu starten.
+- Nicht in echtem WordPress geprüft.
+
+## [0.61.0] – 2026-10-28
+
+### Kasse: Bon mit Mehrfachtipp, Vollbild fürs Tablet, nur Kassenprodukte
+- **Kacheln mehrfach antippen:** Jeder Tipp legt ein Stück auf den Bon (Zähler an der Kachel). Im Bon lassen sich Menge (− / +), Einzelpreis und Zeile ändern; **Kassieren** bucht alles auf einmal (`POSModule::book_bon()`, vorab geprüft, jede Zeile mit eigener Lagerbuchung). Der freie Betrag kommt als Zeile auf den Bon. Das alte Formular „Neuer Verkauf“ entfällt.
+- **Vollbild:** Der Knopf „⛶ Vollbild“ blendet Kopf und Menü aus und nutzt, wo der Browser es kann, echtes Vollbild; Kacheln und Bon werden deutlich größer (Esc oder „Vollbild beenden“). Auf dem iPad ohne Vollbild-Schnittstelle gilt die große Ansicht trotzdem.
+- **Die Kasse zeigt nur noch Kassenprodukte.** Bisher standen dort auch ERP-Artikel mit Shop-Verknüpfung und Altprodukte der abgelösten Lagerverwaltung (oft aus WooCommerce übernommen). Frühere Verkäufe und Bestände bleiben unberührt.
+- Nicht in echtem WordPress geprüft; bitte am Tablet ausprobieren.
+
+## [0.60.0] – 2026-10-28
+
+### Kasse: Produkte nur für die Kasse, schnell angelegt
+- **„+ Neues Produkt“ auf der Kassenseite:** Foto direkt mit der Handykamera aufnehmen, Name, Preis und optional Anfangsbestand eintragen – danach ist die Kachel da und schon gewählt. Das Foto wird im Browser auf 800 px verkleinert und als WordPress-Mediendatei gespeichert (nur JPEG, PNG, WebP, höchstens 3 MB, geprüft am Inhalt).
+- **Ein normaler Artikel mit Kennzeichen `pos_only`:** Artikelnummer automatisch (`K-0001` …), Beschaffungsweg Zukauf, verkäuflich, aktiv. Bestand, Lagerabgang und Storno laufen wie bei jedem Artikel; der Anfangsbestand wird als Korrekturbuchung gebucht. Keine Shop-Verknüpfung, und das Produkt erscheint nicht in der manuellen Auftragserfassung und im Konfigurator. In Lager, Lagerplätzen und Bedarf bleibt es sichtbar, damit sich Bestand nachbuchen lässt.
+- **Ändern an der Kachel:** Kassenprodukte tragen einen Stift (✎) – Name, Preis, neues Foto (das alte wird gelöscht) und „Ausblenden“ (Status ausgelaufen: weg aus den Kacheln, Bestand und Bücher bleiben). Normale Artikel lassen sich so nicht ändern; Bestandskorrekturen laufen im Lager.
+- **Datenbank:** Tabelle `articles` bekommt `pos_only` und `image_id` (DB_VERSION 48; das Upgrade läuft beim nächsten Seitenaufruf).
+- Nicht in echtem WordPress geprüft; vor allem Kamera am Handy und Foto-Upload bitte einmal von Hand durchspielen.
+
+### Kasse: ins ERP umgezogen, raus aus dem wp-admin
+- **Die Marktkasse ist eine eigene ERP-Seite** (Verkauf → Kasse): Kassatag starten, Kacheln antippen, freier Betrag, Storno, Tagesabschluss und die Liste der abgeschlossenen Tage mit Details. Die Seite ist für Handy und Rechner dieselbe; die getrennte „Mobile Kasse“ entfällt.
+- **Entfernt:** die wp-admin-Seite „Kasse“ samt Menüeintrag, die `admin-post`-Handler (`lw16_pos_*`) und die alte Produktsuche per Ajax. Fachlogik und Daten bleiben unverändert (`POSModule::start_tag/book_sale/storno_position/close_tag`): gleiche Lagerweiche, gleicher Beleg und Kassenbucheintrag beim Abschluss.
+- **Neu abgesichert:** Der Tagesabschluss ist gegen Doppelklick und zwei Geräte zugleich gesperrt (vorher konnte er zweimal gebucht werden); Startdatum und Markt werden geprüft.
+
+## [0.59.1] – 2026-10-28
+
+### Warenkorb-Erinnerungen
+- **Keine Erinnerung mehr nach dem Kauf in der Block-Kasse.** Der Warenkorb wurde dort nie als „umgewandelt“ markiert; wer bestellt hatte, bekam trotzdem die Mails. Zusätzlich prüft der Versand jetzt vor jeder Mail, ob seit dem Warenkorb eine Bestellung mit derselben E-Mail vorliegt.
+- **Keine Dauerschleife mehr:** Jeder Seitenaufruf setzte den Erinnerungs-Timer zurück, sodass die Mails immer wieder neu rausgingen. Ein unveränderter, schon erinnerter Warenkorb bleibt jetzt, wie er ist.
+
+## [0.59.0] – 2026-10-28
+
+### Live-Ansicht: Nutzer für den Bildschirm, der nicht abläuft
+- **Neue Rolle „Lindenweg16 Live-Anzeige“.** Ein Konto mit nur dieser Rolle sieht ausschließlich die Live-Seite (alle Blöcke), landet nach der Anmeldung direkt in der Vollbild-Ansicht und bleibt **ein Jahr** angemeldet statt zwei bzw. vierzehn Tage. Das Konto legst du in WordPress unter Benutzer an; Haken bei „Angemeldet bleiben“ beim ersten Login.
+- **Abgelaufenes Seiten-Token wird automatisch erneuert.** Das Token, mit dem die Oberfläche den Server fragt, gilt nur 12–24 Stunden – auch bei gültiger Anmeldung. Bisher blieb ein dauernd offener Bildschirm dann auf „Die Sitzung ist abgelaufen“ stehen; jetzt holt die Seite ein neues und wiederholt die Anfrage einmal. Das gilt für das ganze ERP.
+- Nicht in echtem WordPress geprüft.
+
+## [0.58.0] – 2026-10-28
+
+### Workflow: ein Weg vom Bedarf bis ins Lager
+- **Automatisch slicen direkt im Workflow.** Beim Freigeben eines Plans gibt es den Haken „Automatisch slicen und an den Drucker“; auf der Seite einer freigegebenen Platte den Knopf dazu. Bisher lag das Slicen in einem anderen Menü (Bambu-Lab-Drucker → Platten anordnen).
+- **Die Plattenseite zeigt, was im Hintergrund passiert:** wird geslict, Slicen fehlgeschlagen (mit Grund und „Erneut slicen“), in der Warteschlange (mit Hinweis auf „Platte ist frei“), wird übertragen, druckt, Druck fehlgeschlagen (mit „Erneut in die Warteschlange“), unklar. Die Karten im Workflow tragen den Stand als Hinweis.
+- **Melden mit Rolle:** Die Rolle lässt sich wählen oder per Spulen-Etikett scannen; vorgeschlagen bleibt die älteste mit genug Rest. Eine gescannte Spule gilt danach als in Benutzung. Der Server konnte das schon, die Oberfläche bot es nie an.
+- **Einlagern auf einen Lagerplatz:** Beim Melden ist der Standardplatz des Artikels vorbelegt und änderbar; der Lagerzugang wird auf diesen Platz gebucht. Bisher landete Fertigware „ohne Platz“.
+- **Notizfeld** beim Melden; die Notiz steht an der Platte und im Druckjournal.
+
+### Entfernt: Druckwege, die nicht oder falsch buchten
+- **Bambu-Lab-Drucker → „Platten anordnen“** (ERP-Reiter und wp-admin-Seite): Dort gedruckte Platten buchten nichts ins Lager und zählten nicht als gedeckter Bedarf. Platten entstehen nur noch im Workflow.
+- **wp-admin → Bedarf → „Direkt drucken“**: buchte bei Druckende automatisch alle Teile als gut, ohne Ausschuss. Bereits eingereihte Aufträge aus diesem Weg drucken weiter, buchen aber nicht mehr automatisch – bitte über das Druckjournal nachtragen.
+- **Automatische Ist-Druckzeit alter Druckaufträge** beim Druckende (kein Aufrufer mehr).
+- Der Reiter „Aufträge“ bleibt für Einzeldrucke (Muster, Ersatz, privat) – ausdrücklich ohne Buchung.
+- Nicht in echtem WordPress geprüft.
 
 ## [0.57.1] – 2026-10-28
 

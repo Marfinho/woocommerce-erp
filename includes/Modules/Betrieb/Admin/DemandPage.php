@@ -11,8 +11,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
-use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
-use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
@@ -37,7 +35,6 @@ class DemandPage {
 	public function register() {
 		add_action( 'lw16_betrieb_render_lw16_betrieb_bedarf', array( $this, 'render' ) );
 		add_action( 'admin_post_lw16_betrieb_demand_order', array( $this, 'handle_order' ) );
-		add_action( 'admin_post_lw16_betrieb_demand_bambu_print', array( $this, 'handle_bambu_print' ) );
 	}
 
 	/**
@@ -116,42 +113,6 @@ class DemandPage {
 					? __( 'Druckauftrag %s angelegt. Er steht unter Lagerplätze, Fertigung & Picklisten und lässt sich dort starten.', 'lindenweg16' )
 					: __( 'Fertigungsauftrag %s angelegt, Materialliste steht bereit.', 'lindenweg16' ),
 				$order['code']
-			)
-		);
-	}
-
-	/**
-	 * "Direkt drucken": Bedarf ohne Umweg über einen manuell angelegten
-	 * Fertigungsauftrag in die Bambu-Warteschlange einreihen (siehe
-	 * BambuService::dispatch_from_demand()).
-	 */
-	public function handle_bambu_print() {
-		$this->require_cap();
-		check_admin_referer( self::NONCE . '_bambu' );
-
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- durch check_admin_referer abgedeckt.
-		$article_id  = isset( $_POST['article_id'] ) ? (int) $_POST['article_id'] : 0;
-		$qty         = isset( $_POST['qty'] ) ? (float) str_replace( ',', '.', wp_unslash( $_POST['qty'] ) ) : 0;
-		$printer_id  = isset( $_POST['bambu_printer_id'] ) ? sanitize_key( wp_unslash( $_POST['bambu_printer_id'] ) ) : '';
-		$ams_tray_id = isset( $_POST['ams_tray_id'] ) && '' !== $_POST['ams_tray_id'] ? max( 0, min( 255, (int) $_POST['ams_tray_id'] ) ) : null;
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		$result = BambuService::dispatch_from_demand( $article_id, $printer_id, $qty, $ams_tray_id );
-
-		if ( ! $result['ok'] ) {
-			$this->redirect( $result['error'], 'error' );
-		}
-
-		$this->redirect(
-			sprintf(
-				/* translators: %d: Anzahl Platten. */
-				_n(
-					'%d Platte in die Bambu-Warteschlange gelegt. Der Drucker holt sie bei der nächsten Bridge-Verbindung ab.',
-					'%d Platten in die Bambu-Warteschlange gelegt. Der Drucker holt sie bei der nächsten Bridge-Verbindung ab.',
-					$result['plates'],
-					'lindenweg16'
-				),
-				$result['plates']
 			)
 		);
 	}
@@ -345,7 +306,6 @@ class DemandPage {
 	protected function render_articles( array $rows ) {
 		$actions        = DemandPlanner::action_labels();
 		$sources        = DemandPlanner::source_labels();
-		$bambu_printers = BambuPrinterRepository::all();
 
 		echo '<h2>' . esc_html__( 'Zu tun', 'lindenweg16' ) . '</h2>';
 		echo '<p class="description">' . esc_html__( 'Von unten nach oben abarbeiten: Was am tiefsten in der Stückliste steckt, steht oben – es muss zuerst da sein.', 'lindenweg16' ) . '</p>';
@@ -404,10 +364,6 @@ class DemandPage {
 					esc_html( 'druck' === $kind ? __( 'Druckauftrag anlegen', 'lindenweg16' ) : __( 'Auftrag anlegen', 'lindenweg16' ) )
 				);
 				echo '</form>';
-
-				if ( 'drucken' === $row['action'] && $bambu_printers ) {
-					$this->render_bambu_print_form( $row, $bambu_printers );
-				}
 			} else {
 				printf(
 					'<a class="button button-small" href="%s">%s</a>',
@@ -419,75 +375,6 @@ class DemandPage {
 		}
 
 		echo '</tbody></table>';
-	}
-
-	/**
-	 * "Direkt drucken": Drucker wählen, los – nur sichtbar, wenn für die
-	 * aktive Revision bereits eine geslicte Druckdatei hinterlegt ist
-	 * (siehe BambuService::dispatch_from_demand()). Ohne das würde der
-	 * Knopf nur zu einer Fehlermeldung führen; ein Artikel ohne
-	 * Druckdatei zeigt ihn deshalb erst gar nicht.
-	 *
-	 * @param array $row            Bedarfszeile.
-	 * @param array $bambu_printers Registrierte Bambu-Drucker.
-	 */
-	protected function render_bambu_print_form( array $row, array $bambu_printers ) {
-		$revision = RevisionRepository::active_for_article( (int) $row['article_id'] );
-
-		if ( ! $revision || empty( $revision['model_file'] ) || 'druckdatei' !== $revision['model_kind'] ) {
-			return;
-		}
-
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:4px">';
-		wp_nonce_field( self::NONCE . '_bambu' );
-		echo '<input type="hidden" name="action" value="lw16_betrieb_demand_bambu_print" />';
-		printf( '<input type="hidden" name="article_id" value="%d" />', (int) $row['article_id'] );
-		printf( '<input type="hidden" name="qty" value="%s" />', esc_attr( (string) $row['net'] ) );
-		echo '<select name="bambu_printer_id" style="max-width:140px">';
-		foreach ( $bambu_printers as $printer ) {
-			printf( '<option value="%s">%s</option>', esc_attr( $printer->printer_id ), esc_html( $printer->name ) );
-		}
-		echo '</select> ';
-		$this->render_ams_tray_select( $bambu_printers );
-		printf(
-			'<button class="button button-small">%s</button>',
-			esc_html__( 'Direkt drucken', 'lindenweg16' )
-		);
-		echo '</form>';
-	}
-
-	/**
-	 * Auswahl "welches Filament" für "Direkt drucken" - ein Fach gilt für
-	 * die gesamte Platte (kein Mehrfarb-Mapping pro Bauteil). Dasselbe
-	 * Muster wie BambuPrintersPage::render_ams_tray_select().
-	 *
-	 * @param array $bambu_printers Registrierte Bambu-Drucker.
-	 */
-	protected function render_ams_tray_select( array $bambu_printers ) {
-		$gruppen = array();
-
-		foreach ( $bambu_printers as $printer ) {
-			$optionen = BambuPrinterRepository::ams_tray_options( $printer );
-
-			if ( $optionen ) {
-				$gruppen[ $printer->name ] = $optionen;
-			}
-		}
-
-		if ( ! $gruppen ) {
-			return;
-		}
-
-		echo '<select name="ams_tray_id" style="max-width:200px">';
-		echo '<option value="">' . esc_html__( '– aktuell eingelegtes Filament –', 'lindenweg16' ) . '</option>';
-		foreach ( $gruppen as $drucker_name => $optionen ) {
-			printf( '<optgroup label="%s">', esc_attr( $drucker_name ) );
-			foreach ( $optionen as $option ) {
-				printf( '<option value="%d">%s</option>', (int) $option['value'], esc_html( $option['label'] ) );
-			}
-			echo '</optgroup>';
-		}
-		echo '</select> ';
 	}
 
 	/**

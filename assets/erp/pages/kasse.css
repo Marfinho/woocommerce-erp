@@ -1,0 +1,56 @@
+/* ERP-Seite „Kasse“: Kachelauswahl, Summe, Verkäufe. Am Stand mit dem Daumen bedienbar. */
+.ks-total { display: flex; flex-wrap: wrap; gap: 6px 24px; align-items: baseline; margin-bottom: 14px; }
+.ks-total .big { font: 700 34px/1.1 var(--font-head); font-variant-numeric: tabular-nums; }
+.ks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; max-height: 340px; overflow-y: auto; padding: 2px; margin: 10px 0 12px; }
+.ks-kachel {
+	display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 6px; font: inherit; text-align: center;
+	background: var(--surface); color: var(--text); border: 2px solid var(--line); border-radius: 12px; cursor: pointer; min-height: 44px;
+}
+.ks-kachel[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.ks-kachel[hidden] { display: none; }
+.ks-bild { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--surface-muted); font: 700 22px var(--font-head); color: var(--text-muted); }
+.ks-bild img { width: 100%; height: 100%; object-fit: cover; }
+.ks-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.ks-sku { font-size: 11px; color: var(--text-muted); }
+.ks-preis { font-size: 13px; font-weight: 700; color: var(--accent); }
+.ks-cell { position: relative; display: flex; }
+.ks-cell > .ks-kachel { flex: 1; }
+.ks-badge { position: absolute; top: 4px; left: 4px; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 14px; background: var(--accent); color: #fff; font: 700 15px/28px var(--font-head); text-align: center; pointer-events: none; }
+.ks-badge[hidden] { display: none; }
+.ks-mini { width: 44px; height: 44px; font-size: 16px; }
+.ks-grow { flex: 1; }
+.ks-main { display: grid; gap: 14px; }
+@media (min-width: 800px) { .ks-main { grid-template-columns: minmax(0, 1fr) 380px; align-items: start; } }
+.ks-bon { position: sticky; top: 12px; }
+.ks-lines { display: grid; gap: 8px; margin-bottom: 10px; }
+.ks-line { display: grid; grid-template-columns: 1fr auto; gap: 6px 8px; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.ks-linename { font-weight: 600; grid-column: 1 / -1; }
+.ks-qty { display: inline-flex; align-items: center; gap: 8px; }
+.ks-qty b { min-width: 22px; text-align: center; font-size: 18px; }
+.ks-step { min-width: 44px; min-height: 44px; padding: 0; font-size: 20px; }
+.ks-linepreis { width: 84px !important; min-height: 44px; text-align: right; }
+.ks-linesum { min-width: 70px; text-align: right; font-variant-numeric: tabular-nums; }
+.ks-line { grid-template-columns: auto 1fr auto auto auto; }
+.ks-bonfoot { display: flex; justify-content: space-between; align-items: baseline; margin: 8px 0 12px; font-size: 15px; }
+.ks-bontotal { font: 700 30px/1.1 var(--font-head); font-variant-numeric: tabular-nums; }
+.ks-payrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.ks-pay { min-height: 56px; font-size: 20px; }
+.ks-free { margin-top: 12px; }
+.ks-free summary { cursor: pointer; font-size: 13px; color: var(--text-muted); }
+.erp.kiosk .ks-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); max-height: none; gap: 12px; }
+.erp.kiosk .ks-bild { width: 96px; height: 96px; font-size: 32px; }
+.erp.kiosk .ks-name { font-size: 16px; }
+.erp.kiosk .ks-preis { font-size: 16px; }
+.erp.kiosk .ks-kachel { padding: 12px 8px; }
+.erp.kiosk .ks-total .big { font-size: 44px; }
+.erp.kiosk .ks-main { grid-template-columns: minmax(0, 1fr) 440px; }
+.ks-cell[hidden] { display: none; }
+.ks-edit { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text-muted); font-size: 16px; cursor: pointer; }
+.ks-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ks-form label { display: block; font-size: 13px; font-weight: 600; margin: 10px 0 4px; }
+.ks-form .field { width: 100%; min-height: 44px; font-size: 16px; }
+.ks-form textarea.field { min-height: 70px; }
+.ks-pos.storno td { opacity: .45; text-decoration: line-through; }
+.ks-diff.ok { color: var(--success); }
+.ks-diff.bad { color: var(--error); }
+.ks-stack { display: grid; gap: 14px; }

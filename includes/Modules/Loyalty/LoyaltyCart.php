@@ -146,8 +146,11 @@ class LoyaltyCart {
 		}
 		$step = max( 1, (int) Settings::get( 'punkte_einloesewert', 100 ) );
 		$use  = LoyaltyFrontend::current_redeem( $user_id );
+		$min  = (float) Settings::get( 'einloesen_min_bestellwert', 0 );
 
 		return array(
+			'min_order'      => $min,
+			'below_min'      => ! LoyaltyRules::redeem_allowed( (float) WC()->cart->get_subtotal(), $min ),
 			'available'      => true,
 			'credit_balance' => round( $credit, 2 ),
 			'points_balance' => $points,

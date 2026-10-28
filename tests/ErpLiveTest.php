@@ -84,6 +84,22 @@ class ErpLiveTest extends TestCase {
 		$this->assertStringNotContainsString( "'wochenstunden'", substr( $src, strpos( $src, 'const KPIS' ), 260 ), 'Personenbezogene Kennzahlen gehören nicht an die Wand.' );
 	}
 
+	public function test_live_anzeige_bleibt_ein_jahr_angemeldet() {
+		$src = $this->read( 'includes/Erp/LiveViewer.php' );
+
+		$this->assertStringContainsString( "'auth_cookie_expiration'", $src );
+		$this->assertStringContainsString( 'const SESSION = YEAR_IN_SECONDS', $src );
+		$this->assertStringContainsString( 'LiveViewer::register()', $this->read( 'includes/Erp/Shell.php' ) );
+		$this->assertStringContainsString( "array( LiveViewer::class, 'can_open' )", $this->read( 'includes/Erp/Pages/Live.php' ) );
+		$this->assertStringContainsString( "array( LiveViewer::class, 'can_open' )", $this->read( 'includes/Erp/RestApi.php' ) );
+	}
+
+	public function test_abgelaufenes_token_wird_erneuert() {
+		$js = $this->read( 'assets/erp/erp.js' );
+
+		$this->assertMatchesRegularExpression( "/return send\(path, opts\)\.catch.*?rest_cookie_invalid_nonce.*?refreshNonce\(\)/s", $js );
+	}
+
 	public function test_oberflaeche_ist_vom_kopf_aus_erreichbar() {
 		$this->assertStringContainsString( "href: '#/live'", $this->read( 'assets/erp/erp.js' ) );
 		$this->assertStringContainsString( "UI.routes['live']", $this->read( 'assets/erp/pages/live.js' ) );
