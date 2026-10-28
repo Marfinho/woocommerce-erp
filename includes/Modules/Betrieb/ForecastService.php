@@ -193,7 +193,7 @@ class ForecastService {
 		$table = $wpdb->prefix . 'lw16_kasse_tage';
 		$row   = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT COUNT(*) AS days, COALESCE(SUM(umsatz_gesamt),0) AS revenue FROM {$table} WHERE status <> 'offen' AND datum >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT COUNT(*) AS days, COALESCE(SUM(umsatz_gesamt),0) AS revenue FROM {$table} WHERE status = 'abgeschlossen' AND datum >= %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				gmdate( 'Y-m-d', time() - 365 * DAY_IN_SECONDS )
 			),
 			ARRAY_A

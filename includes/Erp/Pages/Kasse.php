@@ -54,7 +54,7 @@ class Kasse {
 			)
 		);
 
-		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt', 'produkt-aendern', 'bon' ) as $action ) {
+		foreach ( array( 'start', 'verkauf', 'storno', 'abschluss', 'produkt', 'produkt-aendern', 'bon', 'abbrechen' ) as $action ) {
 			register_rest_route(
 				$ns,
 				'/erp/kasse/' . $action,
@@ -154,6 +154,7 @@ class Kasse {
 				'tage'      => $tage,
 				'kampagnen' => $kampagnen,
 				'heute'     => gmdate( 'Y-m-d' ),
+				'admin'     => current_user_can( 'manage_options' ),
 			)
 		);
 	}
@@ -216,6 +217,22 @@ class Kasse {
 		$body = (array) $request->get_json_params();
 
 		return self::answer( POSModule::book_bon( (int) ( $body['tag_id'] ?? 0 ), (array) ( $body['zeilen'] ?? array() ) ) );
+	}
+
+	/**
+	 * Offenen Tag abbrechen – nur für Administratoren, nur zum Testen.
+	 *
+	 * @param WP_REST_Request $request Anfrage (tag_id).
+	 * @return WP_REST_Response
+	 */
+	public static function abbrechen( WP_REST_Request $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Das darf nur ein Administrator.', 'lindenweg16' ) ), 403 );
+		}
+
+		$body = (array) $request->get_json_params();
+
+		return self::answer( POSModule::cancel_tag( (int) ( $body['tag_id'] ?? 0 ) ) );
 	}
 
 	/**

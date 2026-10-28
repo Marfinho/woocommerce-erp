@@ -366,6 +366,15 @@
 					d.optionen.length ? [suche, grid] : h('p', { class: 'muted' }, 'Noch kein Kassenprodukt – oben ein Produkt anlegen.')),
 				bonBox));
 
+			var abort = null;
+			if (d.admin) {
+				abort = h('button', { class: 'btn', type: 'button' }, 'Tag abbrechen (Test)');
+				abort.addEventListener('click', function () {
+					if (!window.confirm('Kassatag abbrechen? Alle Verkäufe werden storniert und der Bestand zurückgebucht. Es entsteht kein Beleg und kein Kassenbucheintrag. Nur zum Testen.')) { return; }
+					post('abbrechen', { tag_id: t.id }, abort, function (res) { bon = []; return load(); });
+				});
+			}
+
 			box.appendChild(h('div', { class: 'two', style: 'margin-top:14px' },
 				h('div', { class: 'card' },
 					h('h3', null, 'Heutige Verkäufe'),
@@ -376,7 +385,8 @@
 					h('h3', null, 'Tagesabschluss'),
 					field('Kassenbestand Ende (€) – Bargeld zählen und eintragen', ende),
 					field('Notiz', notiz),
-					h('div', { style: 'margin-top:14px' }, close))));
+					h('div', { style: 'margin-top:14px' }, close),
+					abort ? h('div', { style: 'margin-top:18px;padding-top:12px;border-top:1px solid var(--line)' }, h('p', { class: 'muted' }, 'Nur für Administratoren, zum Testen: verwirft den Tag samt Verkäufen.'), abort) : null)));
 
 			paintBon();
 			if (preselect) {

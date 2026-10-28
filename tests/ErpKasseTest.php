@@ -107,4 +107,16 @@ class ErpKasseTest extends TestCase {
 		$this->assertDoesNotMatchRegularExpression( '/if \( \$offen \) \{\s*foreach \( POSModule::sale_options/', $php );
 		$this->assertStringContainsString( 'paintStart(d); paintProdukte(d);', $js );
 	}
+
+	public function test_tag_abbrechen_nur_admin_und_nur_offen() {
+		$root = dirname( __DIR__ );
+		$php  = file_get_contents( $root . '/includes/Erp/Pages/Kasse.php' );
+		$pos  = file_get_contents( $root . '/includes/Modules/POS/POSModule.php' );
+
+		$this->assertMatchesRegularExpression( "/function abbrechen.*?manage_options/s", $php );
+		$this->assertStringContainsString( "'offen' !== \$tag->status", $pos );
+		$this->assertStringContainsString( "'abgebrochen'", $pos );
+		$this->assertStringContainsString( "status = 'abgeschlossen'", file_get_contents( $root . '/includes/Modules/Betrieb/ForecastService.php' ) );
+		$this->assertStringContainsString( 'd.admin', file_get_contents( $root . '/assets/erp/pages/kasse.js' ) );
+	}
 }

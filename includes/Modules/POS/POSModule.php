@@ -538,6 +538,63 @@ class POSModule {
 		return array( 'ok' => true, 'message' => __( 'Produkt gespeichert.', 'lindenweg16' ), 'value' => 'a:' . $id );
 	}
 
+	/**
+	 * Offenen Kassatag abbrechen – nur für Tests.
+	 *
+	 * Alle Verkäufe des Tages werden storniert (Lager zurückgebucht), danach
+	 * steht der Tag auf „abgebrochen“. Es entsteht kein Beleg und kein
+	 * Kassenbucheintrag; der Tag bleibt mit seinen Positionen sichtbar im
+	 * Protokoll, gelöscht wird nichts. Abgeschlossene Tage lassen sich nicht
+	 * abbrechen – sie sind gebucht.
+	 *
+	 * @param int $tag_id Kassatag.
+	 * @return array {ok, message}
+	 */
+	public static function cancel_tag( $tag_id ) {
+		$tag_id = (int) $tag_id;
+
+		if ( ! Lock::acquire( 'pos_abschluss_' . $tag_id, 10 ) ) {
+			return array( 'ok' => false, 'message' => __( 'Der Tag wird gerade bearbeitet.', 'lindenweg16' ) );
+		}
+
+		try {
+			$tag = POSRepository::get_tag( $tag_id );
+			if ( ! $tag || 'offen' !== $tag->status ) {
+				return array( 'ok' => false, 'message' => __( 'Nur ein offener Kassatag lässt sich abbrechen.', 'lindenweg16' ) );
+			}
+
+			$zurueck = 0;
+			foreach ( POSRepository::get_positionen( $tag_id ) as $pos ) {
+				if ( ! $pos->storniert ) {
+					$result = self::storno_position( (int) $pos->id );
+
+					if ( ! $result['ok'] ) {
+						return array( 'ok' => false, 'message' => $result['message'] );
+					}
+					++$zurueck;
+				}
+			}
+
+			POSRepository::update_tag( $tag_id, array(
+				'status'           => 'abgebrochen',
+				'umsatz_gesamt'    => 0,
+				'notiz'            => trim( (string) $tag->notiz . ' ' . __( '[Tag abgebrochen]', 'lindenweg16' ) ),
+				'abgeschlossen_am' => current_time( 'mysql' ),
+			) );
+
+			AuditLog::record( 'pos_tag_abgebrochen', 'pos_tag', $tag_id, array( 'positionen_storniert' => $zurueck ) );
+			Log::attention( 'kasse', 'Kassatag abgebrochen: ' . $tag->markt_name, array( 'tag_id' => $tag_id, 'positionen' => $zurueck ) );
+		} finally {
+			Lock::release( 'pos_abschluss_' . $tag_id );
+		}
+
+		return array(
+			'ok'      => true,
+			/* translators: %d: Anzahl stornierter Positionen. */
+			'message' => sprintf( __( 'Kassatag abgebrochen. %d Verkauf/Verkäufe storniert und der Bestand zurückgebucht.', 'lindenweg16' ), $zurueck ),
+		);
+	}
+
 	/* ------------------------------------------------------------------
 	 * Auswahl und Helfer
 	 * ---------------------------------------------------------------- */

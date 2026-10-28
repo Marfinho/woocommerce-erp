@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.61.2] – 2026-10-28
+
+### Kasse: Kassatag abbrechen (Test)
+- **„Tag abbrechen (Test)“** für Administratoren (`manage_options`) beim offenen Tag: storniert alle Verkäufe, bucht den Bestand zurück und setzt den Tag auf „abgebrochen“. Es entsteht weder Beleg noch Kassenbucheintrag; der Tag bleibt im Protokoll, gelöscht wird nichts. Abgeschlossene Tage lassen sich nicht abbrechen.
+- Die Marktumsatz-Prognose zählt nur noch abgeschlossene Tage (vorher alles außer „offen“, abgebrochene Tage hätten den Schnitt gedrückt).
+- Nicht in echtem WordPress geprüft.
+
 ## [0.61.1] – 2026-10-28
 
 ### Kasse: Kassenprodukte ohne offenen Tag pflegen
