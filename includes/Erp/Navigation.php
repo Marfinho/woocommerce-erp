@@ -11,7 +11,7 @@
  *
  * - `native` – gehört der neuen Oberfläche (Start, Rechte).
  * - `legacy` – die bestehende wp-admin-Seite, eingebettet. Das gilt nur
- *   noch für Seiten ohne eigene Oberfläche (derzeit Kasse und Shop-Produkte);
+ *   noch für Seiten ohne eigene Oberfläche (derzeit nur Shop-Produkte);
  *   alles andere ist `native`.
  *
  * Frei von Datenbank und WordPress, damit die Zuordnung prüfbar ist.
@@ -214,7 +214,7 @@ class Navigation {
 			self::item( 'kontakte', 'verkauf', __( 'Kontakte / B2B', 'lindenweg16' ), 'verkauf.kontakte', '', 'native', '', 'lw16-betrieb-kontakte' ),
 			self::item( 'shop-produkte', 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), 'verkauf.shop_products', 'edit.php?post_type=product', 'legacy', 'edit_products' ),
 			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', '', 'native', '', 'lw16-loyalty' ),
-			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', 'lw16-kasse' ),
+			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', '', 'native' ),
 			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', '', 'native', '', 'lw16-marketing' ),
 			self::item( 'kurzlinks', 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), 'verkauf.kurzlinks', '', 'native', '', 'lw16-kurzlinks' ),
 

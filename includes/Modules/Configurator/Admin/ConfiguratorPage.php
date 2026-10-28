@@ -368,7 +368,7 @@ class ConfiguratorPage {
 
 		echo '<tr><th scope="row"><label for="lw16-artikel">' . esc_html__( 'Artikel', 'lindenweg16' ) . '</label></th><td>';
 		echo '<select name="article_id" id="lw16-artikel">';
-		foreach ( ArticleRepository::selectable( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true, true ) as $article ) {
 			printf(
 				'<option value="%d" %s>%s (%s)</option>',
 				(int) $article['id'],

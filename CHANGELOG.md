@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.60.0] – 2026-10-28
+
+### Kasse: Produkte nur für die Kasse, schnell angelegt
+- **„+ Neues Produkt“ auf der Kassenseite:** Foto direkt mit der Handykamera aufnehmen, Name, Preis und optional Anfangsbestand eintragen – danach ist die Kachel da und schon gewählt. Das Foto wird im Browser auf 800 px verkleinert und als WordPress-Mediendatei gespeichert (nur JPEG, PNG, WebP, höchstens 3 MB, geprüft am Inhalt).
+- **Ein normaler Artikel mit Kennzeichen `pos_only`:** Artikelnummer automatisch (`K-0001` …), Beschaffungsweg Zukauf, verkäuflich, aktiv. Bestand, Lagerabgang und Storno laufen wie bei jedem Artikel; der Anfangsbestand wird als Korrekturbuchung gebucht. Keine Shop-Verknüpfung, und das Produkt erscheint nicht in der manuellen Auftragserfassung und im Konfigurator. In Lager, Lagerplätzen und Bedarf bleibt es sichtbar, damit sich Bestand nachbuchen lässt.
+- **Ändern an der Kachel:** Kassenprodukte tragen einen Stift (✎) – Name, Preis, neues Foto (das alte wird gelöscht) und „Ausblenden“ (Status ausgelaufen: weg aus den Kacheln, Bestand und Bücher bleiben). Normale Artikel lassen sich so nicht ändern; Bestandskorrekturen laufen im Lager.
+- **Datenbank:** Tabelle `articles` bekommt `pos_only` und `image_id` (DB_VERSION 48; das Upgrade läuft beim nächsten Seitenaufruf).
+- Nicht in echtem WordPress geprüft; vor allem Kamera am Handy und Foto-Upload bitte einmal von Hand durchspielen.
+
+### Kasse: ins ERP umgezogen, raus aus dem wp-admin
+- **Die Marktkasse ist eine eigene ERP-Seite** (Verkauf → Kasse): Kassatag starten, Kacheln antippen, freier Betrag, Storno, Tagesabschluss und die Liste der abgeschlossenen Tage mit Details. Die Seite ist für Handy und Rechner dieselbe; die getrennte „Mobile Kasse“ entfällt.
+- **Entfernt:** die wp-admin-Seite „Kasse“ samt Menüeintrag, die `admin-post`-Handler (`lw16_pos_*`) und die alte Produktsuche per Ajax. Fachlogik und Daten bleiben unverändert (`POSModule::start_tag/book_sale/storno_position/close_tag`): gleiche Lagerweiche, gleicher Beleg und Kassenbucheintrag beim Abschluss.
+- **Neu abgesichert:** Der Tagesabschluss ist gegen Doppelklick und zwei Geräte zugleich gesperrt (vorher konnte er zweimal gebucht werden); Startdatum und Markt werden geprüft.
+
 ## [0.59.1] – 2026-10-28
 
 ### Warenkorb-Erinnerungen

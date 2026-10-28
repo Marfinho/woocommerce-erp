@@ -134,17 +134,78 @@ class ArticleRepository {
 	 * Artikel liegt weiter im Regal und steht weiter in den Büchern.
 	 *
 	 * @param bool $only_sellable Nur verkäufliche Artikel.
+	 * @param bool $exclude_pos   Produkte nur für die Kasse weglassen.
 	 * @return array
 	 */
-	public static function selectable( $only_sellable = false ) {
+	public static function selectable( $only_sellable = false, $exclude_pos = false ) {
 		return array_values(
 			array_filter(
 				self::all( $only_sellable ),
-				static function ( $article ) {
+				static function ( $article ) use ( $exclude_pos ) {
+					if ( $exclude_pos && ! empty( $article['pos_only'] ) ) {
+						return false;
+					}
+
 					return self::is_active( $article );
 				}
 			)
 		);
+	}
+
+	/**
+	 * Nächste freie Artikelnummer für ein Kassenprodukt (K-0001, K-0002 …).
+	 *
+	 * @return string
+	 */
+	public static function next_pos_sku() {
+		global $wpdb;
+
+		$table = self::table();
+		$max   = (int) $wpdb->get_var( "SELECT MAX(CAST(SUBSTRING(sku, 3) AS UNSIGNED)) FROM {$table} WHERE sku REGEXP '^K-[0-9]+$'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return sprintf( 'K-%04d', $max + 1 );
+	}
+
+	/**
+	 * Schnell ein Produkt nur für die Kasse anlegen: Name, Preis, Foto.
+	 *
+	 * Ein ganz normaler Artikel – damit gelten Bestand, Lagerabgang und
+	 * Storno unverändert –, nur mit pos_only: Er bekommt keine
+	 * Shop-Verknüpfung und taucht in Auftrags- und Konfigurator-Listen nicht
+	 * auf. Der Beschaffungsweg „Zukauf“ verlangt weder Druckprofil noch Stückliste.
+	 *
+	 * @param string $name     Bezeichnung.
+	 * @param mixed  $price    Bruttopreis, roh getippt.
+	 * @param int    $image_id Mediendatei oder 0.
+	 * @return array {success, message, id}
+	 */
+	public static function create_pos_article( $name, $price, $image_id = 0 ) {
+		$check = self::validate(
+			array(
+				'sku'           => self::next_pos_sku(),
+				'name'          => $name,
+				'status'        => 'aktiv',
+				'sourcing_type' => 'zukauf',
+				'sellable'      => 1,
+				'price_gross'   => $price,
+			)
+		);
+
+		if ( $check['errors'] ) {
+			return array( 'success' => false, 'message' => implode( ' ', $check['errors'] ), 'id' => 0 );
+		}
+
+		$data             = $check['data'];
+		$data['pos_only'] = 1;
+		$data['image_id'] = $image_id ? (int) $image_id : null;
+
+		$id = self::insert( $data );
+
+		if ( ! $id ) {
+			return array( 'success' => false, 'message' => __( 'Das Produkt konnte nicht angelegt werden.', 'lindenweg16' ), 'id' => 0 );
+		}
+
+		return array( 'success' => true, 'message' => __( 'Produkt angelegt.', 'lindenweg16' ), 'id' => $id );
 	}
 
 	/**

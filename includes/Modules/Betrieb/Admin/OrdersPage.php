@@ -86,7 +86,7 @@ class OrdersPage {
 		$articles = array();
 		$costs    = array();
 
-		foreach ( ArticleRepository::selectable( true ) as $article ) {
+		foreach ( ArticleRepository::selectable( true, true ) as $article ) {
 			$id = (int) $article['id'];
 
 			$articles[ $id ] = array(
@@ -575,7 +575,7 @@ class OrdersPage {
 	 * Manuelle Bestellerfassung.
 	 */
 	protected function render_manual_form() {
-		$articles = ArticleRepository::selectable( true );
+		$articles = ArticleRepository::selectable( true, true );
 		$contacts = ContactRepository::all();
 
 		if ( ! $articles ) {

@@ -126,11 +126,6 @@ class ActionMap {
 			'lw16_kampagne_loesen'        => array( 'verkauf.marketing' ),
 			'lw16_kampagne_zuordnen'      => array( 'verkauf.marketing' ),
 			'lw16_save_kampagne'          => array( 'verkauf.marketing' ),
-			'lw16_pos_storno'             => array( 'verkauf.kasse' ),
-			'lw16_pos_tag_abschluss'      => array( 'verkauf.kasse' ),
-			'lw16_pos_tag_start'          => array( 'verkauf.kasse' ),
-			'lw16_pos_verkauf'            => array( 'verkauf.kasse' ),
-			'lw16_pos_produkt_suche'      => array( 'verkauf.kasse' ),
 
 			// Finanzen.
 			'lw16_betrieb_export'         => $export,
