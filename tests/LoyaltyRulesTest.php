@@ -218,6 +218,51 @@ class LoyaltyRulesTest extends TestCase {
 		$this->assertTrue( LoyaltyRules::redeem_allowed( 30, 30 ) );
 	}
 
+	private function presale( array $over = array() ) {
+		return array_merge( array( 'name' => 'Drop', 'von' => '2026-11-01', 'frei_ab' => '2026-11-08', 'stufe' => 2, 'produkte' => array( 7 ), 'kategorien' => array(), 'merkmale' => array() ), $over );
+	}
+
+	public function test_presale_is_checked() {
+		$ok = LoyaltyRules::sanitize_presale( array( 'name' => 'Drop', 'von' => '2026-11-01', 'frei_ab' => '2026-11-08', 'stufe' => '2', 'produkte' => array( '7', 0 ), 'merkmale' => array( 'pa_farbe:rot', 'kaputt!', 'PA_Farbe:Rot' ) ), 3 );
+		$this->assertSame( '', $ok['error'] );
+		$this->assertSame( array( 7 ), $ok['presale']['produkte'] );
+		$this->assertSame( array( 'pa_farbe:rot' ), $ok['presale']['merkmale'] );
+
+		$base = array( 'name' => 'Drop', 'von' => '2026-11-01', 'frei_ab' => '2026-11-08', 'stufe' => 2, 'produkte' => array( 7 ) );
+		foreach ( array(
+			array( 'name' => ' ' ),
+			array( 'frei_ab' => '2026-11-01' ),
+			array( 'von' => 'morgen' ),
+			array( 'stufe' => 0 ),
+			array( 'stufe' => 4 ),
+			array( 'produkte' => array() ),
+		) as $bad ) {
+			$this->assertNull( LoyaltyRules::sanitize_presale( array_merge( $base, $bad ), 3 )['presale'], wp_json_encode( $bad ) );
+		}
+	}
+
+	public function test_presale_matches_product_category_or_term() {
+		$subject = array( 'ids' => array( 9, 7 ), 'cats' => array( 4 ), 'terms' => array( 'pa_farbe:rot' ) );
+		$this->assertTrue( LoyaltyRules::presale_matches( $this->presale(), $subject ) );
+		$this->assertTrue( LoyaltyRules::presale_matches( $this->presale( array( 'produkte' => array(), 'kategorien' => array( 4 ) ) ), $subject ) );
+		$this->assertTrue( LoyaltyRules::presale_matches( $this->presale( array( 'produkte' => array(), 'merkmale' => array( 'pa_farbe:rot' ) ) ), $subject ) );
+		$this->assertFalse( LoyaltyRules::presale_matches( $this->presale( array( 'produkte' => array(), 'merkmale' => array( 'pa_farbe:blau' ) ) ), $subject ) );
+		$this->assertFalse( LoyaltyRules::presale_matches( $this->presale( array( 'produkte' => array( 8 ) ) ), $subject ) );
+	}
+
+	public function test_presale_blocks_only_lower_tiers_and_only_while_running() {
+		$subject = array( 'ids' => array( 7 ), 'cats' => array(), 'terms' => array() );
+		$list    = array( $this->presale() );
+		// Vorab-Zeitraum: 1. bis 7. November, für alle ab 8.
+		$this->assertNotNull( LoyaltyRules::presale_blocking( $list, '2026-11-01', 1, $subject ) );
+		$this->assertNotNull( LoyaltyRules::presale_blocking( $list, '2026-11-07', -1, $subject ) );
+		$this->assertNull( LoyaltyRules::presale_blocking( $list, '2026-11-03', 2, $subject ) );
+		$this->assertNull( LoyaltyRules::presale_blocking( $list, '2026-11-03', 3, $subject ) );
+		$this->assertNull( LoyaltyRules::presale_blocking( $list, '2026-10-31', 0, $subject ) );
+		$this->assertNull( LoyaltyRules::presale_blocking( $list, '2026-11-08', 0, $subject ) );
+		$this->assertNull( LoyaltyRules::presale_blocking( $list, '2026-11-03', 0, array( 'ids' => array( 99 ), 'cats' => array(), 'terms' => array() ) ) );
+	}
+
 	public function test_redeem_split_only_books_what_the_capped_discount_uses() {
 		// Passt in die Summe: alles wie gewünscht.
 		$this->assertSame( array( 'credit' => 5.0, 'points' => 300, 'euro' => 8.0 ), LoyaltyRules::redeem_split( 5, 300, 100, 20 ) );

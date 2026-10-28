@@ -241,6 +241,28 @@
 	background: var(--lw16-accent-1);
 }
 
+.lw16-konto__rotor.is-rotiert {
+	display: grid;
+}
+
+.lw16-konto__rotor.is-rotiert .lw16-konto__slide {
+	grid-area: 1 / 1;
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.4s ease, visibility 0.4s;
+}
+
+.lw16-konto__rotor.is-rotiert .lw16-konto__slide.is-aktiv {
+	opacity: 1;
+	visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.lw16-konto__rotor.is-rotiert .lw16-konto__slide {
+		transition: none;
+	}
+}
+
 .lw16-konto__klein {
 	margin: 0;
 	font-size: var(--lw16-fs-small);
@@ -815,4 +837,12 @@ tr.lw16-cart-points td {
 	margin: 0;
 	color: var(--lw16-error);
 	font-weight: 600;
+}
+
+.lw16-presale-hinweis {
+	margin: 0 0 1em;
+	padding: 0.75em 1em;
+	border-left: 4px solid var(--lw16-accent-1);
+	background: color-mix(in srgb, var(--lw16-accent-1) 10%, transparent);
+	font-size: var(--lw16-fs-small);
 }

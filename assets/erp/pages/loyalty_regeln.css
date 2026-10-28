@@ -44,3 +44,5 @@
 	.lr-tier { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 	.lr-tier-head { display: none; }
 }
+.lr-chips, .lr-results { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.lr-chips .btn, .lr-results .btn { min-height: 36px; }

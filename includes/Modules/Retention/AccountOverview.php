@@ -101,20 +101,40 @@ class AccountOverview {
 			echo '<p class="lw16-konto__wert">' . esc_html__( 'Mit jeder Bestellung sammelst du Punkte und sparst beim nächsten Einkauf.', 'lindenweg16' ) . '</p>';
 		}
 
-		// Die Leiste zeigt den Weg zur nächsten Stufe; ohne Stufen die Punkte bis zum nächsten Euro Rabatt.
+		// Die Leiste wechselt zwischen den Zielen: Punkte bis zum nächsten Euro Rabatt
+		// und, wenn es eine gibt, Umsatz bis zur nächsten Stufe (assets/js/loyalty.js).
+		$slides = array(
+			array(
+				'percent' => $percent,
+				'max'     => $step,
+				'now'     => $rest,
+				'label'   => __( 'Punkte bis zum nächsten Euro Rabatt', 'lindenweg16' ),
+				/* translators: %s: Punkte */
+				'text'    => sprintf( __( 'Noch %s Punkte bis zum nächsten vollen Euro Rabatt', 'lindenweg16' ), number_format_i18n( $step - $rest ) ),
+			),
+		);
 		$tier = LoyaltyTiers::for_user( $user_id );
 		if ( $tier && $tier['next'] ) {
-			$from    = (float) $tier['tier']['ab'];
-			$to      = (float) $tier['next']['ab'];
-			$percent = $to > $from ? (int) max( 0, min( 100, round( ( (float) $tier['revenue'] - $from ) / ( $to - $from ) * 100 ) ) ) : 0;
-			echo '<div class="lw16-konto__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' . (int) $percent . '" aria-label="' . esc_attr__( 'Umsatz bis zur nächsten Stufe', 'lindenweg16' ) . '"><i style="width:' . (int) $percent . '%"></i></div>';
-			/* translators: 1: Betrag, 2: Stufe */
-			echo '<p class="lw16-konto__klein">' . esc_html( sprintf( __( 'Noch %1$s Umsatz bis zur Stufe %2$s', 'lindenweg16' ), self::money( $tier['missing'] ), $tier['next']['name'] ) ) . '</p>';
-		} else {
-			echo '<div class="lw16-konto__bar" role="progressbar" aria-valuemin="0" aria-valuemax="' . (int) $step . '" aria-valuenow="' . (int) $rest . '" aria-label="' . esc_attr__( 'Punkte bis zum nächsten Euro Rabatt', 'lindenweg16' ) . '"><i style="width:' . (int) $percent . '%"></i></div>';
-			/* translators: %s: Punkte */
-			echo '<p class="lw16-konto__klein">' . esc_html( sprintf( __( 'Noch %s Punkte bis zum nächsten vollen Euro Rabatt', 'lindenweg16' ), number_format_i18n( $step - $rest ) ) ) . '</p>';
+			$from       = (float) $tier['tier']['ab'];
+			$to         = (float) $tier['next']['ab'];
+			$tier_pct   = $to > $from ? (int) max( 0, min( 100, round( ( (float) $tier['revenue'] - $from ) / ( $to - $from ) * 100 ) ) ) : 0;
+			$slides[]   = array(
+				'percent' => $tier_pct,
+				'max'     => 100,
+				'now'     => $tier_pct,
+				'label'   => __( 'Umsatz bis zur nächsten Stufe', 'lindenweg16' ),
+				/* translators: 1: Betrag, 2: Stufe */
+				'text'    => sprintf( __( 'Noch %1$s Umsatz bis zur Stufe %2$s', 'lindenweg16' ), self::money( $tier['missing'] ), $tier['next']['name'] ),
+			);
 		}
+		echo '<div class="lw16-konto__rotor"' . ( count( $slides ) > 1 ? ' data-lw16-rotor' : '' ) . '>';
+		foreach ( $slides as $i => $sl ) {
+			echo '<div class="lw16-konto__slide' . ( 0 === $i ? ' is-aktiv' : '' ) . '">';
+			echo '<div class="lw16-konto__bar" role="progressbar" aria-valuemin="0" aria-valuemax="' . (int) $sl['max'] . '" aria-valuenow="' . (int) $sl['now'] . '" aria-label="' . esc_attr( $sl['label'] ) . '"><i style="width:' . (int) $sl['percent'] . '%"></i></div>';
+			echo '<p class="lw16-konto__klein">' . esc_html( $sl['text'] ) . '</p>';
+			echo '</div>';
+		}
+		echo '</div>';
 
 		if ( $pending['points'] > 0 ) {
 			$when = $pending['next_at'] ? date_i18n( 'j. F', strtotime( get_date_from_gmt( $pending['next_at'] ) ) ) : '';

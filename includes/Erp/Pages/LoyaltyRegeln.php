@@ -16,6 +16,7 @@ use Lindenweg16\Core\Settings;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Loyalty\LoyaltyCampaigns;
+use Lindenweg16\Modules\Loyalty\LoyaltyPresale;
 use Lindenweg16\Modules\Loyalty\LoyaltyRules;
 use Lindenweg16\Modules\Loyalty\LoyaltyTiers;
 use WP_REST_Request;
@@ -60,6 +61,21 @@ class LoyaltyRegeln {
 			'callback'            => array( __CLASS__, 'delete_campaign' ),
 			'permission_callback' => $edit,
 		) );
+		register_rest_route( $ns, '/erp/loyalty/presale', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'save_presale' ),
+			'permission_callback' => $edit,
+		) );
+		register_rest_route( $ns, '/erp/loyalty/presale/(?P<id>[a-z0-9]+)/loeschen', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'delete_presale' ),
+			'permission_callback' => $edit,
+		) );
+		register_rest_route( $ns, '/erp/loyalty/presale/produkte', array(
+			'methods'             => 'GET',
+			'callback'            => array( __CLASS__, 'search_products' ),
+			'permission_callback' => $read,
+		) );
 	}
 
 	/**
@@ -87,8 +103,20 @@ class LoyaltyRegeln {
 			$campaigns[] = $c;
 		}
 
+		$presales = array();
+		foreach ( LoyaltyPresale::all() as $p ) {
+			$p['state']    = $p['frei_ab'] <= $today ? 'vorbei' : ( $p['von'] > $today ? 'geplant' : 'laeuft' );
+			$p['produkte_namen'] = array();
+			foreach ( (array) $p['produkte'] as $pid ) {
+				$p['produkte_namen'][ (int) $pid ] = html_entity_decode( get_the_title( (int) $pid ), ENT_QUOTES, 'UTF-8' );
+			}
+			$presales[]    = $p;
+		}
+
 		return new WP_REST_Response(
 			array(
+				'presales'   => $presales,
+				'merkmale'   => self::merkmale(),
 				'groups'     => $groups,
 				'fields'     => $fields,
 				'campaigns'  => $campaigns,
@@ -211,6 +239,103 @@ class LoyaltyRegeln {
 		AuditLog::record( 'loyalty_aktion_geloescht', 'loyalty_aktion', 0, $c );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Aktion gelöscht. Schon vergebene Punkte bleiben.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Pre-Sale anlegen oder ändern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function save_presale( WP_REST_Request $request ) {
+		$in = (array) $request->get_json_params();
+		$id = isset( $in['id'] ) ? sanitize_key( (string) $in['id'] ) : '';
+
+		if ( $id && ! LoyaltyPresale::get( $id ) ) {
+			return self::fail( __( 'Diesen Pre-Sale gibt es nicht mehr. Lade die Seite neu.', 'lindenweg16' ), 404 );
+		}
+
+		$cats  = array_map( 'intval', wp_list_pluck( self::categories(), 'id' ) );
+		$check = LoyaltyRules::sanitize_presale(
+			array(
+				'name'       => sanitize_text_field( (string) ( $in['name'] ?? '' ) ),
+				'von'        => (string) ( $in['von'] ?? '' ),
+				'frei_ab'    => (string) ( $in['frei_ab'] ?? '' ),
+				'stufe'      => $in['stufe'] ?? 0,
+				'produkte'   => isset( $in['produkte'] ) && is_array( $in['produkte'] ) ? $in['produkte'] : array(),
+				'kategorien' => isset( $in['kategorien'] ) && is_array( $in['kategorien'] ) ? array_values( array_intersect( array_map( 'intval', $in['kategorien'] ), $cats ) ) : array(),
+				'merkmale'   => isset( $in['merkmale'] ) && is_array( $in['merkmale'] ) ? $in['merkmale'] : array(),
+			),
+			count( LoyaltyTiers::all() ) - 1
+		);
+		if ( ! $check['presale'] ) {
+			return self::fail( $check['error'] );
+		}
+
+		$new_id = LoyaltyPresale::save( $check['presale'], $id );
+		AuditLog::record( $id ? 'loyalty_presale_geaendert' : 'loyalty_presale_angelegt', 'loyalty_presale', 0, array_merge( array( 'id' => $new_id ), $check['presale'] ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'id' => $new_id, 'message' => $id ? __( 'Pre-Sale geändert.', 'lindenweg16' ) : __( 'Pre-Sale angelegt.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Pre-Sale löschen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function delete_presale( WP_REST_Request $request ) {
+		$id = sanitize_key( (string) $request['id'] );
+		$p  = LoyaltyPresale::get( $id );
+		if ( ! $p || ! LoyaltyPresale::delete( $id ) ) {
+			return self::fail( __( 'Diesen Pre-Sale gibt es nicht mehr.', 'lindenweg16' ), 404 );
+		}
+		AuditLog::record( 'loyalty_presale_geloescht', 'loyalty_presale', 0, $p );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Pre-Sale gelöscht. Die Produkte sind sofort für alle kaufbar.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Produktsuche für die Auswahl einzelner Produkte.
+	 *
+	 * @param WP_REST_Request $request Anfrage (q).
+	 * @return WP_REST_Response
+	 */
+	public static function search_products( WP_REST_Request $request ) {
+		$q = trim( sanitize_text_field( (string) $request->get_param( 'q' ) ) );
+		if ( strlen( $q ) < 2 ) {
+			return new WP_REST_Response( array() );
+		}
+		$ids = get_posts( array( 'post_type' => 'product', 'post_status' => array( 'publish', 'draft', 'private' ), 's' => $q, 'posts_per_page' => 12, 'fields' => 'ids' ) );
+		$out = array();
+		foreach ( $ids as $id ) {
+			$out[] = array( 'id' => (int) $id, 'name' => html_entity_decode( get_the_title( $id ), ENT_QUOTES, 'UTF-8' ) );
+		}
+		return new WP_REST_Response( $out );
+	}
+
+	/**
+	 * Merkmale (Attribute wie Farbe und Schlagwörter) mit ihren Werten für die Auswahl.
+	 *
+	 * @return array Liste mit taxonomy, label, terms (slug, name).
+	 */
+	protected static function merkmale() {
+		$out = array();
+		foreach ( get_object_taxonomies( 'product', 'objects' ) as $tax ) {
+			if ( 'product_cat' === $tax->name || ! ( 'product_tag' === $tax->name || 0 === strpos( $tax->name, 'pa_' ) ) ) {
+				continue;
+			}
+			$terms = get_terms( array( 'taxonomy' => $tax->name, 'hide_empty' => false ) );
+			if ( is_wp_error( $terms ) || ! $terms ) {
+				continue;
+			}
+			$list = array();
+			foreach ( $terms as $t ) {
+				$list[] = array( 'slug' => $t->slug, 'name' => html_entity_decode( $t->name, ENT_QUOTES, 'UTF-8' ) );
+			}
+			$out[] = array( 'taxonomy' => $tax->name, 'label' => $tax->label, 'terms' => $list );
+		}
+		return $out;
 	}
 
 	/**

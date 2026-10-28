@@ -10,7 +10,8 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ## [0.62.0] – 2026-10-28
 
 ### Loyalty
-- **Konto-Übersicht:** Die Leiste unter den Punkten zeigt jetzt den Weg zur nächsten Stufe („Noch 40,00 € Umsatz bis zur Stufe Profi“). Ohne Stufen oder auf der höchsten Stufe bleibt es bei den Punkten bis zum nächsten Euro Rabatt.
+- **Pre-Sale für höhere Stufen.** Neuer Reiter Loyalty → Pre-Sale: Einzelne Produkte, ganze Kategorien oder Merkmale (Attribute wie „Farbe: Rot“, Schlagwörter) sind ab einem Starttag nur für Kunden ab einer wählbaren Stufe kaufbar, ab „für alle ab“ für jeden. Gesperrt wird auch im Warenkorb und an der Kasse; auf der Produktseite steht ein Hinweis mit dem Datum. Bei Varianten sperrt „Farbe: Rot“ nur die roten. Shop-Verwalter sind nie gesperrt.
+- **Konto: wechselnde Leiste.** Die Leiste wechselt alle paar Sekunden zwischen „Punkte bis zum nächsten Euro Rabatt“ und „Umsatz bis zur nächsten Stufe“ (hält an bei Mauszeiger/Fokus, ohne Bewegung bei reduzierter Animation).
 - **Mindestbestellwert zum Einlösen.** Neue Regel unter Loyalty → Regeln → Grundwerte: Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen, 0 = kein Mindestwert. In der Block-Kasse steht dann ein Hinweis statt der Einlösefelder.
 - **Regeln speichern:** Der Fehler „Cannot read properties of undefined (reading 'push')“ beim Öffnen von Loyalty → Regeln ist behoben.
 

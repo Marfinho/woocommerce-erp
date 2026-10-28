@@ -171,6 +171,107 @@ class LoyaltyRules {
 	}
 
 	/**
+	 * Einen Pre-Sale prüfen.
+	 *
+	 * @param array $in        Rohwerte: name, von, frei_ab (Y-m-d), stufe (Index ab 1), produkte (int[]),
+	 *                         kategorien (int[]), merkmale (Liste "taxonomie:slug").
+	 * @param int   $max_stufe Höchster Stufen-Index.
+	 * @return array{presale:?array,error:string}
+	 */
+	public static function sanitize_presale( array $in, $max_stufe ) {
+		$name   = trim( (string) ( $in['name'] ?? '' ) );
+		$von    = (string) ( $in['von'] ?? '' );
+		$frei   = (string) ( $in['frei_ab'] ?? '' );
+		$stufe  = (int) ( $in['stufe'] ?? 0 );
+		$ids    = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $in['produkte'] ?? array() ) ) ) ) );
+		$cats   = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $in['kategorien'] ?? array() ) ) ) ) );
+		$merk   = array();
+		foreach ( (array) ( $in['merkmale'] ?? array() ) as $m ) {
+			$m = strtolower( trim( (string) $m ) );
+			if ( preg_match( '/^[a-z0-9_\-]+:[a-z0-9_\-%]+$/', $m ) ) {
+				$merk[ $m ] = $m;
+			}
+		}
+		$merk = array_values( $merk );
+
+		if ( '' === $name ) {
+			return array( 'presale' => null, 'error' => __( 'Gib dem Pre-Sale einen Namen, z. B. „Herbst-Drop“.', 'lindenweg16' ) );
+		}
+		if ( ! self::is_ymd( $von ) || ! self::is_ymd( $frei ) ) {
+			return array( 'presale' => null, 'error' => __( 'Start und „für alle ab“ brauchen ein gültiges Datum.', 'lindenweg16' ) );
+		}
+		if ( $frei <= $von ) {
+			return array( 'presale' => null, 'error' => __( '„Für alle ab“ muss nach dem Start liegen.', 'lindenweg16' ) );
+		}
+		if ( $stufe < 1 || $stufe > (int) $max_stufe ) {
+			return array( 'presale' => null, 'error' => __( 'Wähle eine Stufe, ab der man vorab kaufen darf (nicht die unterste).', 'lindenweg16' ) );
+		}
+		if ( ! $ids && ! $cats && ! $merk ) {
+			return array( 'presale' => null, 'error' => __( 'Wähle mindestens ein Produkt, eine Kategorie oder ein Merkmal.', 'lindenweg16' ) );
+		}
+
+		return array(
+			'presale' => array(
+				'name'       => $name,
+				'von'        => $von,
+				'frei_ab'    => $frei,
+				'stufe'      => $stufe,
+				'produkte'   => $ids,
+				'kategorien' => $cats,
+				'merkmale'   => $merk,
+			),
+			'error'   => '',
+		);
+	}
+
+	/**
+	 * Betrifft der Pre-Sale diesen Artikel?
+	 *
+	 * @param array $presale Pre-Sale.
+	 * @param array $subject Artikel: ids (Produkt und Elternprodukt), cats (Kategorien samt übergeordneten),
+	 *                       terms (Liste "taxonomie:slug").
+	 * @return bool
+	 */
+	public static function presale_matches( array $presale, array $subject ) {
+		if ( array_intersect( array_map( 'intval', (array) ( $presale['produkte'] ?? array() ) ), array_map( 'intval', (array) ( $subject['ids'] ?? array() ) ) ) ) {
+			return true;
+		}
+		if ( array_intersect( array_map( 'intval', (array) ( $presale['kategorien'] ?? array() ) ), array_map( 'intval', (array) ( $subject['cats'] ?? array() ) ) ) ) {
+			return true;
+		}
+		return (bool) array_intersect( (array) ( $presale['merkmale'] ?? array() ), (array) ( $subject['terms'] ?? array() ) );
+	}
+
+	/**
+	 * Läuft der Pre-Sale an diesem Tag? Vorab ab Start, für alle ab „frei_ab“.
+	 *
+	 * @param array  $presale Pre-Sale.
+	 * @param string $ymd     Tag.
+	 * @return bool
+	 */
+	public static function presale_running( array $presale, $ymd ) {
+		return isset( $presale['von'], $presale['frei_ab'] ) && $presale['von'] <= $ymd && $ymd < $presale['frei_ab'];
+	}
+
+	/**
+	 * Welcher Pre-Sale sperrt den Artikel für diesen Kunden?
+	 *
+	 * @param array  $presales   Alle Pre-Sales.
+	 * @param string $ymd        Heute.
+	 * @param int    $tier_index Stufen-Index des Kunden (-1 = keine Stufe, z. B. nicht angemeldet).
+	 * @param array  $subject    Artikel, siehe presale_matches().
+	 * @return array|null Der sperrende Pre-Sale oder null.
+	 */
+	public static function presale_blocking( array $presales, $ymd, $tier_index, array $subject ) {
+		foreach ( $presales as $p ) {
+			if ( self::presale_running( $p, $ymd ) && (int) $tier_index < (int) $p['stufe'] && self::presale_matches( $p, $subject ) ) {
+				return $p;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Ist das ein Datum im Format Y-m-d?
 	 *
 	 * @param string $s Text.
