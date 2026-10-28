@@ -42,6 +42,7 @@ class Shell {
 	 */
 	public function register() {
 		( new Subdomain() )->register();
+		LiveViewer::register();
 
 		add_action( 'init', array( $this, 'add_rewrite' ) );
 		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );
@@ -194,7 +195,7 @@ class Shell {
 			exit;
 		}
 
-		if ( ! Access::has_any() ) {
+		if ( ! LiveViewer::can_open() ) {
 			status_header( 403 );
 			$this->render_denied();
 			exit;
