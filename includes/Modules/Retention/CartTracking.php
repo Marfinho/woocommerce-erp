@@ -29,6 +29,8 @@ class CartTracking {
 		add_action( 'woocommerce_checkout_update_order_review', array( $this, 'capture_from_checkout' ) );
 		// Umwandlung bei Bestellung markieren.
 		add_action( 'woocommerce_checkout_order_processed', array( $this, 'mark_converted' ), 10, 1 );
+		// Die Block-Kasse löst den klassischen Haken nicht aus.
+		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'mark_converted' ), 10, 1 );
 		// Cron-Erinnerungen.
 		add_action( Scheduler::HOOK_CART_REMINDERS, array( $this, 'send_reminders' ) );
 	}
@@ -130,7 +132,17 @@ class CartTracking {
 			);
 		}
 
-		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT id FROM ' . self::table() . ' WHERE email = %s AND umgewandelt = 0 ORDER BY id DESC LIMIT 1', $email ) ); // phpcs:ignore
+		$existing = $wpdb->get_row( $wpdb->prepare( 'SELECT id, cart_snapshot, erinnert_am FROM ' . self::table() . ' WHERE email = %s AND umgewandelt = 0 ORDER BY id DESC LIMIT 1', $email ) ); // phpcs:ignore
+
+		// Unveränderter Warenkorb, der schon erinnert wurde: nichts tun. Sonst
+		// setzt jeder Seitenaufruf den Timer zurück und die Erinnerung geht
+		// immer wieder neu raus.
+		if ( $existing && ! empty( $existing->erinnert_am ) && (string) $existing->cart_snapshot === wp_json_encode( $snapshot ) ) {
+			if ( $show_errors ) {
+				$wpdb->show_errors();
+			}
+			return;
+		}
 
 		$data = array(
 			'email'         => $email,
@@ -182,10 +194,10 @@ class CartTracking {
 	/**
 	 * Bei Bestellung den Warenkorb als umgewandelt markieren.
 	 *
-	 * @param int $order_id Bestell-ID.
+	 * @param int|\WC_Order $order_id Bestell-ID oder Bestellung (Block-Kasse).
 	 */
 	public function mark_converted( $order_id ) {
-		$order = wc_get_order( $order_id );
+		$order = $order_id instanceof \WC_Order ? $order_id : wc_get_order( $order_id );
 		if ( ! $order ) {
 			return;
 		}
@@ -214,6 +226,10 @@ class CartTracking {
 		$grenze1 = gmdate( 'Y-m-d H:i:s', $jetzt - $erste_frist * HOUR_IN_SECONDS );
 		$rows    = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze1 ) ); // phpcs:ignore
 		foreach ( $rows as $row ) {
+			if ( $this->has_ordered_since( $row ) ) {
+				$wpdb->update( self::table(), array( 'umgewandelt' => 1 ), array( 'id' => $row->id ) );
+				continue;
+			}
 			$this->send_mail( $row, 1 );
 			$wpdb->update( self::table(), array( 'erinnert_am' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
 		}
@@ -223,10 +239,36 @@ class CartTracking {
 			$grenze2 = gmdate( 'Y-m-d H:i:s', $jetzt - $zweite_frist * HOUR_IN_SECONDS );
 			$rows2   = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE umgewandelt = 0 AND erinnert_am IS NOT NULL AND zweite_erinnerung_am IS NULL AND erstellt_am <= %s LIMIT 50', $grenze2 ) ); // phpcs:ignore
 			foreach ( $rows2 as $row ) {
+				if ( $this->has_ordered_since( $row ) ) {
+					$wpdb->update( self::table(), array( 'umgewandelt' => 1 ), array( 'id' => $row->id ) );
+					continue;
+				}
 				$this->send_mail( $row, 2 );
 				$wpdb->update( self::table(), array( 'zweite_erinnerung_am' => current_time( 'mysql' ) ), array( 'id' => $row->id ) );
 			}
 		}
+	}
+
+	/**
+	 * Sicherheitsnetz: Gibt es seit dem Warenkorb schon eine Bestellung dieser E-Mail?
+	 *
+	 * @param object $row Datensatz.
+	 * @return bool
+	 */
+	protected function has_ordered_since( $row ) {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return false;
+		}
+		$orders = wc_get_orders(
+			array(
+				'billing_email' => $row->email,
+				'date_created'  => '>=' . strtotime( $row->erstellt_am ),
+				'limit'         => 1,
+				'return'        => 'ids',
+				'status'        => array( 'pending', 'on-hold', 'processing', 'completed' ),
+			)
+		);
+		return ! empty( $orders );
 	}
 
 	/**

@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.58.1] – 2026-10-28
+
+### Warenkorb-Erinnerungen
+- **Keine Erinnerung mehr nach dem Kauf in der Block-Kasse.** Der Warenkorb wurde dort nie als „umgewandelt“ markiert; wer bestellt hatte, bekam trotzdem die Mails. Zusätzlich prüft der Versand jetzt vor jeder Mail, ob seit dem Warenkorb eine Bestellung mit derselben E-Mail vorliegt.
+- **Keine Dauerschleife mehr:** Jeder Seitenaufruf setzte den Erinnerungs-Timer zurück, sodass die Mails immer wieder neu rausgingen. Ein unveränderter, schon erinnerter Warenkorb bleibt jetzt, wie er ist.
+
 ## [0.58.0] – 2026-10-28
 
 ### Workflow: ein Weg vom Bedarf bis ins Lager
