@@ -204,4 +204,26 @@ class LoyaltyRulesTest extends TestCase {
 		$this->assertSame( 2, LoyaltyRules::anniversary_years( '2024-02-29', '2026-02-28' ) );
 		$this->assertSame( 0, LoyaltyRules::anniversary_years( '-', '2026-10-28' ) );
 	}
+
+	public function test_redeem_request_is_bounded_by_balance() {
+		$this->assertSame( array( 'credit' => 12.5, 'points' => 300 ), LoyaltyRules::redeem_request( true, 300, 12.5, 1240 ) );
+		$this->assertSame( array( 'credit' => 0.0, 'points' => 1240 ), LoyaltyRules::redeem_request( false, 99999, 12.5, 1240 ) );
+		$this->assertSame( array( 'credit' => 0.0, 'points' => 0 ), LoyaltyRules::redeem_request( false, -50, 12.5, 1240 ) );
+		$this->assertSame( array( 'credit' => 0.0, 'points' => 0 ), LoyaltyRules::redeem_request( true, 10, -3, 0 ) );
+	}
+
+	public function test_redeem_split_only_books_what_the_capped_discount_uses() {
+		// Passt in die Summe: alles wie gewünscht.
+		$this->assertSame( array( 'credit' => 5.0, 'points' => 300, 'euro' => 8.0 ), LoyaltyRules::redeem_split( 5, 300, 100, 20 ) );
+
+		// 50 € Guthaben, 20 € Warenkorb: nur 20 € Guthaben, keine Punkte.
+		$this->assertSame( array( 'credit' => 20.0, 'points' => 0, 'euro' => 20.0 ), LoyaltyRules::redeem_split( 50, 1000, 100, 20 ) );
+
+		// 5 € Guthaben + 2.000 Punkte (20 €), 12,34 € Warenkorb: 5 € + 734 Punkte.
+		$this->assertSame( array( 'credit' => 5.0, 'points' => 734, 'euro' => 12.34 ), LoyaltyRules::redeem_split( 5, 2000, 100, 12.34 ) );
+
+		// Ungerader Einlösewert: aufrunden, damit der Rabatt gedeckt ist.
+		$r = LoyaltyRules::redeem_split( 0, 1000, 30, 10 );
+		$this->assertSame( 300, $r['points'] );
+	}
 }
