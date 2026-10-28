@@ -767,10 +767,13 @@ class Verkauf {
 	 * @return string
 	 */
 	public static function ledger_label( $type, $status ) {
-		$types    = array(
-			'earned'   => __( 'Punkte gesammelt', 'lindenweg16' ),
-			'redeemed' => __( 'Punkte eingelöst', 'lindenweg16' ),
-			'reversed' => __( 'Punkte zurückgebucht', 'lindenweg16' ),
+		$types    = array_merge(
+			LoyaltyRepository::ledger_types(),
+			array(
+				'earned'   => __( 'Punkte gesammelt', 'lindenweg16' ),
+				'redeemed' => __( 'Punkte eingelöst', 'lindenweg16' ),
+				'reversed' => __( 'Punkte zurückgebucht', 'lindenweg16' ),
+			)
 		);
 		$statuses = array(
 			'pending'   => __( 'noch nicht verfügbar', 'lindenweg16' ),

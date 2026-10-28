@@ -12,7 +12,6 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\MailTemplate;
-use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 
 /**
  * Dankeschön- und Bewertungsanfrage-Mail über denselben täglichen Cron
@@ -26,8 +25,8 @@ class PostPurchase {
 	public function register() {
 		// Läuft im täglichen Loyalty-Cron mit.
 		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process' ) );
-		// Punkte-Bonus, wenn eine echte Produktbewertung eingeht.
-		add_action( 'comment_post', array( $this, 'maybe_award_review_bonus' ), 10, 2 );
+		// Punkte für Bewertungen vergibt Loyalty\LoyaltyTriggers (erst, wenn
+		// die Bewertung freigeschaltet ist).
 	}
 
 	/**
@@ -119,49 +118,5 @@ class PostPurchase {
 			'{bonus_punkte}'  => (string) $bonus,
 			'{produktlinks}'  => implode( "\n", $links ),
 		) );
-	}
-
-	/**
-	 * Punkte-Bonus vergeben, wenn eine echte Produktbewertung eingeht.
-	 *
-	 * @param int        $comment_id Kommentar-ID.
-	 * @param int|string $approved   Freigabestatus.
-	 */
-	public function maybe_award_review_bonus( $comment_id, $approved ) {
-		$comment = get_comment( $comment_id );
-		if ( ! $comment ) {
-			return;
-		}
-		// Nur Produktbewertungen.
-		if ( 'product' !== get_post_type( $comment->comment_post_ID ) ) {
-			return;
-		}
-		$min = (int) Settings::get( 'review_min_zeichen', 15 );
-		if ( mb_strlen( trim( $comment->comment_content ) ) < $min ) {
-			return;
-		}
-		$user_id = (int) $comment->user_id;
-		if ( ! $user_id ) {
-			return;
-		}
-		// Nur ein Bonus je Nutzer und Produkt.
-		$flag = 'lw16_review_bonus_' . $comment->comment_post_ID;
-		if ( get_user_meta( $user_id, $flag, true ) ) {
-			return;
-		}
-
-		$bonus = (int) Settings::get( 'review_bonus_punkte', 20 );
-		LoyaltyRepository::adjust_points( $user_id, $bonus );
-		LoyaltyRepository::add_ledger(
-			array(
-				'user_id' => $user_id,
-				'order_id' => null,
-				'points'  => $bonus,
-				'type'    => 'review_bonus',
-				'status'  => 'available',
-				'notiz'   => __( 'Bonus für Produktbewertung', 'lindenweg16' ),
-			)
-		);
-		update_user_meta( $user_id, $flag, 1 );
 	}
 }

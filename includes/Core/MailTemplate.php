@@ -42,6 +42,12 @@ class MailTemplate {
 				'text'        => __( "Hallo {vorname},\n\nDu hast Deine Bestellung sicher schon ausprobiert. Über eine ehrliche Bewertung würden wir uns sehr freuen – als Dankeschön schreiben wir Dir {bonus_punkte} Punkte gut, sobald Deine Bewertung online ist.\n\n{produktlinks}\n\nDanke und viele Grüße", 'lindenweg16' ),
 				'platzhalter' => '{vorname}, {bonus_punkte}, {produktlinks}',
 			),
+			'geburtstag'         => array(
+				'label'       => __( 'Geburtstag (Prämienpunkte)', 'lindenweg16' ),
+				'betreff'     => __( 'Alles Gute zum Geburtstag, {vorname}!', 'lindenweg16' ),
+				'text'        => __( "Hallo {vorname},\n\nalles Gute zum Geburtstag! Als kleines Geschenk haben wir Dir {punkte} Prämienpunkte gutgeschrieben – Du hast jetzt {punkte_gesamt} Punkte, einlösbar bei Deiner nächsten Bestellung.\n\nDein Konto: {konto_url}\n\nFeier schön!", 'lindenweg16' ),
+				'platzhalter' => '{vorname}, {punkte}, {punkte_gesamt}, {konto_url}',
+			),
 			'wieder_verfuegbar'  => array(
 				'label'       => __( 'Wieder verfügbar (Warteliste)', 'lindenweg16' ),
 				'betreff'     => __( '{produktname} ist wieder verfügbar', 'lindenweg16' ),

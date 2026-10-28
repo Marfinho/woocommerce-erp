@@ -49,6 +49,16 @@ class Settings {
 			'punkte_pro_euro'           => 1,
 			'punkte_einloesewert'       => 100, // Punkte für 1 EUR.
 			'punkte_wartezeit_tage'     => 14,
+			// Auslöser für Bonuspunkte (0 = aus).
+			'punkte_registrierung'      => 0,
+			'punkte_newsletter'         => 0,
+			'punkte_erste_bestellung'   => 0,
+			'punkte_geburtstag'         => 0,
+			'punkte_bewertung_foto'     => 0,
+			'punkte_empfehlung_werber'  => 0,
+			'punkte_empfehlung_neukunde' => 0,
+			'review_nur_kaeufer'        => 1,
+			'review_foto_max'           => 3,
 			// Kundenbindung.
 			'cart_erinnerung_1_stunden' => 3,
 			'cart_erinnerung_2_stunden' => 48,

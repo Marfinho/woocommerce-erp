@@ -7,6 +7,21 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.55.0] – 2026-10-28
+
+### Prämienprogramm: Regeln, Auslöser, Aktionen
+- **Regeln im ERP** (Verkauf → Loyalty → Regeln): Punkte je Euro, Einlösewert, Wartezeit und Bonuspunkte je Auslöser an einer Stelle, mit Erklärung und Vorschlagswert. Ändern braucht das neue Recht „Loyalty-Regeln einstellen“ (`verkauf.loyalty.regeln`), jede Änderung steht im Protokoll.
+- **Neue Auslöser** (0 = aus, neu angelegte stehen auf aus): Kundenkonto anlegen, Newsletter bestätigen (auch wenn die Anmeldung vor dem Konto kam), erste Bestellung, Geburtstag (freiwilliges Feld in den Kontodetails, Glückwunsch-Mail, zählt erst 30 Tage nach dem Eintragen), Foto in der Bewertung, Punkte für den Werber zusätzlich zum Guthaben, Willkommenspunkte für Geworbene.
+- **Aktionen** (Verkauf → Loyalty → Aktionen): von–bis, 1,5- bis 10-fache Punkte, optional nur für Kategorien. Es zählt der Bestelltag; überschneiden sich Aktionen, gilt je Artikel die stärkste. Kunden sehen laufende Aktionen in der Konto-Übersicht und auf der Produktseite.
+- **Fotos in Bewertungen:** Angemeldete Kunden hängen bis zu 3 Fotos an (JPG, PNG, WebP, je 8 MB; Anzahl einstellbar, 0 = aus). Geprüft wird vor dem Speichern (Typ am Dateiinhalt, Größe, Anzahl); die Fotos stehen unter der Bewertung und werden mit ihr gelöscht.
+- **Produktseite:** „X Prämienpunkte sammeln“ unter dem Preis, während einer Aktion hervorgehoben.
+- Konto-Übersicht: „So sammelst du“ folgt den Einstellungen; Erledigtes fällt weg, Offenes (Newsletter, Geburtstag) ist verlinkt.
+
+### Behoben
+- **Bewertungspunkte gab es auch für nicht freigeschaltete Bewertungen** (und für Spam). Jetzt erst, wenn die Bewertung sichtbar ist; einstellbar nur für Käufer des Produkts (Standard: an).
+- **Empfehlungen wurden beim Fertigmelden nicht erkannt:** Der Empfehlungscode wurde erst beim Abschluss der Bestellung aus dem Cookie gelesen – das ist dann meist das Cookie des Mitarbeiters im Backend. Der Code wird jetzt beim Bestellen an die Bestellung geschrieben (klassische und Block-Kasse).
+- **Punkte stornierter Bestellungen blieben stehen,** wenn es zur Bestellung keine Empfehlung gab. Jetzt werden alle Gutschriften der Bestellung zurückgenommen.
+
 ## [0.54.0] – 2026-10-28
 
 ### Mein Konto: Übersicht mit Prämienpunkten

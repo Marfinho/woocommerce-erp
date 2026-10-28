@@ -809,14 +809,31 @@
 
 	UI.pages['loyalty'] = function (item, ui) {
 		var h = ui.h;
-		ui.pageHead('Loyalty', 'Empfehlungen prüfen, Guthaben und Punkte der Kunden ansehen.', ui.classicBtn(item));
+		ui.pageHead('Loyalty', 'Empfehlungen prüfen, Punkte der Kunden ansehen, Regeln und Aktionen einstellen.', ui.classicBtn(item));
 
 		var tiles = h('div', { class: 'grid tiles' });
 		var queue = h('div');
 		var members = h('div', { class: 'card vk-gap' });
-		ui.view().appendChild(tiles);
-		ui.view().appendChild(queue);
-		ui.view().appendChild(members);
+		var overview = h('div', null, tiles, queue, members);
+		var rules = h('div', { hidden: true });
+		var camps = h('div', { hidden: true });
+
+		// Reiter: Übersicht (Prüfung, Kunden), Regeln, Aktionen (loyalty_regeln.js).
+		var tabs = h('div', { class: 'presets', role: 'tablist', style: 'margin-bottom:14px' });
+		[['uebersicht', 'Übersicht', overview], ['regeln', 'Regeln', rules], ['aktionen', 'Aktionen', camps]].forEach(function (t, i) {
+			var b = h('button', { class: 'chip', type: 'button', role: 'tab', 'aria-pressed': i === 0 ? 'true' : 'false' }, t[1]);
+			b.addEventListener('click', function () {
+				Array.prototype.forEach.call(tabs.children, function (x) { x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+				[overview, rules, camps].forEach(function (p) { p.hidden = p !== t[2]; });
+				if (t[0] === 'regeln' && UI.loyaltyRules) { UI.loyaltyRules(rules, ui); }
+				if (t[0] === 'aktionen' && UI.loyaltyCampaigns) { UI.loyaltyCampaigns(camps, ui); }
+			});
+			tabs.appendChild(b);
+		});
+		ui.view().appendChild(tabs);
+		ui.view().appendChild(overview);
+		ui.view().appendChild(rules);
+		ui.view().appendChild(camps);
 
 		function load() {
 			queue.textContent = '';

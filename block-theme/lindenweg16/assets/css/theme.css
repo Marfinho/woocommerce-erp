@@ -6131,3 +6131,129 @@ body .woocommerce-info {
 	padding: 0 1.1em;
 	font-size: var(--wp--preset--font-size--small);
 }
+
+/* --------------------------------------------------------------------------
+ * Prämienprogramm: Aktionen, Punkte auf der Produktseite, Bewertungsfotos,
+ * Geburtstag in den Kontodetails.
+ * ----------------------------------------------------------------------- */
+
+.lw16-konto__aktion {
+	margin: 0;
+	padding: 12px 14px;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-accent-1);
+	color: var(--lw-on-accent);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.lw16-konto__aktion b {
+	display: block;
+	color: inherit !important;
+}
+
+.lw16-konto__sammeln li a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.lw16-konto__sammeln li a:hover {
+	color: var(--lw-accent-1);
+}
+
+.lw16-produkt-punkte {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px 8px;
+	margin: 0 0 var(--wp--preset--spacing--20);
+	padding: 6px 14px 6px 10px;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	color: var(--lw-text);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+}
+
+.lw16-produkt-punkte::before {
+	content: "";
+	width: 16px;
+	height: 16px;
+	background: var(--lw-accent-2);
+	-webkit-mask: var(--lw-icon-star) center / contain no-repeat;
+	mask: var(--lw-icon-star) center / contain no-repeat;
+}
+
+.lw16-produkt-punkte small {
+	font-weight: 500;
+	opacity: 0.85;
+}
+
+.lw16-produkt-punkte.is-aktion {
+	background: var(--lw-accent-1);
+	color: var(--lw-on-accent);
+}
+
+.lw16-produkt-punkte.is-aktion::before {
+	background: var(--lw-on-accent);
+}
+
+.lw16-review-fotos {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 10px;
+}
+
+.lw16-review-fotos a {
+	display: block;
+	border-radius: var(--lw-r-field);
+	overflow: hidden;
+	line-height: 0;
+}
+
+.lw16-review-fotos img {
+	width: 88px;
+	height: 88px;
+	object-fit: cover;
+	transition: transform var(--lw-base) var(--lw-smooth);
+}
+
+.lw16-review-fotos a:hover img {
+	transform: scale(1.05);
+}
+
+.comment-form-lw16-fotos {
+	display: grid;
+	gap: 6px;
+}
+
+.comment-form-lw16-fotos input[type="file"] {
+	padding: 10px;
+	border: 1.5px dashed var(--lw-line);
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.comment-form-lw16-fotos small {
+	color: var(--lw-text-muted);
+}
+
+.lw16-geburtstag {
+	margin: var(--wp--preset--spacing--30) 0;
+	padding: var(--wp--preset--spacing--30);
+	border: 1px solid var(--lw-line);
+	border-radius: var(--lw-r-image);
+}
+
+.lw16-geburtstag legend {
+	padding: 0 6px;
+	font-weight: 600;
+}
+
+.lw16-geburtstag__hint {
+	margin: 0 0 8px;
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+}

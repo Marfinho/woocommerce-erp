@@ -11,6 +11,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Calc;
 use Lindenweg16\Core\Settings;
+use Lindenweg16\Modules\Loyalty\LoyaltyCampaigns;
 use Lindenweg16\Modules\Loyalty\LoyaltyModule;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 
@@ -114,18 +115,15 @@ class AccountOverview {
 		}
 		echo '</div>';
 
-		$per_euro = (float) Settings::get( 'punkte_pro_euro', 1 );
-		$bonus    = (int) Settings::get( 'review_bonus_punkte', 20 );
 		echo '<div class="lw16-konto__sammeln">';
+		self::render_campaigns();
 		echo '<p class="lw16-konto__eyebrow">' . esc_html__( 'So sammelst du', 'lindenweg16' ) . '</p>';
 		echo '<ul>';
-		/* translators: %s: Punkte je Euro */
-		echo '<li><b>' . esc_html( sprintf( _n( '%s Punkt', '%s Punkte', (int) ceil( $per_euro ), 'lindenweg16' ), number_format_i18n( $per_euro, floor( $per_euro ) === $per_euro ? 0 : 1 ) ) ) . '</b> ' . esc_html__( 'für jeden Euro Einkauf', 'lindenweg16' ) . '</li>';
-		if ( $bonus > 0 ) {
-			/* translators: %s: Bonuspunkte */
-			echo '<li><b>' . esc_html( sprintf( __( '+%s Punkte', 'lindenweg16' ), number_format_i18n( $bonus ) ) ) . '</b> ' . esc_html__( 'für jede Produktbewertung', 'lindenweg16' ) . '</li>';
+		foreach ( self::ways_to_earn( $user_id ) as $way ) {
+			echo '<li' . ( $way[2] ? ' class="is-offen"' : '' ) . '><b>' . esc_html( $way[0] ) . '</b> ';
+			echo $way[3] ? '<a href="' . esc_url( $way[3] ) . '">' . esc_html( $way[1] ) . '</a>' : esc_html( $way[1] );
+			echo '</li>';
 		}
-		echo '<li><b>' . esc_html__( 'Guthaben', 'lindenweg16' ) . '</b> ' . esc_html__( 'wenn Freunde über deinen Link bestellen', 'lindenweg16' ) . '</li>';
 		echo '</ul>';
 
 		$link = home_url( '/?' . LoyaltyModule::COOKIE . '=' . rawurlencode( LoyaltyRepository::get_or_create_code( $user_id ) ) );
@@ -138,6 +136,84 @@ class AccountOverview {
 		echo '</div>';
 
 		echo '</section>';
+	}
+
+	/**
+	 * Laufende Aktionen als Hinweis über der Sammel-Liste.
+	 */
+	protected static function render_campaigns() {
+		foreach ( LoyaltyCampaigns::active() as $c ) {
+			$cats = array();
+			foreach ( (array) $c['kategorien'] as $id ) {
+				$term = get_term( (int) $id, 'product_cat' );
+				if ( $term && ! is_wp_error( $term ) ) {
+					$cats[] = $term->name;
+				}
+			}
+			$factor = (float) $c['faktor'];
+			$what   = 2.0 === $factor ? __( 'Doppelte Punkte', 'lindenweg16' ) : ( 3.0 === $factor
+				? __( 'Dreifache Punkte', 'lindenweg16' )
+				/* translators: %s: Faktor */
+				: sprintf( __( '%s-fache Punkte', 'lindenweg16' ), number_format_i18n( $factor, floor( $factor ) === $factor ? 0 : 1 ) ) );
+			if ( $cats ) {
+				/* translators: 1: Punkte-Art, 2: Kategorien */
+				$what = sprintf( __( '%1$s auf %2$s', 'lindenweg16' ), $what, implode( ', ', $cats ) );
+			}
+			echo '<p class="lw16-konto__aktion"><b>' . esc_html( $c['name'] ) . '</b> ';
+			/* translators: 1: Beschreibung, 2: Datum */
+			echo esc_html( sprintf( __( '%1$s – noch bis %2$s', 'lindenweg16' ), $what, date_i18n( 'j. F', strtotime( $c['bis'] ) ) ) ) . '</p>';
+		}
+	}
+
+	/**
+	 * Wege zu Punkten, wie sie gerade eingestellt sind. Schon Erledigtes
+	 * (Newsletter, erste Bestellung) fällt weg; Offenes bekommt einen Link.
+	 *
+	 * @param int $user_id Kunde.
+	 * @return array Liste aus [Punkte, Text, offen?, Link].
+	 */
+	protected static function ways_to_earn( $user_id ) {
+		$ways     = array();
+		$per_euro = (float) Settings::get( 'punkte_pro_euro', 1 );
+		$pts      = function ( $n ) {
+			/* translators: %s: Punkte */
+			return sprintf( __( '+%s Punkte', 'lindenweg16' ), number_format_i18n( $n ) );
+		};
+
+		if ( $per_euro > 0 ) {
+			/* translators: %s: Punkte je Euro */
+			$ways[] = array( sprintf( _n( '%s Punkt', '%s Punkte', (int) ceil( $per_euro ), 'lindenweg16' ), number_format_i18n( $per_euro, floor( $per_euro ) === $per_euro ? 0 : 1 ) ), __( 'für jeden Euro Einkauf', 'lindenweg16' ), false, '' );
+		}
+		$first = (int) Settings::get( 'punkte_erste_bestellung', 0 );
+		if ( $first > 0 && ! get_user_meta( $user_id, 'lw16_bonus_erste_bestellung', true ) ) {
+			$ways[] = array( $pts( $first ), __( 'extra für deine erste Bestellung', 'lindenweg16' ), true, '' );
+		}
+		$review = (int) Settings::get( 'review_bonus_punkte', 20 );
+		if ( $review > 0 ) {
+			$photo  = (int) Settings::get( 'punkte_bewertung_foto', 0 );
+			$text   = $photo > 0 && (int) Settings::get( 'review_foto_max', 3 ) > 0
+				/* translators: %s: Punkte */
+				? sprintf( __( 'für jede Produktbewertung, %s mehr mit Foto', 'lindenweg16' ), number_format_i18n( $photo ) )
+				: __( 'für jede Produktbewertung', 'lindenweg16' );
+			$ways[] = array( $pts( $review ), $text, false, '' );
+		}
+		$news = (int) Settings::get( 'punkte_newsletter', 0 );
+		if ( $news > 0 && ! get_user_meta( $user_id, 'lw16_bonus_newsletter', true ) ) {
+			$ways[] = array( $pts( $news ), __( 'für die Newsletter-Anmeldung', 'lindenweg16' ), true, home_url( '/#newsletter' ) );
+		}
+		$birthday = (int) Settings::get( 'punkte_geburtstag', 0 );
+		if ( $birthday > 0 ) {
+			$has    = (bool) get_user_meta( $user_id, 'lw16_geburtstag', true );
+			$ways[] = array( $pts( $birthday ), $has ? __( 'zu deinem Geburtstag', 'lindenweg16' ) : __( 'zum Geburtstag – trag ihn in den Kontodetails ein', 'lindenweg16' ), ! $has, $has ? '' : wc_get_account_endpoint_url( 'edit-account' ) );
+		}
+		$referrer = (int) Settings::get( 'punkte_empfehlung_werber', 0 );
+		$ways[]   = array(
+			$referrer > 0 ? $pts( $referrer ) : __( 'Guthaben', 'lindenweg16' ),
+			$referrer > 0 ? __( 'und Guthaben, wenn Freunde über deinen Link bestellen', 'lindenweg16' ) : __( 'wenn Freunde über deinen Link bestellen', 'lindenweg16' ),
+			false,
+			'',
+		);
+		return $ways;
 	}
 
 	/**

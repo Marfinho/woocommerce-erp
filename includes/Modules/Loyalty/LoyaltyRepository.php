@@ -172,6 +172,90 @@ class LoyaltyRepository {
 	}
 
 	/**
+	 * Punkte gutschreiben – sofort oder nach einer Wartezeit.
+	 *
+	 * Sofort: Saldo erhöhen und Eintrag „verfügbar“. Mit Wartezeit: Eintrag
+	 * „ausstehend“ mit Freigabedatum; der tägliche Reifeprozess bucht ihn.
+	 *
+	 * @param int      $user_id   Kunde.
+	 * @param int      $points    Punkte (> 0).
+	 * @param string   $type      Art (siehe ledger_types()).
+	 * @param string   $note      Notiz für Verlauf und ERP.
+	 * @param int|null $order_id  Zugehörige Bestellung (wird bei Storno mit zurückgenommen).
+	 * @param int      $wait_days Wartezeit in Tagen (0 = sofort).
+	 * @return int Gutgeschriebene Punkte.
+	 */
+	public static function award( $user_id, $points, $type, $note, $order_id = null, $wait_days = 0 ) {
+		$user_id = (int) $user_id;
+		$points  = (int) $points;
+		if ( $user_id <= 0 || $points <= 0 ) {
+			return 0;
+		}
+
+		$row = array(
+			'user_id'  => $user_id,
+			'order_id' => $order_id ? (int) $order_id : null,
+			'points'   => $points,
+			'type'     => $type,
+			'notiz'    => $note,
+		);
+
+		if ( $wait_days > 0 ) {
+			$row['status']       = 'pending';
+			$row['available_at'] = gmdate( 'Y-m-d H:i:s', time() + (int) $wait_days * DAY_IN_SECONDS );
+		} else {
+			$row['status'] = 'available';
+			self::adjust_points( $user_id, $points );
+		}
+
+		self::add_ledger( $row );
+		return $points;
+	}
+
+	/**
+	 * Einmal-Bonus: nur wenn der Kunde ihn unter diesem Schlüssel noch nicht hat.
+	 *
+	 * @param int    $user_id Kunde.
+	 * @param string $key     Kennung (z. B. „registrierung“).
+	 * @param int    $points  Punkte.
+	 * @param string $type    Art.
+	 * @param string $note    Notiz.
+	 * @param int    $wait    Wartezeit in Tagen.
+	 * @param int    $order   Bestellung.
+	 * @return int Gutgeschriebene Punkte (0, wenn schon vergeben oder ausgeschaltet).
+	 */
+	public static function award_once( $user_id, $key, $points, $type, $note, $wait = 0, $order = 0 ) {
+		$flag = 'lw16_bonus_' . $key;
+		if ( $points <= 0 || ! $user_id || get_user_meta( $user_id, $flag, true ) ) {
+			return 0;
+		}
+		update_user_meta( $user_id, $flag, current_time( 'mysql' ) );
+		return self::award( $user_id, $points, $type, $note, $order ? $order : null, $wait );
+	}
+
+	/**
+	 * Arten von Punktebewegungen mit Bezeichnung für Kunde und ERP.
+	 *
+	 * @return array Art => Bezeichnung.
+	 */
+	public static function ledger_types() {
+		return array(
+			'earned'            => __( 'Bestellung', 'lindenweg16' ),
+			'redeemed'          => __( 'Eingelöst', 'lindenweg16' ),
+			'reversed'          => __( 'Storniert', 'lindenweg16' ),
+			'manual_adjustment' => __( 'Manuelle Anpassung', 'lindenweg16' ),
+			'signup'            => __( 'Willkommen im Kundenkonto', 'lindenweg16' ),
+			'newsletter'        => __( 'Newsletter-Anmeldung', 'lindenweg16' ),
+			'first_order'       => __( 'Erste Bestellung', 'lindenweg16' ),
+			'birthday'          => __( 'Geburtstag', 'lindenweg16' ),
+			'review_bonus'      => __( 'Produktbewertung', 'lindenweg16' ),
+			'review_photo'      => __( 'Foto in der Bewertung', 'lindenweg16' ),
+			'referral_bonus'    => __( 'Freund geworben', 'lindenweg16' ),
+			'referral_welcome'  => __( 'Willkommen über Empfehlung', 'lindenweg16' ),
+		);
+	}
+
+	/**
 	 * Ledger-Historie eines Nutzers (paginiert).
 	 *
 	 * @param int $user_id  Nutzer.
@@ -211,7 +295,9 @@ class LoyaltyRepository {
 		// der lokalen Zeit (current_time) reiften Punkte in Deutschland ein
 		// bis zwei Stunden zu frueh.
 		$now = gmdate( 'Y-m-d H:i:s' );
-		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE type = 'earned' AND status = 'pending' AND available_at <= %s", $now ) ); // phpcs:ignore
+		// Alle wartenden Gutschriften, nicht nur Bestellpunkte: Erstbestellungs-
+		// und Willkommensbonus warten ebenfalls die Frist ab.
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'pending' AND points > 0 AND available_at IS NOT NULL AND available_at <= %s", $now ) ); // phpcs:ignore
 	}
 
 	/**
