@@ -10,6 +10,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ## [0.62.0] – 2026-10-28
 
 ### Loyalty
+- **Konto-Übersicht:** Die Leiste unter den Punkten zeigt jetzt den Weg zur nächsten Stufe („Noch 40,00 € Umsatz bis zur Stufe Profi“). Ohne Stufen oder auf der höchsten Stufe bleibt es bei den Punkten bis zum nächsten Euro Rabatt.
 - **Mindestbestellwert zum Einlösen.** Neue Regel unter Loyalty → Regeln → Grundwerte: Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen, 0 = kein Mindestwert. In der Block-Kasse steht dann ein Hinweis statt der Einlösefelder.
 - **Regeln speichern:** Der Fehler „Cannot read properties of undefined (reading 'push')“ beim Öffnen von Loyalty → Regeln ist behoben.
 
