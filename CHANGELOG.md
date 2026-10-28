@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.52.0] – 2026-10-28
+
+### Bambu: Werkstatt folgt dem Druckauftrag, Fehldrucke lassen sich wiederholen
+- **Automatisch geslicte Platten springen jetzt von selbst auf „Druckt“ und „Fertig“.** Bisher passte der Dateiname auf dem Drucker („lw16-<Job>-sliced-…“) nie zur Plattendatei, und die Platte blieb stehen, bis jemand tippte. Jetzt folgt eine Platte dem Status ihres Bambu-Auftrags; der Abgleich über den Dateinamen bleibt für Platten, die von Hand in Bambu Studio gestartet werden.
+- **Ist-Druckzeit ab dem bestätigten Druckbeginn** statt ab der Annahme durch die Bridge (Download und Übertragung zählten bisher mit).
+- **„Erneut einreihen“** für fehlgeschlagene und stornierte Aufträge (Bambu-Lab-Drucker → Aufträge), mit derselben Datei und allen Verknüpfungen. Eine Platte, deren Druck scheiterte, steckte bisher fest. Eine Datei, die ein erneut eingereihter Auftrag weiter nutzt, wird beim Aufräumen des alten nicht gelöscht.
+- **Stornieren nimmt den Fertigungsauftrag mit:** Ein stornierter Auftrag aus „Bedarf direkt drucken“ ließ seinen Fertigungsauftrag offen; der deckte dann scheinbar einen Bedarf, für den nichts mehr gedruckt wurde.
+- **3MF auch bei „Rüsten“ und „Im Druck“ herunterladbar** – im Workflow und auf der Plattenseite; bisher nur bei „Freigegeben“.
+- Nicht in echtem WordPress oder mit echtem Drucker getestet.
+
 ## [0.51.0] – 2026-10-28
 
 ### Bambu-Anbindung gehärtet: keine Doppeldrucke, kein Druck auf belegter Platte

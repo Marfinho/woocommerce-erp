@@ -11,6 +11,7 @@
 
 use PHPUnit\Framework\TestCase;
 use Lindenweg16\Erp\Pages\BambuDruck;
+use Lindenweg16\Erp\RunFlow;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 
@@ -120,5 +121,42 @@ class BambuHaertungTest extends TestCase {
 		$this->assertFalse( BambuPrinterRepository::bed_is_clear( (object) array( 'bed_clear' => 0 ) ) );
 		$this->assertFalse( BambuPrinterRepository::bed_is_clear( (object) array() ) );
 		$this->assertTrue( BambuPrinterRepository::bed_is_clear( (object) array( 'bed_clear' => '1' ) ) );
+	}
+
+	/**
+	 * Werkstatt-Platten folgen ihrem Bambu-Auftrag (automatisch geslict),
+	 * nicht dem Dateinamen – der heißt dann „lw16-<Job>-sliced-…“.
+	 */
+	public function test_platte_folgt_dem_status_ihres_auftrags() {
+		$this->assertSame( array( 'druckstart' ), RunFlow::step_for_job( RunFlow::FREIGEGEBEN, 'printing' ) );
+		$this->assertSame( array( 'druckstart' ), RunFlow::step_for_job( RunFlow::RUESTEN, 'printing' ) );
+		$this->assertSame( array( 'druckende' ), RunFlow::step_for_job( RunFlow::DRUCKT, 'completed' ) );
+		$this->assertSame( array( 'druckende' ), RunFlow::step_for_job( RunFlow::DRUCKT, 'failed' ) );
+		$this->assertSame( array( 'druckstart', 'druckende' ), RunFlow::step_for_job( RunFlow::RUESTEN, 'completed' ) );
+	}
+
+	/**
+	 * Was nichts über den Druck aussagt, bewegt die Platte nicht.
+	 */
+	public function test_platte_bleibt_ohne_aussagekraeftigen_auftragsstatus() {
+		foreach ( array( 'queued', 'claimed', 'uploading', 'unklar', 'cancelled' ) as $status ) {
+			$this->assertSame( array(), RunFlow::step_for_job( RunFlow::RUESTEN, $status ), $status );
+			$this->assertSame( array(), RunFlow::step_for_job( RunFlow::DRUCKT, $status ), $status );
+		}
+		$this->assertSame( array(), RunFlow::step_for_job( RunFlow::RUESTEN, 'failed' ), 'Vor dem Druck gescheitert: Platte steht noch beim Rüsten.' );
+		$this->assertSame( array(), RunFlow::step_for_job( RunFlow::ZU_MELDEN, 'printing' ) );
+		$this->assertSame( array(), RunFlow::step_for_job( RunFlow::ERLEDIGT, 'completed' ) );
+	}
+
+	/**
+	 * Erneut einreihen nur nach Fehlschlag oder Storno – ein fertiger Job
+	 * würde doppelt drucken.
+	 */
+	public function test_erneut_einreihen_nur_nach_fehlschlag_oder_storno() {
+		$this->assertTrue( BambuJobRepository::can_requeue( 'failed' ) );
+		$this->assertTrue( BambuJobRepository::can_requeue( 'cancelled' ) );
+		foreach ( array( 'queued', 'claimed', 'uploading', 'printing', 'unklar', 'completed' ) as $status ) {
+			$this->assertFalse( BambuJobRepository::can_requeue( $status ), $status );
+		}
 	}
 }

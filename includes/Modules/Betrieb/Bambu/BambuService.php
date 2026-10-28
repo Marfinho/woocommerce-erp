@@ -14,6 +14,7 @@ use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ModelFile;
+use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
@@ -212,6 +213,68 @@ class BambuService {
 	}
 
 	/**
+	 * Fehlgeschlagenen oder stornierten Job mit derselben Druckdatei erneut
+	 * einreihen. Der neue Job übernimmt alle Verknüpfungen (Platte,
+	 * Fertigungsauftrag, AMS-Fach); eine Platte zeigt danach auf den neuen
+	 * Job, damit die Werkstatt ihm folgt.
+	 *
+	 * @param int $job_id Alter Job.
+	 * @return array {ok, job_id, error}
+	 */
+	public static function requeue_job( $job_id ) {
+		$job  = BambuJobRepository::find( (int) $job_id );
+		$leer = array( 'ok' => false, 'job_id' => 0, 'error' => '' );
+
+		if ( ! $job ) {
+			$leer['error'] = __( 'Diesen Druckauftrag gibt es nicht (mehr).', 'lindenweg16' );
+			return $leer;
+		}
+
+		if ( ! BambuJobRepository::can_requeue( $job->status ) ) {
+			$leer['error'] = __( 'Nur fehlgeschlagene oder stornierte Aufträge lassen sich erneut einreihen.', 'lindenweg16' );
+			return $leer;
+		}
+
+		$printer = BambuPrinterRepository::find_by_printer_id( $job->printer_id );
+		if ( ! $printer || ! (int) $printer->active ) {
+			$leer['error'] = __( 'Der Drucker dieses Auftrags ist nicht (mehr) aktiv.', 'lindenweg16' );
+			return $leer;
+		}
+
+		if ( ! is_file( (string) $job->file_path ) ) {
+			$leer['error'] = __( 'Die Druckdatei ist nicht mehr vorhanden – bitte neu hochladen bzw. neu slicen.', 'lindenweg16' );
+			return $leer;
+		}
+
+		$new_id = BambuJobRepository::create(
+			array(
+				'printer_id'          => $job->printer_id,
+				'druckauftrag_id'     => $job->druckauftrag_id,
+				'work_order_id'       => $job->work_order_id,
+				'article_revision_id' => $job->article_revision_id,
+				'parts_planned'       => $job->parts_planned,
+				'plate_job_id'        => $job->plate_job_id,
+				'ams_tray_id'         => $job->ams_tray_id,
+				'file_path'           => $job->file_path,
+				'file_name'           => $job->file_name,
+			)
+		);
+
+		if ( ! $new_id ) {
+			$leer['error'] = __( 'Job konnte nicht angelegt werden.', 'lindenweg16' );
+			return $leer;
+		}
+
+		if ( $job->plate_job_id ) {
+			PlateJobRepository::set_status( (int) $job->plate_job_id, 'geslict', array( 'bambu_job_id' => $new_id ) );
+		}
+
+		AuditLog::record( 'bambu_druckjob_erneut_eingereiht', 'bambu_job', $new_id, array( 'vorher' => (int) $job->id, 'drucker' => $job->printer_id ) );
+
+		return array( 'ok' => true, 'job_id' => $new_id, 'error' => '' );
+	}
+
+	/**
 	 * Geslicte Druckdateien der aktiven Artikelrevisionen – die Auswahl
 	 * für „aus der Modellablage einreihen".
 	 *
@@ -265,13 +328,21 @@ class BambuService {
 	 * gehört und weiterlebt. Deshalb wird hier doppelt geprüft: die Datei
 	 * muss im Dokumentenordner liegen UND den Upload-Präfix tragen.
 	 *
+	 * Verweist noch ein anderer Job auf dieselbe Datei (erneut eingereiht),
+	 * bleibt sie liegen.
+	 *
 	 * @param string $file_path Pfad aus dem Job-Datensatz.
+	 * @param int    $job_id    Der Job, dessen Datei gelöscht werden soll (wird nicht mitgezählt).
 	 * @return bool Ob gelöscht wurde.
 	 */
-	public static function delete_job_file( $file_path ) {
+	public static function delete_job_file( $file_path, $job_id = 0 ) {
 		$real = realpath( (string) $file_path );
 
 		if ( ! $real || ! self::is_queue_upload( $real, Installer::docs_dir() ) ) {
+			return false;
+		}
+
+		if ( BambuJobRepository::count_by_file( (string) $file_path, (int) $job_id ) > 0 ) {
 			return false;
 		}
 

@@ -155,6 +155,38 @@ class RunFlow {
 	}
 
 	/**
+	 * Welche Aktionen eine Platte braucht, um dem Status ihres Bambu-
+	 * Auftrags zu folgen (Warteschlange, automatisch geslict).
+	 *
+	 * Druckt der Auftrag, ist das Rüsten vorbei; ist er fertig oder
+	 * fehlgeschlagen, ist der Druck zu Ende. Ein Auftrag, der fertig wurde,
+	 * bevor die Platte ihn je als gestartet gesehen hat, bekommt beide
+	 * Schritte. Ein Auftrag, der vor dem Druck scheiterte, bewegt nichts –
+	 * die Platte steht dann noch beim Rüsten.
+	 *
+	 * @param string $run_status Zustand der Platte.
+	 * @param string $job_status Status des Bambu-Auftrags.
+	 * @return string[] Aktionen in Reihenfolge (leer = nichts zu tun).
+	 */
+	public static function step_for_job( $run_status, $job_status ) {
+		$wartet = in_array( $run_status, array( self::FREIGEGEBEN, self::RUESTEN ), true );
+
+		if ( $wartet && 'printing' === $job_status ) {
+			return array( 'druckstart' );
+		}
+
+		if ( $wartet && 'completed' === $job_status ) {
+			return array( 'druckstart', 'druckende' );
+		}
+
+		if ( self::DRUCKT === $run_status && in_array( $job_status, array( 'completed', 'failed' ), true ) ) {
+			return array( 'druckende' );
+		}
+
+		return array();
+	}
+
+	/**
 	 * Spalte im Workflow für einen Zustand.
 	 *
 	 * @param string $status Zustand.

@@ -24,6 +24,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Erp\Pages\BambuDruck;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
+use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;
@@ -838,20 +839,35 @@ class Workflow {
 	/**
 	 * Platten mit dem Stand der Bambu-Drucker abgleichen.
 	 *
-	 * Der Drucker meldet den Namen der geladenen Datei. Passt er zur
-	 * Plattendatei einer Platte, ist genau diese gemeint – auch wenn mehrere
-	 * Platten für denselben Drucker anstehen. Meldet der Drucker „druckt“,
-	 * ist das Rüsten vorbei; meldet er „fertig“, ist der Druck zu Ende.
-	 * Kennt die Bridge noch keinen Dateinamen, gilt wie früher: nur wenn auf
-	 * dem Drucker genau eine Platte läuft – bei zwei wüsste niemand, welche.
+	 * Zuerst über den Druckauftrag: Wurde die Plattendatei automatisch
+	 * geslict und über die Warteschlange gedruckt, hängt an ihr die ID des
+	 * Bambu-Auftrags – dessen Status ist die verlässliche Quelle (der
+	 * Dateiname auf dem Drucker heißt dann „lw16-<Job>-sliced-…“ und passt
+	 * nicht zur Plattendatei).
+	 *
+	 * Für alle anderen Platten (von Hand in Bambu Studio geslict und
+	 * gestartet) bleibt der Abgleich über den Dateinamen: Passt der vom
+	 * Drucker gemeldete Name zur Plattendatei, ist genau diese gemeint.
+	 * Meldet der Drucker „druckt“, ist das Rüsten vorbei; meldet er „fertig“,
+	 * ist der Druck zu Ende. Kennt die Bridge noch keinen Dateinamen, gilt:
+	 * nur wenn auf dem Drucker genau eine Platte läuft.
 	 */
 	public static function sync_printers() {
 		$by_printer = array();
 
 		foreach ( RunRepository::active() as $run ) {
-			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN, RunFlow::DRUCKT ), true ) && ! empty( $run['bambu_printer'] ) ) {
-				$by_printer[ $run['bambu_printer'] ][] = $run;
+			if ( ! in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN, RunFlow::DRUCKT ), true ) || empty( $run['bambu_printer'] ) ) {
+				continue;
 			}
+
+			$job = self::queue_job_for_run( $run );
+
+			if ( $job ) {
+				self::sync_with_job( $run, $job );
+				continue;
+			}
+
+			$by_printer[ $run['bambu_printer'] ][] = $run;
 		}
 
 		foreach ( $by_printer as $bambu_id => $runs ) {
@@ -893,6 +909,41 @@ class Workflow {
 			} elseif ( RunFlow::DRUCKT === $run['status'] && RunFlow::printer_ended( $status ) && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
 				self::act( $run['id'], 'druckende', array(), 0 );
 			}
+		}
+	}
+
+	/**
+	 * Der Bambu-Auftrag, über den die Datei dieser Platte gedruckt wird
+	 * (automatisch geslict und in die Warteschlange gelegt), oder null.
+	 *
+	 * @param array $run Platte.
+	 * @return object|null
+	 */
+	protected static function queue_job_for_run( array $run ) {
+		if ( empty( $run['plate_job_id'] ) ) {
+			return null;
+		}
+
+		$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
+
+		if ( ! $plate || empty( $plate->bambu_job_id ) ) {
+			return null;
+		}
+
+		return BambuJobRepository::find( (int) $plate->bambu_job_id );
+	}
+
+	/**
+	 * Platte nach dem Status ihres Bambu-Auftrags weiterschalten.
+	 *
+	 * @param array  $run Platte.
+	 * @param object $job Bambu-Auftrag.
+	 */
+	protected static function sync_with_job( array $run, $job ) {
+		$step = RunFlow::step_for_job( $run['status'], (string) $job->status );
+
+		foreach ( $step as $action ) {
+			self::act( $run['id'], $action, array(), 0 );
 		}
 	}
 

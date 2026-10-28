@@ -285,6 +285,13 @@
 				} }, 'Als fehlgeschlagen markieren');
 				row.appendChild(h('div', { class: 'label-area' }, okBtn, failBtn));
 			}
+			if (j.can_requeue) {
+				var again = h('button', { class: 'btn', type: 'button', onclick: function () {
+					if (!window.confirm('Auftrag #' + j.id + ' mit derselben Datei erneut einreihen?')) { return; }
+					post(again, 'bambu/auftraege/' + j.id + '/erneut', {}, function (r) { UI.toast(r.message); }).then(function () { load(true); });
+				} }, 'Erneut einreihen');
+				row.appendChild(again);
+			}
 			if (j.can_cancel) {
 				var cancel = h('button', { class: 'btn', type: 'button', onclick: function () {
 					if (!window.confirm('Diesen wartenden Auftrag abbrechen? Die hochgeladene Datei wird gelöscht.')) { return; }

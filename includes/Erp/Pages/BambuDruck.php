@@ -37,6 +37,7 @@ use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingService;
 use Lindenweg16\Modules\Betrieb\ModelFile;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
+use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -96,6 +97,7 @@ class BambuDruck {
 		self::route( 'bambu/auftraege/modell', 'POST', 'job_model', $jobs );
 		self::route( 'bambu/auftraege/(?P<id>\d+)/abbrechen', 'POST', 'job_cancel', $jobs );
 		self::route( 'bambu/auftraege/(?P<id>\d+)/klaeren', 'POST', 'job_resolve', $jobs );
+		self::route( 'bambu/auftraege/(?P<id>\d+)/erneut', 'POST', 'job_requeue', $jobs );
 
 		self::route( 'bambu/platten', 'GET', 'plates', $plates );
 		self::route( 'bambu/platten', 'POST', 'plate_build', $plates );
@@ -691,6 +693,7 @@ class BambuDruck {
 				'error'      => (string) $job->error_message,
 				'can_cancel' => self::can_cancel( $job->status ),
 				'can_resolve' => self::can_resolve( $job->status ),
+				'can_requeue' => BambuJobRepository::can_requeue( $job->status ) && is_file( (string) $job->file_path ),
 			);
 		}
 
@@ -814,9 +817,16 @@ class BambuDruck {
 
 		// Nur eigens hochgeladene Dateien werden gelöscht; Dateien der
 		// Modellablage gehören der Artikelrevision (siehe delete_job_file()).
-		BambuService::delete_job_file( $job->file_path );
+		BambuService::delete_job_file( $job->file_path, $id );
 
 		AuditLog::record( 'bambu_druckjob_storniert', 'bambu_job', $id, array( 'drucker' => $job->printer_id, 'datei' => $job->file_name ) );
+
+		// Aus „Bedarf direkt drucken“: Der Fertigungsauftrag dieser Platte
+		// wird mit storniert – sonst bliebe er offen und deckte scheinbar
+		// einen Bedarf, für den nichts mehr gedruckt wird.
+		if ( $job->work_order_id && class_exists( WorkOrderRepository::class ) ) {
+			WorkOrderRepository::cancel( (int) $job->work_order_id, __( 'Bambu-Druckauftrag storniert.', 'lindenweg16' ) );
+		}
 
 		return self::done( __( 'Druckauftrag abgebrochen.', 'lindenweg16' ) );
 	}
@@ -856,6 +866,23 @@ class BambuDruck {
 				? __( 'Als fertig gebucht.', 'lindenweg16' )
 				: __( 'Als fehlgeschlagen markiert.', 'lindenweg16' )
 		);
+	}
+
+	/**
+	 * Fehlgeschlagenen oder stornierten Auftrag mit derselben Datei erneut
+	 * einreihen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function job_requeue( WP_REST_Request $request ) {
+		$result = BambuService::requeue_job( (int) $request['id'] );
+
+		if ( ! $result['ok'] ) {
+			return self::fail( $result['error'] );
+		}
+
+		return self::done( __( 'Erneut eingereiht. Er startet, sobald der Drucker frei und die Platte als frei bestätigt ist.', 'lindenweg16' ), array( 'job_id' => (int) $result['job_id'] ) );
 	}
 
 	/* ====================================================================

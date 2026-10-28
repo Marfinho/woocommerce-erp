@@ -234,6 +234,17 @@ class BambuJobRepository {
 	}
 
 	/**
+	 * Darf ein Job erneut eingereiht werden? Nur ein fehlgeschlagener oder
+	 * stornierter – ein fertiger würde doppelt drucken, ein aktiver läuft noch.
+	 *
+	 * @param string $status Aktueller Status.
+	 * @return bool
+	 */
+	public static function can_requeue( $status ) {
+		return in_array( (string) $status, array( 'failed', 'cancelled' ), true );
+	}
+
+	/**
 	 * Ist-Druckzeit in Minuten aus Start- und Endzeitpunkt (GMT-Datetime).
 	 *
 	 * @param string $started_at   GMT-Datetime.
@@ -325,6 +336,26 @@ class BambuJobRepository {
 				'SELECT * FROM ' . self::table() . ' WHERE id = %d AND printer_id = %s', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(int) $id,
 				(string) $printer_id
+			)
+		);
+	}
+
+	/**
+	 * Jobs, die auf eine Datei verweisen – für das Aufräumen: Eine Datei, die
+	 * ein erneut eingereihter Job weiter nutzt, darf mit dem alten nicht
+	 * verschwinden.
+	 *
+	 * @param string $file_path Dateipfad.
+	 * @param int    $except_id Diesen Job nicht mitzählen.
+	 * @return int
+	 */
+	public static function count_by_file( $file_path, $except_id = 0 ) {
+		global $wpdb;
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM ' . self::table() . ' WHERE file_path = %s AND id <> %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $file_path,
+				(int) $except_id
 			)
 		);
 	}
@@ -435,6 +466,12 @@ class BambuJobRepository {
 	 * Erneuert das Lease. Die Bridge meldet das erst, wenn der Drucker den
 	 * Druckbeginn bestätigt hat – ab hier ist die Platte belegt.
 	 *
+	 * Beim ersten Wechsel aus claimed/uploading beginnt hier auch die
+	 * Ist-Druckzeit (started_at): Bisher zählte sie ab der Annahme des Jobs,
+	 * also samt Download und Übertragung. Eine wieder aufgenommene Meldung
+	 * (printing/unklar, etwa nach einem Neustart der Bridge) lässt den
+	 * Startzeitpunkt stehen.
+	 *
 	 * @param int    $id         Job-ID.
 	 * @param string $printer_id Anfragende Bridge.
 	 * @return bool
@@ -444,8 +481,9 @@ class BambuJobRepository {
 
 		$updated = $wpdb->query(
 			$wpdb->prepare(
-				'UPDATE ' . self::table() . " SET status = 'printing', locked_at = %s, updated_at = %s, error_message = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				'UPDATE ' . self::table() . " SET started_at = IF(status IN ('claimed','uploading'), %s, started_at), status = 'printing', locked_at = %s, updated_at = %s, error_message = NULL" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				. " WHERE id = %d AND printer_id = %s AND status IN ('claimed','uploading','printing','unklar')",
+				current_time( 'mysql', true ),
 				current_time( 'mysql', true ),
 				current_time( 'mysql', true ),
 				(int) $id,
@@ -878,11 +916,13 @@ class BambuJobRepository {
 			)
 		);
 
+		// Erst die Zeilen, dann die Dateien: delete_job_file() lässt eine
+		// Datei liegen, solange noch ein Job auf sie verweist.
+		$wpdb->delete( self::table(), array( 'printer_id' => (string) $printer_id ) );
+
 		foreach ( (array) $jobs as $job ) {
 			BambuService::delete_job_file( $job->file_path );
 		}
-
-		$wpdb->delete( self::table(), array( 'printer_id' => (string) $printer_id ) );
 	}
 
 	/**
@@ -919,8 +959,8 @@ class BambuJobRepository {
 		$geloescht = 0;
 
 		foreach ( (array) $alte as $job ) {
-			BambuService::delete_job_file( $job->file_path );
 			$geloescht += (int) $wpdb->delete( self::table(), array( 'id' => (int) $job->id ) );
+			BambuService::delete_job_file( $job->file_path );
 		}
 
 		return $geloescht;
