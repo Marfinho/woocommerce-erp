@@ -70,6 +70,12 @@ class PlateService {
 			}
 		}
 
+		// Dazu der Streifen am vorderen Bettrand, auf den X1/P1 vor jedem
+		// Druck Lade- und Kalibrierlinien ziehen, samt Sperrecke vorn links
+		// (siehe BedKeepOut). Als eigene, konvexe Rechtecke – die Packer
+		// rechnen mit der konvexen Hülle jeder Zone.
+		$exclusion_zones = array_merge( $exclusion_zones, BedKeepOut::zones( (string) $printer->printer_model, (float) $bed['width_mm'] ) );
+
 		$expanded = array();
 		$warnings = array();
 

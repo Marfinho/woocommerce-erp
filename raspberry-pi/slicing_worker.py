@@ -32,20 +32,20 @@ das Verhalten von OrcaSlicer 2.4.2 abgeglichen:
     der Dateiname übergeben, kein absoluter Pfad.
   * "--slice 1": Die Plattenanordnung legt alles auf Platte 1, und die
     Bambu-Bridge startet später genau Metadata/plate_1.gcode.
-  * "--arrange 1": OrcaSlicer selbst endgültig anordnen lassen, statt der
-    Platzierung aus der WordPress-Plattenanordnung (PlateComposer/
-    BinPacker) zu vertrauen. Grund für den Wechsel von ursprünglich
-    "--arrange 0": BinPacker kennt nur das reine Bettrechteck, nicht die
-    Sperrflächen des Druckerprofils ("bed_exclude_area", z. B. eine
-    gesperrte Bettecke) - OrcaSlicer selbst schon, und lehnte deshalb
-    live wiederholt mit Code -64 ("too close to exclusion area") ab,
-    obwohl die eigene Anordnung nichts beanstandet hatte. Ausserdem live
-    beobachtet: zwei Bauteile ineinander platziert (ein Fehler in der
-    Anordnungslogik selbst). OrcaSlicer prüft Sperrflächen UND
-    Kollisionen bereits korrekt, wenn es selbst anordnet - PlateComposer
-    liefert weiterhin eine sinnvolle Ausgangslage (u. a. fürs
-    Gewicht/Kosten-Vorabschätzen in WordPress), die tatsächliche
-    Platzierung im Slice-Ergebnis kommt aber von OrcaSlicer.
+  * "--arrange 0": Die Platzierung aus der WordPress-Plattenanordnung
+    bleibt, wie sie ist. Zwischenzeitlich lief der Worker mit
+    "--arrange 1" (OrcaSlicer ordnet selbst an), weil die Anordnung die
+    Sperrecke des Druckers nicht kannte. Das kostete aber Teile: OrcaSlicer
+    ordnet nach der konvexen Hülle an - bei einer T- oder L-Form ein
+    riesiges Vieleck -, ineinandergeschobene Teile passten dann nicht mehr,
+    das überzählige landete neben dem Bett bzw. auf Platte 2 und wurde
+    nicht mitgeslict (live: Brillenhalter, 2 geplant, 1 gedruckt).
+    Inzwischen kennt die Anordnung die Sperrflächen (Nesting\\BedKeepOut,
+    bed_exclude_area im ausgelieferten Druckerprofil), und
+    check_plate_layout() prüft vor jedem Slicen selbst, dass sich keine
+    Teile überschneiden und alle auf dem Bett außerhalb der Sperrfläche
+    liegen - sonst scheitert der Auftrag mit einer klaren Meldung, statt
+    still Teile wegzulassen.
 
 Vor dem produktiven Einsatz unbedingt mit einer einzelnen, unkritischen
 Platte von Hand gegenprüfen (Ergebnis-3MF in Bambu Studio öffnen und die
@@ -76,6 +76,8 @@ import signal
 import subprocess
 import sys
 import time
+import zipfile
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Optional
 
@@ -125,7 +127,7 @@ DEFAULT_SLICER_ARGS_TEMPLATE = (
     "{input} "
     "--load-settings {printer};{process} "
     "--load-filaments {filament} "
-    "--arrange 1 "
+    "--arrange 0 "
     "--slice 1 "
     "--allow-newer-file "
     "--outputdir {workdir} "
@@ -166,6 +168,11 @@ class Config:
     # Aufrufvorlage, siehe DEFAULT_SLICER_ARGS_TEMPLATE. Nur anpassen,
     # wenn eine andere OrcaSlicer-Version andere Flags braucht.
     SLICER_ARGS_TEMPLATE = os.environ.get("SLICER_ARGS_TEMPLATE", "").strip() or DEFAULT_SLICER_ARGS_TEMPLATE
+
+    # Vor dem Slicen prüfen, dass sich die Teile der Platte nicht
+    # überschneiden und auf dem Bett außerhalb der Sperrfläche liegen
+    # (siehe check_plate_layout()). Nur zur Fehlersuche abschalten.
+    PLATE_LAYOUT_CHECK = _env_bool("PLATE_LAYOUT_CHECK", True)
 
     # Wie lange ein einzelner Slice-Lauf höchstens dauern darf, bevor der
     # Worker ihn abbricht und als fehlgeschlagen meldet (Sekunden). Eine
@@ -855,6 +862,194 @@ ORCA_EXIT_HINTS = {
 }
 
 
+# ---------------------------------------------------------------------
+# Plattenanordnung vor dem Slicen prüfen
+# ---------------------------------------------------------------------
+
+NS_CORE = "{http://schemas.microsoft.com/3dmanufacturing/core/2015/02}"
+NS_PROD = "{http://schemas.microsoft.com/3dmanufacturing/production/2015/06}"
+IDENTITAET = [1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0, 0, 0]
+
+
+def parse_transform(text: str) -> list:
+    """3MF-Transformation ("m00 m01 m02 m10 m11 m12 m20 m21 m22 tx ty tz",
+    Zeilenvektor-Konvention) als Liste; leer/kaputt = Identität."""
+    try:
+        werte = [float(v) for v in str(text or "").split()]
+    except ValueError:
+        return list(IDENTITAET)
+    return werte if len(werte) == 12 else list(IDENTITAET)
+
+
+def combine_transforms(innen: list, aussen: list) -> list:
+    """Erst innen, dann aussen anwenden."""
+    a, b = innen, aussen
+    r = [0.0] * 12
+    for row in range(3):
+        for col in range(3):
+            r[row * 3 + col] = sum(a[row * 3 + k] * b[k * 3 + col] for k in range(3))
+    for col in range(3):
+        r[9 + col] = sum(a[9 + k] * b[k * 3 + col] for k in range(3)) + b[9 + col]
+    return r
+
+
+def _objects_of(zf: zipfile.ZipFile, path: str, cache: dict) -> dict:
+    """Objekte einer Modelldatei: id -> ("mesh", Punkte, Dreiecke) oder
+    ("components", [(Pfad, objectid, Transformation), ...])."""
+    if path in cache:
+        return cache[path]
+    objekte: dict = {}
+    try:
+        root = ET.fromstring(zf.read(path.lstrip("/")))
+    except (KeyError, ET.ParseError):
+        cache[path] = objekte
+        return objekte
+    for obj in root.iter(NS_CORE + "object"):
+        oid = obj.get("id")
+        mesh = obj.find(NS_CORE + "mesh")
+        if mesh is not None:
+            punkte = [(float(v.get("x", 0)), float(v.get("y", 0)), float(v.get("z", 0))) for v in mesh.iter(NS_CORE + "vertex")]
+            dreiecke = [(int(t.get("v1", 0)), int(t.get("v2", 0)), int(t.get("v3", 0))) for t in mesh.iter(NS_CORE + "triangle")]
+            objekte[oid] = ("mesh", punkte, dreiecke)
+            continue
+        teile = []
+        for comp in obj.iter(NS_CORE + "component"):
+            teile.append((comp.get(NS_PROD + "path") or path, comp.get("objectid"), parse_transform(comp.get("transform"))))
+        objekte[oid] = ("components", teile)
+    cache[path] = objekte
+    return objekte
+
+
+def _meshes_of(zf: zipfile.ZipFile, path: str, oid: str, transform: list, cache: dict, tiefe: int = 0) -> list:
+    """Alle Netze eines Objekts samt aufgelöster Gesamt-Transformation."""
+    if tiefe > 5:
+        return []
+    eintrag = _objects_of(zf, path, cache).get(oid)
+    if not eintrag:
+        return []
+    if eintrag[0] == "mesh":
+        return [(eintrag[1], eintrag[2], transform)]
+    netze = []
+    for sub_path, sub_id, sub_t in eintrag[1]:
+        netze += _meshes_of(zf, sub_path, sub_id, combine_transforms(sub_t, transform), cache, tiefe + 1)
+    return netze
+
+
+def _raster_footprint(netze: list, zelle: float) -> set:
+    """Grundriss von oben als Menge von Rasterzellen (Zellmittelpunkt liegt
+    in mindestens einem Dreieck). Zwei Teile, die sich nicht überschneiden,
+    teilen nie eine Zelle - ein Mittelpunkt liegt in höchstens einem Teil."""
+    zellen = set()
+    for punkte, dreiecke, t in netze:
+        xy = [(x * t[0] + y * t[3] + z * t[6] + t[9], x * t[1] + y * t[4] + z * t[7] + t[10]) for x, y, z in punkte]
+        for i1, i2, i3 in dreiecke:
+            try:
+                a, b, c = xy[i1], xy[i2], xy[i3]
+            except IndexError:
+                continue
+            x0, x1 = min(a[0], b[0], c[0]), max(a[0], b[0], c[0])
+            y0, y1 = min(a[1], b[1], c[1]), max(a[1], b[1], c[1])
+            for gy in range(int(y0 // zelle), int(y1 // zelle) + 1):
+                py = (gy + 0.5) * zelle
+                for gx in range(int(x0 // zelle), int(x1 // zelle) + 1):
+                    px = (gx + 0.5) * zelle
+                    d1 = (px - b[0]) * (a[1] - b[1]) - (a[0] - b[0]) * (py - b[1])
+                    d2 = (px - c[0]) * (b[1] - c[1]) - (b[0] - c[0]) * (py - c[1])
+                    d3 = (px - a[0]) * (c[1] - a[1]) - (c[0] - a[0]) * (py - a[1])
+                    if not ((d1 < 0 or d2 < 0 or d3 < 0) and (d1 > 0 or d2 > 0 or d3 > 0)):
+                        zellen.add((gx, gy))
+    return zellen
+
+
+def plate_footprints(input_path: Path, zelle: float = 1.0) -> list:
+    """Grundriss jeder Platzierung (<build><item>) der Platte."""
+    cache: dict = {}
+    with zipfile.ZipFile(input_path) as zf:
+        try:
+            root = ET.fromstring(zf.read("3D/3dmodel.model"))
+        except (KeyError, ET.ParseError):
+            return []
+        build = root.find(NS_CORE + "build")
+        if build is None:
+            return []
+        teile = []
+        for nummer, item in enumerate(build.iter(NS_CORE + "item"), start=1):
+            if item.get("printable", "1") == "0":
+                continue
+            netze = _meshes_of(zf, "/3D/3dmodel.model", item.get("objectid"), parse_transform(item.get("transform")), cache)
+            teile.append((nummer, _raster_footprint(netze, zelle)))
+        return teile
+
+
+def _point_in_polygon(x: float, y: float, polygon: list) -> bool:
+    innen = False
+    j = len(polygon) - 1
+    for i in range(len(polygon)):
+        xi, yi = polygon[i]
+        xj, yj = polygon[j]
+        if (yi > y) != (yj > y) and x < (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi:
+            innen = not innen
+        j = i
+    return innen
+
+
+def _profile_polygon(werte) -> list:
+    punkte = []
+    for eintrag in werte or []:
+        if isinstance(eintrag, str) and "x" in eintrag:
+            try:
+                x, y = (float(v) for v in eintrag.split("x", 1))
+            except ValueError:
+                continue
+            punkte.append((x, y))
+    return punkte
+
+
+def check_plate_layout(input_path: Path, printer_json: Path, zelle: float = 1.0) -> str:
+    """Leer, wenn die Platte so geslict werden kann, sonst die Begründung.
+
+    Prüft je Teil, dass es ganz im druckbaren Bereich (printable_area) und
+    außerhalb der Sperrfläche (bed_exclude_area) liegt, und dass sich keine
+    zwei Teile überschneiden. Lässt sich die Platte nicht auswerten, wird
+    nicht blockiert (leere Rückgabe) - OrcaSlicer lehnt dann selbst ab, was
+    außerhalb des Betts liegt.
+    """
+    try:
+        teile = plate_footprints(input_path, zelle)
+    except (OSError, zipfile.BadZipFile, ValueError) as exc:
+        log.warning("Plattenprüfung übersprungen (Datei nicht auswertbar): %s", exc)
+        return ""
+
+    teile = [(n, z) for n, z in teile if z]
+    if not teile:
+        log.warning("Plattenprüfung übersprungen: keine auswertbare Geometrie gefunden.")
+        return ""
+
+    try:
+        profil = json.loads(printer_json.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        profil = {}
+    bett = _profile_polygon(profil.get("printable_area")) or [(0, 0), (256, 0), (256, 256), (0, 256)]
+    sperre = _profile_polygon(profil.get("bed_exclude_area"))
+    bx0, bx1 = min(p[0] for p in bett), max(p[0] for p in bett)
+    by0, by1 = min(p[1] for p in bett), max(p[1] for p in bett)
+
+    for nummer, zellen in teile:
+        for gx, gy in zellen:
+            px, py = (gx + 0.5) * zelle, (gy + 0.5) * zelle
+            if not (bx0 <= px <= bx1 and by0 <= py <= by1):
+                return f"Teil {nummer} der Platte ragt über das Druckbett hinaus - bitte die Platte neu anordnen."
+            if len(sperre) >= 3 and _point_in_polygon(px, py, sperre):
+                return f"Teil {nummer} der Platte liegt in der Sperrfläche des Druckers (Kalibrierlinie/Sperrecke vorn) - bitte die Platte neu anordnen."
+
+    for i in range(len(teile)):
+        for j in range(i + 1, len(teile)):
+            if teile[i][1] & teile[j][1]:
+                return f"Teil {teile[i][0]} und Teil {teile[j][0]} der Platte überschneiden sich - bitte die Platte neu anordnen."
+
+    return ""
+
+
 def build_slicer_command(
     template: str,
     slicer_cli: str,
@@ -1171,6 +1366,14 @@ def process_job(api: ApiClient, job: dict) -> None:
             ", …" if len(dropped) > 12 else "",
         )
     sanitize_model_settings(input_path)
+
+    if Config.PLATE_LAYOUT_CHECK:
+        problem = check_plate_layout(input_path, printer_json)
+        if problem:
+            log.error("Auftrag %s: %s", job_id, problem)
+            api.fail(job_id, problem)
+            prune_old_work_dirs()
+            return
 
     slice_ok, message = run_slicer(input_path, output_path, printer_json, filament_json, process_json)
 
