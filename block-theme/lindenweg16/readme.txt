@@ -254,6 +254,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.8.0 =
+* Mein Konto: Menü stand auf manchen Seiten rechts und der Inhalt in der schmalen linken Spalte – WooCommerces Clearfix wurde im Grid zur unsichtbaren ersten Zelle
 * Gestaltung der Prämien-Teile (Konto-Übersicht, Prämienkarte, Punkte in Warenkorb und Kasse, Einlösen, Bewertungsfotos, Geburtstagsfeld) liegt jetzt im ERP-Plugin 0.57.0 – sie funktioniert damit auch, wenn das Theme noch nicht aktualisiert ist; das Theme behält Menü-Seitenleiste und WooCommerce-Korrekturen
 
 = 1.7.0 =

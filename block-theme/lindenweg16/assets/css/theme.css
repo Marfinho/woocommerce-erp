@@ -5613,6 +5613,24 @@ body div.wpforms-container-full .wpforms-form :is(button[type="submit"], .wpform
 		grid-column: 1 / -1;
 	}
 
+	/* WooCommerce setzt hier einen Clearfix (::before/::after mit
+	   display: table). Im Grid wird das ein unsichtbares erstes Element,
+	   das die linke Zelle belegt – das Menü rutschte nach rechts und der
+	   Inhalt in die schmale Spalte darunter. */
+	.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation)::before,
+	.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation)::after {
+		content: none;
+		display: none;
+	}
+
+	.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation) > .woocommerce-MyAccount-navigation {
+		grid-column: 1;
+	}
+
+	.woocommerce-account .woocommerce:has(> .woocommerce-MyAccount-navigation) > .woocommerce-MyAccount-content {
+		grid-column: 2;
+	}
+
 	.woocommerce-account .woocommerce-MyAccount-navigation {
 		position: sticky;
 		top: calc(var(--lw-header-top) + var(--lw-header-space));
