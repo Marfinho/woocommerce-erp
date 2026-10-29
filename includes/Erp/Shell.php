@@ -49,6 +49,7 @@ class Shell {
 		add_filter( 'query_vars', array( $this, 'query_vars' ) );
 		add_action( 'template_redirect', array( $this, 'maybe_render' ), 1 );
 		add_action( 'admin_bar_menu', array( $this, 'admin_bar_link' ), 90 );
+		add_filter( 'show_admin_bar', array( $this, 'show_admin_bar' ) );
 		add_filter( 'login_redirect', array( $this, 'login_redirect' ), 20, 3 );
 
 		if ( is_admin() ) {
@@ -119,6 +120,20 @@ class Shell {
 		$vars[] = self::QUERY_VAR;
 
 		return $vars;
+	}
+
+	/**
+	 * Adminleiste im Frontend nur für Team: Normale Kunden-Konten sehen sie nicht.
+	 *
+	 * @param bool $show Ob die Leiste angezeigt wird.
+	 * @return bool
+	 */
+	public function show_admin_bar( $show ) {
+		if ( ! $show ) {
+			return false;
+		}
+
+		return Access::has_any() || current_user_can( 'edit_posts' );
 	}
 
 	/**
