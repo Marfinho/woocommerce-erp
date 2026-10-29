@@ -102,6 +102,8 @@ class Permissions {
 		return array(
 			// Verkauf.
 			'verkauf.shop_orders'     => self::def( 'verkauf', __( 'Shop-Bestellungen', 'lindenweg16' ), __( 'WooCommerce-Bestellungen ansehen und bearbeiten. Braucht zusätzlich die WordPress-Rolle „Shop-Manager“.', 'lindenweg16' ), array(), $page ),
+			'verkauf.shop_orders.status' => self::def( 'verkauf', __( 'Shop-Bestellung: Status und Notizen', 'lindenweg16' ), __( 'Status einer Shop-Bestellung ändern, Notizen anlegen und an den Kunden schicken (löst eine E-Mail aus).', 'lindenweg16' ), array(), $cap, array( 'verkauf.shop_orders' ) ),
+			'verkauf.shop_orders.erstatten' => self::def( 'verkauf', __( 'Shop-Bestellung erstatten', 'lindenweg16' ), __( 'Geld zurückgeben: ganz oder teilweise erstatten, wahlweise über den Zahlungsanbieter und mit Lagerrückbuchung. Gibt Geld heraus – nur vertrauenswürdigen Personen geben.', 'lindenweg16' ), array(), $cap, array( 'verkauf.shop_orders' ) ),
 			'verkauf.shop_products'   => self::def( 'verkauf', __( 'Shop-Produkte', 'lindenweg16' ), __( 'Produkte im Shop pflegen. Braucht zusätzlich die WordPress-Rolle „Shop-Manager“.', 'lindenweg16' ), array(), $page ),
 			'verkauf.orders'          => self::def( 'verkauf', __( 'Aufträge', 'lindenweg16' ), __( 'Betriebsaufträge zu Bestellungen: offene Aufträge, Positionen, Status.', 'lindenweg16' ), array( $production ), $page ),
 			'verkauf.orders.status'   => self::def( 'verkauf', __( 'Auftragsstatus ändern', 'lindenweg16' ), __( 'Aufträge bestätigen, stornieren oder fertigmelden.', 'lindenweg16' ), array( $production ), $cap, array( 'verkauf.orders' ) ),

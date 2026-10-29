@@ -694,7 +694,7 @@
 		var h = ui.h;
 		var f = { status: '', q: '', page: 1 };
 
-		ui.pageHead('Shop-Bestellungen', 'Was im Shop bestellt wurde. Bearbeiten und Erstatten bleibt in WooCommerce.',
+		ui.pageHead('Shop-Bestellungen', 'Was im Shop bestellt wurde. „Ansehen“ zeigt die Bestellung mit Status, Notizen und Erstattung.',
 			item.path ? h('a', { class: 'btn', href: ui.config.adminUrl + item.path, target: '_blank', rel: 'noopener' }, ui.ico('ext'), 'WooCommerce öffnen') : null);
 
 		if (item.locked) {
@@ -748,6 +748,7 @@
 				h('small', null, [ui.when(o.ts), o.company, o.items + (o.items === 1 ? ' Stück' : ' Stück'), o.method].filter(Boolean).join(' · ')));
 			var actions = h('div', { class: 'vk-actions' },
 				d_can(o) ? h('a', { class: 'btn', href: '#/bestellung/' + o.id }, o.ship ? 'Versand' : 'Akte') : null,
+				h('a', { class: 'btn', href: '#/shop/' + o.id }, 'Ansehen'),
 				h('a', { class: 'btn', href: '#/woo/' + o.id }, 'In WooCommerce öffnen'));
 			return h('div', { class: 'row-card vk-shop' }, main,
 				h('div', { class: 'row-num' }, ui.money(o.total, o.currency || 'EUR'), o.refunded > 0 ? h('small', { class: 'muted' }, ' −' + ui.money(o.refunded, o.currency || 'EUR')) : null),
@@ -773,6 +774,161 @@
 		}
 
 		load();
+	};
+
+	// Eine Shop-Bestellung im ERP: #/shop/<Bestell-ID> – ansehen, Status, Notiz, erstatten.
+	UI.routes['shop'] = function (r, ui) {
+		var h = ui.h;
+		var id = parseInt(r.id, 10) || 0;
+
+		ui.section('shop-bestellungen');
+		ui.setHead('Shop-Bestellung', 'Verkauf');
+		ui.view().appendChild(backLink(ui, '#/seite/shop-bestellungen', 'Alle Shop-Bestellungen'));
+
+		var box = h('div');
+		ui.view().appendChild(box);
+		box.appendChild(loading(ui));
+
+		function eur(n, cur) { return ui.money(n, cur || 'EUR'); }
+		function num(txt) {
+			var x = String(txt).replace(/[^0-9,.\-]/g, '');
+			if (x.indexOf(',') !== -1) { x = x.replace(/\./g, '').replace(',', '.'); }
+			var n = parseFloat(x);
+			return isNaN(n) || n < 0 ? 0 : n;
+		}
+
+		function paint(o) {
+			box.textContent = '';
+			var cur = o.currency;
+
+			box.appendChild(h('div', { class: 'page-head' },
+				h('div', null, h('h2', null, 'Bestellung #' + o.number), h('p', { class: 'muted', style: 'margin:4px 0 0' }, [ui.when(o.ts), o.method, o.paid ? 'bezahlt' : 'nicht bezahlt'].filter(Boolean).join(' · '))),
+				h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;align-items:center' }, h('span', { class: 'tag ' + (o.status === 'completed' ? 'now' : 'later') }, o.label),
+					h('a', { class: 'btn', href: '#/woo/' + o.id }, 'In WooCommerce öffnen'))));
+
+			// Kunde.
+			box.appendChild(h('div', { class: 'grid cards', style: 'margin-bottom:14px' },
+				h('div', { class: 'card' }, h('h3', null, 'Rechnungsadresse'), o.billing.map(function (l) { return h('div', null, l); }),
+					o.email ? h('div', { class: 'muted' }, o.email) : null, o.phone ? h('div', { class: 'muted' }, o.phone) : null),
+				h('div', { class: 'card' }, h('h3', null, 'Lieferadresse'), o.shipping_to.length ? o.shipping_to.map(function (l) { return h('div', null, l); }) : h('span', { class: 'muted' }, 'wie Rechnungsadresse'),
+					o.customer_note ? h('p', null, h('b', null, 'Kundennotiz: '), o.customer_note) : null)));
+
+			// Positionen + Erstattungsformular.
+			var picks = {};          // Positions-ID → Stück
+			var shipPick = {};       // Versand-ID → true
+			var free = h('input', { class: 'field', type: 'text', inputmode: 'decimal', placeholder: '0,00', style: 'max-width:9em' });
+			var reason = h('input', { class: 'field', type: 'text', placeholder: 'Grund (erscheint in WooCommerce)' });
+			var restock = h('input', { type: 'checkbox' });
+			var pay = h('input', { type: 'checkbox', checked: true });
+			var sumEl = h('b', null);
+			var rows = h('tbody');
+
+			function sum() {
+				var x = num(free.value);
+				o.items.forEach(function (it) { x += (picks[it.id] || 0) * it.unit; });
+				o.shipping.forEach(function (s) { if (shipPick[s.id]) { x += s.open; } });
+				sumEl.textContent = eur(x, cur);
+				return x;
+			}
+
+			o.items.forEach(function (it) {
+				var q = h('input', { class: 'field', type: 'number', min: '0', max: String(it.open), step: '1', value: '0', disabled: !o.can.refund || it.open < 1, style: 'width:5em', 'aria-label': 'Stück erstatten: ' + it.name });
+				q.addEventListener('input', function () { var v = Math.max(0, Math.min(it.open, parseInt(q.value, 10) || 0)); picks[it.id] = v; sum(); });
+				rows.appendChild(h('tr', null, h('td', null, it.name, it.sku ? h('div', { class: 'muted' }, it.sku) : null),
+					h('td', { class: 'num' }, String(it.qty) + (it.refunded ? ' (−' + it.refunded + ')' : '')),
+					h('td', { class: 'num' }, eur(it.gross, cur)),
+					o.can.refund ? h('td', { class: 'num' }, q) : null));
+			});
+			o.shipping.forEach(function (s) {
+				var c = h('input', { type: 'checkbox', disabled: !o.can.refund || s.open <= 0, 'aria-label': 'Versand erstatten: ' + s.name });
+				c.addEventListener('change', function () { shipPick[s.id] = c.checked; sum(); });
+				rows.appendChild(h('tr', null, h('td', null, s.name), h('td', { class: 'num' }, '1'), h('td', { class: 'num' }, eur(s.gross, cur)),
+					o.can.refund ? h('td', { class: 'num' }, c, ' ', s.open > 0 ? eur(s.open, cur) : 'erstattet') : null));
+			});
+
+			var itemsCard = h('div', { class: 'card', style: 'margin-bottom:14px' },
+				h('h3', null, 'Positionen'),
+				h('div', { style: 'overflow-x:auto' }, h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Artikel'), h('th', { class: 'num' }, 'Stück'), h('th', { class: 'num' }, 'Brutto'), o.can.refund ? h('th', { class: 'num' }, 'Erstatten') : null)),
+					rows)),
+				h('div', { class: 'kv', style: 'margin-top:10px' }, h('span', null, 'Summe'), h('b', null, eur(o.total, cur)),
+					h('span', null, 'davon Steuer'), h('b', null, eur(o.tax, cur)),
+					h('span', null, 'bereits erstattet'), h('b', null, eur(o.refunded, cur)),
+					h('span', null, 'noch erstattbar'), h('b', null, eur(o.refundable, cur))));
+			box.appendChild(itemsCard);
+
+			if (o.can.refund && o.refundable > 0) {
+				var go = h('button', { class: 'btn primary', type: 'button' }, 'Erstatten');
+				go.addEventListener('click', function () {
+					var amount = sum();
+					if (amount <= 0) { ui.toast('Bitte Stückzahlen, Versand oder einen Betrag wählen.', true); return; }
+					if (amount > o.refundable + 0.001) { ui.toast('Mehr als noch erstattbar ist (' + eur(o.refundable, cur) + ').', true); return; }
+					var ask = 'Jetzt ' + eur(amount, cur) + ' erstatten?'
+						+ (pay.checked ? ' Das Geld geht über ' + (o.method || 'den Zahlungsanbieter') + ' an den Kunden zurück und lässt sich nicht zurückholen.' : ' Das Geld wird NICHT automatisch zurückgezahlt, das musst du von Hand tun.')
+						+ (restock.checked ? ' Die Ware wird ins Lager zurückgebucht.' : '');
+					if (!window.confirm(ask)) { return; }
+					var zeilen = o.items.filter(function (it) { return picks[it.id] > 0; }).map(function (it) { return { id: it.id, qty: picks[it.id] }; })
+						.concat(o.shipping.filter(function (s) { return shipPick[s.id]; }).map(function (s) { return { id: s.id, versand: true }; }));
+					go.disabled = true;
+					ui.api('shop-bestellung/erstattung', { method: 'POST', body: { id: o.id, zeilen: zeilen, frei: free.value, grund: reason.value, bestand: restock.checked, zahlung: pay.checked } })
+						.then(function (res) { ui.toast(res.message); paint(res.order); })
+						.catch(function (e) { go.disabled = false; ui.toast(e.message, true); });
+				});
+				box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' },
+					h('h3', null, 'Erstatten'),
+					h('p', { class: 'muted' }, 'Stückzahlen bei den Positionen eintragen, Versand abhaken oder unten einen freien Betrag (brutto) angeben. Der Betrag wird auf dem Server neu berechnet.'),
+					h('div', { style: 'display:grid;gap:10px' },
+						h('label', null, 'Freier Betrag zusätzlich (brutto) ', free),
+						h('label', null, 'Grund ', reason),
+						h('label', { class: 'chk' }, restock, ' Ware ins Lager zurückbuchen'),
+						h('label', { class: 'chk' }, pay, ' Geld über den Zahlungsanbieter zurückzahlen (' + (o.method || 'Zahlart unbekannt') + ')')),
+					h('div', { style: 'margin:12px 0;display:flex;gap:12px;align-items:baseline' }, h('span', null, 'Erstattung gesamt:'), sumEl),
+					go));
+				sum();
+			} else if (o.can.refund) {
+				box.appendChild(h('div', { class: 'notice' }, 'Es ist nichts mehr zu erstatten.'));
+			}
+
+			if (o.refunds.length) {
+				box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' }, h('h3', null, 'Bisherige Erstattungen'),
+					o.refunds.map(function (rf) { return h('div', null, ui.when(rf.ts) + ' · ' + eur(rf.amount, cur) + (rf.reason ? ' · ' + rf.reason : '') + (rf.by ? ' · ' + rf.by : '')); })));
+			}
+
+			// Status.
+			if (o.can.status) {
+				var sel = h('select', { class: 'field', style: 'max-width:16em' });
+				Object.keys(o.statuses).forEach(function (k) { sel.appendChild(h('option', { value: k, selected: k === o.status }, o.statuses[k])); });
+				var setBtn = h('button', { class: 'btn', type: 'button' }, 'Status ändern');
+				setBtn.addEventListener('click', function () {
+					if (sel.value === o.status) { ui.toast('Die Bestellung hat diesen Status schon.', true); return; }
+					if (!window.confirm('Status auf „' + o.statuses[sel.value] + '“ setzen? WooCommerce verschickt dazu womöglich eine E-Mail, und bei „storniert“ werden Rechnung und Lager zurückgebucht.')) { return; }
+					setBtn.disabled = true;
+					ui.api('shop-bestellung/status', { method: 'POST', body: { id: o.id, status: sel.value } })
+						.then(function (res) { ui.toast(res.message); paint(res.order); })
+						.catch(function (e) { setBtn.disabled = false; ui.toast(e.message, true); });
+				});
+				box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' }, h('h3', null, 'Status'), h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, sel, setBtn),
+					h('p', { class: 'muted' }, '„Erstattet“ lässt sich nicht von Hand setzen, es entsteht durch eine Erstattung.')));
+			}
+
+			// Notizen.
+			var text = h('textarea', { class: 'field', rows: '2', placeholder: 'Notiz …' });
+			var toCustomer = h('input', { type: 'checkbox' });
+			var noteBtn = h('button', { class: 'btn', type: 'button' }, 'Notiz speichern');
+			noteBtn.addEventListener('click', function () {
+				if (!text.value.trim()) { ui.toast('Bitte einen Text eintragen.', true); return; }
+				if (toCustomer.checked && !window.confirm('Die Notiz geht als E-Mail an den Kunden. Senden?')) { return; }
+				noteBtn.disabled = true;
+				ui.api('shop-bestellung/notiz', { method: 'POST', body: { id: o.id, text: text.value, kunde: toCustomer.checked } })
+					.then(function (res) { ui.toast(res.message); paint(res.order); })
+					.catch(function (e) { noteBtn.disabled = false; ui.toast(e.message, true); });
+			});
+			box.appendChild(h('div', { class: 'card' }, h('h3', null, 'Notizen'),
+				o.can.status ? h('div', { style: 'display:grid;gap:8px;margin-bottom:12px' }, text, h('label', { class: 'chk' }, toCustomer, ' An den Kunden schicken (E-Mail)'), h('div', null, noteBtn)) : null,
+				o.notes.length ? o.notes.map(function (n) { return h('div', { style: 'padding:6px 0;border-top:1px solid var(--line)' }, h('small', { class: 'muted' }, ui.when(n.ts) + (n.by ? ' · ' + n.by : '') + (n.customer ? ' · an Kunden' : '')), h('div', null, n.text)); }) : h('p', { class: 'muted' }, 'Keine Notizen.')));
+		}
+
+		ui.api('shop-bestellung?id=' + id).then(paint).catch(function (e) { errBox(ui, box, e); });
 	};
 
 	// Eine WooCommerce-Bestellung eingebettet öffnen: #/woo/<Bestell-ID>

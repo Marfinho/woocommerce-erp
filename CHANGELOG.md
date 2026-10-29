@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.64.0] – 2026-10-29
+
+### Shop-Bestellungen im ERP bearbeiten und erstatten
+- **Neue Bestellansicht** (Verkauf → Shop-Bestellungen → „Ansehen“): Adressen, Positionen mit Stück und Brutto, Summe, Steuer, bisherige Erstattungen und Notizen. Weiter möglich: „In WooCommerce öffnen“.
+- **Erstatten im ERP:** ganze oder teilweise Erstattung nach Stückzahl je Position, Versand und/oder freiem Bruttobetrag, mit Grund. Wahlweise Geld über den Zahlungsanbieter zurückzahlen und Ware ins Lager zurückbuchen. Es läuft über `wc_create_refund`, also mit denselben Folgen wie in WooCommerce (Rechnung, Lager, Gateway). Der Betrag wird auf dem Server neu gerechnet, nie mehr als noch erstattbar, Sperre gegen Doppelklick.
+- **Status ändern und Notizen** (intern oder per E-Mail an den Kunden). „Erstattet“ lässt sich nicht von Hand setzen.
+- **Zwei neue Rechte:** `verkauf.shop_orders.status` und `verkauf.shop_orders.erstatten` (Voraussetzung: `verkauf.shop_orders`). Das Erstatten steht in keiner Vorlage, es wird einzeln vergeben. Wie die Liste braucht die Person weiterhin die WordPress-Rolle „Shop-Manager“.
+- Jede Änderung steht im Audit-Log und als Notiz an der Bestellung.
+- Nicht in echtem WordPress und nicht mit einem echten Zahlungsanbieter geprüft – bitte zuerst mit einer Testbestellung erstatten (Zahlungsanbieter-Haken aus), dann mit einem Cent-Betrag über den echten Anbieter.
+
 ## [0.63.0] – 2026-10-28
 
 ### 16 neue Push-Benachrichtigungen, jede Person wählt selbst
