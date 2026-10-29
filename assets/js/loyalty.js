@@ -4,6 +4,30 @@
 
 	$( function () {
 
+		// Konto: Die Leiste wechselt zwischen ihren Zielen. Ohne Skript stehen alle untereinander.
+		document.querySelectorAll( '[data-lw16-rotor]' ).forEach( function ( box ) {
+			var slides = box.querySelectorAll( '.lw16-konto__slide' );
+			if ( slides.length < 2 ) { return; }
+			box.classList.add( 'is-rotiert' );
+			var i = 0;
+			var timer = null;
+			function show( n ) {
+				i = n % slides.length;
+				slides.forEach( function ( s, k ) { s.classList.toggle( 'is-aktiv', k === i ); } );
+			}
+			function start() {
+				if ( ! timer && ! window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches ) {
+					timer = setInterval( function () { show( i + 1 ); }, 5000 );
+				}
+			}
+			function stop() { clearInterval( timer ); timer = null; }
+			box.addEventListener( 'mouseenter', stop );
+			box.addEventListener( 'mouseleave', start );
+			box.addEventListener( 'focusin', stop );
+			box.addEventListener( 'focusout', start );
+			start();
+		} );
+
 		// Empfehlungslink kopieren.
 		$( document ).on( 'click', '#lw16-copy-btn', function () {
 			var input = document.getElementById( $( this ).data( 'target' ) );

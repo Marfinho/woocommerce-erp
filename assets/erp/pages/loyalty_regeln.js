@@ -213,4 +213,181 @@
 			}
 		}).catch(function (e) { fail(ui, box, e); });
 	};
+	/* ---------------- Pre-Sale ---------------- */
+
+	UI.loyaltyPresale = function (box, ui) {
+		var h = ui.h;
+		box.textContent = '';
+		box.appendChild(h('div', { class: 'card' }, 'Wird geladen …'));
+
+		function reload() { UI.loyaltyPresale(box, ui); }
+
+		ui.api('loyalty/regeln').then(function (d) {
+			box.textContent = '';
+			var catName = {};
+			d.categories.forEach(function (c) { catName[c.id] = c.name; });
+			var termName = {};
+			d.merkmale.forEach(function (m) { m.terms.forEach(function (t) { termName[m.taxonomy + ':' + t.slug] = m.label + ': ' + t.name; }); });
+			var tiers = d.tiers || [];
+
+			box.appendChild(h('div', { class: 'card lr-intro' },
+				h('div', null,
+					h('h3', null, 'Pre-Sale'),
+					h('p', { class: 'muted' }, 'Bestimmte Produkte, Kategorien oder Merkmale (z. B. Farbe: Rot) dürfen bis zu einem Tag nur Kunden ab einer Stufe kaufen. Alle anderen sehen den Hinweis, wann es für sie losgeht. Du als Shop-Verwalter siehst und kaufst immer alles.')),
+				d.can_edit && tiers.length > 1 ? h('button', { class: 'btn primary', type: 'button', onclick: function () { edit(null); } }, 'Neuer Pre-Sale') : null));
+
+			if (tiers.length < 2) {
+				box.appendChild(h('div', { class: 'notice warn' }, 'Für einen Pre-Sale braucht es mindestens zwei Stufen. Lege sie unter Regeln an.'));
+				return;
+			}
+			if (!d.presales.length) {
+				box.appendChild(h('div', { class: 'notice' }, 'Noch kein Pre-Sale.'));
+				return;
+			}
+
+			box.appendChild(h('div', { class: 'rows' }, d.presales.map(function (p) {
+				var st = STATE[p.state] || ['', ''];
+				var what = []
+					.concat(Object.keys(p.produkte_namen || {}).map(function (id) { return p.produkte_namen[id] || ('Produkt ' + id); }))
+					.concat((p.kategorien || []).map(function (id) { return 'Kategorie ' + (catName[id] || id); }))
+					.concat((p.merkmale || []).map(function (m) { return termName[m] || m; }));
+				var tier = tiers[p.stufe] ? tiers[p.stufe].name : ('Stufe ' + p.stufe);
+				return h('div', { class: 'row-card lr-camp' },
+					h('div', { class: 'row-main' },
+						h('b', null, p.name),
+						h('small', null, 'Vorab ' + fmtDate(p.von) + ' bis ' + fmtDate(p.frei_ab) + ' (für alle ab ' + fmtDate(p.frei_ab) + ') · ' + what.join(', '))),
+					h('div', { class: 'row-num' }, 'ab ' + tier),
+					h('div', { class: 'row-tags' },
+						h('span', { class: 'tag ' + st[1] }, p.state === 'vorbei' ? 'für alle offen' : st[0]),
+						d.can_edit ? h('button', { class: 'btn', type: 'button', onclick: function () { edit(p); } }, 'Bearbeiten') : null));
+			})));
+
+			function edit(p) {
+				var isNew = !p;
+				var tomorrow = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+				p = p || { name: '', von: d.today, frei_ab: tomorrow, stufe: Math.max(1, tiers.length - 2), produkte: [], produkte_namen: {}, kategorien: [], merkmale: [] };
+				var produkte = {};
+				(p.produkte || []).forEach(function (id) { produkte[id] = (p.produkte_namen || {})[id] || ('Produkt ' + id); });
+				var merkmale = (p.merkmale || []).slice();
+
+				var name = h('input', { class: 'field', id: 'lr-p-name', value: p.name, maxlength: 80, placeholder: 'z. B. Herbst-Drop' });
+				var von = h('input', { class: 'field', id: 'lr-p-von', type: 'date', value: p.von });
+				var frei = h('input', { class: 'field', id: 'lr-p-frei', type: 'date', value: p.frei_ab });
+				var stufe = h('select', { class: 'field', id: 'lr-p-stufe' });
+				tiers.forEach(function (t, i) {
+					if (i === 0) { return; }
+					var o = h('option', { value: String(i) }, 'ab ' + t.name + (i < tiers.length - 1 ? ' (und höher)' : ''));
+					if (Number(p.stufe) === i) { o.selected = true; }
+					stufe.appendChild(o);
+				});
+
+				// Einzelne Produkte: Suche, Auswahl als Chips.
+				var chips = h('div', { class: 'lr-chips' });
+				var results = h('div', { class: 'lr-results' });
+				var search = h('input', { class: 'field', type: 'search', placeholder: 'Produkt suchen …', 'aria-label': 'Produkt suchen' });
+				function paintChips() {
+					chips.textContent = '';
+					Object.keys(produkte).forEach(function (id) {
+						var x = h('button', { class: 'btn', type: 'button', 'aria-label': produkte[id] + ' entfernen' }, produkte[id] + ' ×');
+						x.addEventListener('click', function () { delete produkte[id]; paintChips(); });
+						chips.appendChild(x);
+					});
+				}
+				var timer = null;
+				search.addEventListener('input', function () {
+					clearTimeout(timer);
+					timer = setTimeout(function () {
+						results.textContent = '';
+						if (search.value.trim().length < 2) { return; }
+						ui.api('loyalty/presale/produkte?q=' + encodeURIComponent(search.value.trim())).then(function (list) {
+							results.textContent = '';
+							list.forEach(function (r) {
+								var b = h('button', { class: 'btn', type: 'button' }, r.name);
+								b.addEventListener('click', function () { produkte[r.id] = r.name; paintChips(); results.textContent = ''; search.value = ''; });
+								results.appendChild(b);
+							});
+							if (!list.length) { results.appendChild(h('small', { class: 'muted' }, 'Nichts gefunden.')); }
+						}).catch(function () {});
+					}, 250);
+				});
+				paintChips();
+
+				var cats = d.categories.map(function (cat) {
+					var cb = h('input', { type: 'checkbox', value: String(cat.id), checked: (p.kategorien || []).indexOf(cat.id) > -1 });
+					return h('label', { class: 'lr-cat' }, cb, h('span', null, cat.name));
+				});
+
+				// Merkmale: Gruppe wählen, Werte ankreuzen.
+				var mSel = h('select', { class: 'field', 'aria-label': 'Merkmal' }, h('option', { value: '' }, 'Merkmal wählen …'));
+				d.merkmale.forEach(function (m) { mSel.appendChild(h('option', { value: m.taxonomy }, m.label)); });
+				var mTerms = h('div', { class: 'lr-cat-grid' });
+				var mChosen = h('div', { class: 'lr-chips' });
+				function paintMerk() {
+					mChosen.textContent = '';
+					merkmale.forEach(function (m) {
+						var x = h('button', { class: 'btn', type: 'button', 'aria-label': (termName[m] || m) + ' entfernen' }, (termName[m] || m) + ' ×');
+						x.addEventListener('click', function () { merkmale = merkmale.filter(function (v) { return v !== m; }); paintMerk(); paintTerms(); });
+						mChosen.appendChild(x);
+					});
+				}
+				function paintTerms() {
+					mTerms.textContent = '';
+					var grp = d.merkmale.filter(function (m) { return m.taxonomy === mSel.value; })[0];
+					if (!grp) { return; }
+					grp.terms.forEach(function (t) {
+						var key = grp.taxonomy + ':' + t.slug;
+						var cb = h('input', { type: 'checkbox', checked: merkmale.indexOf(key) > -1 });
+						cb.addEventListener('change', function () {
+							merkmale = merkmale.filter(function (v) { return v !== key; });
+							if (cb.checked) { merkmale.push(key); }
+							paintMerk();
+						});
+						mTerms.appendChild(h('label', { class: 'lr-cat' }, cb, h('span', null, t.name)));
+					});
+				}
+				mSel.addEventListener('change', paintTerms);
+				paintMerk();
+
+				var save = h('button', { class: 'btn primary', type: 'submit' }, isNew ? 'Pre-Sale anlegen' : 'Speichern');
+				var del = isNew ? null : h('button', { class: 'btn', type: 'button' }, 'Löschen');
+				var form = h('form', { class: 'lr-dlg' },
+					h('div', { class: 'lr-row' }, h('label', { for: 'lr-p-name' }, h('b', null, 'Name'), h('small', null, 'So steht er in deiner Übersicht.')), name),
+					h('div', { class: 'lr-two' },
+						h('div', { class: 'lr-row' }, h('label', { for: 'lr-p-von' }, h('b', null, 'Vorab-Verkauf ab')), von),
+						h('div', { class: 'lr-row' }, h('label', { for: 'lr-p-frei' }, h('b', null, 'Für alle ab'), h('small', null, 'Ab diesem Tag ist der Pre-Sale vorbei.')), frei)),
+					h('div', { class: 'lr-row' }, h('label', { for: 'lr-p-stufe' }, h('b', null, 'Vorab kaufen dürfen')), stufe),
+					h('fieldset', { class: 'lr-cats' }, h('legend', null, 'Einzelne Produkte'), search, results, chips),
+					h('fieldset', { class: 'lr-cats' }, h('legend', null, 'Ganze Kategorien'),
+						cats.length ? h('div', { class: 'lr-cat-grid' }, cats) : h('p', { class: 'muted' }, 'Keine Produktkategorien gefunden.')),
+					h('fieldset', { class: 'lr-cats' }, h('legend', null, 'Merkmale, z. B. Farbe: Rot'),
+						d.merkmale.length ? [mSel, mTerms, mChosen] : h('p', { class: 'muted' }, 'Keine Attribute oder Schlagwörter gefunden.')),
+					h('p', { class: 'muted small' }, 'Es reicht, wenn eines davon zutrifft. Bei Varianten zählt die gewählte Ausprägung: „Farbe: Rot“ sperrt nur die roten Varianten.'),
+					h('div', { class: 'lr-actions' }, del, save));
+				var dialog = ui.dlg(isNew ? 'Neuer Pre-Sale' : 'Pre-Sale bearbeiten', form);
+
+				form.addEventListener('submit', function (e) {
+					e.preventDefault();
+					save.disabled = true;
+					var body = {
+						id: isNew ? '' : p.id, name: name.value, von: von.value, frei_ab: frei.value, stufe: parseInt(stufe.value, 10),
+						produkte: Object.keys(produkte).map(function (id) { return parseInt(id, 10); }),
+						kategorien: cats.map(function (l) { return l.querySelector('input'); }).filter(function (i) { return i.checked; }).map(function (i) { return parseInt(i.value, 10); }),
+						merkmale: merkmale
+					};
+					ui.api('loyalty/presale', { method: 'POST', body: body })
+						.then(function (r) { ui.toast(r.message); dialog.close(); reload(); })
+						.catch(function (err) { save.disabled = false; ui.toast(err.message, true); });
+				});
+				if (del) {
+					del.addEventListener('click', function () {
+						if (!window.confirm('Pre-Sale „' + p.name + '“ löschen? Die Produkte sind dann sofort für alle kaufbar.')) { return; }
+						del.disabled = true;
+						ui.api('loyalty/presale/' + p.id + '/loeschen', { method: 'POST', body: {} })
+							.then(function (r) { ui.toast(r.message); dialog.close(); reload(); })
+							.catch(function (err) { del.disabled = false; ui.toast(err.message, true); });
+					});
+				}
+			}
+		}).catch(function (e) { fail(ui, box, e); });
+	};
 })();

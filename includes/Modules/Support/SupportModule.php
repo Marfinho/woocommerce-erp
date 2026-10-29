@@ -276,6 +276,7 @@ class SupportModule {
 			array( '%d', '%d', '%s', '%s', '%s', '%s' )
 		);
 		$ticket_id = (int) $wpdb->insert_id;
+		do_action( 'lw16_support_ticket_created', $ticket_id, sanitize_text_field( wp_unslash( $_POST['betreff'] ?? '' ) ) );
 
 		// Manager benachrichtigen.
 		$emails = Roles::get_manager_emails();

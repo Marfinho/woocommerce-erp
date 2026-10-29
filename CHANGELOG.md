@@ -7,6 +7,42 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.63.0] – 2026-10-28
+
+### 16 neue Push-Benachrichtigungen, jede Person wählt selbst
+Im ERP unter Profilmenü → **Benachrichtigungen** stehen jetzt 18 Meldungsarten, nach Bereich gruppiert. Jede Person sieht nur die Arten, für die sie das Recht hat, und schaltet sie für sich ein oder aus; die Wahl gilt für alle ihre Geräte. Die neuen Arten sind zunächst **aus** – „Neue Shop-Bestellung“ und „Fast/ganz ausverkauft“ bleiben wie bisher an.
+
+| Bereich | Meldung | Recht |
+|---|---|---|
+| Verkauf | Zahlung zu einer wartenden Bestellung eingegangen (Vorkasse) | Shop-Bestellungen |
+| Verkauf | Bestellung storniert | Shop-Bestellungen |
+| Verkauf | Erstattung gebucht | Shop-Bestellungen |
+| Verkauf | Neue Produktbewertung (mit Sternen, auch „wartet auf Freigabe“) | Shop-Produkte |
+| Verkauf | Kunde trägt sich in die Warteliste ein | Shop-Produkte |
+| Verkauf | Wiedervorlage bei einem Kontakt fällig – nachfassen (morgens) | Kontakte / B2B |
+| Verkauf | Etikettendruck fehlgeschlagen | Versand |
+| Fertigung | Bambu-Druck fertig – Platte abräumen | Bambu-Lab-Drucker |
+| Fertigung | Bambu-Druck fehlgeschlagen oder Ausgang unklar | Bambu-Lab-Drucker |
+| Fertigung | Slicen einer Platte fehlgeschlagen | Workflow |
+| Fertigung | Drucker-Wartung neu fällig (morgens) | 3D-Drucker & Wartung |
+| Lager | Ausverkaufter Artikel wieder auf Lager | Lager |
+| Lager | Neu nachzubestellen (morgens) | Einkauf |
+| Finanzen | E-Rechnung eingegangen | Buchhaltung |
+| Verwaltung | Neue Support-Anfrage | Support |
+| Verwaltung | Mir wurde eine Mail zugewiesen (nur an die Person selbst) | Mailbox |
+
+- Wer eine Stornierung, Erstattung, Bewertung oder Mail-Zuweisung selbst auslöst, bekommt dazu keine Meldung.
+- Wartung, Nachbestellen und Wiedervorlagen prüft das ERP einmal am Morgen (ab 8 Uhr Ortszeit, im stündlichen Lauf) und meldet nur, was seit dem Vortag **neu** fällig ist.
+- Die neuen Auslöser laufen abgesichert: Ein Fehler beim Benachrichtigen bricht Kasse, Drucker-Bridge oder Postfach nicht ab, er landet nur im PHP-Fehlerprotokoll.
+- Neue Hooks für eigene Erweiterungen: `lw16_waitlist_signup` (Produkt, Artikel) und `lw16_support_ticket_created` (Ticket, Betreff).
+## [0.62.0] – 2026-10-28
+
+### Loyalty
+- **Pre-Sale für höhere Stufen.** Neuer Reiter Loyalty → Pre-Sale: Einzelne Produkte, ganze Kategorien oder Merkmale (Attribute wie „Farbe: Rot“, Schlagwörter) sind ab einem Starttag nur für Kunden ab einer wählbaren Stufe kaufbar, ab „für alle ab“ für jeden. Gesperrt wird auch im Warenkorb und an der Kasse; auf der Produktseite steht ein Hinweis mit dem Datum. Bei Varianten sperrt „Farbe: Rot“ nur die roten. Shop-Verwalter sind nie gesperrt.
+- **Konto: wechselnde Leiste.** Die Leiste wechselt alle paar Sekunden zwischen „Punkte bis zum nächsten Euro Rabatt“ und „Umsatz bis zur nächsten Stufe“ (hält an bei Mauszeiger/Fokus, ohne Bewegung bei reduzierter Animation).
+- **Mindestbestellwert zum Einlösen.** Neue Regel unter Loyalty → Regeln → Grundwerte: Punkte und Guthaben lassen sich erst ab diesem Warenwert (ohne Steuer und Versand) einlösen, 0 = kein Mindestwert. In der Block-Kasse steht dann ein Hinweis statt der Einlösefelder.
+- **Regeln speichern:** Der Fehler „Cannot read properties of undefined (reading 'push')“ beim Öffnen von Loyalty → Regeln ist behoben.
+
 ## [0.61.1] – 2026-10-28
 
 ### Kasse: Kassenprodukte ohne offenen Tag pflegen

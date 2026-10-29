@@ -17,6 +17,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Throttle;
 use Lindenweg16\Erp\Access;
+use Lindenweg16\Erp\Navigation;
 use Lindenweg16\Erp\Push;
 use Lindenweg16\Erp\RestApi;
 use WP_REST_Request;
@@ -54,10 +55,11 @@ class Benachrichtigung {
 		$uid  = get_current_user_id();
 		$keys = Push::keys();
 		$prefs = Push::prefs( $uid );
+		$areas = Navigation::areas();
 		$arten = array();
 		foreach ( Push::categories() as $key => $def ) {
 			if ( Access::can( $def[1] ) ) {
-				$arten[] = array( 'key' => $key, 'label' => $def[0], 'an' => $prefs[ $key ] );
+				$arten[] = array( 'key' => $key, 'label' => $def[0], 'bereich' => isset( $areas[ $def[2] ] ) ? $areas[ $def[2] ][0] : '', 'an' => $prefs[ $key ] );
 			}
 		}
 		$geraete = array();
