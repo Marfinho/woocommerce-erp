@@ -199,6 +199,42 @@ class Procurement {
 			);
 		}
 
+		// Kleinteile, die für den Bedarf (Aufträge, Sollbestand) fehlen – auch ohne
+		// Verbrauchshistorie, die der Beschaffungsalarm braucht. Dieselbe Rechnung
+		// wie auf der Bedarfsseite, damit „Zum Einkauf“ dort auch hier ankommt.
+		$ordered = array();
+		foreach ( $order as $o ) {
+			$ordered[ $o['type'] . ':' . $o['item_id'] ] = true;
+		}
+
+		$planner = '\Lindenweg16\Modules\Betrieb\DemandPlanner';
+		$plan    = $planner::plan( $planner::collect( true ), $planner::context() );
+
+		foreach ( (array) $plan['components'] as $row ) {
+			$cid = (int) $row['component_id'];
+
+			if ( $row['net'] <= 0.0005 || isset( $ordered[ 'component:' . $cid ] ) || in_array( 'component:' . $cid . ':', $known, true ) ) {
+				continue;
+			}
+
+			$last = PurchaseRepository::last_for( 'component', $cid, '' );
+
+			$order[] = array(
+				'type'      => 'component',
+				'kind'      => __( 'Kleinteil – fehlt für den Bedarf', 'lindenweg16' ),
+				'item_id'   => $cid,
+				'item_ref'  => '',
+				'label'     => $row['code'] . ' – ' . $row['name'],
+				'unit'      => self::unit( 'component' ),
+				'stock'     => (float) $row['stock'],
+				'coverage'  => null,
+				'threshold' => 0,
+				'qty'       => (float) ceil( $row['net'] ),
+				'supplier'  => $last ? (string) $last['supplier'] : '',
+				'price'     => $last ? (float) $last['unit_price_net'] : 0.0,
+			);
+		}
+
 		// Die dringendsten zuerst: kleinste Reichweite oben.
 		usort(
 			$order,
