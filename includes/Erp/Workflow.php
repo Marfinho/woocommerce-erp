@@ -104,6 +104,7 @@ class Workflow {
 			'weeks'         => Forecast::WEEKS,
 			'cover_weeks'   => Forecast::COVER_WEEKS,
 			'hide_wpadmin'  => 0,
+			'lock_wpadmin'  => 0,
 			'filament_lead_days'   => 10,
 			'filament_safety_days' => 5,
 			// Reihenfolge der Platten nach Tageszeit (siehe ShiftOrder).
@@ -143,6 +144,7 @@ class Workflow {
 			'weeks'         => min( 26, max( 1, (int) ( isset( $in['weeks'] ) ? $in['weeks'] : $def['weeks'] ) ) ),
 			'cover_weeks'   => min( 12.0, max( 0.0, (float) ( isset( $in['cover_weeks'] ) ? $in['cover_weeks'] : $def['cover_weeks'] ) ) ),
 			'hide_wpadmin'  => ! empty( $in['hide_wpadmin'] ) ? 1 : 0,
+			'lock_wpadmin'  => ! empty( $in['lock_wpadmin'] ) ? 1 : 0,
 			'filament_lead_days'   => min( 120, max( 0, (int) ( isset( $in['filament_lead_days'] ) ? $in['filament_lead_days'] : $def['filament_lead_days'] ) ) ),
 			'filament_safety_days' => min( 60, max( 0, (int) ( isset( $in['filament_safety_days'] ) ? $in['filament_safety_days'] : $def['filament_safety_days'] ) ) ),
 			'shift_end'            => preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', isset( $in['shift_end'] ) ? (string) $in['shift_end'] : '' ) ? (string) $in['shift_end'] : $def['shift_end'],

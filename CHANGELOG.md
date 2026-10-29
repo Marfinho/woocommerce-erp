@@ -7,6 +7,24 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.65.0] – 2026-10-29
+
+### wp-admin nur für den Webmaster
+- **Neue Einstellung „wp-admin sperren“** (ERP → Plan und Board → Einstellungen → WordPress-Admin, nur vom Webmaster zu ändern). Eingeschaltet kommt nur noch hinein, wer die Website verwaltet (`manage_options`). Alle anderen werden ins ERP geleitet (ohne ERP-Rechte auf die Startseite); Formular-Aufrufe ohne Berechtigung werden mit 403 abgewiesen. Die Adminleiste verschwindet für sie, nach der Anmeldung geht es direkt ins ERP.
+- **Offen bleiben:** `admin-post.php`, `admin-ajax.php` und `async-upload.php` (ERP und Shop nutzen sie), das eigene Profil (Passwort ändern) und die zwei eingebetteten Seiten im ERP (Shop-Produkte, WooCommerce-Bestellung) – nur im Rahmen und nur mit dem jeweiligen ERP-Recht.
+- **Standard: aus.** Der Webmaster ist von der Sperre nie betroffen. Die WordPress-Rolle „Shop-Manager“ bleibt für Shop-Bestellungen nötig, sie öffnet aber nicht mehr das wp-admin.
+- Nicht in echtem WordPress geprüft. Vor dem Einschalten mit einem Mitarbeiterkonto testen: Anmelden → ERP, Bestellung öffnen, Shop-Produkte öffnen.
+
+## [0.64.0] – 2026-10-29
+
+### Shop-Bestellungen im ERP bearbeiten und erstatten
+- **Neue Bestellansicht** (Verkauf → Shop-Bestellungen → „Ansehen“): Adressen, Positionen mit Stück und Brutto, Summe, Steuer, bisherige Erstattungen und Notizen. Weiter möglich: „In WooCommerce öffnen“.
+- **Erstatten im ERP:** ganze oder teilweise Erstattung nach Stückzahl je Position, Versand und/oder freiem Bruttobetrag, mit Grund. Wahlweise Geld über den Zahlungsanbieter zurückzahlen und Ware ins Lager zurückbuchen. Es läuft über `wc_create_refund`, also mit denselben Folgen wie in WooCommerce (Rechnung, Lager, Gateway). Der Betrag wird auf dem Server neu gerechnet, nie mehr als noch erstattbar, Sperre gegen Doppelklick.
+- **Status ändern und Notizen** (intern oder per E-Mail an den Kunden). „Erstattet“ lässt sich nicht von Hand setzen.
+- **Zwei neue Rechte:** `verkauf.shop_orders.status` und `verkauf.shop_orders.erstatten` (Voraussetzung: `verkauf.shop_orders`). Das Erstatten steht in keiner Vorlage, es wird einzeln vergeben. Wie die Liste braucht die Person weiterhin die WordPress-Rolle „Shop-Manager“.
+- Jede Änderung steht im Audit-Log und als Notiz an der Bestellung.
+- Nicht in echtem WordPress und nicht mit einem echten Zahlungsanbieter geprüft – bitte zuerst mit einer Testbestellung erstatten (Zahlungsanbieter-Haken aus), dann mit einem Cent-Betrag über den echten Anbieter.
+
 ## [0.63.0] – 2026-10-28
 
 ### 16 neue Push-Benachrichtigungen, jede Person wählt selbst

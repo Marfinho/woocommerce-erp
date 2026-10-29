@@ -2679,6 +2679,7 @@
 			var copies = h('select', { class: 'field', id: 'ws-copies' }, [1, 2, 3].map(function (n) { return h('option', { value: String(n), selected: n === s.label_copies }, String(n)); }));
 			var auto = h('input', { type: 'checkbox', id: 'ws-auto', checked: !!s.label_auto });
 			var hide = h('input', { type: 'checkbox', id: 'ws-hide', checked: !!s.hide_wpadmin });
+			var lock = h('input', { type: 'checkbox', id: 'ws-lock', checked: !!s.lock_wpadmin, disabled: !r.webmaster });
 			var fLead = h('input', { class: 'field', type: 'number', id: 'ws-flead', min: '0', max: '120', value: String(s.filament_lead_days) });
 			var fSafe = h('input', { class: 'field', type: 'number', id: 'ws-fsafe', min: '0', max: '60', value: String(s.filament_safety_days) });
 			var shiftEnd = h('input', { class: 'field', type: 'time', id: 'ws-shift-end', value: s.shift_end });
@@ -2724,6 +2725,8 @@
 			body.appendChild(h('h4', { class: 'sec' }, 'WordPress-Admin'));
 			body.appendChild(h('label', { class: 'chk', for: 'ws-hide' }, hide, ' wp-admin nur für die Website: ERP-Menüs ausblenden, ERP-Nutzer ohne Websiteverwaltung nach der Anmeldung ins ERP leiten'));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das wp-admin zeigt dann nur noch die Website. Die Seiten bleiben erreichbar und werden im ERP weiter eingebettet angezeigt.'));
+			body.appendChild(h('label', { class: 'chk', for: 'ws-lock', style: 'margin-top:10px' }, lock, ' wp-admin sperren: nur der Webmaster (Website-Verwaltung) kommt hinein, alle anderen landen im ERP'));
+			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, r.webmaster ? 'Offen bleiben nur das eigene Profil (Passwort) und die zwei eingebetteten Shop-Seiten im ERP. Teste vorher mit einem zweiten Konto, dass du selbst nicht ausgesperrt wirst – der Webmaster ist nie betroffen.' : 'Das ändert nur der Webmaster.'));
 
 			var save = h('button', { class: 'btn primary', type: 'button', style: 'margin-top:16px' }, 'Speichern');
 			save.addEventListener('click', function () {
@@ -2731,7 +2734,7 @@
 				api('workflow/einstellungen', { method: 'POST', body: {
 					label_printer: printer.value, label_roll: roll.value, label_copies: parseInt(copies.value, 10), label_auto: auto.checked ? 1 : 0,
 					label_fields: Object.keys(boxes).filter(function (k) { return boxes[k].checked; }),
-					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0,
+					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0, lock_wpadmin: lock.checked ? 1 : 0,
 					filament_lead_days: parseInt(fLead.value, 10), filament_safety_days: parseInt(fSafe.value, 10),
 					shift_end: shiftEnd.value, shift_lead_h: parseFloat(shiftLead.value), long_h: parseFloat(longH.value)
 				} }).then(function () { toast('Gespeichert'); d.close(); }).catch(function (e) { save.disabled = false; toast(e.message, true); });

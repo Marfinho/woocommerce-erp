@@ -882,6 +882,7 @@ class RestApi {
 				'rolls'          => $rolls,
 				'fields'         => $fields,
 				'queue_printers' => Workflow::queue_printers(),
+				'webmaster'      => current_user_can( 'manage_options' ),
 			)
 		);
 	}
@@ -893,7 +894,15 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function workflow_settings_save( WP_REST_Request $request ) {
-		$saved = Workflow::save_settings( (array) $request->get_json_params() );
+		$in = (array) $request->get_json_params();
+
+		// Die Sperre des wp-admin ändert nur, wer die Website verwaltet: Wer Pläne
+		// freigeben darf, soll sich nicht selbst den Zugang geben oder anderen nehmen.
+		if ( ! current_user_can( 'manage_options' ) ) {
+			unset( $in['lock_wpadmin'] );
+		}
+
+		$saved = Workflow::save_settings( $in );
 
 		AuditLog::record( 'erp_workflow_einstellungen', 'settings', 0, $saved );
 
