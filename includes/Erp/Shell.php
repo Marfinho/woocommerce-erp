@@ -53,6 +53,7 @@ class Shell {
 		add_filter( 'login_redirect', array( $this, 'login_redirect' ), 20, 3 );
 
 		if ( is_admin() ) {
+			add_action( 'admin_init', array( $this, 'lock_wpadmin' ), 1 );
 			add_action( 'admin_init', array( $this, 'gate_plugin_pages' ) );
 			add_action( 'admin_menu', array( $this, 'maybe_hide_menus' ), 9999 );
 			add_action( 'admin_init', array( $this, 'gate_actions' ), 2 );
@@ -130,6 +131,12 @@ class Shell {
 	 */
 	public function show_admin_bar( $show ) {
 		if ( ! $show ) {
+			return false;
+		}
+
+		// Ist das wp-admin gesperrt, brauchen Mitarbeiter die Leiste mit ihren
+		// wp-admin-Links nicht; sie arbeiten im ERP.
+		if ( Workflow::settings()['lock_wpadmin'] && ! current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
@@ -528,11 +535,79 @@ class Shell {
 			return $to;
 		}
 
-		if ( self::wants_erp_landing( (bool) Workflow::settings()['hide_wpadmin'], Access::has_any( $user->ID ), user_can( $user, 'manage_options' ) ) ) {
+		if ( self::wants_erp_landing( (bool) ( Workflow::settings()['hide_wpadmin'] || Workflow::settings()['lock_wpadmin'] ), Access::has_any( $user->ID ), user_can( $user, 'manage_options' ) ) ) {
 			return self::url();
 		}
 
 		return $to;
+	}
+
+	/**
+	 * Seiten im wp-admin, die auch bei gesperrtem wp-admin offen bleiben.
+	 *
+	 * Formular- und Ajax-Eingänge (das ERP und der Shop nutzen sie), der
+	 * Datei-Upload und das eigene Profil (Passwort ändern).
+	 *
+	 * @return string[]
+	 */
+	public static function lock_exempt_pages() {
+		return array( 'admin-post.php', 'admin-ajax.php', 'async-upload.php', 'profile.php' );
+	}
+
+	/**
+	 * Wird dieser wp-admin-Aufruf gesperrt? – reine Regel.
+	 *
+	 * @param bool   $locked      Die Sperre ist eingeschaltet.
+	 * @param bool   $can_manage  Die Person verwaltet die Website (Webmaster).
+	 * @param string $pagenow     Aufgerufene Datei.
+	 * @param bool   $embedded    Aufruf aus einem Rahmen des ERP.
+	 * @param bool   $embed_right Die Person darf eine eingebettete Seite (Shop-Produkte oder -Bestellungen) öffnen.
+	 * @return bool
+	 */
+	public static function wpadmin_blocked( $locked, $can_manage, $pagenow, $embedded, $embed_right ) {
+		if ( ! $locked || $can_manage ) {
+			return false;
+		}
+
+		if ( in_array( $pagenow, self::lock_exempt_pages(), true ) ) {
+			return false;
+		}
+
+		// Die zwei Seiten, die das ERP noch einbettet, öffnen sich nur im Rahmen und nur mit dem ERP-Recht.
+		return ! ( $embedded && $embed_right );
+	}
+
+	/**
+	 * wp-admin für alle außer dem Webmaster sperren (Einstellung).
+	 *
+	 * Wer das ERP nutzen darf, landet dort; alle anderen auf der Startseite.
+	 * Ein Formular-Aufruf wird abgewiesen statt umgeleitet.
+	 */
+	public function lock_wpadmin() {
+		global $pagenow;
+
+		if ( ! is_user_logged_in() || ! Workflow::settings()['lock_wpadmin'] ) {
+			return;
+		}
+
+		$blocked = self::wpadmin_blocked(
+			true,
+			current_user_can( 'manage_options' ),
+			(string) $pagenow,
+			self::is_embedded(),
+			Access::can( 'verkauf.shop_products' ) || Access::can( 'verkauf.shop_orders' )
+		);
+
+		if ( ! $blocked ) {
+			return;
+		}
+
+		if ( 'GET' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) ) {
+			wp_die( esc_html__( 'Das wp-admin ist gesperrt. Bitte im ERP arbeiten.', 'lindenweg16' ), '', array( 'response' => 403 ) );
+		}
+
+		wp_safe_redirect( Access::has_any() ? self::url() : home_url( '/' ) );
+		exit;
 	}
 
 	/**

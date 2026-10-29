@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.65.0] – 2026-10-29
+
+### wp-admin nur für den Webmaster
+- **Neue Einstellung „wp-admin sperren“** (ERP → Plan und Board → Einstellungen → WordPress-Admin, nur vom Webmaster zu ändern). Eingeschaltet kommt nur noch hinein, wer die Website verwaltet (`manage_options`). Alle anderen werden ins ERP geleitet (ohne ERP-Rechte auf die Startseite); Formular-Aufrufe ohne Berechtigung werden mit 403 abgewiesen. Die Adminleiste verschwindet für sie, nach der Anmeldung geht es direkt ins ERP.
+- **Offen bleiben:** `admin-post.php`, `admin-ajax.php` und `async-upload.php` (ERP und Shop nutzen sie), das eigene Profil (Passwort ändern) und die zwei eingebetteten Seiten im ERP (Shop-Produkte, WooCommerce-Bestellung) – nur im Rahmen und nur mit dem jeweiligen ERP-Recht.
+- **Standard: aus.** Der Webmaster ist von der Sperre nie betroffen. Die WordPress-Rolle „Shop-Manager“ bleibt für Shop-Bestellungen nötig, sie öffnet aber nicht mehr das wp-admin.
+- Nicht in echtem WordPress geprüft. Vor dem Einschalten mit einem Mitarbeiterkonto testen: Anmelden → ERP, Bestellung öffnen, Shop-Produkte öffnen.
+
 ## [0.64.0] – 2026-10-29
 
 ### Shop-Bestellungen im ERP bearbeiten und erstatten
