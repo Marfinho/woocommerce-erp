@@ -666,6 +666,7 @@ class Lager {
 		self::route( $ns, '/erp/lager/storno', 'POST', 'storno', $api->needs( $rules['lw16_betrieb_stock_void'] ) );
 		self::route( $ns, '/erp/lager/soll', 'POST', 'soll', $api->needs( $rules['lw16_betrieb_stock_target'] ) );
 		self::route( $ns, '/erp/lager/teil', 'POST', 'teil', $api->needs( $rules['lw16_betrieb_stock_part'] ) );
+		self::route( $ns, '/erp/lager/teil/speichern', 'POST', 'teil_speichern', $api->needs( array( 'lager.bestand' ) ) );
 
 		// Lagerplätze und Fertigung.
 		self::route( $ns, '/erp/lagerplaetze', 'GET', 'plaetze', $api->needs( array( 'lager.lagerplaetze' ) ) );
@@ -843,9 +844,30 @@ class Lager {
 			'can_book'   => $can_book,
 			'can_void'   => $can_book && $lead,
 			'can_target' => Access::can( 'fertigung.stammdaten.edit' ) && $lead,
+			'part_edit'  => array(
+				'component' => self::can_edit_part( 'component' ),
+				'supply'    => self::can_edit_part( 'supply' ),
+			),
 			'kinds'      => self::kinds(),
 			'weeks'      => 4,
 		);
+
+		if ( $can_book || $out['can_target'] || $out['part_edit']['component'] || $out['part_edit']['supply'] ) {
+			$out['parts'] = self::parts();
+		}
+
+		if ( $out['part_edit']['component'] || $out['part_edit']['supply'] ) {
+			$out['part_bins'] = array();
+			foreach ( $bins as $bin ) {
+				if ( ! empty( $bin['is_active'] ) ) {
+					$out['part_bins'][] = array( 'id' => (int) $bin['id'], 'label' => trim( $bin['code'] . ' ' . (string) $bin['name'] ) );
+				}
+			}
+			$out['part_categories'] = array();
+			foreach ( \Lindenweg16\Modules\Betrieb\ComponentRepository::category_labels() as $slug => $label ) {
+				$out['part_categories'][] = array( 'slug' => (string) $slug, 'label' => (string) $label );
+			}
+		}
 
 		if ( $can_book || $out['can_target'] ) {
 			$list = array();
@@ -897,7 +919,6 @@ class Lager {
 			$out['reasons']  = $reasons;
 			$out['dealers']  = $dealers;
 			$out['commission_types'] = \Lindenweg16\Modules\Betrieb\CommissionBatch::types();
-			$out['parts']    = self::parts();
 		}
 
 		return new WP_REST_Response( $out );
@@ -1262,6 +1283,95 @@ class Lager {
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Bestand korrigiert.', 'lindenweg16' ) ), 201 );
 	}
 
+	/**
+	 * Darf die Person Komponenten oder Verbrauchsmaterial anlegen und ändern?
+	 *
+	 * @param string $type component oder supply.
+	 * @return bool
+	 */
+	protected static function can_edit_part( $type ) {
+		$rules = ActionMap::rules();
+		$need  = 'supply' === $type ? $rules['lw16_betrieb_save_supply'] : $rules['lw16_betrieb_save_component'];
+
+		foreach ( $need as $perm ) {
+			if ( ! Access::can( $perm ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Komponente oder Karton anlegen beziehungsweise ändern.
+	 *
+	 * Der Bestand wird nur beim Anlegen gesetzt; danach ändert ihn allein die
+	 * Korrektur mit Begründung.
+	 *
+	 * @param WP_REST_Request $request Anfrage: part_type, part_id (0 = neu) und die Stammdatenfelder.
+	 * @return WP_REST_Response
+	 */
+	public static function teil_speichern( WP_REST_Request $request ) {
+		$type = 'supply' === self::text( $request, 'part_type' ) ? 'supply' : 'component';
+		$id   = (int) $request->get_param( 'part_id' );
+
+		if ( ! self::can_edit_part( $type ) ) {
+			return self::fail( __( 'Dafür fehlt dir die Berechtigung.', 'lindenweg16' ), 403 );
+		}
+
+		$input = array();
+		foreach ( array( 'code', 'name', 'barcode', 'category', 'supplier', 'pack_qty', 'pack_price_net', 'order_url', 'lead_time_days', 'min_order_qty', 'stock_qty', 'safety_days', 'default_bin_id', 'unit', 'price_per_unit', 'consumption_per_order' ) as $key ) {
+			$input[ $key ] = self::text( $request, $key );
+		}
+		$note          = $request->get_param( 'note' );
+		$input['note'] = is_scalar( $note ) ? (string) $note : '';
+		$reason        = self::text( $request, 'reason' );
+
+		if ( 'supply' === $type ) {
+			$before = $id ? \Lindenweg16\Modules\Betrieb\SupplyRepository::find( $id ) : null;
+
+			if ( $id && ! $before ) {
+				return self::fail( __( 'Diese Position gibt es nicht mehr. Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+			}
+
+			if ( $before ) {
+				$input['stock_qty'] = $before['stock_qty'];
+			}
+
+			$input['supply_id'] = $id;
+			$result             = \Lindenweg16\Modules\Betrieb\SupplyRepository::save( $input );
+
+			if ( $result['errors'] ) {
+				return self::fail( implode( ' ', $result['errors'] ) );
+			}
+
+			return new WP_REST_Response( array( 'ok' => true, 'message' => $id ? __( 'Karton gespeichert.', 'lindenweg16' ) : __( 'Karton angelegt.', 'lindenweg16' ) ), $id ? 200 : 201 );
+		}
+
+		$result = \Lindenweg16\Modules\Betrieb\ComponentRepository::validate( $input, $id ? $id : null );
+
+		if ( $result['errors'] ) {
+			return self::fail( implode( ' ', $result['errors'] ) );
+		}
+
+		if ( $id ) {
+			if ( ! \Lindenweg16\Modules\Betrieb\ComponentRepository::find( $id ) ) {
+				return self::fail( __( 'Diese Position gibt es nicht mehr. Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+			}
+
+			unset( $result['data']['stock_qty'] );
+			\Lindenweg16\Modules\Betrieb\ComponentRepository::update( $id, $result['data'], $reason );
+
+			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Kleinteil gespeichert.', 'lindenweg16' ) ) );
+		}
+
+		if ( ! \Lindenweg16\Modules\Betrieb\ComponentRepository::insert( $result['data'] ) ) {
+			return self::fail( __( 'Kleinteil konnte nicht angelegt werden.', 'lindenweg16' ), 500 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Kleinteil angelegt.', 'lindenweg16' ) ), 201 );
+	}
+
 	/* ---------- Lagerplätze ---------- */
 
 	/**
@@ -1384,14 +1494,14 @@ class Lager {
 				$warning = self::lock_warning( $lines );
 			}
 
-			if ( ! $repo::update( $id, $result['data'], $reason ) ) {
+			if ( ! \Lindenweg16\Modules\Betrieb\ComponentRepository::update( $id, $result['data'], $reason ) ) {
 				return self::fail( __( 'Der Lagerplatz konnte nicht gespeichert werden. Bitte noch einmal versuchen.', 'lindenweg16' ), 500 );
 			}
 
 			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Lagerplatz gespeichert.', 'lindenweg16' ), 'warnings' => $warning ? array( $warning ) : array() ) );
 		}
 
-		if ( ! $repo::insert( $result['data'] ) ) {
+		if ( ! \Lindenweg16\Modules\Betrieb\ComponentRepository::insert( $result['data'] ) ) {
 			return self::fail( __( 'Der Lagerplatz konnte nicht angelegt werden. Bitte noch einmal versuchen.', 'lindenweg16' ), 500 );
 		}
 
