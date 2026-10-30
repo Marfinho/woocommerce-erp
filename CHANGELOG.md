@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.66.0] – 2026-10-30
+
+### Live-Bildschirm kompakter
+- **Mehr Zahlen ohne Scrollen:** Die 8 Kennzahlen stehen in einer Leiste oben, darunter Verkauf, Website und Produktion in drei Spalten, die Kampagnen als schmale Tabelle unten. Im Vollbild passt alles auf eine Bildschirmhöhe.
+- Kleinere Schrift und Abstände, flachere Diagramme, Drucker als einzeilige Zeilen, Kampagnen mit Kanal und Bestellungen als eigene Spalten (höchstens 4 Zeilen).
+- Nur Darstellung, keine neuen Daten oder Rechte. Nicht im Browser geprüft – bitte einmal im Vollbild ansehen.
+
 ## [0.65.0] – 2026-10-29
 
 ### wp-admin nur für den Webmaster
