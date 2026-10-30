@@ -15,6 +15,9 @@
 .lv-state.bad { color: var(--lv-bad); }
 .lv-grid { display: flex; flex-direction: column; gap: var(--lv-gap); flex: 1; min-height: 0; }
 .lv-mid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: var(--lv-gap); flex: 1; min-height: 0; }
+.lv-side { display: flex; flex-direction: column; gap: var(--lv-gap); min-width: 0; min-height: 0; }
+.lv-side > .lv-card { flex: 1 1 0; }
+.lv-side > .lv-tasks { flex-grow: 1.1; }
 .lv-card { background: var(--lv-card); border: 1px solid var(--lv-line); border-radius: .9em; padding: .9em 1em; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 .lv-card h3 { margin: 0 0 .6em; font: 700 .8em var(--font-head); color: var(--lv-muted); text-transform: uppercase; letter-spacing: .08em; }
 .lv-body { display: flex; flex-direction: column; gap: .8em; flex: 1; min-height: 0; }
@@ -61,12 +64,18 @@
 .lv-printers { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(10em, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: .6em; }
 .lv-printer { background: #232b34; border-radius: .7em; padding: .7em .9em; display: flex; flex-direction: column; justify-content: center; gap: .5em; border-left: .35em solid var(--lv-line); min-height: 0; }
 .lv-printer .nm { font-size: 1.1em; }
-.lv-printer .pc { font: 700 3.6em/1 var(--font-head); font-variant-numeric: tabular-nums; }
+.lv-printer .pc { font: 700 2.6em/1 var(--font-head); font-variant-numeric: tabular-nums; }
 .lv-printer .sub { color: var(--lv-muted); font-variant-numeric: tabular-nums; }
 .lv-printer .meter { height: .7em; }
 .lv-printer.st-running, .lv-printer.st-druckt { border-left-color: var(--lv-ok); }
 .lv-printer.st-offline { opacity: .55; }
 .lv-printer.st-failed, .lv-printer.st-pause { border-left-color: var(--lv-bad); }
+.lv-tlist { position: relative; list-style: none; margin: 0; padding: 0; display: grid; align-content: start; gap: .4em; overflow: hidden; flex: 1; min-height: 0; }
+.lv-tlist li { display: grid; gap: .1em; padding: .4em .7em; border-radius: .6em; background: #232b34; border-left: .3em solid var(--lv-line); min-width: 0; }
+.lv-tlist li.hot { border-left-color: var(--lv-warn); }
+.lv-tlist b, .lv-tlist span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lv-tlist span { color: var(--lv-muted); font-size: .85em; }
+.lv-done { margin: auto; color: var(--lv-ok); font: 700 1.6em var(--font-head); }
 .lv-alert { padding: .5em .8em; border-radius: .6em; background: color-mix(in srgb, var(--lv-warn) 18%, transparent); color: var(--lv-warn); font-weight: 700; font-size: .9em; }
 .lv-table { width: 100%; border-collapse: collapse; }
 .lv-table th { text-align: left; color: var(--lv-muted); font-weight: 600; padding: .15em .6em; }

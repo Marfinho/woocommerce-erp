@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.68.0] – 2026-10-30
+
+### Live-Bildschirm: Aufgaben aus „Heute“
+- **Neue Karte „Aufgaben“** unter der Produktion: die offenen Aufgaben aus dem ERP nach Wichtigkeit (Platten melden und rüsten, Montage, Versand, Nachbestellung, Wartung, überfällige Lieferungen und Rechnungen, Wiedervorlagen). Eilige sind orange markiert. Es werden so viele Zeilen gezeigt, wie in die Karte passen; der Rest steht als „+ N weitere“. Ohne offene Aufgabe steht „Alles erledigt“.
+- Der Wandbildschirm sieht alle Aufgaben, **ohne persönliche Mails**. Angemeldete Personen sehen im Live-Bildschirm nur die Aufgaben, die ihre Rechte hergeben. Zwischenspeicher 60 Sekunden.
+- Nicht in echtem WordPress geprüft (nur Darstellung mit Testdaten und Syntaxprüfung).
+
 ## [0.67.0] – 2026-10-30
 
 ### Live-Bildschirm füllt den Schirm

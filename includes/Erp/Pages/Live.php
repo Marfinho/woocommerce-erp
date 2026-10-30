@@ -4,7 +4,7 @@
  *
  * Eine Anfrage liefert, was der Person nach ihren Rechten gezeigt werden darf:
  * Verkauf heute, Kennzahlen gegen ihre Ziele, Produktion und Drucker,
- * Kampagnen, Seitenaufrufe der Website. Die Zahlen kommen aus den Quellen der
+ * Aufgaben, Kampagnen, Seitenaufrufe der Website. Die Zahlen kommen aus den Quellen der
  * übrigen Seiten (Reporting, KampagnenReport, Drucker, Traffic); hier steht
  * nur das Zusammenstellen und ein kurzer Zwischenspeicher, damit ein Bildschirm,
  * der alle 15 Sekunden fragt, die Datenbank nicht belastet.
@@ -23,6 +23,7 @@ use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Erp\RunFlow;
 use Lindenweg16\Erp\RunRepository;
 use Lindenweg16\Erp\Screens;
+use Lindenweg16\Erp\Tasks;
 use Lindenweg16\Erp\Traffic;
 use Lindenweg16\Modules\ArView\Stats;
 use Lindenweg16\Modules\Betrieb\Kpi;
@@ -111,7 +112,39 @@ class Live {
 			$blocks['campaigns'] = self::cached( 'campaigns', 300, array( __CLASS__, 'campaigns' ) );
 		}
 
+		$blocks['tasks'] = $all ? self::cached( 'tasks', 60, array( __CLASS__, 'tasks_all' ) ) : self::tasks( false );
+
 		return new WP_REST_Response( array( 'now' => time(), 'shop' => get_bloginfo( 'name' ), 'blocks' => $blocks ) );
+	}
+
+	/**
+	 * Aufgaben für den Wandbildschirm: alle, ohne persönliche Mails.
+	 *
+	 * @return array
+	 */
+	public static function tasks_all() {
+		return self::tasks( true );
+	}
+
+	/**
+	 * Offene Aufgaben aus „Heute“, nach Wichtigkeit.
+	 *
+	 * @param bool $everything Alle Bereiche (Bildschirm) statt nur die der Person.
+	 * @return array
+	 */
+	public static function tasks( $everything ) {
+		$rows = array();
+		$all  = Tasks::collect( $everything );
+
+		foreach ( array_slice( $all, 0, 10 ) as $t ) {
+			$rows[] = array(
+				'kind'  => (string) $t['kind'],
+				'title' => (string) $t['title'],
+				'sub'   => isset( $t['sub'] ) ? (string) $t['sub'] : '',
+			);
+		}
+
+		return array( 'total' => count( $all ), 'rows' => $rows );
 	}
 
 	/**

@@ -84,6 +84,15 @@ class ErpLiveTest extends TestCase {
 		$this->assertStringNotContainsString( "'wochenstunden'", substr( $src, strpos( $src, 'const KPIS' ), 260 ), 'Personenbezogene Kennzahlen gehören nicht an die Wand.' );
 	}
 
+	public function test_aufgaben_an_der_wand_ohne_persoenliche_mails() {
+		$live  = $this->read( 'includes/Erp/Pages/Live.php' );
+		$tasks = $this->read( 'includes/Erp/Tasks.php' );
+
+		$this->assertStringContainsString( 'Tasks::collect( $everything )', $live );
+		$this->assertStringContainsString( '$everything ? 0 : self::unread_mail()', $tasks, 'Die Mails einer Person gehören nicht an die Wand.' );
+		$this->assertStringNotContainsString( "Access::can(", substr( $tasks, strpos( $tasks, 'public static function collect' ), 9000 ), 'Rechteprüfung nur über allowed().' );
+	}
+
 	public function test_live_anzeige_bleibt_ein_jahr_angemeldet() {
 		$src = $this->read( 'includes/Erp/LiveViewer.php' );
 

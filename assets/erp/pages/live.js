@@ -207,6 +207,32 @@
 			return c.el;
 		}
 
+		// Zeigt nur, was ganz in die Karte passt; der Rest steht als „+ N weitere“.
+		function fitList(list, more, total) {
+			var rows = list.childNodes, shown = rows.length, i;
+			for (i = 0; i < rows.length; i++) { rows[i].style.display = ''; }
+			for (i = 0; i < rows.length; i++) {
+				if (rows[i].offsetTop + rows[i].offsetHeight > list.clientHeight + 1) { shown = i; break; }
+			}
+			for (i = shown; i < rows.length; i++) { rows[i].style.display = 'none'; }
+			more.textContent = total > shown ? '+ ' + (total - shown) + ' weitere' : '';
+		}
+
+		function tasks(b) {
+			var c = card('Aufgaben' + (b.total ? ' · ' + b.total : ''), 'lv-tasks');
+			if (!b.rows.length) { c.body.appendChild(h('p', { class: 'lv-done' }, '✓ Alles erledigt')); return c; }
+			var urgent = { melden: 1, wartung: 1, lieferung: 1, rechnung: 1 };
+			var list = h('ul', { class: 'lv-tlist' });
+			b.rows.forEach(function (t) {
+				list.appendChild(h('li', { class: urgent[t.kind] ? 'hot' : '' }, h('b', null, t.title), h('span', null, t.sub)));
+			});
+			var more = h('p', { class: 'lv-note' }, '');
+			c.body.appendChild(list);
+			c.body.appendChild(more);
+			c.fit = function () { fitList(list, more, b.total); };
+			return c;
+		}
+
 		function campaigns(b) {
 			var c = card('Kampagnen', 'lv-camp');
 			if (!b.rows.length) { c.body.appendChild(h('p', { class: 'muted' }, 'Keine laufende Kampagne.')); return c.el; }
@@ -231,9 +257,20 @@
 			var any = false;
 			if (b.kpis) { grid.appendChild(kpis(b.kpis)); any = true; }
 			var mid = h('div', { class: 'lv-mid' });
-			[['sales', sales], ['traffic', traffic], ['production', production]].forEach(function (o) { if (b[o[0]]) { mid.appendChild(o[1](b[o[0]])); any = true; } });
+			[['sales', sales], ['traffic', traffic]].forEach(function (o) { if (b[o[0]]) { mid.appendChild(o[1](b[o[0]])); any = true; } });
+			var side = h('div', { class: 'lv-side' });
+			var fits = [];
+			[['production', production], ['tasks', tasks]].forEach(function (o) {
+				if (!b[o[0]]) { return; }
+				var r = o[1](b[o[0]]);
+				side.appendChild(r.el || r);
+				if (r.fit) { fits.push(r.fit); }
+				any = true;
+			});
+			if (side.childNodes.length) { mid.appendChild(side); }
 			if (mid.childNodes.length) { grid.appendChild(mid); }
 			if (b.campaigns) { grid.appendChild(campaigns(b.campaigns)); any = true; }
+			fits.forEach(function (f) { f(); });
 			if (!any) { grid.appendChild(h('div', { class: 'lv-card' }, h('p', { class: 'muted' }, 'Für dein Profil gibt es keine Live-Zahlen. Verkauf, Berichte, Produktion und Marketing schalten Blöcke frei.'))); }
 		}
 
