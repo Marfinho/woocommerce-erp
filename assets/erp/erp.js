@@ -1906,7 +1906,8 @@
 					.then(function (r) { toast(r.message); reload(); })
 					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
 			}
-		}, qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'));
+		}, o.order_url ? h('a', { class: 'btn', href: o.order_url, target: '_blank', rel: 'noopener' }, 'Zum Lieferanten ↗') : null,
+		qtyIn, h('small', null, o.unit), sup, price, due, h('button', { class: 'btn primary', type: 'submit' }, 'Bestellt ✓'));
 	}
 
 	// Wareneingang zu einer offenen Bestellung.

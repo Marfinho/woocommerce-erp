@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.69.0] – 2026-10-30
+
+### Einkauf: Link zum Lieferanten
+- In der Spalte „Bestellen“ steht bei Kleinteilen und Kartons jetzt der Knopf **Zum Lieferanten ↗**, wenn ein Bestell-Link hinterlegt ist. Er öffnet die Artikelseite in einem neuen Tab.
+- Den Link pflegst du im Lager beim Bearbeiten (Kleinteil und Karton). Neu: Kartons haben jetzt auch ein Feld „Bestell-Link“.
+
 ## [0.68.0] – 2026-10-30
 
 ### Lager: Kleinteile und Kartons anlegen und bearbeiten

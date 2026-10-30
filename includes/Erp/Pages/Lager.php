@@ -969,6 +969,7 @@ class Lager {
 					'name'                  => (string) $row['name'],
 					'unit'                  => (string) $row['unit'],
 					'supplier'              => (string) $row['supplier'],
+					'order_url'             => (string) $row['order_url'],
 					'price_per_unit'        => (float) $row['price_per_unit'],
 					'consumption_per_order' => (float) $row['consumption_per_order'],
 					'min_order_qty'         => (float) $row['min_order_qty'],

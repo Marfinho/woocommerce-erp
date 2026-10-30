@@ -235,6 +235,7 @@
 			}
 			add('supplier', 'Lieferant', f.supplier);
 			if (isSupply) {
+				add('order_url', 'Bestell-Link', f.order_url, 'Artikelseite beim Lieferanten (http/https). Erscheint im Einkauf als Knopf „Zum Lieferanten“.', { type: 'url' });
 				add('price_per_unit', 'Preis je Einheit (€ netto)', f.price_per_unit, null, { inputmode: 'decimal' });
 				add('consumption_per_order', 'Verbrauch je Bestellung', f.consumption_per_order, 'Wird bei jeder Bestellung vom Bestand abgebucht.', { inputmode: 'decimal' });
 			} else {
