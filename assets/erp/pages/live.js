@@ -129,7 +129,7 @@
 			date.textContent = n.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 			var age = Math.round((Date.now() - fetched) / 1000);
 			state.className = 'lv-state' + (failed ? ' bad' : (age > 45 ? ' stale' : ''));
-			state.textContent = failed ? 'Keine Verbindung – Stand ' + new Date(fetched).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : (fetched ? '● live · vor ' + age + ' s' : 'lädt …');
+			state.textContent = failed ? 'Keine Verbindung – Stand ' + new Date(fetched).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : (fetched ? 'live · vor ' + age + ' s' : 'lädt …');
 		}
 
 		function sales(b) {
@@ -176,12 +176,10 @@
 		function kpis(b) {
 			var g = h('div', { class: 'lv-kpis', title: 'Kennzahlen ' + b.label });
 			b.rows.forEach(function (k) {
-				var m = k.meter;
 				g.appendChild(h('div', { class: 'lv-kpi lv-' + (k.level || 'grau') },
 					h('div', { class: 'l' }, k.label),
 					h('div', { class: 'v' }, k.text),
-					k.target ? h('div', { class: 'tgt' }, 'Ziel ' + k.target) : null,
-					m && m.value !== undefined && m.value !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + Math.round(Math.max(0, Math.min(1, m.value)) * 100) + '%' })) : null));
+					k.target ? h('div', { class: 'tgt' }, 'Ziel ' + k.target) : null));
 			});
 			return g;
 		}

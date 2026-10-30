@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.69.0] – 2026-10-30
+
+### Live-Bildschirm im Stil der Website
+- **Look der Website Lindenweg16:** warmer Hintergrund mit weichen Farbflecken, weiße Karten mit großer Rundung und sanftem Schatten, Kopfzeile als Glas-Pille. Farben, Schriften und Rundungen stammen aus dem Theme (Bricolage Grotesque für Zahlen und Überschriften, Inter für Text, DM Mono für die kleinen Beschriftungen).
+- Kennzahlen als Kacheln mit Ziel-Chip in Grün, Gelb oder Rot; Balken in Gold, die laufende Stunde in Kupfer.
+- **Schriften im Plugin:** Die Schriftdateien liegen unter `assets/vendor/lindenweg16-fonts/` (SIL Open Font License, Lizenztexte dabei), der Bildschirm lädt nichts aus dem Internet.
+- Nur Darstellung, keine neuen Daten oder Rechte.
+
 ## [0.68.0] – 2026-10-30
 
 ### Live-Bildschirm: Aufgaben aus „Heute“
