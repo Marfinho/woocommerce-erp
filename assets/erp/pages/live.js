@@ -42,13 +42,13 @@
 	// Balken je Stunde, die laufende hervorgehoben.
 	function bars(values, current, color) {
 		var max = Math.max.apply(null, values.concat([1]));
-		var w = 480, hh = 110, bw = w / values.length;
-		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 22), class: 'lv-chart', role: 'img', 'aria-label': 'Verlauf nach Stunde' });
+		var w = 480, hh = 64, bw = w / values.length;
+		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 18), class: 'lv-chart', role: 'img', 'aria-label': 'Verlauf nach Stunde' });
 		values.forEach(function (v, i) {
 			var bh = Math.max(v > 0 ? 3 : 1, v / max * hh);
 			root.appendChild(svg('rect', { x: i * bw + 2, y: hh - bh, width: bw - 4, height: bh, rx: 3, class: 'bar' + (i === current ? ' now' : '') + (i > current ? ' future' : ''), fill: color }));
 			if (i % 3 === 0) {
-				var t = svg('text', { x: i * bw + bw / 2, y: hh + 16, 'text-anchor': 'middle', class: 'ax' });
+				var t = svg('text', { x: i * bw + bw / 2, y: hh + 14, 'text-anchor': 'middle', class: 'ax' });
 				t.textContent = String(i);
 				root.appendChild(t);
 			}
@@ -59,14 +59,14 @@
 	function line(series) {
 		var vals = series.map(function (s) { return s.views; });
 		var max = Math.max.apply(null, vals.concat([1]));
-		var w = 480, hh = 110, step = w / (vals.length - 1);
+		var w = 480, hh = 64, step = w / (vals.length - 1);
 		var d = '';
 		vals.forEach(function (v, i) { d += (i ? 'L' : 'M') + (i * step).toFixed(1) + ' ' + (hh - v / max * (hh - 8) - 4).toFixed(1) + ' '; });
 		var area = d + 'L' + w + ' ' + hh + ' L0 ' + hh + ' Z';
-		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 22), class: 'lv-chart', role: 'img', 'aria-label': 'Seitenaufrufe der letzten 24 Stunden' },
+		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 18), class: 'lv-chart', role: 'img', 'aria-label': 'Seitenaufrufe der letzten 24 Stunden' },
 			svg('path', { d: area, class: 'area' }), svg('path', { d: d, class: 'ln', fill: 'none' }));
 		[0, 6, 12, 18, 23].forEach(function (i) {
-			var t = svg('text', { x: Math.min(w - 14, Math.max(14, i * step)), y: hh + 16, 'text-anchor': 'middle', class: 'ax' });
+			var t = svg('text', { x: Math.min(w - 14, Math.max(14, i * step)), y: hh + 14, 'text-anchor': 'middle', class: 'ax' });
 			t.textContent = new Date(series[i].ts * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 			root.appendChild(t);
 		});
@@ -137,12 +137,13 @@
 		}
 
 		function sales(b) {
-			var c = card('Verkauf heute', 'wide');
+			var c = card('Verkauf heute', 'lv-sales');
 			if (!b.available) { c.body.appendChild(h('p', { class: 'muted' }, 'WooCommerce ist nicht aktiv.')); return c.el; }
-			var left = h('div', { class: 'lv-cols' },
-				h('div', null, big(eur(b.revenue), 'Umsatz', delta(b.revenue, b.revenue_yday, eur(b.revenue_yday))), big(int(b.orders), b.orders === 1 ? 'Bestellung' : 'Bestellungen', delta(b.orders, b.orders_yday, int(b.orders_yday)))),
-				h('div', null, big(b.basket === null ? '–' : eur(b.basket, 2), 'Ø Warenkorb'), big(int(b.to_ship), 'zu versenden', null)));
-			c.body.appendChild(left);
+			c.body.appendChild(h('div', { class: 'lv-stats' },
+				big(eur(b.revenue), 'Umsatz', delta(b.revenue, b.revenue_yday, eur(b.revenue_yday))),
+				big(int(b.orders), b.orders === 1 ? 'Bestellung' : 'Bestellungen', delta(b.orders, b.orders_yday, int(b.orders_yday))),
+				big(b.basket === null ? '–' : eur(b.basket, 2), 'Ø Warenkorb'),
+				big(int(b.to_ship), 'zu versenden')));
 			c.body.appendChild(bars(b.hours, b.hour_now, 'var(--lv-accent)'));
 			var list = h('ul', { class: 'lv-orders' });
 			b.last.forEach(function (o) {
@@ -155,10 +156,11 @@
 		}
 
 		function traffic(b) {
-			var c = card('Seitenaufrufe Website', 'wide');
-			c.body.appendChild(h('div', { class: 'lv-cols' },
-				h('div', null, big(int(b.last30), 'letzte 30 Minuten')),
-				h('div', null, big(int(b.today), 'heute', delta(b.today, b.yesterday, int(b.yesterday) + ' gesamt')))));
+			var c = card('Website', 'lv-traffic');
+			c.body.appendChild(h('div', { class: 'lv-stats three' },
+				big(int(b.last30), 'letzte 30 Min.'),
+				big(int(b.today), 'Aufrufe heute', delta(b.today, b.yesterday, int(b.yesterday))),
+				big(int(b.ar_today), 'AR angezeigt')));
 			c.body.appendChild(line(b.series));
 			var max = Math.max.apply(null, Object.keys(b.sections).map(function (k) { return b.sections[k]; }).concat([1]));
 			var names = { start: 'Start', shop: 'Shop', warenkorb: 'Warenkorb', kasse: 'Kasse', inhalt: 'Inhalt' };
@@ -169,15 +171,13 @@
 			c.body.appendChild(secs);
 			var ago = b.last_ts ? Math.max(0, Math.round((Date.now() / 1000 - b.last_ts) / 60)) : null;
 			c.body.appendChild(h('p', { class: 'lv-note' }, ago === null
-				? 'Noch kein Aufruf gezählt. Angemeldete Personen (auch du im selben Browser) zählen nicht: Öffne die Website in einem privaten Fenster, um den Zähler zu prüfen.'
-				: 'Letzter gezählter Aufruf: vor ' + (ago < 10 ? 'unter 10' : ago) + ' Min.'));
-			c.body.appendChild(h('p', { class: 'lv-note' }, 'Aufrufe, nicht Besucher: anonym gezählt, ohne Cookie und Adresse. AR-Ansicht heute: ' + int(b.ar_today) + ' angezeigt.'));
+				? 'Noch kein Aufruf gezählt. Angemeldete Personen zählen nicht: Website in einem privaten Fenster öffnen.'
+				: 'Letzter Aufruf vor ' + (ago < 10 ? 'unter 10' : ago) + ' Min. · Aufrufe, nicht Besucher.'));
 			return c.el;
 		}
 
 		function kpis(b) {
-			var c = card('Kennzahlen ' + b.label, 'wide');
-			var g = h('div', { class: 'lv-kpis' });
+			var g = h('div', { class: 'lv-kpis', title: 'Kennzahlen ' + b.label });
 			b.rows.forEach(function (k) {
 				var m = k.meter;
 				g.appendChild(h('div', { class: 'lv-kpi lv-' + (k.level || 'grau') },
@@ -186,20 +186,20 @@
 					k.target ? h('div', { class: 'tgt' }, 'Ziel ' + k.target) : null,
 					m && m.value !== undefined && m.value !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + Math.round(Math.max(0, Math.min(1, m.value)) * 100) + '%' })) : null));
 			});
-			c.body.appendChild(g);
-			return c.el;
+			return g;
 		}
 
 		function production(b) {
-			var c = card('Produktion', 'wide');
+			var c = card('Produktion', 'lv-prod');
 			c.body.appendChild(h('div', { class: 'lv-runs' },
 				big(int(b.runs.freigegeben), 'freigegeben'), big(int(b.runs.im_druck), 'im Druck'), big(int(b.runs.zu_melden), 'zu melden')));
 			var pr = h('div', { class: 'lv-printers' });
 			b.printers.forEach(function (p) {
+				var rest = p.progress !== null && p.remaining !== null ? (p.remaining < 60 ? p.remaining + ' min' : Math.floor(p.remaining / 60) + ' h ' + ('0' + (p.remaining % 60)).slice(-2)) : '';
 				pr.appendChild(h('div', { class: 'lv-printer st-' + (p.online ? p.status : 'offline') },
-					h('div', { class: 'row' }, h('b', null, p.name), h('span', null, p.text)),
-					p.progress !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + p.progress + '%' })) : null,
-					h('div', { class: 'sub' }, p.progress !== null ? p.progress + ' %' + (p.remaining !== null ? ' · noch ' + (p.remaining < 60 ? p.remaining + ' min' : Math.floor(p.remaining / 60) + ' h ' + ('0' + (p.remaining % 60)).slice(-2)) : '') : '')));
+					h('b', null, p.name),
+					p.progress !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + p.progress + '%' })) : h('span', null, ''),
+					h('span', { class: 'sub' }, p.progress !== null ? p.progress + ' %' + (rest ? ' · ' + rest : '') : p.text)));
 			});
 			if (!b.printers.length) { pr.appendChild(h('p', { class: 'muted' }, 'Kein Drucker angelegt.')); }
 			c.body.appendChild(pr);
@@ -210,15 +210,16 @@
 		}
 
 		function campaigns(b) {
-			var c = card('Kampagnen', 'wide');
+			var c = card('Kampagnen', 'lv-camp');
 			if (!b.rows.length) { c.body.appendChild(h('p', { class: 'muted' }, 'Keine laufende Kampagne.')); return c.el; }
-			var t = h('table', { class: 'lv-table' }, h('thead', null, h('tr', null, h('th', null, 'Kampagne'), h('th', { class: 'num' }, 'Kosten'), h('th', { class: 'num' }, 'Umsatz'), h('th', { class: 'num' }, 'je € Einsatz'), h('th', { class: 'num' }, 'Budget'))));
+			var t = h('table', { class: 'lv-table' }, h('thead', null, h('tr', null, h('th', null, 'Kampagne'), h('th', null, 'Kanal'), h('th', { class: 'num' }, 'Kosten'), h('th', { class: 'num' }, 'Umsatz'), h('th', { class: 'num' }, 'je € Einsatz'), h('th', { class: 'num' }, 'Bestellungen'), h('th', { class: 'num' }, 'Budget'))));
 			var tb = h('tbody');
-			b.rows.forEach(function (k) {
+			b.rows.slice(0, 4).forEach(function (k) {
 				tb.appendChild(h('tr', null,
-					h('td', null, h('b', null, k.name), h('div', { class: 'sub' }, k.channel + (k.orders ? ' · ' + k.orders + ' Bestellungen' : ''))),
+					h('td', null, h('b', null, k.name)), h('td', { class: 'sub' }, k.channel),
 					h('td', { class: 'num' }, eur(k.cost)), h('td', { class: 'num' }, eur(k.revenue)),
 					h('td', { class: 'num' }, k.roas === null ? '–' : k.roas.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '×'),
+					h('td', { class: 'num' }, int(k.orders)),
 					h('td', { class: 'num ' + (k.light === 'ueberzogen' ? 'bad' : (k.light === 'knapp' ? 'warn' : '')) }, k.budget === null ? '–' : k.budget + ' %')));
 			});
 			t.appendChild(tb);
@@ -229,9 +230,12 @@
 		function paint() {
 			grid.textContent = '';
 			var b = data.blocks;
-			var order = [['sales', sales], ['traffic', traffic], ['kpis', kpis], ['production', production], ['campaigns', campaigns]];
 			var any = false;
-			order.forEach(function (o) { if (b[o[0]]) { grid.appendChild(o[1](b[o[0]])); any = true; } });
+			if (b.kpis) { grid.appendChild(kpis(b.kpis)); any = true; }
+			var mid = h('div', { class: 'lv-mid' });
+			[['sales', sales], ['traffic', traffic], ['production', production]].forEach(function (o) { if (b[o[0]]) { mid.appendChild(o[1](b[o[0]])); any = true; } });
+			if (mid.childNodes.length) { grid.appendChild(mid); }
+			if (b.campaigns) { grid.appendChild(campaigns(b.campaigns)); any = true; }
 			if (!any) { grid.appendChild(h('div', { class: 'lv-card' }, h('p', { class: 'muted' }, 'Für dein Profil gibt es keine Live-Zahlen. Verkauf, Berichte, Produktion und Marketing schalten Blöcke frei.'))); }
 		}
 
