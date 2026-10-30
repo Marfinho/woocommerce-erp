@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.70.1] – 2026-10-30
+
+### Tests wieder grün
+- Die Aufgaben-Sammlung im Live-Bildschirm prüft die Rechte wieder mit sichtbarem `Access::can( '…' )` im Quelltext (der bestehende Test `ErpTasksTest` sucht genau das). Verhalten unverändert: Der Wandbildschirm überspringt die Rechteprüfung, Personen nicht.
+
 ## [0.70.0] – 2026-10-30
 
 ### Live-Bildschirm im Stil der Website

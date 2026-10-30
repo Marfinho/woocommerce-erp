@@ -102,16 +102,6 @@ class Tasks {
 	protected static $everything = false;
 
 	/**
-	 * Darf die Person das? Der Wandbildschirm sieht alle Aufgaben.
-	 *
-	 * @param string $key Recht.
-	 * @return bool
-	 */
-	protected static function allowed( $key ) {
-		return self::$everything || Access::can( $key );
-	}
-
-	/**
 	 * Alle Aufgaben dieser Person.
 	 *
 	 * @param bool $everything Ohne Rechteprüfung (Wandbildschirm, ohne Mails).
@@ -121,7 +111,7 @@ class Tasks {
 		self::$everything = $everything;
 		$tasks             = array();
 
-		if ( self::allowed( 'fertigung.workflow' ) ) {
+		if ( ( self::$everything || Access::can( 'fertigung.workflow' ) ) ) {
 			// Bereite Platten nach Tageszeit: tagsüber die kurzen, vor Feierabend die lange.
 			$active = RunRepository::active();
 			$ready  = array();
@@ -166,7 +156,7 @@ class Tasks {
 			}
 		}
 
-		if ( self::allowed( 'fertigung.workflow' ) ) {
+		if ( ( self::$everything || Access::can( 'fertigung.workflow' ) ) ) {
 			foreach ( Assembly::board()['open'] as $order ) {
 				$tasks[] = array(
 					'kind'  => 'montage',
@@ -179,7 +169,7 @@ class Tasks {
 			}
 		}
 
-		if ( self::allowed( 'verkauf.versand' ) && function_exists( 'wc_orders_count' ) ) {
+		if ( ( self::$everything || Access::can( 'verkauf.versand' ) ) && function_exists( 'wc_orders_count' ) ) {
 			$n = (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' );
 
 			if ( $n > 0 ) {
@@ -194,9 +184,9 @@ class Tasks {
 		}
 
 		// Das Board ist teuer (Alarm für alle Teile): einmal berechnen, zweimal nutzen.
-		$board = self::allowed( 'lager.einkauf' ) ? Procurement::board() : array( 'order' => array(), 'open' => array() );
+		$board = ( self::$everything || Access::can( 'lager.einkauf' ) ) ? Procurement::board() : array( 'order' => array(), 'open' => array() );
 
-		if ( self::allowed( 'lager.einkauf' ) ) {
+		if ( ( self::$everything || Access::can( 'lager.einkauf' ) ) ) {
 			$n = count( $board['order'] );
 
 			if ( $n > 0 ) {
@@ -215,7 +205,7 @@ class Tasks {
 			}
 		}
 
-		if ( self::allowed( 'fertigung.drucker' ) ) {
+		if ( ( self::$everything || Access::can( 'fertigung.drucker' ) ) ) {
 			$n = 0;
 
 			foreach ( MaintenanceRepository::due() as $row ) {
@@ -235,7 +225,7 @@ class Tasks {
 			}
 		}
 
-		if ( self::allowed( 'lager.einkauf' ) ) {
+		if ( ( self::$everything || Access::can( 'lager.einkauf' ) ) ) {
 			$late = array();
 
 			foreach ( $board['open'] as $purchase ) {
@@ -255,7 +245,7 @@ class Tasks {
 			}
 		}
 
-		if ( self::allowed( 'verkauf.kontakte' ) ) {
+		if ( ( self::$everything || Access::can( 'verkauf.kontakte' ) ) ) {
 			$overdue = 0;
 
 			foreach ( OrderOpsRepository::open_invoices() as $order ) {

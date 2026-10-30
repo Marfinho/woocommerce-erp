@@ -90,7 +90,7 @@ class ErpLiveTest extends TestCase {
 
 		$this->assertStringContainsString( 'Tasks::collect( $everything )', $live );
 		$this->assertStringContainsString( '$everything ? 0 : self::unread_mail()', $tasks, 'Die Mails einer Person gehören nicht an die Wand.' );
-		$this->assertStringNotContainsString( "Access::can(", substr( $tasks, strpos( $tasks, 'public static function collect' ), 9000 ), 'Rechteprüfung nur über allowed().' );
+		$this->assertStringContainsString( "self::\$everything || Access::can( 'fertigung.workflow' )", $tasks, 'Der Wandbildschirm überspringt die Rechteprüfung, Personen nicht.' );
 	}
 
 	public function test_live_anzeige_bleibt_ein_jahr_angemeldet() {
