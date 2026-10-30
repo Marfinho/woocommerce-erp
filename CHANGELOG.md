@@ -7,7 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [Unveröffentlicht]
+## [0.66.0] – 2026-10-30
+
+### Live-Bildschirm kompakter
+- **Mehr Zahlen ohne Scrollen:** Die 8 Kennzahlen stehen in einer Leiste oben, darunter Verkauf, Website und Produktion in drei Spalten, die Kampagnen als schmale Tabelle unten. Im Vollbild passt alles auf eine Bildschirmhöhe.
+- Kleinere Schrift und Abstände, flachere Diagramme, Drucker als einzeilige Zeilen, Kampagnen mit Kanal und Bestellungen als eigene Spalten (höchstens 4 Zeilen).
+- Nur Darstellung, keine neuen Daten oder Rechte. Nicht im Browser geprüft – bitte einmal im Vollbild ansehen.
 
 ### Lager: Kleinteile und Kartons anlegen und bearbeiten
 - Im Lager unter „Kleinteile & Kartons“ gibt es **Kleinteil anlegen**, **Karton anlegen** und je Zeile **Bearbeiten** (Code, Bezeichnung, Kategorie, Lieferant, Gebinde und Preis, Bestell-Link, Lieferzeit, Standardplatz …). Der Bestand wird nur beim Anlegen gesetzt; danach ändert ihn nur „Korrigieren“ mit Begründung.
