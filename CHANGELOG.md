@@ -7,7 +7,7 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
-## [0.69.0] – 2026-10-30
+## [0.70.0] – 2026-10-30
 
 ### Live-Bildschirm im Stil der Website
 - **Look der Website Lindenweg16:** warmer Hintergrund mit weichen Farbflecken, weiße Karten mit großer Rundung und sanftem Schatten, Kopfzeile als Glas-Pille. Farben, Schriften und Rundungen stammen aus dem Theme (Bricolage Grotesque für Zahlen und Überschriften, Inter für Text, DM Mono für die kleinen Beschriftungen).
@@ -15,12 +15,23 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Schriften im Plugin:** Die Schriftdateien liegen unter `assets/vendor/lindenweg16-fonts/` (SIL Open Font License, Lizenztexte dabei), der Bildschirm lädt nichts aus dem Internet.
 - Nur Darstellung, keine neuen Daten oder Rechte.
 
-## [0.68.0] – 2026-10-30
-
 ### Live-Bildschirm: Aufgaben aus „Heute“
 - **Neue Karte „Aufgaben“** unter der Produktion: die offenen Aufgaben aus dem ERP nach Wichtigkeit (Platten melden und rüsten, Montage, Versand, Nachbestellung, Wartung, überfällige Lieferungen und Rechnungen, Wiedervorlagen). Eilige sind orange markiert. Es werden so viele Zeilen gezeigt, wie in die Karte passen; der Rest steht als „+ N weitere“. Ohne offene Aufgabe steht „Alles erledigt“.
 - Der Wandbildschirm sieht alle Aufgaben, **ohne persönliche Mails**. Angemeldete Personen sehen im Live-Bildschirm nur die Aufgaben, die ihre Rechte hergeben. Zwischenspeicher 60 Sekunden.
 - Nicht in echtem WordPress geprüft (nur Darstellung mit Testdaten und Syntaxprüfung).
+
+## [0.69.0] – 2026-10-30
+
+### Einkauf: Link zum Lieferanten
+- In der Spalte „Bestellen“ steht bei Kleinteilen und Kartons jetzt der Knopf **Zum Lieferanten ↗**, wenn ein Bestell-Link hinterlegt ist. Er öffnet die Artikelseite in einem neuen Tab.
+- Den Link pflegst du im Lager beim Bearbeiten (Kleinteil und Karton). Neu: Kartons haben jetzt auch ein Feld „Bestell-Link“.
+
+## [0.68.0] – 2026-10-30
+
+### Lager: Kleinteile und Kartons anlegen und bearbeiten
+- Im Lager unter „Kleinteile & Kartons“ gibt es **Kleinteil anlegen**, **Karton anlegen** und je Zeile **Bearbeiten** (Code, Bezeichnung, Kategorie, Lieferant, Gebinde und Preis, Bestell-Link, Lieferzeit, Standardplatz …). Der Bestand wird nur beim Anlegen gesetzt; danach ändert ihn nur „Korrigieren“ mit Begründung.
+- Rechte wie auf den klassischen Seiten: Kleinteile wie „Artikel & Revisionen“, Kartons wie „Material“. Neue Route `POST /erp/lager/teil/speichern`.
+- Leere Felder beim Bearbeiten lassen den gespeicherten Wert stehen.
 
 ## [0.67.0] – 2026-10-30
 
@@ -35,10 +46,6 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Mehr Zahlen ohne Scrollen:** Die 8 Kennzahlen stehen in einer Leiste oben, darunter Verkauf, Website und Produktion in drei Spalten, die Kampagnen als schmale Tabelle unten. Im Vollbild passt alles auf eine Bildschirmhöhe.
 - Kleinere Schrift und Abstände, flachere Diagramme, Drucker als einzeilige Zeilen, Kampagnen mit Kanal und Bestellungen als eigene Spalten (höchstens 4 Zeilen).
 - Nur Darstellung, keine neuen Daten oder Rechte. Nicht im Browser geprüft – bitte einmal im Vollbild ansehen.
-
-### Lager: Kleinteile und Kartons anlegen und bearbeiten
-- Im Lager unter „Kleinteile & Kartons“ gibt es **Kleinteil anlegen**, **Karton anlegen** und je Zeile **Bearbeiten** (Code, Bezeichnung, Kategorie, Lieferant, Gebinde und Preis, Bestell-Link, Lieferzeit, Standardplatz …). Der Bestand wird nur beim Anlegen gesetzt; danach ändert ihn nur „Korrigieren“ mit Begründung.
-- Rechte wie auf den klassischen Seiten: Kleinteile wie „Artikel & Revisionen“, Kartons wie „Material“. Neue Route `POST /erp/lager/teil/speichern`.
 
 ## [0.65.0] – 2026-10-29
 

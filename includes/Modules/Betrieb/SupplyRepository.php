@@ -116,6 +116,11 @@ class SupplyRepository {
 			'safety_days'           => self::int_or( $input, 'safety_days', 7 ),
 		);
 
+		// Nur setzen, wenn das Formular das Feld kennt – sonst bliebe ein gepflegter Link nicht erhalten.
+		if ( isset( $input['order_url'] ) ) {
+			$data['order_url'] = Purchase::clean_url( $input['order_url'] );
+		}
+
 		$id = self::int_or( $input, 'supply_id', 0 );
 
 		if ( $id ) {

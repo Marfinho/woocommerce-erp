@@ -145,6 +145,25 @@ class Procurement {
 	}
 
 	/**
+	 * Bestell-Link des Artikels beim Lieferanten (leer, wenn keiner hinterlegt ist).
+	 *
+	 * @param string $type component oder supply.
+	 * @param int    $id   Datensatz.
+	 * @return string
+	 */
+	protected static function order_url( $type, $id ) {
+		if ( 'component' === $type ) {
+			$row = \Lindenweg16\Modules\Betrieb\ComponentRepository::find( $id );
+		} elseif ( 'supply' === $type ) {
+			$row = \Lindenweg16\Modules\Betrieb\SupplyRepository::find( $id );
+		} else {
+			return '';
+		}
+
+		return $row ? \Lindenweg16\Modules\Betrieb\Purchase::clean_url( isset( $row['order_url'] ) ? $row['order_url'] : '' ) : '';
+	}
+
+	/**
 	 * Das Board.
 	 *
 	 * @return array {order, open, done}
@@ -196,6 +215,7 @@ class Procurement {
 				'qty'       => (float) $alert['order_qty'],
 				'supplier'  => $last ? (string) $last['supplier'] : '',
 				'price'     => $last ? (float) $last['unit_price_net'] : 0.0,
+				'order_url' => self::order_url( $type, (int) $alert['id'] ),
 			);
 		}
 
@@ -232,6 +252,7 @@ class Procurement {
 				'qty'       => (float) ceil( $row['net'] ),
 				'supplier'  => $last ? (string) $last['supplier'] : '',
 				'price'     => $last ? (float) $last['unit_price_net'] : 0.0,
+				'order_url' => self::order_url( $type, $cid ),
 			);
 		}
 
