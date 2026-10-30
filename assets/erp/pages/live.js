@@ -39,38 +39,34 @@
 		return h('span', { class: 'lv-delta ' + (p >= 0 ? 'up' : 'down') }, (p >= 0 ? '▲ ' : '▼ ') + Math.abs(p) + ' % zu gestern (' + label + ')');
 	}
 
-	// Balken je Stunde, die laufende hervorgehoben.
+	function axis(labels) {
+		var ax = h('div', { class: 'lv-ax' });
+		labels.forEach(function (t) { ax.appendChild(h('span', null, t)); });
+		return ax;
+	}
+
+	// Balken je Stunde, die laufende hervorgehoben; füllt die Höhe, die der Karte übrig bleibt.
 	function bars(values, current, color) {
 		var max = Math.max.apply(null, values.concat([1]));
-		var w = 480, hh = 64, bw = w / values.length;
-		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 18), class: 'lv-chart', role: 'img', 'aria-label': 'Verlauf nach Stunde' });
+		var n = values.length;
+		var root = svg('svg', { viewBox: '0 0 ' + n * 10 + ' 100', preserveAspectRatio: 'none', role: 'img', 'aria-label': 'Verlauf nach Stunde' });
 		values.forEach(function (v, i) {
-			var bh = Math.max(v > 0 ? 3 : 1, v / max * hh);
-			root.appendChild(svg('rect', { x: i * bw + 2, y: hh - bh, width: bw - 4, height: bh, rx: 3, class: 'bar' + (i === current ? ' now' : '') + (i > current ? ' future' : ''), fill: color }));
-			if (i % 3 === 0) {
-				var t = svg('text', { x: i * bw + bw / 2, y: hh + 14, 'text-anchor': 'middle', class: 'ax' });
-				t.textContent = String(i);
-				root.appendChild(t);
-			}
+			var bh = Math.max(v > 0 ? 4 : 1.5, v / max * 100);
+			root.appendChild(svg('rect', { x: i * 10 + 1, y: 100 - bh, width: 8, height: bh, class: 'bar' + (i === current ? ' now' : '') + (i > current ? ' future' : ''), fill: color }));
 		});
-		return root;
+		return h('div', { class: 'lv-chart' }, h('div', { class: 'lv-plot' }, root), axis(['0', '6', '12', '18', '23']));
 	}
 
 	function line(series) {
 		var vals = series.map(function (s) { return s.views; });
 		var max = Math.max.apply(null, vals.concat([1]));
-		var w = 480, hh = 64, step = w / (vals.length - 1);
+		var w = 240, step = w / (vals.length - 1);
 		var d = '';
-		vals.forEach(function (v, i) { d += (i ? 'L' : 'M') + (i * step).toFixed(1) + ' ' + (hh - v / max * (hh - 8) - 4).toFixed(1) + ' '; });
-		var area = d + 'L' + w + ' ' + hh + ' L0 ' + hh + ' Z';
-		var root = svg('svg', { viewBox: '0 0 ' + w + ' ' + (hh + 18), class: 'lv-chart', role: 'img', 'aria-label': 'Seitenaufrufe der letzten 24 Stunden' },
-			svg('path', { d: area, class: 'area' }), svg('path', { d: d, class: 'ln', fill: 'none' }));
-		[0, 6, 12, 18, 23].forEach(function (i) {
-			var t = svg('text', { x: Math.min(w - 14, Math.max(14, i * step)), y: hh + 14, 'text-anchor': 'middle', class: 'ax' });
-			t.textContent = new Date(series[i].ts * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-			root.appendChild(t);
-		});
-		return root;
+		vals.forEach(function (v, i) { d += (i ? 'L' : 'M') + (i * step).toFixed(1) + ' ' + (96 - v / max * 88).toFixed(1) + ' '; });
+		var root = svg('svg', { viewBox: '0 0 ' + w + ' 100', preserveAspectRatio: 'none', role: 'img', 'aria-label': 'Seitenaufrufe der letzten 24 Stunden' },
+			svg('path', { d: d + 'L' + w + ' 100 L0 100 Z', class: 'area' }), svg('path', { d: d, class: 'ln', fill: 'none', 'vector-effect': 'non-scaling-stroke' }));
+		var times = [0, 6, 12, 18, 23].map(function (i) { return new Date(series[i].ts * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); });
+		return h('div', { class: 'lv-chart' }, h('div', { class: 'lv-plot' }, root), axis(times));
 	}
 
 	function card(title, cls) {
@@ -151,6 +147,7 @@
 				seen[o.number] = true;
 				list.appendChild(h('li', { class: fresh ? 'new' : '' }, h('b', null, '#' + o.number), h('span', null, new Date(o.ts * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })), h('b', null, eur(o.total, 2))));
 			});
+			if (!b.last.length) { list.appendChild(h('li', { class: 'none' }, 'Heute noch keine Bestellung.')); }
 			c.body.appendChild(list);
 			return c.el;
 		}
@@ -197,9 +194,10 @@
 			b.printers.forEach(function (p) {
 				var rest = p.progress !== null && p.remaining !== null ? (p.remaining < 60 ? p.remaining + ' min' : Math.floor(p.remaining / 60) + ' h ' + ('0' + (p.remaining % 60)).slice(-2)) : '';
 				pr.appendChild(h('div', { class: 'lv-printer st-' + (p.online ? p.status : 'offline') },
-					h('b', null, p.name),
-					p.progress !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + p.progress + '%' })) : h('span', null, ''),
-					h('span', { class: 'sub' }, p.progress !== null ? p.progress + ' %' + (rest ? ' · ' + rest : '') : p.text)));
+					h('b', { class: 'nm' }, p.name),
+					h('div', { class: 'pc' }, p.progress !== null ? p.progress + ' %' : p.text),
+					p.progress !== null ? h('div', { class: 'meter' }, h('i', { style: 'width:' + p.progress + '%' })) : null,
+					h('div', { class: 'sub' }, p.progress !== null ? (rest ? 'noch ' + rest : p.text) : '')));
 			});
 			if (!b.printers.length) { pr.appendChild(h('p', { class: 'muted' }, 'Kein Drucker angelegt.')); }
 			c.body.appendChild(pr);

@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.67.0] – 2026-10-30
+
+### Live-Bildschirm füllt den Schirm
+- **Passt sich der Bildschirmgröße an:** Schrift und Abstände skalieren mit Breite und Höhe, die Diagramme (Umsatz nach Stunde, Seitenaufrufe) wachsen in die freie Höhe der Karte, Drucker erscheinen als große Kacheln mit Fortschritt und Restzeit. Weniger leere Fläche auf Tablet und Fernseher.
+- Im Vollbild liegt die Ansicht über der Seite und scrollt nicht; unter 1200 px Breite stapeln sich die Spalten.
+- Ohne Bestellung heute steht ein Hinweis statt einer Lücke.
+
 ## [0.66.0] – 2026-10-30
 
 ### Live-Bildschirm kompakter
