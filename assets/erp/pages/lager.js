@@ -211,6 +211,66 @@
 			qty.focus();
 		}
 
+		// Kleinteil oder Karton anlegen/bearbeiten. Beim Bearbeiten bleibt der Bestand unberührt (dafür gibt es „Korrigieren“).
+		function partEditDialog(d, p, type, done) {
+			var f = (p && p.form) || {};
+			var isSupply = type === 'supply';
+			var fields = {};
+			var rows = [];
+
+			function add(key, label, value, hint, extra) {
+				fields[key] = textIn(value === undefined || value === null || value === 0 && key !== 'safety_days' ? '' : String(value).replace('.', ','), label, extra || {});
+				rows.push(row(label, fields[key], hint));
+			}
+
+			if (!isSupply) {
+				add('code', 'Code', f.code, 'Pflicht, eindeutig, z. B. SCHR-M4-80.', { required: '', autocapitalize: 'characters' });
+			}
+			add('name', 'Bezeichnung', f.name, null, { required: '' });
+			if (isSupply) {
+				add('unit', 'Einheit', f.unit || 'Stück');
+			} else {
+				fields.category = select(d.part_categories.map(function (c) { return [c.slug, c.label]; }), f.category || 'sonstiges', 'Kategorie');
+				rows.push(row('Kategorie', fields.category));
+			}
+			add('supplier', 'Lieferant', f.supplier);
+			if (isSupply) {
+				add('price_per_unit', 'Preis je Einheit (€ netto)', f.price_per_unit, null, { inputmode: 'decimal' });
+				add('consumption_per_order', 'Verbrauch je Bestellung', f.consumption_per_order, 'Wird bei jeder Bestellung vom Bestand abgebucht.', { inputmode: 'decimal' });
+			} else {
+				add('pack_qty', 'Gebindegröße', p ? f.pack_qty : 100, 'Stück je Packung, z. B. 100 Dübel. Daraus wird der Stückpreis gerechnet.', { inputmode: 'decimal' });
+				add('pack_price_net', 'Gebindepreis (€ netto)', f.pack_price_net, null, { inputmode: 'decimal' });
+				add('order_url', 'Bestell-Link', f.order_url, 'Artikelseite beim Lieferanten (http/https).', { type: 'url' });
+				add('barcode', 'Barcode', f.barcode, 'Barcode des Lieferanten, falls die Packung einen trägt.');
+			}
+			add('min_order_qty', 'Mindestbestellmenge', p ? f.min_order_qty : 1, null, { inputmode: 'decimal' });
+			add('lead_time_days', 'Lieferzeit (Tage)', f.lead_time_days, null, { inputmode: 'numeric' });
+			add('safety_days', 'Sicherheitspuffer (Tage)', p ? f.safety_days : 7, 'Zusätzlich zur Lieferzeit, bevor der Beschaffungsalarm auslöst.', { inputmode: 'numeric' });
+			if (!isSupply) {
+				fields.default_bin_id = select([['0', '– kein fester Platz –']].concat((d.part_bins || []).map(function (b) { return [b.id, b.label]; })), f.default_bin_id || 0, 'Standardplatz');
+				rows.push(row('Standardplatz', fields.default_bin_id, 'Wo die Kiste steht; daraus kennt die Pickliste den Weg.'));
+				fields.note = h('textarea', { class: 'field', rows: '2', 'aria-label': 'Bemerkung' }, f.note || '');
+				rows.push(row('Bemerkung', fields.note));
+			}
+			if (!p) {
+				add('stock_qty', 'Anfangsbestand', '', 'Später änderst du den Bestand nur noch über „Korrigieren“, mit Begründung.', { inputmode: 'decimal', placeholder: '0' });
+			} else {
+				add('reason', 'Begründung der Änderung', '', 'Optional, steht im Änderungsprotokoll.');
+			}
+
+			var err = h('div', { 'aria-live': 'polite' });
+			var btn = h('button', { class: 'btn primary', type: 'submit' }, p ? 'Speichern' : 'Anlegen');
+			var form = h('form', { class: 'lg-form' }, rows, err, h('div', { class: 'lg-actions' }, btn));
+			var title = (p ? 'Bearbeiten: ' : 'Neu: ') + (isSupply ? 'Karton / Verbrauchsmaterial' : 'Kleinteil');
+			var dialog = ui.dlg(title, h('div', { class: 'sheet-body' }, form));
+			form.addEventListener('submit', submitter(dialog, err, btn, function () {
+				var body = { part_type: type, part_id: p ? p.id : 0 };
+				Object.keys(fields).forEach(function (k) { body[k] = fields[k].value; });
+				return ui.api('lager/teil/speichern', { method: 'POST', body: body });
+			}, done));
+			(fields.code || fields.name).focus();
+		}
+
 		function voidDialog(m, done) {
 			var reason = textIn('', 'Grund', { placeholder: 'Pflicht, z. B. „falsch gezählt“', required: '' });
 			var err = h('div', { 'aria-live': 'polite' });
@@ -287,14 +347,21 @@
 
 		function partsList(d, reload) {
 			var list = h('div', { class: 'rows' });
-			if (!d.parts || !d.parts.length) { list.appendChild(h('div', { class: 'card muted' }, 'Noch nichts angelegt. Kleinteile und Kartons pflegst du unter „Material“.')); }
+			var pe = d.part_edit || {};
+			var bar = h('div', { class: 'lg-btns lg-gap0' });
+			if (pe.component) { bar.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function () { partEditDialog(d, null, 'component', reload); } }, 'Kleinteil anlegen')); }
+			if (pe.supply) { bar.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { partEditDialog(d, null, 'supply', reload); } }, 'Karton anlegen')); }
+			if (!d.parts || !d.parts.length) { list.appendChild(h('div', { class: 'card muted' }, 'Noch nichts angelegt.')); }
 			(d.parts || []).forEach(function (p) {
+				var canEdit = !!pe[p.type];
 				list.appendChild(h('article', { class: 'row-card lg-row' },
 					h('div', { class: 'row-main' }, h('b', null, p.title), h('small', null, (p.type === 'supply' ? 'Karton / Verbrauchsmaterial · ' : 'Kleinteil · ') + p.sub)),
 					h('div', { class: 'lg-num' }, h('span', { class: 'row-num' }, num(p.qty)), h('small', { class: 'muted' }, 'Bestand')),
-					h('div', { class: 'lg-btns' }, d.can_book ? h('button', { class: 'btn', type: 'button', onclick: function () { partDialog(p, reload); } }, 'Korrigieren') : null)));
+					h('div', { class: 'lg-btns' },
+						canEdit ? h('button', { class: 'btn', type: 'button', onclick: function () { partEditDialog(d, p, p.type, reload); } }, 'Bearbeiten') : null,
+						d.can_book ? h('button', { class: 'btn', type: 'button', onclick: function () { partDialog(p, reload); } }, 'Korrigieren') : null)));
 			});
-			return h('div', null, h('p', { class: 'muted' }, 'Schrauben, Dübel, Kartons und Klebeband. Wareneingang und Verbrauch schreiben den Bestand fort; Korrekturen hier landen mit Begründung im Änderungsprotokoll.'), list);
+			return h('div', null, h('p', { class: 'muted' }, 'Schrauben, Dübel, Kartons und Klebeband. Wareneingang und Verbrauch schreiben den Bestand fort; Korrekturen hier landen mit Begründung im Änderungsprotokoll.'), bar, list);
 		}
 
 		function journal(d, reload) {

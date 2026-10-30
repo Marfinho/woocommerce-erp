@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [Unveröffentlicht]
+
+### Lager: Kleinteile und Kartons anlegen und bearbeiten
+- Im Lager unter „Kleinteile & Kartons“ gibt es **Kleinteil anlegen**, **Karton anlegen** und je Zeile **Bearbeiten** (Code, Bezeichnung, Kategorie, Lieferant, Gebinde und Preis, Bestell-Link, Lieferzeit, Standardplatz …). Der Bestand wird nur beim Anlegen gesetzt; danach ändert ihn nur „Korrigieren“ mit Begründung.
+- Rechte wie auf den klassischen Seiten: Kleinteile wie „Artikel & Revisionen“, Kartons wie „Material“. Neue Route `POST /erp/lager/teil/speichern`.
+
 ## [0.65.0] – 2026-10-29
 
 ### wp-admin nur für den Webmaster
