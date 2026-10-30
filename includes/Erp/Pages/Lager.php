@@ -1352,6 +1352,15 @@ class Lager {
 		$input['note'] = is_scalar( $note ) ? (string) $note : '';
 		$reason        = self::text( $request, 'reason' );
 
+		// Leere Felder lassen beim Bearbeiten den gespeicherten Wert stehen.
+		$keep = function ( $existing ) use ( &$input ) {
+			foreach ( $input as $key => $value ) {
+				if ( '' === $value && isset( $existing[ $key ] ) && '' !== (string) $existing[ $key ] ) {
+					$input[ $key ] = $existing[ $key ];
+				}
+			}
+		};
+
 		if ( 'supply' === $type ) {
 			$before = $id ? \Lindenweg16\Modules\Betrieb\SupplyRepository::find( $id ) : null;
 
@@ -1360,6 +1369,7 @@ class Lager {
 			}
 
 			if ( $before ) {
+				$keep( $before );
 				$input['stock_qty'] = $before['stock_qty'];
 			}
 
@@ -1373,6 +1383,16 @@ class Lager {
 			return new WP_REST_Response( array( 'ok' => true, 'message' => $id ? __( 'Karton gespeichert.', 'lindenweg16' ) : __( 'Karton angelegt.', 'lindenweg16' ) ), $id ? 200 : 201 );
 		}
 
+		if ( $id ) {
+			$existing = \Lindenweg16\Modules\Betrieb\ComponentRepository::find( $id );
+
+			if ( ! $existing ) {
+				return self::fail( __( 'Diese Position gibt es nicht mehr. Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+			}
+
+			$keep( $existing );
+		}
+
 		$result = \Lindenweg16\Modules\Betrieb\ComponentRepository::validate( $input, $id ? $id : null );
 
 		if ( $result['errors'] ) {
@@ -1380,9 +1400,6 @@ class Lager {
 		}
 
 		if ( $id ) {
-			if ( ! \Lindenweg16\Modules\Betrieb\ComponentRepository::find( $id ) ) {
-				return self::fail( __( 'Diese Position gibt es nicht mehr. Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
-			}
 
 			unset( $result['data']['stock_qty'] );
 			\Lindenweg16\Modules\Betrieb\ComponentRepository::update( $id, $result['data'], $reason );
