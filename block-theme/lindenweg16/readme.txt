@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.8.0
+Stable tag: 1.8.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -252,6 +252,10 @@ lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.8.1 =
+* Footer: Steuerhinweis passt zur Shop-Einstellung – als Kleinunternehmer „Gemäß § 19 UStG wird keine Umsatzsteuer berechnet“ statt „Alle Preise inkl. MwSt.“ (erkannt über Germanized oder das ERP-Plugin; Filter lindenweg16_tax_note)
+* Preis-Hinweis ohne Germanized: als Kleinunternehmer „keine MwSt. gem. § 19 UStG“
 
 = 1.8.0 =
 * Mein Konto: Menü stand auf manchen Seiten rechts und der Inhalt in der schmalen linken Spalte – WooCommerces Clearfix wurde im Grid zur unsichtbaren ersten Zelle

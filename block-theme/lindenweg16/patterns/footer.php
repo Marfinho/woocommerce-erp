@@ -86,7 +86,10 @@ $lindenweg16_payments = lindenweg16_payment_methods(); // Design → Lindenweg16
 	<!-- wp:group {"align":"wide","className":"lw16-footer__bottom","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
 	<div class="wp-block-group alignwide lw16-footer__bottom">
 		<!-- wp:paragraph -->
-		<p><?php echo esc_html( sprintf( /* translators: %s: Jahreszahl. */ __( '© %s Lindenweg16 · Alle Preise inkl. MwSt.', 'lindenweg16' ), wp_date( 'Y' ) ) ); ?></p>
+		<p><?php
+			$lindenweg16_tax_note = lindenweg16_tax_note();
+			echo esc_html( sprintf( /* translators: %s: Jahreszahl. */ __( '© %s Lindenweg16', 'lindenweg16' ), wp_date( 'Y' ) ) . ( '' !== $lindenweg16_tax_note ? ' · ' . $lindenweg16_tax_note : '' ) );
+		?></p>
 		<!-- /wp:paragraph -->
 		<!-- wp:paragraph -->
 		<p><?php esc_html_e( 'Mit Liebe in Haste gebaut', 'lindenweg16' ); ?></p>

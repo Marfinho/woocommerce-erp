@@ -387,6 +387,52 @@ function lindenweg16_has_legal_plugin(): bool {
 }
 
 /**
+ * Kleinunternehmer nach § 19 UStG? Dann weist der Shop keine Umsatzsteuer
+ * aus – Hinweise wie „inkl. MwSt.“ wären falsch.
+ *
+ * Erkannt über Germanized (Kleinunternehmer-Regelung) oder das Lindenweg16-ERP
+ * (Einstellung „Kleinunternehmer §19 UStG“).
+ */
+function lindenweg16_is_small_business(): bool {
+	$small = 'yes' === get_option( 'woocommerce_gzd_small_enterprise' );
+
+	if ( ! $small && class_exists( '\Lindenweg16\Core\Settings' ) ) {
+		$small = 1 === (int) \Lindenweg16\Core\Settings::get( 'kleinunternehmer', 1 );
+	}
+
+	/**
+	 * Filtert, ob der Shop als Kleinunternehmer (keine Umsatzsteuer) gilt.
+	 *
+	 * @param bool $small Erkanntes Ergebnis.
+	 */
+	return (bool) apply_filters( 'lindenweg16_is_small_business', $small );
+}
+
+/**
+ * Steuerhinweis für den Footer – passend zur Einstellung im Shop.
+ *
+ * @return string Leer, wenn der Shop keine Steuer anzeigt.
+ */
+function lindenweg16_tax_note(): string {
+	if ( lindenweg16_is_small_business() ) {
+		$note = __( 'Gemäß § 19 UStG wird keine Umsatzsteuer berechnet', 'lindenweg16' );
+	} elseif ( function_exists( 'wc_tax_enabled' ) && wc_tax_enabled() && 'incl' === get_option( 'woocommerce_tax_display_shop' ) ) {
+		$note = __( 'Alle Preise inkl. MwSt.', 'lindenweg16' );
+	} elseif ( function_exists( 'wc_tax_enabled' ) && wc_tax_enabled() ) {
+		$note = __( 'Alle Preise zzgl. MwSt.', 'lindenweg16' );
+	} else {
+		$note = '';
+	}
+
+	/**
+	 * Filtert den Steuerhinweis im Footer. Leer = kein Hinweis.
+	 *
+	 * @param string $note Hinweis.
+	 */
+	return (string) apply_filters( 'lindenweg16_tax_note', $note );
+}
+
+/**
  * Body-Klasse, damit das CSS weiß, wer die Hinweise ausgibt.
  *
  * @param string[] $classes Body-Klassen.

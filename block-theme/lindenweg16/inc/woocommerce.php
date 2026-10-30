@@ -85,7 +85,10 @@ function lindenweg16_price_note( string $content, array $parsed_block = array(),
 
 	$shipping_url = (string) apply_filters( 'lindenweg16_shipping_page_url', lindenweg16_page_url( 'versand-und-zahlung' ) );
 
-	if ( wc_tax_enabled() && 'incl' === get_option( 'woocommerce_tax_display_shop' ) ) {
+	if ( lindenweg16_is_small_business() ) {
+		/* translators: %s: Link „Versand“. */
+		$text = __( 'keine MwSt. gem. § 19 UStG, zzgl. %s', 'lindenweg16' );
+	} elseif ( wc_tax_enabled() && 'incl' === get_option( 'woocommerce_tax_display_shop' ) ) {
 		/* translators: %s: Link „Versand“. */
 		$text = __( 'inkl. MwSt., zzgl. %s', 'lindenweg16' );
 	} else {
