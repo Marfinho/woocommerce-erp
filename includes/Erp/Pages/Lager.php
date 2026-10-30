@@ -940,6 +940,21 @@ class Lager {
 				'title' => (string) $row['name'],
 				'sub'   => trim( (string) $row['code'] . ' · ' . ( isset( $labels[ $row['category'] ] ) ? $labels[ $row['category'] ] : (string) $row['category'] ), ' ·' ),
 				'qty'   => (float) $row['stock_qty'],
+				'form'  => array(
+					'code'           => (string) $row['code'],
+					'name'           => (string) $row['name'],
+					'barcode'        => (string) $row['barcode'],
+					'category'       => (string) $row['category'],
+					'supplier'       => (string) $row['supplier'],
+					'pack_qty'       => (float) $row['pack_qty'],
+					'pack_price_net' => (float) $row['pack_price_net'],
+					'order_url'      => (string) $row['order_url'],
+					'lead_time_days' => (int) $row['lead_time_days'],
+					'min_order_qty'  => (float) $row['min_order_qty'],
+					'safety_days'    => (int) $row['safety_days'],
+					'default_bin_id' => (int) $row['default_bin_id'],
+					'note'           => (string) $row['note'],
+				),
 			);
 		}
 
@@ -950,6 +965,16 @@ class Lager {
 				'title' => (string) $row['name'],
 				'sub'   => trim( (string) $row['unit'] . ' · ' . number_format_i18n( (float) $row['consumption_per_order'], 2 ) . ' ' . __( 'je Bestellung', 'lindenweg16' ), ' ·' ),
 				'qty'   => (float) $row['stock_qty'],
+				'form'  => array(
+					'name'                  => (string) $row['name'],
+					'unit'                  => (string) $row['unit'],
+					'supplier'              => (string) $row['supplier'],
+					'price_per_unit'        => (float) $row['price_per_unit'],
+					'consumption_per_order' => (float) $row['consumption_per_order'],
+					'min_order_qty'         => (float) $row['min_order_qty'],
+					'lead_time_days'        => (int) $row['lead_time_days'],
+					'safety_days'           => (int) $row['safety_days'],
+				),
 			);
 		}
 
