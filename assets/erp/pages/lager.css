@@ -36,3 +36,14 @@
 }
 .lg-field { display: grid; gap: 4px; font-size: 14px; }
 .lg-field span { color: var(--text-muted); font-size: 13px; }
+
+/* Protokoll der Lagerbewegungen */
+.lg-jbar { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 12px; align-items: end; margin: 10px 0 8px; }
+.lg-jbar .field { width: 100%; }
+.lg-jq { grid-column: 1 / -1; }
+.lg-jact { grid-column: 1 / -1; }
+.lg-jsum { margin: 4px 0 10px; font-size: 14px; }
+.lg-jpager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 14px 0; }
+.lg-nr { font-size: 12px; font-variant-numeric: tabular-nums; }
+.lg-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--text-muted); text-underline-offset: 3px; }
+.lg-link:hover { text-decoration-color: currentColor; }

@@ -1,5 +1,5 @@
 /*
- * Lager im ERP: Seiten „lager“ (Bestand, Buchen, Journal), „lagerplaetze“
+ * Lager im ERP: Seiten „lager“ (Bestand, Buchen, Protokoll aller Bewegungen), „lagerplaetze“
  * (Plätze, Etiketten, Fertigungsaufträge) und „bedarf“ (was fehlt).
  * Schnittstelle: includes/Erp/Pages/Lager.php. Kein innerHTML mit Daten.
  */
@@ -136,7 +136,7 @@
 					zugang: 'Du tippst nur die Stückzahl; sie kommt zum Bestand dazu.',
 					abgang: 'Du tippst nur die Stückzahl; sie geht vom Bestand ab.',
 					korrektur: 'Plus oder Minus, wie die Inventur es ergibt – mit Begründung, damit es nachvollziehbar bleibt.',
-					umlagerung: 'Die Ware wechselt den Platz; der Gesamtbestand bleibt gleich. Beide Buchungen stehen einzeln im Journal.',
+					umlagerung: 'Die Ware wechselt den Platz; der Gesamtbestand bleibt gleich. Beide Buchungen stehen einzeln im Protokoll.',
 					kommission: 'Ausliefern oder zurücknehmen verschiebt nur zwischen Lager und Händler; Abrechnen verkauft die Ware.'
 				}[k] || '';
 			}
@@ -331,6 +331,9 @@
 				if (d.can_target) {
 					actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { targetDialog(d, r, reload); } }, 'Soll'));
 				}
+				if (state.openJournal) {
+					actions.appendChild(h('button', { class: 'btn', type: 'button', title: 'Alle Bewegungen dieses Artikels in dieser Farbe', onclick: function () { state.openJournal({ article_id: r.article_id, color: r.color }); } }, 'Verlauf'));
+				}
 
 				return h('article', { class: 'row-card lg-row' },
 					h('div', { class: 'row-main' }, h('b', null, r.sku), h('small', null, r.name + ' · ' + r.color_label), h('small', null, detail.join(' · ')), tags),
@@ -365,36 +368,128 @@
 			return h('div', null, h('p', { class: 'muted' }, 'Schrauben, Dübel, Kartons und Klebeband. Wareneingang und Verbrauch schreiben den Bestand fort; Korrekturen hier landen mit Begründung im Änderungsprotokoll.'), bar, list);
 		}
 
-		function journal(d, reload) {
+		// Protokoll aller Lagerbewegungen: Filter laufen auf dem Server, damit auch alte Buchungen gefunden werden.
+		function journal(d, state) {
+			var f = state.jf = state.jf || {};
 			var box = h('div');
-			var limit = 60;
+			var bar = h('div', { class: 'lg-jbar' });
+			var sum = h('div', { class: 'lg-jsum muted', 'aria-live': 'polite' });
+			var list = h('div', { class: 'rows' });
+			var pager = h('div', { class: 'lg-jpager' });
+			var opts = state.jopts || null;
+			var timer = null;
+			var seq = 0;
+
+			function qs() {
+				return Object.keys(f).filter(function (k) { return f[k] !== '' && f[k] !== null && f[k] !== undefined; })
+					.map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(f[k]); }).join('&');
+			}
+
+			function set(key, value) {
+				f[key] = value;
+				f.page = 1;
+				load();
+			}
+
+			function pick(key, label, pairs, all) {
+				var s = select([['', all]].concat(pairs || []), f[key] || '', label);
+				s.addEventListener('change', function () { set(key, s.value); });
+				return h('label', { class: 'lg-field' }, h('span', null, label), s);
+			}
+
+			function dateIn(key, label) {
+				var i = h('input', { class: 'field', type: 'date', value: f[key] || '', 'aria-label': label });
+				i.addEventListener('change', function () { set(key, i.value); });
+				return h('label', { class: 'lg-field' }, h('span', null, label), i);
+			}
+
+			function paintBar() {
+				bar.textContent = '';
+				var search = h('input', { class: 'field', type: 'search', value: f.q || '', autocomplete: 'off', 'aria-label': 'Suchen', placeholder: 'Nr., SKU, Artikel, Bestell-/Auftragsnr., Notiz …' });
+				search.addEventListener('input', function () {
+					clearTimeout(timer);
+					timer = setTimeout(function () { set('q', search.value.trim()); }, 350);
+				});
+				var o = opts || {};
+				var active = Object.keys(f).some(function (k) { return k !== 'page' && f[k]; });
+				bar.appendChild(h('label', { class: 'lg-field lg-jq' }, h('span', null, 'Suche'), search));
+				bar.appendChild(pick('article_id', 'Artikel', o.articles, 'Alle Artikel'));
+				bar.appendChild(pick('color', 'Farbe', o.colors, 'Alle Farben'));
+				bar.appendChild(pick('type', 'Art', o.types, 'Alle Arten'));
+				bar.appendChild(pick('dir', 'Richtung', [['zugang', 'nur Zugänge (+)'], ['abgang', 'nur Abgänge (−)']], 'Zu- und Abgänge'));
+				bar.appendChild(pick('place', 'Ort', o.places, 'Alle Orte'));
+				if (o.bins && o.bins.length) { bar.appendChild(pick('bin_id', 'Lagerplatz', o.bins, 'Alle Plätze')); }
+				bar.appendChild(pick('origin', 'Herkunft', o.origins, 'Jede Herkunft'));
+				if (o.users && o.users.length) { bar.appendChild(pick('user_id', 'Person', o.users, 'Alle Personen')); }
+				bar.appendChild(pick('state', 'Status', [['offen', 'gültig'], ['storniert', 'storniert'], ['gegenbuchung', 'Gegenbuchungen']], 'Alle'));
+				bar.appendChild(dateIn('from', 'Von'));
+				bar.appendChild(dateIn('to', 'Bis'));
+				var csv = h('button', { class: 'btn', type: 'button' }, ui.ico ? ui.ico('download') : null, 'CSV');
+				csv.addEventListener('click', function () {
+					csv.disabled = true;
+					ui.api('lager/journal/csv?' + qs()).then(function (r) {
+						csv.disabled = false;
+						var blob = new Blob([r.text], { type: r.mime });
+						var url = URL.createObjectURL(blob);
+						var a = document.createElement('a');
+						a.href = url; a.download = r.filename;
+						document.body.appendChild(a); a.click(); a.remove();
+						setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+					}).catch(function (e) { csv.disabled = false; ui.toast(e.message, true); });
+				});
+				bar.appendChild(h('div', { class: 'lg-btns lg-jact' },
+					active ? h('button', { class: 'btn', type: 'button', onclick: function () { Object.keys(f).forEach(function (k) { delete f[k]; }); paintBar(); load(); } }, 'Filter zurücksetzen') : null,
+					csv));
+			}
+
+			function sign(n) { return (n > 0 ? '+' : '') + num(n); }
+
+			function rowCard(m) {
+				var tags = h('div', { class: 'row-tags' }, h('span', { class: 'tag' }, m.type), h('span', { class: 'tag' }, m.place));
+				if (m.state === 'storniert') { tags.appendChild(h('span', { class: 'tag later' }, 'storniert')); }
+				if (m.state === 'gegenbuchung') { tags.appendChild(h('span', { class: 'tag' }, 'Gegenbuchung zu Nr. ' + m.reverses_id)); }
+				var art = h('button', { class: 'lg-link', type: 'button', title: 'Nur diesen Artikel in dieser Farbe zeigen', onclick: function () { f.article_id = m.article_id; f.color = m.color; f.page = 1; paintBar(); load(); } }, m.sku + ' · ' + m.color_label);
+				var meta = [ui.when(m.ts)];
+				if (m.bin) { meta.push('Platz ' + m.bin); }
+				if (m.origin) { meta.push(m.origin); }
+				if (m.user) { meta.push(m.user); }
+				return h('article', { class: 'row-card lg-row' + (m.state === 'offen' ? '' : ' lg-dim') },
+					h('div', { class: 'row-main' },
+						h('div', null, h('span', { class: 'muted lg-nr' }, 'Nr. ' + m.id), ' ', art, m.name ? h('small', { class: 'muted' }, ' ' + m.name) : null),
+						h('small', null, meta.join(' · ')),
+						m.note ? h('small', null, m.note) : null, tags),
+					h('div', { class: 'lg-num' }, h('span', { class: 'row-num' }, sign(m.qty))),
+					h('div', { class: 'lg-btns' }, m.can_void ? h('button', { class: 'btn', type: 'button', onclick: function () { voidDialog(m, load); } }, 'Stornieren') : null));
+			}
 
 			function load() {
-				box.textContent = '';
-				box.appendChild(h('div', { class: 'card muted' }, 'Wird geladen …'));
-				ui.api('lager/journal?limit=' + limit).then(function (j) {
-					box.textContent = '';
-					var list = h('div', { class: 'rows' });
-					if (!j.rows.length) { list.appendChild(h('div', { class: 'card muted' }, 'Noch keine Bewegungen.')); }
-					j.rows.forEach(function (m) {
-						var tags = h('div', { class: 'row-tags' }, h('span', { class: 'tag' }, m.type), h('span', { class: 'tag' }, m.place));
-						if (m.state === 'storniert') { tags.appendChild(h('span', { class: 'tag later' }, 'storniert')); }
-						if (m.state === 'gegenbuchung') { tags.appendChild(h('span', { class: 'tag' }, 'Gegenbuchung')); }
-						list.appendChild(h('article', { class: 'row-card lg-row' + (m.state === 'offen' ? '' : ' lg-dim') },
-							h('div', { class: 'row-main' },
-								h('b', null, m.sku + ' · ' + m.color_label),
-								h('small', null, ui.when(m.ts) + (m.bin ? ' · Platz ' + m.bin : '') + (m.origin ? ' · ' + m.origin : '')),
-								m.note ? h('small', null, m.note) : null, tags),
-							h('div', { class: 'lg-num' }, h('span', { class: 'row-num' }, (m.qty > 0 ? '+' : '') + num(m.qty))),
-							h('div', { class: 'lg-btns' }, m.can_void ? h('button', { class: 'btn', type: 'button', onclick: function () { voidDialog(m, load); } }, 'Stornieren') : null)));
-					});
-					box.appendChild(list);
-					if (j.rows.length >= limit && limit < 200) {
-						box.appendChild(h('p', null, h('button', { class: 'btn', type: 'button', onclick: function () { limit = Math.min(200, limit + 60); load(); } }, 'Ältere zeigen')));
+				var mine = ++seq;
+				var withOpts = !opts;
+				list.textContent = '';
+				list.appendChild(h('div', { class: 'card muted' }, 'Wird geladen …'));
+				ui.api('lager/journal?' + qs() + (withOpts ? '' : '&no_options=1')).then(function (j) {
+					if (mine !== seq) { return; }
+					if (withOpts && j.options) { opts = state.jopts = j.options; paintBar(); }
+					sum.textContent = j.total + (j.total === 1 ? ' Bewegung' : ' Bewegungen') + ' · Zugang ' + sign(j.plus) + ' · Abgang ' + num(j.minus) + ' · Saldo ' + sign(j.plus + j.minus);
+					list.textContent = '';
+					if (!j.rows.length) { list.appendChild(h('div', { class: 'card muted' }, j.total || Object.keys(f).some(function (k) { return k !== 'page' && f[k]; }) ? 'Keine Bewegung passt zu den Filtern.' : 'Noch keine Bewegungen.')); }
+					j.rows.forEach(function (m) { list.appendChild(rowCard(m)); });
+					pager.textContent = '';
+					if (j.pages > 1) {
+						pager.appendChild(h('button', { class: 'btn', type: 'button', disabled: j.page <= 1 ? true : null, onclick: function () { f.page = j.page - 1; load(); } }, '← Neuere'));
+						pager.appendChild(h('span', { class: 'muted' }, 'Seite ' + j.page + ' von ' + j.pages));
+						pager.appendChild(h('button', { class: 'btn', type: 'button', disabled: j.page >= j.pages ? true : null, onclick: function () { f.page = j.page + 1; load(); } }, 'Ältere →'));
 					}
-				}).catch(function (e) { failBox(box, e); });
+				}).catch(function (e) { if (mine === seq) { failBox(list, e); } });
 			}
+
+			paintBar();
 			load();
+			box.appendChild(h('p', { class: 'muted' }, 'Jede Bewegung im Lager mit Nummer, Zeitpunkt, Herkunft und Person. Gelöscht wird nichts: Stornos sind Gegenbuchungen und stehen ebenfalls hier.'));
+			box.appendChild(bar);
+			box.appendChild(sum);
+			box.appendChild(list);
+			box.appendChild(pager);
 			return box;
 		}
 
@@ -416,7 +511,8 @@
 		}
 
 		function pageLager(item) {
-			var state = { tab: 'bestand', f: 'alle', q: '' };
+			var state = { tab: 'bestand', f: 'alle', q: '', jf: {} };
+			state.openJournal = function (filter) { state.jf = filter; state.tab = 'journal'; paint(); };
 			var head = h('div');
 			var body = h('div');
 			var shown = null;
@@ -439,7 +535,7 @@
 					head.appendChild(h('div', { class: 'notice warn lg-gap' }, d.unresolved + ' Buchung(en) ohne eindeutige Farbe: gebucht, aber keiner Farbe zugeordnet. Farbattribut am Produkt prüfen und per Korrektur umbuchen.'));
 				}
 				var bar = h('div', { class: 'lg-top' },
-					pills([['bestand', 'Bestand'], ['teile', 'Kleinteile & Kartons'], ['journal', 'Journal']], state.tab, function (t) { state.tab = t; paint(); }),
+					pills([['bestand', 'Bestand'], ['teile', 'Kleinteile & Kartons'], ['journal', 'Protokoll']], state.tab, function (t) { state.tab = t; paint(); }),
 					h('div', { class: 'lg-btns' },
 						d.can_book && ui.can('verkauf.kontakte') && UI.commissionDialog ? h('button', { class: 'btn', type: 'button', onclick: function () { commissionPicker(load); } }, 'Kommission') : null,
 						d.can_target && d.articles ? h('button', { class: 'btn', type: 'button', onclick: function () { newTargetDialog(d, load); } }, 'Soll festlegen') : null,
@@ -448,7 +544,7 @@
 				body.textContent = '';
 				if (state.tab === 'bestand') { body.appendChild(stockList(d, state, load)); }
 				else if (state.tab === 'teile') { body.appendChild(partsList(d, load)); }
-				else { body.appendChild(journal(d, load)); }
+				else { body.appendChild(journal(d, state)); }
 				if (!d.can_book) { body.appendChild(h('p', { class: 'muted lg-gap' }, h('span', { class: 'tag' }, 'Nur ansehen'), ' Bestand buchen darfst du nicht.')); }
 			}
 
@@ -457,7 +553,7 @@
 			}
 
 			function load() {
-				return ui.api('lager').then(function (d) { shown = d; paint(); }).catch(function (e) { failBox(body, e); });
+				return ui.api('lager').then(function (d) { shown = d; state.jopts = null; paint(); }).catch(function (e) { failBox(body, e); });
 			}
 			load();
 			ui.every(function () { if (!document.querySelector('dialog[open]') && state.tab === 'bestand') { ui.api('lager').then(function (d) { shown = d; paint(); }).catch(function () {}); } }, 60000);

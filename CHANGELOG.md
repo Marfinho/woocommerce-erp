@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.71.0] – 2026-11-01
+
+### Lager: Protokoll aller Lagerbewegungen
+- Der Reiter „Journal“ im Lager heißt jetzt **Protokoll** und zeigt **alle** Bewegungen, nicht mehr nur die letzten 200 – seitenweise, neueste zuerst.
+- **Filter:** Suche nach Bewegungsnummer, Bestell-/Auftrags-/Druckjobnummer (z. B. `#1234`), SKU, Artikelname, Notiz oder Stornogrund; dazu Artikel, Farbe, Art, Richtung (Zu-/Abgang), Ort, Lagerplatz, Herkunft, Person, Status (gültig, storniert, Gegenbuchung) und Zeitraum von/bis. Die Auswahllisten zeigen nur Werte, die im Protokoll vorkommen.
+- Über der Liste stehen Anzahl, Summe der Zugänge, der Abgänge und der Saldo – passend zu den gesetzten Filtern.
+- Jede Zeile zeigt jetzt Nummer und Person. Ein Klick auf den Artikel filtert auf diesen Artikel in dieser Farbe; im Bestand führt der neue Knopf **Verlauf** direkt ins gefilterte Protokoll.
+- **CSV-Export** mit denselben Filtern (bis 10.000 Zeilen). Neue Route `GET /erp/lager/journal/csv`; `GET /erp/lager/journal` nimmt die Filter und `page`/`per_page` an (`limit` gilt weiter).
+- Rechte unverändert: Ansehen mit „Lager · Bestand“, Stornieren wie bisher nur die Betriebsleitung. Storniert-Markierung stimmt jetzt auch über Seitengrenzen hinweg.
+- Nicht in echtem WordPress geprüft (Unit-Tests für Filter und Abfrage, Syntaxprüfung).
+
 ## [0.70.1] – 2026-10-30
 
 ### Tests wieder grün
