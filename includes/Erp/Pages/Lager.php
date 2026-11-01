@@ -479,6 +479,216 @@ class Lager {
 	}
 
 	/**
+	 * Filter des Protokolls aus der Anfrage lesen und bereinigen.
+	 *
+	 * Unbekannte oder leere Werte fallen weg, damit eine Abfrage nie an einem
+	 * Tippfehler in der Adresse scheitert.
+	 *
+	 * @param array $in Rohwerte (q, article_id, color, type, place, bin_id, origin, user_id, from, to, state, dir, page, per_page).
+	 * @return array Bereinigt, alle Schlüssel vorhanden.
+	 */
+	public static function journal_filter( array $in ) {
+		$text = function ( $key, $max = 50 ) use ( $in ) {
+			if ( ! isset( $in[ $key ] ) || ! is_scalar( $in[ $key ] ) ) {
+				return '';
+			}
+			$v = trim( (string) $in[ $key ] );
+			return function_exists( 'mb_substr' ) ? mb_substr( $v, 0, $max ) : substr( $v, 0, $max );
+		};
+		$slug = function ( $key ) use ( $text ) {
+			return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( $text( $key ) ) );
+		};
+		$int  = function ( $key ) use ( $in ) {
+			return isset( $in[ $key ] ) && is_scalar( $in[ $key ] ) ? max( 0, (int) $in[ $key ] ) : 0;
+		};
+		$date = function ( $key ) use ( $text ) {
+			$v = $text( $key, 10 );
+			return preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m ) && checkdate( (int) $m[2], (int) $m[3], (int) $m[1] ) ? $v : '';
+		};
+
+		$from = $date( 'from' );
+		$to   = $date( 'to' );
+		if ( '' !== $from && '' !== $to && $from > $to ) {
+			list( $from, $to ) = array( $to, $from );
+		}
+
+		$state = $slug( 'state' );
+		$dir   = $slug( 'dir' );
+		$per   = $int( 'per_page' );
+
+		return array(
+			'q'          => $text( 'q', 100 ),
+			'article_id' => $int( 'article_id' ),
+			'color'      => $slug( 'color' ),
+			'type'       => $slug( 'type' ),
+			'place'      => $slug( 'place' ),
+			'bin_id'     => $int( 'bin_id' ),
+			'origin'     => $slug( 'origin' ),
+			'user_id'    => $int( 'user_id' ),
+			'from'       => $from,
+			'to'         => $to,
+			'state'      => in_array( $state, array( 'offen', 'storniert', 'gegenbuchung' ), true ) ? $state : '',
+			'dir'        => in_array( $dir, array( 'zugang', 'abgang' ), true ) ? $dir : '',
+			'page'       => max( 1, $int( 'page' ) ),
+			'per_page'   => $per ? max( 10, min( 200, $per ) ) : 50,
+		);
+	}
+
+	/**
+	 * Suchtext zerlegen: Zahlen („123“, „#123“) sind Kennungen, der Rest Text.
+	 *
+	 * @param string $q Suchtext.
+	 * @return array {ids: int[], text: string}
+	 */
+	public static function parse_search( $q ) {
+		$q   = trim( (string) $q );
+		$ids = array();
+
+		if ( preg_match( '/^#?(\d{1,18})$/', $q, $m ) ) {
+			$ids[] = (int) $m[1];
+		}
+
+		return array(
+			'ids'  => $ids,
+			'text' => ltrim( $q, '#' ) === $q || ! $ids ? $q : '',
+		);
+	}
+
+	/**
+	 * Bedingung (WHERE) für das Protokoll bauen – ohne Datenbank, getestet.
+	 *
+	 * Der Suchtext trifft die Bewegungsnummer, die Nummer der Herkunft
+	 * (Bestellung, Auftrag, Druckjob …), Artikel (SKU oder Name, vorher
+	 * aufgelöst), Notiz und Stornogrund.
+	 *
+	 * @param array  $f           Bereinigter Filter (journal_filter).
+	 * @param array  $article_ids Artikel, deren SKU oder Name den Suchtext enthält.
+	 * @param string $table       Tabelle der Bewegungen.
+	 * @param array  $range       Zeitraum in UTC: {from, to} als 'Y-m-d H:i:s' (leer = offen).
+	 * @return array {0: string SQL ohne „WHERE“, 1: array Werte für prepare}
+	 */
+	public static function journal_where( array $f, array $article_ids, $table, array $range = array() ) {
+		$sql  = array();
+		$args = array();
+
+		if ( ! empty( $f['article_id'] ) ) {
+			$sql[]  = 'article_id = %d';
+			$args[] = (int) $f['article_id'];
+		}
+
+		if ( ! empty( $f['color'] ) ) {
+			if ( \Lindenweg16\Modules\Betrieb\ColorRegistry::UNRESOLVED === $f['color'] ) {
+				$sql[] = "(color IS NULL OR color = '' OR color = %s)";
+			} else {
+				$sql[] = 'color = %s';
+			}
+			$args[] = (string) $f['color'];
+		}
+
+		$exact = array(
+			'type'   => 'movement_type = %s',
+			'place'  => 'location = %s',
+			'origin' => 'ref_type = %s',
+		);
+		foreach ( $exact as $key => $cond ) {
+			if ( ! empty( $f[ $key ] ) ) {
+				$sql[]  = $cond;
+				$args[] = (string) $f[ $key ];
+			}
+		}
+
+		if ( ! empty( $f['bin_id'] ) ) {
+			$sql[]  = 'bin_id = %d';
+			$args[] = (int) $f['bin_id'];
+		}
+
+		if ( ! empty( $f['user_id'] ) ) {
+			$sql[]  = 'created_by = %d';
+			$args[] = (int) $f['user_id'];
+		}
+
+		if ( ! empty( $range['from'] ) ) {
+			$sql[]  = 'moved_at >= %s';
+			$args[] = (string) $range['from'];
+		}
+
+		if ( ! empty( $range['to'] ) ) {
+			$sql[]  = 'moved_at < %s';
+			$args[] = (string) $range['to'];
+		}
+
+		if ( 'zugang' === $f['dir'] ) {
+			$sql[] = 'qty > 0';
+		} elseif ( 'abgang' === $f['dir'] ) {
+			$sql[] = 'qty < 0';
+		}
+
+		$voided = "SELECT reverses_id FROM {$table} WHERE reverses_id IS NOT NULL";
+		if ( 'gegenbuchung' === $f['state'] ) {
+			$sql[] = 'reverses_id IS NOT NULL';
+		} elseif ( 'storniert' === $f['state'] ) {
+			$sql[] = "id IN ({$voided})";
+		} elseif ( 'offen' === $f['state'] ) {
+			$sql[] = "reverses_id IS NULL AND id NOT IN ({$voided})";
+		}
+
+		if ( '' !== (string) $f['q'] ) {
+			$search = self::parse_search( $f['q'] );
+			$any    = array();
+
+			foreach ( $search['ids'] as $id ) {
+				$any[]  = 'id = %d OR ref_id = %d OR reverses_id = %d';
+				$args[] = $id;
+				$args[] = $id;
+				$args[] = $id;
+			}
+
+			$article_ids = array_values( array_unique( array_filter( array_map( 'intval', $article_ids ) ) ) );
+			if ( $article_ids ) {
+				$any[] = 'article_id IN (' . implode( ',', array_fill( 0, count( $article_ids ), '%d' ) ) . ')';
+				$args  = array_merge( $args, $article_ids );
+			}
+
+			if ( '' !== $search['text'] ) {
+				$like  = '%' . addcslashes( $search['text'], '_%\\' ) . '%';
+				$any[] = 'note LIKE %s OR void_reason LIKE %s';
+				$args[] = $like;
+				$args[] = $like;
+			}
+
+			$sql[] = $any ? '(' . implode( ' OR ', $any ) . ')' : '1 = 0';
+		}
+
+		return array( $sql ? implode( ' AND ', $sql ) : '1 = 1', $args );
+	}
+
+	/**
+	 * Artikel, deren SKU oder Name den Suchtext enthält.
+	 *
+	 * @param array  $articles article_id => Artikel (sku, name).
+	 * @param string $text     Suchtext.
+	 * @return int[]
+	 */
+	public static function match_articles( array $articles, $text ) {
+		$text = function_exists( 'mb_strtolower' ) ? mb_strtolower( trim( (string) $text ) ) : strtolower( trim( (string) $text ) );
+		$out  = array();
+
+		if ( '' === $text ) {
+			return $out;
+		}
+
+		foreach ( $articles as $id => $article ) {
+			$hay = (string) ( isset( $article['sku'] ) ? $article['sku'] : '' ) . ' ' . (string) ( isset( $article['name'] ) ? $article['name'] : '' );
+			$hay = function_exists( 'mb_strtolower' ) ? mb_strtolower( $hay ) : strtolower( $hay );
+			if ( false !== strpos( $hay, $text ) ) {
+				$out[] = (int) $id;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Eine Korrektur an Komponente oder Karton prüfen.
 	 *
 	 * @param array $in Eingaben: part_type, part_id, qty, note.
@@ -661,6 +871,7 @@ class Lager {
 		// Lager.
 		self::route( $ns, '/erp/lager', 'GET', 'bestand', $api->needs( array( 'lager.bestand' ) ) );
 		self::route( $ns, '/erp/lager/journal', 'GET', 'journal', $api->needs( array( 'lager.bestand' ) ) );
+		self::route( $ns, '/erp/lager/journal/csv', 'GET', 'journal_csv', $api->needs( array( 'lager.bestand' ) ) );
 		self::route( $ns, '/erp/lager/buchen', 'POST', 'buchen', $api->needs( $rules['lw16_betrieb_stock_move'] ) );
 		self::route( $ns, '/erp/lager/kommission', 'POST', 'kommission', $api->needs( array( 'lager.bestand', 'lager.buchen' ) ) );
 		self::route( $ns, '/erp/lager/storno', 'POST', 'storno', $api->needs( $rules['lw16_betrieb_stock_void'] ) );
@@ -983,58 +1194,236 @@ class Lager {
 	}
 
 	/**
-	 * Letzte Bewegungen.
+	 * Protokoll der Lagerbewegungen: gefiltert, seitenweise, mit Summen.
 	 *
-	 * @param WP_REST_Request $request Anfrage (limit).
+	 * Filter: q (Nummer, SKU, Name, Notiz), article_id, color, type, place,
+	 * bin_id, origin, user_id, from/to (Y-m-d), state, dir, page, per_page.
+	 * `limit` gilt als per_page (alte Aufrufe).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
 	 * @return WP_REST_Response
 	 */
 	public static function journal( WP_REST_Request $request ) {
-		$limit    = max( 20, min( 200, (int) $request->get_param( 'limit' ) ) );
-		$rows     = \Lindenweg16\Modules\Betrieb\StockRepository::recent( $limit );
+		$params = (array) $request->get_params();
+		if ( empty( $params['per_page'] ) && ! empty( $params['limit'] ) ) {
+			$params['per_page'] = $params['limit'];
+		}
+
+		$f      = self::journal_filter( $params );
+		$q      = self::journal_query( $f );
+		$offset = ( $f['page'] - 1 ) * $f['per_page'];
+		$rows   = \Lindenweg16\Modules\Betrieb\StockRepository::search( $q['where'], $q['args'], $f['per_page'], $offset );
+		$totals = \Lindenweg16\Modules\Betrieb\StockRepository::search_totals( $q['where'], $q['args'] );
+		$out    = self::journal_rows( $rows, $q['articles'], Access::can( 'lager.buchen' ) && self::is_lead() );
+
+		return new WP_REST_Response(
+			array(
+				'rows'     => $out,
+				'filter'   => $f,
+				'total'    => $totals['total'],
+				'plus'     => $totals['plus'],
+				'minus'    => $totals['minus'],
+				'page'     => $f['page'],
+				'per_page' => $f['per_page'],
+				'pages'    => max( 1, (int) ceil( $totals['total'] / $f['per_page'] ) ),
+				'limit'    => $f['per_page'],
+				'options'  => empty( $params['no_options'] ) ? self::journal_options( $q['articles'] ) : null,
+			)
+		);
+	}
+
+	/**
+	 * Protokoll als CSV (gleiche Filter, höchstens 10.000 Zeilen).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function journal_csv( WP_REST_Request $request ) {
+		$f    = self::journal_filter( (array) $request->get_params() );
+		$q    = self::journal_query( $f );
+		$rows = self::journal_rows( \Lindenweg16\Modules\Betrieb\StockRepository::search( $q['where'], $q['args'], 10000, 0 ), $q['articles'], false );
+		$csv  = array(
+			array( 'Nr.', 'Zeitpunkt', 'SKU', 'Artikel', 'Farbe', 'Menge', 'Art', 'Ort', 'Lagerplatz', 'Herkunft', 'Person', 'Notiz', 'Status', 'Storno von Nr.' ),
+		);
+		$states = array(
+			'offen'        => __( 'gültig', 'lindenweg16' ),
+			'storniert'    => __( 'storniert', 'lindenweg16' ),
+			'gegenbuchung' => __( 'Gegenbuchung', 'lindenweg16' ),
+		);
+
+		foreach ( $rows as $r ) {
+			$csv[] = array(
+				$r['id'],
+				$r['ts'] ? wp_date( 'd.m.Y H:i', $r['ts'] ) : '',
+				$r['sku'],
+				$r['name'],
+				$r['color_label'],
+				str_replace( '.', ',', (string) ( 0 + $r['qty'] ) ),
+				$r['type'],
+				$r['place'],
+				$r['bin'],
+				$r['origin'],
+				$r['user'],
+				$r['note'],
+				isset( $states[ $r['state'] ] ) ? $states[ $r['state'] ] : $r['state'],
+				$r['reverses_id'] ? $r['reverses_id'] : '',
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'filename' => 'lagerprotokoll-' . wp_date( 'Y-m-d' ) . '.csv',
+				'mime'     => 'text/csv;charset=utf-8',
+				'text'     => Zahlen::csv( $csv ),
+				'count'    => count( $rows ),
+			)
+		);
+	}
+
+	/**
+	 * Filter in Bedingung übersetzen (Zeitraum in UTC, Suchtext gegen Artikel).
+	 *
+	 * @param array $f Bereinigter Filter.
+	 * @return array {where, args, articles}
+	 */
+	protected static function journal_query( array $f ) {
 		$articles = \Lindenweg16\Modules\Betrieb\ArticleRepository::all_by_id();
-		$types    = \Lindenweg16\Modules\Betrieb\StockLedger::movement_labels();
-		$places   = \Lindenweg16\Modules\Betrieb\StockLedger::location_labels();
-		$bins     = array();
-		$voided   = array();
+		$search   = self::parse_search( $f['q'] );
+		$matching = '' !== $search['text'] ? self::match_articles( $articles, $search['text'] ) : array();
+		$range    = array(
+			'from' => '' !== $f['from'] ? get_gmt_from_date( $f['from'] . ' 00:00:00' ) : '',
+			'to'   => '' !== $f['to'] ? get_gmt_from_date( gmdate( 'Y-m-d', strtotime( $f['to'] . ' +1 day' ) ) . ' 00:00:00' ) : '',
+		);
+
+		list( $where, $args ) = self::journal_where( $f, $matching, \Lindenweg16\Modules\Betrieb\StockRepository::table(), $range );
+
+		return array(
+			'where'    => $where,
+			'args'     => $args,
+			'articles' => $articles,
+		);
+	}
+
+	/**
+	 * Bewegungen für die Anzeige aufbereiten.
+	 *
+	 * @param array $rows     Bewegungen.
+	 * @param array $articles article_id => Artikel.
+	 * @param bool  $can_void Darf stornieren.
+	 * @return array
+	 */
+	protected static function journal_rows( array $rows, array $articles, $can_void ) {
+		$types  = \Lindenweg16\Modules\Betrieb\StockLedger::movement_labels();
+		$places = \Lindenweg16\Modules\Betrieb\StockLedger::location_labels();
+		$bins   = array();
+		$users  = array();
+		$voided = \Lindenweg16\Modules\Betrieb\StockRepository::voided_among( wp_list_pluck( $rows, 'id' ) );
+		$out    = array();
 
 		foreach ( \Lindenweg16\Modules\Betrieb\BinRepository::all() as $bin ) {
 			$bins[ (int) $bin['id'] ] = (string) $bin['code'];
 		}
 
-		// Eine Gegenbuchung ist immer neuer als ihr Original – steht das
-		// Original im Ausschnitt, steht auch seine Gegenbuchung darin.
 		foreach ( $rows as $row ) {
-			if ( ! empty( $row['reverses_id'] ) ) {
-				$voided[ (int) $row['reverses_id'] ] = true;
+			$state   = self::journal_state( $row, $voided );
+			$time    = strtotime( (string) $row['moved_at'] . ' UTC' );
+			$aid     = (int) $row['article_id'];
+			$user_id = (int) $row['created_by'];
+
+			if ( $user_id && ! isset( $users[ $user_id ] ) ) {
+				$user              = get_userdata( $user_id );
+				$users[ $user_id ] = $user ? (string) $user->display_name : '#' . $user_id;
 			}
-		}
-
-		$can_void = Access::can( 'lager.buchen' ) && self::is_lead();
-		$out      = array();
-
-		foreach ( $rows as $row ) {
-			$state = self::journal_state( $row, $voided );
-			$qty   = (float) $row['qty'];
-			$time  = strtotime( (string) $row['moved_at'] . ' UTC' );
 
 			$out[] = array(
 				'id'          => (int) $row['id'],
 				'ts'          => $time ? (int) $time : 0,
-				'sku'         => isset( $articles[ (int) $row['article_id'] ] ) ? (string) $articles[ (int) $row['article_id'] ]['sku'] : '#' . (int) $row['article_id'],
-				'name'        => isset( $articles[ (int) $row['article_id'] ] ) ? (string) $articles[ (int) $row['article_id'] ]['name'] : '',
+				'article_id'  => $aid,
+				'sku'         => isset( $articles[ $aid ] ) ? (string) $articles[ $aid ]['sku'] : '#' . $aid,
+				'name'        => isset( $articles[ $aid ] ) ? (string) $articles[ $aid ]['name'] : '',
+				'color'       => '' === (string) $row['color'] ? \Lindenweg16\Modules\Betrieb\ColorRegistry::UNRESOLVED : \Lindenweg16\Modules\Betrieb\ColorRegistry::normalize( $row['color'] ),
 				'color_label' => \Lindenweg16\Modules\Betrieb\ColorRegistry::label( $row['color'] ),
-				'qty'         => $qty,
+				'qty'         => (float) $row['qty'],
+				'type_key'    => (string) $row['movement_type'],
 				'type'        => isset( $types[ $row['movement_type'] ] ) ? $types[ $row['movement_type'] ] : (string) $row['movement_type'],
 				'place'       => isset( $places[ $row['location'] ] ) ? $places[ $row['location'] ] : (string) $row['location'],
+				'bin_id'      => (int) $row['bin_id'],
 				'bin'         => $row['bin_id'] && isset( $bins[ (int) $row['bin_id'] ] ) ? $bins[ (int) $row['bin_id'] ] : '',
+				'ref_type'    => (string) $row['ref_type'],
+				'ref_id'      => (int) $row['ref_id'],
 				'origin'      => self::ref_label( (string) $row['ref_type'], (int) $row['ref_id'] ),
+				'user_id'     => $user_id,
+				'user'        => $user_id ? $users[ $user_id ] : '',
 				'note'        => trim( (string) $row['note'] . ( $row['void_reason'] ? ' · ' . $row['void_reason'] : '' ), ' ·' ),
+				'reverses_id' => (int) $row['reverses_id'],
 				'state'       => $state,
 				'can_void'    => $can_void && 'offen' === $state,
 			);
 		}
 
-		return new WP_REST_Response( array( 'rows' => $out, 'limit' => $limit ) );
+		return $out;
+	}
+
+	/**
+	 * Auswahllisten für die Filter: nur Werte, die im Protokoll vorkommen.
+	 *
+	 * @param array $articles article_id => Artikel.
+	 * @return array
+	 */
+	protected static function journal_options( array $articles ) {
+		$seen   = \Lindenweg16\Modules\Betrieb\StockRepository::distinct_values();
+		$types  = \Lindenweg16\Modules\Betrieb\StockLedger::movement_labels();
+		$places = \Lindenweg16\Modules\Betrieb\StockLedger::location_labels();
+		$bins   = array();
+		$out    = array(
+			'articles' => array(),
+			'colors'   => array(),
+			'types'    => array(),
+			'places'   => array(),
+			'bins'     => array(),
+			'origins'  => array(),
+			'users'    => array(),
+		);
+
+		foreach ( \Lindenweg16\Modules\Betrieb\BinRepository::all() as $bin ) {
+			$bins[ (int) $bin['id'] ] = (string) $bin['code'];
+		}
+
+		foreach ( $seen['article_id'] as $id ) {
+			$id                = (int) $id;
+			$out['articles'][] = array( $id, isset( $articles[ $id ] ) ? trim( $articles[ $id ]['sku'] . ' · ' . $articles[ $id ]['name'], ' ·' ) : '#' . $id );
+		}
+		foreach ( array_unique( array_map( array( '\Lindenweg16\Modules\Betrieb\ColorRegistry', 'normalize' ), $seen['color'] ) ) as $c ) {
+			$out['colors'][] = array( $c, \Lindenweg16\Modules\Betrieb\ColorRegistry::label( $c ) );
+		}
+		foreach ( $seen['movement_type'] as $t ) {
+			$out['types'][] = array( $t, isset( $types[ $t ] ) ? $types[ $t ] : $t );
+		}
+		foreach ( $seen['location'] as $p ) {
+			$out['places'][] = array( $p, isset( $places[ $p ] ) ? $places[ $p ] : $p );
+		}
+		foreach ( $seen['bin_id'] as $b ) {
+			$out['bins'][] = array( (int) $b, isset( $bins[ (int) $b ] ) ? $bins[ (int) $b ] : '#' . (int) $b );
+		}
+		foreach ( $seen['ref_type'] as $r ) {
+			$out['origins'][] = array( $r, self::ref_label( $r, 0 ) );
+		}
+		foreach ( $seen['created_by'] as $u ) {
+			$user           = get_userdata( (int) $u );
+			$out['users'][] = array( (int) $u, $user ? (string) $user->display_name : '#' . (int) $u );
+		}
+
+		foreach ( $out as $key => $list ) {
+			usort(
+				$list,
+				function ( $a, $b ) {
+					return strnatcasecmp( (string) $a[1], (string) $b[1] );
+				}
+			);
+			$out[ $key ] = $list;
+		}
+
+		return $out;
 	}
 
 	/**

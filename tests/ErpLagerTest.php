@@ -223,4 +223,107 @@ class ErpLagerTest extends TestCase {
 		$why = Lager::demand_reasons( array( 'bestellung' => array( 'qty' => 4, 'labels' => array( '#1', '#2' ) ) ), array( 'bestellung' => 'Bestellung' ) );
 		$this->assertSame( array( '4 Bestellung (#1, #2)' ), $why );
 	}
+
+	public function test_journal_filter_bereinigt_und_begrenzt() {
+		$f = Lager::journal_filter(
+			array(
+				'q'          => '  #42 ',
+				'article_id' => '7',
+				'color'      => 'Weiss; DROP',
+				'state'      => 'kaputt',
+				'dir'        => 'abgang',
+				'from'       => '2026-10-31',
+				'to'         => '2026-10-01',
+				'per_page'   => '5000',
+				'page'       => '-3',
+			)
+		);
+		$this->assertSame( '#42', $f['q'] );
+		$this->assertSame( 7, $f['article_id'] );
+		$this->assertSame( 'weissdrop', $f['color'] );
+		$this->assertSame( '', $f['state'] );
+		$this->assertSame( 'abgang', $f['dir'] );
+		$this->assertSame( '2026-10-01', $f['from'], 'Von und Bis vertauscht wird gedreht' );
+		$this->assertSame( '2026-10-31', $f['to'] );
+		$this->assertSame( 200, $f['per_page'] );
+		$this->assertSame( 1, $f['page'] );
+
+		$leer = Lager::journal_filter( array( 'from' => '2026-02-30', 'per_page' => array( 1 ) ) );
+		$this->assertSame( '', $leer['from'], 'Ungültiges Datum fällt weg' );
+		$this->assertSame( 50, $leer['per_page'] );
+	}
+
+	public function test_parse_search_nummer_und_text() {
+		$this->assertSame( array( 'ids' => array( 123 ), 'text' => '' ), Lager::parse_search( '#123' ) );
+		$this->assertSame( array( 'ids' => array( 123 ), 'text' => '123' ), Lager::parse_search( '123' ) );
+		$this->assertSame( array( 'ids' => array(), 'text' => 'Vase' ), Lager::parse_search( ' Vase ' ) );
+	}
+
+	public function test_journal_where_ohne_filter() {
+		$f = Lager::journal_filter( array() );
+		$this->assertSame( array( '1 = 1', array() ), Lager::journal_where( $f, array(), 'wp_t' ) );
+	}
+
+	public function test_journal_where_kombiniert_filter() {
+		$f = Lager::journal_filter(
+			array(
+				'article_id' => 7,
+				'color'      => 'weiss',
+				'type'       => 'verkauf',
+				'place'      => 'lager',
+				'bin_id'     => 3,
+				'origin'     => 'wc_order',
+				'user_id'    => 9,
+				'dir'        => 'abgang',
+				'state'      => 'offen',
+			)
+		);
+		list( $sql, $args ) = Lager::journal_where( $f, array(), 'wp_t', array( 'from' => '2026-10-01 00:00:00', 'to' => '2026-11-01 00:00:00' ) );
+
+		$this->assertStringContainsString( 'article_id = %d', $sql );
+		$this->assertStringContainsString( 'color = %s', $sql );
+		$this->assertStringContainsString( 'movement_type = %s', $sql );
+		$this->assertStringContainsString( 'moved_at >= %s AND moved_at < %s', $sql );
+		$this->assertStringContainsString( 'qty < 0', $sql );
+		$this->assertStringContainsString( 'id NOT IN (SELECT reverses_id FROM wp_t', $sql );
+		$this->assertSame( array( 7, 'weiss', 'verkauf', 'lager', 'wc_order', 3, 9, '2026-10-01 00:00:00', '2026-11-01 00:00:00' ), $args );
+		$this->assertSame( substr_count( $sql, '%' ), count( $args ), 'Jeder Platzhalter hat einen Wert' );
+	}
+
+	public function test_journal_where_ungeklaerte_farbe_trifft_leere() {
+		$f = Lager::journal_filter( array( 'color' => 'ungeklaert' ) );
+		list( $sql, $args ) = Lager::journal_where( $f, array(), 'wp_t' );
+		$this->assertStringContainsString( "color IS NULL OR color = ''", $sql );
+		$this->assertSame( array( 'ungeklaert' ), $args );
+	}
+
+	public function test_journal_where_suche_nummer_artikel_und_notiz() {
+		$f = Lager::journal_filter( array( 'q' => '1234' ) );
+		list( $sql, $args ) = Lager::journal_where( $f, array( 5, 5, 8 ), 'wp_t' );
+		$this->assertStringContainsString( 'id = %d OR ref_id = %d OR reverses_id = %d', $sql );
+		$this->assertStringContainsString( 'article_id IN (%d,%d)', $sql );
+		$this->assertStringContainsString( 'note LIKE %s OR void_reason LIKE %s', $sql );
+		$this->assertSame( array( 1234, 1234, 1234, 5, 8, '%1234%', '%1234%' ), $args );
+
+		$f = Lager::journal_filter( array( 'q' => '50%_rabatt' ) );
+		list( , $args ) = Lager::journal_where( $f, array(), 'wp_t' );
+		$this->assertSame( '%50\\%\\_rabatt%', $args[0], 'Platzhalter im Suchtext werden maskiert' );
+	}
+
+	public function test_journal_where_status() {
+		$f = Lager::journal_filter( array( 'state' => 'gegenbuchung' ) );
+		$this->assertSame( 'reverses_id IS NOT NULL', Lager::journal_where( $f, array(), 'wp_t' )[0] );
+		$f = Lager::journal_filter( array( 'state' => 'storniert' ) );
+		$this->assertSame( 'id IN (SELECT reverses_id FROM wp_t WHERE reverses_id IS NOT NULL)', Lager::journal_where( $f, array(), 'wp_t' )[0] );
+	}
+
+	public function test_match_articles_sku_und_name() {
+		$articles = array(
+			3 => array( 'sku' => 'VASE-01', 'name' => 'Vase groß' ),
+			4 => array( 'sku' => 'SCH-02', 'name' => 'Schale' ),
+		);
+		$this->assertSame( array( 3 ), Lager::match_articles( $articles, 'vase' ) );
+		$this->assertSame( array( 4 ), Lager::match_articles( $articles, 'sch-' ) );
+		$this->assertSame( array(), Lager::match_articles( $articles, '' ) );
+	}
 }

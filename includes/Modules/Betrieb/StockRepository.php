@@ -410,6 +410,93 @@ class StockRepository {
 	}
 
 	/**
+	 * Bewegungen für das Protokoll: gefiltert und seitenweise, neueste zuerst.
+	 *
+	 * @param string $where  Bedingung ohne „WHERE“ mit Platzhaltern.
+	 * @param array  $args   Werte zu den Platzhaltern.
+	 * @param int    $limit  Anzahl.
+	 * @param int    $offset Versatz.
+	 * @return array
+	 */
+	public static function search( $where, array $args, $limit = 50, $offset = 0 ) {
+		global $wpdb;
+		$table = self::table();
+		$args  = array_merge( $args, array( (int) $limit, (int) $offset ) );
+		return $wpdb->get_results(
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE {$where} ORDER BY moved_at DESC, id DESC LIMIT %d OFFSET %d", $args ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
+		);
+	}
+
+	/**
+	 * Anzahl und Summen der gefilterten Bewegungen.
+	 *
+	 * @param string $where Bedingung ohne „WHERE“ mit Platzhaltern.
+	 * @param array  $args  Werte zu den Platzhaltern.
+	 * @return array {total, plus, minus}
+	 */
+	public static function search_totals( $where, array $args ) {
+		global $wpdb;
+		$table = self::table();
+		$sql   = "SELECT COUNT(*) AS total, COALESCE(SUM(CASE WHEN qty > 0 THEN qty ELSE 0 END), 0) AS plus, COALESCE(SUM(CASE WHEN qty < 0 THEN qty ELSE 0 END), 0) AS minus FROM {$table} WHERE {$where}";
+		$row   = $args ? $wpdb->get_row( $wpdb->prepare( $sql, $args ), ARRAY_A ) : $wpdb->get_row( $sql, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+
+		return array(
+			'total' => $row ? (int) $row['total'] : 0,
+			'plus'  => $row ? (float) $row['plus'] : 0.0,
+			'minus' => $row ? (float) $row['minus'] : 0.0,
+		);
+	}
+
+	/**
+	 * Welche dieser Bewegungen sind storniert (haben eine Gegenbuchung)?
+	 *
+	 * @param int[] $ids Kennungen.
+	 * @return array id => true
+	 */
+	public static function voided_among( array $ids ) {
+		global $wpdb;
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+		$out = array();
+
+		if ( ! $ids ) {
+			return $out;
+		}
+
+		$table = self::table();
+		$found = $wpdb->get_col(
+			$wpdb->prepare( "SELECT reverses_id FROM {$table} WHERE reverses_id IN (" . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')', $ids ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+
+		foreach ( (array) $found as $id ) {
+			$out[ (int) $id ] = true;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Vorkommende Werte je Spalte – für die Auswahllisten im Protokoll.
+	 *
+	 * @return array Spalte => Liste der Werte.
+	 */
+	public static function distinct_values() {
+		global $wpdb;
+		$table = self::table();
+		$out   = array();
+
+		foreach ( array( 'article_id', 'color', 'movement_type', 'location', 'bin_id', 'ref_type', 'created_by' ) as $col ) {
+			$out[ $col ] = array_values( array_filter( array_map( 'strval', (array) $wpdb->get_col( "SELECT DISTINCT {$col} FROM {$table} WHERE {$col} IS NOT NULL" ) ), 'strlen' ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
+
+		if ( $wpdb->get_var( "SELECT 1 FROM {$table} WHERE color IS NULL OR color = '' LIMIT 1" ) ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$out['color'][] = ColorRegistry::UNRESOLVED;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Verbrauch eines Artikels in den letzten Wochen (für die Reichweite).
 	 *
 	 * @param int $article_id Artikel.
