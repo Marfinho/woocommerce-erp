@@ -86,10 +86,39 @@ class Schema {
 			PRIMARY KEY  (id)
 		) {$charset_collate};";
 
-		// Kontoumsätze. Der Fingerabdruck verhindert, dass derselbe Umsatz zweimal importiert wird.
+		// Bankkonten: aus der Vivid-Anbindung (Saldo live) oder aus einem Kontoauszug (IBAN).
+		$t[] = "CREATE TABLE {$p}bank_accounts (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			provider VARCHAR(20) NOT NULL DEFAULT 'datei',
+			external_id VARCHAR(64) NULL,
+			name VARCHAR(255) NOT NULL DEFAULT '',
+			iban VARCHAR(40) NULL,
+			bic VARCHAR(20) NULL,
+			currency CHAR(3) NOT NULL DEFAULT 'EUR',
+			state VARCHAR(20) NOT NULL DEFAULT 'active',
+			balance_available DECIMAL(14,2) NULL,
+			balance_pending DECIMAL(14,2) NULL,
+			balance_at DATETIME NULL,
+			last_sync_at DATETIME NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY provider_ext (provider, external_id),
+			KEY iban (iban)
+		) {$charset_collate};";
+
+		// Kontoumsätze. Der Fingerabdruck verhindert, dass derselbe Umsatz zweimal importiert wird;
+		// bei Vivid ist er aus der Kennung des Umsatzes gebildet.
 		$t[] = "CREATE TABLE {$p}bank_transactions (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			import_id BIGINT UNSIGNED NOT NULL,
+			import_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			bank_account_id BIGINT UNSIGNED NULL,
+			source VARCHAR(10) NOT NULL DEFAULT 'datei',
+			external_id VARCHAR(64) NULL,
+			ext_state VARCHAR(20) NULL,
+			ext_type VARCHAR(20) NULL,
+			card_last4 VARCHAR(4) NULL,
+			ext_updated_at DATETIME NULL,
+			enriched TINYINT(1) NOT NULL DEFAULT 0,
 			fingerprint CHAR(40) NOT NULL,
 			account_iban VARCHAR(40) NULL,
 			booking_date DATE NOT NULL,
@@ -111,15 +140,20 @@ class Schema {
 			UNIQUE KEY fingerprint (fingerprint),
 			KEY booking_date (booking_date),
 			KEY status (status),
-			KEY match_ref (match_type, match_id)
+			KEY match_ref (match_type, match_id),
+			KEY external_id (external_id),
+			KEY bank_account_id (bank_account_id)
 		) {$charset_collate};";
 
 		// Versandte Mahnungen und Erinnerungen je offenem Posten (Auftrag).
 		$t[] = "CREATE TABLE {$p}dunning_notices (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-			order_op_id BIGINT UNSIGNED NOT NULL,
+			order_op_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			wc_order_id BIGINT UNSIGNED NULL,
 			contact_id BIGINT UNSIGNED NULL,
 			level TINYINT UNSIGNED NOT NULL DEFAULT 1,
+			interest DECIMAL(10,2) NOT NULL DEFAULT 0,
+			fee_booked TINYINT(1) NOT NULL DEFAULT 0,
 			amount DECIMAL(12,2) NOT NULL DEFAULT 0,
 			fee DECIMAL(10,2) NOT NULL DEFAULT 0,
 			new_due DATE NULL,
@@ -130,7 +164,21 @@ class Schema {
 			sent_by BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			KEY order_op_id (order_op_id),
+			KEY wc_order_id (wc_order_id),
 			KEY contact_id (contact_id)
+		) {$charset_collate};";
+
+		// Vorsteuer je Beleg: Zusatzangabe neben dem festgeschriebenen Beleg (der bleibt unverändert).
+		$t[] = "CREATE TABLE {$p}beleg_steuer (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			beleg_id BIGINT UNSIGNED NOT NULL,
+			netto DECIMAL(12,2) NOT NULL DEFAULT 0,
+			vorsteuer DECIMAL(12,2) NOT NULL DEFAULT 0,
+			satz TINYINT UNSIGNED NOT NULL DEFAULT 19,
+			erfasst_am DATETIME NOT NULL,
+			erfasst_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY beleg_id (beleg_id)
 		) {$charset_collate};";
 
 		/* -----------------------------------------------------------------
@@ -235,6 +283,7 @@ class Schema {
 		$t[] = "CREATE TABLE {$p}stocktake_lines (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			stocktake_id BIGINT UNSIGNED NOT NULL,
+			item_type VARCHAR(20) NOT NULL DEFAULT 'article',
 			article_id BIGINT UNSIGNED NOT NULL,
 			color VARCHAR(50) NOT NULL DEFAULT '',
 			expected_qty DECIMAL(14,3) NOT NULL DEFAULT 0,
@@ -245,7 +294,7 @@ class Schema {
 			movement_id BIGINT UNSIGNED NULL,
 			note VARCHAR(255) NULL,
 			PRIMARY KEY  (id),
-			UNIQUE KEY line (stocktake_id, article_id, color),
+			UNIQUE KEY line (stocktake_id, item_type, article_id, color),
 			KEY stocktake_id (stocktake_id)
 		) {$charset_collate};";
 

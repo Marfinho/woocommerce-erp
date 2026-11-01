@@ -65,4 +65,41 @@ class ErpMahnwesenTest extends TestCase {
 
 		$this->assertStringContainsString( 'Letzte Mahnung', Mahnwesen::text( 3, $ctx )['subject'] );
 	}
+
+	public function test_verzugszinsen() {
+		$this->assertSame( array( 'rate' => 10.27, 'amount' => 25.32 ), Mahnwesen::interest( 1000, 1.27, 90, true ) );
+		$this->assertSame( 6.27, Mahnwesen::interest( 1000, 1.27, 90, false )['rate'], 'Verbraucher: plus 5 Punkte' );
+		$this->assertSame( 0.0, Mahnwesen::interest( 1000, 1.27, 0, true )['amount'] );
+	}
+
+	public function test_zahlung_deckt_nebenforderungen() {
+		$this->assertTrue( Mahnwesen::covers_extras( 105, 100, 5 ) );
+		$this->assertFalse( Mahnwesen::covers_extras( 100, 100, 5 ) );
+		$this->assertFalse( Mahnwesen::covers_extras( 200, 100, 0 ), 'Ohne Gebühr nichts zu buchen' );
+	}
+
+	public function test_letzte_mahnung_mit_zinsen_pauschale_und_frueheren_gebuehren() {
+		$t = Mahnwesen::text(
+			3,
+			array(
+				'company'  => 'Laden',
+				'person'   => '',
+				'shop'     => 'Lindenweg16',
+				'iban'     => '',
+				'items'    => array( array( 'number' => 'A-7', 'date' => '2026-08-01', 'value' => 1000, 'due' => '2026-08-15' ) ),
+				'fee'      => 10,
+				'interest' => 25.32,
+				'rate'     => 10.27,
+				'days'     => 90,
+				'flat'     => 40,
+				'earlier'  => 5,
+				'new_due'  => '2026-11-11',
+			)
+		);
+		$this->assertSame( 1080.32, $t['total'] );
+		$this->assertStringContainsString( 'Verzugszinsen nach § 288 BGB (10,27 % p. a., 90 Tage): 25,32 €', $t['body'] );
+		$this->assertStringContainsString( 'Verzugspauschale', $t['body'] );
+		$this->assertStringContainsString( 'Aus früheren Mahnungen offen: 5,00 €', $t['body'] );
+		$this->assertStringStartsWith( 'Guten Tag,', $t['body'] );
+	}
 }

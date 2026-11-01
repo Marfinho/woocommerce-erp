@@ -198,6 +198,12 @@ class Kit {
 				'gebuehr_stufe2'  => 5.0,
 				'gebuehr_stufe3'  => 10.0,
 				'frist_tage'      => 10,
+				'shop_mahnen'     => 1,
+				'shop_tage'       => 7,
+				'zinsen'          => 0,
+				'basiszins'       => 0.0,
+				'pauschale'       => 0,
+				'konto'           => '',
 			),
 			'liqui' => array(
 				'saldo'           => 0.0,
@@ -205,6 +211,10 @@ class Kit {
 				'shop_wochen'     => 8,
 				'shop_einrechnen' => 1,
 				'puffer'          => 1000.0,
+			),
+			'bank'  => array(
+				'auto_zuordnen'   => 1,
+				'auto_schwelle'   => 100,
 			),
 			'urlaub' => array(
 				'tage_standard'   => 24,

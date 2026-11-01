@@ -73,6 +73,10 @@ class Scheduler {
 	 */
 	const HOOK_FORECAST = 'lw16_prognose_pruefen';
 
+	// ERP: Vivid-Umsätze stündlich abrufen; täglicher Überblick (Mahnungen, Angebote, Urlaub …).
+	const HOOK_ERP_BANK_SYNC = 'lw16_erp_bank_sync';
+	const HOOK_ERP_DAILY     = 'lw16_erp_daily';
+
 	// Asynchrone Einzeljobs.
 	const HOOK_GENERATE_INVOICE = 'lw16_generate_invoice';
 	const HOOK_GENERATE_PACKING = 'lw16_generate_packing_slip';
@@ -105,6 +109,8 @@ class Scheduler {
 			self::HOOK_AR_MODEL_CLEANUP,
 			self::HOOK_SHOP_STOCK,
 			self::HOOK_FORECAST,
+			self::HOOK_ERP_BANK_SYNC,
+			self::HOOK_ERP_DAILY,
 		);
 	}
 
@@ -213,6 +219,8 @@ class Scheduler {
 			self::HOOK_AR_MODEL_CLEANUP      => DAY_IN_SECONDS,
 			self::HOOK_SHOP_STOCK            => HOUR_IN_SECONDS,
 			self::HOOK_FORECAST              => DAY_IN_SECONDS,
+			self::HOOK_ERP_BANK_SYNC         => HOUR_IN_SECONDS,
+			self::HOOK_ERP_DAILY             => DAY_IN_SECONDS,
 		);
 
 		foreach ( $recurring as $hook => $interval ) {

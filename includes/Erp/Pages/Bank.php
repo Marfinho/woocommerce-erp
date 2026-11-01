@@ -425,6 +425,126 @@ class Bank {
 		return array_slice( $out, 0, $max );
 	}
 
+	/**
+	 * Gehört eine Zeile aus dem Kontoauszug zu einem schon per Vivid abgerufenen Umsatz?
+	 *
+	 * Gleicher Betrag, Buchungstag höchstens drei Tage auseinander, noch nicht
+	 * ergänzt. Bei mehreren gewinnt der zeitlich nächste; sind zwei gleich nah,
+	 * wird nicht geraten (null).
+	 *
+	 * @param array $row        Zeile aus der Datei (amount, booking_date).
+	 * @param array $candidates Vivid-Umsätze (id, amount, booking_date, enriched).
+	 * @param array $taken      Schon in dieser Datei vergebene Kennungen (id => true).
+	 * @return int|null
+	 */
+	public static function merge_target( array $row, array $candidates, array $taken = array() ) {
+		$best  = null;
+		$dist  = 99;
+		$equal = false;
+
+		foreach ( $candidates as $c ) {
+			if ( ! empty( $c['enriched'] ) || isset( $taken[ (int) $c['id'] ] ) || abs( (float) $c['amount'] - (float) $row['amount'] ) >= 0.005 ) {
+				continue;
+			}
+			$d = abs( Kit::days_between( $c['booking_date'], $row['booking_date'] ) );
+			if ( $d > 3 ) {
+				continue;
+			}
+			if ( $d < $dist ) {
+				$best  = (int) $c['id'];
+				$dist  = $d;
+				$equal = false;
+			} elseif ( $d === $dist ) {
+				$equal = true;
+			}
+		}
+
+		return $equal ? null : $best;
+	}
+
+	/**
+	 * Eindeutiger Vorschlag für die automatische Zuordnung.
+	 *
+	 * Nur wenn der beste Vorschlag mindestens die Schwelle erreicht, der Betrag
+	 * genau stimmt und kein zweiter Vorschlag nahe dran ist (Abstand 40 Punkte).
+	 *
+	 * @param array $suggestions suggest().
+	 * @param int   $threshold   Schwelle.
+	 * @return array|null
+	 */
+	public static function auto_pick( array $suggestions, $threshold ) {
+		if ( ! $suggestions ) {
+			return null;
+		}
+
+		$top = $suggestions[0];
+		if ( (int) $top['score'] < (int) $threshold || ! in_array( __( 'Betrag stimmt', 'lindenweg16' ), (array) $top['why'], true ) ) {
+			return null;
+		}
+		if ( isset( $suggestions[1] ) && (int) $suggestions[1]['score'] > (int) $top['score'] - 40 ) {
+			return null;
+		}
+
+		return $top;
+	}
+
+	/**
+	 * Regel, die auf einen Umsatz passt.
+	 *
+	 * @param array $tx    Umsatz (counterparty, purpose, amount).
+	 * @param array $rules Regeln {text, field: name|zweck|beide, direction: alle|ein|aus, note}.
+	 * @return array|null
+	 */
+	public static function rule_for( array $tx, array $rules ) {
+		$name = function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $tx['counterparty'], 'UTF-8' ) : strtolower( (string) $tx['counterparty'] );
+		$why  = function_exists( 'mb_strtolower' ) ? mb_strtolower( (string) $tx['purpose'], 'UTF-8' ) : strtolower( (string) $tx['purpose'] );
+
+		foreach ( $rules as $r ) {
+			$needle = function_exists( 'mb_strtolower' ) ? mb_strtolower( trim( (string) $r['text'] ), 'UTF-8' ) : strtolower( trim( (string) $r['text'] ) );
+			if ( '' === $needle ) {
+				continue;
+			}
+			$dir = isset( $r['direction'] ) ? (string) $r['direction'] : 'alle';
+			if ( ( 'ein' === $dir && (float) $tx['amount'] <= 0 ) || ( 'aus' === $dir && (float) $tx['amount'] >= 0 ) ) {
+				continue;
+			}
+			$field = isset( $r['field'] ) ? (string) $r['field'] : 'beide';
+			$hit   = ( 'zweck' !== $field && false !== strpos( $name, $needle ) ) || ( 'name' !== $field && false !== strpos( $why, $needle ) );
+			if ( $hit ) {
+				return $r;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Regeln bereinigen.
+	 *
+	 * @param array $in Rohwerte.
+	 * @return array
+	 */
+	public static function clean_rules( array $in ) {
+		$out = array();
+
+		foreach ( $in as $r ) {
+			$r    = (array) $r;
+			$text = trim( wp_strip_all_tags( (string) ( isset( $r['text'] ) ? $r['text'] : '' ) ) );
+			$note = trim( wp_strip_all_tags( (string) ( isset( $r['note'] ) ? $r['note'] : '' ) ) );
+			if ( '' === $text || '' === $note ) {
+				continue;
+			}
+			$out[] = array(
+				'text'      => Kit::cut( $text, 80 ),
+				'field'     => in_array( isset( $r['field'] ) ? $r['field'] : '', array( 'name', 'zweck', 'beide' ), true ) ? $r['field'] : 'beide',
+				'direction' => in_array( isset( $r['direction'] ) ? $r['direction'] : '', array( 'alle', 'ein', 'aus' ), true ) ? $r['direction'] : 'alle',
+				'note'      => Kit::cut( $note, 120 ),
+			);
+		}
+
+		return array_slice( $out, 0, 50 );
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
@@ -444,6 +564,9 @@ class Bank {
 		register_rest_route( $ns, '/erp/bank/(?P<id>\d+)/zuordnen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'assign' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/bank/(?P<id>\d+)/ignorieren', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'ignore' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/bank/(?P<id>\d+)/loesen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'release' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/bank/vivid', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'vivid_save' ), 'permission_callback' => $api->needs( array( 'finanzen.bank', 'verwaltung.einstellungen' ) ) ) );
+		register_rest_route( $ns, '/erp/bank/vivid/abrufen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'vivid_now' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/bank/regeln', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'save_rules' ), 'permission_callback' => $needs ) );
 	}
 
 	/**
@@ -459,6 +582,7 @@ class Bank {
 		$status = sanitize_key( (string) $request->get_param( 'status' ) );
 		$status = in_array( $status, array( 'offen', 'zugeordnet', 'ignoriert', 'alle' ), true ) ? $status : 'offen';
 		$q      = trim( sanitize_text_field( (string) $request->get_param( 'q' ) ) );
+		$acct   = (int) $request->get_param( 'konto' );
 		$page   = max( 1, (int) $request->get_param( 'page' ) );
 		$per    = 50;
 		$where  = array( '1 = 1' );
@@ -467,6 +591,10 @@ class Bank {
 		if ( 'alle' !== $status ) {
 			$where[] = 'status = %s';
 			$args[]  = $status;
+		}
+		if ( $acct ) {
+			$where[] = 'bank_account_id = %d';
+			$args[]  = $acct;
 		}
 		if ( '' !== $q ) {
 			$like    = '%' . $wpdb->esc_like( $q ) . '%';
@@ -509,7 +637,12 @@ class Bank {
 				'pages'   => max( 1, (int) ceil( $total / $per ) ),
 				'status'  => $status,
 				'counts'  => $counts,
-				'balance' => self::latest_balance(),
+				'balance'  => self::latest_balance(),
+				'accounts' => self::accounts_out(),
+				'vivid'    => self::vivid_out(),
+				'rules'    => self::rules(),
+				'settings' => Kit::settings( 'bank' ),
+				'can_connect' => \Lindenweg16\Erp\Access::can( 'verwaltung.einstellungen' ),
 				'imports' => $wpdb->get_results( 'SELECT id, file_name, format, rows_total, rows_new, closing_balance, closing_date, created_at FROM ' . Kit::table( 'bank_imports' ) . ' ORDER BY id DESC LIMIT 5', ARRAY_A ), // phpcs:ignore WordPress.DB.PreparedSQL
 			)
 		);
@@ -523,9 +656,50 @@ class Bank {
 	public static function latest_balance() {
 		global $wpdb;
 
+		// Live-Salden aus Vivid haben Vorrang: Summe aller offenen Vivid-Konten.
+		$live = (array) $wpdb->get_results( 'SELECT balance_available, balance_at FROM ' . Kit::table( 'bank_accounts' ) . " WHERE provider = 'vivid' AND state <> 'closed' AND balance_available IS NOT NULL", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+		if ( $live ) {
+			$sum  = 0.0;
+			$when = '';
+			foreach ( $live as $l ) {
+				$sum += (float) $l['balance_available'];
+				$when = max( $when, (string) $l['balance_at'] );
+			}
+			// Dateikonten mit eigenem Stand dazu.
+			foreach ( (array) $wpdb->get_results( 'SELECT balance_available FROM ' . Kit::table( 'bank_accounts' ) . " WHERE provider = 'datei' AND balance_available IS NOT NULL", ARRAY_A ) as $f ) { // phpcs:ignore WordPress.DB.PreparedSQL
+				$sum += (float) $f['balance_available'];
+			}
+			return array( 'amount' => round( $sum, 2 ), 'date' => substr( $when, 0, 10 ), 'source' => 'vivid' );
+		}
+
 		$row = $wpdb->get_row( 'SELECT closing_balance, closing_date FROM ' . Kit::table( 'bank_imports' ) . ' WHERE closing_balance IS NOT NULL ORDER BY closing_date DESC, id DESC LIMIT 1', ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
 
-		return $row ? array( 'amount' => (float) $row['closing_balance'], 'date' => (string) $row['closing_date'] ) : null;
+		return $row ? array( 'amount' => (float) $row['closing_balance'], 'date' => (string) $row['closing_date'], 'source' => 'datei' ) : null;
+	}
+
+	/**
+	 * Konten für die Oberfläche.
+	 *
+	 * @return array
+	 */
+	protected static function accounts_out() {
+		global $wpdb;
+
+		$out = array();
+		foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . Kit::table( 'bank_accounts' ) . " ORDER BY provider = 'vivid' DESC, name ASC", ARRAY_A ) as $a ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$out[] = array(
+				'id'        => (int) $a['id'],
+				'provider'  => (string) $a['provider'],
+				'name'      => (string) $a['name'],
+				'iban'      => (string) $a['iban'],
+				'state'     => (string) $a['state'],
+				'available' => null === $a['balance_available'] ? null : (float) $a['balance_available'],
+				'pending'   => null === $a['balance_pending'] ? null : (float) $a['balance_pending'],
+				'at'        => $a['balance_at'] ? strtotime( $a['balance_at'] . ' UTC' ) : 0,
+			);
+		}
+
+		return $out;
 	}
 
 	/**
@@ -545,10 +719,16 @@ class Bank {
 			'iban'         => (string) $row['counterparty_iban'],
 			'purpose'      => (string) $row['purpose'],
 			'status'       => (string) $row['status'],
+			'source'       => (string) $row['source'],
+			'pending'      => 'pending' === (string) $row['ext_state'],
+			'ext_type'     => (string) $row['ext_type'],
+			'card_last4'   => (string) $row['card_last4'],
+			'enriched'     => (bool) $row['enriched'],
+			'account_id'   => (int) $row['bank_account_id'],
 			'match_type'   => (string) $row['match_type'],
 			'match_id'     => (int) $row['match_id'],
 			'match_note'   => (string) $row['match_note'],
-			'matched_by'   => $user ? (string) $user->display_name : '',
+			'matched_by'   => $user ? (string) $user->display_name : ( 'offen' !== $row['status'] && ! (int) $row['matched_by'] ? __( 'automatisch', 'lindenweg16' ) : '' ),
 			'suggestions'  => array(),
 		);
 	}
@@ -693,6 +873,9 @@ class Bank {
 	/**
 	 * Kontoauszug einlesen.
 	 *
+	 * Gehört eine Zeile zu einem schon per Vivid abgerufenen Umsatz, werden nur
+	 * Name, IBAN und Verwendungszweck ergänzt – es entsteht kein zweiter Umsatz.
+	 *
 	 * @param WP_REST_Request $request Anfrage {name, content}.
 	 * @return WP_REST_Response
 	 */
@@ -717,6 +900,8 @@ class Bank {
 			return Kit::fail( $parsed['error'] );
 		}
 
+		$account_id = self::account_for_iban( $parsed['iban'] );
+
 		$wpdb->insert(
 			Kit::table( 'bank_imports' ),
 			array(
@@ -737,15 +922,51 @@ class Bank {
 			return Kit::fail( __( 'Der Import ließ sich nicht speichern. Ist das Plugin-Update vollständig gelaufen (Datenbank)?', 'lindenweg16' ), 500 );
 		}
 
+		// Kontostand aus dem Auszug am Konto, wenn es kein Live-Konto ist.
+		if ( $account_id && null !== $parsed['closing_balance'] ) {
+			$acc = $wpdb->get_row( $wpdb->prepare( 'SELECT provider FROM ' . Kit::table( 'bank_accounts' ) . ' WHERE id = %d', $account_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+			if ( $acc && 'datei' === $acc['provider'] ) {
+				$wpdb->update( Kit::table( 'bank_accounts' ), array( 'balance_available' => $parsed['closing_balance'], 'balance_at' => $parsed['closing_date'] . ' 23:59:59' ), array( 'id' => $account_id ) );
+			}
+		}
+
+		$t      = Kit::table( 'bank_transactions' );
 		$prints = self::fingerprints( $parsed['rows'], $parsed['iban'] );
 		$new    = 0;
-		$t      = Kit::table( 'bank_transactions' );
+		$merged = 0;
+		$ids    = array();
+		$taken  = array();
+
+		// Vivid-Umsätze dieses Zeitraums, die noch keinen Verwendungszweck haben.
+		$dates = array_column( $parsed['rows'], 'booking_date' );
+		$live  = $dates ? (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, amount, booking_date, enriched FROM {$t} WHERE source = 'vivid' AND enriched = 0 AND booking_date >= %s AND booking_date <= %s", Kit::add_days( min( $dates ), -3 ), Kit::add_days( max( $dates ), 3 ) ), ARRAY_A ) : array(); // phpcs:ignore WordPress.DB.PreparedSQL
 
 		foreach ( $parsed['rows'] as $i => $row ) {
+			$target = $live ? self::merge_target( $row, $live, $taken ) : null;
+
+			if ( $target ) {
+				$taken[ $target ] = true;
+				$wpdb->update(
+					$t,
+					array(
+						'counterparty'      => Kit::cut( $row['counterparty'], 250 ),
+						'counterparty_iban' => substr( $row['counterparty_iban'], 0, 40 ),
+						'purpose'           => $row['purpose'],
+						'end_to_end'        => substr( $row['end_to_end'], 0, 100 ),
+						'enriched'          => 1,
+					),
+					array( 'id' => $target )
+				);
+				$ids[] = $target;
+				++$merged;
+				continue;
+			}
+
 			$ok = $wpdb->query(
 				$wpdb->prepare(
-					"INSERT IGNORE INTO {$t} (import_id, fingerprint, account_iban, booking_date, value_date, amount, currency, counterparty, counterparty_iban, purpose, end_to_end, status, created_at) VALUES (%d, %s, %s, %s, %s, %f, %s, %s, %s, %s, %s, 'offen', %s)", // phpcs:ignore WordPress.DB.PreparedSQL
+					"INSERT IGNORE INTO {$t} (import_id, bank_account_id, source, fingerprint, account_iban, booking_date, value_date, amount, currency, counterparty, counterparty_iban, purpose, end_to_end, status, created_at) VALUES (%d, %d, 'datei', %s, %s, %s, %s, %f, %s, %s, %s, %s, %s, 'offen', %s)", // phpcs:ignore WordPress.DB.PreparedSQL
 					$import_id,
+					$account_id,
 					$prints[ $i ],
 					$parsed['iban'],
 					$row['booking_date'],
@@ -759,27 +980,416 @@ class Bank {
 					current_time( 'mysql', true )
 				)
 			);
-			$new += $ok ? 1 : 0;
+			if ( $ok ) {
+				$ids[] = (int) $wpdb->insert_id;
+				++$new;
+			}
 		}
 
 		$wpdb->update( Kit::table( 'bank_imports' ), array( 'rows_new' => $new ), array( 'id' => $import_id ) );
-		AuditLog::record( 'erp_bank_import', 'bank_import', $import_id, array( 'datei' => $name, 'format' => $format, 'zeilen' => count( $parsed['rows'] ), 'neu' => $new ) );
+		AuditLog::record( 'erp_bank_import', 'bank_import', $import_id, array( 'datei' => $name, 'format' => $format, 'zeilen' => count( $parsed['rows'] ), 'neu' => $new, 'ergaenzt' => $merged ) );
 
-		$skipped = count( $parsed['rows'] ) - $new;
+		$auto    = self::after_new_rows( $ids );
+		$skipped = count( $parsed['rows'] ) - $new - $merged;
+		$parts   = array();
+		/* translators: %d: Anzahl. */
+		$parts[] = sprintf( __( '%d neue Umsätze', 'lindenweg16' ), $new );
+		if ( $merged ) {
+			/* translators: %d: Anzahl. */
+			$parts[] = sprintf( __( '%d Vivid-Umsätze um Name und Verwendungszweck ergänzt', 'lindenweg16' ), $merged );
+		}
+		if ( $skipped ) {
+			/* translators: %d: Anzahl. */
+			$parts[] = sprintf( __( '%d waren schon da', 'lindenweg16' ), $skipped );
+		}
+		if ( $auto['assigned'] || $auto['ruled'] ) {
+			/* translators: 1: Anzahl, 2: Anzahl. */
+			$parts[] = sprintf( __( '%1$d automatisch zugeordnet, %2$d per Regel erledigt', 'lindenweg16' ), $auto['assigned'], $auto['ruled'] );
+		}
 
-		return new WP_REST_Response(
-			array(
-				'ok'      => true,
-				'new'     => $new,
-				'skipped' => $skipped,
-				'message' => $skipped
-					/* translators: 1: neu, 2: schon vorhanden. */
-					? sprintf( __( '%1$d neue Umsätze eingelesen, %2$d waren schon da.', 'lindenweg16' ), $new, $skipped )
-					/* translators: %d: Anzahl. */
-					: sprintf( __( '%d neue Umsätze eingelesen.', 'lindenweg16' ), $new ),
-			),
-			201
+		return new WP_REST_Response( array( 'ok' => true, 'new' => $new, 'merged' => $merged, 'skipped' => $skipped, 'message' => implode( ', ', $parts ) . '.' ), 201 );
+	}
+
+	/**
+	 * Konto zu einer IBAN (legt ein Dateikonto an, wenn es keins gibt).
+	 *
+	 * @param string $iban IBAN.
+	 * @return int Kennung oder 0.
+	 */
+	protected static function account_for_iban( $iban ) {
+		global $wpdb;
+
+		$iban = strtoupper( str_replace( ' ', '', (string) $iban ) );
+		if ( '' === $iban ) {
+			return 0;
+		}
+
+		$t  = Kit::table( 'bank_accounts' );
+		$id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$t} WHERE iban = %s ORDER BY provider = 'vivid' DESC, id ASC LIMIT 1", $iban ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		if ( ! $id ) {
+			$wpdb->insert( $t, array( 'provider' => 'datei', 'name' => __( 'Konto', 'lindenweg16' ) . ' ' . substr( $iban, -4 ), 'iban' => $iban, 'created_at' => current_time( 'mysql', true ) ) );
+			$id = (int) $wpdb->insert_id;
+		}
+
+		return $id;
+	}
+
+	/**
+	 * Neue Umsätze nachbearbeiten: Regeln anwenden, eindeutige Treffer zuordnen.
+	 *
+	 * @param int[] $ids Umsätze.
+	 * @return array {assigned, ruled}
+	 */
+	public static function after_new_rows( array $ids ) {
+		global $wpdb;
+
+		$out = array( 'assigned' => 0, 'ruled' => 0 );
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+
+		if ( ! $ids ) {
+			return $out;
+		}
+
+		$s          = Kit::settings( 'bank' );
+		$rules      = self::rules();
+		$candidates = null;
+		$t          = Kit::table( 'bank_transactions' );
+		$rows       = (array) $wpdb->get_results( 'SELECT * FROM ' . $t . " WHERE status = 'offen' AND id IN (" . implode( ',', $ids ) . ')', ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		foreach ( $rows as $tx ) {
+			if ( 'pending' === $tx['ext_state'] ) {
+				continue; // Vorgemerkt: Betrag kann sich noch ändern.
+			}
+
+			$rule = $rules ? self::rule_for( $tx, $rules ) : null;
+			if ( $rule ) {
+				$wpdb->update( $t, array( 'status' => 'ignoriert', 'match_note' => $rule['note'] . ' ' . __( '(Regel)', 'lindenweg16' ), 'matched_at' => current_time( 'mysql', true ), 'matched_by' => 0 ), array( 'id' => (int) $tx['id'] ) );
+				++$out['ruled'];
+				continue;
+			}
+
+			if ( ! (int) $s['auto_zuordnen'] ) {
+				continue;
+			}
+			if ( null === $candidates ) {
+				$candidates = self::candidates();
+			}
+			$pick = self::auto_pick( self::suggest( $tx, $candidates ), (int) $s['auto_schwelle'] );
+			if ( $pick ) {
+				$res = self::assign_to( $tx, $pick['type'], (int) $pick['id'], true );
+				if ( $res['ok'] ) {
+					++$out['assigned'];
+					// Ein Gegenstück wird nur einmal vergeben.
+					$candidates = array_values( array_filter( $candidates, function ( $c ) use ( $pick ) {
+						return ! ( $c['type'] === $pick['type'] && (int) $c['id'] === (int) $pick['id'] );
+					} ) );
+				}
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Gespeicherte Regeln.
+	 *
+	 * @return array
+	 */
+	public static function rules() {
+		$r = get_option( 'lw16_erp_bank_rules', array() );
+
+		return is_array( $r ) ? $r : array();
+	}
+
+	/* ====================================================================
+	 * Vivid
+	 * ================================================================== */
+
+	/**
+	 * Zustand der Vivid-Anbindung für die Oberfläche (ohne Schlüssel).
+	 *
+	 * @return array
+	 */
+	protected static function vivid_out() {
+		$s    = \Lindenweg16\Erp\Vivid::state();
+		$days = '' !== $s['expires'] ? Kit::days_between( current_time( 'Y-m-d' ), $s['expires'] ) : null;
+
+		return array(
+			'connected'     => \Lindenweg16\Erp\Vivid::connected(),
+			'has_key'       => '' !== $s['key'],
+			'key_hint'      => (string) $s['key_hint'],
+			'expires'       => (string) $s['expires'],
+			'expires_in'    => $days,
+			'last_sync'     => $s['last_sync'] ? strtotime( $s['last_sync'] . ' UTC' ) : 0,
+			'last_error'    => (string) $s['last_error'],
+			'last_error_at' => $s['last_error_at'] ? strtotime( $s['last_error_at'] . ' UTC' ) : 0,
+			'crypto'        => \Lindenweg16\Modules\Mailbox\MailCrypto::available(),
 		);
+	}
+
+	/**
+	 * Schlüssel speichern (vorher mit „ping“ prüfen) oder Anbindung trennen.
+	 *
+	 * @param WP_REST_Request $request Anfrage {key, expires, disconnect}.
+	 * @return WP_REST_Response
+	 */
+	public static function vivid_save( WP_REST_Request $request ) {
+		$in = Kit::input( $request );
+
+		if ( ! empty( $in['disconnect'] ) ) {
+			\Lindenweg16\Erp\Vivid::update_state( array( 'key' => '', 'key_hint' => '', 'enabled' => 0, 'last_error' => '' ) );
+			AuditLog::record( 'erp_vivid_getrennt', 'settings', 0 );
+			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Vivid getrennt. Der Schlüssel ist gelöscht; bitte ihn auch in Vivid Business → API löschen.', 'lindenweg16' ) ) );
+		}
+
+		$key     = trim( (string) ( isset( $in['key'] ) ? $in['key'] : '' ) );
+		$expires = Kit::date( isset( $in['expires'] ) ? $in['expires'] : '' );
+
+		if ( ! \Lindenweg16\Modules\Mailbox\MailCrypto::available() ) {
+			return Kit::fail( __( 'Auf dem Server fehlt libsodium – ohne Verschlüsselung wird der Schlüssel nicht gespeichert. Bitte den Hoster fragen (PHP-Erweiterung sodium).', 'lindenweg16' ), 500 );
+		}
+
+		if ( '' === $key ) {
+			// Nur das Ablaufdatum ändern.
+			if ( '' === \Lindenweg16\Erp\Vivid::state()['key'] ) {
+				return Kit::fail( __( 'Bitte den API-Schlüssel aus Vivid Business eintragen.', 'lindenweg16' ) );
+			}
+			\Lindenweg16\Erp\Vivid::update_state( array( 'expires' => $expires ) );
+			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Gespeichert.', 'lindenweg16' ) ) );
+		}
+
+		if ( ! \Lindenweg16\Erp\Vivid::looks_like_key( $key ) ) {
+			return Kit::fail( __( 'Das sieht nicht nach einem Vivid-Schlüssel aus (er beginnt mit „vivid_sk_v1_“). Bitte vollständig kopieren.', 'lindenweg16' ) );
+		}
+
+		$ping = \Lindenweg16\Erp\Vivid::call( 'ping', array(), $key );
+		if ( ! $ping['ok'] ) {
+			return Kit::fail( $ping['message'], 422 );
+		}
+		$acc = \Lindenweg16\Erp\Vivid::call( 'accounts/current/list', array(), $key );
+		if ( ! $acc['ok'] ) {
+			return Kit::fail( $acc['message'], 422 );
+		}
+
+		\Lindenweg16\Erp\Vivid::update_state(
+			array(
+				'key'        => \Lindenweg16\Modules\Mailbox\MailCrypto::encrypt( $key ),
+				'key_hint'   => '…' . substr( $key, -4 ),
+				'expires'    => '' !== $expires ? $expires : Kit::add_days( current_time( 'Y-m-d' ), 180 ),
+				'enabled'    => 1,
+				'last_error' => '',
+			)
+		);
+		AuditLog::record( 'erp_vivid_verbunden', 'settings', 0, array( 'konten' => count( (array) $acc['data']['accounts'] ) ) );
+
+		$sync = self::vivid_sync();
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Vivid ist verbunden. ', 'lindenweg16' ) . $sync['message'] ) );
+	}
+
+	/**
+	 * Jetzt abrufen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function vivid_now() {
+		if ( ! \Lindenweg16\Erp\Vivid::connected() ) {
+			return Kit::fail( __( 'Vivid ist nicht verbunden.', 'lindenweg16' ), 409 );
+		}
+
+		$lock = 'lw16_erp_vivid_sync';
+		if ( get_transient( $lock ) ) {
+			return Kit::fail( __( 'Ein Abruf läuft gerade. Bitte kurz warten.', 'lindenweg16' ), 409 );
+		}
+
+		$r = self::vivid_sync();
+
+		return $r['ok'] ? new WP_REST_Response( array( 'ok' => true, 'message' => $r['message'] ) ) : Kit::fail( $r['message'], 502 );
+	}
+
+	/**
+	 * Abruf von Konten und Umsätzen (stündlich und auf Knopfdruck).
+	 *
+	 * @return array {ok, message, new, updated}
+	 */
+	public static function vivid_sync() {
+		global $wpdb;
+
+		$lock = 'lw16_erp_vivid_sync';
+		if ( ! \Lindenweg16\Erp\Vivid::connected() || get_transient( $lock ) ) {
+			return array( 'ok' => false, 'message' => __( 'Vivid ist nicht verbunden oder ein Abruf läuft schon.', 'lindenweg16' ), 'new' => 0, 'updated' => 0 );
+		}
+		set_transient( $lock, 1, 5 * MINUTE_IN_SECONDS );
+
+		$state = \Lindenweg16\Erp\Vivid::state();
+		$fail  = function ( $msg ) use ( $lock ) {
+			\Lindenweg16\Erp\Vivid::update_state( array( 'last_error' => $msg, 'last_error_at' => current_time( 'mysql', true ) ) );
+			\Lindenweg16\Core\Log::error( 'bank', 'Vivid: ' . $msg );
+			delete_transient( $lock );
+			return array( 'ok' => false, 'message' => $msg, 'new' => 0, 'updated' => 0 );
+		};
+
+		// 1. Konten und Salden.
+		$acc = \Lindenweg16\Erp\Vivid::call( 'accounts/current/list' );
+		if ( ! $acc['ok'] ) {
+			return $fail( $acc['message'] );
+		}
+
+		$at       = Kit::table( 'bank_accounts' );
+		$accounts = array();
+		$now      = current_time( 'mysql', true );
+
+		foreach ( (array) $acc['data']['accounts'] as $a ) {
+			$row = \Lindenweg16\Erp\Vivid::account_row( (array) $a );
+			$id  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$at} WHERE provider = 'vivid' AND external_id = %s", $row['external_id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+			$row['balance_at']   = $now;
+			$row['last_sync_at'] = $now;
+
+			if ( $id ) {
+				$wpdb->update( $at, $row, array( 'id' => $id ) );
+			} else {
+				// Ein Dateikonto mit derselben IBAN wird zum Vivid-Konto.
+				$file_id = '' !== $row['iban'] ? (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$at} WHERE provider = 'datei' AND iban = %s LIMIT 1", $row['iban'] ) ) : 0; // phpcs:ignore WordPress.DB.PreparedSQL
+				if ( $file_id ) {
+					$wpdb->update( $at, array_merge( $row, array( 'provider' => 'vivid' ) ), array( 'id' => $file_id ) );
+					$id = $file_id;
+				} else {
+					$wpdb->insert( $at, array_merge( $row, array( 'provider' => 'vivid', 'created_at' => $now ) ) );
+					$id = (int) $wpdb->insert_id;
+				}
+			}
+			$accounts[ $row['external_id'] ] = array( 'id' => $id, 'iban' => $row['iban'] );
+		}
+
+		// 2. Umsätze, seitenweise.
+		$from    = \Lindenweg16\Erp\Vivid::updated_from( (string) $state['last_sync'], time() );
+		$body    = array( 'limit' => 500 );
+		$tt      = Kit::table( 'bank_transactions' );
+		$new     = 0;
+		$updated = 0;
+		$ids     = array();
+		$started = $now;
+
+		if ( '' !== $from ) {
+			$body['updated_from'] = $from;
+		}
+
+		for ( $page = 0; $page < 40; $page++ ) {
+			$res = \Lindenweg16\Erp\Vivid::call( 'transactions/list', $body );
+			if ( ! $res['ok'] ) {
+				return $fail( $res['message'] );
+			}
+
+			foreach ( (array) $res['data']['transactions'] as $tx ) {
+				$row = \Lindenweg16\Erp\Vivid::to_row( (array) $tx );
+				if ( ! $row ) {
+					continue;
+				}
+				$acct = isset( $accounts[ $row['account_ext'] ] ) ? $accounts[ $row['account_ext'] ] : array( 'id' => 0, 'iban' => '' );
+				$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, status, enriched FROM {$tt} WHERE external_id = %s AND source = 'vivid' LIMIT 1", $row['external_id'] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+				if ( $have ) {
+					$change = array(
+						'amount'         => $row['amount'],
+						'booking_date'   => $row['booking_date'],
+						'ext_state'      => $row['ext_state'],
+						'ext_updated_at' => $row['ext_updated_at'],
+					);
+					if ( ! (int) $have['enriched'] ) {
+						$change['counterparty'] = $row['counterparty'];
+						$change['purpose']      = $row['purpose'];
+					}
+					// Von der Bank abgelehnt: erledigt sich von selbst.
+					if ( 'declined' === $row['ext_state'] && 'offen' === $have['status'] ) {
+						$change['status']     = 'ignoriert';
+						$change['match_note'] = __( 'von der Bank abgelehnt', 'lindenweg16' );
+						$change['matched_at'] = $now;
+						$change['matched_by'] = 0;
+					}
+					$wpdb->update( $tt, $change, array( 'id' => (int) $have['id'] ) );
+					if ( 'offen' === $have['status'] ) {
+						$ids[] = (int) $have['id'];
+					}
+					++$updated;
+					continue;
+				}
+
+				$insert = array(
+					'import_id'       => 0,
+					'bank_account_id' => $acct['id'] ? $acct['id'] : null,
+					'source'          => 'vivid',
+					'external_id'     => $row['external_id'],
+					'ext_state'       => $row['ext_state'],
+					'ext_type'        => $row['ext_type'],
+					'card_last4'      => $row['card_last4'],
+					'ext_updated_at'  => $row['ext_updated_at'],
+					'fingerprint'     => $row['fingerprint'],
+					'account_iban'    => $acct['iban'],
+					'booking_date'    => $row['booking_date'],
+					'value_date'      => $row['value_date'],
+					'amount'          => $row['amount'],
+					'currency'        => $row['currency'] ? $row['currency'] : 'EUR',
+					'counterparty'    => Kit::cut( $row['counterparty'], 250 ),
+					'purpose'         => $row['purpose'],
+					'status'          => 'declined' === $row['ext_state'] ? 'ignoriert' : 'offen',
+					'match_note'      => 'declined' === $row['ext_state'] ? __( 'von der Bank abgelehnt', 'lindenweg16' ) : null,
+					'created_at'      => $now,
+				);
+				if ( $wpdb->insert( $tt, $insert ) ) {
+					$ids[] = (int) $wpdb->insert_id;
+					++$new;
+				}
+			}
+
+			if ( empty( $res['data']['next_cursor'] ) ) {
+				break;
+			}
+			$body['cursor'] = (string) $res['data']['next_cursor'];
+		}
+
+		\Lindenweg16\Erp\Vivid::update_state( array( 'last_sync' => $started, 'last_error' => '', 'last_error_at' => '' ) );
+		delete_transient( $lock );
+
+		$auto = self::after_new_rows( $ids );
+
+		/* translators: 1: neu, 2: aktualisiert, 3: automatisch zugeordnet. */
+		$msg = sprintf( __( 'Abgerufen: %1$d neue, %2$d aktualisierte Umsätze, %3$d automatisch zugeordnet.', 'lindenweg16' ), $new, $updated, $auto['assigned'] );
+
+		return array( 'ok' => true, 'message' => $msg, 'new' => $new, 'updated' => $updated );
+	}
+
+	/**
+	 * Regeln und Zuordnungs-Einstellungen speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage {rules[], auto_zuordnen, auto_schwelle, apply}.
+	 * @return WP_REST_Response
+	 */
+	public static function save_rules( WP_REST_Request $request ) {
+		global $wpdb;
+
+		$in    = Kit::input( $request );
+		$rules = self::clean_rules( (array) ( isset( $in['rules'] ) ? $in['rules'] : array() ) );
+
+		update_option( 'lw16_erp_bank_rules', $rules, false );
+		Kit::save_settings(
+			'bank',
+			array(
+				'auto_zuordnen' => empty( $in['auto_zuordnen'] ) ? 0 : 1,
+				'auto_schwelle' => max( 60, min( 150, (int) ( isset( $in['auto_schwelle'] ) ? $in['auto_schwelle'] : 100 ) ) ),
+			)
+		);
+		AuditLog::record( 'erp_bank_regeln', 'settings', 0, array( 'regeln' => count( $rules ) ) );
+
+		$msg = __( 'Gespeichert.', 'lindenweg16' );
+		if ( ! empty( $in['apply'] ) ) {
+			$ids  = array_map( 'intval', (array) $wpdb->get_col( 'SELECT id FROM ' . Kit::table( 'bank_transactions' ) . " WHERE status = 'offen'" ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+			$auto = self::after_new_rows( $ids );
+			/* translators: 1: Anzahl, 2: Anzahl. */
+			$msg .= ' ' . sprintf( __( 'Auf offene Umsätze angewandt: %1$d zugeordnet, %2$d per Regel erledigt.', 'lindenweg16' ), $auto['assigned'], $auto['ruled'] );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => $msg ) );
 	}
 
 	/**
@@ -789,8 +1399,6 @@ class Bank {
 	 * @return WP_REST_Response
 	 */
 	public static function assign( WP_REST_Request $request ) {
-		global $wpdb;
-
 		$tx = self::find( (int) $request['id'] );
 		$in = Kit::input( $request );
 
@@ -801,31 +1409,50 @@ class Bank {
 			return Kit::fail( __( 'Dieser Umsatz ist schon erledigt. Erst die Zuordnung lösen, dann neu zuordnen.', 'lindenweg16' ), 409 );
 		}
 
-		$type   = sanitize_key( isset( $in['type'] ) ? (string) $in['type'] : '' );
-		$target = isset( $in['target_id'] ) ? (int) $in['target_id'] : 0;
-		$date   = (string) $tx['booking_date'];
-		$note   = '';
+		$res = self::assign_to( $tx, sanitize_key( isset( $in['type'] ) ? (string) $in['type'] : '' ), isset( $in['target_id'] ) ? (int) $in['target_id'] : 0, false );
+
+		return $res['ok'] ? new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Zugeordnet: ', 'lindenweg16' ) . $res['note'] . '.' ) ) : Kit::fail( $res['note'], $res['status'] );
+	}
+
+	/**
+	 * Zuordnung ausführen (von Hand oder automatisch).
+	 *
+	 * Bei einem Auftrag mit offener Mahngebühr gilt: Deckt die Zahlung Rechnung
+	 * plus Gebühr, wird die Gebühr als Einnahme gebucht (Mahnwesen::book_fee).
+	 *
+	 * @param array  $tx     Umsatz.
+	 * @param string $type   auftrag, shop oder beleg.
+	 * @param int    $target Kennung.
+	 * @param bool   $auto   Automatisch?
+	 * @return array {ok, note, status}
+	 */
+	public static function assign_to( array $tx, $type, $target, $auto ) {
+		global $wpdb;
+
+		$date = (string) $tx['booking_date'];
+		$note = '';
 
 		if ( 'auftrag' === $type ) {
 			$order = \Lindenweg16\Modules\Betrieb\OrderOpsRepository::find( $target );
 			if ( ! $order ) {
-				return Kit::fail( __( 'Diesen Auftrag gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+				return array( 'ok' => false, 'note' => __( 'Diesen Auftrag gibt es nicht (mehr).', 'lindenweg16' ), 'status' => 404 );
 			}
 			if ( 'bezahlt' !== $order['invoice_status'] ) {
-				$change = array(
-					'invoice_status' => 'bezahlt',
-					'paid_date'      => $date,
-					'updated_at'     => current_time( 'mysql', true ),
-				);
+				$change = array( 'invoice_status' => 'bezahlt', 'paid_date' => $date, 'updated_at' => current_time( 'mysql', true ) );
 				$wpdb->update( \Lindenweg16\Modules\Betrieb\OrderOpsRepository::table(), $change, array( 'id' => $target ) );
-				\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', $target, $order, $change, __( 'Zahlungseingang laut Bankabgleich', 'lindenweg16' ) );
+				\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', $target, $order, $change, $auto ? __( 'Zahlungseingang laut Bankabgleich (automatisch)', 'lindenweg16' ) : __( 'Zahlungseingang laut Bankabgleich', 'lindenweg16' ) );
 			}
 			/* translators: %s: Datum. */
 			$note = sprintf( __( 'Rechnung als bezahlt am %s markiert', 'lindenweg16' ), Kit::dmy( $date ) );
+			$fee  = Mahnwesen::book_fee_if_paid( 'auftrag', $target, (float) $tx['amount'], \Lindenweg16\Modules\Betrieb\OrderOpsRepository::order_value( $order ), $date );
+			if ( $fee > 0 ) {
+				/* translators: %s: Betrag. */
+				$note .= ', ' . sprintf( __( 'Mahngebühr %s gebucht', 'lindenweg16' ), Kit::eur( $fee ) );
+			}
 		} elseif ( 'shop' === $type ) {
 			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $target ) : null;
 			if ( ! $order ) {
-				return Kit::fail( __( 'Diese Shop-Bestellung gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+				return array( 'ok' => false, 'note' => __( 'Diese Shop-Bestellung gibt es nicht (mehr).', 'lindenweg16' ), 'status' => 404 );
 			}
 			if ( in_array( $order->get_status(), array( 'on-hold', 'pending' ), true ) ) {
 				/* translators: 1: Datum, 2: Betrag. */
@@ -835,14 +1462,22 @@ class Bank {
 			} else {
 				$note = __( 'Bestellung war schon bezahlt – nur verknüpft', 'lindenweg16' );
 			}
+			$fee = Mahnwesen::book_fee_if_paid( 'shop', $target, (float) $tx['amount'], (float) $order->get_total(), $date );
+			if ( $fee > 0 ) {
+				/* translators: %s: Betrag. */
+				$note .= ', ' . sprintf( __( 'Mahngebühr %s gebucht', 'lindenweg16' ), Kit::eur( $fee ) );
+			}
 		} elseif ( 'beleg' === $type ) {
-			$beleg = \Lindenweg16\Modules\Accounting\BelegRepository::get( $target );
-			if ( ! $beleg ) {
-				return Kit::fail( __( 'Diesen Beleg gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+			if ( ! \Lindenweg16\Modules\Accounting\BelegRepository::get( $target ) ) {
+				return array( 'ok' => false, 'note' => __( 'Diesen Beleg gibt es nicht (mehr).', 'lindenweg16' ), 'status' => 404 );
 			}
 			$note = __( 'mit Beleg verknüpft', 'lindenweg16' );
 		} else {
-			return Kit::fail( __( 'Bitte wähle, wozu der Umsatz gehört.', 'lindenweg16' ) );
+			return array( 'ok' => false, 'note' => __( 'Bitte wähle, wozu der Umsatz gehört.', 'lindenweg16' ), 'status' => 422 );
+		}
+
+		if ( $auto ) {
+			$note .= ' ' . __( '(automatisch)', 'lindenweg16' );
 		}
 
 		$wpdb->update(
@@ -853,13 +1488,13 @@ class Bank {
 				'match_id'   => $target,
 				'match_note' => $note,
 				'matched_at' => current_time( 'mysql', true ),
-				'matched_by' => get_current_user_id(),
+				'matched_by' => $auto ? 0 : get_current_user_id(),
 			),
 			array( 'id' => (int) $tx['id'] )
 		);
-		AuditLog::record( 'erp_bank_zuordnung', 'bank_transaction', (int) $tx['id'], array( 'typ' => $type, 'ziel' => $target, 'betrag' => (float) $tx['amount'] ) );
+		AuditLog::record( $auto ? 'erp_bank_zuordnung_auto' : 'erp_bank_zuordnung', 'bank_transaction', (int) $tx['id'], array( 'typ' => $type, 'ziel' => $target, 'betrag' => (float) $tx['amount'] ) );
 
-		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Zugeordnet: ', 'lindenweg16' ) . $note . '.' ) );
+		return array( 'ok' => true, 'note' => $note, 'status' => 200 );
 	}
 
 	/**

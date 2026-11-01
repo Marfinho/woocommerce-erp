@@ -142,4 +142,43 @@ XML;
 		$c  = array( array( 'type' => 'shop', 'id' => 1, 'label' => 'A', 'amount' => 99.0, 'refs' => array( '1234' ), 'name' => '', 'date' => '' ) );
 		$this->assertSame( array(), Bank::suggest( $tx, $c ) );
 	}
+
+	public function test_zusammenfuehrung_mit_vivid() {
+		$live = array(
+			array( 'id' => 1, 'amount' => 149.9, 'booking_date' => '2026-10-04', 'enriched' => 0 ),
+			array( 'id' => 2, 'amount' => 149.9, 'booking_date' => '2026-10-10', 'enriched' => 0 ),
+			array( 'id' => 3, 'amount' => -19.99, 'booking_date' => '2026-10-06', 'enriched' => 1 ),
+		);
+		$this->assertSame( 1, Bank::merge_target( array( 'amount' => 149.9, 'booking_date' => '2026-10-05' ), $live ) );
+		$this->assertNull( Bank::merge_target( array( 'amount' => 149.9, 'booking_date' => '2026-10-05' ), $live, array( 1 => true ) ), 'Schon vergeben, der andere liegt zu weit weg' );
+		$this->assertNull( Bank::merge_target( array( 'amount' => -19.99, 'booking_date' => '2026-10-06' ), $live ), 'Schon ergänzt' );
+		$this->assertNull( Bank::merge_target( array( 'amount' => 149.9, 'booking_date' => '2026-10-07' ), $live ), 'Gleich weit weg: nicht raten' );
+	}
+
+	public function test_automatische_zuordnung_nur_eindeutig() {
+		$a = array( 'score' => 110, 'why' => array( 'Betrag stimmt', 'Nummer 1234 im Verwendungszweck' ), 'type' => 'shop', 'id' => 1 );
+		$b = array( 'score' => 55, 'why' => array( 'Betrag stimmt' ), 'type' => 'shop', 'id' => 2 );
+		$c = array( 'score' => 100, 'why' => array( 'Betrag stimmt' ), 'type' => 'shop', 'id' => 3 );
+		$this->assertSame( 1, Bank::auto_pick( array( $a, $b ), 100 )['id'] );
+		$this->assertNull( Bank::auto_pick( array( $a, $c ), 100 ), 'Zweiter zu nah dran' );
+		$this->assertNull( Bank::auto_pick( array( $b ), 100 ), 'Unter der Schwelle' );
+		$this->assertNull( Bank::auto_pick( array( array( 'score' => 120, 'why' => array( 'Nummer x' ) ) ), 100 ), 'Ohne passenden Betrag nie automatisch' );
+		$this->assertNull( Bank::auto_pick( array(), 100 ) );
+	}
+
+	public function test_regeln() {
+		$rules = Bank::clean_rules(
+			array(
+				array( 'text' => 'Finanzamt', 'field' => 'name', 'direction' => 'aus', 'note' => 'Steuer' ),
+				array( 'text' => 'tagesgeld', 'field' => 'zweck', 'direction' => 'alle', 'note' => 'Umbuchung' ),
+				array( 'text' => '', 'note' => 'leer' ),
+				array( 'text' => 'x', 'field' => 'kaputt', 'direction' => 'quer', 'note' => 'Vorgaben' ),
+			)
+		);
+		$this->assertCount( 3, $rules );
+		$this->assertSame( 'beide', $rules[2]['field'] );
+		$this->assertSame( 'Steuer', Bank::rule_for( array( 'counterparty' => 'FINANZAMT Köln', 'purpose' => '', 'amount' => -100 ), $rules )['note'] );
+		$this->assertNull( Bank::rule_for( array( 'counterparty' => 'Finanzamt', 'purpose' => 'Erstattung', 'amount' => 100 ), array_slice( $rules, 0, 2 ) ), 'Richtung zählt' );
+		$this->assertSame( 'Umbuchung', Bank::rule_for( array( 'counterparty' => '', 'purpose' => 'Übertrag Tagesgeld', 'amount' => 500 ), $rules )['note'] );
+	}
 }

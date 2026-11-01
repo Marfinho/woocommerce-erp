@@ -439,6 +439,7 @@ require $lw16_root . '/includes/Erp/Pages/Konten.php';
 require $lw16_root . '/includes/Erp/Pages/BuchBelege.php';
 require $lw16_root . '/includes/Erp/Pages/BuchAbschluss.php';
 require $lw16_root . '/includes/Erp/Kit.php';
+require $lw16_root . '/includes/Erp/Vivid.php';
 require $lw16_root . '/includes/Erp/Pages/Bank.php';
 require $lw16_root . '/includes/Erp/Pages/Steuer.php';
 require $lw16_root . '/includes/Erp/Pages/Angebote.php';

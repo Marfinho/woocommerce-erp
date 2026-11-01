@@ -106,7 +106,8 @@ class Installer {
 	 * bank_transactions (Bankabgleich), dunning_notices (Mahnwesen), quotes und
 	 * quote_items (Angebote), rma_cases (Reklamationen), stocktakes und
 	 * stocktake_lines (Inventur), supplier_orders und supplier_order_items
-	 * (Bestellungen an Lieferanten), absences (Urlaub und Abwesenheit).
+	 * (Bestellungen an Lieferanten), absences (Urlaub und Abwesenheit),
+	 * bank_accounts (Vivid-Anbindung) und beleg_steuer (Vorsteuer je Beleg).
 	 */
 	const DB_VERSION = '49';
 

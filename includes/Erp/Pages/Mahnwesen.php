@@ -115,11 +115,26 @@ class Mahnwesen {
 			$lines[] = sprintf( __( '– %1$s vom %2$s über %3$s, fällig seit %4$s', 'lindenweg16' ), $item['number'], Kit::dmy( $item['date'] ), Kit::eur( $item['value'] ), Kit::dmy( $item['due'] ) );
 		}
 
-		$fee   = $level > 1 ? max( 0, (float) $ctx['fee'] ) : 0.0;
-		$total = round( $sum + $fee, 2 );
+		$fee      = $level > 1 ? max( 0, (float) $ctx['fee'] ) : 0.0;
+		$interest = $level > 1 && isset( $ctx['interest'] ) ? max( 0, (float) $ctx['interest'] ) : 0.0;
+		$flat     = $level > 1 && isset( $ctx['flat'] ) ? max( 0, (float) $ctx['flat'] ) : 0.0;
+		$earlier  = isset( $ctx['earlier'] ) ? max( 0, (float) $ctx['earlier'] ) : 0.0;
+		$total    = round( $sum + $fee + $interest + $flat + $earlier, 2 );
 		$hello = '' !== trim( (string) $ctx['person'] ) ? sprintf( /* translators: %s: Name. */ __( 'Guten Tag %s,', 'lindenweg16' ), trim( (string) $ctx['person'] ) ) : __( 'Guten Tag,', 'lindenweg16' );
 		$pay   = '' !== (string) $ctx['iban'] ? sprintf( /* translators: %s: IBAN. */ __( 'Bitte überweisen Sie auf IBAN %s.', 'lindenweg16' ), $ctx['iban'] ) : '';
 		$fee_t = $fee > 0 ? sprintf( /* translators: %s: Gebühr. */ __( 'Für diese Mahnung berechnen wir eine Mahngebühr von %s.', 'lindenweg16' ), Kit::eur( $fee ) ) . "\n" : '';
+		if ( $earlier > 0 ) {
+			/* translators: %s: Betrag. */
+			$fee_t .= sprintf( __( 'Aus früheren Mahnungen offen: %s.', 'lindenweg16' ), Kit::eur( $earlier ) ) . "\n";
+		}
+		if ( $interest > 0 ) {
+			/* translators: 1: Betrag, 2: Zinssatz, 3: Tage. */
+			$fee_t .= sprintf( __( 'Verzugszinsen nach § 288 BGB (%2$s %% p. a., %3$d Tage): %1$s.', 'lindenweg16' ), Kit::eur( $interest ), str_replace( '.', ',', (string) ( isset( $ctx['rate'] ) ? $ctx['rate'] : '' ) ), isset( $ctx['days'] ) ? (int) $ctx['days'] : 0 ) . "\n";
+		}
+		if ( $flat > 0 ) {
+			/* translators: %s: Betrag. */
+			$fee_t .= sprintf( __( 'Verzugspauschale nach § 288 Abs. 5 BGB: %s.', 'lindenweg16' ), Kit::eur( $flat ) ) . "\n";
+		}
 		$list  = implode( "\n", $lines );
 		$due   = Kit::dmy( $ctx['new_due'] );
 
@@ -150,45 +165,81 @@ class Mahnwesen {
 		);
 	}
 
+	/**
+	 * Verzugszinsen (§ 288 BGB): Basiszinssatz plus 9 Prozentpunkte unter
+	 * Unternehmern, plus 5 gegenüber Verbrauchern.
+	 *
+	 * @param float $value    Forderung.
+	 * @param float $base     Basiszinssatz in Prozent (kann negativ sein).
+	 * @param int   $days     Tage im Verzug.
+	 * @param bool  $business Unternehmer?
+	 * @return array {rate, amount}
+	 */
+	public static function interest( $value, $base, $days, $business ) {
+		$rate = round( (float) $base + ( $business ? 9 : 5 ), 2 );
+
+		return array(
+			'rate'   => $rate,
+			'amount' => $days > 0 && $rate > 0 ? round( (float) $value * $rate / 100 * (int) $days / 365, 2 ) : 0.0,
+		);
+	}
+
+	/**
+	 * Deckt eine Zahlung Rechnung und Nebenforderungen?
+	 *
+	 * @param float $paid   Gezahlt.
+	 * @param float $base   Rechnungsbetrag.
+	 * @param float $extras Gebühren und Zinsen.
+	 * @return bool
+	 */
+	public static function covers_extras( $paid, $base, $extras ) {
+		return $extras > 0 && (float) $paid + 0.005 >= (float) $base + (float) $extras;
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
 
 	/**
-	 * Routen anmelden.
+	 * Routen anmelden. Ein Posten ist ein Auftrag (art=auftrag) oder eine
+	 * Shop-Bestellung, die auf die Überweisung wartet (art=shop).
 	 *
 	 * @param RestApi $api Schnittstelle.
 	 */
 	public static function register( RestApi $api ) {
 		$ns    = RestApi::NAMESPACE_V1;
 		$needs = $api->needs( array( 'finanzen.mahnwesen' ) );
+		$item  = '/erp/mahnwesen/(?P<art>auftrag|shop)/(?P<id>\d+)';
 
 		register_rest_route( $ns, '/erp/mahnwesen', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'overview' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/mahnwesen/einstellungen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'save_settings' ), 'permission_callback' => $needs ) );
-		register_rest_route( $ns, '/erp/mahnwesen/(?P<id>\d+)/entwurf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'draft' ), 'permission_callback' => $needs ) );
-		register_rest_route( $ns, '/erp/mahnwesen/(?P<id>\d+)/pdf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'pdf' ), 'permission_callback' => $needs ) );
-		register_rest_route( $ns, '/erp/mahnwesen/(?P<id>\d+)/senden', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'send' ), 'permission_callback' => $needs ) );
-		register_rest_route( $ns, '/erp/mahnwesen/(?P<id>\d+)/bezahlt', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'paid' ), 'permission_callback' => $needs ) );
-		register_rest_route( $ns, '/erp/mahnwesen/(?P<id>\d+)/rechnungsdatum', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'invoice_date' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/mahnwesen/sammeln', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'send_all' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, $item . '/entwurf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'draft' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, $item . '/pdf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'pdf' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, $item . '/senden', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'send' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, $item . '/bezahlt', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'paid' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/mahnwesen/auftrag/(?P<id>\d+)/rechnungsdatum', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'invoice_date' ), 'permission_callback' => $needs ) );
 	}
 
 	/**
-	 * Letzte verschickte Stufe je Auftrag.
+	 * Verschickte Schreiben je Posten.
 	 *
-	 * @return array order_op_id => {level, sent, new_due, count}
+	 * @return array Schlüssel (auftrag-ID / shop-ID) => {level, sent, new_due, count, extras_open}
 	 */
-	protected static function last_notices() {
+	protected static function notices() {
 		global $wpdb;
 
 		$out = array();
-		foreach ( (array) $wpdb->get_results( 'SELECT order_op_id, level, sent_at, new_due FROM ' . Kit::table( 'dunning_notices' ) . ' ORDER BY sent_at ASC, id ASC', ARRAY_A ) as $n ) { // phpcs:ignore WordPress.DB.PreparedSQL
-			$id         = (int) $n['order_op_id'];
-			$count      = isset( $out[ $id ] ) ? $out[ $id ]['count'] + 1 : 1;
-			$out[ $id ] = array(
-				'level'   => max( (int) $n['level'], isset( $out[ $id ] ) ? $out[ $id ]['level'] : 0 ),
-				'sent'    => substr( (string) $n['sent_at'], 0, 10 ),
-				'new_due' => (string) $n['new_due'],
-				'count'   => $count,
+		foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . Kit::table( 'dunning_notices' ) . ' ORDER BY sent_at ASC, id ASC', ARRAY_A ) as $n ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$key = (int) $n['wc_order_id'] && ! (int) $n['order_op_id'] ? 'shop-' . (int) $n['wc_order_id'] : 'auftrag-' . (int) $n['order_op_id'];
+			$cur = isset( $out[ $key ] ) ? $out[ $key ] : array( 'level' => 0, 'sent' => '', 'new_due' => '', 'count' => 0, 'extras_open' => 0.0 );
+
+			$out[ $key ] = array(
+				'level'       => max( (int) $n['level'], $cur['level'] ),
+				'sent'        => substr( (string) $n['sent_at'], 0, 10 ),
+				'new_due'     => (string) $n['new_due'],
+				'count'       => $cur['count'] + 1,
+				'extras_open' => $cur['extras_open'] + ( (int) $n['fee_booked'] ? 0 : (float) $n['fee'] + (float) $n['interest'] ),
 			);
 		}
 
@@ -196,43 +247,114 @@ class Mahnwesen {
 	}
 
 	/**
-	 * Ein offener Posten für Anzeige und Text.
+	 * Gemeinsame Felder eines Postens.
 	 *
-	 * @param array  $o       Auftrag.
-	 * @param array  $notices Letzte Stufen.
+	 * @param array  $base    Grunddaten {kind, id, number, …}.
+	 * @param array  $notices Schreiben.
 	 * @param array  $s       Einstellungen.
 	 * @param string $today   Heute.
 	 * @return array
 	 */
-	protected static function item( array $o, array $notices, array $s, $today ) {
-		$contact = $o['contact_id'] ? ContactRepository::find( (int) $o['contact_id'] ) : null;
-		$due     = $o['invoice_date'] ? Kit::add_days( $o['invoice_date'], (int) $o['payment_terms_days'] ) : '';
+	protected static function finish( array $base, array $notices, array $s, $today ) {
+		$key     = $base['kind'] . '-' . $base['id'];
+		$due     = $base['due'];
 		$overdue = '' !== $due ? Kit::days_between( $due, $today ) : 0;
-		$last    = isset( $notices[ (int) $o['id'] ] ) ? $notices[ (int) $o['id'] ] : array( 'level' => 0, 'sent' => '', 'new_due' => '', 'count' => 0 );
+		$last    = isset( $notices[ $key ] ) ? $notices[ $key ] : array( 'level' => 0, 'sent' => '', 'new_due' => '', 'count' => 0, 'extras_open' => 0.0 );
 		$next    = '' !== $due ? self::next_level( $overdue, $last['level'], $last['sent'], $last['new_due'], $s, $today ) : array( 'level' => 0, 'due' => false, 'wait' => 0 );
 		$labels  = self::level_labels();
 
+		return array_merge(
+			$base,
+			array(
+				'key'         => $key,
+				'overdue'     => $overdue,
+				'bucket'      => '' === $due ? 'ohne_rechnung' : self::bucket( $overdue ),
+				'extras_open' => round( $last['extras_open'], 2 ),
+				'last_level'  => (int) $last['level'],
+				'last_label'  => $last['level'] ? $labels[ $last['level'] ] : '',
+				'last_sent'   => $last['sent'],
+				'next_level'  => $next['level'],
+				'next_label'  => $next['level'] ? $labels[ $next['level'] ] : '',
+				'next_due'    => $next['due'],
+				'next_wait'   => $next['wait'],
+			)
+		);
+	}
+
+	/**
+	 * Auftrag als Posten.
+	 *
+	 * @param array $o Auftrag.
+	 * @return array
+	 */
+	protected static function from_order( array $o ) {
+		$contact = $o['contact_id'] ? ContactRepository::find( (int) $o['contact_id'] ) : null;
+
 		return array(
+			'kind'         => 'auftrag',
 			'id'           => (int) $o['id'],
 			'number'       => (int) $o['wc_order_id'] ? '#' . (int) $o['wc_order_id'] : 'A-' . (int) $o['id'],
 			'contact_id'   => (int) $o['contact_id'],
 			'company'      => $contact ? (string) $contact['company'] : __( 'ohne Kontakt', 'lindenweg16' ),
 			'person'       => $contact ? (string) $contact['contact_person'] : '',
 			'email'        => self::email_of( $contact ),
+			'address'      => $contact ? array( (string) $contact['company'], (string) $contact['contact_person'], (string) $contact['street'], trim( $contact['zip'] . ' ' . $contact['city'] ) ) : array(),
+			'business'     => 'B2C' !== (string) $o['customer_type'],
 			'value'        => round( OrderOpsRepository::order_value( $o ), 2 ),
 			'order_date'   => substr( (string) OrderOpsRepository::order_date( $o ), 0, 10 ),
 			'invoice_date' => (string) $o['invoice_date'],
 			'terms'        => (int) $o['payment_terms_days'],
-			'due'          => $due,
-			'overdue'      => $overdue,
-			'bucket'       => '' === $due ? 'ohne_rechnung' : self::bucket( $overdue ),
-			'last_level'   => (int) $last['level'],
-			'last_label'   => $last['level'] ? $labels[ $last['level'] ] : '',
-			'last_sent'    => $last['sent'],
-			'next_level'   => $next['level'],
-			'next_label'   => $next['level'] ? $labels[ $next['level'] ] : '',
-			'next_due'     => $next['due'],
-			'next_wait'    => $next['wait'],
+			'due'          => $o['invoice_date'] ? Kit::add_days( $o['invoice_date'], (int) $o['payment_terms_days'] ) : '',
+		);
+	}
+
+	/**
+	 * Shop-Bestellung, die auf die Überweisung wartet, als Posten.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @param array     $s     Einstellungen.
+	 * @return array
+	 */
+	protected static function from_shop( $order, array $s ) {
+		$date = $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d' ) : current_time( 'Y-m-d' );
+		$name = trim( $order->get_billing_first_name() . ' ' . $order->get_billing_last_name() );
+		$co   = trim( (string) $order->get_billing_company() );
+
+		return array(
+			'kind'         => 'shop',
+			'id'           => (int) $order->get_id(),
+			'number'       => '#' . $order->get_order_number(),
+			'contact_id'   => 0,
+			'company'      => '' !== $co ? $co : $name,
+			'person'       => $name,
+			'email'        => (string) $order->get_billing_email(),
+			'address'      => array( $co, $name, (string) $order->get_billing_address_1(), trim( $order->get_billing_postcode() . ' ' . $order->get_billing_city() ) ),
+			'business'     => '' !== $co,
+			'value'        => round( (float) $order->get_total(), 2 ),
+			'order_date'   => $date,
+			'invoice_date' => $date,
+			'terms'        => (int) $s['shop_tage'],
+			'due'          => Kit::add_days( $date, (int) $s['shop_tage'] ),
+			'payment'      => (string) $order->get_payment_method_title(),
+		);
+	}
+
+	/**
+	 * Wartende Shop-Bestellungen.
+	 *
+	 * @return array
+	 */
+	protected static function shop_orders() {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return array();
+		}
+
+		return (array) wc_get_orders(
+			array(
+				'status' => array( 'wc-on-hold', 'wc-pending' ),
+				'limit'  => 300,
+				'return' => 'objects',
+			)
 		);
 	}
 
@@ -253,24 +375,28 @@ class Mahnwesen {
 	}
 
 	/**
-	 * Übersicht.
+	 * Alle offenen Posten.
 	 *
-	 * @return WP_REST_Response
+	 * @return array
 	 */
-	public static function overview() {
+	public static function all_items() {
 		$today   = current_time( 'Y-m-d' );
 		$s       = Kit::settings( 'mahn' );
-		$notices = self::last_notices();
+		$notices = self::notices();
 		$rows    = array();
-		$sums    = array( 'offen' => 0.0, 'ueberfaellig' => 0.0, 'nicht_faellig' => 0.0, '1_30' => 0.0, '31_60' => 0.0, 'ueber_60' => 0.0, 'ohne_rechnung' => 0.0 );
 
 		foreach ( OrderOpsRepository::open_invoices() as $o ) {
-			$item                      = self::item( $o, $notices, $s, $today );
-			$rows[]                    = $item;
-			$sums['offen']            += $item['value'];
-			$sums[ $item['bucket'] ]  += $item['value'];
-			if ( $item['overdue'] > 0 && '' !== $item['due'] ) {
-				$sums['ueberfaellig'] += $item['value'];
+			$rows[] = self::finish( self::from_order( $o ), $notices, $s, $today );
+		}
+
+		if ( (int) $s['shop_mahnen'] ) {
+			foreach ( self::shop_orders() as $order ) {
+				// Gehört die Bestellung zu einem Auftrag mit offener Rechnung, steht sie dort schon.
+				$op = OrderOpsRepository::find_by_order( (int) $order->get_id() );
+				if ( $op && in_array( $op['invoice_status'], array( 'offen', 'berechnet' ), true ) && $op['invoice_date'] ) {
+					continue;
+				}
+				$rows[] = self::finish( self::from_shop( $order, $s ), $notices, $s, $today );
 			}
 		}
 
@@ -281,22 +407,44 @@ class Mahnwesen {
 			}
 		);
 
-		$waiting = 0;
-		if ( function_exists( 'wc_get_orders' ) ) {
-			$waiting = count( (array) wc_get_orders( array( 'status' => array( 'wc-on-hold' ), 'limit' => 200, 'return' => 'ids', 'date_created' => '<' . ( time() - 7 * DAY_IN_SECONDS ) ) ) );
+		return $rows;
+	}
+
+	/**
+	 * Übersicht.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function overview() {
+		global $wpdb;
+
+		$rows = self::all_items();
+		$sums = array( 'offen' => 0.0, 'ueberfaellig' => 0.0, 'nicht_faellig' => 0.0, '1_30' => 0.0, '31_60' => 0.0, 'ueber_60' => 0.0, 'ohne_rechnung' => 0.0, 'nebenforderungen' => 0.0 );
+		$due  = 0;
+
+		foreach ( $rows as $item ) {
+			$sums['offen']             += $item['value'];
+			$sums[ $item['bucket'] ]   += $item['value'];
+			$sums['nebenforderungen']  += $item['extras_open'];
+			if ( '' !== $item['due'] && $item['overdue'] > 0 ) {
+				$sums['ueberfaellig'] += $item['value'];
+			}
+			if ( $item['next_level'] && $item['next_due'] && is_email( $item['email'] ) ) {
+				++$due;
+			}
 		}
 
 		$history = array();
-		global $wpdb;
-		foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . Kit::table( 'dunning_notices' ) . ' ORDER BY id DESC LIMIT 30', ARRAY_A ) as $n ) { // phpcs:ignore WordPress.DB.PreparedSQL
-			$labels    = self::level_labels();
+		$labels  = self::level_labels();
+		foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . Kit::table( 'dunning_notices' ) . ' ORDER BY id DESC LIMIT 50', ARRAY_A ) as $n ) { // phpcs:ignore WordPress.DB.PreparedSQL
 			$history[] = array(
-				'order_op_id' => (int) $n['order_op_id'],
-				'level'       => isset( $labels[ (int) $n['level'] ] ) ? $labels[ (int) $n['level'] ] : (string) $n['level'],
-				'amount'      => (float) $n['amount'],
-				'fee'         => (float) $n['fee'],
-				'sent_at'     => substr( (string) $n['sent_at'], 0, 10 ),
-				'sent_to'     => (string) $n['sent_to'],
+				'number'   => (int) $n['order_op_id'] ? 'A-' . (int) $n['order_op_id'] : '#' . (int) $n['wc_order_id'],
+				'level'    => isset( $labels[ (int) $n['level'] ] ) ? $labels[ (int) $n['level'] ] : (string) $n['level'],
+				'amount'   => (float) $n['amount'],
+				'fee'      => (float) $n['fee'] + (float) $n['interest'],
+				'booked'   => (bool) $n['fee_booked'],
+				'sent_at'  => substr( (string) $n['sent_at'], 0, 10 ),
+				'sent_to'  => (string) $n['sent_to'],
 			);
 		}
 
@@ -306,11 +454,11 @@ class Mahnwesen {
 
 		return new WP_REST_Response(
 			array(
-				'rows'         => $rows,
-				'sums'         => $sums,
-				'settings'     => $s,
-				'shop_waiting' => $waiting,
-				'history'      => $history,
+				'rows'     => $rows,
+				'sums'     => $sums,
+				'settings' => Kit::settings( 'mahn' ),
+				'due_now'  => $due,
+				'history'  => $history,
 			)
 		);
 	}
@@ -324,10 +472,24 @@ class Mahnwesen {
 	public static function save_settings( WP_REST_Request $request ) {
 		$in = Kit::input( $request );
 
-		foreach ( array( 'tage_erinnerung', 'tage_stufe2', 'tage_stufe3', 'frist_tage' ) as $key ) {
+		foreach ( array( 'tage_erinnerung', 'tage_stufe2', 'tage_stufe3', 'frist_tage', 'shop_tage' ) as $key ) {
 			if ( isset( $in[ $key ] ) && ( ! is_numeric( $in[ $key ] ) || (int) $in[ $key ] < 0 || (int) $in[ $key ] > 120 ) ) {
 				return Kit::fail( __( 'Tage bitte als ganze Zahl zwischen 0 und 120.', 'lindenweg16' ) );
 			}
+		}
+		if ( isset( $in['basiszins'] ) && '' !== (string) $in['basiszins'] ) {
+			$b = Kit::amount( $in['basiszins'] );
+			if ( null === $b || $b < -10 || $b > 20 ) {
+				return Kit::fail( __( 'Der Basiszinssatz ist keine plausible Zahl (Prozent, z. B. 1,27).', 'lindenweg16' ) );
+			}
+		}
+		foreach ( array( 'shop_mahnen', 'zinsen', 'pauschale' ) as $flag ) {
+			if ( array_key_exists( $flag, $in ) ) {
+				$in[ $flag ] = empty( $in[ $flag ] ) ? 0 : 1;
+			}
+		}
+		if ( isset( $in['konto'] ) && '' !== (string) $in['konto'] && ! preg_match( '/^\d{4,8}$/', (string) $in['konto'] ) ) {
+			return Kit::fail( __( 'Das Konto für Mahngebühren besteht aus 4 bis 8 Ziffern (oder leer lassen).', 'lindenweg16' ) );
 		}
 
 		$saved = Kit::save_settings( 'mahn', $in );
@@ -337,14 +499,27 @@ class Mahnwesen {
 	}
 
 	/**
-	 * Auftrag als offenen Posten laden.
+	 * Posten laden.
 	 *
-	 * @param int $id Auftrag.
+	 * @param string $kind auftrag oder shop.
+	 * @param int    $id   Kennung.
 	 * @return array|WP_REST_Response
 	 */
-	protected static function load( $id ) {
-		$o = OrderOpsRepository::find( (int) $id );
+	protected static function load( $kind, $id ) {
+		$s = Kit::settings( 'mahn' );
 
+		if ( 'shop' === $kind ) {
+			$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $id ) : null;
+			if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
+				return Kit::fail( __( 'Diese Shop-Bestellung gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+			}
+			if ( ! in_array( $order->get_status(), array( 'on-hold', 'pending' ), true ) ) {
+				return Kit::fail( __( 'Diese Bestellung wartet nicht mehr auf eine Zahlung.', 'lindenweg16' ), 409 );
+			}
+			return self::finish( self::from_shop( $order, $s ), self::notices(), $s, current_time( 'Y-m-d' ) );
+		}
+
+		$o = OrderOpsRepository::find( (int) $id );
 		if ( ! $o ) {
 			return Kit::fail( __( 'Diesen Auftrag gibt es nicht (mehr).', 'lindenweg16' ), 404 );
 		}
@@ -352,47 +527,69 @@ class Mahnwesen {
 			return Kit::fail( __( 'Diese Rechnung ist nicht mehr offen.', 'lindenweg16' ), 409 );
 		}
 
-		return self::item( $o, self::last_notices(), Kit::settings( 'mahn' ), current_time( 'Y-m-d' ) );
+		return self::finish( self::from_order( $o ), self::notices(), $s, current_time( 'Y-m-d' ) );
 	}
 
 	/**
 	 * Text für eine Stufe.
 	 *
-	 * @param array $item  Posten.
-	 * @param int   $level Stufe.
-	 * @param float $fee   Gebühr (null = Vorgabe).
-	 * @return array {subject, body, total, fee, new_due}
+	 * @param array      $item  Posten.
+	 * @param int        $level Stufe.
+	 * @param float|null $fee   Gebühr (null = Vorgabe).
+	 * @return array {subject, body, total, fee, interest, flat, new_due}
 	 */
 	protected static function compose( array $item, $level, $fee = null ) {
-		$s       = Kit::settings( 'mahn' );
-		$c       = Kit::company();
-		$fee     = null === $fee ? ( 2 === $level ? (float) $s['gebuehr_stufe2'] : ( 3 === $level ? (float) $s['gebuehr_stufe3'] : 0.0 ) ) : (float) $fee;
-		$new_due = Kit::add_days( current_time( 'Y-m-d' ), (int) $s['frist_tage'] );
-		$text    = self::text(
+		$s        = Kit::settings( 'mahn' );
+		$c        = Kit::company();
+		$fee      = null === $fee ? ( 2 === $level ? (float) $s['gebuehr_stufe2'] : ( 3 === $level ? (float) $s['gebuehr_stufe3'] : 0.0 ) ) : (float) $fee;
+		$new_due  = Kit::add_days( current_time( 'Y-m-d' ), (int) $s['frist_tage'] );
+		$int      = array( 'rate' => 0, 'amount' => 0.0 );
+		$flat     = 0.0;
+
+		// Zinsen und Pauschale ab der letzten Mahnung; die Pauschale nur unter Unternehmern und nur einmal.
+		if ( 3 === $level && (int) $s['zinsen'] ) {
+			$int = self::interest( $item['value'], (float) $s['basiszins'], $item['overdue'], $item['business'] );
+		}
+		if ( 3 === $level && (int) $s['pauschale'] && $item['business'] ) {
+			$flat = 40.0;
+		}
+
+		$text = self::text(
 			$level,
 			array(
-				'company' => $item['company'],
-				'person'  => $item['person'],
-				'shop'    => $c['name'],
-				'iban'    => $c['iban'],
-				'items'   => array( array( 'number' => $item['number'], 'date' => $item['invoice_date'], 'value' => $item['value'], 'due' => $item['due'] ) ),
-				'fee'     => $fee,
-				'new_due' => $new_due,
+				'company'  => $item['company'],
+				'person'   => $item['person'],
+				'shop'     => $c['name'],
+				'iban'     => $c['iban'],
+				'items'    => array( array( 'number' => $item['number'], 'date' => $item['invoice_date'], 'value' => $item['value'], 'due' => $item['due'] ) ),
+				'fee'      => $fee,
+				'interest' => $int['amount'],
+				'rate'     => $int['rate'],
+				'days'     => $item['overdue'],
+				'flat'     => $flat,
+				'earlier'  => $item['extras_open'],
+				'new_due'  => $new_due,
 			)
 		);
 
-		return array_merge( $text, array( 'fee' => $level > 1 ? $fee : 0.0, 'new_due' => $new_due ) );
+		return array_merge(
+			$text,
+			array(
+				'fee'      => $level > 1 ? $fee : 0.0,
+				'interest' => round( $int['amount'] + $flat, 2 ),
+				'new_due'  => $new_due,
+			)
+		);
 	}
 
 	/**
-	 * Gewählte Stufe aus der Anfrage (Vorgabe: die nächste).
+	 * Gewählte Stufe (Vorgabe: die nächste).
 	 *
-	 * @param WP_REST_Request|array $src  Anfrage oder Eingaben.
-	 * @param array                 $item Posten.
+	 * @param mixed $raw  Eingabe.
+	 * @param array $item Posten.
 	 * @return int
 	 */
-	protected static function level_of( $src, array $item ) {
-		$raw = is_array( $src ) ? ( isset( $src['level'] ) ? $src['level'] : 0 ) : $src->get_param( 'level' );
+	protected static function level_of( $raw, array $item ) {
 		$lvl = (int) $raw;
 
 		return $lvl >= 1 && $lvl <= 3 ? $lvl : max( 1, (int) $item['next_level'] );
@@ -405,15 +602,14 @@ class Mahnwesen {
 	 * @return WP_REST_Response
 	 */
 	public static function draft( WP_REST_Request $request ) {
-		$item = self::load( (int) $request['id'] );
+		$item = self::load( (string) $request['art'], (int) $request['id'] );
 		if ( $item instanceof WP_REST_Response ) {
 			return $item;
 		}
 
-		$level = self::level_of( $request, $item );
-		$text  = self::compose( $item, $level );
+		$level = self::level_of( $request->get_param( 'level' ), $item );
 
-		return new WP_REST_Response( array_merge( $text, array( 'to' => $item['email'], 'level' => $level, 'item' => $item ) ) );
+		return new WP_REST_Response( array_merge( self::compose( $item, $level ), array( 'to' => $item['email'], 'level' => $level, 'item' => $item ) ) );
 	}
 
 	/**
@@ -427,17 +623,16 @@ class Mahnwesen {
 	protected static function build_pdf( array $item, $level, array $text ) {
 		$pdf    = new Pdf();
 		$labels = self::level_labels();
-		$c      = $item['contact_id'] ? ContactRepository::find( $item['contact_id'] ) : null;
-		$addr   = $c ? array( (string) $c['company'], (string) $c['contact_person'], (string) $c['street'], trim( $c['zip'] . ' ' . $c['city'] ) ) : array( $item['company'] );
 
 		Kit::letter_head(
 			$pdf,
-			$addr,
+			$item['address'] ? $item['address'] : array( $item['company'] ),
 			$labels[ $level ],
 			array(
-				__( 'Datum', 'lindenweg16' )         => Kit::dmy( current_time( 'Y-m-d' ) ),
-				__( 'Rechnung/Auftrag', 'lindenweg16' ) => $item['number'],
-				__( 'Zahlbar bis', 'lindenweg16' )   => Kit::dmy( $text['new_due'] ),
+				__( 'Datum', 'lindenweg16' )            => Kit::dmy( current_time( 'Y-m-d' ) ),
+				__( 'Rechnung/Bestellung', 'lindenweg16' ) => $item['number'],
+				__( 'Offen insgesamt', 'lindenweg16' )  => Kit::eur( $text['total'] ),
+				__( 'Zahlbar bis', 'lindenweg16' )      => Kit::dmy( $text['new_due'] ),
 			)
 		);
 
@@ -457,76 +652,71 @@ class Mahnwesen {
 	 * @return WP_REST_Response
 	 */
 	public static function pdf( WP_REST_Request $request ) {
-		$item = self::load( (int) $request['id'] );
+		$item = self::load( (string) $request['art'], (int) $request['id'] );
 		if ( $item instanceof WP_REST_Response ) {
 			return $item;
 		}
 
-		$level = self::level_of( $request, $item );
+		$level = self::level_of( $request->get_param( 'level' ), $item );
 
-		return Kit::file_response( sanitize_title( self::level_labels()[ $level ] ) . '-' . $item['number'] . '.pdf', 'application/pdf', self::build_pdf( $item, $level, self::compose( $item, $level ) ) );
+		return Kit::file_response( sanitize_title( self::level_labels()[ $level ] ) . '-' . ltrim( $item['number'], '#' ) . '.pdf', 'application/pdf', self::build_pdf( $item, $level, self::compose( $item, $level ) ) );
 	}
 
 	/**
-	 * Verschicken und festhalten.
+	 * Ein Schreiben verschicken und festhalten.
 	 *
-	 * @param WP_REST_Request $request Anfrage {level, to, subject, body, fee}.
-	 * @return WP_REST_Response
+	 * @param array      $item    Posten.
+	 * @param int        $level   Stufe.
+	 * @param string     $to      Empfänger.
+	 * @param string     $subject Betreff.
+	 * @param string     $body    Text (leer = Vorgabe).
+	 * @param float|null $fee     Gebühr (null = Vorgabe).
+	 * @return array {ok, message, status}
 	 */
-	public static function send( WP_REST_Request $request ) {
+	protected static function deliver( array $item, $level, $to, $subject, $body, $fee = null ) {
 		global $wpdb;
 
-		$item = self::load( (int) $request['id'] );
-		if ( $item instanceof WP_REST_Response ) {
-			return $item;
-		}
-
-		$in      = Kit::input( $request );
-		$level   = self::level_of( $in, $item );
-		$to      = trim( (string) ( isset( $in['to'] ) ? $in['to'] : '' ) );
-		$subject = sanitize_text_field( (string) ( isset( $in['subject'] ) ? $in['subject'] : '' ) );
-		$body    = sanitize_textarea_field( (string) ( isset( $in['body'] ) ? $in['body'] : '' ) );
-		$fee     = Kit::amount( isset( $in['fee'] ) ? $in['fee'] : '' );
-
 		if ( '' === $item['due'] || $item['overdue'] <= 0 ) {
-			return Kit::fail( __( 'Diese Rechnung ist noch nicht fällig.', 'lindenweg16' ), 409 );
+			return array( 'ok' => false, 'message' => __( 'Diese Rechnung ist noch nicht fällig.', 'lindenweg16' ), 'status' => 409 );
 		}
 		if ( $level > $item['last_level'] + 1 ) {
-			return Kit::fail( __( 'Bitte die Stufen der Reihe nach verschicken (erst Erinnerung, dann Mahnung).', 'lindenweg16' ), 409 );
+			return array( 'ok' => false, 'message' => __( 'Bitte die Stufen der Reihe nach verschicken (erst Erinnerung, dann Mahnung).', 'lindenweg16' ), 'status' => 409 );
 		}
 		if ( ! is_email( $to ) ) {
-			return Kit::fail( __( 'Die E-Mail-Adresse stimmt nicht. Bitte in der Kundenakte nachtragen.', 'lindenweg16' ) );
-		}
-		if ( '' === $subject || '' === trim( $body ) ) {
-			return Kit::fail( __( 'Betreff und Text dürfen nicht leer sein.', 'lindenweg16' ) );
+			return array( 'ok' => false, 'message' => __( 'Die E-Mail-Adresse stimmt nicht. Bitte in der Kundenakte bzw. Bestellung nachtragen.', 'lindenweg16' ), 'status' => 422 );
 		}
 
-		$lock = 'lw16_erp_mahnung_' . $item['id'];
+		$lock = 'lw16_erp_mahnung_' . $item['key'];
 		if ( get_transient( $lock ) ) {
-			return Kit::fail( __( 'Das Schreiben ist gerade eben schon rausgegangen.', 'lindenweg16' ), 409 );
+			return array( 'ok' => false, 'message' => __( 'Das Schreiben ist gerade eben schon rausgegangen.', 'lindenweg16' ), 'status' => 409 );
 		}
 
-		$text         = self::compose( $item, $level, null === $fee ? null : $fee );
-		$text['body'] = $body;
-		$labels       = self::level_labels();
+		$text = self::compose( $item, $level, $fee );
+		if ( '' !== trim( (string) $body ) ) {
+			$text['body'] = $body;
+		}
+		$subject = '' !== trim( (string) $subject ) ? $subject : $text['subject'];
+		$labels  = self::level_labels();
 
-		if ( ! Kit::mail( $to, $subject, $body, sanitize_title( $labels[ $level ] ) . '-' . $item['number'] . '.pdf', self::build_pdf( $item, $level, $text ) ) ) {
-			return Kit::fail( __( 'Die Mail konnte nicht verschickt werden. Bitte die Mail-Einstellungen der Website prüfen.', 'lindenweg16' ), 502 );
+		if ( ! Kit::mail( $to, $subject, $text['body'], sanitize_title( $labels[ $level ] ) . '-' . ltrim( $item['number'], '#' ) . '.pdf', self::build_pdf( $item, $level, $text ) ) ) {
+			return array( 'ok' => false, 'message' => __( 'Die Mail konnte nicht verschickt werden. Bitte die Mail-Einstellungen der Website prüfen.', 'lindenweg16' ), 'status' => 502 );
 		}
 		set_transient( $lock, 1, 60 );
 
 		$wpdb->insert(
 			Kit::table( 'dunning_notices' ),
 			array(
-				'order_op_id' => $item['id'],
+				'order_op_id' => 'auftrag' === $item['kind'] ? $item['id'] : 0,
+				'wc_order_id' => 'shop' === $item['kind'] ? $item['id'] : null,
 				'contact_id'  => $item['contact_id'] ? $item['contact_id'] : null,
 				'level'       => $level,
 				'amount'      => $item['value'],
 				'fee'         => $text['fee'],
+				'interest'    => $text['interest'],
 				'new_due'     => $text['new_due'],
 				'sent_to'     => $to,
 				'subject'     => $subject,
-				'body'        => $body,
+				'body'        => $text['body'],
 				'sent_at'     => current_time( 'mysql', true ),
 				'sent_by'     => get_current_user_id(),
 			)
@@ -538,41 +728,195 @@ class Mahnwesen {
 					'contact_id'    => $item['contact_id'],
 					'activity_type' => 'mail',
 					/* translators: 1: Stufe, 2: Nummer, 3: Betrag. */
-					'summary'       => sprintf( __( '%1$s zu %2$s (%3$s) verschickt.', 'lindenweg16' ), $labels[ $level ], $item['number'], Kit::eur( $item['value'] ) ),
+					'summary'       => sprintf( __( '%1$s zu %2$s (%3$s) verschickt.', 'lindenweg16' ), $labels[ $level ], $item['number'], Kit::eur( $text['total'] ) ),
 					'next_step'     => __( 'Zahlungseingang prüfen', 'lindenweg16' ),
 					'follow_up_on'  => Kit::add_days( $text['new_due'], 1 ),
 				)
 			);
 		}
-		AuditLog::record( 'erp_mahnung', 'order_ops', $item['id'], array( 'stufe' => $level, 'betrag' => $item['value'], 'gebuehr' => $text['fee'], 'an' => $to ) );
+		if ( 'shop' === $item['kind'] && function_exists( 'wc_get_order' ) ) {
+			$order = wc_get_order( $item['id'] );
+			if ( $order ) {
+				/* translators: 1: Stufe, 2: Adresse. */
+				$order->add_order_note( sprintf( __( '%1$s per Mail an %2$s geschickt (ERP).', 'lindenweg16' ), $labels[ $level ], $to ) );
+			}
+		}
+		AuditLog::record( 'erp_mahnung', 'shop' === $item['kind'] ? 'wc_order' : 'order_ops', $item['id'], array( 'stufe' => $level, 'betrag' => $item['value'], 'gebuehr' => $text['fee'], 'zinsen' => $text['interest'], 'an' => $to ) );
 
 		/* translators: %s: Stufe. */
-		return new WP_REST_Response( array( 'ok' => true, 'message' => sprintf( __( '%s verschickt.', 'lindenweg16' ), $labels[ $level ] ) ), 201 );
+		return array( 'ok' => true, 'message' => sprintf( __( '%s verschickt.', 'lindenweg16' ), $labels[ $level ] ), 'status' => 201 );
 	}
 
 	/**
-	 * Als bezahlt markieren.
+	 * Verschicken.
 	 *
-	 * @param WP_REST_Request $request Anfrage {date}.
+	 * @param WP_REST_Request $request Anfrage {level, to, subject, body, fee}.
+	 * @return WP_REST_Response
+	 */
+	public static function send( WP_REST_Request $request ) {
+		$item = self::load( (string) $request['art'], (int) $request['id'] );
+		if ( $item instanceof WP_REST_Response ) {
+			return $item;
+		}
+
+		$in      = Kit::input( $request );
+		$subject = sanitize_text_field( (string) ( isset( $in['subject'] ) ? $in['subject'] : '' ) );
+		$body    = sanitize_textarea_field( (string) ( isset( $in['body'] ) ? $in['body'] : '' ) );
+
+		if ( '' === $subject || '' === trim( $body ) ) {
+			return Kit::fail( __( 'Betreff und Text dürfen nicht leer sein.', 'lindenweg16' ) );
+		}
+
+		$fee = isset( $in['fee'] ) && '' !== (string) $in['fee'] ? Kit::amount( $in['fee'] ) : null;
+		$res = self::deliver( $item, self::level_of( isset( $in['level'] ) ? $in['level'] : 0, $item ), trim( (string) ( isset( $in['to'] ) ? $in['to'] : '' ) ), $subject, $body, null === $fee ? null : max( 0, $fee ) );
+
+		return $res['ok'] ? new WP_REST_Response( array( 'ok' => true, 'message' => $res['message'] ), 201 ) : Kit::fail( $res['message'], $res['status'] );
+	}
+
+	/**
+	 * Alle fälligen Stufen mit den Vorgabetexten verschicken.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function send_all() {
+		$sent    = 0;
+		$skipped = array();
+
+		foreach ( self::all_items() as $item ) {
+			if ( ! $item['next_level'] || ! $item['next_due'] ) {
+				continue;
+			}
+			if ( ! is_email( $item['email'] ) ) {
+				$skipped[] = $item['number'] . ' (' . __( 'keine Mailadresse', 'lindenweg16' ) . ')';
+				continue;
+			}
+			$res = self::deliver( $item, (int) $item['next_level'], $item['email'], '', '' );
+			if ( $res['ok'] ) {
+				++$sent;
+			} else {
+				$skipped[] = $item['number'] . ' (' . $res['message'] . ')';
+			}
+		}
+
+		/* translators: %d: Anzahl. */
+		$msg = sprintf( __( '%d Schreiben verschickt.', 'lindenweg16' ), $sent );
+		if ( $skipped ) {
+			$msg .= ' ' . __( 'Nicht verschickt:', 'lindenweg16' ) . ' ' . implode( ', ', array_slice( $skipped, 0, 10 ) );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => $msg, 'sent' => $sent, 'skipped' => count( $skipped ) ) );
+	}
+
+	/**
+	 * Mahngebühren und Zinsen buchen, wenn die Zahlung sie deckt (aus dem Bankabgleich).
+	 *
+	 * @param string $kind   auftrag oder shop.
+	 * @param int    $id     Kennung.
+	 * @param float  $paid   Gezahlter Betrag.
+	 * @param float  $base   Rechnungsbetrag.
+	 * @param string $date   Zahldatum.
+	 * @return float Gebuchter Betrag (0 = nichts).
+	 */
+	public static function book_fee_if_paid( $kind, $id, $paid, $base, $date ) {
+		global $wpdb;
+
+		$t    = Kit::table( 'dunning_notices' );
+		$col  = 'shop' === $kind ? 'wc_order_id' : 'order_op_id';
+		$open = (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(fee + interest), 0) FROM {$t} WHERE {$col} = %d AND fee_booked = 0", (int) $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		if ( ! self::covers_extras( $paid, $base, $open ) ) {
+			return 0.0;
+		}
+
+		return self::book_fee( $kind, $id, round( $open, 2 ), $date );
+	}
+
+	/**
+	 * Nebenforderung als Einnahme ins Journal.
+	 *
+	 * @param string $kind   auftrag oder shop.
+	 * @param int    $id     Kennung.
+	 * @param float  $amount Betrag.
+	 * @param string $date   Datum.
+	 * @return float
+	 */
+	protected static function book_fee( $kind, $id, $amount, $date ) {
+		global $wpdb;
+
+		if ( $amount <= 0 ) {
+			return 0.0;
+		}
+
+		$s     = Kit::settings( 'mahn' );
+		$konto = '' !== (string) $s['konto'] ? (string) $s['konto'] . ' ' : '';
+		$col   = 'shop' === $kind ? 'wc_order_id' : 'order_op_id';
+
+		\Lindenweg16\Modules\Accounting\BuchungRepository::create(
+			array(
+				'buchungsdatum' => $date,
+				'jahr'          => (int) substr( $date, 0, 4 ),
+				'typ'           => 'einnahme',
+				'betrag'        => $amount,
+				'kategorie'     => $konto . __( 'Mahngebühren und Verzugszinsen', 'lindenweg16' ),
+				/* translators: %s: Nummer. */
+				'beschreibung'  => sprintf( __( 'Mahngebühr/Zinsen zu %s', 'lindenweg16' ), ( 'shop' === $kind ? '#' : 'A-' ) . (int) $id ),
+				'referenz_typ'  => 'mahnung',
+				'referenz_id'   => (int) $id,
+			)
+		);
+		$wpdb->query( $wpdb->prepare( 'UPDATE ' . Kit::table( 'dunning_notices' ) . " SET fee_booked = 1 WHERE {$col} = %d", (int) $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		AuditLog::record( 'erp_mahngebuehr_gebucht', 'shop' === $kind ? 'wc_order' : 'order_ops', (int) $id, array( 'betrag' => $amount ) );
+
+		return $amount;
+	}
+
+	/**
+	 * Als bezahlt markieren (wahlweise mit Mahngebühr).
+	 *
+	 * @param WP_REST_Request $request Anfrage {date, fee_paid}.
 	 * @return WP_REST_Response
 	 */
 	public static function paid( WP_REST_Request $request ) {
 		global $wpdb;
 
-		$o    = OrderOpsRepository::find( (int) $request['id'] );
+		$kind = (string) $request['art'];
+		$id   = (int) $request['id'];
 		$in   = Kit::input( $request );
 		$date = Kit::date( isset( $in['date'] ) ? $in['date'] : '' );
 		$date = '' !== $date ? $date : current_time( 'Y-m-d' );
+		$msg  = __( 'Als bezahlt markiert.', 'lindenweg16' );
 
-		if ( ! $o ) {
-			return Kit::fail( __( 'Diesen Auftrag gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		if ( 'shop' === $kind ) {
+			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $id ) : null;
+			if ( ! $order ) {
+				return Kit::fail( __( 'Diese Shop-Bestellung gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+			}
+			if ( in_array( $order->get_status(), array( 'on-hold', 'pending' ), true ) ) {
+				/* translators: %s: Datum. */
+				$order->add_order_note( sprintf( __( 'Zahlungseingang am %s (Offene Posten im ERP).', 'lindenweg16' ), Kit::dmy( $date ) ) );
+				$order->payment_complete();
+			}
+		} else {
+			$o = OrderOpsRepository::find( $id );
+			if ( ! $o ) {
+				return Kit::fail( __( 'Diesen Auftrag gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+			}
+			$change = array( 'invoice_status' => 'bezahlt', 'paid_date' => $date, 'updated_at' => current_time( 'mysql', true ) );
+			$wpdb->update( OrderOpsRepository::table(), $change, array( 'id' => $id ) );
+			\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', $id, $o, $change, __( 'Als bezahlt markiert (Offene Posten)', 'lindenweg16' ) );
 		}
 
-		$change = array( 'invoice_status' => 'bezahlt', 'paid_date' => $date, 'updated_at' => current_time( 'mysql', true ) );
-		$wpdb->update( OrderOpsRepository::table(), $change, array( 'id' => (int) $o['id'] ) );
-		\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', (int) $o['id'], $o, $change, __( 'Als bezahlt markiert (Offene Posten)', 'lindenweg16' ) );
+		if ( ! empty( $in['fee_paid'] ) ) {
+			$col  = 'shop' === $kind ? 'wc_order_id' : 'order_op_id';
+			$open = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(fee + interest), 0) FROM ' . Kit::table( 'dunning_notices' ) . " WHERE {$col} = %d AND fee_booked = 0", $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+			$fee  = self::book_fee( $kind, $id, round( $open, 2 ), $date );
+			if ( $fee > 0 ) {
+				/* translators: %s: Betrag. */
+				$msg .= ' ' . sprintf( __( 'Mahngebühr/Zinsen %s als Einnahme gebucht.', 'lindenweg16' ), Kit::eur( $fee ) );
+			}
+		}
 
-		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Als bezahlt markiert.', 'lindenweg16' ) ) );
+		return new WP_REST_Response( array( 'ok' => true, 'message' => $msg ) );
 	}
 
 	/**
