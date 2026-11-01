@@ -90,6 +90,19 @@ class ErpInventurLiquiditaetSzenarienTest extends TestCase {
 		$this->assertSame( '2029-02-28', Liquiditaet::next_date( '2028-02-29', 'jaehrlich' ) );
 	}
 
+	public function test_monatliche_reihe_am_31_kehrt_nach_dem_februar_zurueck() {
+		$this->assertSame(
+			array( '2026-01-31', '2026-02-28', '2026-03-31', '2026-04-30' ),
+			Liquiditaet::occurrences( '2026-01-31', 'monatlich', '2026-04-30' )
+		);
+
+		// Gespeichert ist schon der 28.02.; das Startdatum gibt den 31. vor.
+		$this->assertSame(
+			array( '2026-02-28', '2026-03-31' ),
+			Liquiditaet::occurrences( '2026-02-28', 'monatlich', '2026-03-31', '', '2026-01-31' )
+		);
+	}
+
 	public function test_termine_inklusive_horizont_ohne_start_und_begrenzt() {
 		$this->assertSame( array( '2026-03-01', '2026-03-08', '2026-03-15' ), Liquiditaet::occurrences( '2026-03-01', 'woechentlich', '2026-03-15' ) );
 		$this->assertSame( array(), Liquiditaet::occurrences( '', 'monatlich', '2026-04-30' ) );

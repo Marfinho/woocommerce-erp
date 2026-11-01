@@ -122,7 +122,8 @@ class Variance {
 	 * @return bool
 	 */
 	public static function should_adjust( $factor, $runs ) {
-		return null !== $factor && $runs >= self::MIN_RUNS && abs( $factor - 1 ) >= self::TOLERANCE;
+		// Kleiner Puffer gegen Gleitkomma: abs( 0.9 - 1 ) ist 0.0999…
+		return null !== $factor && $runs >= self::MIN_RUNS && abs( $factor - 1 ) >= self::TOLERANCE - 1e-9;
 	}
 
 	/**
