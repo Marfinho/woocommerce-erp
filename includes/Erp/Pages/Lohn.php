@@ -229,7 +229,7 @@ class Lohn {
 			$calc['days'][ $i ]['category_text'] = isset( $labels[ $day['category'] ] ) ? $labels[ $day['category'] ] : $day['category'];
 		}
 
-		return new WP_REST_Response( array( 'name' => $user->display_name, 'label' => $bounds['label'], 'calc' => $calc, 'limits' => Payslips::limits( $user->ID ), 'year_before' => Payslips::year_before( $user->ID, $bounds['von'] ) ) );
+		return new WP_REST_Response( array( 'name' => $user->display_name, 'label' => $bounds['label'], 'calc' => $calc, 'limits' => Payslips::limits( $user->ID ), 'year_before' => Payslips::year_before( $user->ID, $bounds['von'] ), 'absences' => Abwesenheit::pay_suggestions( $user->ID, $bounds['von'], $bounds['bis'] ) ) );
 	}
 
 	/**
@@ -252,7 +252,7 @@ class Lohn {
 			$days['days'][ $i ]['category_text'] = isset( $labels[ $day['category'] ] ) ? $labels[ $day['category'] ] : $day['category'];
 		}
 
-		return new WP_REST_Response( array( 'slip' => self::slip_view( $slip ), 'calc' => $days, 'limits' => Payslips::limits( $slip['user_id'] ), 'year_before' => Payslips::year_before( $slip['user_id'], $slip['period_von'], $slip['id'] ) ) );
+		return new WP_REST_Response( array( 'slip' => self::slip_view( $slip ), 'calc' => $days, 'limits' => Payslips::limits( $slip['user_id'] ), 'year_before' => Payslips::year_before( $slip['user_id'], $slip['period_von'], $slip['id'] ), 'absences' => Payslips::DRAFT === $slip['status'] ? Abwesenheit::pay_suggestions( $slip['user_id'], $slip['period_von'], $slip['period_bis'] ) : array() ) );
 	}
 
 	/**

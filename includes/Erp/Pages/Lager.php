@@ -467,6 +467,8 @@ class Lager {
 			'purchase'     => __( 'Wareneingang', 'lindenweg16' ),
 			'work_order'   => __( 'Fertigungsauftrag', 'lindenweg16' ),
 			'altbestand'   => __( 'Übernahme Altbestand', 'lindenweg16' ),
+			'inventur'     => __( 'Inventur', 'lindenweg16' ),
+			'rma'          => __( 'Reklamation', 'lindenweg16' ),
 		);
 
 		if ( '' === $type ) {

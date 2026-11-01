@@ -116,6 +116,8 @@ class Permissions {
 			'verkauf.kasse'           => self::def( 'verkauf', __( 'Kasse', 'lindenweg16' ), __( 'Verkauf vor Ort.', 'lindenweg16' ), array( 'lw16_mod_kasse' ), $page ),
 			'verkauf.marketing'       => self::def( 'verkauf', __( 'Marketing', 'lindenweg16' ), __( 'Kampagnen und Auswertung.', 'lindenweg16' ), array( 'lw16_mod_marketing' ), $page ),
 			'verkauf.kurzlinks'       => self::def( 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), __( 'Feste Adressen für Printmaterial verwalten, Aufrufe und Bestellungen nach Herkunft sehen.', 'lindenweg16' ), array( 'manage_woocommerce' ), $page ),
+			'verkauf.angebote'        => self::def( 'verkauf', __( 'Angebote', 'lindenweg16' ), __( 'Angebote für Händler und Sonderanfertigungen schreiben, als PDF verschicken und angenommene Angebote in einen Auftrag umwandeln.', 'lindenweg16' ), array( $production ), $page ),
+			'verkauf.reklamationen'   => self::def( 'verkauf', __( 'Reklamationen & Retouren', 'lindenweg16' ), __( 'Reklamationen und Rücksendungen als Fall mit Status führen, Ware zurück ins Lager oder in den Ausschuss buchen, Gründe auswerten.', 'lindenweg16' ), array( $capture ), $page ),
 
 			// Fertigung.
 			'fertigung.workflow'      => self::def( 'fertigung', __( 'Workflow: Platten abarbeiten', 'lindenweg16' ), __( 'Den Auftragsablauf sehen, Platten rüsten, drucken, per QR-Code am Handy bearbeiten und die Ist-Menge melden.', 'lindenweg16' ), array( $capture ), $page ),
@@ -142,6 +144,9 @@ class Permissions {
 			'lager.einkauf'           => self::def( 'lager', __( 'Einkauf', 'lindenweg16' ), __( 'Nachbestellen und Wareneingang: Bestellungen anlegen, eingegangene Ware buchen. Der Wareneingang erhöht den Bestand und braucht zusätzlich das Recht zum Lagerbuchen.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.bedarf'            => self::def( 'lager', __( 'Bedarf', 'lindenweg16' ), __( 'Bedarfsplanung und Nachbestellung.', 'lindenweg16' ), array( $production ), $page ),
 			'lager.buchen'            => self::def( 'lager', __( 'Bestand buchen und korrigieren', 'lindenweg16' ), __( 'Zu- und Abgänge buchen, Inventurdifferenzen korrigieren – auch beim Scannen und in der mobilen Erfassung.', 'lindenweg16' ), array( $capture ), $cap, array( 'lager.bestand' ) ),
+			'lager.inventur'          => self::def( 'lager', __( 'Inventur', 'lindenweg16' ), __( 'Inventur zum Stichtag anlegen und zählen (auch am Handy). Den Bestandswert sieht nur, wer auch „Preise, Kosten und Löhne sehen“ hat.', 'lindenweg16' ), array( $capture ), $page, array( 'lager.bestand' ) ),
+			'lager.inventur.abschliessen' => self::def( 'lager', __( 'Inventur abschließen', 'lindenweg16' ), __( 'Eine Inventur abschließen: Alle Zähldifferenzen werden als Korrektur gebucht. Ändert den Bestand.', 'lindenweg16' ), array( $production ), $cap, array( 'lager.inventur' ) ),
+			'lager.bestellungen'      => self::def( 'lager', __( 'Bestellungen an Lieferanten', 'lindenweg16' ), __( 'Offene Einkäufe je Lieferant zu einem Bestellschein (PDF) bündeln, per Mail schicken und Bestätigung sowie Lieferstand verfolgen.', 'lindenweg16' ), array( $production ), $page, array( 'lager.einkauf' ) ),
 
 			// Finanzen.
 			'finanzen.berichte'       => self::def( 'finanzen', __( 'Berichte', 'lindenweg16' ), __( 'Kennzahlen und Auswertungen.', 'lindenweg16' ), array( $reports ), $page ),
@@ -151,9 +156,15 @@ class Permissions {
 			'finanzen.dashboard'      => self::def( 'finanzen', __( 'Dashboard Finanzen', 'lindenweg16' ), __( 'Steuer-Rücklage und Übersicht.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 			'finanzen.kosten'         => self::def( 'finanzen', __( 'Preise, Kosten und Löhne sehen', 'lindenweg16' ), __( 'Kalkulation, Herstellkosten, Verkaufspreise. Ohne dieses Recht bleiben die Spalten leer.', 'lindenweg16' ), array( $costs ), $cap ),
 			'finanzen.export'         => self::def( 'finanzen', __( 'Daten exportieren', 'lindenweg16' ), __( 'Auswertungen als Datei herunterladen.', 'lindenweg16' ), array( $reports ), $cap, array( 'finanzen.berichte' ) ),
+			'finanzen.bank'           => self::def( 'finanzen', __( 'Bankabgleich', 'lindenweg16' ), __( 'Kontoauszüge (CAMT oder CSV) einlesen und Zahlungen Aufträgen, Shop-Bestellungen und Belegen zuordnen. Eine Zuordnung kann Rechnungen als bezahlt markieren.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
+			'finanzen.mahnwesen'      => self::def( 'finanzen', __( 'Offene Posten & Mahnungen', 'lindenweg16' ), __( 'Alle offenen Rechnungen mit Fälligkeit, Erinnerung und Mahnstufen per Mail, Mahngebühr und Protokoll.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
+			'finanzen.steuer'         => self::def( 'finanzen', __( 'Steuer & DATEV', 'lindenweg16' ), __( 'Umsatzsteuer-Zahlen und Kleinunternehmergrenze im Blick, Buchungen als DATEV-Datei für den Steuerberater.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
+			'finanzen.liquiditaet'    => self::def( 'finanzen', __( 'Liquidität', 'lindenweg16' ), __( 'Vorschau auf den Kontostand der nächsten Wochen aus offenen Posten, Daueraufträgen, Löhnen und Einkäufen.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 
 			// Verwaltung.
 			'verwaltung.zeit'         => self::def( 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), __( 'Eigene Arbeitszeit erfassen.', 'lindenweg16' ), array( $capture ), $page ),
+			'verwaltung.abwesenheit'  => self::def( 'verwaltung', __( 'Urlaub & Abwesenheit', 'lindenweg16' ), __( 'Eigenen Urlaub beantragen, Krankheit melden, Resturlaub und Team-Kalender sehen.', 'lindenweg16' ), array( $capture ), $page ),
+			'verwaltung.abwesenheit.genehmigen' => self::def( 'verwaltung', __( 'Urlaub genehmigen', 'lindenweg16' ), __( 'Urlaubsanträge aller Personen genehmigen oder ablehnen und Urlaubsanspruch je Person festlegen.', 'lindenweg16' ), array( $users ), $cap, array( 'verwaltung.abwesenheit' ) ),
 			'verwaltung.etiketten'    => self::def( 'verwaltung', __( 'Etikettendrucker', 'lindenweg16' ), __( 'Etiketten drucken, Warteschlange.', 'lindenweg16' ), array( $capture ), $page ),
 			'verwaltung.einstellungen' => self::def( 'verwaltung', __( 'Einstellungen', 'lindenweg16' ), __( 'Kalkulationsgrundlagen, Ziele, Plugin- und DHL-Einstellungen.', 'lindenweg16' ), array( $settings ), $page ),
 			'verwaltung.import'       => self::def( 'verwaltung', __( 'Import & Doku', 'lindenweg16' ), __( 'Datenimport und Verfahrensdokumentation.', 'lindenweg16' ), array( $settings ), $page ),

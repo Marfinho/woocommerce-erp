@@ -438,6 +438,18 @@ require $lw16_root . '/includes/Erp/Pages/Import.php';
 require $lw16_root . '/includes/Erp/Pages/Konten.php';
 require $lw16_root . '/includes/Erp/Pages/BuchBelege.php';
 require $lw16_root . '/includes/Erp/Pages/BuchAbschluss.php';
+require $lw16_root . '/includes/Erp/Kit.php';
+require $lw16_root . '/includes/Erp/Vivid.php';
+require $lw16_root . '/includes/Erp/Pages/Bank.php';
+require $lw16_root . '/includes/Erp/Pages/Steuer.php';
+require $lw16_root . '/includes/Erp/Pages/Angebote.php';
+require $lw16_root . '/includes/Erp/Pages/Mahnwesen.php';
+require $lw16_root . '/includes/Erp/Pages/Inventur.php';
+require $lw16_root . '/includes/Erp/Pages/Liquiditaet.php';
+require $lw16_root . '/includes/Erp/Pages/Lieferantenbestellungen.php';
+require $lw16_root . '/includes/Erp/Pages/Abwesenheit.php';
+require $lw16_root . '/includes/Erp/Pages/Reklamationen.php';
+require $lw16_root . '/includes/Erp/Digest.php';
 require $lw16_root . '/includes/Erp/Push.php';
 require $lw16_root . '/includes/Erp/Spools.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {

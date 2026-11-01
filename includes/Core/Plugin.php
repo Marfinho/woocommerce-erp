@@ -95,6 +95,7 @@ class Plugin {
 		( new ErpShell() )->register();
 		( new \Lindenweg16\Erp\Traffic() )->register();
 		\Lindenweg16\Erp\Push::init();
+		\Lindenweg16\Erp\Jobs::init();
 
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {

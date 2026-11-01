@@ -539,7 +539,11 @@
 			loading();
 			ui.api('zahlen/buchhaltung/euer?' + qs(q)).then(function (d) {
 				box.textContent = '';
-				var rows = [{ cells: [h('b', null, 'Einnahmen (WooCommerce, abzgl. Refunds)'), eur(ui, d.einnahmen)] }];
+				var rows = [{ cells: [h('b', null, 'Einnahmen gesamt'), eur(ui, d.einnahmen)] }];
+				var t = d.einnahmen_teile || { shop: d.einnahmen, auftraege: 0, sonstige: 0 };
+				rows.push({ cells: ['   Shop (WooCommerce, abzgl. Refunds)', eur(ui, t.shop)] });
+				if (t.auftraege) { rows.push({ cells: ['   Aufträge ohne Shop (bezahlt)', eur(ui, t.auftraege)] }); }
+				if (t.sonstige) { rows.push({ cells: ['   Mahngebühren und Verzugszinsen', eur(ui, t.sonstige)] }); }
 				rows.push({ cells: [h('b', null, 'Ausgaben nach Kontengruppe (SKR03)'), ''] });
 				d.gruppen.forEach(function (g) { rows.push({ cells: ['   ' + g.name, eur(ui, g.summe)] }); });
 				if (d.kuerzung > 0) { rows.push({ cells: ['   darin nicht abziehbarer Anteil (z. B. 30 % der Bewirtung)', '− ' + eur(ui, d.kuerzung)] }); }

@@ -7,6 +7,120 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.74.0] – 2026-11-01
+
+Letzte Lücken der neuen Seiten geschlossen.
+
+### EÜR: Einnahmen vollständig
+- Bisher zählten nur Shop-Bestellungen. Jetzt auch **bezahlte Aufträge ohne Shop-Bestellung** (Fachhandel, aus Angeboten – am Zahltag) und **Mahngebühren/Verzugszinsen** aus dem Journal (abzüglich Stornos). Die EÜR zeigt die drei Teile einzeln (ERP, wp-admin, PDF, CSV, Betriebsprüfungs-Export). **Dadurch kann die EÜR höher ausfallen als vorher** – das war vorher zu niedrig, wenn es manuelle Aufträge gab.
+
+### Lohn: Urlaub und Krankheit
+- In der Lohnabrechnung stehen die genehmigten Abwesenheiten des Monats als Vorschlag (Urlaubsentgelt, Entgeltfortzahlung, Sonderurlaub, Fortbildung: Arbeitstage × Stunden je Tag × Stundenlohn) und lassen sich mit einem Klick als Zuschläge übernehmen. Stunden je Arbeitstag einstellbar (Vorgabe 8, je Person über `lw16_stunden_pro_tag`).
+
+### Offene Posten
+- **Basiszinssatz automatisch** von der Deutschen Bundesbank (Zeitreihe BBIN1.M.DE.BBK.BBKBAS2.EUR.ME, § 247 BGB), wöchentlich und auf Knopfdruck; von Hand überschreibbar. Stand heute 1,52 %.
+- **Mahnstopp** je Posten mit Grund und optionalem Enddatum (Ratenzahlung, offene Reklamation …): kein Vorschlag, kein Sammelversand, kein Einzelversand, steht im Überblick nicht mehr. Fällt mit der Zahlung weg.
+- Links zur Kundenakte bzw. Shop-Bestellung.
+
+### Kundenakte
+- Neue Karte **Angebote, Mahnungen, Reklamationen** des Kontakts (je nach Recht).
+
+### Bankabgleich
+- Filter **„Ausgaben ohne Beleg“** und Knopf „Beleg erfassen“, wenn es keinen passenden Beleg gibt.
+
+### Inventur und Reklamationen
+- **Handscanner:** Code scannen → die passende Zeile ist sofort zum Zählen bereit; nach Enter geht es zurück in die Suche.
+- Reklamation mit Shop-Bestellung: Knopf zur Bestellung, bei Gutschrift direkt zum Erstatten.
+
+## [0.73.0] – 2026-11-01
+
+Die neuen Seiten aus 0.72.0 sind jetzt vollständig ausgebaut.
+
+### Bankabgleich: Vivid Business verbunden
+- **Vivid-Anbindung** über die Vivid Business API (nur lesend): API-Schlüssel aus Vivid Business → API eintragen (Rechte „accounts:read“ und „transactions:read“), das ERP prüft ihn und speichert ihn **verschlüsselt** (libsodium). Danach kommen Konten, **Live-Kontostand** und Umsätze **stündlich von selbst**, dazu der Knopf „Vivid abrufen“.
+- Richtig abgeglichen: Umsätze seitenweise, bei jedem Abruf die letzten 14 Tage erneut (vorgemerkte Umsätze ändern noch Betrag und Zustand), abgelehnte erledigen sich selbst, bei zu vielen Abrufen wird gewartet und wiederholt. Fehler (Schlüssel abgelaufen, IP nicht erlaubt, fehlendes Recht …) stehen verständlich auf der Seite; vor Ablauf des Schlüssels (höchstens 180 Tage) kommt eine Erinnerung.
+- **Wichtig:** Vivid gibt bei Überweisungen weder Namen noch Verwendungszweck heraus und nur 90 Tage rückwirkend. Darum lässt sich zusätzlich der Umsatz-Export einlesen: Gleiche Umsätze (Betrag, ±3 Tage) werden **zusammengeführt** und um Name, IBAN und Verwendungszweck ergänzt – nicht doppelt angelegt.
+- Mehrere Konten mit Saldo und Kontofilter; vorgemerkte Umsätze sind markiert.
+- **Regeln** („Wenn Name/Zweck enthält … dann ohne Zuordnung mit Notiz …“, z. B. Finanzamt, Umbuchung, Gebühren) und **automatische Zuordnung** eindeutiger Treffer (Betrag + Nummer, kein zweiter Vorschlag nahe dran; vorgemerkte nie).
+
+### Offene Posten
+- **Shop-Bestellungen per Überweisung/Vorkasse** („In Wartestellung“/„Ausstehend“) sind jetzt eigene offene Posten mit Zahlungsfrist (Vorgabe 7 Tage) und lassen sich genauso erinnern und mahnen; Notiz an der Bestellung.
+- **Mahngebühren** stehen in der Forderung (auch die aus früheren Stufen) und werden als Einnahme gebucht, sobald die Zahlung sie deckt – automatisch im Bankabgleich oder per Haken bei „Bezahlt“. Konto für DATEV einstellbar.
+- **Verzugszinsen** nach § 288 BGB (Basiszins + 9 Punkte unter Unternehmern, + 5 bei Verbrauchern) und **40-€-Pauschale** bei Unternehmern in der letzten Mahnung – beides abschaltbar, Basiszinssatz einstellbar.
+- **„Alle fälligen verschicken“**: alle fälligen Stufen auf einmal mit Vorgabetext und PDF.
+
+### Steuer & DATEV
+- **Vorsteuer je Beleg** erfassen (Satz wählen genügt, Betrag wird aus dem Brutto gerechnet; Mischsätze von Hand). Der Beleg selbst bleibt unverändert und festgeschrieben, die Angabe steht daneben mit Protokoll.
+- Voranmeldung mit **Kz 66 und Zahllast** je Monat/Quartal, Hinweis auf Belege ohne Angabe, **CSV** der Zahlen. Manuelle Aufträge zählen mit 19 % aus dem Brutto.
+- DATEV-Export mit **BU-Schlüssel** 9 (19 % Vorsteuer) bzw. 8 (7 %), wenn die Vorsteuer erfasst ist.
+
+### Inventur
+- **Kleinteile und Kartons/Verbrauchsmaterial** werden mitgezählt (abschaltbar) und beim Abschluss korrigiert – mit Begründung im Änderungsprotokoll wie bei „Korrigieren“.
+- **Zählliste als PDF** nach Lagerplatz, auch als **Blindzählung** ohne Soll.
+- **Bestandswert** enthält am Stichtag „heute“ auch Kleinteile, Kartons (Stückpreis aus dem Einkauf) und **Filament** (Restmenge × Preis je kg der Charge).
+
+### Liquidität
+- Startwert ist der **Live-Saldo aller Vivid-Konten**. Mit Regelbesteuerung kommt die **Umsatzsteuer-Zahllast** am 10. des Folgemonats als Ausgang dazu.
+
+### Täglicher Überblick per Mail
+- Einmal am Tag, nur wenn etwas zu tun ist: fällige Mahnstufen, Angebote kurz vor Ablauf, offene Urlaubsanträge, unbestätigte Bestellscheine, Reklamationen über 14 Tage, nicht zugeordnete Bankumsätze, Vivid-Schlüssel läuft ab oder Abruf fehlgeschlagen, Engpass in der Liquidität. An/Aus und Empfänger in den Einstellungen der Liquiditätsseite.
+
+### Urlaub & Abwesenheit
+- **Resturlaub-Übertrag** ins neue Jahr, zuerst verbraucht, verfällt nach einem einstellbaren Tag (Vorgabe 31.03.).
+- **Mail an alle, die genehmigen dürfen**, sobald ein Antrag eingeht.
+
+### Reklamationen
+- Wahlweise **Mail an den Kunden**: Eingangsbestätigung mit Fallnummer und die Lösung (Ersatz, Erstattung mit Betrag, Reparatur, Ablehnung). Steht im Verlauf.
+
+### Technisch
+- Neue Tabellen `bank_accounts`, `beleg_steuer`; `bank_transactions`, `dunning_notices`, `stocktake_lines` erweitert (Datenbank-Version 49, noch nicht veröffentlicht).
+- Hintergrundaufgaben `lw16_erp_bank_sync` (stündlich) und `lw16_erp_daily` (täglich).
+- Tests für Vivid (Umwandlung, Abrufabschnitt, Fehlertexte), Zusammenführung, Regeln, automatische Zuordnung, Zinsen, Gebühren, Vorsteuer/Zahllast, BU-Schlüssel, Übertrag, Überblick, Kundenmails; alle Seiten im Browser mit Testdaten durchgeklickt. **Nicht gegen die echte Vivid-API und nicht in echtem WordPress geprüft** – Vivid hat keine Testumgebung.
+
+## [0.72.0] – 2026-11-01
+
+Neun neue Seiten im ERP. Neue Tabellen (Datenbank-Version 49) legt das Update selbst an.
+
+### Zahlen → Bank & Posten: Bankabgleich
+- **Kontoauszug einlesen:** CAMT.053/052/054 (XML) oder die CSV-Datei der Bank (Sparkasse, Volksbank, DKB, ING, … – Kopfzeile wird erkannt, Vorspann übersprungen, Windows-Zeichensatz umgewandelt). Derselbe Auszug zweimal schadet nicht: Jeder Umsatz hat einen Fingerabdruck. Vorgemerkte Umsätze zählen nicht.
+- **Vorschläge je Umsatz** nach Betrag, Nummer im Verwendungszweck (Bestell-, Rechnungs-, Belegnummer) und Name. Zuordnen zu einem B2B-Auftrag markiert die Rechnung als bezahlt (mit Datum, im Protokoll), zu einer wartenden Shop-Bestellung verbucht die Zahlung in WooCommerce, zu einem Beleg verknüpft nur. „Ohne Zuordnung“ mit Notiz (Privatentnahme, Umbuchung). Zuordnung lösbar.
+- Der Kontostand aus dem CAMT-Auszug ist Startwert der Liquiditätsvorschau.
+
+### Zahlen → Bank & Posten: Offene Posten und Mahnungen
+- Alle offenen Rechnungen mit Fälligkeit und Altersklassen (1–30, 31–60, über 60 Tage). Ohne Rechnungsdatum lässt es sich nachtragen.
+- **Stufen:** Zahlungserinnerung → 1. Mahnung → letzte Mahnung, mit neuer Frist und Mahngebühr (wird genannt, nicht gebucht). Wann die nächste Stufe dran ist, steht in den Einstellungen. Versand per Mail mit PDF, Eintrag in der Kundenakte mit Wiedervorlage, Protokoll. „Bezahlt“ von Hand.
+
+### Zahlen → Steuer: Steuer & DATEV
+- **Kleinunternehmer:** Umsatz Vorjahr und laufendes Jahr gegen die Grenzen nach § 19 UStG (25.000 € / 100.000 €) mit Hochrechnung und klaren Warnungen.
+- **Regelbesteuerung:** je Monat oder Quartal Bemessungsgrundlage und Umsatzsteuer 19 % und 7 % aus den Shop-Bestellungen (Kennzahlen 81 und 86). Die Vorsteuer steht nicht in den Belegen – das sagt die Seite.
+- **DATEV-Export:** das Buchungsjournal als „DATEV Buchungsstapel“ (EXTF 700, SKR03, Windows-1252) mit Berater- und Mandantennummer. Einnahmen Bank an Erlöse, Ausgaben Aufwand an Bank, Stornos als Gegenbuchung. Bitte den ersten Export mit dem Steuerberater prüfen.
+
+### Zahlen → Prognose: Liquidität
+- Kontostand der nächsten 12 Wochen aus offenen Rechnungen (Fälligkeit), Dauerbuchungen, Löhnen (Schnitt der letzten drei Monate), offenen Einkäufen und wahlweise dem üblichen Shop-Umsatz. Mindestpuffer mit Warnung, jeder Posten nachvollziehbar.
+
+### Verkauf → Angebote
+- Angebot mit Positionen (Artikel oder frei, Farbe, Menge, Preis, Rabatt), Gesamtrabatt und Versand; Kontakt füllt Adresse und Rabatt der Kondition, Händler bekommen den Händlerpreis vorgeschlagen. PDF, Versand per Mail (Wiedervorlage in der Kundenakte), abgelehnt, Kopie.
+- **„Angenommen → Auftrag“** legt einen bestätigten Auftrag an (Zahlungsziel aus der Kondition, Lagerabgang), Nummernkreis AN-JJJJ-0001.
+
+### Verkauf → Kunden: Reklamationen
+- Fall zur Shop-Bestellung (Kunde und Positionen werden nachgeschlagen) oder frei, mit Grund. Ware zurück ins Lager (Retoure) oder Ausschuss, Lösung (Ersatz – wahlweise mit Lagerabgang –, Gutschrift mit Betrag, Reparatur, abgelehnt), Verlauf, erledigt. Der Auftrag bekommt die Kennzeichen Reklamation/Retoure. Auswertung der Gründe und der häufigsten Artikel.
+
+### Lager → Bestand: Inventur und Bestandswert
+- **Inventur:** Soll zum Stichtag, Zählliste am Handy (Suche nach SKU, Barcode, Platz; „= Soll“ per Tipp), Artikel nachtragen. Abschließen (eigenes Recht) bucht die Differenz zum Bestand **zum Zeitpunkt des Zählens** als Korrektur – Verkäufe während der Inventur gehen nicht verloren. Protokoll als CSV.
+- **Bestandswert zum Stichtag** aus dem Bewegungskonto (Lager, beim Händler, unterwegs) mal Herstellkosten, als CSV. Nur mit „Preise, Kosten und Löhne sehen“.
+
+### Lager → Einkauf: Bestellungen an Lieferanten
+- Offene Einkäufe je Lieferant zu einem Bestellschein bündeln (BE-JJJJ-0001), als PDF per Mail schicken (Adresse wird gemerkt), Bestätigung mit Liefertermin festhalten – die Einkäufe bekommen ihn als erwartete Lieferung. Lieferstand (teilweise/geliefert) aus den Wareneingängen.
+
+### Profil → Urlaub & Abwesenheit
+- Urlaub beantragen, Krankheit melden (gilt sofort), Resturlaub, Monatskalender mit Feiertagen des Bundeslandes. Wer genehmigen darf (eigenes Recht), sieht offene Anträge, Urlaubskonten und Krankheitstage aller und setzt den Anspruch je Person. Andere sehen bei Kolleginnen und Kollegen nur „abwesend“, nie den Grund.
+
+### Technisch
+- Neue Rechte: `verkauf.angebote`, `verkauf.reklamationen`, `lager.inventur`, `lager.inventur.abschliessen`, `lager.bestellungen`, `finanzen.bank`, `finanzen.mahnwesen`, `finanzen.steuer`, `finanzen.liquiditaet`, `verwaltung.abwesenheit`, `verwaltung.abwesenheit.genehmigen`. Bitte unter Benutzer & Rechte vergeben.
+- Neue Tabellen: `bank_imports`, `bank_transactions`, `dunning_notices`, `quotes`, `quote_items`, `rma_cases`, `stocktakes`, `stocktake_lines`, `supplier_orders`, `supplier_order_items`, `absences`.
+- Gemeinsame Helfer `Erp\Kit` (PHP) und `kit.js`/`kit.css`. Im Lagerprotokoll heißen die Herkünfte „Inventur“ und „Reklamation“.
+- Tests für alle Rechenregeln (Einlesen, Vorschläge, DATEV-Zeilen, Mahnstufen, Feiertage, Arbeitstage, Inventur, Liquidität …); alle Seiten im Browser mit Testdaten durchgeklickt. **Nicht in echtem WordPress geprüft** – insbesondere Bankimport mit echten Dateien deiner Bank und den DATEV-Import bitte einmal ausprobieren.
+
 ## [0.71.0] – 2026-11-01
 
 ### Lager: Protokoll aller Lagerbewegungen
