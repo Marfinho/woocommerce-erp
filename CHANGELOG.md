@@ -7,6 +7,50 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.72.0] – 2026-11-01
+
+Neun neue Seiten im ERP. Neue Tabellen (Datenbank-Version 49) legt das Update selbst an.
+
+### Zahlen → Bank & Posten: Bankabgleich
+- **Kontoauszug einlesen:** CAMT.053/052/054 (XML) oder die CSV-Datei der Bank (Sparkasse, Volksbank, DKB, ING, … – Kopfzeile wird erkannt, Vorspann übersprungen, Windows-Zeichensatz umgewandelt). Derselbe Auszug zweimal schadet nicht: Jeder Umsatz hat einen Fingerabdruck. Vorgemerkte Umsätze zählen nicht.
+- **Vorschläge je Umsatz** nach Betrag, Nummer im Verwendungszweck (Bestell-, Rechnungs-, Belegnummer) und Name. Zuordnen zu einem B2B-Auftrag markiert die Rechnung als bezahlt (mit Datum, im Protokoll), zu einer wartenden Shop-Bestellung verbucht die Zahlung in WooCommerce, zu einem Beleg verknüpft nur. „Ohne Zuordnung“ mit Notiz (Privatentnahme, Umbuchung). Zuordnung lösbar.
+- Der Kontostand aus dem CAMT-Auszug ist Startwert der Liquiditätsvorschau.
+
+### Zahlen → Bank & Posten: Offene Posten und Mahnungen
+- Alle offenen Rechnungen mit Fälligkeit und Altersklassen (1–30, 31–60, über 60 Tage). Ohne Rechnungsdatum lässt es sich nachtragen.
+- **Stufen:** Zahlungserinnerung → 1. Mahnung → letzte Mahnung, mit neuer Frist und Mahngebühr (wird genannt, nicht gebucht). Wann die nächste Stufe dran ist, steht in den Einstellungen. Versand per Mail mit PDF, Eintrag in der Kundenakte mit Wiedervorlage, Protokoll. „Bezahlt“ von Hand.
+
+### Zahlen → Steuer: Steuer & DATEV
+- **Kleinunternehmer:** Umsatz Vorjahr und laufendes Jahr gegen die Grenzen nach § 19 UStG (25.000 € / 100.000 €) mit Hochrechnung und klaren Warnungen.
+- **Regelbesteuerung:** je Monat oder Quartal Bemessungsgrundlage und Umsatzsteuer 19 % und 7 % aus den Shop-Bestellungen (Kennzahlen 81 und 86). Die Vorsteuer steht nicht in den Belegen – das sagt die Seite.
+- **DATEV-Export:** das Buchungsjournal als „DATEV Buchungsstapel“ (EXTF 700, SKR03, Windows-1252) mit Berater- und Mandantennummer. Einnahmen Bank an Erlöse, Ausgaben Aufwand an Bank, Stornos als Gegenbuchung. Bitte den ersten Export mit dem Steuerberater prüfen.
+
+### Zahlen → Prognose: Liquidität
+- Kontostand der nächsten 12 Wochen aus offenen Rechnungen (Fälligkeit), Dauerbuchungen, Löhnen (Schnitt der letzten drei Monate), offenen Einkäufen und wahlweise dem üblichen Shop-Umsatz. Mindestpuffer mit Warnung, jeder Posten nachvollziehbar.
+
+### Verkauf → Angebote
+- Angebot mit Positionen (Artikel oder frei, Farbe, Menge, Preis, Rabatt), Gesamtrabatt und Versand; Kontakt füllt Adresse und Rabatt der Kondition, Händler bekommen den Händlerpreis vorgeschlagen. PDF, Versand per Mail (Wiedervorlage in der Kundenakte), abgelehnt, Kopie.
+- **„Angenommen → Auftrag“** legt einen bestätigten Auftrag an (Zahlungsziel aus der Kondition, Lagerabgang), Nummernkreis AN-JJJJ-0001.
+
+### Verkauf → Kunden: Reklamationen
+- Fall zur Shop-Bestellung (Kunde und Positionen werden nachgeschlagen) oder frei, mit Grund. Ware zurück ins Lager (Retoure) oder Ausschuss, Lösung (Ersatz – wahlweise mit Lagerabgang –, Gutschrift mit Betrag, Reparatur, abgelehnt), Verlauf, erledigt. Der Auftrag bekommt die Kennzeichen Reklamation/Retoure. Auswertung der Gründe und der häufigsten Artikel.
+
+### Lager → Bestand: Inventur und Bestandswert
+- **Inventur:** Soll zum Stichtag, Zählliste am Handy (Suche nach SKU, Barcode, Platz; „= Soll“ per Tipp), Artikel nachtragen. Abschließen (eigenes Recht) bucht die Differenz zum Bestand **zum Zeitpunkt des Zählens** als Korrektur – Verkäufe während der Inventur gehen nicht verloren. Protokoll als CSV.
+- **Bestandswert zum Stichtag** aus dem Bewegungskonto (Lager, beim Händler, unterwegs) mal Herstellkosten, als CSV. Nur mit „Preise, Kosten und Löhne sehen“.
+
+### Lager → Einkauf: Bestellungen an Lieferanten
+- Offene Einkäufe je Lieferant zu einem Bestellschein bündeln (BE-JJJJ-0001), als PDF per Mail schicken (Adresse wird gemerkt), Bestätigung mit Liefertermin festhalten – die Einkäufe bekommen ihn als erwartete Lieferung. Lieferstand (teilweise/geliefert) aus den Wareneingängen.
+
+### Profil → Urlaub & Abwesenheit
+- Urlaub beantragen, Krankheit melden (gilt sofort), Resturlaub, Monatskalender mit Feiertagen des Bundeslandes. Wer genehmigen darf (eigenes Recht), sieht offene Anträge, Urlaubskonten und Krankheitstage aller und setzt den Anspruch je Person. Andere sehen bei Kolleginnen und Kollegen nur „abwesend“, nie den Grund.
+
+### Technisch
+- Neue Rechte: `verkauf.angebote`, `verkauf.reklamationen`, `lager.inventur`, `lager.inventur.abschliessen`, `lager.bestellungen`, `finanzen.bank`, `finanzen.mahnwesen`, `finanzen.steuer`, `finanzen.liquiditaet`, `verwaltung.abwesenheit`, `verwaltung.abwesenheit.genehmigen`. Bitte unter Benutzer & Rechte vergeben.
+- Neue Tabellen: `bank_imports`, `bank_transactions`, `dunning_notices`, `quotes`, `quote_items`, `rma_cases`, `stocktakes`, `stocktake_lines`, `supplier_orders`, `supplier_order_items`, `absences`.
+- Gemeinsame Helfer `Erp\Kit` (PHP) und `kit.js`/`kit.css`. Im Lagerprotokoll heißen die Herkünfte „Inventur“ und „Reklamation“.
+- Tests für alle Rechenregeln (Einlesen, Vorschläge, DATEV-Zeilen, Mahnstufen, Feiertage, Arbeitstage, Inventur, Liquidität …); alle Seiten im Browser mit Testdaten durchgeklickt. **Nicht in echtem WordPress geprüft** – insbesondere Bankimport mit echten Dateien deiner Bank und den DATEV-Import bitte einmal ausprobieren.
+
 ## [0.71.0] – 2026-11-01
 
 ### Lager: Protokoll aller Lagerbewegungen

@@ -101,8 +101,14 @@ class Installer {
 	 * DB_VERSION 48: articles um pos_only (Produkt nur für die Kasse, nicht im Shop)
 	 * und image_id (Foto als WordPress-Mediendatei) erweitert, siehe
 	 * ArticleRepository::create_pos_article().
+	 *
+	 * DB_VERSION 49: ERP-Erweiterungen (siehe Erp\Schema): bank_imports und
+	 * bank_transactions (Bankabgleich), dunning_notices (Mahnwesen), quotes und
+	 * quote_items (Angebote), rma_cases (Reklamationen), stocktakes und
+	 * stocktake_lines (Inventur), supplier_orders und supplier_order_items
+	 * (Bestellungen an Lieferanten), absences (Urlaub und Abwesenheit).
 	 */
-	const DB_VERSION = '48';
+	const DB_VERSION = '49';
 
 	/**
 	 * Aktivierungsroutine.

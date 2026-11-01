@@ -692,6 +692,12 @@ vorhanden ist – nicht, was geplant war.
   Punkteanzeige in Warenkorb und Kasse (Store-API) und zeitlich
   begrenzte Aktionen (Faktor, optional je Kategorie) – eingestellt im ERP
   unter Verkauf → Loyalty → Regeln/Aktionen (Recht `verkauf.loyalty.regeln`).
+- **ERP-Erweiterungen (0.72):** Bankabgleich (CAMT/CSV, Zuordnung zu Aufträgen,
+  Shop-Bestellungen, Belegen), Offene Posten mit Mahnstufen, Steuer & DATEV
+  (Kleinunternehmergrenzen, USt-Zahlen, Buchungsstapel EXTF 700),
+  Liquiditätsvorschau, Angebote (PDF, Mail, in Auftrag umwandeln),
+  Reklamationen, Inventur mit Bestandswert, Bestellscheine an Lieferanten,
+  Urlaub & Abwesenheit. Siehe `CHANGELOG.md`.
 - **Produktion:** Lieferschein-PDF (im Code noch `PackingSlipGenerator`) und
   **Sendungsverfolgung im Kundenkonto** (Zeitleiste in den Bestelldetails und
   Spalte in der Bestellübersicht), Ist-Zeit-Erfassung. Die Versandliste selbst
