@@ -168,6 +168,63 @@ class Reklamationen {
 		return (string) wp_json_encode( $list );
 	}
 
+	/**
+	 * Mail an den Kunden.
+	 *
+	 * @param string $kind       eingang oder loesung.
+	 * @param array  $case       Fall (number, customer).
+	 * @param string $company    Firma.
+	 * @param string $resolution Lösung (bei loesung).
+	 * @param float  $refund     Betrag der Gutschrift.
+	 * @return array {subject, body}
+	 */
+	public static function customer_mail( $kind, array $case, $company, $resolution = '', $refund = null ) {
+		$hello = '' !== trim( (string) $case['customer'] ) ? sprintf( /* translators: %s: Name. */ __( 'Hallo %s,', 'lindenweg16' ), trim( (string) $case['customer'] ) ) : __( 'Hallo,', 'lindenweg16' );
+
+		if ( 'eingang' === $kind ) {
+			return array(
+				/* translators: 1: Nummer, 2: Firma. */
+				'subject' => sprintf( __( 'Ihre Reklamation %1$s bei %2$s', 'lindenweg16' ), $case['number'], $company ),
+				/* translators: 1: Anrede, 2: Nummer, 3: Firma. */
+				'body'    => sprintf( __( "%1\$s\n\nwir haben Ihre Reklamation erhalten und unter der Nummer %2\$s angelegt. Wir melden uns, sobald wir eine Lösung haben – bitte geben Sie die Nummer bei Rückfragen und auf einer Rücksendung an.\n\nEs tut uns leid, dass etwas nicht gepasst hat.\n\nViele Grüße\n%3\$s", 'lindenweg16' ), $hello, $case['number'], $company ),
+			);
+		}
+
+		$texts = array(
+			'ersatz'     => __( 'Wir schicken Ihnen Ersatz. Sie bekommen eine Versandbestätigung, sobald das Paket unterwegs ist.', 'lindenweg16' ),
+			'gutschrift' => null !== $refund ? sprintf( /* translators: %s: Betrag. */ __( 'Wir erstatten Ihnen %s. Das Geld geht auf demselben Weg zurück, auf dem Sie bezahlt haben.', 'lindenweg16' ), Kit::eur( $refund ) ) : __( 'Wir erstatten Ihnen den Betrag.', 'lindenweg16' ),
+			'reparatur'  => __( 'Wir reparieren den Artikel und schicken ihn Ihnen zurück.', 'lindenweg16' ),
+			'abgelehnt'  => __( 'Nach Prüfung können wir die Reklamation leider nicht anerkennen. Gern erklären wir Ihnen die Gründe – antworten Sie einfach auf diese Mail.', 'lindenweg16' ),
+		);
+
+		return array(
+			/* translators: 1: Nummer, 2: Firma. */
+			'subject' => sprintf( __( 'Ihre Reklamation %1$s – unsere Lösung', 'lindenweg16' ), $case['number'], $company ),
+			/* translators: 1: Anrede, 2: Nummer, 3: Text, 4: Firma. */
+			'body'    => sprintf( __( "%1\$s\n\nzu Ihrer Reklamation %2\$s: %3\$s\n\nViele Grüße\n%4\$s", 'lindenweg16' ), $hello, $case['number'], isset( $texts[ $resolution ] ) ? $texts[ $resolution ] : '', $company ),
+		);
+	}
+
+	/**
+	 * Kunden informieren und im Verlauf festhalten.
+	 *
+	 * @param array  $case Fall.
+	 * @param array  $mail {subject, body}.
+	 * @return bool
+	 */
+	protected static function tell_customer( array $case, array $mail ) {
+		if ( ! is_email( (string) $case['customer_email'] ) ) {
+			return false;
+		}
+
+		$ok = wp_mail( (string) $case['customer_email'], $mail['subject'], $mail['body'] );
+		if ( $ok ) {
+			self::update( $case, array(), __( 'Kunde per Mail informiert:', 'lindenweg16' ) . ' ' . $mail['subject'] );
+		}
+
+		return (bool) $ok;
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
@@ -437,6 +494,9 @@ class Reklamationen {
 
 		$case = self::find( $id );
 		self::flag_order( $case, 'complaint' );
+		if ( ! empty( $in['notify'] ) ) {
+			self::tell_customer( $case, self::customer_mail( 'eingang', $case, Kit::company()['name'] ) );
+		}
 		AuditLog::record( 'erp_reklamation_angelegt', 'rma', $id, array( 'nummer' => $num, 'grund' => $reason, 'bestellung' => $wc ) );
 
 		/* translators: %s: Nummer. */
@@ -574,6 +634,9 @@ class Reklamationen {
 
 		$note = trim( sanitize_text_field( isset( $in['note'] ) ? (string) $in['note'] : '' ) );
 		self::update( $c, array( 'status' => 'entschieden', 'resolution' => $res, 'refund_amount' => $refund ), $text . ( '' !== $note ? ' – ' . $note : '' ) );
+		if ( ! empty( $in['notify'] ) ) {
+			self::tell_customer( self::find( (int) $c['id'] ), self::customer_mail( 'loesung', $c, Kit::company()['name'], $res, $refund ) );
+		}
 
 		$msg = __( 'Lösung gespeichert.', 'lindenweg16' );
 		if ( 'gutschrift' === $res && (int) $c['wc_order_id'] ) {

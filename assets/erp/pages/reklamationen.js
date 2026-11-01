@@ -34,6 +34,7 @@
 			var qty = k.input('1', { inputmode: 'decimal' });
 			var reason = k.select(Object.keys(d.reasons).map(function (r) { return [r, d.reasons[r]]; }), 'defekt');
 			var desc = k.area('', { rows: 3, placeholder: 'Was ist passiert? Fotos liegen z. B. im Postfach.' });
+			var notify = h('input', { type: 'checkbox', checked: true });
 			var pick = h('div');
 			look.addEventListener('click', function () {
 				look.disabled = true;
@@ -56,9 +57,10 @@
 				h('div', { class: 'kt-grid' }, k.field('Kunde', customer), k.field('E-Mail', email)),
 				h('div', { class: 'kt-grid' }, k.field('Artikel', art), k.field('Farbe', color), k.field('Menge', qty)),
 				k.field('Grund', reason),
-				k.field('Beschreibung', desc)
+				k.field('Beschreibung', desc),
+				h('label', { class: 'lg-chk' }, notify, ' Eingangsbestätigung mit Fallnummer an den Kunden schicken')
 			], 'Anlegen', function () {
-				return ui.api('reklamationen', { method: 'POST', body: { wc_order_id: orderNo.value.replace(/\D/g, ''), customer: customer.value, email: email.value, article_id: art.value, color: color.value, qty: qty.value, reason: reason.value, description: desc.value } });
+				return ui.api('reklamationen', { method: 'POST', body: { wc_order_id: orderNo.value.replace(/\D/g, ''), customer: customer.value, email: email.value, article_id: art.value, color: color.value, qty: qty.value, reason: reason.value, description: desc.value, notify: notify.checked ? 1 : 0 } });
 			}, load, true);
 		}
 
@@ -84,14 +86,15 @@
 			var refundRow = k.field('Betrag der Gutschrift', refund, c.wc_order_id && data.can_refund ? 'Das Geld zurück: Shop-Bestellung → Erstatten.' : null);
 			var bookRow = h('label', { class: 'lg-chk' }, book, ' Ersatz (' + q3(c.qty) + ') aus dem Lager ausbuchen');
 			var note = k.input('');
+			var notify = h('input', { type: 'checkbox', checked: !!c.email });
 			function toggle() {
 				refundRow.hidden = res.value !== 'gutschrift';
 				bookRow.hidden = res.value !== 'ersatz' || !data.can_book || !c.article_id;
 			}
 			res.addEventListener('change', toggle);
 			toggle();
-			k.formDialog('Lösung: ' + c.number, [k.field('Lösung', res), refundRow, bookRow, k.field('Notiz', note)], 'Speichern', function () {
-				return ui.api('reklamationen/' + c.id + '/loesung', { method: 'POST', body: { resolution: res.value, refund: refund.value, book_replacement: book.checked && !bookRow.hidden ? 1 : 0, note: note.value } });
+			k.formDialog('Lösung: ' + c.number, [k.field('Lösung', res), refundRow, bookRow, k.field('Notiz (intern)', note), c.email ? h('label', { class: 'lg-chk' }, notify, ' Kunden per Mail über die Lösung informieren') : null], 'Speichern', function () {
+				return ui.api('reklamationen/' + c.id + '/loesung', { method: 'POST', body: { resolution: res.value, refund: refund.value, book_replacement: book.checked && !bookRow.hidden ? 1 : 0, note: note.value, notify: notify.checked ? 1 : 0 } });
 			}, load);
 		}
 

@@ -212,6 +212,10 @@ class Kit {
 				'shop_einrechnen' => 1,
 				'puffer'          => 1000.0,
 			),
+			'digest' => array(
+				'aktiv'           => 1,
+				'an'              => '',
+			),
 			'bank'  => array(
 				'auto_zuordnen'   => 1,
 				'auto_schwelle'   => 100,
@@ -219,6 +223,8 @@ class Kit {
 			'urlaub' => array(
 				'tage_standard'   => 24,
 				'bundesland'      => '',
+				'uebertrag'       => 1,
+				'verfall'         => '03-31',
 			),
 		);
 	}
@@ -248,7 +254,7 @@ class Kit {
 				$num   = self::amount( $value );
 				$value = null === $num ? (float) $default : $num;
 			} else {
-				$value = trim( preg_replace( '/[^\p{L}\p{N} ._\-\/]/u', '', (string) $value ) );
+				$value = trim( preg_replace( '/[^\p{L}\p{N} ._\-\/@+]/u', '', (string) $value ) );
 			}
 
 			$out[ $key ] = $value;

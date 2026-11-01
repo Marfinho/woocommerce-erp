@@ -64,4 +64,20 @@ class ErpAbwesenheitTest extends TestCase {
 		);
 		$this->assertSame( array( 'anspruch' => 24.0, 'genommen' => 5.0, 'geplant' => 3.0, 'beantragt' => 2.0, 'rest' => 14.0 ), $b );
 	}
+
+	public function test_uebertrag_wird_zuerst_verbraucht_und_verfaellt() {
+		$abs = array(
+			array( 'kind' => 'urlaub', 'status' => 'genehmigt', 'days' => 3, 'date_from' => '2026-02-10' ),
+			array( 'kind' => 'urlaub', 'status' => 'genehmigt', 'days' => 5, 'date_from' => '2026-07-01' ),
+		);
+		$before = A::balance_with_carry( 24, 5, $abs, 2026, '2026-03-01', '03-31' );
+		$this->assertSame( 0.0, $before['verfallen'], 'Vor dem Verfallstag verfällt nichts' );
+		$this->assertSame( 21.0, $before['rest'], '24 + 5 − 3 genommen − 5 geplant' );
+
+		$after = A::balance_with_carry( 24, 5, $abs, 2026, '2026-04-01', '03-31' );
+		$this->assertSame( 2.0, $after['verfallen'], '5 Übertrag − 3 bis Ende März genutzt' );
+		$this->assertSame( 19.0, $after['rest'] );
+
+		$this->assertSame( 0.0, A::balance_with_carry( 24, 5, $abs, 2026, '2026-12-01', '' )['verfallen'], 'Ohne Verfallstag bleibt er' );
+	}
 }

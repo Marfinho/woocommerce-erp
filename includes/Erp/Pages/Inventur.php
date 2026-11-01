@@ -189,6 +189,7 @@ class Inventur {
 		register_rest_route( $ns, '/erp/inventur/(?P<id>\d+)/zeile', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'add_line' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/inventur/(?P<id>\d+)/abschliessen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'close' ), 'permission_callback' => $api->needs( array( 'lager.inventur', 'lager.inventur.abschliessen' ) ) ) );
 		register_rest_route( $ns, '/erp/inventur/(?P<id>\d+)/csv', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'csv' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/inventur/(?P<id>\d+)/pdf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'pdf' ), 'permission_callback' => $needs ) );
 	}
 
 	/**
@@ -257,6 +258,7 @@ class Inventur {
 		$in    = Kit::input( $request );
 		$title = Kit::cut( sanitize_text_field( isset( $in['title'] ) ? (string) $in['title'] : '' ), 250 );
 		$only  = ! empty( $in['nur_bestand'] );
+		$parts = ! array_key_exists( 'mit_teilen', $in ) || ! empty( $in['mit_teilen'] );
 		$t     = Kit::table( 'stocktakes' );
 
 		if ( (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t} WHERE status = 'offen'" ) ) { // phpcs:ignore WordPress.DB.PreparedSQL
@@ -316,10 +318,69 @@ class Inventur {
 			);
 		}
 
-		AuditLog::record( 'erp_inventur_angelegt', 'stocktake', $id, array( 'code' => $code, 'zeilen' => count( $lines ) ) );
+		$n = count( $lines );
+		if ( $parts ) {
+			foreach ( self::part_rows() as $part ) {
+				if ( $only && abs( $part['qty'] ) < 0.0005 ) {
+					continue;
+				}
+				$wpdb->insert(
+					Kit::table( 'stocktake_lines' ),
+					array(
+						'stocktake_id' => $id,
+						'item_type'    => $part['type'],
+						'article_id'   => $part['id'],
+						'color'        => '',
+						'expected_qty' => $part['qty'],
+						'unit_value'   => $part['unit'],
+					)
+				);
+				++$n;
+			}
+		}
+
+		AuditLog::record( 'erp_inventur_angelegt', 'stocktake', $id, array( 'code' => $code, 'zeilen' => $n ) );
 
 		/* translators: 1: Nummer, 2: Anzahl. */
-		return new WP_REST_Response( array( 'ok' => true, 'id' => $id, 'message' => sprintf( __( 'Inventur %1$s mit %2$d Zeilen angelegt. Jetzt zählen.', 'lindenweg16' ), $code, count( $lines ) ) ), 201 );
+		return new WP_REST_Response( array( 'ok' => true, 'id' => $id, 'message' => sprintf( __( 'Inventur %1$s mit %2$d Zeilen angelegt. Jetzt zählen.', 'lindenweg16' ), $code, $n ) ), 201 );
+	}
+
+	/**
+	 * Kleinteile (Komponenten) und Kartons/Verbrauchsmaterial mit Bestand und Stückwert.
+	 *
+	 * @return array Liste {type, id, qty, unit, code, name, unit_label, barcode, bin_id}
+	 */
+	public static function part_rows() {
+		$out = array();
+
+		foreach ( \Lindenweg16\Modules\Betrieb\ComponentRepository::all() as $c ) {
+			$out[] = array(
+				'type'       => 'component',
+				'id'         => (int) $c['id'],
+				'qty'        => (float) $c['stock_qty'],
+				'unit'       => round( \Lindenweg16\Modules\Betrieb\CostCalculator::unit_price( $c ), 4 ),
+				'code'       => (string) $c['code'],
+				'name'       => (string) $c['name'],
+				'unit_label' => __( 'Stück', 'lindenweg16' ),
+				'barcode'    => (string) $c['barcode'],
+				'bin_id'     => (int) $c['default_bin_id'],
+			);
+		}
+		foreach ( \Lindenweg16\Modules\Betrieb\SupplyRepository::all() as $s ) {
+			$out[] = array(
+				'type'       => 'supply',
+				'id'         => (int) $s['id'],
+				'qty'        => (float) $s['stock_qty'],
+				'unit'       => round( (float) $s['price_per_unit'], 4 ),
+				'code'       => '',
+				'name'       => (string) $s['name'],
+				'unit_label' => (string) $s['unit'],
+				'barcode'    => '',
+				'bin_id'     => 0,
+			);
+		}
+
+		return $out;
 	}
 
 	/**
@@ -364,23 +425,46 @@ class Inventur {
 			$bins[ (int) $bin['id'] ] = (string) $bin['code'];
 		}
 
+		$parts = array();
+		foreach ( self::part_rows() as $p ) {
+			$parts[ $p['type'] . ':' . $p['id'] ] = $p;
+		}
+		$kinds = array( 'article' => __( 'Produkt', 'lindenweg16' ), 'component' => __( 'Kleinteil', 'lindenweg16' ), 'supply' => __( 'Karton/Material', 'lindenweg16' ) );
+
 		foreach ( $s['lines'] as $l ) {
-			$a       = isset( $articles[ (int) $l['article_id'] ] ) ? $articles[ (int) $l['article_id'] ] : null;
-			$lines[] = array(
+			$type = (string) $l['item_type'];
+			if ( 'article' === $type ) {
+				$a    = isset( $articles[ (int) $l['article_id'] ] ) ? $articles[ (int) $l['article_id'] ] : null;
+				$info = array(
+					'sku'         => $a ? (string) $a['sku'] : '#' . (int) $l['article_id'],
+					'name'        => $a ? (string) $a['name'] : '',
+					'barcode'     => $a ? (string) $a['barcode'] : '',
+					'bin'         => $a && $a['default_bin_id'] && isset( $bins[ (int) $a['default_bin_id'] ] ) ? $bins[ (int) $a['default_bin_id'] ] : '',
+					'color_label' => ColorRegistry::label( $l['color'] ),
+					'unit_label'  => __( 'Stück', 'lindenweg16' ),
+				);
+			} else {
+				$p    = isset( $parts[ $type . ':' . (int) $l['article_id'] ] ) ? $parts[ $type . ':' . (int) $l['article_id'] ] : null;
+				$info = array(
+					'sku'         => $p ? ( '' !== $p['code'] ? $p['code'] : $kinds[ $type ] ) : '#' . (int) $l['article_id'],
+					'name'        => $p ? $p['name'] : '',
+					'barcode'     => $p ? $p['barcode'] : '',
+					'bin'         => $p && $p['bin_id'] && isset( $bins[ $p['bin_id'] ] ) ? $bins[ $p['bin_id'] ] : '',
+					'color_label' => $kinds[ $type ],
+					'unit_label'  => $p ? $p['unit_label'] : '',
+				);
+			}
+			$lines[] = array_merge( $info, array(
 				'id'          => (int) $l['id'],
+				'type'        => $type,
 				'article_id'  => (int) $l['article_id'],
-				'sku'         => $a ? (string) $a['sku'] : '#' . (int) $l['article_id'],
-				'name'        => $a ? (string) $a['name'] : '',
-				'barcode'     => $a ? (string) $a['barcode'] : '',
-				'bin'         => $a && $a['default_bin_id'] && isset( $bins[ (int) $a['default_bin_id'] ] ) ? $bins[ (int) $a['default_bin_id'] ] : '',
 				'color'       => (string) $l['color'],
-				'color_label' => ColorRegistry::label( $l['color'] ),
 				'expected'    => (float) $l['expected_qty'],
 				'counted'     => null === $l['counted_qty'] ? null : (float) $l['counted_qty'],
 				'unit_value'  => $value && null !== $l['unit_value'] ? (float) $l['unit_value'] : null,
 				'note'        => (string) $l['note'],
-				'booked'      => (bool) $l['movement_id'],
-			);
+				'booked'      => (bool) $l['movement_id'] || (bool) $l['booked'],
+			) );
 		}
 
 		usort(
@@ -398,9 +482,13 @@ class Inventur {
 		}
 
 		$options = array();
+		$popts   = array();
 		if ( 'offen' === $s['status'] ) {
 			foreach ( $articles as $a ) {
 				$options[] = array( (int) $a['id'], $a['sku'] . ' · ' . $a['name'] );
+			}
+			foreach ( self::part_rows() as $p ) {
+				$popts[] = array( $p['type'] . ':' . $p['id'], $kinds[ $p['type'] ] . ' · ' . trim( $p['code'] . ' ' . $p['name'] ) );
 			}
 		}
 
@@ -414,6 +502,7 @@ class Inventur {
 				'lines'       => $lines,
 				'summary'     => $sum,
 				'articles'    => $options,
+				'parts'       => $popts,
 				'colors'      => ColorRegistry::options( true ),
 				'can_close'   => Access::can( 'lager.inventur.abschliessen' ),
 			)
@@ -479,7 +568,12 @@ class Inventur {
 
 		$s       = self::find( (int) $request['id'] );
 		$in      = Kit::input( $request );
+		$type    = isset( $in['item_type'] ) && in_array( $in['item_type'], array( 'component', 'supply' ), true ) ? (string) $in['item_type'] : 'article';
 		$article = isset( $in['article_id'] ) ? (int) $in['article_id'] : 0;
+
+		if ( 'article' !== $type ) {
+			return self::add_part_line( $s, $type, $article, $in );
+		}
 		$color   = ColorRegistry::normalize( isset( $in['color'] ) ? (string) $in['color'] : '' );
 		$qty     = Kit::amount( isset( $in['qty'] ) ? $in['qty'] : '' );
 
@@ -524,6 +618,108 @@ class Inventur {
 	}
 
 	/**
+	 * Kleinteil oder Karton nachtragen.
+	 *
+	 * @param array|null $s    Inventur.
+	 * @param string     $type component oder supply.
+	 * @param int        $id   Kennung.
+	 * @param array      $in   Eingaben.
+	 * @return WP_REST_Response
+	 */
+	protected static function add_part_line( $s, $type, $id, array $in ) {
+		global $wpdb;
+
+		$qty  = Kit::amount( isset( $in['qty'] ) ? $in['qty'] : '' );
+		$part = null;
+		foreach ( self::part_rows() as $p ) {
+			if ( $p['type'] === $type && $p['id'] === $id ) {
+				$part = $p;
+			}
+		}
+
+		if ( ! $s || 'offen' !== $s['status'] ) {
+			return Kit::fail( __( 'Diese Inventur ist nicht (mehr) offen.', 'lindenweg16' ), 409 );
+		}
+		if ( ! $part ) {
+			return Kit::fail( __( 'Bitte eine Position wählen.', 'lindenweg16' ) );
+		}
+		if ( null === $qty || $qty < 0 ) {
+			return Kit::fail( __( 'Bitte die gezählte Menge eintragen.', 'lindenweg16' ) );
+		}
+		foreach ( $s['lines'] as $l ) {
+			if ( $l['item_type'] === $type && (int) $l['article_id'] === $id ) {
+				return Kit::fail( __( 'Diese Position steht schon auf der Liste – bitte dort zählen.', 'lindenweg16' ), 409 );
+			}
+		}
+
+		$wpdb->insert(
+			Kit::table( 'stocktake_lines' ),
+			array(
+				'stocktake_id' => (int) $s['id'],
+				'item_type'    => $type,
+				'article_id'   => $id,
+				'color'        => '',
+				'expected_qty' => $part['qty'],
+				'counted_qty'  => $qty,
+				'unit_value'   => $part['unit'],
+				'counted_at'   => current_time( 'mysql', true ),
+				'counted_by'   => get_current_user_id(),
+				'note'         => __( 'nachgetragen', 'lindenweg16' ),
+			)
+		);
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Zeile nachgetragen.', 'lindenweg16' ) ), 201 );
+	}
+
+	/**
+	 * Zählliste als PDF zum Ausdrucken (nach Lagerplatz sortiert).
+	 *
+	 * @param WP_REST_Request $request Anfrage (blind = ohne Soll).
+	 * @return WP_REST_Response
+	 */
+	public static function pdf( WP_REST_Request $request ) {
+		$res = self::show( $request );
+
+		if ( 200 !== $res->get_status() ) {
+			return $res;
+		}
+
+		$d      = $res->get_data();
+		$blind  = (bool) $request->get_param( 'blind' );
+		$pdf    = new \Lindenweg16\Core\Pdf();
+		$widths = array( 50, 80, 205, 70, 60, 70 );
+		$aligns = array( 'l', 'l', 'l', 'l', 'r', 'r' );
+
+		$pdf->text( Kit::company()['name'], 10 );
+		/* translators: 1: Nummer, 2: Titel. */
+		$pdf->text( sprintf( __( 'Zählliste %1$s – %2$s', 'lindenweg16' ), $d['code'], $d['title'] ), 16, true );
+		/* translators: %s: Datum. */
+		$pdf->text( sprintf( __( 'Stichtag %s · Gezählt von: ____________________', 'lindenweg16' ), wp_date( 'd.m.Y H:i', $d['snapshot_at'] ) ), 10 );
+		$pdf->space( 8 );
+		$pdf->hr();
+		$pdf->table_cols( array( __( 'Platz', 'lindenweg16' ), __( 'Nummer', 'lindenweg16' ), __( 'Bezeichnung', 'lindenweg16' ), __( 'Farbe/Art', 'lindenweg16' ), $blind ? '' : __( 'Soll', 'lindenweg16' ), __( 'Gezählt', 'lindenweg16' ) ), $widths, $aligns, 9, true );
+		$pdf->hr( 0.3 );
+
+		foreach ( $d['lines'] as $l ) {
+			$pdf->table_cols(
+				array(
+					Kit::cut( $l['bin'], 9 ),
+					Kit::cut( $l['sku'], 14 ),
+					Kit::cut( $l['name'], 40 ),
+					Kit::cut( $l['color_label'], 12 ),
+					$blind ? '' : str_replace( '.', ',', (string) ( 0 + $l['expected'] ) ) . ' ' . Kit::cut( $l['unit_label'], 6 ),
+					null === $l['counted'] ? '________' : str_replace( '.', ',', (string) ( 0 + $l['counted'] ) ),
+				),
+				$widths,
+				$aligns,
+				9
+			);
+		}
+
+		return Kit::file_response( 'zaehlliste-' . $d['code'] . '.pdf', 'application/pdf', $pdf->output() );
+	}
+
+	/**
 	 * Abschließen: Differenzen als Korrektur buchen.
 	 *
 	 * @param WP_REST_Request $request Anfrage.
@@ -547,8 +743,35 @@ class Inventur {
 		$booked = 0;
 		$cache  = array();
 
+		$part_stock = array();
+		foreach ( self::part_rows() as $p ) {
+			$part_stock[ $p['type'] . ':' . $p['id'] ] = $p['qty'];
+		}
+
 		foreach ( $s['lines'] as $l ) {
-			if ( null === $l['counted_qty'] || $l['movement_id'] ) {
+			if ( null === $l['counted_qty'] || $l['movement_id'] || $l['booked'] ) {
+				continue;
+			}
+
+			// Kleinteile und Kartons haben kein Bewegungskonto: Differenz zum Bestand jetzt.
+			if ( 'article' !== $l['item_type'] ) {
+				$key  = $l['item_type'] . ':' . (int) $l['article_id'];
+				$have = isset( $part_stock[ $key ] ) ? (float) $part_stock[ $key ] : null;
+				if ( null === $have ) {
+					continue;
+				}
+				$diff = self::correction( $l['counted_qty'], $have );
+				if ( abs( $diff ) >= 0.0005 ) {
+					/* translators: 1: Nummer, 2: gezählt. */
+					$why = sprintf( __( 'Inventur %1$s: gezählt %2$s', 'lindenweg16' ), $s['code'], str_replace( '.', ',', (string) ( 0 + (float) $l['counted_qty'] ) ) );
+					$ok  = 'supply' === $l['item_type']
+						? \Lindenweg16\Modules\Betrieb\SupplyRepository::adjust_stock( (int) $l['article_id'], $diff, $why )
+						: \Lindenweg16\Modules\Betrieb\ComponentRepository::adjust_stock( (int) $l['article_id'], $diff, $why );
+					if ( $ok ) {
+						++$booked;
+					}
+				}
+				$wpdb->update( Kit::table( 'stocktake_lines' ), array( 'booked' => 1 ), array( 'id' => (int) $l['id'] ) );
 				continue;
 			}
 
@@ -675,6 +898,34 @@ class Inventur {
 			}
 		}
 
+		// Kleinteile, Kartons und Filament führen keinen Verlauf – sie gibt es nur mit dem heutigen Stand.
+		$today = current_time( 'Y-m-d' );
+		$extra = $date === $today;
+		if ( $extra ) {
+			$kinds = array( 'component' => __( 'Kleinteil', 'lindenweg16' ), 'supply' => __( 'Karton/Material', 'lindenweg16' ) );
+			foreach ( self::part_rows() as $p ) {
+				if ( $p['qty'] <= 0 ) {
+					continue;
+				}
+				$value             = round( $p['qty'] * $p['unit'], 2 );
+				$total            += $value;
+				$by_place['teile'] = ( isset( $by_place['teile'] ) ? $by_place['teile'] : 0.0 ) + $value;
+				$rows[]            = array( 'sku' => $p['code'], 'name' => $p['name'], 'color' => $kinds[ $p['type'] ], 'place' => __( 'Kleinteile & Kartons', 'lindenweg16' ), 'qty' => $p['qty'], 'unit' => $p['unit'], 'value' => $value );
+			}
+			foreach ( \Lindenweg16\Modules\Betrieb\FilamentRepository::all() as $lot ) {
+				$kg = round( (float) \Lindenweg16\Modules\Betrieb\FilamentRepository::remaining_kg( (array) $lot ), 3 );
+				if ( $kg <= 0 ) {
+					continue;
+				}
+				$value                = round( $kg * (float) $lot['price_per_kg'], 2 );
+				$total               += $value;
+				$by_place['filament'] = ( isset( $by_place['filament'] ) ? $by_place['filament'] : 0.0 ) + $value;
+				$rows[]               = array( 'sku' => (string) $lot['lot_code'], 'name' => trim( 'Filament ' . $lot['material'] . ' ' . $lot['manufacturer'] ), 'color' => ColorRegistry::label( $lot['color'] ), 'place' => __( 'Filament', 'lindenweg16' ), 'qty' => $kg, 'unit' => (float) $lot['price_per_kg'], 'value' => $value );
+			}
+			$places['teile']    = __( 'Kleinteile & Kartons', 'lindenweg16' );
+			$places['filament'] = __( 'Filament (kg)', 'lindenweg16' );
+		}
+
 		usort(
 			$rows,
 			function ( $a, $b ) {
@@ -704,6 +955,7 @@ class Inventur {
 				'by_place' => $named,
 				'rows'     => array_slice( $rows, 0, 300 ),
 				'count'    => count( $rows ),
+				'with_parts' => $extra,
 			)
 		);
 	}

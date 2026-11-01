@@ -245,6 +245,45 @@ class Abwesenheit {
 		);
 	}
 
+	/**
+	 * Urlaubskonto mit Übertrag aus dem Vorjahr.
+	 *
+	 * Der Rest des Vorjahres wird zuerst verbraucht – von Urlaub, der bis zum
+	 * Verfallstag beginnt. Was danach übrig ist, verfällt am Tag danach.
+	 *
+	 * @param float  $entitlement Anspruch dieses Jahres.
+	 * @param float  $carry       Rest aus dem Vorjahr (≥ 0).
+	 * @param array  $absences    Abwesenheiten dieses Jahres.
+	 * @param int    $year        Jahr.
+	 * @param string $today       Heute.
+	 * @param string $expiry      Verfallstag MM-TT (leer = verfällt nicht).
+	 * @return array balance() plus {uebertrag, verfallen}
+	 */
+	public static function balance_with_carry( $entitlement, $carry, array $absences, $year, $today, $expiry ) {
+		$carry = max( 0.0, (float) $carry );
+		$base  = self::balance( $entitlement, $absences, $year, $today );
+		$lost  = 0.0;
+
+		if ( $carry > 0 && preg_match( '/^\d{2}-\d{2}$/', (string) $expiry ) ) {
+			$until = $year . '-' . $expiry;
+			$early = 0.0;
+			foreach ( $absences as $a ) {
+				if ( 'urlaub' === $a['kind'] && in_array( $a['status'], array( 'genehmigt', 'beantragt' ), true ) && (int) substr( (string) $a['date_from'], 0, 4 ) === (int) $year && (string) $a['date_from'] <= $until ) {
+					$early += (float) $a['days'];
+				}
+			}
+			if ( $today > $until ) {
+				$lost = max( 0.0, $carry - $early );
+			}
+		}
+
+		$base['uebertrag'] = $carry;
+		$base['verfallen'] = $lost;
+		$base['rest']      = $base['rest'] + $carry - $lost;
+
+		return $base;
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
@@ -287,6 +326,23 @@ class Abwesenheit {
 		$own = get_user_meta( (int) $user_id, self::META_DAYS, true );
 
 		return '' !== $own && null !== $own ? (float) $own : (float) Kit::settings( 'urlaub' )['tage_standard'];
+	}
+
+	/**
+	 * Konto einer Person für das laufende Jahr mit Übertrag.
+	 *
+	 * @param int    $user_id Person.
+	 * @param int    $year    Jahr.
+	 * @param string $today   Heute.
+	 * @return array
+	 */
+	protected static function account_of( $user_id, $year, $today ) {
+		$s    = Kit::settings( 'urlaub' );
+		$prev = self::rows( "user_id = %d AND date_from >= %s AND date_from <= %s", array( (int) $user_id, ( $year - 1 ) . '-01-01', ( $year - 1 ) . '-12-31' ) );
+		$cur  = self::rows( "user_id = %d AND date_from >= %s AND date_from <= %s", array( (int) $user_id, $year . '-01-01', $year . '-12-31' ) );
+		$rest = (int) $s['uebertrag'] ? self::balance( self::entitlement( $user_id ), $prev, $year - 1, ( $year - 1 ) . '-12-31' )['rest'] : 0.0;
+
+		return self::balance_with_carry( self::entitlement( $user_id ), $rest, $cur, $year, $today, (int) $s['uebertrag'] ? (string) $s['verfall'] : '' );
 	}
 
 	/**
@@ -381,7 +437,7 @@ class Abwesenheit {
 			'me'        => $me,
 			'month'     => $month,
 			'holidays'  => self::holidays( (int) substr( $month, 0, 4 ), (string) $s['bundesland'] ),
-			'balance'   => self::balance( self::entitlement( $me ), $mine, $year, $today ),
+			'balance'   => self::account_of( $me, $year, $today ),
 			'mine'      => array_map( function ( $a ) use ( $people, $full ) { return self::out( $a, $people, $full ); }, array_reverse( $mine ) ),
 			'calendar'  => array_map( function ( $a ) use ( $people, $full ) { return self::out( $a, $people, $full ); }, $month_rows ),
 			'kinds'     => self::kinds(),
@@ -397,7 +453,7 @@ class Abwesenheit {
 			foreach ( $people as $id => $name ) {
 				$own             = array_filter( $all_year, function ( $a ) use ( $id ) { return (int) $a['user_id'] === (int) $id; } );
 				$sick            = array_sum( array_map( function ( $a ) { return 'krank' === $a['kind'] && 'genehmigt' === $a['status'] ? (float) $a['days'] : 0; }, $own ) );
-				$out['people'][] = array_merge( array( 'id' => $id, 'name' => $name, 'krank' => $sick ), self::balance( self::entitlement( $id ), $own, $year, $today ) );
+				$out['people'][] = array_merge( array( 'id' => $id, 'name' => $name, 'krank' => $sick ), self::account_of( $id, $year, $today ) );
 			}
 		}
 
@@ -473,6 +529,10 @@ class Abwesenheit {
 			return Kit::fail( __( 'Ließ sich nicht speichern. Ist das Plugin-Update vollständig gelaufen (Datenbank)?', 'lindenweg16' ), 500 );
 		}
 
+		if ( 'beantragt' === $status ) {
+			self::notify_approvers( $user, $from, $to, $days );
+		}
+
 		// Ohne Grund im Protokoll – Krankheit gehört nicht in ein allgemeines Protokoll.
 		AuditLog::record( 'erp_abwesenheit_angelegt', 'absence', $id, array( 'person' => $user, 'tage' => $days, 'status' => $status ) );
 
@@ -483,6 +543,32 @@ class Abwesenheit {
 			: sprintf( __( 'Eingetragen (%s Arbeitstage).', 'lindenweg16' ), str_replace( '.', ',', (string) $days ) );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => $msg ), 201 );
+	}
+
+	/**
+	 * Wer genehmigen darf, bekommt eine Mail.
+	 *
+	 * @param int    $user Antragsteller.
+	 * @param string $from Von.
+	 * @param string $to   Bis.
+	 * @param float  $days Tage.
+	 */
+	protected static function notify_approvers( $user, $from, $to, $days ) {
+		$who  = get_userdata( (int) $user );
+		$name = $who ? $who->display_name : '#' . (int) $user;
+		$sent = array();
+
+		foreach ( get_users( array( 'fields' => array( 'ID', 'user_email' ) ) ) as $u ) {
+			if ( (int) $u->ID === (int) $user || ! is_email( $u->user_email ) || isset( $sent[ $u->user_email ] ) ) {
+				continue;
+			}
+			if ( ! Access::can( 'verwaltung.abwesenheit.genehmigen', (int) $u->ID ) ) {
+				continue;
+			}
+			/* translators: 1: Name, 2: von, 3: bis, 4: Tage. */
+			wp_mail( $u->user_email, __( 'Neuer Urlaubsantrag', 'lindenweg16' ), sprintf( __( "%1\$s beantragt Urlaub vom %2\$s bis %3\$s (%4\$s Arbeitstage).\n\nGenehmigen im ERP unter Urlaub & Abwesenheit → Team.", 'lindenweg16' ), $name, Kit::dmy( $from ), Kit::dmy( $to ), str_replace( '.', ',', (string) $days ) ) );
+			$sent[ $u->user_email ] = true;
+		}
 	}
 
 	/**
@@ -569,6 +655,12 @@ class Abwesenheit {
 		if ( isset( $in['bundesland'] ) || isset( $in['tage_standard'] ) ) {
 			if ( isset( $in['bundesland'] ) && ! isset( self::states()[ (string) $in['bundesland'] ] ) ) {
 				return Kit::fail( __( 'Unbekanntes Bundesland.', 'lindenweg16' ) );
+			}
+			if ( isset( $in['verfall'] ) && ! preg_match( '/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', (string) $in['verfall'] ) ) {
+				return Kit::fail( __( 'Verfallstag bitte als MM-TT, z. B. 03-31.', 'lindenweg16' ) );
+			}
+			if ( array_key_exists( 'uebertrag', $in ) ) {
+				$in['uebertrag'] = empty( $in['uebertrag'] ) ? 0 : 1;
 			}
 			$saved = Kit::save_settings( 'urlaub', $in );
 			AuditLog::record( 'erp_urlaub_einstellungen', 'settings', 0, $saved );

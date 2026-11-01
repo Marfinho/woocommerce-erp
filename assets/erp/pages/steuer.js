@@ -40,19 +40,54 @@
 					box.appendChild(h('div', { class: 'notice' + (u.status.level === 'ok' ? '' : ' warn') + ' kt-gap' }, t));
 				});
 			} else {
-				box.appendChild(h('h3', { class: 'kt-h' }, 'Umsatzsteuer aus dem Shop'));
+				box.appendChild(h('h3', { class: 'kt-h' }, 'Umsatzsteuer-Voranmeldung'));
 				box.appendChild(h('div', { class: 'kt-bar' },
-					k.pills([['monat', 'Monatlich'], ['quartal', 'Quartalsweise']], state.modus, function (m) { state.modus = m; load(); })));
-				var sum = { kz81: 0, ust19: 0, kz86: 0, ust7: 0, summe: 0 };
+					k.pills([['monat', 'Monatlich'], ['quartal', 'Quartalsweise']], state.modus, function (m) { state.modus = m; load(); }),
+					k.fileBtn('Zahlen als CSV', function () { return 'steuer/ustva?' + k.qs(state); })));
+				var sum = { kz81: 0, ust19: 0, kz86: 0, ust7: 0, summe: 0, kz66: 0, zahllast: 0 };
 				var rows = d.ust.map(function (r) {
 					Object.keys(sum).forEach(function (key) { sum[key] += r[key]; });
-					return [r.label, k.eur(r.kz81), k.eur(r.ust19), k.eur(r.kz86), k.eur(r.ust7), k.eur(r.summe)];
+					return [r.label, k.eur(r.kz81), k.eur(r.ust19), k.eur(r.kz86), k.eur(r.ust7), k.eur(r.kz66) + (r.belege_offen ? ' (' + r.belege_offen + ' Belege fehlen)' : ''),
+						h('b', { class: r.zahllast < 0 ? 'kt-pos' : '' }, k.eur(r.zahllast)),
+						h('button', { class: 'btn', type: 'button', onclick: function () { vatDialog(r); } }, 'Vorsteuer')];
 				});
-				rows.push([h('b', null, 'Summe'), k.eur(sum.kz81), k.eur(sum.ust19), k.eur(sum.kz86), k.eur(sum.ust7), h('b', null, k.eur(sum.summe))]);
-				box.appendChild(k.table(['Zeitraum', 'Kz 81 (19 %, netto)', 'USt 19 %', 'Kz 86 (7 %, netto)', 'USt 7 %', 'USt gesamt'], rows, [1, 2, 3, 4, 5]));
-				box.appendChild(h('div', { class: 'notice kt-gap' }, 'Nur Shop-Bestellungen (abgeschlossen, Erstattungen abgezogen). Die Vorsteuer (Kz 66) steht nicht in den Belegen – sie kommt aus den Eingangsrechnungen. Manuelle Aufträge mit Umsatzsteuer bitte ebenfalls ergänzen. Die Voranmeldung selbst geht über ELSTER oder den Steuerberater.'));
+				rows.push([h('b', null, 'Summe'), k.eur(sum.kz81), k.eur(sum.ust19), k.eur(sum.kz86), k.eur(sum.ust7), k.eur(sum.kz66), h('b', null, k.eur(sum.zahllast)), '']);
+				box.appendChild(k.table(['Zeitraum', 'Kz 81 (19 %, netto)', 'USt 19 %', 'Kz 86 (7 %, netto)', 'USt 7 %', 'Kz 66 Vorsteuer', 'Zahllast', ''], rows, [1, 2, 3, 4, 5, 6]));
+				box.appendChild(h('div', { class: 'notice kt-gap' }, 'Umsätze: abgeschlossene Shop-Bestellungen nach den Steuersätzen aus WooCommerce (Erstattungen abgezogen) plus manuelle Aufträge, die mit 19 % aus dem Bruttowert gerechnet werden. Vorsteuer: aus den Angaben je Beleg – fehlt sie, zählt der Beleg nicht. Negative Zahllast = Erstattung. Die Voranmeldung selbst geht über ELSTER oder den Steuerberater.'));
 			}
 			return box;
+		}
+
+		function vatDialog(r) {
+			var box = h('div', { class: 'sheet-body' }, h('p', { class: 'muted' }, 'Wird geladen …'));
+			var dlg = ui.dlg('Vorsteuer ' + r.label, box, true);
+			var only = h('input', { type: 'checkbox' });
+			function load2() {
+				ui.api('steuer/vorsteuer?' + k.qs({ von: r.from, bis: r.to, nur_offen: only.checked ? 1 : '' })).then(function (d) {
+					box.textContent = '';
+					only.onchange = load2;
+					box.appendChild(h('div', { class: 'kt-bar' }, h('label', { class: 'lg-chk' }, only, ' nur Belege ohne Angabe'), h('small', { class: 'muted' }, 'Satz wählen genügt – die Vorsteuer wird aus dem Bruttobetrag gerechnet. Abweichend (Mischsätze) einfach den Betrag eintragen.')));
+					if (!d.rows.length) { box.appendChild(h('div', { class: 'card muted' }, 'Keine Belege in diesem Zeitraum.')); }
+					d.rows.forEach(function (b) {
+						var rate = k.select([[19, '19 %'], [7, '7 %'], [0, '0 % / ohne']], b.satz === null ? 19 : b.satz, { 'aria-label': 'Satz' });
+						var tax = k.input(b.vorsteuer === null ? '' : String(b.vorsteuer).replace('.', ','), { inputmode: 'decimal', placeholder: 'berechnet', 'aria-label': 'Vorsteuer', style: 'width:100px' });
+						var mark = h('small', { class: 'muted' }, b.vorsteuer === null ? 'fehlt' : 'erfasst');
+						function save(remove) {
+							ui.api('steuer/vorsteuer', { method: 'POST', body: { beleg_id: b.id, satz: rate.value, vorsteuer: tax.value, remove: remove ? 1 : 0 } }).then(function (res) {
+								if (res.row) { tax.value = String(res.row.vorsteuer).replace('.', ','); mark.textContent = 'erfasst'; } else { tax.value = ''; mark.textContent = 'fehlt'; }
+							}).catch(function (e) { ui.toast(e.message, true); });
+						}
+						rate.addEventListener('change', function () { tax.value = ''; save(false); });
+						tax.addEventListener('change', function () { save(false); });
+						box.appendChild(h('article', { class: 'row-card kt-row' },
+							h('div', { class: 'row-main' }, h('b', null, (b.number || '#' + b.id) + ' · ' + b.vendor), h('small', null, k.dmy(b.date) + ' · ' + b.konto)),
+							h('div', { class: 'kt-num' }, h('span', { class: 'row-num' }, k.eur(b.gross)), h('small', { class: 'muted' }, 'brutto')),
+							h('div', { class: 'kt-btns' }, rate, tax, h('button', { class: 'btn', type: 'button', onclick: function () { save(false); } }, 'OK'), mark)));
+					});
+				}).catch(function (e) { k.fail(box, e); });
+			}
+			load2();
+			dlg.addEventListener('close', load);
 		}
 
 		function datevBlock(d) {
@@ -64,7 +99,7 @@
 			var btn = k.fileBtn('DATEV-Datei herunterladen', function () { return 'steuer/datev?' + k.qs({ von: from.value, bis: to.value }); }, true);
 
 			box.appendChild(h('h3', { class: 'kt-h' }, 'DATEV-Export für den Steuerberater'));
-			box.appendChild(h('p', { class: 'muted' }, 'Alle Buchungen des Journals im Format „DATEV Buchungsstapel“ (EXTF 700, SKR03). Einnahmen: Bank an ' + d.erloes_konto + ', Ausgaben: Aufwandskonto an Bank, Stornos als Gegenbuchung. Bitte den ersten Export zusammen mit dem Steuerberater prüfen.'));
+			box.appendChild(h('p', { class: 'muted' }, 'Alle Buchungen des Journals im Format „DATEV Buchungsstapel“ (EXTF 700, SKR03). Einnahmen: Bank an ' + d.erloes_konto + ', Ausgaben: Aufwandskonto an Bank' + (d.kleinunternehmer ? '' : ' mit BU-Schlüssel 9 bzw. 8, wenn die Vorsteuer erfasst ist') + ', Stornos als Gegenbuchung. Bitte den ersten Export zusammen mit dem Steuerberater prüfen.'));
 			box.appendChild(h('div', { class: 'kt-grid' }, k.field('Von', from), k.field('Bis', to), h('div', null, btn)));
 
 			var f = {

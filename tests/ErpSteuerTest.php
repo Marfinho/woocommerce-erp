@@ -84,4 +84,27 @@ class ErpSteuerTest extends TestCase {
 		$this->assertStringStartsWith( 'Umsatz (ohne Soll/Haben-Kz);Soll/Haben-Kennzeichen', $lines[1] );
 		$this->assertSame( mb_convert_encoding( '1,00;"S";"EUR";;;;1200;8195;;0101;"B1";"";;"Müller ""groß"""', 'Windows-1252', 'UTF-8' ), $lines[2] );
 	}
+
+	public function test_steuer_aus_brutto_und_zahllast() {
+		$this->assertSame( array( 'net' => 100.0, 'tax' => 19.0 ), Steuer::vat_from_gross( 119, 19 ) );
+		$this->assertSame( array( 'net' => 100.0, 'tax' => 7.0 ), Steuer::vat_from_gross( 107, 7 ) );
+		$this->assertSame( array( 'net' => 50.0, 'tax' => 0.0 ), Steuer::vat_from_gross( 50, 0 ) );
+
+		$row = Steuer::ustva_row( array( 19 => array( 'net' => 1000.0, 'tax' => 190.0 ), 7 => array( 'net' => 100.0, 'tax' => 7.0 ), 0 => array( 'net' => 5.0, 'tax' => 0.0 ) ), 250.5 );
+		$this->assertSame( 197.0, $row['summe'] );
+		$this->assertSame( 250.5, $row['kz66'] );
+		$this->assertSame( -53.5, $row['zahllast'], 'Mehr Vorsteuer als Umsatzsteuer = Erstattung' );
+	}
+
+	public function test_datev_bu_schluessel_aus_vorsteuer() {
+		$b = array(
+			array( 'id' => 1, 'buchungsnummer' => 'B1', 'buchungsdatum' => '2026-10-06', 'typ' => 'ausgabe', 'betrag' => 119, 'kategorie' => '4600 Werbekosten', 'beschreibung' => 'Flyer', 'referenz_typ' => 'beleg', 'referenz_id' => 5, 'storno_von_id' => null ),
+			array( 'id' => 2, 'buchungsnummer' => 'B2', 'buchungsdatum' => '2026-10-06', 'typ' => 'ausgabe', 'betrag' => 107, 'kategorie' => '3200 Wareneingang', 'beschreibung' => 'Buch', 'referenz_typ' => 'beleg', 'referenz_id' => 6, 'storno_von_id' => null ),
+			array( 'id' => 3, 'buchungsnummer' => 'B3', 'buchungsdatum' => '2026-10-07', 'typ' => 'storno', 'betrag' => 119, 'kategorie' => '', 'beschreibung' => 'Storno', 'referenz_typ' => 'storno', 'referenz_id' => 1, 'storno_von_id' => 1 ),
+			array( 'id' => 4, 'buchungsnummer' => 'B4', 'buchungsdatum' => '2026-10-07', 'typ' => 'einnahme', 'betrag' => 50, 'kategorie' => 'Einnahmen', 'beschreibung' => 'RE', 'referenz_typ' => 'rechnung', 'referenz_id' => 5, 'storno_von_id' => null ),
+		);
+		$r = Steuer::datev_rows( $b, array( 'bank_konto' => '1200', 'kasse_konto' => '1000', 'erloes_konto' => '8400' ), array( 5 => 19, 6 => 7 ) );
+
+		$this->assertSame( array( '9', '8', '9', '' ), array_column( $r['rows'], 8 ), 'Storno trägt den Schlüssel des Originals, Einnahmen keinen' );
+	}
 }

@@ -114,24 +114,28 @@
 				box.appendChild(l);
 			}
 			box.appendChild(h('h3', { class: 'kt-h' }, 'Urlaubskonten ' + new Date().getFullYear()));
-			box.appendChild(k.table(['Person', 'Anspruch', 'genommen', 'geplant', 'beantragt', 'Rest', 'Krankheitstage', ''], d.people.map(function (p) {
-				return [p.name, days(p.anspruch), days(p.genommen), days(p.geplant), days(p.beantragt), h('b', null, days(p.rest)), String(p.krank).replace('.', ','),
+			box.appendChild(k.table(['Person', 'Anspruch', 'Übertrag', 'genommen', 'geplant', 'beantragt', 'Rest', 'Krankheitstage', ''], d.people.map(function (p) {
+				return [p.name, days(p.anspruch), p.uebertrag ? days(p.uebertrag) + (p.verfallen ? ' (' + days(p.verfallen) + ' verfallen)' : '') : '—', days(p.genommen), days(p.geplant), days(p.beantragt), h('b', null, days(p.rest)), String(p.krank).replace('.', ','),
 					h('button', { class: 'btn', type: 'button', onclick: function () {
 						var inp = k.input(String(p.anspruch).replace('.', ','), { inputmode: 'decimal' });
 						k.formDialog('Urlaubsanspruch: ' + p.name, [k.field('Tage je Jahr', inp)], 'Speichern', function () {
 							return ui.api('abwesenheit/anspruch', { method: 'POST', body: { user_id: p.id, days: inp.value } });
 						}, load);
 					} }, 'Anspruch')];
-			}), [1, 2, 3, 4, 5, 6]));
+			}), [1, 2, 3, 4, 5, 6, 7]));
 
 			var land = k.select(Object.keys(d.states).map(function (s) { return [s, d.states[s]]; }), d.settings.bundesland);
 			var std = k.input(String(d.settings.tage_standard), { inputmode: 'numeric' });
+			var carry = h('input', { type: 'checkbox', checked: !!d.settings.uebertrag });
+			var exp = k.input(d.settings.verfall, { placeholder: '03-31' });
 			var btn = h('button', { class: 'btn', type: 'submit' }, 'Speichern');
-			var form = h('form', null, h('div', { class: 'kt-grid kt-gap' }, k.field('Bundesland (Feiertage)', land), k.field('Urlaubstage Vorgabe', std)), h('div', { class: 'kt-actions' }, btn));
+			var form = h('form', null, h('div', { class: 'kt-grid kt-gap' }, k.field('Bundesland (Feiertage)', land), k.field('Urlaubstage Vorgabe', std), k.field('Übertrag verfällt nach (MM-TT)', exp)),
+				h('label', { class: 'lg-chk' }, carry, ' Resturlaub ins nächste Jahr übertragen (wird zuerst verbraucht)'),
+				h('div', { class: 'kt-actions' }, btn));
 			form.addEventListener('submit', function (e) {
 				e.preventDefault();
 				btn.disabled = true;
-				ui.api('abwesenheit/anspruch', { method: 'POST', body: { bundesland: land.value, tage_standard: std.value } }).then(function (r) { ui.toast(r.message); load(); })
+				ui.api('abwesenheit/anspruch', { method: 'POST', body: { bundesland: land.value, tage_standard: std.value, uebertrag: carry.checked ? 1 : 0, verfall: exp.value } }).then(function (r) { ui.toast(r.message); load(); })
 					.catch(function (e2) { ui.toast(e2.message, true); btn.disabled = false; });
 			});
 			box.appendChild(h('details', { class: 'card kt-gap' }, h('summary', null, 'Feiertage und Vorgaben'), form));
@@ -143,7 +147,7 @@
 			body.textContent = '';
 			var b = d.balance;
 			body.appendChild(h('div', { class: 'grid tiles' },
-				k.tile('Resturlaub ' + new Date().getFullYear(), days(b.rest), 'von ' + days(b.anspruch)),
+				k.tile('Resturlaub ' + new Date().getFullYear(), days(b.rest), 'Anspruch ' + days(b.anspruch) + (b.uebertrag ? ' + ' + days(b.uebertrag) + ' aus dem Vorjahr' : '') + (b.verfallen ? ', ' + days(b.verfallen) + ' verfallen' : '')),
 				k.tile('Genommen', days(b.genommen)),
 				k.tile('Geplant', days(b.geplant)),
 				k.tile('Beantragt', days(b.beantragt))));

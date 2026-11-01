@@ -170,6 +170,41 @@ class Steuer {
 		return $out;
 	}
 
+	/**
+	 * Enthaltene Steuer aus einem Bruttobetrag.
+	 *
+	 * @param float $gross Brutto.
+	 * @param int   $rate  Satz (19, 7, 0).
+	 * @return array {net, tax}
+	 */
+	public static function vat_from_gross( $gross, $rate ) {
+		$tax = $rate > 0 ? round( (float) $gross * $rate / ( 100 + $rate ), 2 ) : 0.0;
+
+		return array( 'net' => round( (float) $gross - $tax, 2 ), 'tax' => $tax );
+	}
+
+	/**
+	 * Zeile der Voranmeldung: Umsatzsteuer minus Vorsteuer.
+	 *
+	 * @param array $vat       Umsätze je Satz (by_rate()).
+	 * @param float $vorsteuer Vorsteuer (Kz 66).
+	 * @return array {kz81, ust19, kz86, ust7, frei, kz66, zahllast}
+	 */
+	public static function ustva_row( array $vat, $vorsteuer ) {
+		$ust = round( $vat[19]['tax'] + $vat[7]['tax'], 2 );
+
+		return array(
+			'kz81'     => $vat[19]['net'],
+			'ust19'    => $vat[19]['tax'],
+			'kz86'     => $vat[7]['net'],
+			'ust7'     => $vat[7]['tax'],
+			'frei'     => $vat[0]['net'],
+			'summe'    => $ust,
+			'kz66'     => round( (float) $vorsteuer, 2 ),
+			'zahllast' => round( $ust - (float) $vorsteuer, 2 ),
+		);
+	}
+
 	/* ====================================================================
 	 * Reine Regeln: DATEV
 	 * ================================================================== */
@@ -208,9 +243,11 @@ class Steuer {
 	 *
 	 * @param array $buchungen Buchungen (id, buchungsnummer, buchungsdatum, typ, betrag, kategorie, beschreibung, referenz_typ, storno_von_id).
 	 * @param array $s         Einstellungen {bank_konto, kasse_konto, erloes_konto}.
+	 * @param array $vat       Steuersatz je Beleg (beleg_id => 19|7) für den BU-Schlüssel
+	 *                         (9 = 19 % Vorsteuer, 8 = 7 % Vorsteuer); leer als Kleinunternehmer.
 	 * @return array {rows: array[], skipped: string[]}
 	 */
-	public static function datev_rows( array $buchungen, array $s ) {
+	public static function datev_rows( array $buchungen, array $s, array $vat = array() ) {
 		$by_id   = array();
 		$rows    = array();
 		$skipped = array();
@@ -244,6 +281,12 @@ class Steuer {
 				$gegen  = $money;
 			}
 
+			$bu = '';
+			$ref = isset( $base['referenz_id'] ) ? (int) $base['referenz_id'] : 0;
+			if ( 'ausgabe' === $base['typ'] && 'beleg' === (string) $base['referenz_typ'] && isset( $vat[ $ref ] ) ) {
+				$bu = 19 === (int) $vat[ $ref ] ? '9' : ( 7 === (int) $vat[ $ref ] ? '8' : '' );
+			}
+
 			$amount = abs( (float) $b['betrag'] );
 			if ( $amount < 0.005 ) {
 				continue;
@@ -260,7 +303,7 @@ class Steuer {
 				'',
 				$konto,
 				$gegen,
-				'',
+				$bu,
 				substr( $date, 8, 2 ) . substr( $date, 5, 2 ),
 				substr( preg_replace( '/[^A-Za-z0-9$%&*+\-\/._]/', '', (string) $b['buchungsnummer'] ), 0, 36 ),
 				'',
@@ -350,6 +393,11 @@ class Steuer {
 		register_rest_route( $ns, '/erp/steuer', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'overview' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/steuer/einstellungen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'save' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/steuer/datev', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'datev' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/steuer/vorsteuer', array(
+			array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'input_tax_list' ), 'permission_callback' => $needs ),
+			array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'input_tax_save' ), 'permission_callback' => $needs ),
+		) );
+		register_rest_route( $ns, '/erp/steuer/ustva', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'ustva_csv' ), 'permission_callback' => $needs ) );
 	}
 
 	/**
@@ -411,6 +459,187 @@ class Steuer {
 	}
 
 	/**
+	 * Umsätze nach Satz: Shop (aus WooCommerce) plus manuelle Aufträge.
+	 *
+	 * Manuelle Aufträge haben keine Steuerangabe; sie zählen mit 19 % aus dem
+	 * Bruttowert (das steht so auch auf der Seite).
+	 *
+	 * @param string $from Von.
+	 * @param string $to   Bis.
+	 * @return array Satz => {net, tax}
+	 */
+	public static function vat_with_manual( $from, $to ) {
+		$vat = self::vat_of( $from, $to );
+		$man = self::revenue_manual( $from, $to );
+
+		if ( $man > 0 ) {
+			$split            = self::vat_from_gross( $man, 19 );
+			$vat[19]['net']  = round( $vat[19]['net'] + $split['net'], 2 );
+			$vat[19]['tax']  = round( $vat[19]['tax'] + $split['tax'], 2 );
+		}
+
+		return $vat;
+	}
+
+	/**
+	 * Manuelle Aufträge (ohne Shop-Bestellung) eines Zeitraums, brutto.
+	 *
+	 * @param string $from Von.
+	 * @param string $to   Bis.
+	 * @return float
+	 */
+	protected static function revenue_manual( $from, $to ) {
+		global $wpdb;
+
+		$t = \Lindenweg16\Modules\Betrieb\OrderOpsRepository::table();
+
+		return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(manual_order_value), 0) FROM {$t} WHERE wc_order_id IS NULL AND order_status = 'bestaetigt' AND invoice_status <> 'storniert' AND manual_order_date >= %s AND manual_order_date <= %s", $from, $to ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+	}
+
+	/**
+	 * Vorsteuer eines Zeitraums aus den erfassten Angaben je Beleg.
+	 *
+	 * @param string $from Von.
+	 * @param string $to   Bis.
+	 * @return array {sum, missing}
+	 */
+	public static function input_tax( $from, $to ) {
+		global $wpdb;
+
+		$b = \Lindenweg16\Modules\Accounting\BelegRepository::table();
+		$v = Kit::table( 'beleg_steuer' );
+
+		$sum     = (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(v.vorsteuer), 0) FROM {$v} v JOIN {$b} b ON b.id = v.beleg_id WHERE b.storniert = 0 AND b.datum >= %s AND b.datum <= %s", $from, $to ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$missing = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$b} b LEFT JOIN {$v} v ON v.beleg_id = b.id WHERE b.storniert = 0 AND v.id IS NULL AND b.datum >= %s AND b.datum <= %s", $from, $to ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		return array( 'sum' => round( $sum, 2 ), 'missing' => $missing );
+	}
+
+	/**
+	 * Belege eines Zeitraums mit ihrer Vorsteuer.
+	 *
+	 * @param WP_REST_Request $request Anfrage (von, bis, nur_offen).
+	 * @return WP_REST_Response
+	 */
+	public static function input_tax_list( WP_REST_Request $request ) {
+		global $wpdb;
+
+		$from = Kit::date( (string) $request->get_param( 'von' ) );
+		$to   = Kit::date( (string) $request->get_param( 'bis' ) );
+
+		if ( '' === $from || '' === $to || $from > $to ) {
+			return Kit::fail( __( 'Bitte einen gültigen Zeitraum wählen.', 'lindenweg16' ) );
+		}
+
+		$b    = \Lindenweg16\Modules\Accounting\BelegRepository::table();
+		$v    = Kit::table( 'beleg_steuer' );
+		$only = $request->get_param( 'nur_offen' ) ? ' AND v.id IS NULL' : '';
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT b.id, b.belegnummer, b.datum, b.betrag, b.haendler, b.konto, b.eur_kategorie, v.netto, v.vorsteuer, v.satz FROM {$b} b LEFT JOIN {$v} v ON v.beleg_id = b.id WHERE b.storniert = 0 AND b.datum >= %s AND b.datum <= %s{$only} ORDER BY b.datum ASC, b.id ASC LIMIT 1000", $from, $to ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		$out = array();
+		foreach ( $rows as $r ) {
+			$out[] = array(
+				'id'        => (int) $r['id'],
+				'number'    => (string) $r['belegnummer'],
+				'date'      => (string) $r['datum'],
+				'gross'     => abs( (float) $r['betrag'] ),
+				'vendor'    => (string) $r['haendler'],
+				'konto'     => $r['konto'] ? \Lindenweg16\Modules\Accounting\Kontenrahmen::label( $r['konto'] ) : (string) $r['eur_kategorie'],
+				'satz'      => null === $r['satz'] ? null : (int) $r['satz'],
+				'vorsteuer' => null === $r['vorsteuer'] ? null : (float) $r['vorsteuer'],
+			);
+		}
+
+		return new WP_REST_Response( array( 'rows' => $out ) );
+	}
+
+	/**
+	 * Vorsteuer zu einem Beleg speichern (oder entfernen).
+	 *
+	 * Der Beleg selbst bleibt unverändert (er kann festgeschrieben sein); die
+	 * Angabe steht daneben in beleg_steuer und im Änderungsprotokoll.
+	 *
+	 * @param WP_REST_Request $request Anfrage {beleg_id, satz, vorsteuer, remove}.
+	 * @return WP_REST_Response
+	 */
+	public static function input_tax_save( WP_REST_Request $request ) {
+		global $wpdb;
+
+		$in    = Kit::input( $request );
+		$id    = isset( $in['beleg_id'] ) ? (int) $in['beleg_id'] : 0;
+		$beleg = $id ? \Lindenweg16\Modules\Accounting\BelegRepository::get( $id ) : null;
+		$t     = Kit::table( 'beleg_steuer' );
+
+		if ( ! $beleg ) {
+			return Kit::fail( __( 'Diesen Beleg gibt es nicht.', 'lindenweg16' ), 404 );
+		}
+
+		if ( ! empty( $in['remove'] ) ) {
+			$wpdb->delete( $t, array( 'beleg_id' => $id ) );
+			AuditLog::record( 'erp_vorsteuer_entfernt', 'beleg', $id );
+			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Vorsteuer entfernt.', 'lindenweg16' ) ) );
+		}
+
+		$satz  = isset( $in['satz'] ) ? (int) $in['satz'] : 19;
+		$gross = abs( (float) $beleg->betrag );
+
+		if ( ! in_array( $satz, array( 0, 7, 19 ), true ) ) {
+			return Kit::fail( __( 'Steuersatz bitte 19, 7 oder 0 %.', 'lindenweg16' ) );
+		}
+
+		$calc = self::vat_from_gross( $gross, $satz );
+		$tax  = isset( $in['vorsteuer'] ) && '' !== (string) $in['vorsteuer'] ? Kit::amount( $in['vorsteuer'] ) : $calc['tax'];
+
+		if ( null === $tax || $tax < 0 || $tax > $gross ) {
+			return Kit::fail( __( 'Die Vorsteuer muss zwischen 0 und dem Bruttobetrag liegen.', 'lindenweg16' ) );
+		}
+
+		$row = array(
+			'beleg_id'    => $id,
+			'netto'       => round( $gross - $tax, 2 ),
+			'vorsteuer'   => round( $tax, 2 ),
+			'satz'        => $satz,
+			'erfasst_am'  => current_time( 'mysql', true ),
+			'erfasst_von' => get_current_user_id(),
+		);
+		$before = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE beleg_id = %d", $id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		if ( $before ) {
+			$wpdb->update( $t, $row, array( 'beleg_id' => $id ) );
+		} else {
+			$wpdb->insert( $t, $row );
+		}
+		AuditLog::record( 'erp_vorsteuer', 'beleg', $id, array( 'vorher' => $before ? (float) $before['vorsteuer'] : null, 'nachher' => $row['vorsteuer'], 'satz' => $satz ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Gespeichert.', 'lindenweg16' ), 'row' => $row ) );
+	}
+
+	/**
+	 * Voranmeldungszahlen als CSV.
+	 *
+	 * @param WP_REST_Request $request Anfrage (jahr, modus).
+	 * @return WP_REST_Response
+	 */
+	public static function ustva_csv( WP_REST_Request $request ) {
+		$res = self::overview( $request );
+		$d   = $res->get_data();
+
+		if ( empty( $d['ust'] ) ) {
+			return Kit::fail( __( 'Als Kleinunternehmer gibt es keine Voranmeldung.', 'lindenweg16' ), 409 );
+		}
+
+		$num  = function ( $n ) {
+			return number_format( (float) $n, 2, ',', '' );
+		};
+		$rows = array( array( 'Zeitraum', 'von', 'bis', 'Kz 81 (19 % netto)', 'USt 19 %', 'Kz 86 (7 % netto)', 'USt 7 %', 'steuerfrei', 'Kz 66 Vorsteuer', 'Zahllast', 'Belege ohne Vorsteuerangabe' ) );
+		foreach ( $d['ust'] as $r ) {
+			$rows[] = array( $r['label'], Kit::dmy( $r['from'] ), Kit::dmy( $r['to'] ), $num( $r['kz81'] ), $num( $r['ust19'] ), $num( $r['kz86'] ), $num( $r['ust7'] ), $num( $r['frei'] ), $num( $r['kz66'] ), $num( $r['zahllast'] ), $r['belege_offen'] );
+		}
+
+		return new WP_REST_Response( array( 'filename' => 'ustva-' . $d['jahr'] . '-' . $d['modus'] . '.csv', 'mime' => 'text/csv;charset=utf-8', 'text' => Zahlen::csv( $rows ) ) );
+	}
+
+	/**
 	 * Übersicht.
 	 *
 	 * @param WP_REST_Request $request Anfrage (jahr, modus).
@@ -448,17 +677,12 @@ class Steuer {
 				if ( $p['from'] > $today ) {
 					break;
 				}
-				$vat    = self::vat_of( $p['from'], min( $p['to'], $today ) );
-				$rows[] = array(
-					'label' => $p['label'],
-					'from'  => $p['from'],
-					'to'    => $p['to'],
-					'kz81'  => $vat[19]['net'],
-					'ust19' => $vat[19]['tax'],
-					'kz86'  => $vat[7]['net'],
-					'ust7'  => $vat[7]['tax'],
-					'frei'  => $vat[0]['net'],
-					'summe' => round( $vat[19]['tax'] + $vat[7]['tax'], 2 ),
+				$to     = min( $p['to'], $today );
+				$vat    = self::vat_with_manual( $p['from'], $to );
+				$pre    = self::input_tax( $p['from'], $to );
+				$rows[] = array_merge(
+					array( 'label' => $p['label'], 'from' => $p['from'], 'to' => $p['to'], 'belege_offen' => $pre['missing'] ),
+					self::ustva_row( $vat, $pre['sum'] )
 				);
 			}
 			$out['ust'] = $rows;
@@ -529,7 +753,13 @@ class Steuer {
 
 		$ku               = 1 === (int) \Lindenweg16\Core\Settings::get( 'kleinunternehmer', 1 );
 		$s['erloes_konto'] = \Lindenweg16\Modules\Accounting\Kontenrahmen::erloes_konto( $ku );
-		$built            = self::datev_rows( (array) $rows, $s );
+		$vat = array();
+		if ( ! $ku ) {
+			foreach ( (array) $wpdb->get_results( 'SELECT beleg_id, satz FROM ' . Kit::table( 'beleg_steuer' ), ARRAY_A ) as $v ) { // phpcs:ignore WordPress.DB.PreparedSQL
+				$vat[ (int) $v['beleg_id'] ] = (int) $v['satz'];
+			}
+		}
+		$built            = self::datev_rows( (array) $rows, $s, $vat );
 
 		if ( ! $built['rows'] ) {
 			return Kit::fail( __( 'In diesem Zeitraum gibt es keine Buchungen.', 'lindenweg16' ), 404 );

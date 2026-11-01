@@ -7,6 +7,51 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.73.0] – 2026-11-01
+
+Die neuen Seiten aus 0.72.0 sind jetzt vollständig ausgebaut.
+
+### Bankabgleich: Vivid Business verbunden
+- **Vivid-Anbindung** über die Vivid Business API (nur lesend): API-Schlüssel aus Vivid Business → API eintragen (Rechte „accounts:read“ und „transactions:read“), das ERP prüft ihn und speichert ihn **verschlüsselt** (libsodium). Danach kommen Konten, **Live-Kontostand** und Umsätze **stündlich von selbst**, dazu der Knopf „Vivid abrufen“.
+- Richtig abgeglichen: Umsätze seitenweise, bei jedem Abruf die letzten 14 Tage erneut (vorgemerkte Umsätze ändern noch Betrag und Zustand), abgelehnte erledigen sich selbst, bei zu vielen Abrufen wird gewartet und wiederholt. Fehler (Schlüssel abgelaufen, IP nicht erlaubt, fehlendes Recht …) stehen verständlich auf der Seite; vor Ablauf des Schlüssels (höchstens 180 Tage) kommt eine Erinnerung.
+- **Wichtig:** Vivid gibt bei Überweisungen weder Namen noch Verwendungszweck heraus und nur 90 Tage rückwirkend. Darum lässt sich zusätzlich der Umsatz-Export einlesen: Gleiche Umsätze (Betrag, ±3 Tage) werden **zusammengeführt** und um Name, IBAN und Verwendungszweck ergänzt – nicht doppelt angelegt.
+- Mehrere Konten mit Saldo und Kontofilter; vorgemerkte Umsätze sind markiert.
+- **Regeln** („Wenn Name/Zweck enthält … dann ohne Zuordnung mit Notiz …“, z. B. Finanzamt, Umbuchung, Gebühren) und **automatische Zuordnung** eindeutiger Treffer (Betrag + Nummer, kein zweiter Vorschlag nahe dran; vorgemerkte nie).
+
+### Offene Posten
+- **Shop-Bestellungen per Überweisung/Vorkasse** („In Wartestellung“/„Ausstehend“) sind jetzt eigene offene Posten mit Zahlungsfrist (Vorgabe 7 Tage) und lassen sich genauso erinnern und mahnen; Notiz an der Bestellung.
+- **Mahngebühren** stehen in der Forderung (auch die aus früheren Stufen) und werden als Einnahme gebucht, sobald die Zahlung sie deckt – automatisch im Bankabgleich oder per Haken bei „Bezahlt“. Konto für DATEV einstellbar.
+- **Verzugszinsen** nach § 288 BGB (Basiszins + 9 Punkte unter Unternehmern, + 5 bei Verbrauchern) und **40-€-Pauschale** bei Unternehmern in der letzten Mahnung – beides abschaltbar, Basiszinssatz einstellbar.
+- **„Alle fälligen verschicken“**: alle fälligen Stufen auf einmal mit Vorgabetext und PDF.
+
+### Steuer & DATEV
+- **Vorsteuer je Beleg** erfassen (Satz wählen genügt, Betrag wird aus dem Brutto gerechnet; Mischsätze von Hand). Der Beleg selbst bleibt unverändert und festgeschrieben, die Angabe steht daneben mit Protokoll.
+- Voranmeldung mit **Kz 66 und Zahllast** je Monat/Quartal, Hinweis auf Belege ohne Angabe, **CSV** der Zahlen. Manuelle Aufträge zählen mit 19 % aus dem Brutto.
+- DATEV-Export mit **BU-Schlüssel** 9 (19 % Vorsteuer) bzw. 8 (7 %), wenn die Vorsteuer erfasst ist.
+
+### Inventur
+- **Kleinteile und Kartons/Verbrauchsmaterial** werden mitgezählt (abschaltbar) und beim Abschluss korrigiert – mit Begründung im Änderungsprotokoll wie bei „Korrigieren“.
+- **Zählliste als PDF** nach Lagerplatz, auch als **Blindzählung** ohne Soll.
+- **Bestandswert** enthält am Stichtag „heute“ auch Kleinteile, Kartons (Stückpreis aus dem Einkauf) und **Filament** (Restmenge × Preis je kg der Charge).
+
+### Liquidität
+- Startwert ist der **Live-Saldo aller Vivid-Konten**. Mit Regelbesteuerung kommt die **Umsatzsteuer-Zahllast** am 10. des Folgemonats als Ausgang dazu.
+
+### Täglicher Überblick per Mail
+- Einmal am Tag, nur wenn etwas zu tun ist: fällige Mahnstufen, Angebote kurz vor Ablauf, offene Urlaubsanträge, unbestätigte Bestellscheine, Reklamationen über 14 Tage, nicht zugeordnete Bankumsätze, Vivid-Schlüssel läuft ab oder Abruf fehlgeschlagen, Engpass in der Liquidität. An/Aus und Empfänger in den Einstellungen der Liquiditätsseite.
+
+### Urlaub & Abwesenheit
+- **Resturlaub-Übertrag** ins neue Jahr, zuerst verbraucht, verfällt nach einem einstellbaren Tag (Vorgabe 31.03.).
+- **Mail an alle, die genehmigen dürfen**, sobald ein Antrag eingeht.
+
+### Reklamationen
+- Wahlweise **Mail an den Kunden**: Eingangsbestätigung mit Fallnummer und die Lösung (Ersatz, Erstattung mit Betrag, Reparatur, Ablehnung). Steht im Verlauf.
+
+### Technisch
+- Neue Tabellen `bank_accounts`, `beleg_steuer`; `bank_transactions`, `dunning_notices`, `stocktake_lines` erweitert (Datenbank-Version 49, noch nicht veröffentlicht).
+- Hintergrundaufgaben `lw16_erp_bank_sync` (stündlich) und `lw16_erp_daily` (täglich).
+- Tests für Vivid (Umwandlung, Abrufabschnitt, Fehlertexte), Zusammenführung, Regeln, automatische Zuordnung, Zinsen, Gebühren, Vorsteuer/Zahllast, BU-Schlüssel, Übertrag, Überblick, Kundenmails; alle Seiten im Browser mit Testdaten durchgeklickt. **Nicht gegen die echte Vivid-API und nicht in echtem WordPress geprüft** – Vivid hat keine Testumgebung.
+
 ## [0.72.0] – 2026-11-01
 
 Neun neue Seiten im ERP. Neue Tabellen (Datenbank-Version 49) legt das Update selbst an.

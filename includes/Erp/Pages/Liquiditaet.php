@@ -258,6 +258,28 @@ class Liquiditaet {
 			);
 		}
 
+		// Umsatzsteuer-Zahllast (nur mit Regelbesteuerung): laufender und letzter Monat,
+		// fällig am 10. des Folgemonats.
+		if ( 1 !== (int) \Lindenweg16\Core\Settings::get( 'kleinunternehmer', 1 ) ) {
+			foreach ( array( gmdate( 'Y-m-01', strtotime( $today . ' -1 month' ) ), substr( $today, 0, 8 ) . '01' ) as $month ) {
+				$end = gmdate( 'Y-m-t', strtotime( $month . ' 12:00:00 UTC' ) );
+				$due = gmdate( 'Y-m-10', strtotime( $end . ' +1 day' ) );
+				if ( $due < $today ) {
+					continue;
+				}
+				$row = Steuer::ustva_row( Steuer::vat_with_manual( $month, min( $end, $today ) ), Steuer::input_tax( $month, min( $end, $today ) )['sum'] );
+				if ( $row['zahllast'] > 0 ) {
+					$events[] = array(
+						'date'   => $due,
+						'amount' => -$row['zahllast'],
+						/* translators: %s: Monat. */
+						'label'  => sprintf( __( 'Umsatzsteuer %s (bisher, Vorsteuer laut Belegen)', 'lindenweg16' ), wp_date( 'm/Y', strtotime( $month . ' 12:00:00 UTC' ) ) ),
+						'kind'   => 'steuer',
+					);
+				}
+			}
+		}
+
 		// Üblicher Shop-Umsatz.
 		$shop_week = 0.0;
 		if ( (int) $s['shop_einrechnen'] && function_exists( 'wc_get_orders' ) ) {
@@ -287,7 +309,7 @@ class Liquiditaet {
 
 		$start = array( 'amount' => (float) $s['saldo'], 'date' => (string) $s['saldo_datum'], 'source' => 'manuell' );
 		if ( $bank && ( '' === $start['date'] || $bank['date'] >= $start['date'] ) ) {
-			$start = array( 'amount' => $bank['amount'], 'date' => $bank['date'], 'source' => 'bank' );
+			$start = array( 'amount' => $bank['amount'], 'date' => $bank['date'], 'source' => 'vivid' === $bank['source'] ? 'vivid' : 'bank' );
 		}
 
 		$ev   = self::events( $today, $until, $s );
@@ -303,6 +325,7 @@ class Liquiditaet {
 				'shop_week'     => $ev['shop_week'],
 				'payroll_month' => $ev['payroll_month'],
 				'min'           => $rows ? min( array_column( $rows, 'balance' ) ) : $start['amount'],
+				'digest'        => Kit::settings( 'digest' ),
 			)
 		);
 	}
@@ -326,6 +349,13 @@ class Liquiditaet {
 			}
 		}
 		$in['shop_einrechnen'] = empty( $in['shop_einrechnen'] ) ? 0 : 1;
+
+		if ( isset( $in['digest_an'] ) && '' !== trim( (string) $in['digest_an'] ) && ! is_email( trim( (string) $in['digest_an'] ) ) ) {
+			return Kit::fail( __( 'Die Adresse für den täglichen Überblick stimmt nicht.', 'lindenweg16' ) );
+		}
+		if ( array_key_exists( 'digest_aktiv', $in ) ) {
+			Kit::save_settings( 'digest', array( 'aktiv' => empty( $in['digest_aktiv'] ) ? 0 : 1, 'an' => isset( $in['digest_an'] ) ? trim( (string) $in['digest_an'] ) : '' ) );
+		}
 
 		$saved = Kit::save_settings( 'liqui', $in );
 		AuditLog::record( 'erp_liquiditaet_einstellungen', 'settings', 0, $saved );

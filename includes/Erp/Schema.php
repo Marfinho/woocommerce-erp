@@ -292,6 +292,7 @@ class Schema {
 			counted_at DATETIME NULL,
 			counted_by BIGINT UNSIGNED NULL,
 			movement_id BIGINT UNSIGNED NULL,
+			booked TINYINT(1) NOT NULL DEFAULT 0,
 			note VARCHAR(255) NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY line (stocktake_id, item_type, article_id, color),

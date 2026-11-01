@@ -692,7 +692,7 @@ vorhanden ist – nicht, was geplant war.
   Punkteanzeige in Warenkorb und Kasse (Store-API) und zeitlich
   begrenzte Aktionen (Faktor, optional je Kategorie) – eingestellt im ERP
   unter Verkauf → Loyalty → Regeln/Aktionen (Recht `verkauf.loyalty.regeln`).
-- **ERP-Erweiterungen (0.72):** Bankabgleich (CAMT/CSV, Zuordnung zu Aufträgen,
+- **ERP-Erweiterungen (0.72/0.73):** Bankabgleich mit Vivid-Business-Anbindung (stündlich) und CAMT/CSV, Zuordnung zu Aufträgen,
   Shop-Bestellungen, Belegen), Offene Posten mit Mahnstufen, Steuer & DATEV
   (Kleinunternehmergrenzen, USt-Zahlen, Buchungsstapel EXTF 700),
   Liquiditätsvorschau, Angebote (PDF, Mail, in Auftrag umwandeln),

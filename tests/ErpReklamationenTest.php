@@ -43,4 +43,15 @@ class ErpReklamationenTest extends TestCase {
 		$this->assertSame( array( 'ts' => 200, 'who' => 'Sven', 'text' => 'Ware zurück' ), $l[1] );
 		$this->assertCount( 1, json_decode( R::add_history( 'kaputt', 'x', '', 1 ), true ), 'Kaputter Verlauf beginnt neu' );
 	}
+
+	public function test_kundenmails() {
+		$c = array( 'number' => 'RK-2026-0001', 'customer' => 'Frau Meier' );
+		$e = R::customer_mail( 'eingang', $c, 'Lindenweg16' );
+		$this->assertStringContainsString( 'RK-2026-0001', $e['subject'] );
+		$this->assertStringStartsWith( 'Hallo Frau Meier,', $e['body'] );
+
+		$l = R::customer_mail( 'loesung', $c, 'Lindenweg16', 'gutschrift', 24.9 );
+		$this->assertStringContainsString( 'Wir erstatten Ihnen 24,90 €', $l['body'] );
+		$this->assertStringContainsString( 'nicht anerkennen', R::customer_mail( 'loesung', $c, 'L', 'abgelehnt' )['body'] );
+	}
 }
