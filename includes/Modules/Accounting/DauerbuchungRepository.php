@@ -115,30 +115,12 @@ class DauerbuchungRepository {
 	 *
 	 * @param string $current_date Aktuelles Datum (Y-m-d).
 	 * @param string $intervall    Intervall-Typ.
+	 * @param int    $anchor_day   Tag im Monat aus dem Startdatum (0 = Tag von $current_date);
+	 *                             am Monatsende wird begrenzt (31.01. → 28.02. → 31.03.).
 	 * @return string Nächstes Datum (Y-m-d).
 	 */
-	public static function calculate_next( $current_date, $intervall ) {
-		$dt = new \DateTime( $current_date );
-		switch ( $intervall ) {
-			case 'woechentlich':
-				$dt->modify( '+1 week' );
-				break;
-			case 'monatlich':
-				$dt->modify( '+1 month' );
-				break;
-			case 'quartalsweise':
-				$dt->modify( '+3 months' );
-				break;
-			case 'halbjaehrlich':
-				$dt->modify( '+6 months' );
-				break;
-			case 'jaehrlich':
-				$dt->modify( '+1 year' );
-				break;
-			default:
-				$dt->modify( '+1 month' );
-		}
-		return $dt->format( 'Y-m-d' );
+	public static function calculate_next( $current_date, $intervall, $anchor_day = 0 ) {
+		return \Lindenweg16\Erp\Kit::next_interval_date( $current_date, $intervall, $anchor_day );
 	}
 
 	/**
@@ -180,7 +162,7 @@ class DauerbuchungRepository {
 			}
 
 			// Nächstes Ausführungsdatum berechnen.
-			$next = self::calculate_next( $db->naechste_ausfuehrung, $db->intervall );
+			$next = self::calculate_next( $db->naechste_ausfuehrung, $db->intervall, (int) substr( (string) $db->start_datum, 8, 2 ) );
 			$update = array(
 				'naechste_ausfuehrung' => $next,
 				'letzte_ausfuehrung'   => $today,
