@@ -100,7 +100,20 @@
 				s.diff_value !== null ? k.tile('Differenz Wert', k.eur(s.diff_value), 'Soll ' + k.eur(s.expected_value)) : null));
 
 			var search = k.input(state.q, { type: 'search', placeholder: 'SKU, Name, Barcode oder Platz …', 'aria-label': 'Suchen' });
+			var visible = [];
 			search.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(function () { state.q = search.value.trim(); paintList(); }, 200); });
+			// Handscanner schickt den Code mit Enter: genau ein Treffer (oder genau passender Barcode/SKU) → gleich zählen.
+			search.addEventListener('keydown', function (e) {
+				if (e.key !== 'Enter') { return; }
+				e.preventDefault();
+				clearTimeout(timer);
+				state.q = search.value.trim();
+				paintList();
+				var code = state.q.toLowerCase();
+				var exact = visible.filter(function (v) { return v.l.barcode.toLowerCase() === code || v.l.sku.toLowerCase() === code; });
+				var hit = exact.length === 1 ? exact[0] : (visible.length === 1 ? visible[0] : null);
+				if (hit) { hit.input.focus(); hit.input.select(); }
+			});
 			var acts = h('div', { class: 'kt-btns' });
 			if (open) {
 				acts.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { addDialog(d); } }, '+ Artikel nachtragen'));
@@ -140,7 +153,8 @@
 					diffBox.appendChild(document.createTextNode(diff === 0 ? 'stimmt' : (diff > 0 ? '+' : '') + q3(diff)));
 				}
 				input.addEventListener('change', function () { save(l, input.value.trim(), input, mark); });
-				input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+				input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); input.blur(); search.value = ''; search.focus(); } });
+				visible.push({ l: l, input: input });
 				mark();
 				return h('article', { class: 'row-card kt-row' },
 					h('div', { class: 'row-main' },
@@ -154,6 +168,7 @@
 
 			function paintList() {
 				listBox.textContent = '';
+				visible = [];
 				var q = state.q.toLowerCase();
 				var rows = d.lines.filter(function (l) {
 					if (state.f === 'offen' && l.counted !== null) { return false; }

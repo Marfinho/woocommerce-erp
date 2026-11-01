@@ -580,7 +580,7 @@ class Bank {
 
 		$t      = Kit::table( 'bank_transactions' );
 		$status = sanitize_key( (string) $request->get_param( 'status' ) );
-		$status = in_array( $status, array( 'offen', 'zugeordnet', 'ignoriert', 'alle' ), true ) ? $status : 'offen';
+		$status = in_array( $status, array( 'offen', 'zugeordnet', 'ignoriert', 'alle', 'ohne_beleg' ), true ) ? $status : 'offen';
 		$q      = trim( sanitize_text_field( (string) $request->get_param( 'q' ) ) );
 		$acct   = (int) $request->get_param( 'konto' );
 		$page   = max( 1, (int) $request->get_param( 'page' ) );
@@ -588,7 +588,9 @@ class Bank {
 		$where  = array( '1 = 1' );
 		$args   = array();
 
-		if ( 'alle' !== $status ) {
+		if ( 'ohne_beleg' === $status ) {
+			$where[] = "status = 'offen' AND amount < 0";
+		} elseif ( 'alle' !== $status ) {
 			$where[] = 'status = %s';
 			$args[]  = $status;
 		}
@@ -628,6 +630,7 @@ class Bank {
 		foreach ( (array) $wpdb->get_results( "SELECT status, COUNT(*) AS n FROM {$t} GROUP BY status", ARRAY_A ) as $c ) { // phpcs:ignore WordPress.DB.PreparedSQL
 			$counts[ $c['status'] ] = (int) $c['n'];
 		}
+		$counts['ohne_beleg'] = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t} WHERE status = 'offen' AND amount < 0" ); // phpcs:ignore WordPress.DB.PreparedSQL
 
 		return new WP_REST_Response(
 			array(

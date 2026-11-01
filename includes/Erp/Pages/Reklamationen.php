@@ -689,4 +689,31 @@ class Reklamationen {
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Fall erledigt.', 'lindenweg16' ) ) );
 	}
+
+	/**
+	 * Reklamationen eines Kontakts (für die Kundenakte).
+	 *
+	 * @param int $contact_id Kontakt.
+	 * @return array
+	 */
+	public static function for_contact( $contact_id ) {
+		global $wpdb;
+
+		$reasons = self::reasons();
+		$states  = self::status_labels();
+		$out     = array();
+
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( 'SELECT number, reason, status, qty, created_at FROM ' . Kit::table( 'rma_cases' ) . ' WHERE contact_id = %d ORDER BY id DESC LIMIT 20', (int) $contact_id ), ARRAY_A ) as $c ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$out[] = array(
+				'number' => (string) $c['number'],
+				'reason' => isset( $reasons[ $c['reason'] ] ) ? $reasons[ $c['reason'] ] : (string) $c['reason'],
+				'status' => isset( $states[ $c['status'] ] ) ? $states[ $c['status'] ] : (string) $c['status'],
+				'done'   => 'erledigt' === $c['status'],
+				'qty'    => (float) $c['qty'],
+				'date'   => substr( (string) $c['created_at'], 0, 10 ),
+			);
+		}
+
+		return $out;
+	}
 }

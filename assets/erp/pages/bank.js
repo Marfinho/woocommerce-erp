@@ -122,6 +122,7 @@
 				main.appendChild(sug);
 				btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { pickDialog(t); } }, 'Andere wählen'));
 				btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { ignoreDialog(t); } }, 'Ohne Zuordnung'));
+				if (t.amount < 0 && !t.suggestions.length && ui.findItem('buchhaltung')) { btns.appendChild(h('a', { class: 'btn', href: '#/seite/buchhaltung', title: 'Beleg hochladen, danach hier zuordnen' }, 'Beleg erfassen')); }
 			} else {
 				main.appendChild(h('div', { class: 'row-tags' },
 					k.tag(t.status === 'zugeordnet' ? 'zugeordnet' : 'ohne Zuordnung', t.status === 'zugeordnet' ? 'now' : ''),
@@ -236,7 +237,7 @@
 			var acctSel = d.accounts.length > 1 ? k.select([['', 'Alle Konten']].concat(d.accounts.map(function (a) { return [a.id, a.name]; })), state.konto, { 'aria-label': 'Konto' }) : null;
 			if (acctSel) { acctSel.addEventListener('change', function () { state.konto = acctSel.value; state.page = 1; load(); }); }
 			head.appendChild(h('div', { class: 'kt-bar' },
-				k.pills([['offen', 'Offen'], ['zugeordnet', 'Zugeordnet'], ['ignoriert', 'Ohne Zuordnung'], ['alle', 'Alle']], state.status, function (s) { state.status = s; state.page = 1; load(); }),
+				k.pills([['offen', 'Offen'], ['ohne_beleg', 'Ausgaben ohne Beleg' + (d.counts.ohne_beleg ? ' (' + d.counts.ohne_beleg + ')' : '')], ['zugeordnet', 'Zugeordnet'], ['ignoriert', 'Ohne Zuordnung'], ['alle', 'Alle']], state.status, function (s) { state.status = s; state.page = 1; load(); }),
 				h('div', { class: 'kt-btns', style: 'flex:1 1 320px;max-width:560px' }, acctSel, search,
 					h('button', { class: 'btn', type: 'button', onclick: function () { rulesDialog(d); } }, 'Regeln'))));
 

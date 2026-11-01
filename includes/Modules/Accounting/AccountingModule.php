@@ -550,7 +550,10 @@ class AccountingModule {
 		echo '</form>';
 
 		echo '<table class="widefat striped" style="max-width:640px">';
-		echo '<tr><th>' . esc_html__( 'Einnahmen (WooCommerce, abzgl. Refunds)', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
+		echo '<tr><th>' . esc_html__( 'Einnahmen gesamt', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
+		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Shop (WooCommerce, abzgl. Refunds)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_shop'] ) ) . '</td></tr>';
+		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Aufträge ohne Shop (bezahlt)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_auftraege'] ) ) . '</td></tr>';
+		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Mahngebühren und Verzugszinsen', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_sonstige'] ) ) . '</td></tr>';
 		echo '<tr><th colspan="2">' . esc_html__( 'Ausgaben nach Kontengruppe (SKR03)', 'lindenweg16' ) . '</th></tr>';
 		foreach ( $rep['ausgaben_gruppen'] as $gruppe => $summe ) {
 			echo '<tr><td style="padding-left:2em">' . esc_html( $gruppe ) . '</td><td>' . esc_html( self::euro( $summe ) ) . '</td></tr>';
@@ -700,7 +703,14 @@ class AccountingModule {
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );
 		$pdf->text( mb_strtoupper( __( 'Einnahmen', 'lindenweg16' ) ), 8, true );
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_TINTE );
-		$pdf->row( __( 'WooCommerce (abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
+		$pdf->row( __( 'Shop (WooCommerce, abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen_shop'] ), 10 );
+		if ( $rep['einnahmen_auftraege'] ) {
+			$pdf->row( __( 'Aufträge ohne Shop (bezahlt)', 'lindenweg16' ), self::euro( $rep['einnahmen_auftraege'] ), 10 );
+		}
+		if ( $rep['einnahmen_sonstige'] ) {
+			$pdf->row( __( 'Mahngebühren und Verzugszinsen', 'lindenweg16' ), self::euro( $rep['einnahmen_sonstige'] ), 10 );
+		}
+		$pdf->row( __( 'Einnahmen gesamt', 'lindenweg16' ), self::euro( $rep['einnahmen'] ), 11, true );
 		$pdf->space( 8 );
 
 		$pdf->set_color( \Lindenweg16\Core\Pdf::COLOR_COGNAC );

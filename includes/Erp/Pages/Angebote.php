@@ -810,4 +810,33 @@ class Angebote {
 
 		return self::save( $new );
 	}
+
+	/**
+	 * Angebote eines Kontakts (für die Kundenakte).
+	 *
+	 * @param int $contact_id Kontakt.
+	 * @return array
+	 */
+	public static function for_contact( $contact_id ) {
+		global $wpdb;
+
+		$today  = current_time( 'Y-m-d' );
+		$labels = self::status_labels();
+		$out    = array();
+
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( 'SELECT id, number, quote_date, valid_until, status, total_gross, order_op_id FROM ' . Kit::table( 'quotes' ) . ' WHERE contact_id = %d ORDER BY id DESC LIMIT 20', (int) $contact_id ), ARRAY_A ) as $q ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$shown = self::shown_status( $q['status'], $q['valid_until'], $today );
+			$out[] = array(
+				'id'     => (int) $q['id'],
+				'number' => (string) $q['number'],
+				'date'   => (string) $q['quote_date'],
+				'total'  => (float) $q['total_gross'],
+				'shown'  => $shown,
+				'label'  => $labels[ $shown ],
+				'order'  => (int) $q['order_op_id'],
+			);
+		}
+
+		return $out;
+	}
 }

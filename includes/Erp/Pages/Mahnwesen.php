@@ -196,6 +196,85 @@ class Mahnwesen {
 		return $extras > 0 && (float) $paid + 0.005 >= (float) $base + (float) $extras;
 	}
 
+	/**
+	 * Ist ein Posten gesperrt?
+	 *
+	 * @param array|null $block Sperre {until, reason} oder null.
+	 * @param string     $today Heute.
+	 * @return bool
+	 */
+	public static function is_blocked( $block, $today ) {
+		return is_array( $block ) && ( '' === (string) $block['until'] || (string) $block['until'] >= $today );
+	}
+
+	/**
+	 * Zeitreihe der Bundesbank: Basiszinssatz gemäß § 247 BGB (SU0115).
+	 */
+	const BASE_RATE_URL = 'https://api.statistiken.bundesbank.de/rest/data/BBIN1/M.DE.BBK.BBKBAS2.EUR.ME?lastNObservations=1';
+
+	/**
+	 * Basiszinssatz aus der CSV-Antwort der Bundesbank lesen.
+	 *
+	 * @param string $csv Antwort (Semikolon, Kopfzeile mit TIME_PERIOD und OBS_VALUE).
+	 * @return array|null {rate, period}
+	 */
+	public static function parse_base_rate( $csv ) {
+		$lines = preg_split( '/\r\n|\r|\n/', preg_replace( '/^\xEF\xBB\xBF/', '', (string) $csv ) );
+		$head  = null;
+		$best  = null;
+
+		foreach ( $lines as $line ) {
+			if ( '' === trim( $line ) ) {
+				continue;
+			}
+			$cells = str_getcsv( $line, ';', '"', '' );
+			if ( null === $head ) {
+				$head = array_flip( $cells );
+				if ( ! isset( $head['TIME_PERIOD'], $head['OBS_VALUE'] ) ) {
+					return null;
+				}
+				continue;
+			}
+			$period = isset( $cells[ $head['TIME_PERIOD'] ] ) ? (string) $cells[ $head['TIME_PERIOD'] ] : '';
+			$value  = isset( $cells[ $head['OBS_VALUE'] ] ) ? str_replace( ',', '.', (string) $cells[ $head['OBS_VALUE'] ] ) : '';
+			if ( preg_match( '/^\d{4}-\d{2}$/', $period ) && is_numeric( $value ) && ( ! $best || $period > $best['period'] ) ) {
+				$best = array( 'rate' => round( (float) $value, 2 ), 'period' => $period );
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * Basiszinssatz bei der Bundesbank abrufen und speichern (wenn „automatisch“ an ist).
+	 *
+	 * @param bool $force Auch wenn der letzte Abruf jünger als eine Woche ist.
+	 * @return array {ok, message, rate}
+	 */
+	public static function refresh_base_rate( $force = false ) {
+		$s = Kit::settings( 'mahn' );
+
+		if ( ! (int) $s['basiszins_auto'] ) {
+			return array( 'ok' => false, 'message' => __( 'Der Basiszinssatz wird von Hand gepflegt.', 'lindenweg16' ), 'rate' => (float) $s['basiszins'] );
+		}
+		if ( ! $force && '' !== (string) $s['basiszins_abruf'] && Kit::days_between( $s['basiszins_abruf'], current_time( 'Y-m-d' ) ) < 7 ) {
+			return array( 'ok' => true, 'message' => '', 'rate' => (float) $s['basiszins'] );
+		}
+
+		$res = wp_remote_get( self::BASE_RATE_URL, array( 'timeout' => 20, 'headers' => array( 'Accept' => 'application/vnd.sdmx.data+csv;version=1.0.0' ) ) );
+		$got = is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ? null : self::parse_base_rate( wp_remote_retrieve_body( $res ) );
+
+		if ( ! $got ) {
+			\Lindenweg16\Core\Log::error( 'mahnwesen', 'Basiszinssatz der Bundesbank nicht abrufbar' );
+			return array( 'ok' => false, 'message' => __( 'Die Bundesbank war nicht erreichbar. Der bisherige Wert bleibt.', 'lindenweg16' ), 'rate' => (float) $s['basiszins'] );
+		}
+
+		Kit::save_settings( 'mahn', array( 'basiszins' => $got['rate'], 'basiszins_stand' => $got['period'], 'basiszins_abruf' => current_time( 'Y-m-d' ) ) );
+
+		/* translators: 1: Satz, 2: Monat. */
+		return array( 'ok' => true, 'message' => sprintf( __( 'Basiszinssatz laut Bundesbank: %1$s %% (Stand %2$s).', 'lindenweg16' ), str_replace( '.', ',', (string) $got['rate'] ), $got['period'] ), 'rate' => $got['rate'] );
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
@@ -214,10 +293,12 @@ class Mahnwesen {
 		register_rest_route( $ns, '/erp/mahnwesen', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'overview' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/mahnwesen/einstellungen', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'save_settings' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/mahnwesen/sammeln', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'send_all' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, '/erp/mahnwesen/basiszins', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'base_rate_now' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, $item . '/entwurf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'draft' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, $item . '/pdf', array( 'methods' => 'GET', 'callback' => array( __CLASS__, 'pdf' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, $item . '/senden', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'send' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, $item . '/bezahlt', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'paid' ), 'permission_callback' => $needs ) );
+		register_rest_route( $ns, $item . '/sperre', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'block' ), 'permission_callback' => $needs ) );
 		register_rest_route( $ns, '/erp/mahnwesen/auftrag/(?P<id>\d+)/rechnungsdatum', array( 'methods' => 'POST', 'callback' => array( __CLASS__, 'invoice_date' ), 'permission_callback' => $needs ) );
 	}
 
@@ -262,6 +343,12 @@ class Mahnwesen {
 		$last    = isset( $notices[ $key ] ) ? $notices[ $key ] : array( 'level' => 0, 'sent' => '', 'new_due' => '', 'count' => 0, 'extras_open' => 0.0 );
 		$next    = '' !== $due ? self::next_level( $overdue, $last['level'], $last['sent'], $last['new_due'], $s, $today ) : array( 'level' => 0, 'due' => false, 'wait' => 0 );
 		$labels  = self::level_labels();
+		$blocks  = self::blocks();
+		$block   = isset( $blocks[ $key ] ) && self::is_blocked( $blocks[ $key ], $today ) ? $blocks[ $key ] : null;
+
+		if ( $block ) {
+			$next['due'] = false;
+		}
 
 		return array_merge(
 			$base,
@@ -277,8 +364,55 @@ class Mahnwesen {
 				'next_label'  => $next['level'] ? $labels[ $next['level'] ] : '',
 				'next_due'    => $next['due'],
 				'next_wait'   => $next['wait'],
+				'block'       => $block,
 			)
 		);
+	}
+
+	/**
+	 * Mahnsperren.
+	 *
+	 * @return array Schlüssel => {until, reason, by, at}
+	 */
+	protected static function blocks() {
+		$b = get_option( 'lw16_erp_mahnsperre', array() );
+
+		return is_array( $b ) ? $b : array();
+	}
+
+	/**
+	 * Mahnsperre setzen oder aufheben.
+	 *
+	 * @param WP_REST_Request $request Anfrage {until, reason, remove}.
+	 * @return WP_REST_Response
+	 */
+	public static function block( WP_REST_Request $request ) {
+		$key    = (string) $request['art'] . '-' . (int) $request['id'];
+		$in     = Kit::input( $request );
+		$blocks = self::blocks();
+
+		if ( ! empty( $in['remove'] ) ) {
+			unset( $blocks[ $key ] );
+			update_option( 'lw16_erp_mahnsperre', $blocks, false );
+			AuditLog::record( 'erp_mahnsperre_aufgehoben', 'shop' === $request['art'] ? 'wc_order' : 'order_ops', (int) $request['id'] );
+			return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Mahnsperre aufgehoben.', 'lindenweg16' ) ) );
+		}
+
+		$until  = Kit::date( isset( $in['until'] ) ? $in['until'] : '' );
+		$reason = Kit::cut( sanitize_text_field( isset( $in['reason'] ) ? (string) $in['reason'] : '' ), 200 );
+
+		if ( '' === $reason ) {
+			return Kit::fail( __( 'Bitte einen Grund angeben, z. B. „Ratenzahlung vereinbart“ oder „Reklamation offen“.', 'lindenweg16' ) );
+		}
+		if ( '' !== $until && $until < current_time( 'Y-m-d' ) ) {
+			return Kit::fail( __( 'Das Datum liegt in der Vergangenheit.', 'lindenweg16' ) );
+		}
+
+		$blocks[ $key ] = array( 'until' => $until, 'reason' => $reason, 'by' => get_current_user_id(), 'at' => current_time( 'Y-m-d' ) );
+		update_option( 'lw16_erp_mahnsperre', $blocks, false );
+		AuditLog::record( 'erp_mahnsperre', 'shop' === $request['art'] ? 'wc_order' : 'order_ops', (int) $request['id'], array( 'bis' => $until, 'grund' => $reason ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Mahnsperre gesetzt.', 'lindenweg16' ) ) );
 	}
 
 	/**
@@ -464,6 +598,17 @@ class Mahnwesen {
 	}
 
 	/**
+	 * Basiszinssatz jetzt abrufen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public static function base_rate_now() {
+		$r = self::refresh_base_rate( true );
+
+		return $r['ok'] ? new WP_REST_Response( array( 'ok' => true, 'message' => $r['message'] ) ) : Kit::fail( $r['message'], 502 );
+	}
+
+	/**
 	 * Einstellungen speichern.
 	 *
 	 * @param WP_REST_Request $request Anfrage.
@@ -483,7 +628,7 @@ class Mahnwesen {
 				return Kit::fail( __( 'Der Basiszinssatz ist keine plausible Zahl (Prozent, z. B. 1,27).', 'lindenweg16' ) );
 			}
 		}
-		foreach ( array( 'shop_mahnen', 'zinsen', 'pauschale' ) as $flag ) {
+		foreach ( array( 'shop_mahnen', 'zinsen', 'pauschale', 'basiszins_auto' ) as $flag ) {
 			if ( array_key_exists( $flag, $in ) ) {
 				$in[ $flag ] = empty( $in[ $flag ] ) ? 0 : 1;
 			}
@@ -681,6 +826,10 @@ class Mahnwesen {
 		}
 		if ( $level > $item['last_level'] + 1 ) {
 			return array( 'ok' => false, 'message' => __( 'Bitte die Stufen der Reihe nach verschicken (erst Erinnerung, dann Mahnung).', 'lindenweg16' ), 'status' => 409 );
+		}
+		if ( ! empty( $item['block'] ) ) {
+			/* translators: %s: Grund. */
+			return array( 'ok' => false, 'message' => sprintf( __( 'Für diesen Posten gilt eine Mahnsperre (%s). Erst aufheben.', 'lindenweg16' ), $item['block']['reason'] ), 'status' => 409 );
 		}
 		if ( ! is_email( $to ) ) {
 			return array( 'ok' => false, 'message' => __( 'Die E-Mail-Adresse stimmt nicht. Bitte in der Kundenakte bzw. Bestellung nachtragen.', 'lindenweg16' ), 'status' => 422 );
@@ -906,6 +1055,12 @@ class Mahnwesen {
 			\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', $id, $o, $change, __( 'Als bezahlt markiert (Offene Posten)', 'lindenweg16' ) );
 		}
 
+		$blocks = self::blocks();
+		if ( isset( $blocks[ $kind . '-' . $id ] ) ) {
+			unset( $blocks[ $kind . '-' . $id ] );
+			update_option( 'lw16_erp_mahnsperre', $blocks, false );
+		}
+
 		if ( ! empty( $in['fee_paid'] ) ) {
 			$col  = 'shop' === $kind ? 'wc_order_id' : 'order_op_id';
 			$open = (float) $wpdb->get_var( $wpdb->prepare( 'SELECT COALESCE(SUM(fee + interest), 0) FROM ' . Kit::table( 'dunning_notices' ) . " WHERE {$col} = %d AND fee_booked = 0", $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL
@@ -948,5 +1103,31 @@ class Mahnwesen {
 		\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'order_ops', (int) $o['id'], $o, $change, __( 'Rechnungsdatum nachgetragen (Offene Posten)', 'lindenweg16' ) );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Rechnungsdatum gespeichert.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Erinnerungen und Mahnungen an einen Kontakt (für die Kundenakte).
+	 *
+	 * @param int $contact_id Kontakt.
+	 * @return array
+	 */
+	public static function for_contact( $contact_id ) {
+		global $wpdb;
+
+		$labels = self::level_labels();
+		$out    = array();
+
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( 'SELECT order_op_id, level, amount, fee, interest, sent_at, new_due FROM ' . Kit::table( 'dunning_notices' ) . ' WHERE contact_id = %d ORDER BY id DESC LIMIT 20', (int) $contact_id ), ARRAY_A ) as $n ) { // phpcs:ignore WordPress.DB.PreparedSQL
+			$out[] = array(
+				'number' => 'A-' . (int) $n['order_op_id'],
+				'label'  => isset( $labels[ (int) $n['level'] ] ) ? $labels[ (int) $n['level'] ] : '',
+				'amount' => (float) $n['amount'],
+				'extra'  => round( (float) $n['fee'] + (float) $n['interest'], 2 ),
+				'date'   => substr( (string) $n['sent_at'], 0, 10 ),
+				'due'    => (string) $n['new_due'],
+			);
+		}
+
+		return $out;
 	}
 }

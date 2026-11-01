@@ -80,4 +80,21 @@ class ErpAbwesenheitTest extends TestCase {
 
 		$this->assertSame( 0.0, A::balance_with_carry( 24, 5, $abs, 2026, '2026-12-01', '' )['verfallen'], 'Ohne Verfallstag bleibt er' );
 	}
+
+	public function test_lohnvorschlag_aus_abwesenheiten() {
+		$abs = array(
+			array( 'kind' => 'urlaub', 'status' => 'genehmigt', 'date_from' => '2026-10-29', 'date_to' => '2026-11-04', 'half_day' => 0 ),
+			array( 'kind' => 'krank', 'status' => 'genehmigt', 'date_from' => '2026-11-10', 'date_to' => '2026-11-10', 'half_day' => 1 ),
+			array( 'kind' => 'urlaub', 'status' => 'beantragt', 'date_from' => '2026-11-20', 'date_to' => '2026-11-20', 'half_day' => 0 ),
+			array( 'kind' => 'sonstiges', 'status' => 'genehmigt', 'date_from' => '2026-11-23', 'date_to' => '2026-11-23', 'half_day' => 0 ),
+		);
+		$l = A::pay_lines( $abs, '2026-11-01', '2026-11-30', '', 8, 15 );
+
+		$this->assertCount( 2, $l, 'Beantragt und Sonstiges zählen nicht' );
+		$this->assertSame( 3.0, $l[0]['days'], 'Urlaub auf November beschnitten: Mo 2. bis Mi 4.' );
+		$this->assertSame( 360.0, $l[0]['amount'] );
+		$this->assertSame( 0.5, $l[1]['days'] );
+		$this->assertSame( 60.0, $l[1]['amount'] );
+		$this->assertNull( A::pay_lines( $abs, '2026-11-01', '2026-11-30', '', 8, null )[0]['amount'], 'Ohne Lohn kein Betrag' );
+	}
 }

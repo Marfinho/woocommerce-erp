@@ -284,6 +284,80 @@ class Abwesenheit {
 		return $base;
 	}
 
+	/**
+	 * Vorschläge für die Lohnabrechnung: bezahlte Abwesenheiten eines Monats.
+	 *
+	 * Urlaub, Krankheit (Entgeltfortzahlung), Sonderurlaub und Fortbildung
+	 * zählen mit Arbeitstagen × Stunden je Tag × Stundenlohn. „Sonstiges“
+	 * bleibt unbezahlt. Nur genehmigte Einträge; Zeiträume werden auf den Monat
+	 * beschnitten.
+	 *
+	 * @param array  $absences Abwesenheiten (kind, status, date_from, date_to, half_day).
+	 * @param string $from     Monatsanfang.
+	 * @param string $to       Monatsende.
+	 * @param string $land     Bundesland.
+	 * @param float  $hours    Stunden je Arbeitstag.
+	 * @param float  $rate     Stundenlohn (null = unbekannt).
+	 * @return array Liste {label, amount, days, hours}
+	 */
+	public static function pay_lines( array $absences, $from, $to, $land, $hours, $rate ) {
+		$labels = array(
+			'urlaub'       => __( 'Urlaubsentgelt', 'lindenweg16' ),
+			'krank'        => __( 'Entgeltfortzahlung Krankheit', 'lindenweg16' ),
+			'sonderurlaub' => __( 'Sonderurlaub', 'lindenweg16' ),
+			'fortbildung'  => __( 'Fortbildung', 'lindenweg16' ),
+		);
+		$days = array();
+
+		foreach ( $absences as $a ) {
+			if ( 'genehmigt' !== $a['status'] || ! isset( $labels[ $a['kind'] ] ) ) {
+				continue;
+			}
+			$f = max( (string) $a['date_from'], $from );
+			$t = min( (string) $a['date_to'], $to );
+			if ( $f > $t ) {
+				continue;
+			}
+			$n = self::workdays( $f, $t, $land, ! empty( $a['half_day'] ) && $a['date_from'] === $a['date_to'] );
+			$days[ $a['kind'] ] = ( isset( $days[ $a['kind'] ] ) ? $days[ $a['kind'] ] : 0.0 ) + $n;
+		}
+
+		$out = array();
+		foreach ( $days as $kind => $n ) {
+			if ( $n <= 0 ) {
+				continue;
+			}
+			$h     = round( $n * (float) $hours, 2 );
+			$out[] = array(
+				/* translators: 1: Art, 2: Tage, 3: Stunden. */
+				'label'  => sprintf( __( '%1$s: %2$s Tage à %3$s h', 'lindenweg16' ), $labels[ $kind ], str_replace( '.', ',', (string) $n ), str_replace( '.', ',', (string) ( 0 + (float) $hours ) ) ),
+				'amount' => null === $rate ? null : round( $h * (float) $rate, 2 ),
+				'days'   => $n,
+				'hours'  => $h,
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Vorschläge für eine Person und einen Monat (für die Lohnseite).
+	 *
+	 * @param int    $user_id Person.
+	 * @param string $from    Monatsanfang.
+	 * @param string $to      Monatsende.
+	 * @return array
+	 */
+	public static function pay_suggestions( $user_id, $from, $to ) {
+		$s     = Kit::settings( 'urlaub' );
+		$own   = get_user_meta( (int) $user_id, 'lw16_stunden_pro_tag', true );
+		$hours = '' !== $own && null !== $own && (float) $own > 0 ? (float) $own : (float) $s['stunden_tag'];
+		$rate  = \Lindenweg16\Modules\Betrieb\WageRepository::current( (int) $user_id, $from );
+		$rows  = self::rows( "user_id = %d AND status = 'genehmigt' AND date_from <= %s AND date_to >= %s", array( (int) $user_id, $to, $from ) );
+
+		return self::pay_lines( $rows, $from, $to, (string) $s['bundesland'], $hours, $rate );
+	}
+
 	/* ====================================================================
 	 * Routen
 	 * ================================================================== */
@@ -658,6 +732,12 @@ class Abwesenheit {
 			}
 			if ( isset( $in['verfall'] ) && ! preg_match( '/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/', (string) $in['verfall'] ) ) {
 				return Kit::fail( __( 'Verfallstag bitte als MM-TT, z. B. 03-31.', 'lindenweg16' ) );
+			}
+			if ( isset( $in['stunden_tag'] ) ) {
+				$hpd = Kit::amount( $in['stunden_tag'] );
+				if ( null === $hpd || $hpd <= 0 || $hpd > 12 ) {
+					return Kit::fail( __( 'Stunden je Arbeitstag bitte zwischen 0,5 und 12.', 'lindenweg16' ) );
+				}
 			}
 			if ( array_key_exists( 'uebertrag', $in ) ) {
 				$in['uebertrag'] = empty( $in['uebertrag'] ) ? 0 : 1;

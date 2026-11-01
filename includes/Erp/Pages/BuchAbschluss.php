@@ -1668,7 +1668,10 @@ class BuchAbschluss {
 		$rows   = array(
 			array( 'Einnahmenüberschussrechnung', $period['von'] . ' bis ' . $period['bis'] ),
 			array( 'Position', 'Betrag in EUR' ),
-			array( 'Einnahmen (WooCommerce, abzgl. Rückerstattungen)', self::csv_num( $rep['einnahmen'] ) ),
+			array( 'Einnahmen gesamt', self::csv_num( $rep['einnahmen'] ) ),
+			array( '   Shop (WooCommerce, abzgl. Rückerstattungen)', self::csv_num( isset( $rep['einnahmen_shop'] ) ? $rep['einnahmen_shop'] : $rep['einnahmen'] ) ),
+			array( '   Aufträge ohne Shop (bezahlt)', self::csv_num( isset( $rep['einnahmen_auftraege'] ) ? $rep['einnahmen_auftraege'] : 0 ) ),
+			array( '   Mahngebühren und Verzugszinsen', self::csv_num( isset( $rep['einnahmen_sonstige'] ) ? $rep['einnahmen_sonstige'] : 0 ) ),
 		);
 
 		foreach ( self::groups_from_accounts( (array) $rep['ausgaben_konten'] ) as $g ) {

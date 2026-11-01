@@ -7,6 +7,31 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.74.0] – 2026-11-01
+
+Letzte Lücken der neuen Seiten geschlossen.
+
+### EÜR: Einnahmen vollständig
+- Bisher zählten nur Shop-Bestellungen. Jetzt auch **bezahlte Aufträge ohne Shop-Bestellung** (Fachhandel, aus Angeboten – am Zahltag) und **Mahngebühren/Verzugszinsen** aus dem Journal (abzüglich Stornos). Die EÜR zeigt die drei Teile einzeln (ERP, wp-admin, PDF, CSV, Betriebsprüfungs-Export). **Dadurch kann die EÜR höher ausfallen als vorher** – das war vorher zu niedrig, wenn es manuelle Aufträge gab.
+
+### Lohn: Urlaub und Krankheit
+- In der Lohnabrechnung stehen die genehmigten Abwesenheiten des Monats als Vorschlag (Urlaubsentgelt, Entgeltfortzahlung, Sonderurlaub, Fortbildung: Arbeitstage × Stunden je Tag × Stundenlohn) und lassen sich mit einem Klick als Zuschläge übernehmen. Stunden je Arbeitstag einstellbar (Vorgabe 8, je Person über `lw16_stunden_pro_tag`).
+
+### Offene Posten
+- **Basiszinssatz automatisch** von der Deutschen Bundesbank (Zeitreihe BBIN1.M.DE.BBK.BBKBAS2.EUR.ME, § 247 BGB), wöchentlich und auf Knopfdruck; von Hand überschreibbar. Stand heute 1,52 %.
+- **Mahnstopp** je Posten mit Grund und optionalem Enddatum (Ratenzahlung, offene Reklamation …): kein Vorschlag, kein Sammelversand, kein Einzelversand, steht im Überblick nicht mehr. Fällt mit der Zahlung weg.
+- Links zur Kundenakte bzw. Shop-Bestellung.
+
+### Kundenakte
+- Neue Karte **Angebote, Mahnungen, Reklamationen** des Kontakts (je nach Recht).
+
+### Bankabgleich
+- Filter **„Ausgaben ohne Beleg“** und Knopf „Beleg erfassen“, wenn es keinen passenden Beleg gibt.
+
+### Inventur und Reklamationen
+- **Handscanner:** Code scannen → die passende Zeile ist sofort zum Zählen bereit; nach Enter geht es zurück in die Suche.
+- Reklamation mit Shop-Bestellung: Knopf zur Bestellung, bei Gutschrift direkt zum Erstatten.
+
 ## [0.73.0] – 2026-11-01
 
 Die neuen Seiten aus 0.72.0 sind jetzt vollständig ausgebaut.

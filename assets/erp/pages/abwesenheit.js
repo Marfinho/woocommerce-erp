@@ -128,14 +128,15 @@
 			var std = k.input(String(d.settings.tage_standard), { inputmode: 'numeric' });
 			var carry = h('input', { type: 'checkbox', checked: !!d.settings.uebertrag });
 			var exp = k.input(d.settings.verfall, { placeholder: '03-31' });
+			var hpd = k.input(String(d.settings.stunden_tag).replace('.', ','), { inputmode: 'decimal' });
 			var btn = h('button', { class: 'btn', type: 'submit' }, 'Speichern');
-			var form = h('form', null, h('div', { class: 'kt-grid kt-gap' }, k.field('Bundesland (Feiertage)', land), k.field('Urlaubstage Vorgabe', std), k.field('Übertrag verfällt nach (MM-TT)', exp)),
+			var form = h('form', null, h('div', { class: 'kt-grid kt-gap' }, k.field('Bundesland (Feiertage)', land), k.field('Urlaubstage Vorgabe', std), k.field('Übertrag verfällt nach (MM-TT)', exp), k.field('Stunden je Arbeitstag (für den Lohn)', hpd)),
 				h('label', { class: 'lg-chk' }, carry, ' Resturlaub ins nächste Jahr übertragen (wird zuerst verbraucht)'),
 				h('div', { class: 'kt-actions' }, btn));
 			form.addEventListener('submit', function (e) {
 				e.preventDefault();
 				btn.disabled = true;
-				ui.api('abwesenheit/anspruch', { method: 'POST', body: { bundesland: land.value, tage_standard: std.value, uebertrag: carry.checked ? 1 : 0, verfall: exp.value } }).then(function (r) { ui.toast(r.message); load(); })
+				ui.api('abwesenheit/anspruch', { method: 'POST', body: { bundesland: land.value, tage_standard: std.value, uebertrag: carry.checked ? 1 : 0, verfall: exp.value, stunden_tag: hpd.value } }).then(function (r) { ui.toast(r.message); load(); })
 					.catch(function (e2) { ui.toast(e2.message, true); btn.disabled = false; });
 			});
 			box.appendChild(h('details', { class: 'card kt-gap' }, h('summary', null, 'Feiertage und Vorgaben'), form));

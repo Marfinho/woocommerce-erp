@@ -117,6 +117,7 @@
 				}
 			}
 			btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { noteDialog(c); } }, 'Notiz'));
+			if (c.wc_order_id && ui.can('verkauf.shop_orders')) { btns.appendChild(h('a', { class: 'btn', href: '#/shop/' + c.wc_order_id }, c.resolution === 'gutschrift' ? 'Erstatten in der Bestellung' : 'Bestellung')); }
 
 			var tags = h('div', { class: 'row-tags' }, k.tag(c.status_label, c.status === 'erledigt' ? 'now' : (c.age_days > 14 ? 'later' : '')), k.tag(c.reason_label));
 			if (c.res_label) { tags.appendChild(k.tag(c.res_label + (c.refund !== null ? ' ' + k.eur(c.refund) : ''))); }

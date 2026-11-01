@@ -384,7 +384,33 @@
 			box.appendChild(orders(d));
 			if (d.open.length) { box.appendChild(openItems(d)); }
 			box.appendChild(commission(d, classic));
+			var more = erpExtra(d);
+			if (more) { box.appendChild(more); }
 			box.appendChild(activities(d));
+		}
+
+		// Angebote, Mahnungen und Reklamationen des Kontakts (nur mit dem jeweiligen Recht).
+		function erpExtra(d) {
+			if (!d.quotes && !d.dunning && !d.rma) { return null; }
+			function block(title, list, empty, row, link) {
+				if (!list) { return null; }
+				return h('div', null, h('h4', null, title, link && ui.findItem(link) ? h('a', { href: '#/seite/' + link, style: 'margin-left:8px;font-weight:400;font-size:13px' }, 'öffnen →') : null),
+					list.length ? h('div', { class: 'rows' }, list.map(row)) : h('p', { class: 'muted' }, empty));
+			}
+			var card = h('div', { class: 'card vk-gap' }, h('h3', null, 'Angebote, Mahnungen, Reklamationen'),
+				block('Angebote', d.quotes, 'Noch kein Angebot.', function (q) {
+					return h('div', { class: 'row-card' }, h('div', { class: 'row-main' }, h('b', null, q.number), h('small', null, ymd(q.date) + (q.order ? ' · Auftrag A-' + q.order : ''))),
+						h('div', { class: 'row-num' }, ui.money(q.total, 'EUR')), h('div', { class: 'row-tags' }, h('span', { class: 'tag' + (q.shown === 'angenommen' ? ' now' : (q.shown === 'abgelaufen' || q.shown === 'abgelehnt' ? ' later' : '')) }, q.label)));
+				}, 'angebote'),
+				block('Erinnerungen und Mahnungen', d.dunning, 'Noch nie gemahnt.', function (n) {
+					return h('div', { class: 'row-card' }, h('div', { class: 'row-main' }, h('b', null, n.label + ' · ' + n.number), h('small', null, ymd(n.date) + (n.due ? ' · Frist ' + ymd(n.due) : ''))),
+						h('div', { class: 'row-num' }, ui.money(n.amount, 'EUR')), n.extra ? h('div', { class: 'row-tags' }, h('span', { class: 'tag' }, '+ ' + ui.money(n.extra, 'EUR'))) : null);
+				}, 'mahnwesen'),
+				block('Reklamationen', d.rma, 'Keine Reklamation.', function (r) {
+					return h('div', { class: 'row-card' }, h('div', { class: 'row-main' }, h('b', null, r.number + ' · ' + r.reason), h('small', null, ymd(r.date) + ' · ' + ui.num(r.qty) + ' Stk.')),
+						h('div', { class: 'row-tags' }, h('span', { class: 'tag' + (r.done ? ' now' : ' later') }, r.status)));
+				}, 'reklamationen'));
+			return card;
 		}
 
 		function profileFields(p, o) {

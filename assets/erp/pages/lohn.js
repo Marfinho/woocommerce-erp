@@ -265,6 +265,20 @@
 
 				body.appendChild(h('h4', null, 'Zuschläge und Abzüge'));
 				body.appendChild(h('p', { class: 'muted small', style: 'margin-top:0' }, 'Frei eintragen, Abzüge mit Minus (zum Beispiel Vorschuss -100). Steuern und Sozialabgaben gehören nicht hierher.'));
+				if (x.absences && x.absences.length && (!slip || slip.status === 'entwurf')) {
+					var absBox = h('div', { class: 'notice' }, h('b', null, 'Bezahlte Abwesenheiten in diesem Monat'),
+						h('ul', null, x.absences.map(function (a) { return h('li', null, a.label + ': ' + (a.amount === null ? 'ohne Stundenlohn' : eur(a.amount))); })),
+						h('button', { class: 'btn', type: 'button', onclick: function () {
+							x.absences.forEach(function (a) {
+								if (a.amount === null) { return; }
+								var have = adjustments.some(function (r) { return r.label === a.label; });
+								if (!have) { adjustments.push({ label: a.label.slice(0, 80), amount: String(a.amount).replace('.', ',') }); }
+							});
+							paintAdj(); paintTotal();
+						} }, 'Als Zuschläge übernehmen'),
+						h('p', { class: 'muted small' }, 'Aus Urlaub & Abwesenheit (genehmigt): Arbeitstage × Stunden je Tag × Stundenlohn. Ein Vorschlag – bei schwankenden Arbeitszeiten gilt der Durchschnitt der letzten 13 Wochen.'));
+					body.appendChild(absBox);
+				}
 				body.appendChild(adjBox);
 				body.appendChild(note);
 				body.appendChild(h('p', { class: 'lh-total' }, 'Gesamtbetrag brutto: ', totalEl));

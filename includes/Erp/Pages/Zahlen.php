@@ -1268,6 +1268,11 @@ class Zahlen {
 				'von'              => $von,
 				'bis'              => $bis,
 				'einnahmen'        => (float) $rep['einnahmen'],
+				'einnahmen_teile'  => array(
+					'shop'      => isset( $rep['einnahmen_shop'] ) ? (float) $rep['einnahmen_shop'] : (float) $rep['einnahmen'],
+					'auftraege' => isset( $rep['einnahmen_auftraege'] ) ? (float) $rep['einnahmen_auftraege'] : 0.0,
+					'sonstige'  => isset( $rep['einnahmen_sonstige'] ) ? (float) $rep['einnahmen_sonstige'] : 0.0,
+				),
 				'gruppen'          => self::groups_in_order( (array) $rep['ausgaben_gruppen'] ),
 				'kuerzung'         => (float) $rep['ausgaben_kuerzung'],
 				'ausgaben'         => (float) $rep['ausgaben_summe'],

@@ -102,4 +102,18 @@ class ErpMahnwesenTest extends TestCase {
 		$this->assertStringContainsString( 'Aus früheren Mahnungen offen: 5,00 €', $t['body'] );
 		$this->assertStringStartsWith( 'Guten Tag,', $t['body'] );
 	}
+
+	public function test_basiszins_der_bundesbank_lesen() {
+		$csv = "\xEF\xBB\xBFDATAFLOW;BBK_STD_FREQ;TIME_PERIOD;OBS_VALUE;BBK_UNIT\nBBK:BBIN1(1.0);M;2026-10;1.52;% p.a.\nBBK:BBIN1(1.0);M;2026-11;1.27;% p.a.\n";
+		$this->assertSame( array( 'rate' => 1.27, 'period' => '2026-11' ), Mahnwesen::parse_base_rate( $csv ) );
+		$this->assertSame( array( 'rate' => -0.88, 'period' => '2020-01' ), Mahnwesen::parse_base_rate( "TIME_PERIOD;OBS_VALUE\n2020-01;-0.88\n" ), 'Negativer Basiszins' );
+		$this->assertNull( Mahnwesen::parse_base_rate( '{"status":404}' ) );
+	}
+
+	public function test_mahnsperre() {
+		$this->assertTrue( Mahnwesen::is_blocked( array( 'until' => '', 'reason' => 'x' ), '2026-11-01' ) );
+		$this->assertTrue( Mahnwesen::is_blocked( array( 'until' => '2026-11-01', 'reason' => 'x' ), '2026-11-01' ) );
+		$this->assertFalse( Mahnwesen::is_blocked( array( 'until' => '2026-10-31', 'reason' => 'x' ), '2026-11-01' ), 'Abgelaufene Sperre gilt nicht' );
+		$this->assertFalse( Mahnwesen::is_blocked( null, '2026-11-01' ) );
+	}
 }

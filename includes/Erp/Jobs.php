@@ -24,7 +24,15 @@ class Jobs {
 	 */
 	public static function init() {
 		add_action( Scheduler::HOOK_ERP_BANK_SYNC, array( __CLASS__, 'bank_sync' ) );
-		add_action( Scheduler::HOOK_ERP_DAILY, array( Digest::class, 'run' ) );
+		add_action( Scheduler::HOOK_ERP_DAILY, array( __CLASS__, 'daily' ) );
+	}
+
+	/**
+	 * Tagesjob: Basiszinssatz aktuell halten (wöchentlich), dann der Überblick.
+	 */
+	public static function daily() {
+		Pages\Mahnwesen::refresh_base_rate();
+		Digest::run();
 	}
 
 	/**

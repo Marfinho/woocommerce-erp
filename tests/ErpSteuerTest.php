@@ -107,4 +107,8 @@ class ErpSteuerTest extends TestCase {
 
 		$this->assertSame( array( '9', '8', '9', '' ), array_column( $r['rows'], 8 ), 'Storno trägt den Schlüssel des Originals, Einnahmen keinen' );
 	}
+
+	public function test_euer_einnahmen_aus_teilen() {
+		$this->assertSame( array( 'shop' => 1000.0, 'auftraege' => 250.5, 'sonstige' => 5.0, 'summe' => 1255.5 ), \Lindenweg16\Modules\Accounting\EuerCalculator::income_parts( 1000, 250.499, 5 ) );
+	}
 }

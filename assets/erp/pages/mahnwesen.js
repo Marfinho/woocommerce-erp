@@ -53,6 +53,20 @@
 			}, load);
 		}
 
+		function blockDialog(r) {
+			if (r.block) {
+				k.confirmDo('Mahnsperre aufheben', 'Danach kann ' + r.number + ' wieder gemahnt werden.', 'Aufheben', function () {
+					return ui.api(path(r) + '/sperre', { method: 'POST', body: { remove: 1 } });
+				}, load);
+				return;
+			}
+			var reason = k.input('', { placeholder: 'z. B. Ratenzahlung vereinbart, Reklamation offen', required: '' });
+			var until = k.input('', { type: 'date' });
+			k.formDialog('Mahnstopp: ' + r.number, [k.field('Grund', reason), k.field('Bis', until, 'Leer = bis zum Aufheben.')], 'Sperren', function () {
+				return ui.api(path(r) + '/sperre', { method: 'POST', body: { reason: reason.value, until: until.value } });
+			}, load);
+		}
+
 		function invoiceDialog(r) {
 			var date = k.input(new Date().toISOString().slice(0, 10), { type: 'date' });
 			var terms = k.input(String(r.terms || 14), { inputmode: 'numeric' });
@@ -68,14 +82,18 @@
 			else { tags.appendChild(k.tag('fällig am ' + k.dmy(r.due), 'now')); }
 			if (r.last_level) { tags.appendChild(k.tag(r.last_label + ' am ' + k.dmy(r.last_sent))); }
 			if (r.extras_open > 0) { tags.appendChild(k.tag('+ ' + k.eur(r.extras_open) + ' Gebühren/Zinsen')); }
+			if (r.block) { tags.appendChild(k.tag('Mahnsperre' + (r.block.until ? ' bis ' + k.dmy(r.block.until) : '') + ': ' + r.block.reason, 'later')); }
 
 			var btns = h('div', { class: 'kt-btns' });
 			if (!r.due) {
 				btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { invoiceDialog(r); } }, 'Rechnungsdatum'));
-			} else if (r.next_level) {
+			} else if (r.next_level && !r.block) {
 				btns.appendChild(h('button', { class: 'btn' + (r.next_due ? ' primary' : ''), type: 'button', title: r.next_due ? '' : 'Regulär erst in ' + r.next_wait + ' Tagen', onclick: function () { sendDialog(r, r.next_level); } }, r.next_label + (r.next_due ? '' : ' (in ' + r.next_wait + ' T.)')));
 				btns.appendChild(k.fileBtn('PDF', path(r) + '/pdf?level=' + r.next_level));
 			}
+			if (r.kind === 'shop') { btns.appendChild(h('a', { class: 'btn', href: '#/shop/' + r.id }, 'Bestellung')); }
+			else if (r.contact_id) { btns.appendChild(h('a', { class: 'btn', href: '#/kontakt/' + r.contact_id }, 'Akte')); }
+			btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { blockDialog(r); } }, r.block ? 'Sperre aufheben' : 'Mahnstopp'));
 			btns.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { paidDialog(r); } }, 'Bezahlt'));
 
 			return h('article', { class: 'row-card kt-row' },
@@ -102,7 +120,8 @@
 			var flags = {
 				shop_mahnen: h('input', { type: 'checkbox', checked: !!s.shop_mahnen }),
 				zinsen: h('input', { type: 'checkbox', checked: !!s.zinsen }),
-				pauschale: h('input', { type: 'checkbox', checked: !!s.pauschale })
+				pauschale: h('input', { type: 'checkbox', checked: !!s.pauschale }),
+				basiszins_auto: h('input', { type: 'checkbox', checked: !!s.basiszins_auto })
 			};
 			var btn = h('button', { class: 'btn', type: 'submit' }, 'Speichern');
 			var form = h('form', null,
@@ -116,7 +135,11 @@
 				h('label', { class: 'lg-chk' }, flags.shop_mahnen, ' Shop-Bestellungen mit Überweisung/Vorkasse einbeziehen'),
 				k.field('Zahlungsfrist Shop-Bestellungen (Tage)', f.shop_tage),
 				h('label', { class: 'lg-chk' }, flags.zinsen, ' Verzugszinsen in der letzten Mahnung (§ 288 BGB: Basiszins + 9 Punkte unter Unternehmern, + 5 bei Verbrauchern)'),
-				k.field('Aktueller Basiszinssatz in %', f.basiszins, 'Steht bei der Deutschen Bundesbank, ändert sich zum 1.1. und 1.7.'),
+				h('label', { class: 'lg-chk' }, flags.basiszins_auto, ' Basiszinssatz automatisch von der Bundesbank holen (wöchentlich)'),
+				k.field('Basiszinssatz in %', f.basiszins, s.basiszins_stand ? 'Laut Bundesbank, Stand ' + s.basiszins_stand + '. Ändert sich zum 1.1. und 1.7.' : 'Ändert sich zum 1.1. und 1.7.'),
+				h('p', null, h('button', { class: 'btn', type: 'button', onclick: function () {
+					ui.api('mahnwesen/basiszins', { method: 'POST', body: {} }).then(function (r) { ui.toast(r.message); load(); }).catch(function (e) { ui.toast(e.message, true); });
+				} }, 'Jetzt bei der Bundesbank abrufen')),
 				h('label', { class: 'lg-chk' }, flags.pauschale, ' 40-€-Verzugspauschale bei Unternehmern (§ 288 Abs. 5 BGB)'),
 				k.field('Konto für Mahngebühren/Zinsen (DATEV)', f.konto, 'Mit dem Steuerberater abstimmen.'),
 				h('div', { class: 'kt-actions kt-gap' }, btn));

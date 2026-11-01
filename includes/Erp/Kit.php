@@ -201,7 +201,10 @@ class Kit {
 				'shop_mahnen'     => 1,
 				'shop_tage'       => 7,
 				'zinsen'          => 0,
-				'basiszins'       => 0.0,
+				'basiszins'       => 1.52,
+				'basiszins_auto'  => 1,
+				'basiszins_stand' => '',
+				'basiszins_abruf' => '',
 				'pauschale'       => 0,
 				'konto'           => '',
 			),
@@ -225,6 +228,7 @@ class Kit {
 				'bundesland'      => '',
 				'uebertrag'       => 1,
 				'verfall'         => '03-31',
+				'stunden_tag'     => 8.0,
 			),
 		);
 	}

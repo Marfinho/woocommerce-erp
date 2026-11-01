@@ -1316,6 +1316,9 @@ class Verkauf {
 				'status'     => ContactRepository::status_labels(),
 				'activity_types' => ContactRepository::activity_labels(),
 				'can_orders' => Access::can( 'verkauf.versand' ),
+				'quotes'     => Access::can( 'verkauf.angebote' ) ? Angebote::for_contact( $id ) : null,
+				'dunning'    => Access::can( 'finanzen.mahnwesen' ) ? Mahnwesen::for_contact( $id ) : null,
+				'rma'        => Access::can( 'verkauf.reklamationen' ) ? Reklamationen::for_contact( $id ) : null,
 			)
 		);
 	}
