@@ -477,6 +477,10 @@ class BambuService {
 		if ( $last > $now - 30 ) {
 			return;
 		}
+		// Bisher sah niemand hin: die Bridge klingeln, damit sofort ein frisches Bild kommt.
+		if ( $last <= $now - self::CAMERA_WATCH_SECONDS ) {
+			\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'kamera', $printer_id );
+		}
 		set_transient( $key, $now, self::CAMERA_WATCH_SECONDS );
 	}
 

@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.76.3] – 2026-11-02
+
+### Neu: Türklingel über Home Assistant
+- Statt dass die Programme auf dem Raspberry Pi laufend nachfragen, **klingelt WordPress**, wenn es etwas gibt: bei einem neuen Bambu-Druck, Slicing- oder Etikettenauftrag, wenn hängende Aufträge wieder freigegeben werden, bei „Etikett erneut drucken“ und wenn jemand das Kamerabild öffnet.
+- Die Klingel ist ein kurzer HTTPS-Aufruf an einen Webhook von Home Assistant (z. B. über Nabu Casa), ohne auf die Antwort zu warten und gesammelt am Ende des Aufrufs. Home Assistant gibt sie per MQTT (Mosquitto) an den Pi weiter. Sie enthält nur Kanal und Drucker-ID, keine Auftragsdaten.
+- Einstellung unter Betrieb → Bambu-Lab-Drucker → „Türklingel über Home Assistant“, mit Testklingel. Nur HTTPS-Adressen.
+- Pi-Programme: neue Einstellungen `DOORBELL_MQTT_HOST`, `…_PORT`, `…_USER`, `…_PASSWORD`, `…_TLS`, `DOORBELL_TOPIC`, `DOORBELL_FALLBACK`. Mit verbundener Klingel startet ein Auftrag nach 1–2 Sekunden, nachgefragt wird nur noch alle 5 Minuten; ohne Klingel läuft alles wie in 0.76.2. Anleitung mit fertiger Automation: `raspberry-pi/README.md`, „Türklingel“.
+- Die `.htaccess`-Drossel aus 0.76.2 ist aus dem README entfernt: Sie hat auf dem IONOS-Webspace die ganze Seite mit Fehler 500 lahmgelegt.
+- Tests: `tests/BetriebDoorbellTest.php`, `raspberry-pi/tests/test_doorbell.py` (inkl. Durchlauf gegen einen echten Mosquitto-Broker, wenn installiert).
+
 ## [0.76.2] – 2026-11-02
 
 ### Behoben: Raspberry-Pi-Programme überlasten den Webspace (Fehler 500/503)
@@ -15,7 +25,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Status (Bambu):** wird nur noch bei einer Änderung (Zustand, Fortschritt, Fehler, AMS) gemeldet, sonst einmal pro Minute als Lebenszeichen (`STATUS_HEARTBEAT`). Temperaturen gehen mit dem Lebenszeichen mit.
 - **Kamera (Bambu):** Standbilder gehen nur noch hoch, solange jemand das Live-Bild ansieht (wp-admin, ERP-Druckfarm, Bildschirme) und bis zu zwei Minuten danach. WordPress meldet das im neuen Feld `camera` der Antwort auf `/status` und `/snapshot` (`CAMERA_ONLY_WHEN_WATCHED`). Ältere Bridges ignorieren das Feld.
 - **Fehler behoben:** Bei Serverfehlern (500/503) setzten alle drei Programme ihre Wartezeit sofort wieder auf 1 Sekunde zurück und fragten gerade bei Überlast **jede Sekunde** nach. Jetzt wird wirklich immer länger gewartet (bis 30 s), ein `Retry-After`-Header wird beachtet.
-- Die Pi-Programme aktualisieren sich nicht selbst: Die neuen Versionen von `bambu_bridge.py`, `slicing_worker.py` und `haster_print_client.py` müssen auf dem Pi eingespielt werden. Bis dahin hilft die Drossel in der `.htaccess` (siehe `raspberry-pi/README.md`).
+- Die Pi-Programme aktualisieren sich nicht selbst: Die neuen Versionen von `bambu_bridge.py`, `slicing_worker.py` und `haster_print_client.py` müssen auf dem Pi eingespielt werden.
 - Tests: `raspberry-pi/tests/test_pacing.py`, `tests/BambuKameraZuschauerTest.php`.
 
 ## [0.76.1] – 2026-11-02

@@ -186,6 +186,8 @@ class PrintJobRepository {
 			array( '%d', '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%d', '%s' )
 		);
 
+		\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'etikett', (string) $data['printer_id'] );
+
 		return (int) $wpdb->insert_id;
 	}
 
@@ -394,7 +396,7 @@ class PrintJobRepository {
 
 		$grenze = gmdate( 'Y-m-d H:i:s', time() - self::LOCK_TIMEOUT_MINUTES * 60 );
 
-		return (int) $wpdb->query(
+		$count = (int) $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, updated_at = %s" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				. " WHERE status IN ('claimed','printing') AND locked_at IS NOT NULL AND locked_at < %s",
@@ -402,6 +404,12 @@ class PrintJobRepository {
 				$grenze
 			)
 		);
+
+		if ( $count > 0 ) {
+			\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'etikett' );
+		}
+
+		return $count;
 	}
 
 	/**

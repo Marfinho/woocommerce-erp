@@ -157,6 +157,8 @@ class SlicingJobRepository {
 			array( '%d', '%d', '%s', '%d', '%s' )
 		);
 
+		\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'slicing' );
+
 		return (int) $wpdb->insert_id;
 	}
 
@@ -369,7 +371,7 @@ class SlicingJobRepository {
 
 		$grenze = gmdate( 'Y-m-d H:i:s', time() - self::LOCK_TIMEOUT_MINUTES * 60 );
 
-		return (int) $wpdb->query(
+		$count = (int) $wpdb->query(
 			$wpdb->prepare(
 				'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, started_at = NULL, updated_at = %s" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				. " WHERE status IN ('claimed','slicing') AND locked_at IS NOT NULL AND locked_at < %s",
@@ -377,6 +379,12 @@ class SlicingJobRepository {
 				$grenze
 			)
 		);
+
+		if ( $count > 0 ) {
+			\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'slicing' );
+		}
+
+		return $count;
 	}
 
 	/**

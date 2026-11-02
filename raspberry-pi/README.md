@@ -578,42 +578,11 @@ ausstieg), gilt seit 0.76.2 für alle drei:
   länger (1, 2, 4 … 30 s) und beachtet einen `Retry-After`-Header – bis
   0.76.1 fragte es gerade bei Überlast jede Sekunde nach.
 
-**Notbremse ohne Zugriff auf den Pi.** Laufen auf dem Pi noch ältere
-Versionen und der Webspace kippt, lässt sich die Last auf dem Webspace
-selbst drosseln: Dieser Block ganz oben in die `.htaccess` im
-WordPress-Hauptverzeichnis (vor `# BEGIN WordPress`) weist die meisten
-Abfragen ab, bevor PHP startet. Alle drei Programme warten auf `429` hin
-30 Sekunden. Neue Jobs werden dann nur in den Minuten :00, :05, :10 …
-abgeholt, laufende Jobs sind nicht betroffen, das Live-Bild ist aus.
-Sobald die aktuellen Versionen auf dem Pi laufen, den Block wieder
-entfernen.
-
-```apache
-# BEGIN lw16-drossel
-# Notbremse: bremst die Abfragen der Raspberry-Pi-Programme, bevor PHP startet.
-# Wieder entfernen, sobald die Pi-Programme seltener abfragen.
-<IfModule mod_rewrite.c>
-RewriteEngine On
-
-# 1) Kamerabilder der Bambu-Bridge ganz abweisen.
-RewriteCond %{REQUEST_URI} ^/wp-json/lw16-bambu/v1/snapshot [NC]
-RewriteRule ^ - [R=429,L]
-
-# 2) Druckerstatus nur in den Sekunden 00-09 und 30-39 jeder Minute
-#    (kommt alle 10 s, also mind. 2x pro Minute durch - bleibt "online").
-RewriteCond %{REQUEST_URI} ^/wp-json/lw16-bambu/v1/status [NC]
-RewriteCond %{TIME_SEC} !^[03][0-9]$
-RewriteRule ^ - [R=429,L]
-
-# 3) "Gibt es neue Jobs?"-Abfragen nur in den Minuten :00, :05, :10 ...
-#    Laufende Jobs (Annehmen, Fortschritt, Fertigmeldung) sind nicht betroffen.
-RewriteCond %{REQUEST_METHOD} =GET
-RewriteCond %{REQUEST_URI} ^/wp-json/(lw16-bambu|lw16-slicing|lw16-print-queue)/v1/jobs/?$ [NC]
-RewriteCond %{TIME_MIN} !^[0-5][05]$
-RewriteRule ^ - [R=429,L]
-</IfModule>
-# END lw16-drossel
-```
+**Keine `.htaccess`-Drossel.** Ein Versuch, die Abfragen per
+`mod_rewrite` (`R=429`, Zeitbedingungen) in der `.htaccess` abzuweisen,
+hat auf dem IONOS-Webspace die ganze Seite mit Fehler 500 lahmgelegt
+(November 2026). Die Entlastung gehört in die Pi-Programme (oben) und in
+die Türklingel (unten).
 
 Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
 zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-
@@ -627,6 +596,76 @@ LONG_POLL_ENABLED=true
 Ob Long Polling beim eigenen Hoster überhaupt funktioniert, zeigt sich
 im Log: Bricht `GET /jobs` regelmäßig mit einem Verbindungsfehler statt
 mit einem sauberen `204` ab, bleibt es bei `LONG_POLL_ENABLED=false`.
+
+### Türklingel über Home Assistant (statt ständig nachzufragen)
+
+Seit 0.76.3 können Bambu-Bridge, Slicing-Worker und Etikettendrucker-Client
+auf eine **Klingel** warten, statt WordPress laufend zu fragen: Kommt ein
+neuer Auftrag (oder öffnet jemand das Kamerabild), ruft WordPress einen
+Webhook von Home Assistant auf, Home Assistant gibt das per MQTT im
+Heimnetz an den Pi weiter, und der Pi holt sich den Auftrag sofort – wie
+bisher mit seinem Token. Die Klingel enthält keine Daten, nur den Kanal
+(`bambu`, `slicing`, `etikett`, `kamera`) und ggf. die Drucker-ID.
+
+Mit verbundener Klingel fragt jedes Programm nur noch alle
+`DOORBELL_FALLBACK` Sekunden (Standard 300) selbst nach, für den Fall,
+dass eine Klingel verloren geht. Ist Home Assistant oder der Broker weg,
+geht es automatisch zurück auf das normale Nachfragen (`IDLE_POLL_MAX`).
+
+**1. MQTT-Benutzer anlegen.** Das Mosquitto-Add-on meldet über die
+Benutzer von Home Assistant an: Einstellungen → Personen → Benutzer →
+neuer Benutzer, z. B. `lw16-pi` (nur lokal anmelden, kein Admin).
+
+**2. Automation in Home Assistant anlegen** (Einstellungen →
+Automationen → neu → ⋮ → In YAML bearbeiten). Die `webhook_id` ist ein
+Geheimnis – eine lange, zufällige Zeichenkette verwenden:
+
+```yaml
+alias: LW16 Türklingel
+description: WordPress meldet neue Aufträge an die Programme auf dem Raspberry Pi.
+triggers:
+  - trigger: webhook
+    webhook_id: lw16-HIER-EINE-LANGE-ZUFAELLIGE-ZEICHENKETTE
+    allowed_methods:
+      - POST
+    local_only: false   # wichtig: sonst kommt der Aufruf aus dem Internet nicht an
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.json is defined and trigger.json.channel in ['bambu', 'slicing', 'etikett', 'kamera'] }}
+actions:
+  - action: mqtt.publish
+    data:
+      topic: "lw16/klingel/{{ trigger.json.channel }}"
+      payload: "{{ trigger.json.printer | default('') }}"
+      qos: 1
+mode: queued
+max: 20
+```
+
+**3. Adresse über Nabu Casa holen.** Einstellungen → Home Assistant Cloud
+→ Webhooks: bei der Automation „LW16 Türklingel“ einschalten und die
+Adresse `https://hooks.nabu.casa/…` kopieren. (Geht auch:
+`https://<deine-adresse>.ui.nabu.casa/api/webhook/<webhook_id>`.)
+
+**4. In WordPress eintragen:** Betrieb → Bambu-Lab-Drucker → ganz unten
+„Türklingel über Home Assistant“ → Adresse einfügen → „Speichern und
+Testklingel“.
+
+**5. Auf dem Pi** in jede `.env` (`.env.bambu`, `.env.slicing`, `.env`):
+
+```env
+DOORBELL_MQTT_HOST=192.168.178.10   # IP von Home Assistant
+DOORBELL_MQTT_PORT=1883
+DOORBELL_MQTT_USER=lw16-pi
+DOORBELL_MQTT_PASSWORD=...
+```
+
+Slicing-Worker und Etikettendrucker-Client brauchen dafür `paho-mqtt`
+(steht jetzt in `requirements.txt` bzw. `requirements-slicing.txt`; die
+Bridge hat es ohnehin). Fehlt es, laufen sie wie bisher ohne Klingel.
+Danach die Dienste neu starten. Im Log steht dann „Türklingel verbunden“,
+bei der Testklingel „Klingel: bambu (test)“.
 
 ### Ist-Druckzeit im Druckjournal
 
