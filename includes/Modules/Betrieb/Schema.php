@@ -291,6 +291,7 @@ class Schema {
 			tare_g INT UNSIGNED NULL,
 			corr_g DECIMAL(10,1) NOT NULL DEFAULT 0,
 			status VARCHAR(12) NOT NULL DEFAULT 'neu',
+			is_active TINYINT(1) NOT NULL DEFAULT 0,
 			location VARCHAR(100) NULL,
 			opened_at DATETIME NULL,
 			emptied_at DATETIME NULL,

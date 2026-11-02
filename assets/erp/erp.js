@@ -1229,6 +1229,7 @@
 	function rollPanel(roll, reload) {
 		var info = h('div', { class: 'roll-info' },
 			h('span', { class: 'tag' + (roll.status === 'in_benutzung' ? ' now' : (roll.status === 'leer' ? ' later' : '')) }, ROLL_STATUS[roll.status] || roll.status),
+			roll.active ? h('span', { class: 'tag now' }, 'Aktiv') : null,
 			h('span', null, [roll.color_label, roll.material].filter(Boolean).join(' ')),
 			h('span', { class: 'muted' }, roll.code + (roll.location ? ' · ' + roll.location : '')));
 		var bar = h('div', { class: 'roll-bar', role: 'img', 'aria-label': roll.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, roll.percent)) + '%' }));
@@ -1259,7 +1260,8 @@
 			rollAction(roll, { aktion: 'wiegen', gross_g: g, tare_g: parseFloat(tare.value) || 0 }, reload);
 		} }, gross, h('label', { class: 'roll-tare' }, 'abzüglich leere Spule (g)', tare), h('button', { class: 'btn', type: 'submit' }, 'Wiegen'));
 
-		panel.appendChild(h('div', { class: 'roll-actions' }, empty, use));
+		var act = h('button', { class: 'btn', type: 'button', onclick: function (e) { e.target.disabled = true; rollAction(roll, { aktion: roll.active ? 'inaktiv' : 'aktiv' }, reload); } }, roll.active ? 'Nicht mehr aktiv' : 'Als aktiv setzen');
+		panel.appendChild(h('div', { class: 'roll-actions' }, empty, use, act));
 		panel.appendChild(weigh);
 		return panel;
 	}
@@ -2005,6 +2007,7 @@
 				h('b', null, r.code),
 				h('span', null, r.material),
 				h('span', { class: 'tag' + (r.status === 'in_benutzung' ? ' now' : '') }, ROLL_STATUS[r.status] || r.status),
+				r.active ? h('span', { class: 'tag now' }, 'Aktiv') : null,
 				h('span', { class: 'roll-bar small', role: 'img', 'aria-label': r.percent + ' % übrig' }, h('i', { style: 'width:' + Math.max(0, Math.min(100, r.percent)) + '%' })),
 				h('span', null, qty(r.remaining_g) + ' g'),
 				r.label_url ? h('button', { class: 'btn', type: 'button', onclick: function (e) {

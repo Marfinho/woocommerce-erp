@@ -201,6 +201,12 @@ class RestApi {
 			case 'einsetzen':
 				$r = FilamentRolls::start_use( $id, (string) $request->get_param( 'printer' ) );
 				break;
+			case 'aktiv':
+				$r = FilamentRolls::set_active( $id, true );
+				break;
+			case 'inaktiv':
+				$r = FilamentRolls::set_active( $id, false );
+				break;
 			case 'wiegen':
 				$tare = $request->get_param( 'tare_g' );
 				$r    = FilamentRolls::measure( $id, (float) $request->get_param( 'gross_g' ), null === $tare || '' === $tare ? null : (float) $tare );
