@@ -143,19 +143,7 @@ class Server {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		}
 
-		$tools    = new Tools( (array) $this->token );
-		$protocol = new Protocol(
-			$tools->all(),
-			$tools->prompts(),
-			array(
-				'name'    => 'lindenweg16-erp',
-				'title'   => 'Lindenweg16 ERP',
-				'version' => defined( 'LW16_VERSION' ) ? LW16_VERSION : '0',
-			),
-			self::instructions( ! empty( $this->token['write'] ) )
-		);
-
-		$answer = $protocol->handle_raw( $request->get_body() );
+		$answer = self::protocol( (array) $this->token )->handle_raw( $request->get_body() );
 
 		if ( null === $answer ) {
 			return new WP_REST_Response( null, 202 );
@@ -168,6 +156,27 @@ class Server {
 	}
 
 	/**
+	 * Protokoll mit den Werkzeugen dieses Schlüssels (auch für FastPath).
+	 *
+	 * @param array $token Schlüsseleintrag.
+	 * @return Protocol
+	 */
+	public static function protocol( array $token ) {
+		$tools = new Tools( $token );
+
+		return new Protocol(
+			$tools->all(),
+			$tools->prompts(),
+			array(
+				'name'    => 'lindenweg16-erp',
+				'title'   => 'Lindenweg16 ERP',
+				'version' => defined( 'LW16_VERSION' ) ? LW16_VERSION : '0',
+			),
+			self::instructions( ! empty( $token['write'] ) )
+		);
+	}
+
+	/**
 	 * Hinweise an das Modell beim Verbinden.
 	 *
 	 * @param bool $write Darf schreiben?
@@ -176,6 +185,7 @@ class Server {
 	public static function instructions( $write ) {
 		return "Zugang zum Shop lindenweg16.de (WooCommerce) und seinem ERP. Beginne mit „tagesueberblick“. "
 			. 'Für alles Weitere: „routen_auflisten“ zeigt die Schnittstellen (lw16/v1 = ERP, wc/v3 = WooCommerce), „rest_lesen“ ruft sie auf, „datenbank_tabellen“/„datenbank_abfrage“ lesen die Datenbank direkt. '
+			. 'Mails: /lw16/v1/erp/postfach (Postfächer), /lw16/v1/erp/postfach/liste?account=<id>&folder=INBOX, /lw16/v1/erp/postfach/mail/<id>. B2B-Kontakte und Wiedervorlagen: /lw16/v1/erp/kontakte. '
 			. ( $write
 				? 'Mit „rest_schreiben“ kannst du im echten Shop ändern – nur auf ausdrückliche Bitte des Menschen in diesem Gespräch. '
 				: 'Dieser Schlüssel darf nur lesen. ' )
