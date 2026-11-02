@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.2] – 2026-11-02
+
+### Behoben: Claude-Briefing bricht beim Verbinden ab (Timeout)
+- **Ursache:** Beim Verbinden schickt Claude nacheinander Begrüßung, Benachrichtigung und Werkzeugliste und gibt dafür zusammen 30 Sekunden. Über den normalen REST-Weg lud jede dieser Anfragen erst WooCommerce, das ganze ERP und das Theme. War der IONOS-Webspace gerade ausgelastet (gemessen: 5–8 s selbst für statische Dateien), reichte die Zeit nicht.
+- **Schnellweg (`Mcp\FastPath`):** Begrüßung, Ping, Werkzeug- und Vorlagenliste und Benachrichtigungen werden jetzt schon beim Laden der Plugin-Datei beantwortet, vor WooCommerce und vor dem Plugin-Start. Im Test etwa 20-mal weniger Rechenzeit (0,02 statt 0,38 s). Werkzeugaufrufe, falsche Schlüssel (401) und Drosselung (429) laufen unverändert über den normalen Weg.
+- Test: `tests/McpFastPathTest.php`.
+
 ## [0.78.1] – 2026-11-02
 
 ### Neu: Claude-Zugang im ERP

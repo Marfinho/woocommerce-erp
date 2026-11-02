@@ -143,19 +143,7 @@ class Server {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		}
 
-		$tools    = new Tools( (array) $this->token );
-		$protocol = new Protocol(
-			$tools->all(),
-			$tools->prompts(),
-			array(
-				'name'    => 'lindenweg16-erp',
-				'title'   => 'Lindenweg16 ERP',
-				'version' => defined( 'LW16_VERSION' ) ? LW16_VERSION : '0',
-			),
-			self::instructions( ! empty( $this->token['write'] ) )
-		);
-
-		$answer = $protocol->handle_raw( $request->get_body() );
+		$answer = self::protocol( (array) $this->token )->handle_raw( $request->get_body() );
 
 		if ( null === $answer ) {
 			return new WP_REST_Response( null, 202 );
@@ -165,6 +153,27 @@ class Server {
 		$response->header( 'Cache-Control', 'no-store' );
 
 		return $response;
+	}
+
+	/**
+	 * Protokoll mit den Werkzeugen dieses Schlüssels (auch für FastPath).
+	 *
+	 * @param array $token Schlüsseleintrag.
+	 * @return Protocol
+	 */
+	public static function protocol( array $token ) {
+		$tools = new Tools( $token );
+
+		return new Protocol(
+			$tools->all(),
+			$tools->prompts(),
+			array(
+				'name'    => 'lindenweg16-erp',
+				'title'   => 'Lindenweg16 ERP',
+				'version' => defined( 'LW16_VERSION' ) ? LW16_VERSION : '0',
+			),
+			self::instructions( ! empty( $token['write'] ) )
+		);
 	}
 
 	/**
