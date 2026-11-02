@@ -99,6 +99,7 @@ class Navigation {
 			'kurzlinks'        => array( 'verkauf', __( 'Marketing', 'lindenweg16' ) ),
 			'angebote'         => array( 'verkauf', __( 'Angebote', 'lindenweg16' ) ),
 			'reklamationen'    => array( 'verkauf', __( 'Kunden', 'lindenweg16' ) ),
+			'nachkauf'         => array( 'verkauf', __( 'Kunden', 'lindenweg16' ) ),
 
 			'lager'            => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
 			'lagerplaetze'     => array( 'lager', __( 'Bestand', 'lindenweg16' ) ),
@@ -115,6 +116,7 @@ class Navigation {
 			'arview'           => array( 'katalog', __( 'AR-Ansicht', 'lindenweg16' ) ),
 
 			'finanz-dashboard' => array( 'zahlen', __( 'Übersicht', 'lindenweg16' ) ),
+			'rueckblick'       => array( 'zahlen', __( 'Übersicht', 'lindenweg16' ) ),
 			'berichte'         => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
 			'prognose'         => array( 'zahlen', __( 'Prognose', 'lindenweg16' ) ),
 			'reporting'        => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
@@ -122,6 +124,7 @@ class Navigation {
 			'bank'             => array( 'zahlen', __( 'Bank & Posten', 'lindenweg16' ) ),
 			'mahnwesen'        => array( 'zahlen', __( 'Bank & Posten', 'lindenweg16' ) ),
 			'liquiditaet'      => array( 'zahlen', __( 'Prognose', 'lindenweg16' ) ),
+			'stundenlohn'      => array( 'zahlen', __( 'Berichte', 'lindenweg16' ) ),
 			'steuer'           => array( 'zahlen', __( 'Steuer', 'lindenweg16' ) ),
 
 			'mailbox'          => array( 'mail', __( 'Mailbox', 'lindenweg16' ) ),
@@ -228,6 +231,7 @@ class Navigation {
 			self::item( 'kurzlinks', 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), 'verkauf.kurzlinks', '', 'native', '', 'lw16-kurzlinks' ),
 			self::item( 'angebote', 'verkauf', __( 'Angebote', 'lindenweg16' ), 'verkauf.angebote', '', 'native' ),
 			self::item( 'reklamationen', 'verkauf', __( 'Reklamationen', 'lindenweg16' ), 'verkauf.reklamationen', '', 'native' ),
+			self::item( 'nachkauf', 'verkauf', __( 'Nachkauf', 'lindenweg16' ), 'verkauf.nachkauf', '', 'native' ),
 
 			self::item( 'workflow', 'fertigung', __( 'Workflow', 'lindenweg16' ), 'fertigung.workflow', '', 'native' ),
 			self::item( 'druckfarm', 'fertigung', __( 'Druckfarm', 'lindenweg16' ), 'fertigung.druckfarm', '', 'native', '', 'lw16-betrieb-druckfarm' ),
@@ -261,6 +265,8 @@ class Navigation {
 			self::item( 'mahnwesen', 'finanzen', __( 'Offene Posten', 'lindenweg16' ), 'finanzen.mahnwesen', '', 'native' ),
 			self::item( 'steuer', 'finanzen', __( 'Steuer & DATEV', 'lindenweg16' ), 'finanzen.steuer', '', 'native' ),
 			self::item( 'liquiditaet', 'finanzen', __( 'Liquidität', 'lindenweg16' ), 'finanzen.liquiditaet', '', 'native' ),
+			self::item( 'stundenlohn', 'finanzen', __( 'Stundenlohn', 'lindenweg16' ), 'finanzen.stundenlohn', '', 'native' ),
+			self::item( 'rueckblick', 'finanzen', __( 'Wochenrückblick', 'lindenweg16' ), 'finanzen.rueckblick', '', 'native' ),
 
 			self::item( 'zeit', 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), 'verwaltung.zeit', '', 'native', '', 'lw16-betrieb-zeit' ),
 			self::item( 'abwesenheit', 'verwaltung', __( 'Urlaub & Abwesenheit', 'lindenweg16' ), 'verwaltung.abwesenheit', '', 'native' ),

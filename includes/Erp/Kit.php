@@ -215,6 +215,10 @@ class Kit {
 				'shop_einrechnen' => 1,
 				'puffer'          => 1000.0,
 			),
+			'rueckblick' => array(
+				'aktiv'           => 1,
+				'stunde'          => 16,
+			),
 			'nacht' => array(
 				'feierabend'      => '20:00',
 				'aufstehen'       => '07:00',

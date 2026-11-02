@@ -44,5 +44,6 @@ class Jobs {
 		}
 		// Läuft stündlich: passender Moment für den Nachtschicht-Push.
 		Pages\Nachtschicht::maybe_push();
+		Pages\Rueckblick::maybe_send();
 	}
 }

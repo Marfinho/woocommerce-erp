@@ -209,6 +209,7 @@ class Liquiditaet {
 				/* translators: 1: Nummer, 2: Firma. */
 				'label'  => sprintf( __( 'Rechnung %1$s · %2$s', 'lindenweg16' ), (int) $o['wc_order_id'] ? '#' . (int) $o['wc_order_id'] : 'A-' . (int) $o['id'], $contact ? $contact['company'] : '' ),
 				'kind'   => $due < $today ? 'ueberfaellig' : 'rechnung',
+				'who'    => $contact ? (string) $contact['company'] : '',
 			);
 		}
 
