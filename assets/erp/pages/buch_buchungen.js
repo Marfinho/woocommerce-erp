@@ -496,14 +496,62 @@
 				var v = r.vorschau;
 				if (!v) { return null; }
 				return h('div', { class: 'bb-preview' },
-					h('b', null, 'Das würde gebucht'),
-					h('span', null, 'Beleg über ' + B.eur(v.betrag) + ' („' + r.bezeichnung + '“, ' + r.kategorie + ') mit Datum ' + day(v.beleg_datum) + ', sofort festgeschrieben und im Journal gebucht.'),
+					h('b', null, r.auf_rechnung ? 'Das passiert' : 'Das würde gebucht'),
+					r.auf_rechnung
+						? h('span', null, 'Noch kein Beleg: Der Termin („' + r.bezeichnung + '“, erwartet ' + B.eur(v.betrag) + ') wartet auf die Rechnung und steht auf der Startseite. Gebucht wird erst, wenn du die Rechnung hochlädst – mit ihrem echten Betrag und Datum.')
+						: h('span', null, 'Beleg über ' + B.eur(v.betrag) + ' („' + r.bezeichnung + '“, ' + r.kategorie + ') mit Datum ' + day(v.beleg_datum) + ', sofort festgeschrieben und im Journal gebucht.'),
 					h('span', null, 'Danach ist die nächste Buchung am ' + day(v.naechste) + (v.endet ? ' – das liegt nach dem Ende, die Dauerbuchung wird dann abgeschaltet.' : '.')),
 					v.rueckstand > 0 ? h('span', { class: 'bb-err' }, 'Es sind noch ' + v.rueckstand + ' weitere Termine offen. Pro Lauf wird nur einer gebucht, der Rest folgt im nächsten Lauf.') : null);
 			}
 
+			// Rechnung zu einem wartenden Termin erfassen: die normale Beleg-Erfassung, vorbelegt.
+			function capture(w, mode) {
+				if (typeof UI.belegCapture !== 'function') { B.ui.toast('Die Beleg-Erfassung ist nicht geladen. Bitte die Seite neu laden.', true); return; }
+				UI.belegCapture({
+					mode: mode,
+					title: 'Rechnung: ' + w.bezeichnung,
+					prefill: { betrag: w.betrag, haendler: w.bezeichnung, konto: w.konto, notiz: 'Rechnung zur Dauerbuchung „' + w.bezeichnung + '“, fällig ' + day(w.faellig_am) },
+					extra: { dauer_offen_id: w.id },
+					onSaved: function () { load(); }
+				});
+			}
+
+			function skip(w) {
+				B.sheet('Termin entfällt', function (body, close) {
+					var why = h('textarea', { class: 'field', maxlength: '200', placeholder: 'z. B. Abo im Oktober pausiert, Rechnung kam als Jahresrechnung', 'aria-label': 'Grund' });
+					var err = h('div', { class: 'bb-err', role: 'alert' });
+					var go = h('button', { class: 'btn primary', type: 'button' }, 'Ja, entfällt');
+					go.addEventListener('click', function () {
+						B.send(go, err, function () { return B.post('dauer/termin/verwerfen', { id: w.id, grund: why.value }); }).then(function (r) {
+							if (r) { B.ui.toast(r.message); close(); load(); }
+						});
+					});
+					body.appendChild(h('div', { class: 'bb-form' },
+						h('p', { style: 'margin:0' }, '„' + w.bezeichnung + '“, fällig ' + day(w.faellig_am) + ': Es kommt keine Rechnung, es wird nichts gebucht.'),
+						B.lab('Grund (Pflicht, steht im Protokoll)', why), err, go));
+					why.focus();
+				});
+			}
+
+			function waiting(list) {
+				var card = h('div', { class: 'card', style: 'margin-bottom:12px' },
+					h('h3', { style: 'margin:0 0 4px;font-size:17px' }, 'Wartet auf Rechnung'),
+					h('p', { class: 'muted', style: 'margin:0 0 10px;font-size:13px' }, 'Diese Termine sind fällig. Der Beleg entsteht erst mit der hochgeladenen Rechnung – Betrag und Datum stellst du dabei auf die Rechnung ein.'));
+				list.forEach(function (w) {
+					card.appendChild(h('div', { class: 'bb-preview', style: 'margin-top:8px' },
+						h('b', null, w.bezeichnung),
+						h('span', null, 'fällig ' + day(w.faellig_am) + ' · erwartet ' + B.eur(w.betrag) + ' · ' + w.kategorie),
+						B.canWrite ? h('div', { class: 'bb-actions' },
+							h('button', { class: 'btn primary', type: 'button', onclick: function () { capture(w, 'upload'); } }, 'Rechnung hochladen'),
+							h('button', { class: 'btn', type: 'button', onclick: function () { capture(w, 'camera'); } }, 'Fotografieren'),
+							h('button', { class: 'btn', type: 'button', onclick: function () { skip(w); } }, 'Entfällt')) : null));
+				});
+				return card;
+			}
+
 			function paint(d) {
 				box.textContent = '';
+				if (d.wartend && d.wartend.length) { box.appendChild(waiting(d.wartend)); }
 				if (d.faellig > 0) {
 					var runAll = h('button', { class: 'btn primary', type: 'button', onclick: function () { runSheet(); } }, 'Fällige prüfen und ausführen');
 					box.appendChild(h('div', { class: 'notice warn', style: 'margin-bottom:12px' },
@@ -513,7 +561,7 @@
 				else {
 					var ul = h('ul', { class: 'bb-list' });
 					d.rows.forEach(function (r) {
-						ul.appendChild(B.item(r.bezeichnung, r.intervall_text + (r.aktiv ? ' · nächste ' + day(r.naechste) : ' · deaktiviert') + (r.faellig ? ' · FÄLLIG' : ''),
+						ul.appendChild(B.item(r.bezeichnung, r.intervall_text + (r.auf_rechnung ? ' · mit Rechnung' : '') + (r.aktiv ? ' · nächste ' + day(r.naechste) : ' · deaktiviert') + (r.faellig ? ' · FÄLLIG' : ''),
 							B.eur(r.betrag), r.kategorie, !r.aktiv, function () { detail(r); }));
 					});
 					box.appendChild(ul);
@@ -530,7 +578,7 @@
 			function runSheet() {
 				var due = data.rows.filter(function (r) { return r.faellig; });
 				B.sheet('Fällige Dauerbuchungen', function (body, close) {
-					body.appendChild(h('p', { class: 'muted', style: 'margin:0' }, 'Bitte prüfen: Das wird jetzt gebucht und lässt sich nur per Storno rückgängig machen.'));
+					body.appendChild(h('p', { class: 'muted', style: 'margin:0' }, 'Bitte prüfen: Das wird jetzt gebucht und lässt sich nur per Storno rückgängig machen. Dauerbuchungen „mit Rechnung“ buchen noch nichts, sie warten danach auf ihre Rechnung.'));
 					due.forEach(function (r) { body.appendChild(preview(r)); });
 					var err = h('div', { class: 'bb-err', role: 'alert' });
 					var go = h('button', { class: 'btn primary', type: 'button', style: 'min-height:56px;font-size:16px' }, due.length + ' Buchung(en) jetzt ausführen');
@@ -554,6 +602,7 @@
 						h('dt', null, 'Ende'), h('dd', null, r.ende ? day(r.ende) : 'unbefristet'),
 						h('dt', null, 'Nächste'), h('dd', null, r.aktiv ? day(r.naechste) : '–'),
 						h('dt', null, 'Zuletzt'), h('dd', null, r.letzte ? day(r.letzte) : 'noch nie'),
+						h('dt', null, 'Beleg'), h('dd', null, r.auf_rechnung ? 'erst mit der hochgeladenen Rechnung' : 'automatisch, sofort festgeschrieben'),
 						h('dt', null, 'Status'), h('dd', null, r.aktiv ? 'aktiv' : 'deaktiviert')));
 					if (!B.canWrite || !r.aktiv) { return; }
 					var pv = preview(r);
@@ -613,11 +662,13 @@
 					var start = h('input', { class: 'field', type: 'date', value: r ? r.start : today(), 'aria-label': 'Start' });
 					if (r) { start.disabled = true; }
 					var ende = h('input', { class: 'field', type: 'date', value: r ? r.ende : '', 'aria-label': 'Ende' });
+					var warten = h('input', { type: 'checkbox' });
+					warten.checked = !!(r && r.auf_rechnung);
 					var err = h('div', { class: 'bb-err', role: 'alert' });
 					var go = h('button', { class: 'btn primary', type: 'button', style: 'min-height:56px;font-size:16px' }, r ? 'Änderung speichern' : 'Dauerbuchung anlegen');
 					go.addEventListener('click', function () {
 						B.send(go, err, function () {
-							return B.post('dauer/speichern', { id: r ? r.id : 0, bezeichnung: name.value, betrag: betrag.value, kategorie: kat.value, intervall: intv.value, start_datum: start.value, ende_datum: ende.value });
+							return B.post('dauer/speichern', { id: r ? r.id : 0, bezeichnung: name.value, betrag: betrag.value, kategorie: kat.value, intervall: intv.value, start_datum: start.value, ende_datum: ende.value, auf_rechnung: warten.checked ? 1 : 0 });
 						}).then(function (res) { if (res) { B.ui.toast(res.message); close(); load(); } });
 					});
 					body.appendChild(h('div', { class: 'bb-form' },
@@ -626,6 +677,9 @@
 						B.lab('Kostenart', kat),
 						B.lab('Wie oft?', intv),
 						h('div', { class: 'bb-two' }, B.lab(r ? 'Start (fest)' : 'Erste Buchung', start), B.lab('Ende (leer = unbefristet)', ende)),
+						h('label', { style: 'display:flex;gap:10px;align-items:flex-start' }, warten,
+							h('span', null, h('b', null, 'Auf Rechnung warten'), h('br'),
+								h('span', { class: 'muted', style: 'font-size:13px' }, 'Für Abos und Verträge mit monatlicher Rechnung: Zum Termin wird noch nichts gebucht. Auf der Startseite erscheint „Rechnung hochladen“; der Beleg entsteht mit der Rechnung als Datei und ihrem echten Betrag.'))),
 						r ? h('p', { class: 'muted', style: 'font-size:13px;margin:0' }, 'Eine Änderung gilt nur für künftige Buchungen. Schon gebuchte Belege bleiben unverändert; die Änderung steht im Protokoll.') : null,
 						err, go));
 					name.focus();

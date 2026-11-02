@@ -300,7 +300,7 @@ class ErpBuchBuchungenTest extends TestCase {
 		$this->assertStringContainsString( "\$buch = \$api->needs( array( 'finanzen.buchhaltung' ) )", $src );
 
 		preg_match_all( "/self::route\( \\\$ns, '([^']+)', '(GET|POST)', '(\w+)', (\\\$\w+) \)/", $src, $m, PREG_SET_ORDER );
-		$this->assertCount( 14, $m );
+		$this->assertCount( 15, $m );
 		foreach ( $m as $r ) {
 			$this->assertSame( '$buch', $r[4], $r[1] . ' muss am Buchhaltungsrecht hängen.' );
 			$this->assertStringStartsWith( '/erp/buch/', $r[1] );
@@ -311,12 +311,38 @@ class ErpBuchBuchungenTest extends TestCase {
 	public function test_schreibende_routen_sind_post() {
 		$src = $this->src( 'includes/Erp/Pages/BuchBuchungen.php' );
 
-		foreach ( array( 'rechnungen/storno', 'kasse/eintrag', 'kasse/storno', 'dauer/speichern', 'dauer/deaktivieren', 'dauer/ausfuehren' ) as $route ) {
+		foreach ( array( 'rechnungen/storno', 'kasse/eintrag', 'kasse/storno', 'dauer/speichern', 'dauer/deaktivieren', 'dauer/ausfuehren', 'dauer/termin/verwerfen' ) as $route ) {
 			$this->assertMatchesRegularExpression( "#'/erp/buch/" . preg_quote( $route, '#' ) . "', 'POST'#", $src, $route );
 		}
 		foreach ( array( 'rechnungen', 'rechnungen/fehlend', 'kasse', 'kasse/tagesabschluss', 'journal', 'journal/export', 'dauer' ) as $route ) {
 			$this->assertMatchesRegularExpression( "#'/erp/buch/" . preg_quote( $route, '#' ) . "', 'GET'#", $src, $route );
 		}
+	}
+
+	public function test_dauer_schalter() {
+		foreach ( array( 1, '1', 'true', 'on', 'ja', true ) as $ja ) {
+			$this->assertSame( 1, BuchBuchungen::dauer_flag( $ja ), var_export( $ja, true ) );
+		}
+		foreach ( array( 0, '0', '', null, 'nein', false, 'false' ) as $nein ) {
+			$this->assertSame( 0, BuchBuchungen::dauer_flag( $nein ), var_export( $nein, true ) );
+		}
+	}
+
+	public function test_auf_rechnung_warten_bucht_erst_mit_der_rechnung() {
+		$repo = $this->src( 'includes/Modules/Accounting/DauerbuchungRepository.php' );
+		$src  = $this->src( 'includes/Erp/Pages/BuchBuchungen.php' );
+
+		// Lauf und „Jetzt buchen“ gehen durch dieselbe Ausführung.
+		$this->assertStringContainsString( 'self::ausfuehren( $db, $today )', $repo );
+		$this->assertStringContainsString( 'DauerbuchungRepository::ausfuehren( $db, $heute )', $src );
+		$this->assertStringNotContainsString( 'BelegRepository::create(', $src, 'Kein eigener Belegweg mehr neben dem Repository.' );
+
+		// Mit dem Schalter entsteht ein wartender Termin statt des Belegs.
+		$this->assertMatchesRegularExpression( '/if \( ! empty\( \$db->auf_rechnung \) \) \{\s+\$id = self::termin_anlegen\(/', $repo );
+
+		// Erledigen und Verwerfen nur aus „wartet“ – nie doppelt.
+		$this->assertSame( 2, substr_count( $repo, "array( 'id' => (int) \$id, 'status' => 'wartet' )" ) );
+		$this->assertDoesNotMatchRegularExpression( '/\$wpdb->delete|DELETE\s+FROM/i', $repo );
 	}
 
 	public function test_nie_loeschen() {

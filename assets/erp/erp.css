@@ -701,6 +701,7 @@ dialog.palette::backdrop { background: rgb(0 0 0 / 40%); }
 .task.t-lieferung { border-left-color: var(--a-lager); }
 .task.t-rechnung { border-left-color: var(--error); }
 .task.t-nachfassen { border-left-color: var(--a-verkauf); }
+.task.t-dauerbeleg { border-left-color: var(--a-finanzen); }
 
 /* Einzelrechte: eingeklappt, bis man sie braucht */
 details.adv { margin-top: 14px; }

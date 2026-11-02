@@ -111,8 +111,12 @@ class Installer {
 	 *
 	 * DB_VERSION 50: kampagnen um event_ende (optionales letztes Veranstaltungsdatum
 	 * bei mehrtägigen Events) erweitert.
+	 *
+	 * DB_VERSION 51: dauerbuchungen um auf_rechnung (Beleg erst mit der echten
+	 * Rechnung) und neue Tabelle dauerbuchung_offen (fällige Termine, die auf
+	 * ihre Rechnung warten), siehe DauerbuchungRepository.
 	 */
-	const DB_VERSION = '50';
+	const DB_VERSION = '51';
 
 	/**
 	 * Aktivierungsroutine.
@@ -756,11 +760,33 @@ class Installer {
 			naechste_ausfuehrung DATE NOT NULL,
 			letzte_ausfuehrung DATE NULL,
 			aktiv TINYINT(1) NOT NULL DEFAULT 1,
+			auf_rechnung TINYINT(1) NOT NULL DEFAULT 0,
 			erstellt_am DATETIME NOT NULL,
 			erstellt_von BIGINT UNSIGNED NULL,
 			PRIMARY KEY  (id),
 			KEY aktiv (aktiv),
 			KEY naechste_ausfuehrung (naechste_ausfuehrung)
+		) {$charset_collate};";
+
+		// Fällige Termine von Dauerbuchungen „auf Rechnung warten“: Der Beleg
+		// entsteht erst, wenn die echte Rechnung hochgeladen wird (Datei und
+		// Betrag gehören in die Hash-Kette und lassen sich nicht nachreichen).
+		$tables[] = "CREATE TABLE {$p}dauerbuchung_offen (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			dauerbuchung_id BIGINT UNSIGNED NOT NULL,
+			faellig_am DATE NOT NULL,
+			bezeichnung VARCHAR(255) NOT NULL DEFAULT '',
+			betrag DECIMAL(12,2) NOT NULL DEFAULT 0,
+			kategorie VARCHAR(100) NOT NULL DEFAULT '',
+			status VARCHAR(20) NOT NULL DEFAULT 'wartet',
+			beleg_id BIGINT UNSIGNED NULL,
+			grund VARCHAR(255) NOT NULL DEFAULT '',
+			erstellt_am DATETIME NOT NULL,
+			erledigt_am DATETIME NULL,
+			erledigt_von BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY termin (dauerbuchung_id, faellig_am),
+			KEY status (status)
 		) {$charset_collate};";
 
 		// --- Modul 1: Anlagenverzeichnis (AfA) --------------------------
