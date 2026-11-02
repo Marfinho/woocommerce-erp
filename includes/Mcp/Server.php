@@ -185,6 +185,7 @@ class Server {
 	public static function instructions( $write ) {
 		return "Zugang zum Shop lindenweg16.de (WooCommerce) und seinem ERP. Beginne mit „tagesueberblick“. "
 			. 'Für alles Weitere: „routen_auflisten“ zeigt die Schnittstellen (lw16/v1 = ERP, wc/v3 = WooCommerce), „rest_lesen“ ruft sie auf, „datenbank_tabellen“/„datenbank_abfrage“ lesen die Datenbank direkt. '
+			. 'Mails: /lw16/v1/erp/postfach (Postfächer), /lw16/v1/erp/postfach/liste?account=<id>&folder=INBOX, /lw16/v1/erp/postfach/mail/<id>. B2B-Kontakte und Wiedervorlagen: /lw16/v1/erp/kontakte. '
 			. ( $write
 				? 'Mit „rest_schreiben“ kannst du im echten Shop ändern – nur auf ausdrückliche Bitte des Menschen in diesem Gespräch. '
 				: 'Dieser Schlüssel darf nur lesen. ' )

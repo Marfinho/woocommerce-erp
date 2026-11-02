@@ -15,7 +15,7 @@ Shop und ERP lesen und dir jeden Morgen einen Lagebericht mit Handlungsanweisung
 
 | Werkzeug | Was es tut |
 |---|---|
-| `tagesueberblick` | Aufgaben aus „Heute“, alle Punkte der täglichen Übersichtsmail (Mahnungen, Angebote, Urlaub, Lieferanten, Reklamationen, Bank, Nachkauf, Liquidität), Kennzahlen der Startseite, Bestellungen je Status, Umsatz (heute, gestern, 7/30 Tage, Vorwoche, Monat) jeweils mit Vorjahr |
+| `tagesueberblick` | Aufgaben aus „Heute“, alle Punkte der täglichen Übersichtsmail (Mahnungen, Angebote, Urlaub, Lieferanten, Reklamationen, Bank, Nachkauf, Liquidität), Kennzahlen der Startseite, Bestellungen je Status, Umsatz (heute, gestern, 7/30 Tage, Vorwoche, Monat) jeweils mit Vorjahr, Druckerwartung je Drucker, Nachbestellvorschläge, Filament je Farbe, B2B-Wiedervorlagen, Mails aller Postfächer |
 | `bestellungen` | WooCommerce-Bestellungen kompakt, Filter nach Status, Zeitraum, Suche |
 | `routen_auflisten` | Alle REST-Routen mit Methoden und Parametern: `lw16/v1` (ERP), `wc/v3`, `wc-analytics`, `wp/v2` |
 | `rest_lesen` | Ruft jede dieser Routen lesend auf (GET) |

@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.3] – 2026-11-02
+
+### Claude-Zugang: Tagesüberblick zeigt Wartung, Nachbestellen, Material, B2B und Mails
+- **Druckerwartung:** je Drucker, was fällig ist und warum (Düsentausch, wöchentliche/monatliche/jährliche Wartung). Bisher stand dort nur „1 Drucker braucht Wartung“.
+- **Nachbestellen:** alle Vorschläge aus Lager → Einkauf (Kleinteile, Komponenten, Filament) mit Bestand, Reichweite, Meldegrenze, Bestellmenge und Bestelllink, dazu was schon bestellt und unterwegs ist.
+- **Material:** Filament je Farbe mit Bestand, Verbrauch, Reichweite, Ampel, „trocknen“ und den einzelnen Rollen.
+- **B2B-Wiedervorlagen:** fällige und in den nächsten 7 Tagen anstehende, mit Firma, Ansprechpartner, Status, Mail und Telefon.
+- **Mails:** je Postfach alle Mails der letzten 3 Tage mit „gelesen“/„beantwortet“, dazu ältere ungelesene. Ganze Mails liest Claude über `/lw16/v1/erp/postfach/mail/<id>`, die Hinweise dazu stehen jetzt beim Verbinden.
+- Der Auftragstext für den Morgenbericht hat dafür eigene Abschnitte („Nachbestellen & Material“, „Drucker & Wartung“, „B2B“, „Mails“).
+
 ## [0.78.2] – 2026-11-02
 
 ### Behoben: Claude-Briefing bricht beim Verbinden ab (Timeout)
