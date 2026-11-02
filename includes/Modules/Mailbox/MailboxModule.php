@@ -31,6 +31,11 @@ class MailboxModule {
 	const PAGE = 'lw16-mailbox';
 
 	/**
+	 * Slug der Postfach-Verwaltung (= AccountsPage::PAGE, hier ohne die Klasse zu laden).
+	 */
+	const ACCOUNTS_PAGE = 'lw16-mailbox-konten';
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
@@ -58,7 +63,11 @@ class MailboxModule {
 		add_action( 'wp_ajax_lw16_mail_sync', array( $this, 'ajax_sync' ) );
 		add_action( 'wp_ajax_lw16_mail_preview', array( $this, 'ajax_preview' ) );
 
-		( new AccountsPage() )->register();
+		// Die Postfach-Verwaltung hat nur Formular- und AJAX-Handler; ihre Seite
+		// läuft über den Menü-Rückruf unten. Sonst bleibt die Klasse ungeladen.
+		if ( \Lindenweg16\Core\Lazy::is_handler_request() ) {
+			( new AccountsPage() )->register();
+		}
 		( new OrderMailsBox() )->register();
 	}
 
@@ -97,8 +106,8 @@ class MailboxModule {
 				__( 'Postfächer', 'lindenweg16' ),
 				__( 'Postfächer', 'lindenweg16' ),
 				MailboxAccess::menu_cap(),
-				AccountsPage::PAGE,
-				array( new AccountsPage(), 'render_page' )
+				self::ACCOUNTS_PAGE,
+				\Lindenweg16\Core\Lazy::method( AccountsPage::class, 'render_page' )
 			);
 		}
 	}

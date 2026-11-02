@@ -25,7 +25,9 @@ class EventsModule {
 		( new EventsWidget() )->register();
 		( new EventsBlock() )->register();
 
-		if ( is_admin() ) {
+		// Metaboxen und Spalten gibt es nur im Beitragseditor und in der
+		// Liste – sonst bleibt die Klasse ungeladen.
+		if ( is_admin() && ( \Lindenweg16\Core\Lazy::is_handler_request() || in_array( \Lindenweg16\Core\Lazy::pagenow(), array( 'post.php', 'post-new.php', 'edit.php' ), true ) ) ) {
 			( new EventAdmin() )->register();
 		}
 

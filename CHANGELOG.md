@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.76.1] – 2026-11-02
+
+### Schneller: Plugin lädt nur noch, was der Aufruf braucht
+- Bisher wurde bei **jedem** Seitenaufruf jede Admin-Seitenklasse und jede REST-Klasse geladen, nur um ihre Hooks anzumelden – rund 1,9 MB PHP-Code auf jeder wp-admin-Seite. Auf kleinem Webspace kostet das spürbar Speicher und Zeit und kann bei knappem `memory_limit` zu Fehler 500 führen.
+- Neuer Helfer `Core\Lazy`: Die 17 Betrieb-Seiten (Artikel, Lager, Lagerplätze, Drucker, Bambu, Versand …), die Konfigurator-Verwaltung, die Postfach-Verwaltung und der Event-Editor werden nur noch geladen, wenn ihre Seite offen ist oder ein Formular/AJAX-Aufruf (`admin-post.php`, `admin-ajax.php`) kommt. Die sechs REST-Klassen laden erst bei einem echten API-Aufruf (`rest_api_init`).
+- Das stillgelegte alte Lager-Modul wird gar nicht mehr geladen; die wp-admin-Schalter des Workflows („ausblenden“/„sperren“) lesen die Einstellung direkt, ohne die große Workflow-Klasse.
+- Ergebnis auf der wp-admin-Startseite: etwa **40 % weniger** geladener Plugin-Code (1,85 → 1,1 MB) und ein Drittel weniger Speicher. Verhalten unverändert; neuer Test `CoreLazyTest` prüft, dass jede Seite ihrer Klasse zugeordnet bleibt.
+
 ## [0.76.0] – 2026-11-02
 
 ### Neu: Mehrtägige Events (Marketing)

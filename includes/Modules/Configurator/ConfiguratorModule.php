@@ -33,7 +33,7 @@ class ConfiguratorModule {
 		( new Frontend() )->register();
 		( new CartIntegration() )->register();
 
-		if ( is_admin() ) {
+		if ( is_admin() && \Lindenweg16\Core\Lazy::page_needed( array( self::PAGE_SLUG ) ) ) {
 			( new ConfiguratorPage() )->register();
 		}
 	}
