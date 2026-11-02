@@ -65,7 +65,7 @@ class Shell {
 			add_action( 'admin_post_lw16_erp_payslip_csv', array( PayslipPdf::class, 'serve_csv' ) );
 		}
 
-		( new RestApi() )->register();
+		\Lindenweg16\Core\Lazy::rest( RestApi::class );
 	}
 
 	/**
@@ -136,7 +136,7 @@ class Shell {
 
 		// Ist das wp-admin gesperrt, brauchen Mitarbeiter die Leiste mit ihren
 		// wp-admin-Links nicht; sie arbeiten im ERP.
-		if ( Workflow::settings()['lock_wpadmin'] && ! current_user_can( 'manage_options' ) ) {
+		if ( self::wpadmin_flag( 'lock_wpadmin' ) && ! current_user_can( 'manage_options' ) ) {
 			return false;
 		}
 
@@ -428,6 +428,20 @@ class Shell {
 	}
 
 	/**
+	 * Ein Ja/Nein-Schalter aus den Workflow-Einstellungen (hide_wpadmin,
+	 * lock_wpadmin), ohne die große Workflow-Klasse zu laden – das passiert
+	 * sonst auf jeder wp-admin-Seite. Gleiche Auslegung wie
+	 * Workflow::sanitize_settings(): gesetzt und nicht leer = an.
+	 *
+	 * @param string $key Schlüssel.
+	 * @return bool
+	 */
+	public static function wpadmin_flag( $key ) {
+		$saved = get_option( 'lw16_erp_workflow', array() );
+		return is_array( $saved ) && ! empty( $saved[ $key ] );
+	}
+
+	/**
 	 * Im Rahmen das wp-admin-Gerüst ausblenden.
 	 */
 	public function embed_styles() {
@@ -453,7 +467,7 @@ class Shell {
 	 * sie weiterhin –, es verschwindet nur der Menüeintrag.
 	 */
 	public function maybe_hide_menus() {
-		if ( ! Workflow::settings()['hide_wpadmin'] ) {
+		if ( ! self::wpadmin_flag( 'hide_wpadmin' ) ) {
 			return;
 		}
 
@@ -535,7 +549,7 @@ class Shell {
 			return $to;
 		}
 
-		if ( self::wants_erp_landing( (bool) ( Workflow::settings()['hide_wpadmin'] || Workflow::settings()['lock_wpadmin'] ), Access::has_any( $user->ID ), user_can( $user, 'manage_options' ) ) ) {
+		if ( self::wants_erp_landing( (bool) ( self::wpadmin_flag( 'hide_wpadmin' ) || self::wpadmin_flag( 'lock_wpadmin' ) ), Access::has_any( $user->ID ), user_can( $user, 'manage_options' ) ) ) {
 			return self::url();
 		}
 
@@ -586,7 +600,7 @@ class Shell {
 	public function lock_wpadmin() {
 		global $pagenow;
 
-		if ( ! is_user_logged_in() || ! Workflow::settings()['lock_wpadmin'] ) {
+		if ( ! is_user_logged_in() || ! self::wpadmin_flag( 'lock_wpadmin' ) ) {
 			return;
 		}
 
@@ -624,7 +638,7 @@ class Shell {
 			return;
 		}
 
-		if ( self::wants_erp_landing( (bool) Workflow::settings()['hide_wpadmin'], Access::has_any(), current_user_can( 'manage_options' ) ) ) {
+		if ( self::wants_erp_landing( (bool) self::wpadmin_flag( 'hide_wpadmin' ), Access::has_any(), current_user_can( 'manage_options' ) ) ) {
 			wp_safe_redirect( self::url() );
 			exit;
 		}

@@ -31,7 +31,7 @@ class ArViewModule {
 	 */
 	public function register() {
 		( new UploadTypes() )->register();
-		( new RestApi() )->register();
+		\Lindenweg16\Core\Lazy::rest( RestApi::class, 'routes' );
 		( new Banner() )->register();
 		( new Viewer() )->register();
 

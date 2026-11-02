@@ -109,31 +109,34 @@ class Plugin {
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.
-		$this->modules = array(
-			'inventory'  => new InventoryModule(),
-			'accounting' => new AccountingModule(),
-			'loyalty'    => new LoyaltyModule(),
-			'production' => new ProductionModule(),
-			'retention'  => new RetentionModule(),
-			'support'    => new SupportModule(),
-			'pos'        => new POSModule(),
-			'marketing'  => new MarketingModule(),
-			'events'     => new EventsModule(),
-			'betrieb'    => new BetriebModule(),
-			'konfigurator' => new ConfiguratorModule(),
-			'arview'     => new ArViewModule(),
-			'mailbox'    => new MailboxModule(),
-			'gutschein'  => new GutscheinModule(),
-			'kurzlinks'  => new KurzlinksModule(),
+		// Erst die Klassennamen: ein stillgelegtes Modul wird so gar nicht geladen.
+		$classes = array(
+			'inventory'    => InventoryModule::class,
+			'accounting'   => AccountingModule::class,
+			'loyalty'      => LoyaltyModule::class,
+			'production'   => ProductionModule::class,
+			'retention'    => RetentionModule::class,
+			'support'      => SupportModule::class,
+			'pos'          => POSModule::class,
+			'marketing'    => MarketingModule::class,
+			'events'       => EventsModule::class,
+			'betrieb'      => BetriebModule::class,
+			'konfigurator' => ConfiguratorModule::class,
+			'arview'       => ArViewModule::class,
+			'mailbox'      => MailboxModule::class,
+			'gutschein'    => GutscheinModule::class,
+			'kurzlinks'    => KurzlinksModule::class,
 		);
 
-		foreach ( $this->modules as $key => $module ) {
+		foreach ( $classes as $key => $class ) {
 			// Das alte Lager-Modul ist stillgelegt, sobald Betrieb alle seine
 			// Produkte übernommen hat (Verwaltung → Farben & Lager).
 			if ( 'inventory' === $key && \Lindenweg16\Modules\Betrieb\StockOwnership::legacy_disabled() ) {
 				continue;
 			}
 
+			$module                = new $class();
+			$this->modules[ $key ] = $module;
 			if ( method_exists( $module, 'register' ) ) {
 				$module->register();
 			}

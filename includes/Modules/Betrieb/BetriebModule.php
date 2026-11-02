@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Admin\MenuGroups;
 use Lindenweg16\Core\Assets;
+use Lindenweg16\Core\Lazy;
 use Lindenweg16\Core\Scheduler;
 
 use Lindenweg16\Core\Roles;
@@ -136,7 +137,7 @@ class BetriebModule {
 		// Gilt auch im Frontend: Der Lagerabzug läuft beim Statuswechsel
 		// einer Bestellung, nicht im Backend.
 		( new StockOwnership() )->register();
-		( new RestApi() )->register();
+		Lazy::rest( RestApi::class );
 		( new MobileCapture() )->register();
 		( new ReorderPage() )->register();
 		( new WooIntegration() )->register();
@@ -146,9 +147,9 @@ class BetriebModule {
 		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();
 		( new Exporter() )->register();
-		( new PrintQueueRestApi() )->register();
-		( new BambuRestApi() )->register();
-		( new SlicingRestApi() )->register();
+		Lazy::rest( PrintQueueRestApi::class );
+		Lazy::rest( BambuRestApi::class );
+		Lazy::rest( SlicingRestApi::class );
 
 		add_action( Scheduler::HOOK_DHL_PRINT_MAINTENANCE, array( PrintQueueService::class, 'run_maintenance' ) );
 		add_action( Scheduler::HOOK_BAMBU_MAINTENANCE, array( BambuService::class, 'run_maintenance' ) );
@@ -161,27 +162,44 @@ class BetriebModule {
 		if ( is_admin() ) {
 			add_action( 'admin_menu', array( $this, 'add_menu' ) );
 			add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-			( new SettingsPage() )->register();
-			( new PrintersPage() )->register();
-			( new ArticlesPage() )->register();
-			( new PrintJobsPage() )->register();
-			( new StockPage() )->register();
-			( new BinsPage() )->register();
-			( new DemandPage() )->register();
-			( new MaterialPage() )->register();
-			( new OrdersPage() )->register();
-			( new ShippingPage() )->register();
-			( new PrintQueuePrintersPage() )->register();
-			// PrintQueueJobsPage hat kein register() mehr - ist jetzt ein
-			// Reiter auf der Etikettendrucker-Seite, kein eigener
-			// Menüpunkt (siehe PrintQueuePrintersPage::render()).
-			( new BambuPrintersPage() )->register();
-			( new DruckfarmPage() )->register();
-			( new SlicingProfilesPage() )->register();
-			( new SimplePages() )->register();
-			( new ImportPage() )->register();
-			( new UsersPage() )->register();
+			// Seitenklassen nur laden, wenn ihre Seite offen ist oder ein
+			// Formular/AJAX-Aufruf kommt (siehe Lazy::page_needed()).
+			foreach ( self::page_classes() as $class => $slugs ) {
+				if ( Lazy::page_needed( $slugs ) ) {
+					Lazy::instance( $class )->register();
+				}
+			}
 		}
+	}
+
+	/**
+	 * Welche Seitenklasse welche Admin-Seiten darstellt. Eine Klasse ohne
+	 * Seite hat nur Formular-Handler (admin-post.php).
+	 *
+	 * @return array<string, string[]>
+	 */
+	public static function page_classes() {
+		return array(
+			SettingsPage::class           => array( 'lw16-betrieb-einstellungen' ),
+			PrintersPage::class           => array( 'lw16-betrieb-drucker' ),
+			ArticlesPage::class           => array( 'lw16-betrieb-artikel' ),
+			PrintJobsPage::class          => array( 'lw16-betrieb-druckjournal' ),
+			StockPage::class              => array( 'lw16-betrieb-lager' ),
+			BinsPage::class               => array( 'lw16-betrieb-lagerplaetze' ),
+			DemandPage::class             => array( 'lw16-betrieb-bedarf' ),
+			MaterialPage::class           => array( 'lw16-betrieb-material' ),
+			OrdersPage::class             => array( 'lw16-betrieb-bestellungen' ),
+			ShippingPage::class           => array( 'lw16-betrieb-versand' ),
+			// PrintQueueJobsPage hat kein register() mehr - ist ein Reiter
+			// auf der Etikettendrucker-Seite (PrintQueuePrintersPage::render()).
+			PrintQueuePrintersPage::class => array( 'lw16-betrieb-druckwarteschlange-drucker' ),
+			BambuPrintersPage::class      => array( 'lw16-betrieb-bambu' ),
+			DruckfarmPage::class          => array( 'lw16-betrieb-druckfarm' ),
+			SlicingProfilesPage::class    => array(),
+			SimplePages::class            => array( 'lw16-betrieb-qualitaet', 'lw16-betrieb-kapazitaet', 'lw16-betrieb-zeit', 'lw16-betrieb-kontakte', 'lw16-betrieb-berichte' ),
+			ImportPage::class             => array( 'lw16-betrieb-import' ),
+			UsersPage::class              => array( 'lw16-betrieb-benutzer' ),
+		);
 	}
 
 	/**
