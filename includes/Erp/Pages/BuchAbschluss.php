@@ -1671,6 +1671,7 @@ class BuchAbschluss {
 			array( 'Einnahmen gesamt', self::csv_num( $rep['einnahmen'] ) ),
 			array( '   Shop (WooCommerce, abzgl. Rückerstattungen)', self::csv_num( isset( $rep['einnahmen_shop'] ) ? $rep['einnahmen_shop'] : $rep['einnahmen'] ) ),
 			array( '   Aufträge ohne Shop (bezahlt)', self::csv_num( isset( $rep['einnahmen_auftraege'] ) ? $rep['einnahmen_auftraege'] : 0 ) ),
+			array( '   Marktkasse (Tagesumsätze)', self::csv_num( isset( $rep['einnahmen_kasse'] ) ? $rep['einnahmen_kasse'] : 0 ) ),
 			array( '   Mahngebühren und Verzugszinsen', self::csv_num( isset( $rep['einnahmen_sonstige'] ) ? $rep['einnahmen_sonstige'] : 0 ) ),
 		);
 

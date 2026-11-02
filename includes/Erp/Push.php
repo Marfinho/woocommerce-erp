@@ -66,6 +66,7 @@ class Push {
 			'druck_fehler'    => array( __( 'Bambu-Druck fehlgeschlagen oder Ausgang unklar', 'lindenweg16' ), 'fertigung.bambu', 'fertigung', false ),
 			'slicen_fehler'   => array( __( 'Slicen einer Platte fehlgeschlagen', 'lindenweg16' ), 'fertigung.workflow', 'fertigung', false ),
 			'wartung'         => array( __( 'Drucker-Wartung neu fällig (morgens)', 'lindenweg16' ), 'fertigung.drucker', 'fertigung', false ),
+			'nachtschicht'    => array( __( 'Nachtschicht-Plan eine Stunde vor dem Feierabend', 'lindenweg16' ), 'fertigung.nachtschicht', 'fertigung', false ),
 			// Lager.
 			'lager'           => array( __( 'Artikel fast oder ganz ausverkauft', 'lindenweg16' ), 'lager.bestand', 'lager', true ),
 			'wieder_da'       => array( __( 'Ausverkaufter Artikel wieder auf Lager', 'lindenweg16' ), 'lager.bestand', 'lager', false ),

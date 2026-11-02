@@ -42,5 +42,7 @@ class Jobs {
 		if ( Vivid::connected() ) {
 			Pages\Bank::vivid_sync();
 		}
+		// Läuft stündlich: passender Moment für den Nachtschicht-Push.
+		Pages\Nachtschicht::maybe_push();
 	}
 }

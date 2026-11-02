@@ -62,12 +62,39 @@ class EuerCalculator {
 	 * @param float $sonstige  Sonstige Einnahmen aus dem Journal (Mahngebühren, Verzugszinsen).
 	 * @return array {shop, auftraege, sonstige, summe}
 	 */
-	public static function income_parts( $shop, $auftraege, $sonstige ) {
+	public static function income_parts( $shop, $auftraege, $sonstige, $kasse = 0.0 ) {
 		$shop      = round( (float) $shop, 2 );
 		$auftraege = round( (float) $auftraege, 2 );
 		$sonstige  = round( (float) $sonstige, 2 );
+		$kasse     = round( (float) $kasse, 2 );
 
-		return array( 'shop' => $shop, 'auftraege' => $auftraege, 'sonstige' => $sonstige, 'summe' => round( $shop + $auftraege + $sonstige, 2 ) );
+		return array( 'shop' => $shop, 'auftraege' => $auftraege, 'sonstige' => $sonstige, 'kasse' => $kasse, 'summe' => round( $shop + $auftraege + $sonstige + $kasse, 2 ) );
+	}
+
+	/**
+	 * Einnahmen über Belege auf Erlöskonten: der Tagesumsatz der Marktkasse
+	 * (immer, er kommt automatisch aus der Kasse) und von Hand erfasste
+	 * Erlösbelege (wenn festgeschrieben).
+	 *
+	 * @param string $from Y-m-d.
+	 * @param string $to   Y-m-d.
+	 * @return float
+	 */
+	public static function einnahmen_kasse( $from, $to ) {
+		global $wpdb;
+
+		$erloese = array();
+		foreach ( Kontenrahmen::all( 'einnahme' ) as $nr => $k ) {
+			$erloese[] = (string) ( is_array( $k ) && isset( $k['konto'] ) ? $k['konto'] : $nr );
+		}
+		if ( ! $erloese ) {
+			return 0.0;
+		}
+
+		$t  = BelegRepository::table();
+		$in = implode( ',', array_fill( 0, count( $erloese ), '%s' ) );
+
+		return (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(betrag), 0) FROM {$t} WHERE storniert = 0 AND quelle != 'storno' AND konto IN ({$in}) AND ( quelle = 'marktkasse' OR festgeschrieben = 1 ) AND datum >= %s AND datum <= %s", array_merge( $erloese, array( $from, $to ) ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL
 	}
 
 	/**
@@ -110,7 +137,8 @@ class EuerCalculator {
 	 * @return array {einnahmen, ausgaben_kategorien, ausgaben_summe, gewinn}
 	 */
 	public static function report( $from, $to ) {
-		$parts     = self::income_parts( self::einnahmen( $from, $to ), self::einnahmen_auftraege( $from, $to ), self::einnahmen_sonstige( $from, $to ) );
+		$kasse     = self::einnahmen_kasse( $from, $to );
+		$parts     = self::income_parts( self::einnahmen( $from, $to ), self::einnahmen_auftraege( $from, $to ), self::einnahmen_sonstige( $from, $to ), $kasse );
 		$einnahmen = $parts['summe'];
 		$ausgaben  = BelegRepository::sum_by_category( $from, $to );
 		$konten    = BelegRepository::sum_by_konto( $from, $to );
@@ -141,6 +169,7 @@ class EuerCalculator {
 			'einnahmen_shop'       => $parts['shop'],
 			'einnahmen_auftraege'  => $parts['auftraege'],
 			'einnahmen_sonstige'   => $parts['sonstige'],
+			'einnahmen_kasse'      => $parts['kasse'],
 			'ausgaben_kategorien'  => $ausgaben,
 			'ausgaben_konten'      => $konten,
 			'ausgaben_gruppen'     => $gruppen,

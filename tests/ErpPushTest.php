@@ -94,7 +94,7 @@ class ErpPushTest extends TestCase {
 	public function test_meldungsarten_sind_vollstaendig() {
 		$cats  = Push::categories();
 		$areas = \Lindenweg16\Erp\Navigation::areas();
-		$this->assertCount( 18, $cats );
+		$this->assertCount( 19, $cats );
 		$an = array();
 		foreach ( $cats as $key => $def ) {
 			$this->assertMatchesRegularExpression( '/^[a-z_]+$/', $key );

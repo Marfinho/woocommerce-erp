@@ -35,7 +35,7 @@
 					meter('Umsatz ' + (d.jahr - 1) + ' (Grenze Vorjahr)', u.vorjahr.summe, u.grenzen.vorjahr),
 					meter('Umsatz ' + d.jahr + ' bis heute', u.laufend.summe, u.grenzen.vorjahr),
 					meter('Umsatz ' + d.jahr + ' (harte Grenze im Jahr)', u.laufend.summe, u.grenzen.laufend)));
-				box.appendChild(h('p', { class: 'muted' }, 'Hochgerechnet auf ' + d.jahr + ': ' + k.eur(u.status.prognose) + '. Darin Shop ' + k.eur(u.laufend.shop) + ' und manuelle Aufträge ' + k.eur(u.laufend.manuell) + '.'));
+				box.appendChild(h('p', { class: 'muted' }, 'Hochgerechnet auf ' + d.jahr + ': ' + k.eur(u.status.prognose) + '. Darin Shop ' + k.eur(u.laufend.shop) + ', manuelle Aufträge ' + k.eur(u.laufend.manuell) + ' und Marktkasse ' + k.eur(u.laufend.kasse || 0) + '.'));
 				u.status.text.forEach(function (t) {
 					box.appendChild(h('div', { class: 'notice' + (u.status.level === 'ok' ? '' : ' warn') + ' kt-gap' }, t));
 				});

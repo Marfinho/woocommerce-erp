@@ -450,6 +450,7 @@ require $lw16_root . '/includes/Erp/Pages/Lieferantenbestellungen.php';
 require $lw16_root . '/includes/Erp/Pages/Abwesenheit.php';
 require $lw16_root . '/includes/Erp/Pages/Reklamationen.php';
 require $lw16_root . '/includes/Erp/Digest.php';
+require $lw16_root . '/includes/Erp/NightShift.php';
 require $lw16_root . '/includes/Erp/Push.php';
 require $lw16_root . '/includes/Erp/Spools.php';
 if ( ! defined( 'LW16_CAPABILITY' ) ) {
