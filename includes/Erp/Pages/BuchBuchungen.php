@@ -518,13 +518,14 @@ class BuchBuchungen {
 	public static function dauer_vorschau( array $row, $heute ) {
 		$naechst = (string) $row['naechste_ausfuehrung'];
 		$ende    = isset( $row['ende_datum'] ) ? (string) $row['ende_datum'] : '';
-		$next    = self::next_date( $naechst, (string) $row['intervall'] );
+		$anchor  = isset( $row['start_datum'] ) ? (int) substr( (string) $row['start_datum'], 8, 2 ) : 0;
+		$next    = self::next_date( $naechst, (string) $row['intervall'], $anchor );
 		$rest    = 0;
 		$cursor  = $next;
 
 		while ( $cursor <= $heute && $rest < 60 ) {
 			++$rest;
-			$cursor = self::next_date( $cursor, (string) $row['intervall'] );
+			$cursor = self::next_date( $cursor, (string) $row['intervall'], $anchor );
 		}
 
 		return array(
@@ -539,31 +540,13 @@ class BuchBuchungen {
 	/**
 	 * Nächstes Datum je Intervall (wie DauerbuchungRepository::calculate_next).
 	 *
-	 * @param string $datum    Datum.
-	 * @param string $intervall Intervall.
+	 * @param string $datum      Datum.
+	 * @param string $intervall  Intervall.
+	 * @param int    $anchor_day Tag im Monat aus dem Startdatum (0 = Tag von $datum).
 	 * @return string
 	 */
-	public static function next_date( $datum, $intervall ) {
-		$dt = new \DateTime( $datum );
-
-		switch ( $intervall ) {
-			case 'woechentlich':
-				$dt->modify( '+1 week' );
-				break;
-			case 'quartalsweise':
-				$dt->modify( '+3 months' );
-				break;
-			case 'halbjaehrlich':
-				$dt->modify( '+6 months' );
-				break;
-			case 'jaehrlich':
-				$dt->modify( '+1 year' );
-				break;
-			default:
-				$dt->modify( '+1 month' );
-		}
-
-		return $dt->format( 'Y-m-d' );
+	public static function next_date( $datum, $intervall, $anchor_day = 0 ) {
+		return \Lindenweg16\Erp\Kit::next_interval_date( $datum, $intervall, $anchor_day );
 	}
 
 	/**
@@ -1499,7 +1482,7 @@ class BuchBuchungen {
 
 		BelegRepository::festschreiben( $beleg_id );
 
-		$next   = DauerbuchungRepository::calculate_next( $db->naechste_ausfuehrung, $db->intervall );
+		$next   = DauerbuchungRepository::calculate_next( $db->naechste_ausfuehrung, $db->intervall, (int) substr( (string) $db->start_datum, 8, 2 ) );
 		$update = array(
 			'naechste_ausfuehrung' => $next,
 			'letzte_ausfuehrung'   => $heute,

@@ -66,22 +66,13 @@ class Liquiditaet {
 	/**
 	 * Nächstes Datum einer Dauerbuchung (wie DauerbuchungRepository::calculate_next).
 	 *
-	 * @param string $date      JJJJ-MM-TT.
-	 * @param string $intervall Intervall.
+	 * @param string $date       JJJJ-MM-TT.
+	 * @param string $intervall  Intervall.
+	 * @param int    $anchor_day Tag im Monat aus dem Startdatum (0 = Tag von $date).
 	 * @return string
 	 */
-	public static function next_date( $date, $intervall ) {
-		$map = array(
-			'woechentlich'  => '+1 week',
-			'monatlich'     => '+1 month',
-			'quartalsweise' => '+3 months',
-			'halbjaehrlich' => '+6 months',
-			'jaehrlich'     => '+1 year',
-		);
-		$dt  = new \DateTime( $date . ' 12:00:00', new \DateTimeZone( 'UTC' ) );
-		$dt->modify( isset( $map[ $intervall ] ) ? $map[ $intervall ] : '+1 month' );
-
-		return $dt->format( 'Y-m-d' );
+	public static function next_date( $date, $intervall, $anchor_day = 0 ) {
+		return Kit::next_interval_date( $date, $intervall, $anchor_day );
 	}
 
 	/**
@@ -91,16 +82,18 @@ class Liquiditaet {
 	 * @param string $intervall Intervall.
 	 * @param string $until     Bis (einschließlich).
 	 * @param string $end       Ende der Dauerbuchung (leer = offen).
+	 * @param string $start     Startdatum der Dauerbuchung (gibt den Tag im Monat vor; leer = Tag von $next).
 	 * @return string[]
 	 */
-	public static function occurrences( $next, $intervall, $until, $end = '' ) {
-		$out  = array();
-		$date = (string) $next;
+	public static function occurrences( $next, $intervall, $until, $end = '', $start = '' ) {
+		$out    = array();
+		$date   = (string) $next;
+		$anchor = preg_match( '/^\d{4}-\d{2}-(\d{2})/', '' !== (string) $start ? (string) $start : $date, $m ) ? (int) $m[1] : 0;
 		$stop = '' !== (string) $end && (string) $end < $until ? (string) $end : $until;
 
 		for ( $i = 0; $i < 60 && '' !== $date && $date <= $stop; $i++ ) {
 			$out[] = $date;
-			$date  = self::next_date( $date, $intervall );
+			$date  = self::next_date( $date, $intervall, $anchor );
 		}
 
 		return $out;
@@ -216,7 +209,7 @@ class Liquiditaet {
 		// Dauerbuchungen.
 		foreach ( \Lindenweg16\Modules\Accounting\DauerbuchungRepository::get_all( true ) as $d ) {
 			$d = (array) $d;
-			foreach ( self::occurrences( (string) $d['naechste_ausfuehrung'], (string) $d['intervall'], $until, (string) $d['ende_datum'] ) as $date ) {
+			foreach ( self::occurrences( (string) $d['naechste_ausfuehrung'], (string) $d['intervall'], $until, (string) $d['ende_datum'], isset( $d['start_datum'] ) ? (string) $d['start_datum'] : '' ) as $date ) {
 				$events[] = array(
 					'date'   => $date,
 					'amount' => ( 'einnahme' === $d['typ'] ? 1 : -1 ) * abs( (float) $d['betrag'] ),

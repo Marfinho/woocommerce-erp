@@ -208,10 +208,13 @@ class Payroll {
 			return null;
 		}
 
-		// „1.234,56“ → 1234.56; „12,5“ → 12.5; „12.5“ bleibt 12.5.
+		// „1.234,56“ → 1234.56; „12,5“ → 12.5; „12.5“ bleibt 12.5;
+		// „1.000“ und „1.234.567“ sind Tausenderpunkte (wie Kit::amount).
 		if ( false !== strpos( $text, ',' ) ) {
 			$text = str_replace( '.', '', $text );
 			$text = str_replace( ',', '.', $text );
+		} elseif ( preg_match( '/^-?\d{1,3}(\.\d{3})+$/', $text ) ) {
+			$text = str_replace( '.', '', $text );
 		}
 
 		return preg_match( '/^-?\d+(\.\d+)?$/', $text ) ? (float) $text : null;

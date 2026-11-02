@@ -120,6 +120,11 @@ class Kit {
 	 * @return int
 	 */
 	public static function days_between( $a, $b ) {
+		// Ohne gültiges Datum 0 – strtotime(' 12:00:00 UTC') wäre sonst „heute“.
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $a ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $b ) ) {
+			return 0;
+		}
+
 		$ta = strtotime( substr( (string) $a, 0, 10 ) . ' 12:00:00 UTC' );
 		$tb = strtotime( substr( (string) $b, 0, 10 ) . ' 12:00:00 UTC' );
 
@@ -135,6 +140,37 @@ class Kit {
 	 */
 	public static function add_days( $ymd, $days ) {
 		return gmdate( 'Y-m-d', strtotime( substr( (string) $ymd, 0, 10 ) . ' 12:00:00 UTC' ) + (int) $days * 86400 );
+	}
+
+	/**
+	 * Nächster Termin einer wiederkehrenden Buchung.
+	 *
+	 * Monate werden gezählt, der Tag auf das Monatsende begrenzt: Ab dem 31.01.
+	 * folgt monatlich der 28.02. (nicht der 03.03.), danach wieder der 31.03.,
+	 * wenn der Ankertag 31 ist.
+	 *
+	 * @param string $date       JJJJ-MM-TT.
+	 * @param string $intervall  woechentlich, monatlich, quartalsweise, halbjaehrlich, jaehrlich (sonst monatlich).
+	 * @param int    $anchor_day Gewünschter Tag im Monat (0 = Tag von $date).
+	 * @return string JJJJ-MM-TT
+	 */
+	public static function next_interval_date( $date, $intervall, $anchor_day = 0 ) {
+		$date = substr( (string) $date, 0, 10 );
+
+		if ( 'woechentlich' === $intervall ) {
+			return self::add_days( $date, 7 );
+		}
+
+		$months = array( 'quartalsweise' => 3, 'halbjaehrlich' => 6, 'jaehrlich' => 12 );
+		$add    = isset( $months[ $intervall ] ) ? $months[ $intervall ] : 1;
+		$y      = (int) substr( $date, 0, 4 );
+		$m      = (int) substr( $date, 5, 2 ) + $add;
+		$day    = (int) $anchor_day > 0 ? min( 31, (int) $anchor_day ) : (int) substr( $date, 8, 2 );
+
+		$y += intdiv( $m - 1, 12 );
+		$m  = ( $m - 1 ) % 12 + 1;
+
+		return sprintf( '%04d-%02d-%02d', $y, $m, min( $day, (int) gmdate( 't', gmmktime( 12, 0, 0, $m, 1, $y ) ) ) );
 	}
 
 	/**

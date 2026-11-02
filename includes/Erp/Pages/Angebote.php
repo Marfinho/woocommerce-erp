@@ -146,7 +146,7 @@ class Angebote {
 			$title = trim( (string) ( isset( $raw['title'] ) ? $raw['title'] : '' ) );
 			$qty   = Kit::amount( isset( $raw['qty'] ) ? $raw['qty'] : '' );
 			$price = Kit::amount( isset( $raw['unit_price_gross'] ) ? $raw['unit_price_gross'] : '' );
-			$disc  = Kit::amount( isset( $raw['discount_pct'] ) ? $raw['discount_pct'] : 0 );
+			$disc  = Kit::amount( isset( $raw['discount_pct'] ) && '' !== trim( (string) $raw['discount_pct'] ) ? $raw['discount_pct'] : 0 );
 			$art   = isset( $raw['article_id'] ) ? (int) $raw['article_id'] : 0;
 
 			if ( '' === $title && ! $art && null === $qty && null === $price ) {
@@ -186,8 +186,9 @@ class Angebote {
 			$errors[] = __( 'Das Angebot braucht mindestens eine Position.', 'lindenweg16' );
 		}
 
-		$disc = Kit::amount( isset( $in['discount_pct'] ) ? $in['discount_pct'] : 0 );
-		$ship = Kit::amount( isset( $in['shipping_gross'] ) ? $in['shipping_gross'] : 0 );
+		// Ein geleertes Feld kommt als '' – das heißt 0, nicht „keine Zahl“.
+		$disc = Kit::amount( isset( $in['discount_pct'] ) && '' !== trim( (string) $in['discount_pct'] ) ? $in['discount_pct'] : 0 );
+		$ship = Kit::amount( isset( $in['shipping_gross'] ) && '' !== trim( (string) $in['shipping_gross'] ) ? $in['shipping_gross'] : 0 );
 
 		if ( null === $disc || $disc < 0 || $disc > 100 ) {
 			$errors[] = __( 'Gesamtrabatt zwischen 0 und 100 %.', 'lindenweg16' );

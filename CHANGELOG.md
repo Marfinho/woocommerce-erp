@@ -37,6 +37,16 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Neue Rechte `fertigung.nachtschicht`, `finanzen.stundenlohn` (braucht „Preise, Kosten und Löhne sehen“), `verkauf.nachkauf`, `finanzen.rueckblick`. Neue Meldungsart `nachtschicht` (von selbst aus).
 - Rechenkerne `Erp\NightShift`, `Erp\HourlyRate`, `Erp\Rhythm`, `Erp\Review` mit Tests; Was-wäre-wenn als reine Funktion `LW16ERP_UI.liquiScenario`.
 - Nicht in echtem WordPress geprüft (Unit-Tests, Browser mit Testdaten).
+## [0.74.1] – 2026-11-01
+
+Fehlerbehebungen aus neuen Testszenarien (157 zusätzliche Tests für die ERP-Regeln).
+
+### Behoben
+- **Dauerbuchungen am Monatsende:** Eine monatliche Dauerbuchung am 31. sprang bisher vom 31.01. auf den **03.03.** (Februar fiel aus) und lief danach am 3. weiter. Jetzt wird der Tag auf das Monatsende begrenzt und der Tag aus dem Startdatum gehalten: 31.01. → 28.02. → 31.03. Gilt für die Ausführung (auch „Jetzt buchen“), die Vorschau im Journal und die Liquiditätsvorschau. Bereits verschobene Termine (z. B. 03.03.) laufen ab der nächsten Ausführung wieder auf dem Tag des Startdatums.
+- **Angebote:** Ein geleertes Feld für Rabatt (je Position oder gesamt) oder Versand wurde mit „Rabatt zwischen 0 und 100 %“ bzw. „Versandkosten dürfen nicht negativ sein“ abgelehnt. Leer heißt jetzt 0.
+- **Lohn:** Zuschläge und Grenzen mit Tausenderpunkt („1.000“) wurden als 1 € gelesen. Jetzt 1.000 €, wie überall im ERP.
+- **Nachkalkulation:** Lief eine Platte genau 10 % schneller als geplant, wurde die Planzeit wegen eines Rundungsfehlers nicht korrigiert (bei 10 % langsamer schon). Jetzt in beide Richtungen ab 10 %.
+- **Tage zwischen zwei Daten:** Ein fehlendes Datum zählte als „heute“; jetzt 0 Tage.
 
 ## [0.74.0] – 2026-11-01
 
