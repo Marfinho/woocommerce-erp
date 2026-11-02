@@ -252,6 +252,9 @@ class BambuPrintersPage {
 			wp_die( esc_html__( 'Drucker nicht gefunden.', 'lindenweg16' ), '', array( 'response' => 404 ) );
 		}
 
+		// Jemand sieht hin: Die Bridge schickt für die nächsten Minuten Bilder.
+		BambuService::mark_camera_watched( $printer->printer_id );
+
 		$pfad = BambuService::snapshot_path( $printer->printer_id );
 
 		if ( ! is_file( $pfad ) ) {

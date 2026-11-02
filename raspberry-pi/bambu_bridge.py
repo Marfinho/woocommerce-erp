@@ -117,6 +117,19 @@ class Config:
     # Zustandswechseln.
     STATUS_INTERVAL = int(os.environ.get("STATUS_INTERVAL", "10"))
 
+    # Der Status wird alle STATUS_INTERVAL Sekunden nur LOKAL geprüft und
+    # bloß bei einer Änderung (Zustand, Fortschritt, Fehler, AMS …) an
+    # WordPress geschickt - sonst höchstens alle STATUS_HEARTBEAT Sekunden
+    # als Lebenszeichen. WordPress zählt einen Drucker nach 120 s ohne
+    # Meldung als offline, deshalb nicht über 90 stellen.
+    STATUS_HEARTBEAT = int(os.environ.get("STATUS_HEARTBEAT", "60"))
+
+    # Leerlauf: Nach jeder leeren Antwort (204) wird die Pause bis zur
+    # nächsten Job-Abfrage verdoppelt - von FALLBACK_POLL_INTERVAL bis
+    # IDLE_POLL_MAX. Sobald ein Job kommt, geht es wieder schnell. Spart auf
+    # kleinem Webspace den Großteil der Aufrufe (jeder startet WordPress).
+    IDLE_POLL_MAX = int(os.environ.get("IDLE_POLL_MAX", "60"))
+
     # Long Polling ist hier bewusst NICHT der Standard (anders als beim
     # Etikettendrucker-Client): Auf manchen (v. a. günstigen Shared-)
     # Webhosting-Paketen kappt der Provider oder ein davorstehender
@@ -218,6 +231,11 @@ class Config:
     # Dienst beim ersten Kontakt (Trust on first use, siehe CertPinStore).
     BAMBU_CERT_FINGERPRINT = os.environ.get("BAMBU_CERT_FINGERPRINT", "")
     CAMERA_SNAPSHOT_INTERVAL = int(os.environ.get("CAMERA_SNAPSHOT_INTERVAL", "10"))
+
+    # Standbilder nur schicken, solange in WordPress jemand das Live-Bild
+    # ansieht (Feld "camera" in der Antwort auf /status und /snapshot).
+    # Ältere WordPress-Versionen ohne dieses Feld bekommen weiter Bilder.
+    CAMERA_ONLY_WHEN_WATCHED = _env_bool("CAMERA_ONLY_WHEN_WATCHED", True)
 
     @classmethod
     def validate(cls) -> None:
@@ -1098,6 +1116,12 @@ def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
     letzte_art = None
 
     while not stop_event.is_set():
+        # Niemand sieht hin: kein Bild aufnehmen und nichts hochladen. Ob
+        # jemand zuschaut, kommt mit der Antwort auf den Status.
+        if Config.CAMERA_ONLY_WHEN_WATCHED and not api.camera_wanted:
+            stop_event.wait(Config.CAMERA_SNAPSHOT_INTERVAL)
+            continue
+
         bild, grund = capture_snapshot()
         art = grund.split(" (", 1)[0]
 
@@ -1119,6 +1143,61 @@ def camera_loop(api: "ApiClient", stop_event: threading.Event) -> None:
 # ---------------------------------------------------------------------
 
 
+class IdlePacer:
+    """Pause zwischen leeren Job-Abfragen: beginnt bei ``base`` und
+    verdoppelt sich nach jeder leeren Antwort bis ``maximum``; ``reset()``
+    sobald es Arbeit gab."""
+
+    def __init__(self, base: float, maximum: float) -> None:
+        self.base = max(1.0, float(base))
+        self.maximum = max(self.base, float(maximum))
+        self.current = self.base
+
+    def idle(self) -> float:
+        """Pause für diese leere Antwort - die nächste wird länger."""
+        delay = self.current
+        self.current = min(self.current * 2, self.maximum)
+        return delay
+
+    def reset(self) -> None:
+        self.current = self.base
+
+
+def retry_after(response: Optional["requests.Response"], default: float) -> float:
+    """Wartezeit aus dem Retry-After-Header (Sekunden), sonst ``default``.
+    Höchstens 10 Minuten, damit ein kaputter Header die Bridge nicht
+    lahmlegt."""
+    try:
+        value = float(response.headers.get("Retry-After", "")) if response is not None else 0.0
+    except (TypeError, ValueError, AttributeError):
+        value = 0.0
+    return min(max(value, float(default)), 600.0)
+
+
+def camera_flag(response: Optional["requests.Response"], current: bool) -> bool:
+    """Feld "camera" aus einer Antwort von /status oder /snapshot. Fehlt es
+    (ältere WordPress-Version), wird weiter fotografiert; ohne Antwort
+    bleibt der bisherige Wert."""
+    if response is None or response.status_code != 200:
+        return current
+    try:
+        body = response.json()
+    except ValueError:
+        return current
+    if not isinstance(body, dict) or "camera" not in body:
+        return True
+    return bool(body["camera"])
+
+
+def status_signature(data: dict) -> tuple:
+    """Was am Status eine sofortige Meldung wert ist. Temperaturen schwanken
+    ständig und gehen nur mit dem Lebenszeichen mit."""
+    return tuple(
+        (key, data.get(key))
+        for key in ("status", "progress_percent", "remaining_minutes", "printer_model", "error", "current_file", "ams")
+    )
+
+
 class ApiClient:
     """Kapselt alle HTTP-Aufrufe gegen die WordPress-REST-API."""
 
@@ -1131,6 +1210,12 @@ class ApiClient:
             }
         )
         self.base = f"{Config.WORDPRESS_URL}/wp-json/{Config.API_NAMESPACE}"
+        # Status nur bei Änderung oder als Lebenszeichen (siehe post_status()).
+        self._last_status_sig: Optional[tuple] = None
+        self._last_status_at = 0.0
+        # Will gerade jemand das Kamerabild sehen? Bis zur ersten Antwort ja,
+        # damit nach dem Start sofort ein aktuelles Bild da ist.
+        self.camera_wanted = True
 
     def get_jobs(self, wait: int) -> Optional[requests.Response]:
         try:
@@ -1203,7 +1288,27 @@ class ApiClient:
         log.warning("GET /jobs/active: unerwarteter Status %s", r.status_code)
         return False, None
 
-    def post_status(self) -> None:
+    def post_status(self, now: Optional[float] = None) -> bool:
+        """Status melden - aber nur, wenn sich etwas geändert hat oder das
+        Lebenszeichen fällig ist (STATUS_HEARTBEAT). Gibt zurück, ob
+        gesendet wurde."""
+        data = self._status_data()
+        now = time.monotonic() if now is None else now
+        sig = status_signature(data)
+
+        if sig == self._last_status_sig and now - self._last_status_at < Config.STATUS_HEARTBEAT:
+            return False
+
+        r = self._post("status", data=data)
+        self.camera_wanted = camera_flag(r, self.camera_wanted)
+
+        # Nur ein angekommener Status zählt - sonst beim nächsten Mal erneut.
+        if r is not None and r.status_code == 200:
+            self._last_status_sig = sig
+            self._last_status_at = now
+        return True
+
+    def _status_data(self) -> dict:
         snap = STATE.snapshot()
 
         if not snap["connected"]:
@@ -1213,14 +1318,10 @@ class ApiClient:
             # "online" aus, weil schon das Job-Polling den Heartbeat setzt,
             # und Status/Temperaturen blieben auf dem letzten Stand stehen.
             # Deshalb wird der Ausfall jetzt ausdrücklich gemeldet.
-            self._post(
-                "status",
-                data={
-                    "status": "mqtt_getrennt",
-                    "error": CERT_PINS.last_mismatch or "Keine MQTT-Verbindung zum Drucker (Gerät, IP und Zugangscode prüfen).",
-                },
-            )
-            return
+            return {
+                "status": "mqtt_getrennt",
+                "error": CERT_PINS.last_mismatch or "Keine MQTT-Verbindung zum Drucker (Gerät, IP und Zugangscode prüfen).",
+            }
 
         data = {
             "status": snap["gcode_state"] or "idle",
@@ -1242,7 +1343,7 @@ class ApiClient:
         if snap["ams"] is not None:
             data["ams"] = json.dumps(snap["ams"])
 
-        self._post("status", data=data)
+        return data
 
     def upload_snapshot(self, jpeg_bytes: bytes) -> bool:
         """Aktuelles Kamera-Standbild hochladen - rohe JPEG-Bytes im Body,
@@ -1251,6 +1352,7 @@ class ApiClient:
         ein Fehlschlag ist nicht kritisch, beim nächsten Intervall wird es
         einfach erneut versucht."""
         r = self._post("snapshot", data=jpeg_bytes, headers={"Content-Type": "image/jpeg"})
+        self.camera_wanted = camera_flag(r, self.camera_wanted)
         return r is not None and r.status_code == 200
 
     def download_file(self, job_id: int, target: Path) -> bool:
@@ -1871,6 +1973,7 @@ def run() -> None:
         camera.start()
 
     backoff = 1
+    pacer = IdlePacer(Config.FALLBACK_POLL_INTERVAL, Config.IDLE_POLL_MAX)
 
     log.info(
         "Bambu-Bridge gestartet: %s, Drucker-ID %s, Bambu-IP %s, Long-Poll=%s.",
@@ -1906,13 +2009,15 @@ def run() -> None:
                 backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
                 continue
 
-            backoff = 1
-
             if response.status_code == 200:
+                backoff = 1
                 try:
                     jobs = response.json().get("jobs", [])
                 except ValueError:
                     jobs = []
+
+                if jobs:
+                    pacer.reset()
 
                 for job in jobs:
                     process_job(api, mqtt_client, job, outbox, store)
@@ -1925,12 +2030,13 @@ def run() -> None:
                 continue
 
             if response.status_code == 204:
+                backoff = 1
                 if not Config.LONG_POLL_ENABLED:
-                    # Klassisches Intervall-Polling: Der Server hat schon
-                    # SHORT_POLL_WAIT Sekunden kurz gehalten (s. o.) - die
-                    # zusätzliche Pause hier verhindert, dass die Bridge den
-                    # Server trotzdem im Sekundentakt mit Anfragen bombardiert.
-                    time.sleep(Config.FALLBACK_POLL_INTERVAL)
+                    # Klassisches Intervall-Polling: Nichts zu tun - die Pause
+                    # wird mit jeder leeren Antwort länger (IdlePacer), bis
+                    # IDLE_POLL_MAX. Jeder Aufruf startet auf dem Webspace
+                    # WordPress komplett; im Leerlauf reicht einmal pro Minute.
+                    time.sleep(pacer.idle())
                 continue
 
             if response.status_code == 401:
@@ -1939,13 +2045,18 @@ def run() -> None:
                 continue
 
             if response.status_code == 429:
-                log.warning("Serverseitiges Ratenlimit erreicht – warte länger.")
-                time.sleep(Config.MAX_RETRY_DELAY)
+                pause = retry_after(response, Config.MAX_RETRY_DELAY)
+                log.warning("Serverseitiges Ratenlimit erreicht – warte %ss.", pause)
+                time.sleep(pause)
                 continue
 
             if 500 <= response.status_code < 600:
-                log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, backoff)
-                time.sleep(backoff)
+                # Überlasteter Server: wirklich immer länger warten. Früher
+                # wurde backoff vor dieser Stelle schon auf 1 zurückgesetzt -
+                # die Bridge fragte dann gerade bei Überlast jede Sekunde.
+                pause = retry_after(response, backoff)
+                log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, pause)
+                time.sleep(pause)
                 backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
                 continue
 

@@ -667,7 +667,8 @@ class BambuRestApi {
 			}
 		}
 
-		return new WP_REST_Response( array( 'ok' => true ), 200 );
+		// „camera“: ob jemand das Live-Bild ansieht – nur dann schickt die Bridge Standbilder.
+		return new WP_REST_Response( array( 'ok' => true, 'camera' => BambuService::camera_watched( $printer->printer_id ) ), 200 );
 	}
 
 	/* -----------------------------------------------------------------
@@ -709,6 +710,6 @@ class BambuRestApi {
 
 		BambuPrinterRepository::mark_snapshot( (int) $printer->id );
 
-		return new WP_REST_Response( array( 'ok' => true ), 200 );
+		return new WP_REST_Response( array( 'ok' => true, 'camera' => BambuService::camera_watched( $printer->printer_id ) ), 200 );
 	}
 }

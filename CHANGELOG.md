@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.76.2] – 2026-11-02
+
+### Behoben: Raspberry-Pi-Programme überlasten den Webspace (Fehler 500/503)
+- **Ursache:** Bambu-Bridge, Slicing-Worker und Etikettendrucker-Client fragten zusammen rund **1.800-mal pro Stunde** bei WordPress an – fast immer mit der Antwort „nichts zu tun“. Jede Anfrage startet WordPress samt WooCommerce; auf dem IONOS-Webspace waren damit die PHP-Prozesse belegt, wp-admin und das Plugin-Update brachen mit 500/503 ab.
+- **Leerlauf:** Nach jeder leeren Antwort verdoppelt sich die Pause bis zur nächsten Abfrage (5 → 10 → 20 → 40 → 60 s, Etiketten bis 30 s). Sobald ein Job kommt, geht es wieder im kurzen Takt. Neue Einstellung `IDLE_POLL_MAX`.
+- **Status (Bambu):** wird nur noch bei einer Änderung (Zustand, Fortschritt, Fehler, AMS) gemeldet, sonst einmal pro Minute als Lebenszeichen (`STATUS_HEARTBEAT`). Temperaturen gehen mit dem Lebenszeichen mit.
+- **Kamera (Bambu):** Standbilder gehen nur noch hoch, solange jemand das Live-Bild ansieht (wp-admin, ERP-Druckfarm, Bildschirme) und bis zu zwei Minuten danach. WordPress meldet das im neuen Feld `camera` der Antwort auf `/status` und `/snapshot` (`CAMERA_ONLY_WHEN_WATCHED`). Ältere Bridges ignorieren das Feld.
+- **Fehler behoben:** Bei Serverfehlern (500/503) setzten alle drei Programme ihre Wartezeit sofort wieder auf 1 Sekunde zurück und fragten gerade bei Überlast **jede Sekunde** nach. Jetzt wird wirklich immer länger gewartet (bis 30 s), ein `Retry-After`-Header wird beachtet.
+- Die Pi-Programme aktualisieren sich nicht selbst: Die neuen Versionen von `bambu_bridge.py`, `slicing_worker.py` und `haster_print_client.py` müssen auf dem Pi eingespielt werden. Bis dahin hilft die Drossel in der `.htaccess` (siehe `raspberry-pi/README.md`).
+- Tests: `raspberry-pi/tests/test_pacing.py`, `tests/BambuKameraZuschauerTest.php`.
+
 ## [0.76.1] – 2026-11-02
 
 ### Schneller: Plugin lädt nur noch, was der Aufruf braucht

@@ -557,6 +557,64 @@ verlangsamen. `SHORT_POLL_WAIT=0` sollte deshalb im klassischen Modus
 so bleiben; für kürzere Verzögerung eher `FALLBACK_POLL_INTERVAL`
 senken.
 
+**Leerlauf und Last auf dem Webspace.** Jede Abfrage startet auf dem
+Webspace WordPress samt WooCommerce komplett. Damit drei Programme auf dem
+Pi im Leerlauf nicht alle paar Sekunden anklopfen (im November 2026 waren
+das rund 1.800 Aufrufe pro Stunde, bis der Webspace mit 500/503
+ausstieg), gilt seit 0.76.2 für alle drei:
+
+- **Leerlauf:** Nach jeder leeren Antwort (`204`) verdoppelt sich die
+  Pause bis zur nächsten Abfrage – `FALLBACK_POLL_INTERVAL`, dann 10, 20,
+  40 … bis `IDLE_POLL_MAX` (Bridge und Slicing 60 s, Etiketten 30 s).
+  Sobald ein Job kommt, geht es wieder im kurzen Takt weiter.
+- **Status (Bambu):** Wird alle `STATUS_INTERVAL` Sekunden nur lokal
+  geprüft und bloß bei einer Änderung gemeldet, sonst alle
+  `STATUS_HEARTBEAT` Sekunden (60) als Lebenszeichen.
+- **Kamera (Bambu):** Standbilder gehen nur hoch, solange in WordPress
+  jemand das Live-Bild ansieht und bis zu zwei Minuten danach
+  (`CAMERA_ONLY_WHEN_WATCHED`). Das erste frische Bild kann deshalb bis
+  zu einer Minute dauern.
+- **Serverfehler:** Bei `500`/`503` wartet das Programm wirklich immer
+  länger (1, 2, 4 … 30 s) und beachtet einen `Retry-After`-Header – bis
+  0.76.1 fragte es gerade bei Überlast jede Sekunde nach.
+
+**Notbremse ohne Zugriff auf den Pi.** Laufen auf dem Pi noch ältere
+Versionen und der Webspace kippt, lässt sich die Last auf dem Webspace
+selbst drosseln: Dieser Block ganz oben in die `.htaccess` im
+WordPress-Hauptverzeichnis (vor `# BEGIN WordPress`) weist die meisten
+Abfragen ab, bevor PHP startet. Alle drei Programme warten auf `429` hin
+30 Sekunden. Neue Jobs werden dann nur in den Minuten :00, :05, :10 …
+abgeholt, laufende Jobs sind nicht betroffen, das Live-Bild ist aus.
+Sobald die aktuellen Versionen auf dem Pi laufen, den Block wieder
+entfernen.
+
+```apache
+# BEGIN lw16-drossel
+# Notbremse: bremst die Abfragen der Raspberry-Pi-Programme, bevor PHP startet.
+# Wieder entfernen, sobald die Pi-Programme seltener abfragen.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# 1) Kamerabilder der Bambu-Bridge ganz abweisen.
+RewriteCond %{REQUEST_URI} ^/wp-json/lw16-bambu/v1/snapshot [NC]
+RewriteRule ^ - [R=429,L]
+
+# 2) Druckerstatus nur in den Sekunden 00-09 und 30-39 jeder Minute
+#    (kommt alle 10 s, also mind. 2x pro Minute durch - bleibt "online").
+RewriteCond %{REQUEST_URI} ^/wp-json/lw16-bambu/v1/status [NC]
+RewriteCond %{TIME_SEC} !^[03][0-9]$
+RewriteRule ^ - [R=429,L]
+
+# 3) "Gibt es neue Jobs?"-Abfragen nur in den Minuten :00, :05, :10 ...
+#    Laufende Jobs (Annehmen, Fortschritt, Fertigmeldung) sind nicht betroffen.
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{REQUEST_URI} ^/wp-json/(lw16-bambu|lw16-slicing|lw16-print-queue)/v1/jobs/?$ [NC]
+RewriteCond %{TIME_MIN} !^[0-5][05]$
+RewriteRule ^ - [R=429,L]
+</IfModule>
+# END lw16-drossel
+```
+
 Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
 zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-
 WordPress-Hoster), kann in `.env.bambu` auf Long Polling umstellen für
@@ -591,7 +649,8 @@ Druckerkarte.
 
 Zusätzlich holt die Bridge alle `CAMERA_SNAPSHOT_INTERVAL` Sekunden
 (Standard 10s) ein einzelnes JPEG-Standbild und lädt es hoch – kein
-Dauerstream, nur ein regelmäßiges Bild. Abschalten mit
+Dauerstream, nur ein regelmäßiges Bild, und nur solange jemand das
+Live-Bild ansieht (`CAMERA_ONLY_WHEN_WATCHED=true`, siehe oben). Abschalten mit
 `CAMERA_ENABLED=false` in `.env.bambu`.
 
 **Nur die X1-Serie (X1C/X1E) wird unterstützt.** Sie liefert ihre

@@ -85,6 +85,12 @@ class Config:
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
     FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "10"))
 
+    # Leerlauf: Nach jeder leeren Antwort (204) verdoppelt sich die Pause
+    # bis zur nächsten Abfrage - von FALLBACK_POLL_INTERVAL bis
+    # IDLE_POLL_MAX. Sobald ein Job kommt, geht es wieder schnell. Jeder
+    # Aufruf startet auf dem Webspace WordPress komplett.
+    IDLE_POLL_MAX = int(os.environ.get("IDLE_POLL_MAX", "30"))
+
     DOWNLOAD_DIRECTORY = Path(os.environ.get("DOWNLOAD_DIRECTORY", "/var/lib/haster-print"))
     LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
@@ -134,6 +140,36 @@ def redact(text: str) -> str:
     if not Config.API_TOKEN:
         return text
     return text.replace(Config.API_TOKEN, "***redacted***")
+
+
+class IdlePacer:
+    """Pause zwischen leeren Job-Abfragen: beginnt bei ``base`` und
+    verdoppelt sich nach jeder leeren Antwort bis ``maximum``; ``reset()``
+    sobald es Arbeit gab."""
+
+    def __init__(self, base: float, maximum: float) -> None:
+        self.base = max(1.0, float(base))
+        self.maximum = max(self.base, float(maximum))
+        self.current = self.base
+
+    def idle(self) -> float:
+        """Pause für diese leere Antwort - die nächste wird länger."""
+        delay = self.current
+        self.current = min(self.current * 2, self.maximum)
+        return delay
+
+    def reset(self) -> None:
+        self.current = self.base
+
+
+def retry_after(response: Optional["requests.Response"], default: float) -> float:
+    """Wartezeit aus dem Retry-After-Header (Sekunden), sonst ``default``.
+    Höchstens 10 Minuten."""
+    try:
+        value = float(response.headers.get("Retry-After", "")) if response is not None else 0.0
+    except (TypeError, ValueError, AttributeError):
+        value = 0.0
+    return min(max(value, float(default)), 600.0)
 
 
 class ApiClient:
@@ -488,6 +524,7 @@ def run() -> None:
 
     api = ApiClient()
     backoff = 1
+    pacer = IdlePacer(Config.FALLBACK_POLL_INTERVAL, Config.IDLE_POLL_MAX)
 
     log.info(
         "Haster-Print-Client gestartet: %s, Drucker-ID %s, Backend=%s, Long-Poll=%s",
@@ -509,15 +546,19 @@ def run() -> None:
             backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
             continue
 
-        # Erfolgreiche Verbindung: Backoff zurücksetzen.
-        backoff = 1
-
         if response.status_code == 200:
+            # Erfolgreiche Antwort: Backoff zurücksetzen. (Nicht schon vor
+            # der Prüfung - sonst fragte der Client bei Serverfehlern im
+            # Sekundentakt nach.)
+            backoff = 1
             try:
                 jobs = response.json().get("jobs", [])
             except ValueError:
                 log.error("Antwort war kein gültiges JSON.")
                 jobs = []
+
+            if jobs:
+                pacer.reset()
 
             for job in jobs:
                 process_job(api, job)
@@ -526,10 +567,11 @@ def run() -> None:
             continue
 
         if response.status_code == 204:
-            # Timeout ohne Job: sofort erneut fragen (kein sleep – das
-            # WAIT des Servers hat die Pause schon übernommen).
+            backoff = 1
+            # Nichts zu tun: Pause wird mit jeder leeren Antwort länger
+            # (IdlePacer), bis IDLE_POLL_MAX.
             if not Config.LONG_POLL_ENABLED:
-                time.sleep(Config.FALLBACK_POLL_INTERVAL)
+                time.sleep(pacer.idle())
             continue
 
         if response.status_code == 401:
@@ -538,13 +580,15 @@ def run() -> None:
             continue
 
         if response.status_code == 429:
-            log.warning("Serverseitiges Ratenlimit erreicht – warte länger.")
-            time.sleep(Config.MAX_RETRY_DELAY)
+            pause = retry_after(response, Config.MAX_RETRY_DELAY)
+            log.warning("Serverseitiges Ratenlimit erreicht – warte %ss.", pause)
+            time.sleep(pause)
             continue
 
         if 500 <= response.status_code < 600:
-            log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, backoff)
-            time.sleep(backoff)
+            pause = retry_after(response, backoff)
+            log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, pause)
+            time.sleep(pause)
             backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
             continue
 
