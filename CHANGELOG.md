@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.0] – 2026-11-02
+
+### Neu: Claude-Zugang (MCP-Server)
+- Das Plugin hat einen eigenen **MCP-Server** unter `/wp-json/lw16/v1/mcp` (Model Context Protocol, Streamable HTTP). Damit kann Claude – als Connector in claude.ai, in Claude Code oder als geplante Aufgabe – Shop und ERP lesen und z. B. jeden Morgen einen Lagebericht mit Handlungsanweisungen schreiben.
+- Werkzeuge: `tagesueberblick` (Aufgaben aus „Heute“, alle Punkte der täglichen Übersichtsmail, Kennzahlen, Bestellungen je Status, Umsatz mit Vorwoche/Vorjahr), `bestellungen`, `routen_auflisten` und `rest_lesen` (jede REST-Route: ERP `lw16/v1`, WooCommerce `wc/v3`/`wc-analytics`, WordPress), `datenbank_tabellen` und `datenbank_abfrage` (nur lesend). Dazu die Vorlage `tagesbericht`.
+- Neue Seite **wp-admin → Verwaltung → Claude-Zugang** (nur Administratoren): Schlüssel anlegen und löschen, fertige Adresse für claude.ai und Befehl für Claude Code, Anleitung und Auftragstext für den täglichen Bericht.
+- Sicherheit: Schlüssel nur als SHA-256 gespeichert, arbeitet mit den Rechten seines Kontos. Voreinstellung „nur lesen“; mit „darf ändern“ gibt es zusätzlich `rest_schreiben` (mit Grund im Audit-Protokoll), Rechte, Konten, Plugins und Einstellungen bleiben gesperrt. SQL wird geprüft und läuft in einer Nur-Lese-Transaktion mit Zeitlimit; Passwort-Hashes, Sitzungen und Schlüssel sind gesperrt. Fehlversuche werden gedrosselt.
+- Anleitung: `docs/claude-mcp.md`. Tests: `tests/McpProtocolTest.php`, `tests/McpSqlGuardTest.php`, `tests/McpTokensTest.php`.
+
 ## [0.77.0] – 2026-11-02
 
 ### Neu: Dauerbuchungen „auf Rechnung warten“

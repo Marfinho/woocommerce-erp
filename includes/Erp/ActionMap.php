@@ -194,6 +194,8 @@ class ActionMap {
 			'lw16_packliste'          => 'Lieferschein: Produktion oder Versand, das Modul prüft beides',
 			'lw16_bambu_snapshot'     => 'Live-Bild: Druckfarm oder Bambu, das Modul prüft die Betriebsrechte',
 			'lw16_reset_run'          => 'nur manage_options (Livegang)',
+			'lw16_mcp_create'         => 'nur manage_options (Claude-Zugang)',
+			'lw16_mcp_revoke'         => 'nur manage_options (Claude-Zugang)',
 			'lw16_check_updates'      => 'WordPress-Updater',
 			'lw16_rechnung'           => $public,
 			'lw16_waitlist_signup'    => $public,
