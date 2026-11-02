@@ -16,6 +16,7 @@ use Lindenweg16\Admin\ResetPage;
 use Lindenweg16\Admin\Dashboard;
 use Lindenweg16\Admin\GlobalSearch;
 use Lindenweg16\Admin\HandbuchPage;
+use Lindenweg16\Admin\McpPage;
 use Lindenweg16\Erp\Shell as ErpShell;
 use Lindenweg16\Modules\Inventory\InventoryModule;
 use Lindenweg16\Modules\Accounting\AccountingModule;
@@ -97,6 +98,10 @@ class Plugin {
 		\Lindenweg16\Erp\Push::init();
 		\Lindenweg16\Erp\Jobs::init();
 
+		// MCP-Zugang für Claude (/wp-json/lw16/v1/mcp). Meldet nur Hooks an;
+		// Werkzeuge und Protokoll laden erst bei einem Aufruf.
+		( new \Lindenweg16\Mcp\Server() )->register();
+
 		// Admin-Grundgerüst.
 		if ( is_admin() ) {
 			( new MenuGroups() )->register();
@@ -106,6 +111,7 @@ class Plugin {
 			( new Dashboard() )->register();
 			( new GlobalSearch() )->register();
 			( new HandbuchPage() )->register();
+			( new McpPage() )->register();
 		}
 
 		// Module registrieren. Jedes Modul kapselt seine eigenen Hooks.

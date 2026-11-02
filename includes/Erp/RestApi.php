@@ -1081,7 +1081,9 @@ class RestApi {
 					// Fehlt die WordPress-Rolle für die Shop-Seite, bleibt der
 					// Eintrag sichtbar, erklärt aber, warum er nicht öffnet.
 					if ( $item['wp_cap'] && ! current_user_can( $item['wp_cap'] ) ) {
-						$row['locked'] = __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
+						$row['locked'] = 'manage_options' === $item['wp_cap']
+							? __( 'Dafür braucht dein WordPress-Konto die Rolle „Administrator“.', 'lindenweg16' )
+							: __( 'Dafür braucht dein WordPress-Konto die Rolle „Shop-Manager“.', 'lindenweg16' );
 					}
 
 					$rows[] = $row;

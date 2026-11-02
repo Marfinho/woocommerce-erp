@@ -108,6 +108,16 @@ class Menu {
 				'lw16-livegang',
 				array( $this, 'render_page' )
 			);
+
+			// Schlüssel für den MCP-Zugang öffnen den ganzen Shop.
+			add_submenu_page(
+				MenuGroups::VERWALTUNG,
+				__( 'Claude-Zugang', 'lindenweg16' ),
+				__( 'Claude-Zugang', 'lindenweg16' ),
+				'manage_options',
+				'lw16-claude',
+				array( $this, 'render_page' )
+			);
 		}
 	}
 
@@ -150,7 +160,7 @@ class Menu {
 		$caps = self::page_caps();
 
 		// Das Zurücksetzen vor dem Livegang bleibt bei den Seitenverwaltern.
-		$needed = isset( $caps[ $page ] ) ? $caps[ $page ] : ( 'lw16-livegang' === $page ? 'manage_options' : LW16_CAPABILITY );
+		$needed = isset( $caps[ $page ] ) ? $caps[ $page ] : ( in_array( $page, array( 'lw16-livegang', 'lw16-claude' ), true ) ? 'manage_options' : LW16_CAPABILITY );
 
 		if ( ! current_user_can( $needed ) ) {
 			wp_die( esc_html__( 'Keine Berechtigung.', 'lindenweg16' ) );

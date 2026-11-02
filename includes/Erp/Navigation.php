@@ -274,6 +274,7 @@ class Navigation {
 			self::item( 'mailbox-konten', 'verwaltung', __( 'Postfächer', 'lindenweg16' ), 'verwaltung.mailbox_konten', '', 'native', '', 'lw16-mailbox-konten' ),
 			self::item( 'etiketten', 'verwaltung', __( 'Etikettendrucker', 'lindenweg16' ), 'verwaltung.etiketten', '', 'native', '', 'lw16-betrieb-druckwarteschlange-drucker' ),
 			self::item( 'rechte', 'verwaltung', __( 'Benutzer & Rechte', 'lindenweg16' ), 'verwaltung.rechte', '', 'native' ),
+			self::item( 'claude', 'verwaltung', __( 'Claude-Zugang', 'lindenweg16' ), 'verwaltung.claude', '', 'native', 'manage_options' ),
 			self::item( 'loehne', 'verwaltung', __( 'Löhne & Protokoll', 'lindenweg16' ), 'verwaltung.loehne', '', 'native', '', 'lw16-betrieb-benutzer' ),
 			self::item( 'einstellungen', 'verwaltung', __( 'Einstellungen', 'lindenweg16' ), 'verwaltung.einstellungen', '', 'native', '', 'lw16-betrieb-einstellungen' ),
 			self::item( 'import', 'verwaltung', __( 'Import & Doku', 'lindenweg16' ), 'verwaltung.import', '', 'native', '', 'lw16-betrieb-import' ),

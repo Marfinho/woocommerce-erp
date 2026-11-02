@@ -67,6 +67,10 @@ Subdomain – soll sie für beide Adressen gelten, zusätzlich `define( 'COOKIE_
 Entnahmen vor, bis die Verbindung zurück ist. Voraussetzung ist https; der Browser muss die Seite einmal
 online geöffnet haben.
 
+**Claude-Zugang (MCP):** Unter `/wp-json/lw16/v1/mcp` liegt ein MCP-Server, über den Claude Shop und ERP
+lesen kann (täglicher Lagebericht, Fragen zum Betrieb). Schlüssel im ERP unter Profilmenü →
+Claude-Zugang; Code in `includes/Mcp/`, Anleitung in `docs/claude-mcp.md`.
+
 **Rechte:** Jedes Modul hat ein eigenes Recht (`lw16_mod_*`), Formular-Aktionen sind über
 `includes/Erp/ActionMap.php` an die feinen Rechte gebunden. Neue Aktionen dort eintragen – ein Test
 erinnert daran.
