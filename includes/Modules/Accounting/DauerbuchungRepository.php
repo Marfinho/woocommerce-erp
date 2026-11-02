@@ -49,6 +49,7 @@ class DauerbuchungRepository {
 			'naechste_ausfuehrung' => '',
 			'letzte_ausfuehrung'   => null,
 			'aktiv'                => 1,
+			'auf_rechnung'         => 0,
 			'erstellt_am'          => current_time( 'mysql' ),
 			'erstellt_von'         => get_current_user_id(),
 		);
@@ -65,6 +66,7 @@ class DauerbuchungRepository {
 			'bezeichnung' => $data['bezeichnung'],
 			'betrag'      => $data['betrag'],
 			'intervall'   => $data['intervall'],
+			'auf_rechnung' => (int) $data['auf_rechnung'],
 		) );
 
 		return $id;
@@ -128,6 +130,8 @@ class DauerbuchungRepository {
 	 *
 	 * Erzeugt für jede fällige Buchung einen Beleg, schreibt ihn fest
 	 * (→ automatische Buchung im Journal) und berechnet das nächste Datum.
+	 * Steht eine Dauerbuchung auf „auf Rechnung warten“, entsteht statt des
+	 * Belegs ein wartender Termin (siehe ausfuehren()).
 	 *
 	 * @return int Anzahl ausgeführter Buchungen.
 	 */
@@ -142,8 +146,53 @@ class DauerbuchungRepository {
 			$today
 		) );
 
-		$count = 0;
+		$count  = 0;
+		$wartet = 0;
 		foreach ( $due as $db ) {
+			$r = self::ausfuehren( $db, $today );
+			if ( 'fehler' === $r['art'] ) {
+				continue;
+			}
+			if ( 'wartet' === $r['art'] ) {
+				++$wartet;
+			}
+			$count++;
+		}
+
+		if ( $count > 0 ) {
+			AuditLog::record( 'dauerbuchungen_ausgefuehrt', 'system', 0, array(
+				'anzahl'      => $count,
+				'datum'       => $today,
+				'auf_rechnung' => $wartet,
+			) );
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Einen fälligen Termin einer Dauerbuchung ausführen.
+	 *
+	 * Normal: Beleg zum heutigen Datum, sofort festgeschrieben (Journal).
+	 * Mit „auf Rechnung warten“: kein Beleg, sondern ein wartender Termin –
+	 * der Beleg entsteht erst mit der hochgeladenen Rechnung (Datei, echter
+	 * Betrag und Rechnungsdatum gehören in die Hash-Kette). Danach in beiden
+	 * Fällen das nächste Datum, bei überschrittenem Ende abschalten.
+	 *
+	 * @param object $db    Zeile aus lw16_dauerbuchungen.
+	 * @param string $today Heute (Y-m-d).
+	 * @return array {art: beleg|wartet|fehler, id: Beleg- bzw. Termin-ID}
+	 */
+	public static function ausfuehren( $db, $today ) {
+		global $wpdb;
+
+		if ( ! empty( $db->auf_rechnung ) ) {
+			$id = self::termin_anlegen( $db, (string) $db->naechste_ausfuehrung );
+			if ( ! $id ) {
+				return array( 'art' => 'fehler', 'id' => 0 );
+			}
+			$r = array( 'art' => 'wartet', 'id' => $id );
+		} else {
 			$beleg_id = BelegRepository::create( array(
 				'betrag'        => abs( (float) $db->betrag ),
 				'datum'         => $today,
@@ -157,34 +206,167 @@ class DauerbuchungRepository {
 				'quelle'        => 'dauerbuchung',
 			) );
 
-			if ( $beleg_id ) {
-				BelegRepository::festschreiben( $beleg_id );
+			if ( ! $beleg_id ) {
+				return array( 'art' => 'fehler', 'id' => 0 );
 			}
 
-			// Nächstes Ausführungsdatum berechnen.
-			$next = self::calculate_next( $db->naechste_ausfuehrung, $db->intervall, (int) substr( (string) $db->start_datum, 8, 2 ) );
-			$update = array(
-				'naechste_ausfuehrung' => $next,
-				'letzte_ausfuehrung'   => $today,
-			);
-
-			// Automatisch deaktivieren, wenn Enddatum überschritten.
-			if ( $db->ende_datum && $next > $db->ende_datum ) {
-				$update['aktiv'] = 0;
-			}
-
-			$wpdb->update( $t, $update, array( 'id' => (int) $db->id ) );
-			$count++;
+			BelegRepository::festschreiben( $beleg_id );
+			$r = array( 'art' => 'beleg', 'id' => (int) $beleg_id );
 		}
 
-		if ( $count > 0 ) {
-			AuditLog::record( 'dauerbuchungen_ausgefuehrt', 'system', 0, array(
-				'anzahl' => $count,
-				'datum'  => $today,
-			) );
+		// Nächstes Ausführungsdatum berechnen.
+		$next   = self::calculate_next( $db->naechste_ausfuehrung, $db->intervall, (int) substr( (string) $db->start_datum, 8, 2 ) );
+		$update = array(
+			'naechste_ausfuehrung' => $next,
+			'letzte_ausfuehrung'   => $today,
+		);
+
+		// Automatisch deaktivieren, wenn Enddatum überschritten.
+		if ( $db->ende_datum && $next > $db->ende_datum ) {
+			$update['aktiv'] = 0;
 		}
 
-		return $count;
+		$wpdb->update( self::table(), $update, array( 'id' => (int) $db->id ) );
+
+		return $r;
+	}
+
+	/* ====================================================================
+	 * Termine, die auf ihre Rechnung warten (lw16_dauerbuchung_offen)
+	 * ================================================================== */
+
+	/**
+	 * Tabelle der wartenden Termine.
+	 *
+	 * @return string
+	 */
+	public static function offen_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'lw16_dauerbuchung_offen';
+	}
+
+	/**
+	 * Wartenden Termin anlegen (je Dauerbuchung und Fälligkeit nur einmal).
+	 *
+	 * @param object $db         Dauerbuchung.
+	 * @param string $faellig_am Fälligkeit (Y-m-d).
+	 * @return int Termin-ID (auch die eines schon vorhandenen).
+	 */
+	public static function termin_anlegen( $db, $faellig_am ) {
+		global $wpdb;
+		$t = self::offen_table();
+
+		$vorhanden = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$t} WHERE dauerbuchung_id = %d AND faellig_am = %s", // phpcs:ignore
+			(int) $db->id,
+			$faellig_am
+		) );
+		if ( $vorhanden ) {
+			return $vorhanden;
+		}
+
+		$wpdb->insert( $t, array(
+			'dauerbuchung_id' => (int) $db->id,
+			'faellig_am'      => $faellig_am,
+			'bezeichnung'     => (string) $db->bezeichnung,
+			'betrag'          => abs( (float) $db->betrag ),
+			'kategorie'       => (string) $db->kategorie,
+			'status'          => 'wartet',
+			'erstellt_am'     => current_time( 'mysql' ),
+		) );
+		$id = (int) $wpdb->insert_id;
+
+		AuditLog::record( 'dauerbuchung_wartet', 'dauerbuchung', (int) $db->id, array(
+			'termin'      => $id,
+			'faellig_am'  => $faellig_am,
+			'bezeichnung' => (string) $db->bezeichnung,
+			'betrag'      => abs( (float) $db->betrag ),
+		) );
+
+		return $id;
+	}
+
+	/**
+	 * Ein Termin.
+	 *
+	 * @param int $id Termin-ID.
+	 * @return object|null
+	 */
+	public static function termin( $id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM " . self::offen_table() . " WHERE id = %d", (int) $id ) ); // phpcs:ignore
+	}
+
+	/**
+	 * Alle Termine, die noch auf ihre Rechnung warten (älteste zuerst).
+	 *
+	 * @return array
+	 */
+	public static function wartende() {
+		global $wpdb;
+		return (array) $wpdb->get_results( "SELECT * FROM " . self::offen_table() . " WHERE status = 'wartet' ORDER BY faellig_am ASC, id ASC" ); // phpcs:ignore
+	}
+
+	/**
+	 * Anzahl wartender Termine.
+	 *
+	 * @return int
+	 */
+	public static function count_wartend() {
+		global $wpdb;
+		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . self::offen_table() . " WHERE status = 'wartet'" ); // phpcs:ignore
+	}
+
+	/**
+	 * Termin als erledigt markieren: Die Rechnung ist als Beleg erfasst.
+	 *
+	 * Nur aus „wartet“ heraus – zwei gleichzeitige Uploads erledigen ihn nicht doppelt.
+	 *
+	 * @param int $id       Termin-ID.
+	 * @param int $beleg_id Beleg.
+	 * @return bool
+	 */
+	public static function termin_erfasst( $id, $beleg_id ) {
+		global $wpdb;
+		$n = $wpdb->update(
+			self::offen_table(),
+			array(
+				'status'       => 'erfasst',
+				'beleg_id'     => (int) $beleg_id,
+				'erledigt_am'  => current_time( 'mysql' ),
+				'erledigt_von' => get_current_user_id(),
+			),
+			array( 'id' => (int) $id, 'status' => 'wartet' )
+		);
+		if ( $n ) {
+			AuditLog::record( 'dauerbuchung_rechnung_erfasst', 'dauerbuchung_offen', (int) $id, array( 'beleg' => (int) $beleg_id ) );
+		}
+		return (bool) $n;
+	}
+
+	/**
+	 * Termin verwerfen: In diesem Zeitraum kam keine Rechnung (z. B. Abo pausiert).
+	 *
+	 * @param int    $id    Termin-ID.
+	 * @param string $grund Begründung.
+	 * @return bool
+	 */
+	public static function termin_verwerfen( $id, $grund ) {
+		global $wpdb;
+		$n = $wpdb->update(
+			self::offen_table(),
+			array(
+				'status'       => 'verworfen',
+				'grund'        => mb_substr( (string) $grund, 0, 255 ),
+				'erledigt_am'  => current_time( 'mysql' ),
+				'erledigt_von' => get_current_user_id(),
+			),
+			array( 'id' => (int) $id, 'status' => 'wartet' )
+		);
+		if ( $n ) {
+			AuditLog::record( 'dauerbuchung_termin_verworfen', 'dauerbuchung_offen', (int) $id, array( 'grund' => (string) $grund ) );
+		}
+		return (bool) $n;
 	}
 
 	/**

@@ -5,6 +5,9 @@
  * - UI.buchTabs['belege']: Liste mit Filtern, Detail, Festschreiben, Stornieren.
  * - UI.belegCapture({ mode: 'camera'|'upload'|'choose', campaignId: 0, onSaved: function (beleg) {} })
  *   Dialog zum Erfassen. Wird auch vom Marketing benutzt: Name und Optionen nicht ändern.
+ *   Zusätzlich (Dauerbuchungen „auf Rechnung warten“): prefill { betrag, haendler, konto, notiz }
+ *   belegt das Formular vor (ausgelesene Werte gehen vor, das Konto der Vorlage bleibt),
+ *   extra { dauer_offen_id } geht unverändert mit dem Speichern an den Server, title ersetzt den Kopf.
  *
  * Alle Daten gelangen über textContent bzw. setAttribute in die Seite, nie als HTML-Text.
  * Klassisches ES5, kein Modulsystem.
@@ -249,6 +252,7 @@
 			}
 
 			if (write && d.offen_anzahl > 0) { box.appendChild(openBanner(d)); }
+			if (write) { var db = dauerBanner(d); if (db) { box.appendChild(db); } }
 
 			var search = h('input', { class: 'field', type: 'search', placeholder: 'Suchen: Händler, Nummer, Betrag, Notiz', value: q.suche, 'aria-label': 'Suchen' });
 			function go() { q.suche = search.value; q.seite = 1; load(); }
@@ -309,6 +313,15 @@
 				h('div', { class: 'v' }, eur(b.betrag)),
 				h('div', { class: 's' }, b.nummer + ' · ' + fmtDate(b.datum) + ' · ' + b.kategorie + (b.hat_datei ? ' · Foto' : '')),
 				h('div', { class: 'g' }, statusTag(b.status)));
+		}
+
+		// Dauerbuchungen „auf Rechnung warten“: Hinweis mit Sprung in den Reiter.
+		function dauerBanner(d) {
+			var n = d.dauer_wartend || 0;
+			if (!n) { return null; }
+			var go = ctx.goTab ? h('button', { class: 'btn', type: 'button', onclick: function () { ctx.goTab('dauer'); } }, 'Zu den Dauerbuchungen') : null;
+			return h('div', { class: 'notice warn', style: 'margin-bottom:12px' },
+				h('p', { style: 'margin:0 0 10px' }, n === 1 ? '1 Dauerbuchung wartet auf ihre Rechnung.' : n + ' Dauerbuchungen warten auf ihre Rechnung.'), go);
 		}
 
 		function openBanner(d) {
@@ -635,7 +648,7 @@
 		};
 
 		var body = h('div', { class: 'bb-cap' });
-		var dlg = UI.dlg('Beleg erfassen', body, true);
+		var dlg = UI.dlg(opts.title || 'Beleg erfassen', body, true);
 		dlg.classList.add('bb-sheet');
 		dlg.addEventListener('close', function () { stopCamera(); S.pages.forEach(function (p) { if (p.url) { URL.revokeObjectURL(p.url); } }); });
 
@@ -985,7 +998,11 @@
 		function paintForm(opt) {
 			clear();
 			var locked = !!S.erechnung;
-			var f = S.fields || {};
+			var pre = opts.prefill || {};
+			var f = {};
+			Object.keys(pre).forEach(function (k) { f[k] = pre[k]; });
+			Object.keys(S.fields || {}).forEach(function (k) { if (S.fields[k] !== '' && S.fields[k] !== null && S.fields[k] !== undefined) { f[k] = S.fields[k]; } });
+			if (pre.konto) { f.konto = pre.konto; }
 			var wraps = {};
 
 			function mark(key, wrap, input) {
@@ -1016,6 +1033,7 @@
 			var kamp = kampagneSelect(opt, opts.campaignId || 0);
 			var anteil = h('input', { class: 'field', type: 'number', min: '0', max: '100', step: '0.1', value: '100', 'aria-label': 'Anteil in Prozent' });
 			var notiz = h('textarea', { class: 'field', rows: '3', placeholder: 'Wofür war das? (optional)' });
+			if (pre.notiz) { notiz.value = pre.notiz; }
 
 			wraps.betrag = fld('Betrag in €', betrag);
 			wraps.datum = fld('Belegdatum', datum);
@@ -1075,12 +1093,15 @@
 			}
 
 			function payload(freeze) {
-				return {
+				var pl = {
 					betrag: betrag.value, datum: datum.value, haendler: haendler.value, externe_nr: extern.value,
 					konto: konto.value, zahlungsart: zahl.value, mwst_satz: mwst.value,
 					kampagne_id: parseInt(kamp.value, 10) || 0, kampagne_anteil: anteil.value,
 					notiz: notiz.value, festschreiben: freeze ? 1 : 0, trotzdem: forceDup ? 1 : 0
 				};
+				var extra = opts.extra || {};
+				Object.keys(extra).forEach(function (k) { pl[k] = extra[k]; });
+				return pl;
 			}
 
 			function fileForUpload() {

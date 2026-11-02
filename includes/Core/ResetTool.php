@@ -105,6 +105,8 @@ class ResetTool {
 					'kassenbuch',
 					'erechnung_eingang',
 					'gobd_pruefung',
+					// Wartende Rechnungen zu Dauerbuchungen zeigen auf Belege.
+					'dauerbuchung_offen',
 				),
 			),
 			'kasse'        => array(

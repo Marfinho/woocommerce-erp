@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.77.0] – 2026-11-02
+
+### Neu: Dauerbuchungen „auf Rechnung warten“
+- Neuer Schalter **„Auf Rechnung warten“** an jeder Dauerbuchung (Buchhaltung → Dauerbuchungen → Neu/Ändern). Gedacht für Abos und Verträge, zu denen jeden Monat eine eigene Rechnung kommt (Telefon, Software, Strom).
+- Zum Termin wird dann **noch kein Beleg gebucht**. Stattdessen wartet der Termin auf seine Rechnung. Hochladen oder Fotografieren öffnet die normale Beleg-Erfassung, vorbelegt mit Händler, erwartetem Betrag, Konto und Notiz. Betrag und Datum stellst du auf die echte Rechnung ein, E-Rechnungen (XML) werden übernommen. Erst dann entsteht der Beleg mit der Datei in der Hash-Kette (Quelle „Dauerbuchung“), auf Wunsch gleich festgeschrieben.
+- Kommt in einem Zeitraum keine Rechnung, lässt sich der Termin mit Pflicht-Grund als **„Entfällt“** schließen. Es wird nichts gebucht und nichts gelöscht, alles steht im Protokoll.
+- **Startseite „Heute“:** neue Aufgabe „Rechnung zur Dauerbuchung hochladen“ (nur mit dem Recht Buchhaltung, nicht auf dem Wandbildschirm). Sie führt direkt in den Reiter Dauerbuchungen. Die Belegliste zeigt einen Hinweis, solange Termine warten.
+- Dauerbuchungen ohne Schalter laufen unverändert: Beleg sofort, festgeschrieben, im Journal. Lauf und „Jetzt buchen“ nutzen jetzt dieselbe Ausführung (`DauerbuchungRepository::ausfuehren`).
+- Datenbank (DB_VERSION 51): Spalte `dauerbuchungen.auf_rechnung`, neue Tabelle `dauerbuchung_offen` (je Dauerbuchung und Fälligkeit ein Termin). Die Tabelle wird beim Zurücksetzen der Buchhaltung mit geleert.
+- Tests: `tests/ErpTasksTest.php`, `tests/ErpBuchBuchungenTest.php`.
+
 ## [0.76.3] – 2026-11-02
 
 ### Neu: Türklingel über Home Assistant

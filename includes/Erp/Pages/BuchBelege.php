@@ -33,6 +33,7 @@ use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Accounting\BelegOcr;
 use Lindenweg16\Modules\Accounting\BelegRepository;
 use Lindenweg16\Modules\Accounting\BuchungRepository;
+use Lindenweg16\Modules\Accounting\DauerbuchungRepository;
 use Lindenweg16\Modules\Accounting\ERechnungImporter;
 use Lindenweg16\Modules\Accounting\FeeExtractor;
 use Lindenweg16\Modules\Accounting\Kontenrahmen;
@@ -867,6 +868,8 @@ class BuchBelege {
 				return __( 'E-Rechnung', 'lindenweg16' );
 			case 'storno':
 				return __( 'Storno', 'lindenweg16' );
+			case 'dauerbuchung':
+				return __( 'Dauerbuchung', 'lindenweg16' );
 		}
 
 		return __( 'manuell', 'lindenweg16' );
@@ -1053,6 +1056,7 @@ class BuchBelege {
 				'filter'       => $f,
 				'offen_anzahl' => $offen ? (int) $offen[0] : 0,
 				'offen_summe'  => $offen ? (float) $offen[1] : 0.0,
+				'dauer_wartend' => DauerbuchungRepository::count_wartend(),
 			)
 		);
 	}
@@ -1408,6 +1412,29 @@ class BuchBelege {
 	}
 
 	/**
+	 * Wartender Termin einer Dauerbuchung, zu dem diese Rechnung gehört.
+	 *
+	 * @param array $p Parameter (dauer_offen_id).
+	 * @return object|null|string Termin, null (keiner angegeben) oder Fehlertext.
+	 */
+	protected static function dauer_termin( array $p ) {
+		$id = isset( $p['dauer_offen_id'] ) ? (int) $p['dauer_offen_id'] : 0;
+		if ( $id <= 0 ) {
+			return null;
+		}
+
+		$t = DauerbuchungRepository::termin( $id );
+		if ( ! $t ) {
+			return __( 'Den Termin der Dauerbuchung gibt es nicht (mehr). Bitte die Liste neu laden.', 'lindenweg16' );
+		}
+		if ( 'wartet' !== (string) $t->status ) {
+			return __( 'Zu diesem Termin der Dauerbuchung ist schon eine Rechnung erfasst (oder er entfällt). Es wurde nichts gespeichert.', 'lindenweg16' );
+		}
+
+		return $t;
+	}
+
+	/**
 	 * Beleg anlegen (mit Datei), optional gleich festschreiben.
 	 *
 	 * @param WP_REST_Request $request Anfrage (multipart oder JSON).
@@ -1421,6 +1448,11 @@ class BuchBelege {
 			return self::fail( reset( $val['errors'] ), 422, array( 'fehler' => $val['errors'] ) );
 		}
 		$c = $val['clean'];
+
+		$termin = self::dauer_termin( $p );
+		if ( is_string( $termin ) ) {
+			return self::fail( $termin, 409 );
+		}
 
 		$kampagne = null;
 		if ( $c['kampagne_id'] ) {
@@ -1449,7 +1481,7 @@ class BuchBelege {
 			}
 		}
 
-		$beleg_id = self::beleg_erzeugen( $c, $datei ? $datei['name'] : '' );
+		$beleg_id = self::beleg_erzeugen( $c, $datei ? $datei['name'] : '', $termin ? 'dauerbuchung' : 'manuell' );
 
 		if ( ! $beleg_id ) {
 			if ( $datei ) {
@@ -1474,8 +1506,13 @@ class BuchBelege {
 				'groesse'  => $datei ? $datei['size'] : 0,
 				'dateityp' => $upload['typ'] ? $upload['typ']['art'] : '',
 				'doppelt_bestaetigt' => (bool) $doppelte,
+				'dauer_termin' => $termin ? (int) $termin->id : 0,
 			)
 		);
+
+		if ( $termin ) {
+			DauerbuchungRepository::termin_erfasst( (int) $termin->id, $beleg_id );
+		}
 
 		return self::nach_anlegen( $beleg_id, self::flag( isset( $p['festschreiben'] ) ? $p['festschreiben'] : false ), $anteil );
 	}
@@ -2016,6 +2053,11 @@ class BuchBelege {
 		}
 		$c = $val['clean'];
 
+		$termin = self::dauer_termin( $p );
+		if ( is_string( $termin ) ) {
+			return self::fail( $termin, 409 );
+		}
+
 		$doppelte = self::doppelte_laden( array( 'betrag' => (float) $c['betrag'], 'datum' => (string) $er->datum, 'haendler' => (string) $er->absender_name ) );
 		$trotzdem = self::flag( isset( $p['trotzdem'] ) ? $p['trotzdem'] : false );
 		if ( $doppelte && ! $trotzdem ) {
@@ -2060,8 +2102,13 @@ class BuchBelege {
 				'erechnung_id' => (int) $er->id,
 				'betrag'       => number_format( (float) $er->betrag, 2, '.', '' ),
 				'doppelt_bestaetigt' => (bool) $doppelte,
+				'dauer_termin' => $termin ? (int) $termin->id : 0,
 			)
 		);
+
+		if ( $termin ) {
+			DauerbuchungRepository::termin_erfasst( (int) $termin->id, $beleg_id );
+		}
 
 		return self::nach_anlegen( $beleg_id, self::flag( isset( $p['festschreiben'] ) ? $p['festschreiben'] : false ), $anteil );
 	}

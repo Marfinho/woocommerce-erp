@@ -14,6 +14,7 @@ namespace Lindenweg16\Erp;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Modules\Accounting\DauerbuchungRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
@@ -43,8 +44,9 @@ class Tasks {
 			'bestellen' => 6,
 			'lieferung' => 7,
 			'rechnung'  => 8,
-			'nachfassen' => 9,
-			'mail'      => 10,
+			'dauerbeleg' => 9,
+			'nachfassen' => 10,
+			'mail'      => 11,
 		);
 	}
 
@@ -282,6 +284,15 @@ class Tasks {
 			}
 		}
 
+		// Dauerbuchungen „auf Rechnung warten“: Termin fällig, Rechnung fehlt noch.
+		// Buchhaltung gehört nicht an die Wand (Händler und Beträge).
+		if ( ! $everything && Access::can( 'finanzen.buchhaltung' ) ) {
+			$task = self::dauerbeleg_task( DauerbuchungRepository::wartende() );
+			if ( $task ) {
+				$tasks[] = $task;
+			}
+		}
+
 		// Die Mails einer Person gehören nicht an die Wand.
 		$mail = $everything ? 0 : self::unread_mail();
 
@@ -298,6 +309,43 @@ class Tasks {
 		self::$everything = false;
 
 		return self::sort( $tasks );
+	}
+
+	/**
+	 * Aufgabe „Rechnung hochladen“ zu wartenden Dauerbuchungs-Terminen – reine Regel.
+	 *
+	 * @param array $wartend Termine (bezeichnung, faellig_am), älteste zuerst.
+	 * @return array|null Aufgabe oder null, wenn nichts wartet.
+	 */
+	public static function dauerbeleg_task( array $wartend ) {
+		$n = count( $wartend );
+		if ( 0 === $n ) {
+			return null;
+		}
+
+		$names = array();
+		foreach ( $wartend as $w ) {
+			$w    = (array) $w;
+			$name = (string) $w['bezeichnung'];
+			if ( ! in_array( $name, $names, true ) ) {
+				$names[] = $name;
+			}
+		}
+		$first = (array) $wartend[0];
+		$sub   = implode( ', ', array_slice( $names, 0, 2 ) ) . ( count( $names ) > 2 ? ' …' : '' );
+		$tag   = (string) $first['faellig_am'];
+		if ( preg_match( '/^(\d{4})-(\d{2})-(\d{2})$/', $tag, $m ) ) {
+			/* translators: %s: Datum. */
+			$sub .= ' · ' . sprintf( __( 'fällig seit %s', 'lindenweg16' ), $m[3] . '.' . $m[2] . '.' . $m[1] );
+		}
+
+		return array(
+			'kind'  => 'dauerbeleg',
+			'title' => self::count_text( $n, __( '%d Rechnung zur Dauerbuchung hochladen', 'lindenweg16' ), __( '%d Rechnungen zu Dauerbuchungen hochladen', 'lindenweg16' ) ),
+			'sub'   => $sub,
+			'cta'   => __( 'Rechnung hochladen', 'lindenweg16' ),
+			'href'  => '#/seite/buchhaltung/dauer',
+		);
 	}
 
 	/**

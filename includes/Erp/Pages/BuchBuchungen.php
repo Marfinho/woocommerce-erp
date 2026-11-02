@@ -31,6 +31,7 @@ use Lindenweg16\Modules\Accounting\BuchungRepository;
 use Lindenweg16\Modules\Accounting\DauerbuchungRepository;
 use Lindenweg16\Modules\Accounting\InvoiceGenerator;
 use Lindenweg16\Modules\Accounting\KassenbuchRepository;
+use Lindenweg16\Modules\Accounting\Kontenrahmen;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -80,6 +81,7 @@ class BuchBuchungen {
 		self::route( $ns, '/erp/buch/dauer/speichern', 'POST', 'dauer_speichern', $buch );
 		self::route( $ns, '/erp/buch/dauer/deaktivieren', 'POST', 'dauer_deaktivieren', $buch );
 		self::route( $ns, '/erp/buch/dauer/ausfuehren', 'POST', 'dauer_ausfuehren', $buch );
+		self::route( $ns, '/erp/buch/dauer/termin/verwerfen', 'POST', 'dauer_termin_verwerfen', $buch );
 	}
 
 	/**
@@ -1212,6 +1214,7 @@ class BuchBuchungen {
 				'naechste'    => (string) $d->naechste_ausfuehrung,
 				'letzte'      => $d->letzte_ausfuehrung ? (string) $d->letzte_ausfuehrung : '',
 				'aktiv'       => $aktiv,
+				'auf_rechnung' => ! empty( $d->auf_rechnung ),
 				'faellig'     => $faellig,
 				'vorschau'    => null,
 			);
@@ -1235,7 +1238,7 @@ class BuchBuchungen {
 		$log = array();
 		$at  = AuditLog::table();
 
-		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$at} WHERE aktion IN ('dauerbuchungen_ausgefuehrt','dauerbuchung_erstellt','dauerbuchung_geaendert','dauerbuchung_deaktiviert') ORDER BY id DESC LIMIT 20" ) as $l ) { // phpcs:ignore
+		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$at} WHERE aktion IN ('dauerbuchungen_ausgefuehrt','dauerbuchung_erstellt','dauerbuchung_geaendert','dauerbuchung_deaktiviert','dauerbuchung_wartet','dauerbuchung_rechnung_erfasst','dauerbuchung_termin_verworfen') ORDER BY id DESC LIMIT 20" ) as $l ) { // phpcs:ignore
 			$user  = $l->user_id ? get_userdata( (int) $l->user_id ) : false;
 			$log[] = array(
 				'zeit'    => (string) $l->erstellt_am,
@@ -1253,8 +1256,33 @@ class BuchBuchungen {
 				'kategorien' => self::kategorien(),
 				'intervalle' => $intv,
 				'protokoll'  => $log,
+				'wartend'    => self::wartend_rows(),
 			)
 		);
+	}
+
+	/**
+	 * Termine, die auf ihre Rechnung warten – fürs Formular „Rechnung hochladen“
+	 * schon mit Konto, Betrag und Händler vorbelegt.
+	 *
+	 * @return array
+	 */
+	public static function wartend_rows() {
+		$out = array();
+
+		foreach ( DauerbuchungRepository::wartende() as $w ) {
+			$out[] = array(
+				'id'              => (int) $w->id,
+				'dauerbuchung_id' => (int) $w->dauerbuchung_id,
+				'faellig_am'      => (string) $w->faellig_am,
+				'bezeichnung'     => (string) $w->bezeichnung,
+				'betrag'          => (float) $w->betrag,
+				'kategorie'       => (string) $w->kategorie,
+				'konto'           => (string) Kontenrahmen::konto_fuer_kategorie( (string) $w->kategorie ),
+			);
+		}
+
+		return $out;
 	}
 
 	/**
@@ -1269,6 +1297,9 @@ class BuchBuchungen {
 			'dauerbuchung_erstellt'      => __( 'Angelegt', 'lindenweg16' ),
 			'dauerbuchung_geaendert'     => __( 'Geändert', 'lindenweg16' ),
 			'dauerbuchung_deaktiviert'   => __( 'Deaktiviert', 'lindenweg16' ),
+			'dauerbuchung_wartet'        => __( 'Wartet auf Rechnung', 'lindenweg16' ),
+			'dauerbuchung_rechnung_erfasst' => __( 'Rechnung erfasst', 'lindenweg16' ),
+			'dauerbuchung_termin_verworfen' => __( 'Termin entfällt', 'lindenweg16' ),
 		);
 
 		return isset( $map[ $aktion ] ) ? $map[ $aktion ] : $aktion;
@@ -1337,7 +1368,8 @@ class BuchBuchungen {
 			return self::fail( $check['message'] );
 		}
 
-		$d = $check['data'];
+		$d            = $check['data'];
+		$auf_rechnung = self::dauer_flag( $request->get_param( 'auf_rechnung' ) );
 
 		if ( ! $old ) {
 			$new = DauerbuchungRepository::create(
@@ -1349,6 +1381,7 @@ class BuchBuchungen {
 					'intervall'   => $d['intervall'],
 					'start_datum' => $d['start_datum'],
 					'ende_datum'  => $d['ende_datum'],
+					'auf_rechnung' => $auf_rechnung,
 				)
 			);
 
@@ -1371,6 +1404,7 @@ class BuchBuchungen {
 				'kategorie'   => $d['kategorie'],
 				'intervall'   => $d['intervall'],
 				'ende_datum'  => $ende,
+				'auf_rechnung' => $auf_rechnung,
 			),
 			array( 'id' => $id )
 		);
@@ -1386,6 +1420,8 @@ class BuchBuchungen {
 				'betrag'          => $d['betrag'],
 				'intervall_alt'   => (string) $old->intervall,
 				'intervall'       => $d['intervall'],
+				'auf_rechnung_alt' => (int) ( isset( $old->auf_rechnung ) ? $old->auf_rechnung : 0 ),
+				'auf_rechnung'    => $auf_rechnung,
 			)
 		);
 
@@ -1418,16 +1454,14 @@ class BuchBuchungen {
 	 * Fällige Dauerbuchungen ausführen: eine (id) oder alle.
 	 *
 	 * Alle: DauerbuchungRepository::execute_due. Einzeln: dieselben Schritte
-	 * für genau eine Vorlage (Beleg, Festschreiben mit Journalbuchung,
-	 * nächstes Datum, ggf. Abschalten, Protokoll), weil das Repository keinen
-	 * Einzelaufruf anbietet.
+	 * für genau eine Vorlage über DauerbuchungRepository::ausfuehren (Beleg,
+	 * Festschreiben mit Journalbuchung – oder bei „auf Rechnung warten“ ein
+	 * wartender Termin –, nächstes Datum, ggf. Abschalten) plus Protokoll.
 	 *
 	 * @param WP_REST_Request $request Anfrage.
 	 * @return WP_REST_Response
 	 */
 	public static function dauer_ausfuehren( WP_REST_Request $request ) {
-		global $wpdb;
-
 		$id    = (int) $request->get_param( 'id' );
 		$heute = gmdate( 'Y-m-d' );
 
@@ -1461,38 +1495,11 @@ class BuchBuchungen {
 			return self::fail( __( 'Diese Dauerbuchung ist heute nicht fällig. Sie kann nicht vorzeitig gebucht werden.', 'lindenweg16' ) );
 		}
 
-		$beleg_id = BelegRepository::create(
-			array(
-				'betrag'        => abs( (float) $db->betrag ),
-				'datum'         => $heute,
-				'haendler'      => $db->bezeichnung,
-				'eur_kategorie' => $db->kategorie,
-				'notiz'         => sprintf(
-					/* translators: %d: Dauerbuchung ID */
-					__( 'Automatisch aus Dauerbuchung #%d', 'lindenweg16' ),
-					$db->id
-				),
-				'quelle'        => 'dauerbuchung',
-			)
-		);
+		$r = DauerbuchungRepository::ausfuehren( $db, $heute );
 
-		if ( ! $beleg_id ) {
+		if ( 'fehler' === $r['art'] ) {
 			return self::fail( __( 'Der Beleg konnte nicht angelegt werden. Es wurde nichts gebucht.', 'lindenweg16' ), 500 );
 		}
-
-		BelegRepository::festschreiben( $beleg_id );
-
-		$next   = DauerbuchungRepository::calculate_next( $db->naechste_ausfuehrung, $db->intervall, (int) substr( (string) $db->start_datum, 8, 2 ) );
-		$update = array(
-			'naechste_ausfuehrung' => $next,
-			'letzte_ausfuehrung'   => $heute,
-		);
-
-		if ( $ende && $next > $ende ) {
-			$update['aktiv'] = 0;
-		}
-
-		$wpdb->update( DauerbuchungRepository::table(), $update, array( 'id' => $id ) );
 
 		AuditLog::record(
 			'dauerbuchungen_ausgefuehrt',
@@ -1502,6 +1509,7 @@ class BuchBuchungen {
 				'anzahl'      => 1,
 				'datum'       => $heute,
 				'bezeichnung' => (string) $db->bezeichnung,
+				'auf_rechnung' => 'wartet' === $r['art'] ? 1 : 0,
 			)
 		);
 
@@ -1509,12 +1517,61 @@ class BuchBuchungen {
 			array(
 				'ok'      => true,
 				'anzahl'  => 1,
-				'message' => sprintf(
-					/* translators: %s: Bezeichnung. */
-					__( '„%s“ wurde gebucht und festgeschrieben.', 'lindenweg16' ),
-					$db->bezeichnung
-				),
+				'message' => 'wartet' === $r['art']
+					? sprintf(
+						/* translators: %s: Bezeichnung. */
+						__( '„%s“ ist fällig und wartet jetzt auf die Rechnung. Lade sie hoch, sobald sie da ist – erst dann wird gebucht.', 'lindenweg16' ),
+						$db->bezeichnung
+					)
+					: sprintf(
+						/* translators: %s: Bezeichnung. */
+						__( '„%s“ wurde gebucht und festgeschrieben.', 'lindenweg16' ),
+						$db->bezeichnung
+					),
 			)
 		);
+	}
+
+	/**
+	 * Schalter aus der Anfrage (1, true, "on", "ja") – reine Regel.
+	 *
+	 * @param mixed $wert Eingabe.
+	 * @return int 0 oder 1.
+	 */
+	public static function dauer_flag( $wert ) {
+		if ( is_bool( $wert ) ) {
+			return $wert ? 1 : 0;
+		}
+
+		return in_array( strtolower( trim( (string) $wert ) ), array( '1', 'true', 'on', 'ja', 'yes' ), true ) ? 1 : 0;
+	}
+
+	/**
+	 * Wartenden Termin verwerfen: In diesem Zeitraum kam keine Rechnung.
+	 *
+	 * Es wird nichts gebucht; der Grund steht im Protokoll.
+	 *
+	 * @param WP_REST_Request $request Anfrage (id, grund).
+	 * @return WP_REST_Response
+	 */
+	public static function dauer_termin_verwerfen( WP_REST_Request $request ) {
+		$id    = (int) $request->get_param( 'id' );
+		$grund = self::clean_grund( $request->get_param( 'grund' ) );
+		$t     = DauerbuchungRepository::termin( $id );
+
+		if ( ! $t ) {
+			return self::fail( __( 'Diesen Termin gibt es nicht (mehr). Bitte die Liste neu laden.', 'lindenweg16' ), 404 );
+		}
+		if ( 'wartet' !== (string) $t->status ) {
+			return self::fail( __( 'Dieser Termin ist schon erledigt.', 'lindenweg16' ), 409 );
+		}
+		if ( mb_strlen( $grund ) < self::MIN_GRUND ) {
+			return self::fail( __( 'Bitte kurz begründen, warum keine Rechnung kommt (mindestens 5 Zeichen), zum Beispiel „Abo im Oktober pausiert“.', 'lindenweg16' ) );
+		}
+		if ( ! DauerbuchungRepository::termin_verwerfen( $id, $grund ) ) {
+			return self::fail( __( 'Der Termin ließ sich nicht verwerfen. Bitte noch einmal versuchen.', 'lindenweg16' ), 500 );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Termin entfällt. Es wurde nichts gebucht; der Grund steht im Protokoll.', 'lindenweg16' ) ) );
 	}
 }
