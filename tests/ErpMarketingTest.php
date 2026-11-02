@@ -81,6 +81,23 @@ class ErpMarketingTest extends TestCase {
 		$r = Marketing::validate_campaign( $this->in( array( 'start_datum' => '2026-12-01', 'ende_datum' => '2026-12-01', 'event_datum' => '2026-12-01' ) ), '2026-10-19' );
 		$this->assertSame( array(), $r['errors'] );
 		$this->assertSame( '2026-12-01', $r['data']['event_datum'] );
+		$this->assertNull( $r['data']['event_ende'] );
+	}
+
+	public function test_mehrtaegiges_event() {
+		$r = Marketing::validate_campaign( $this->in( array( 'event_datum' => '2026-12-04', 'event_ende' => '2026-12-06' ) ), '2026-10-19' );
+		$this->assertSame( array(), $r['errors'] );
+		$this->assertSame( '2026-12-06', $r['data']['event_ende'] );
+
+		// Gleicher Tag = eintägig.
+		$r = Marketing::validate_campaign( $this->in( array( 'event_datum' => '2026-12-04', 'event_ende' => '2026-12-04' ) ), '2026-10-19' );
+		$this->assertNull( $r['data']['event_ende'] );
+
+		$r = Marketing::validate_campaign( $this->in( array( 'event_datum' => '2026-12-06', 'event_ende' => '2026-12-04' ) ), '2026-10-19' );
+		$this->assertStringContainsString( 'Veranstaltungsende liegt vor', $r['errors'][0] );
+
+		$r = Marketing::validate_campaign( $this->in( array( 'event_ende' => '2026-12-04' ) ), '2026-10-19' );
+		$this->assertStringContainsString( 'braucht es zuerst den Veranstaltungstag', $r['errors'][0] );
 	}
 
 	public function test_kilometer() {

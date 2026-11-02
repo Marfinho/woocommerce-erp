@@ -108,8 +108,11 @@ class Installer {
 	 * stocktake_lines (Inventur), supplier_orders und supplier_order_items
 	 * (Bestellungen an Lieferanten), absences (Urlaub und Abwesenheit),
 	 * bank_accounts (Vivid-Anbindung) und beleg_steuer (Vorsteuer je Beleg).
+	 *
+	 * DB_VERSION 50: kampagnen um event_ende (optionales letztes Veranstaltungsdatum
+	 * bei mehrtägigen Events) erweitert.
 	 */
-	const DB_VERSION = '49';
+	const DB_VERSION = '50';
 
 	/**
 	 * Aktivierungsroutine.
@@ -797,6 +800,7 @@ class Installer {
 			start_datum DATE NULL,
 			ende_datum DATE NULL,
 			event_datum DATE NULL,
+			event_ende DATE NULL,
 			budget_geplant DECIMAL(12,2) NOT NULL DEFAULT 0,
 			utm_campaign VARCHAR(100) NULL,
 			gutschein_code VARCHAR(50) NULL,

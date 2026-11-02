@@ -127,7 +127,12 @@ class BuchMarketing {
 	 */
 	public static function in_range( array $k, $von, $bis ) {
 		$d = self::reference_date( $k );
-		return '' !== $d && $d >= $von && $d <= $bis;
+		if ( '' === $d ) {
+			return false;
+		}
+		// Mehrtägiges Event: zählt, sobald ein Tag in den Zeitraum fällt.
+		$ende = ! empty( $k['event_datum'] ) && ! empty( $k['event_ende'] ) ? (string) $k['event_ende'] : $d;
+		return $d <= $bis && max( $d, $ende ) >= $von;
 	}
 
 	/**
@@ -267,8 +272,9 @@ class BuchMarketing {
 			$start = ! empty( $k['start_datum'] ) ? (string) $k['start_datum'] : '';
 			$event = ! empty( $k['event_datum'] ) ? (string) $k['event_datum'] : '';
 			$ende  = ! empty( $k['ende_datum'] ) ? (string) $k['ende_datum'] : '';
+			$e_end = ! empty( $k['event_ende'] ) ? (string) $k['event_ende'] : '';
 			$lo    = '' !== $event && ( '' === $start || $event < $start ) ? $event : $start;
-			$hi    = max( $start, $event, $ende );
+			$hi    = max( $start, $event, $ende, $e_end );
 
 			if ( false !== $t && '' !== $lo && '' !== $hi ) {
 				$von = strtotime( $lo . ' 00:00:00 UTC' ) - 30 * self::DAY;
@@ -279,7 +285,9 @@ class BuchMarketing {
 				}
 			}
 			if ( false !== $t && '' !== $event ) {
-				$diff = abs( $t - strtotime( $event . ' 00:00:00 UTC' ) );
+				$t_von = strtotime( $event . ' 00:00:00 UTC' );
+				$t_bis = '' !== $e_end ? strtotime( $e_end . ' 00:00:00 UTC' ) : $t_von;
+				$diff  = $t < $t_von ? $t_von - $t : ( $t > $t_bis ? $t - $t_bis : 0 );
 				if ( $diff <= 3 * self::DAY ) {
 					$score    += 2;
 					$reasons[] = __( 'nah am Veranstaltungstag', 'lindenweg16' );

@@ -137,6 +137,10 @@ class ErpBuchMarketingTest extends TestCase {
 		$this->assertFalse( BuchMarketing::in_range( $k, '2026-11-01', '2026-11-30' ) );
 		$this->assertTrue( BuchMarketing::in_range( array( 'event_datum' => null, 'start_datum' => '2026-11-01' ), '2026-11-01', '2026-11-30' ) );
 		$this->assertFalse( BuchMarketing::in_range( array(), '2026-01-01', '2026-12-31' ) );
+		$mehr = array( 'event_datum' => '2026-11-28', 'event_ende' => '2026-12-02', 'start_datum' => '2026-11-01' );
+		$this->assertTrue( BuchMarketing::in_range( $mehr, '2026-12-01', '2026-12-31' ) );
+		$this->assertTrue( BuchMarketing::in_range( $mehr, '2026-11-01', '2026-11-30' ) );
+		$this->assertFalse( BuchMarketing::in_range( $mehr, '2026-12-03', '2026-12-31' ) );
 	}
 
 	private function campaigns() {
