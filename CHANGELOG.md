@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.4] – 2026-11-02
+
+### Neu: Filamentrolle als „aktiv“ setzen
+- Bei jeder Rolle gibt es jetzt **„Als aktiv setzen“** (und „Nicht mehr aktiv“). Vom Verbrauch der Charge wird immer **zuerst die aktive Rolle** abgezogen, erst danach die übrigen Rollen im Drucker und die neuen.
+- Je Charge (Farbe/Material) ist nur eine Rolle aktiv; eine neu aktive Rolle löst die bisherige ab und gilt automatisch als „in Benutzung“. Wird die aktive Rolle leer gemeldet, entfällt die Markierung.
+- Neue Spalte `is_active` an den Rollen, REST-Aktionen `aktiv` / `inaktiv` an `filament/rolle`. Test: `tests/BetriebFilamentRollsTest.php`.
+
 ## [0.78.3] – 2026-11-02
 
 ### Claude-Zugang: Tagesüberblick zeigt Wartung, Nachbestellen, Material, B2B und Mails

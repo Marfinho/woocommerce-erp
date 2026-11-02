@@ -248,6 +248,7 @@ class FilamentRolls {
 			$rolls[] = array(
 				'id'                  => (int) $roll['id'],
 				'status'              => (string) $roll['status'],
+				'is_active'           => ! empty( $roll['is_active'] ),
 				'start_g'             => (float) $roll['start_g'],
 				'corr_g'              => (float) $roll['corr_g'],
 				'consumed_g_at_close' => (float) $roll['consumed_g_at_close'],
@@ -300,6 +301,7 @@ class FilamentRolls {
 			'color'       => $color,
 			'color_label' => '' !== $color ? ColorRegistry::label( $color ) : '',
 			'status'      => (string) $roll['status'],
+			'active'      => ! empty( $roll['is_active'] ) && RollAllocator::STATUS_EMPTY !== $roll['status'],
 			'start_g'     => (int) $roll['start_g'],
 			'remaining_g' => round( $remaining ),
 			'percent'     => $roll['start_g'] > 0 ? (int) round( $remaining / (float) $roll['start_g'] * 100 ) : 0,
@@ -349,6 +351,57 @@ class FilamentRolls {
 	}
 
 	/**
+	 * Rolle als aktiv setzen: Von ihr wird der Verbrauch der Charge immer zuerst abgezogen.
+	 *
+	 * Je Charge (also je Farbe und Material) gibt es nur eine aktive Rolle; die
+	 * bisher aktive wird abgewählt. Die Rolle gilt damit auch als in Benutzung.
+	 *
+	 * @param int  $id     Rolle.
+	 * @param bool $active Aktiv setzen (true) oder Markierung entfernen (false).
+	 * @return array {ok, message}
+	 */
+	public static function set_active( $id, $active = true ) {
+		global $wpdb;
+
+		$roll = self::find( $id );
+
+		if ( ! $roll ) {
+			return self::result( false, __( 'Rolle nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( RollAllocator::STATUS_EMPTY === $roll['status'] ) {
+			return self::result( false, __( 'Diese Rolle ist als leer gemeldet und kann nicht aktiv sein.', 'lindenweg16' ) );
+		}
+
+		if ( ! $active ) {
+			$wpdb->update( self::table(), array( 'is_active' => 0 ), array( 'id' => (int) $id ) );
+			BetriebAudit::record( 'update', 'filament_rolls', (int) $id, $roll, self::find( $id ), 'Aktiv-Markierung entfernt' );
+			self::refresh();
+
+			return self::result( true, sprintf( /* translators: %s: Rollencode. */ __( 'Rolle %s ist nicht mehr aktiv.', 'lindenweg16' ), $roll['roll_code'] ) );
+		}
+
+		$table = self::table();
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET is_active = 0 WHERE lot_id = %d AND id <> %d", (int) $roll['lot_id'], (int) $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$wpdb->update(
+			$table,
+			array(
+				'is_active' => 1,
+				'status'    => RollAllocator::STATUS_IN_USE,
+				'opened_at' => $roll['opened_at'] ? $roll['opened_at'] : current_time( 'mysql', true ),
+			),
+			array( 'id' => (int) $id )
+		);
+
+		BetriebAudit::record( 'update', 'filament_rolls', (int) $id, $roll, self::find( $id ), 'als aktiv gesetzt' );
+		Log::normal( 'filament', 'Rolle ' . $roll['roll_code'] . ' als aktiv gesetzt' );
+		self::refresh();
+
+		return self::result( true, sprintf( /* translators: %s: Rollencode. */ __( 'Rolle %s ist aktiv – der Verbrauch wird zuerst von ihr abgezogen.', 'lindenweg16' ), $roll['roll_code'] ) );
+	}
+
+	/**
 	 * Rolle ist leer: aus dem Bestand nehmen, Schwund festhalten.
 	 *
 	 * @param int $id Rolle.
@@ -387,6 +440,7 @@ class FilamentRolls {
 				self::table(),
 				array(
 					'status'              => RollAllocator::STATUS_EMPTY,
+					'is_active'           => 0,
 					'emptied_at'          => current_time( 'mysql', true ),
 					'emptied_by'          => get_current_user_id(),
 					'consumed_g_at_close' => (float) $a['absorbed_g'],

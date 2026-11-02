@@ -5,8 +5,8 @@
  * Die Druckjobs buchen Filament auf eine Charge, nicht auf eine Rolle: Wer
  * druckt, wählt die Charge, die Rolle dazu steckt im Drucker. Damit sich der
  * Bestand trotzdem je Rolle führen lässt, wird der Verbrauch der Charge der
- * Reihe nach auf ihre Rollen angerechnet - zuerst die Rollen im Drucker (die
- * angebrochenen), dann die neuen.
+ * Reihe nach auf ihre Rollen angerechnet - zuerst die als **aktiv** markierte
+ * Rolle, dann die Rollen im Drucker (die angebrochenen), dann die neuen.
  *
  * Eine **leer gescannte** Rolle ist die Wahrheit, an der sich die Rechnung
  * korrigiert: Sie hat tatsächlich nichts mehr. Was die Rechnung ihr noch
@@ -68,7 +68,7 @@ class RollAllocator {
 	/**
 	 * Verbrauch der Charge auf die Rollen anrechnen.
 	 *
-	 * @param array $rolls          Rollen: id, status, start_g, corr_g, consumed_g_at_close, opened_ts.
+	 * @param array $rolls          Rollen: id, status, is_active, start_g, corr_g, consumed_g_at_close, opened_ts.
 	 * @param float $consumed_total Verbrauch der Charge in Gramm (aus den Druckjobs).
 	 * @return array id => {absorbed_g, remaining_g}
 	 */
@@ -88,10 +88,17 @@ class RollAllocator {
 			$open[] = $roll;
 		}
 
-		// Angebrochene zuerst (die im Drucker stecken), dann neue; jeweils die ältere zuerst.
+		// Die aktive Rolle zuerst, dann angebrochene (die im Drucker stecken), dann neue; jeweils die ältere zuerst.
 		usort(
 			$open,
 			static function ( $a, $b ) {
+				$aa = ! empty( $a['is_active'] ) ? 0 : 1;
+				$ab = ! empty( $b['is_active'] ) ? 0 : 1;
+
+				if ( $aa !== $ab ) {
+					return $aa <=> $ab;
+				}
+
 				$ra = self::STATUS_IN_USE === $a['status'] ? 0 : 1;
 				$rb = self::STATUS_IN_USE === $b['status'] ? 0 : 1;
 

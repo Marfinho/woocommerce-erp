@@ -67,6 +67,23 @@ class BetriebFilamentRollsTest extends TestCase {
 	}
 
 	/**
+	 * Die aktive Rolle bekommt den Verbrauch zuerst - auch vor einer älteren im Drucker.
+	 */
+	public function test_aktive_rolle_nimmt_verbrauch_zuerst() {
+		$rolls = array(
+			$this->roll( 1, 'in_benutzung', array( 'opened_ts' => 100 ) ),
+			$this->roll( 2, 'in_benutzung', array( 'opened_ts' => 200, 'is_active' => true ) ),
+			$this->roll( 3, 'neu' ),
+		);
+
+		$a = RollAllocator::allocate( $rolls, 1300 );
+
+		$this->assertSame( 1000.0, $a[2]['absorbed_g'] );
+		$this->assertSame( 300.0, $a[1]['absorbed_g'] );
+		$this->assertSame( 1000.0, $a[3]['remaining_g'] );
+	}
+
+	/**
 	 * Leer gescannt: Die Rolle fällt aus dem Bestand, der Rest an Rechnung ist Schwund.
 	 */
 	public function test_leer_gescannt_fehlt_im_bestand() {
