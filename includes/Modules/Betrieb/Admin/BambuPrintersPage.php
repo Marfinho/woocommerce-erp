@@ -13,6 +13,7 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
+use Lindenweg16\Modules\Betrieb\Doorbell;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 
 /**
@@ -36,6 +37,7 @@ class BambuPrintersPage {
 		add_action( 'admin_post_lw16_bambu_enqueue_job', array( $this, 'handle_enqueue_job' ) );
 		add_action( 'admin_post_lw16_bambu_enqueue_model', array( $this, 'handle_enqueue_model' ) );
 		add_action( 'admin_post_lw16_bambu_snapshot', array( $this, 'handle_snapshot' ) );
+		add_action( 'admin_post_lw16_doorbell_save', array( $this, 'handle_doorbell' ) );
 		add_action( 'wp_ajax_lw16_bambu_cards', array( $this, 'handle_ajax_cards' ) );
 	}
 
@@ -252,6 +254,9 @@ class BambuPrintersPage {
 			wp_die( esc_html__( 'Drucker nicht gefunden.', 'lindenweg16' ), '', array( 'response' => 404 ) );
 		}
 
+		// Jemand sieht hin: Die Bridge schickt für die nächsten Minuten Bilder.
+		BambuService::mark_camera_watched( $printer->printer_id );
+
 		$pfad = BambuService::snapshot_path( $printer->printer_id );
 
 		if ( ! is_file( $pfad ) ) {
@@ -309,6 +314,67 @@ class BambuPrintersPage {
 	}
 
 	/**
+	 * Türklingel (Home-Assistant-Webhook) speichern oder testen.
+	 */
+	public function handle_doorbell() {
+		$this->require_cap( 'lw16_manage_production' );
+		check_admin_referer( self::NONCE . '_doorbell' );
+
+		$url = isset( $_POST['doorbell_url'] ) ? esc_url_raw( trim( wp_unslash( $_POST['doorbell_url'] ) ), array( 'https' ) ) : '';
+		if ( ! Doorbell::valid_url( $url ) ) {
+			$this->back( __( 'Die Webhook-Adresse muss mit https:// beginnen.', 'lindenweg16' ) );
+		}
+		update_option( Doorbell::OPTION, $url, false );
+
+		if ( '' === $url ) {
+			$this->back( __( 'Türklingel ausgeschaltet – die Pi-Programme fragen wieder selbst nach.', 'lindenweg16' ) );
+		}
+
+		if ( empty( $_POST['test'] ) ) {
+			$this->back( __( 'Türklingel gespeichert.', 'lindenweg16' ) );
+		}
+
+		// Testklingel: auf allen Kanälen, mit Antwort.
+		Doorbell::reset();
+		foreach ( Doorbell::CHANNELS as $channel ) {
+			Doorbell::ring( $channel, 'test' );
+		}
+		$errors = array_filter(
+			Doorbell::flush( true ),
+			static function ( $r ) {
+				return true !== $r;
+			}
+		);
+
+		if ( $errors ) {
+			/* translators: %s: Fehlermeldung. */
+			$this->back( sprintf( __( 'Home Assistant hat nicht geantwortet: %s', 'lindenweg16' ), implode( ', ', array_unique( $errors ) ) ) );
+		}
+		$this->back( __( 'Testklingel an Home Assistant gesendet. Im Log der Pi-Programme sollte jetzt „Klingel“ stehen.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Formular für die Türklingel.
+	 */
+	protected function render_doorbell_form() {
+		echo '<h2>' . esc_html__( 'Türklingel über Home Assistant', 'lindenweg16' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Statt dass die Programme auf dem Raspberry Pi alle paar Sekunden nachfragen, klingelt WordPress bei einem neuen Druck-, Slicing- oder Etikettenauftrag und wenn jemand das Live-Bild öffnet. Home Assistant gibt die Klingel per MQTT an den Pi weiter (Anleitung: raspberry-pi/README.md, „Türklingel“). Leer lassen = aus.', 'lindenweg16' ) . '</p>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<input type="hidden" name="action" value="lw16_doorbell_save">';
+		wp_nonce_field( self::NONCE . '_doorbell' );
+		echo '<table class="form-table"><tbody><tr><th scope="row">' . esc_html__( 'Webhook-Adresse', 'lindenweg16' ) . '</th><td>';
+		printf(
+			'<input type="url" name="doorbell_url" class="large-text code" value="%s" placeholder="https://hooks.nabu.casa/…" autocomplete="off">',
+			esc_attr( Doorbell::url() )
+		);
+		echo '<p class="description">' . esc_html__( 'Die Adresse wirkt wie ein Passwort: Wer sie kennt, kann klingeln, aber keine Aufträge sehen oder abholen.', 'lindenweg16' ) . '</p>';
+		echo '</td></tr></tbody></table>';
+		echo '<p><button type="submit" class="button button-primary">' . esc_html__( 'Speichern', 'lindenweg16' ) . '</button> ';
+		echo '<button type="submit" name="test" value="1" class="button">' . esc_html__( 'Speichern und Testklingel', 'lindenweg16' ) . '</button></p>';
+		echo '</form>';
+	}
+
+	/**
 	 * Seite ausgeben.
 	 */
 	public function render() {
@@ -352,6 +418,10 @@ class BambuPrintersPage {
 		echo '<h2>' . esc_html__( 'Registrierte Drucker', 'lindenweg16' ) . '</h2>';
 
 		$this->render_printer_cards();
+
+		if ( $this->can_manage() ) {
+			$this->render_doorbell_form();
+		}
 	}
 
 	/**

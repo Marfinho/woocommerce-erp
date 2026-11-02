@@ -557,6 +557,33 @@ verlangsamen. `SHORT_POLL_WAIT=0` sollte deshalb im klassischen Modus
 so bleiben; für kürzere Verzögerung eher `FALLBACK_POLL_INTERVAL`
 senken.
 
+**Leerlauf und Last auf dem Webspace.** Jede Abfrage startet auf dem
+Webspace WordPress samt WooCommerce komplett. Damit drei Programme auf dem
+Pi im Leerlauf nicht alle paar Sekunden anklopfen (im November 2026 waren
+das rund 1.800 Aufrufe pro Stunde, bis der Webspace mit 500/503
+ausstieg), gilt seit 0.76.2 für alle drei:
+
+- **Leerlauf:** Nach jeder leeren Antwort (`204`) verdoppelt sich die
+  Pause bis zur nächsten Abfrage – `FALLBACK_POLL_INTERVAL`, dann 10, 20,
+  40 … bis `IDLE_POLL_MAX` (Bridge und Slicing 60 s, Etiketten 30 s).
+  Sobald ein Job kommt, geht es wieder im kurzen Takt weiter.
+- **Status (Bambu):** Wird alle `STATUS_INTERVAL` Sekunden nur lokal
+  geprüft und bloß bei einer Änderung gemeldet, sonst alle
+  `STATUS_HEARTBEAT` Sekunden (60) als Lebenszeichen.
+- **Kamera (Bambu):** Standbilder gehen nur hoch, solange in WordPress
+  jemand das Live-Bild ansieht und bis zu zwei Minuten danach
+  (`CAMERA_ONLY_WHEN_WATCHED`). Das erste frische Bild kann deshalb bis
+  zu einer Minute dauern.
+- **Serverfehler:** Bei `500`/`503` wartet das Programm wirklich immer
+  länger (1, 2, 4 … 30 s) und beachtet einen `Retry-After`-Header – bis
+  0.76.1 fragte es gerade bei Überlast jede Sekunde nach.
+
+**Keine `.htaccess`-Drossel.** Ein Versuch, die Abfragen per
+`mod_rewrite` (`R=429`, Zeitbedingungen) in der `.htaccess` abzuweisen,
+hat auf dem IONOS-Webspace die ganze Seite mit Fehler 500 lahmgelegt
+(November 2026). Die Entlastung gehört in die Pi-Programme (oben) und in
+die Türklingel (unten).
+
 Wer weiß, dass der eigene Webspace lang offen gehaltene Verbindungen
 zuverlässig durchreicht (eigener Server, VPS, die meisten Managed-
 WordPress-Hoster), kann in `.env.bambu` auf Long Polling umstellen für
@@ -569,6 +596,76 @@ LONG_POLL_ENABLED=true
 Ob Long Polling beim eigenen Hoster überhaupt funktioniert, zeigt sich
 im Log: Bricht `GET /jobs` regelmäßig mit einem Verbindungsfehler statt
 mit einem sauberen `204` ab, bleibt es bei `LONG_POLL_ENABLED=false`.
+
+### Türklingel über Home Assistant (statt ständig nachzufragen)
+
+Seit 0.76.3 können Bambu-Bridge, Slicing-Worker und Etikettendrucker-Client
+auf eine **Klingel** warten, statt WordPress laufend zu fragen: Kommt ein
+neuer Auftrag (oder öffnet jemand das Kamerabild), ruft WordPress einen
+Webhook von Home Assistant auf, Home Assistant gibt das per MQTT im
+Heimnetz an den Pi weiter, und der Pi holt sich den Auftrag sofort – wie
+bisher mit seinem Token. Die Klingel enthält keine Daten, nur den Kanal
+(`bambu`, `slicing`, `etikett`, `kamera`) und ggf. die Drucker-ID.
+
+Mit verbundener Klingel fragt jedes Programm nur noch alle
+`DOORBELL_FALLBACK` Sekunden (Standard 300) selbst nach, für den Fall,
+dass eine Klingel verloren geht. Ist Home Assistant oder der Broker weg,
+geht es automatisch zurück auf das normale Nachfragen (`IDLE_POLL_MAX`).
+
+**1. MQTT-Benutzer anlegen.** Das Mosquitto-Add-on meldet über die
+Benutzer von Home Assistant an: Einstellungen → Personen → Benutzer →
+neuer Benutzer, z. B. `lw16-pi` (nur lokal anmelden, kein Admin).
+
+**2. Automation in Home Assistant anlegen** (Einstellungen →
+Automationen → neu → ⋮ → In YAML bearbeiten). Die `webhook_id` ist ein
+Geheimnis – eine lange, zufällige Zeichenkette verwenden:
+
+```yaml
+alias: LW16 Türklingel
+description: WordPress meldet neue Aufträge an die Programme auf dem Raspberry Pi.
+triggers:
+  - trigger: webhook
+    webhook_id: lw16-HIER-EINE-LANGE-ZUFAELLIGE-ZEICHENKETTE
+    allowed_methods:
+      - POST
+    local_only: false   # wichtig: sonst kommt der Aufruf aus dem Internet nicht an
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.json is defined and trigger.json.channel in ['bambu', 'slicing', 'etikett', 'kamera'] }}
+actions:
+  - action: mqtt.publish
+    data:
+      topic: "lw16/klingel/{{ trigger.json.channel }}"
+      payload: "{{ trigger.json.printer | default('') }}"
+      qos: 1
+mode: queued
+max: 20
+```
+
+**3. Adresse über Nabu Casa holen.** Einstellungen → Home Assistant Cloud
+→ Webhooks: bei der Automation „LW16 Türklingel“ einschalten und die
+Adresse `https://hooks.nabu.casa/…` kopieren. (Geht auch:
+`https://<deine-adresse>.ui.nabu.casa/api/webhook/<webhook_id>`.)
+
+**4. In WordPress eintragen:** Betrieb → Bambu-Lab-Drucker → ganz unten
+„Türklingel über Home Assistant“ → Adresse einfügen → „Speichern und
+Testklingel“.
+
+**5. Auf dem Pi** in jede `.env` (`.env.bambu`, `.env.slicing`, `.env`):
+
+```env
+DOORBELL_MQTT_HOST=192.168.178.10   # IP von Home Assistant
+DOORBELL_MQTT_PORT=1883
+DOORBELL_MQTT_USER=lw16-pi
+DOORBELL_MQTT_PASSWORD=...
+```
+
+Slicing-Worker und Etikettendrucker-Client brauchen dafür `paho-mqtt`
+(steht jetzt in `requirements.txt` bzw. `requirements-slicing.txt`; die
+Bridge hat es ohnehin). Fehlt es, laufen sie wie bisher ohne Klingel.
+Danach die Dienste neu starten. Im Log steht dann „Türklingel verbunden“,
+bei der Testklingel „Klingel: bambu (test)“.
 
 ### Ist-Druckzeit im Druckjournal
 
@@ -591,7 +688,8 @@ Druckerkarte.
 
 Zusätzlich holt die Bridge alle `CAMERA_SNAPSHOT_INTERVAL` Sekunden
 (Standard 10s) ein einzelnes JPEG-Standbild und lädt es hoch – kein
-Dauerstream, nur ein regelmäßiges Bild. Abschalten mit
+Dauerstream, nur ein regelmäßiges Bild, und nur solange jemand das
+Live-Bild ansieht (`CAMERA_ONLY_WHEN_WATCHED=true`, siehe oben). Abschalten mit
 `CAMERA_ENABLED=false` in `.env.bambu`.
 
 **Nur die X1-Serie (X1C/X1E) wird unterstützt.** Sie liefert ihre

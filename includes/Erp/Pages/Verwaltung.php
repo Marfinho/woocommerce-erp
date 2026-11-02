@@ -1157,6 +1157,7 @@ class Verwaltung {
 		}
 
 		AuditLog::record( 'druckjob_erneut_gesendet', 'print_queue_job', $id, array( 'vorher' => $job->status, 'drucker' => $job->printer_id ) );
+		\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'etikett', (string) $job->printer_id );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Der Auftrag wartet wieder auf den Drucker.', 'lindenweg16' ) ) );
 	}

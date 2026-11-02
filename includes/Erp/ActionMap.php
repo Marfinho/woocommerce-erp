@@ -62,6 +62,7 @@ class ActionMap {
 			'lw16_bambu_delete_printer'   => $bambu,
 			'lw16_bambu_save_printer'     => $bambu,
 			'lw16_bambu_regen_token'      => $bambu,
+			'lw16_doorbell_save'          => $bambu,
 			'lw16_bambu_enqueue_job'      => array( 'fertigung.bambu' ),
 			'lw16_bambu_enqueue_model'    => array( 'fertigung.bambu' ),
 			'lw16_bambu_cards'            => array( 'fertigung.bambu' ),

@@ -75,6 +75,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import threading
 import time
 import zipfile
 import xml.etree.ElementTree as ET
@@ -82,6 +83,11 @@ from pathlib import Path
 from typing import Optional
 
 import requests
+
+try:  # Nur für die Türklingel (optional) - fehlt es, wird nur nachgefragt.
+    import paho.mqtt.client as _MQTT
+except ImportError:  # pragma: no cover
+    _MQTT = None
 
 # ---------------------------------------------------------------------
 # Konfiguration
@@ -155,6 +161,25 @@ class Config:
     # FALLBACK_POLL_INTERVAL unten.
     SHORT_POLL_WAIT = int(os.environ.get("SHORT_POLL_WAIT", "0"))
     FALLBACK_POLL_INTERVAL = int(os.environ.get("FALLBACK_POLL_INTERVAL", "5"))
+
+    # Leerlauf: Nach jeder leeren Antwort (204) verdoppelt sich die Pause
+    # bis zur nächsten Abfrage - von FALLBACK_POLL_INTERVAL bis
+    # IDLE_POLL_MAX. Sobald ein Job kommt, geht es wieder schnell. Jeder
+    # Aufruf startet auf dem Webspace WordPress komplett.
+    IDLE_POLL_MAX = int(os.environ.get("IDLE_POLL_MAX", "60"))
+
+    # --- Türklingel (Home Assistant / MQTT) -----------------------------
+    # WordPress klingelt bei einem neuen Auftrag über einen Webhook von
+    # Home Assistant, das die Klingel per MQTT (Mosquitto-Add-on) weitergibt.
+    # Das Programm holt den Auftrag dann sofort und fragt sonst nur alle
+    # DOORBELL_FALLBACK Sekunden selbst nach. Leerer Host = keine Klingel.
+    DOORBELL_MQTT_HOST = os.environ.get("DOORBELL_MQTT_HOST", "").strip()
+    DOORBELL_MQTT_PORT = int(os.environ.get("DOORBELL_MQTT_PORT", "1883"))
+    DOORBELL_MQTT_USER = os.environ.get("DOORBELL_MQTT_USER", "")
+    DOORBELL_MQTT_PASSWORD = os.environ.get("DOORBELL_MQTT_PASSWORD", "")
+    DOORBELL_MQTT_TLS = _env_bool("DOORBELL_MQTT_TLS", False)
+    DOORBELL_TOPIC = os.environ.get("DOORBELL_TOPIC", "lw16/klingel").strip().rstrip("/")
+    DOORBELL_FALLBACK = int(os.environ.get("DOORBELL_FALLBACK", "300"))
 
     REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "35"))
     MAX_RETRY_DELAY = int(os.environ.get("MAX_RETRY_DELAY", "30"))
@@ -249,6 +274,136 @@ def redact(text: str) -> str:
 # ---------------------------------------------------------------------
 # WordPress-REST-API
 # ---------------------------------------------------------------------
+
+
+class IdlePacer:
+    """Pause zwischen leeren Job-Abfragen: beginnt bei ``base`` und
+    verdoppelt sich nach jeder leeren Antwort bis ``maximum``; ``reset()``
+    sobald es Arbeit gab."""
+
+    def __init__(self, base: float, maximum: float) -> None:
+        self.base = max(1.0, float(base))
+        self.maximum = max(self.base, float(maximum))
+        self.current = self.base
+
+    def idle(self) -> float:
+        """Pause für diese leere Antwort - die nächste wird länger."""
+        delay = min(self.current, self.maximum)
+        self.current = min(delay * 2, self.maximum)
+        return delay
+
+    def reset(self) -> None:
+        self.current = self.base
+
+
+def retry_after(response: Optional["requests.Response"], default: float) -> float:
+    """Wartezeit aus dem Retry-After-Header (Sekunden), sonst ``default``.
+    Höchstens 10 Minuten."""
+    try:
+        value = float(response.headers.get("Retry-After", "")) if response is not None else 0.0
+    except (TypeError, ValueError, AttributeError):
+        value = 0.0
+    return min(max(value, float(default)), 600.0)
+
+
+class Doorbell:
+    """Lauscht per MQTT auf die Klingel aus WordPress (über Home Assistant).
+
+    ``wait(seconds)`` ersetzt das Schlafen zwischen zwei Abfragen: Es kehrt
+    sofort zurück, wenn es klingelt. Ohne DOORBELL_MQTT_HOST (oder ohne
+    paho-mqtt) schläft es einfach - alles läuft wie ohne Klingel.
+    """
+
+    def __init__(self, wake_channels, printer_id: str = "", on_ring=None) -> None:
+        self.wake_channels = tuple(wake_channels)
+        self.printer_id = printer_id
+        self.on_ring = on_ring  # Rückruf(kanal) für Kanäle, die nicht wecken (z. B. kamera)
+        self.extra_channels = ()
+        self.connected = False
+        self._event = threading.Event()
+        self._client = None
+
+    @property
+    def enabled(self) -> bool:
+        return bool(Config.DOORBELL_MQTT_HOST) and _MQTT is not None
+
+    def start(self, extra_channels=()) -> None:
+        self.extra_channels = tuple(extra_channels)
+        if not Config.DOORBELL_MQTT_HOST:
+            return
+        if _MQTT is None:
+            log.warning("Türklingel: Paket 'paho-mqtt' fehlt - es wird nur nachgefragt (pip install paho-mqtt).")
+            return
+
+        client = _MQTT.Client(client_id=f"lw16-klingel-{os.getpid()}-{int(time.time())}", protocol=_MQTT.MQTTv311)
+        if Config.DOORBELL_MQTT_USER:
+            client.username_pw_set(Config.DOORBELL_MQTT_USER, Config.DOORBELL_MQTT_PASSWORD)
+        if Config.DOORBELL_MQTT_TLS:
+            client.tls_set()
+        client.on_connect = self._on_connect
+        client.on_disconnect = self._on_disconnect
+        client.on_message = self._on_message
+        client.reconnect_delay_set(min_delay=1, max_delay=60)
+        client.connect_async(Config.DOORBELL_MQTT_HOST, Config.DOORBELL_MQTT_PORT, keepalive=60)
+        client.loop_start()
+        self._client = client
+
+    def topics(self):
+        return [f"{Config.DOORBELL_TOPIC}/{ch}" for ch in self.wake_channels + self.extra_channels]
+
+    def _on_connect(self, client, userdata, flags, rc, properties=None):  # noqa: ANN001 - paho-Signatur
+        if rc != 0:
+            log.warning("Türklingel: MQTT-Anmeldung abgelehnt (rc=%s) - Benutzer/Passwort prüfen.", rc)
+            return
+        for topic in self.topics():
+            client.subscribe(topic, qos=1)
+        if not self.connected:
+            log.info("Türklingel verbunden (%s:%s).", Config.DOORBELL_MQTT_HOST, Config.DOORBELL_MQTT_PORT)
+        self.connected = True
+        # Was während der Trennung geklingelt hat, ist verloren - einmal nachsehen.
+        self._event.set()
+
+    def _on_disconnect(self, client, userdata, rc, properties=None):  # noqa: ANN001 - paho-Signatur
+        if self.connected:
+            log.warning("Türklingel getrennt (rc=%s) - bis zur Rückkehr wird wieder öfter nachgefragt.", rc)
+        self.connected = False
+
+    def _on_message(self, client, userdata, msg):  # noqa: ANN001 - paho-Signatur
+        self.handle(msg.topic, msg.payload)
+
+    def handle(self, topic: str, payload) -> bool:
+        """Eine Klingel verarbeiten. Gibt zurück, ob sie weckt."""
+        channel = topic.rsplit("/", 1)[-1]
+        try:
+            target = (payload or b"").decode("utf-8", "replace").strip() if isinstance(payload, (bytes, bytearray)) else str(payload or "").strip()
+        except Exception:  # noqa: BLE001 - kaputte Nutzlast ignorieren
+            target = ""
+
+        # Gilt die Klingel einem anderen Drucker? Dann nicht wecken.
+        if self.printer_id and target and target not in (self.printer_id, "test"):
+            return False
+
+        log.info("Klingel: %s%s", channel, f" ({target})" if target else "")
+
+        if channel in self.wake_channels:
+            self._event.set()
+            return True
+        if self.on_ring is not None:
+            self.on_ring(channel)
+        return False
+
+    def idle_max(self, default: float) -> float:
+        """Längste Leerlauf-Pause: mit verbundener Klingel lang, sonst kurz."""
+        return float(Config.DOORBELL_FALLBACK) if self.connected else float(default)
+
+    def wait(self, seconds: float) -> bool:
+        """Bis zu ``seconds`` warten; True, wenn es geklingelt hat."""
+        if not self.enabled:
+            time.sleep(seconds)
+            return False
+        rang = self._event.wait(seconds)
+        self._event.clear()
+        return rang
 
 
 class ApiClient:
@@ -1408,6 +1563,9 @@ def run() -> None:
 
     api = ApiClient()
     backoff = 1
+    pacer = IdlePacer(Config.FALLBACK_POLL_INTERVAL, Config.IDLE_POLL_MAX)
+    doorbell = Doorbell(("slicing",), "")
+    doorbell.start()
 
     log.info(
         "Slicing-Worker gestartet: %s, Long-Poll=%s, Slicer=%s.",
@@ -1426,13 +1584,15 @@ def run() -> None:
             backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
             continue
 
-        backoff = 1
-
         if response.status_code == 200:
+            backoff = 1
             try:
                 jobs = response.json().get("jobs", [])
             except ValueError:
                 jobs = []
+
+            if jobs:
+                pacer.reset()
 
             for job in jobs:
                 process_job(api, job)
@@ -1440,8 +1600,13 @@ def run() -> None:
             continue
 
         if response.status_code == 204:
+            backoff = 1
+            # Nichts zu tun: Pause wird mit jeder leeren Antwort länger
+            # (IdlePacer), bis IDLE_POLL_MAX.
             if not Config.LONG_POLL_ENABLED:
-                time.sleep(Config.FALLBACK_POLL_INTERVAL)
+                pacer.maximum = doorbell.idle_max(Config.IDLE_POLL_MAX)
+                if doorbell.wait(pacer.idle()):
+                    pacer.reset()
             continue
 
         if response.status_code == 401:
@@ -1450,13 +1615,15 @@ def run() -> None:
             continue
 
         if response.status_code == 429:
-            log.warning("Serverseitiges Ratenlimit erreicht – warte länger.")
-            time.sleep(Config.MAX_RETRY_DELAY)
+            pause = retry_after(response, Config.MAX_RETRY_DELAY)
+            log.warning("Serverseitiges Ratenlimit erreicht – warte %ss.", pause)
+            time.sleep(pause)
             continue
 
         if 500 <= response.status_code < 600:
-            log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, backoff)
-            time.sleep(backoff)
+            pause = retry_after(response, backoff)
+            log.warning("Serverfehler (HTTP %s) – erneuter Versuch in %ss.", response.status_code, pause)
+            time.sleep(pause)
             backoff = min(backoff * 2, Config.MAX_RETRY_DELAY)
             continue
 

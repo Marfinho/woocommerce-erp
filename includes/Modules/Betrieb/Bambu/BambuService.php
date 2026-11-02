@@ -451,6 +451,54 @@ class BambuService {
 	}
 
 	/**
+	 * Wie lange nach dem letzten Abruf eines Standbilds die Bridge weiter
+	 * Bilder schickt. Die Ansichten laden das Bild alle paar Sekunden neu,
+	 * solange sie offen sind; danach hört die Kamera von selbst auf.
+	 */
+	const CAMERA_WATCH_SECONDS = 120;
+
+	/**
+	 * Vermerken, dass gerade jemand das Kamerabild ansieht.
+	 *
+	 * Geschrieben wird höchstens alle 30 Sekunden je Drucker – die Ansichten
+	 * fragen viel öfter.
+	 *
+	 * @param string $printer_id Schlüssel des Bambu-Druckers.
+	 * @param int    $now        Zeitpunkt (für Tests).
+	 */
+	public static function mark_camera_watched( $printer_id, $now = 0 ) {
+		$printer_id = sanitize_key( (string) $printer_id );
+		if ( '' === $printer_id ) {
+			return;
+		}
+		$now  = $now ? (int) $now : time();
+		$key  = 'lw16_bambu_cam_' . $printer_id;
+		$last = (int) get_transient( $key );
+		if ( $last > $now - 30 ) {
+			return;
+		}
+		// Bisher sah niemand hin: die Bridge klingeln, damit sofort ein frisches Bild kommt.
+		if ( $last <= $now - self::CAMERA_WATCH_SECONDS ) {
+			\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'kamera', $printer_id );
+		}
+		set_transient( $key, $now, self::CAMERA_WATCH_SECONDS );
+	}
+
+	/**
+	 * Schaut gerade jemand zu? Die Bridge schickt nur dann Standbilder
+	 * (Antwort auf /status und /snapshot, Feld „camera“).
+	 *
+	 * @param string $printer_id Schlüssel des Bambu-Druckers.
+	 * @param int    $now        Zeitpunkt (für Tests).
+	 * @return bool
+	 */
+	public static function camera_watched( $printer_id, $now = 0 ) {
+		$last = (int) get_transient( 'lw16_bambu_cam_' . sanitize_key( (string) $printer_id ) );
+		$now  = $now ? (int) $now : time();
+		return $last > 0 && $last > $now - self::CAMERA_WATCH_SECONDS;
+	}
+
+	/**
 	 * Pfad zum Kamera-Standbild eines Druckers - reine Pfadbildung, ohne
 	 * Dateisystemzugriff, damit sie sowohl beim Schreiben (hier) als auch
 	 * beim Ausliefern (BambuPrintersPage::handle_snapshot()) dieselbe

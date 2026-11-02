@@ -304,6 +304,9 @@ class BambuJobRepository {
 			array( '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s', '%s', '%s', '%d', '%s' )
 		);
 
+		// Die Bridge klingeln: Sie holt den Auftrag sofort statt beim nächsten Nachfragen.
+		\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'bambu', (string) $data['printer_id'] );
+
 		return (int) $wpdb->insert_id;
 	}
 
@@ -754,6 +757,7 @@ class BambuJobRepository {
 			$target  = self::stale_target( $job->status, $printer ? (string) $printer->current_file : '', (int) $job->id );
 
 			if ( 'queued' === $target ) {
+				\Lindenweg16\Modules\Betrieb\Doorbell::ring( 'bambu', (string) $job->printer_id );
 				$sql = $wpdb->prepare(
 					'UPDATE ' . self::table() . " SET status = 'queued', locked_at = NULL, started_at = NULL, updated_at = %s WHERE id = %d AND status = %s AND locked_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					current_time( 'mysql', true ),
