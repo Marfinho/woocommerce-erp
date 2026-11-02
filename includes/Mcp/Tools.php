@@ -33,6 +33,7 @@ class Tools {
 	const BLOCKED_WRITE = array(
 		'#^/lw16/v1/erp/users#',
 		'#^/lw16/v1/mcp#',
+		'#^/lw16/v1/erp/claude#',
 		'#^/wp/v2/(users|plugins|themes|settings|application-passwords)#',
 		'#^/wp/v2/users/[^/]+/application-passwords#',
 		'#^/wc/v[0-9]+/(settings|webhooks|system_status/tools)#',
@@ -540,7 +541,7 @@ class Tools {
 			if ( '' !== $search && false === strpos( strtolower( $route ), $search ) ) {
 				continue;
 			}
-			if ( 0 === strpos( $route, '/lw16/v1/mcp' ) ) {
+			if ( self::self_route( $route ) ) {
 				continue;
 			}
 
@@ -643,6 +644,16 @@ class Tools {
 	}
 
 	/**
+	 * Route des Zugangs selbst (MCP-Endpunkt, Schlüsselverwaltung)? Reine Regel.
+	 *
+	 * @param string $path Pfad (normalisiert).
+	 * @return bool
+	 */
+	public static function self_route( $path ) {
+		return (bool) preg_match( '#^/lw16/v1/(mcp|erp/claude)(/|\?|$)#i', (string) $path );
+	}
+
+	/**
 	 * Pfad vereinheitlichen: führender Schrägstrich, ohne /wp-json, ohne Adresse.
 	 *
 	 * @param string $path Eingabe.
@@ -682,8 +693,8 @@ class Tools {
 		if ( '/' === $path ) {
 			throw new ToolError( 'Pfad fehlt, z. B. /lw16/v1/erp/dashboard. Verfügbare Routen: routen_auflisten.' );
 		}
-		if ( 0 === strpos( strtolower( $path ), '/lw16/v1/mcp' ) ) {
-			throw new ToolError( 'Der Claude-Zugang kann sich nicht selbst aufrufen.' );
+		if ( self::self_route( $path ) ) {
+			throw new ToolError( 'Der Claude-Zugang kann sich nicht selbst aufrufen und keine Schlüssel verwalten.' );
 		}
 
 		$query = array();

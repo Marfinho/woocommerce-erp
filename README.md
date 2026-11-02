@@ -68,7 +68,7 @@ Entnahmen vor, bis die Verbindung zurück ist. Voraussetzung ist https; der Brow
 online geöffnet haben.
 
 **Claude-Zugang (MCP):** Unter `/wp-json/lw16/v1/mcp` liegt ein MCP-Server, über den Claude Shop und ERP
-lesen kann (täglicher Lagebericht, Fragen zum Betrieb). Schlüssel unter wp-admin → Verwaltung →
+lesen kann (täglicher Lagebericht, Fragen zum Betrieb). Schlüssel im ERP unter Profilmenü →
 Claude-Zugang; Code in `includes/Mcp/`, Anleitung in `docs/claude-mcp.md`.
 
 **Rechte:** Jedes Modul hat ein eigenes Recht (`lw16_mod_*`), Formular-Aktionen sind über

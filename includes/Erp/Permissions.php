@@ -179,6 +179,8 @@ class Permissions {
 			'verwaltung.mailbox_konten' => self::def( 'verwaltung', __( 'Postfächer verwalten', 'lindenweg16' ), __( 'Postfächer anlegen, Zugangsdaten und Freigaben ändern.', 'lindenweg16' ), array( 'lw16_mail_manage' ), $page, array( 'verwaltung.mailbox' ) ),
 			'verwaltung.rechte'       => self::def( 'verwaltung', __( 'Rechte vergeben', 'lindenweg16' ), __( 'ERP-Rechte anderer Personen ändern – nur solche, die man selbst hat.', 'lindenweg16' ), array( $users ), $page ),
 			'verwaltung.loehne'       => self::def( 'verwaltung', __( 'Löhne & Protokoll', 'lindenweg16' ), __( 'Stundenlöhne pflegen, Protokoll aller Nutzer einsehen.', 'lindenweg16' ), array( $users ), $page ),
+			// Ein Schlüssel öffnet den ganzen Shop – nur Vollzugriff, nicht vergebbar.
+			'verwaltung.claude'       => self::def( 'verwaltung', __( 'Claude-Zugang', 'lindenweg16' ), __( 'Schlüssel für den MCP-Zugang anlegen, über den Claude Shop und ERP liest. Nur mit Vollzugriff.', 'lindenweg16' ), array(), self::SCOPE_FULL ),
 		);
 	}
 

@@ -5,8 +5,11 @@ Shop und ERP lesen und dir jeden Morgen einen Lagebericht mit Handlungsanweisung
 
 - Adresse: `https://lindenweg16.de/wp-json/lw16/v1/mcp`
 - Transport: „Streamable HTTP“, nur POST, Antwort direkt als JSON, ohne Sitzungen
-- Anmeldung: Schlüssel aus **wp-admin → Verwaltung → Claude-Zugang** (nur Administratoren)
-- Code: `includes/Mcp/` (Protokoll, Werkzeuge, Schlüssel, SQL-Prüfung), Seite `includes/Admin/McpPage.php`
+- Anmeldung: Schlüssel aus dem **ERP (`/erp`) → Profilmenü (Avatar) → Claude-Zugang** – nur mit Vollzugriff und
+  WordPress-Rolle Administrator. Dieselbe Seite gibt es im wp-admin unter Verwaltung → Claude-Zugang
+  (`wp-admin/admin.php?page=lw16-claude`), falls die ERP-Menüs dort nicht ausgeblendet sind.
+- Code: `includes/Mcp/` (Protokoll, Werkzeuge, Schlüssel, SQL-Prüfung), ERP-Seite `includes/Erp/Pages/ClaudeZugang.php`
+  und `assets/erp/pages/claude.js`, wp-admin-Seite `includes/Admin/McpPage.php`
 
 ## Werkzeuge
 
@@ -31,7 +34,7 @@ anbietet. Neue ERP-Seiten und -Routen sind ohne Änderung am MCP-Server sofort m
   wird nur sein SHA-256-Wert (Option `lw16_mcp_tokens`). Den Schlüssel selbst sieht man einmal beim Anlegen.
 - **Nur lesen** ist die Voreinstellung. Mit „darf ändern“ bleiben trotzdem gesperrt: Rechte und Konten
   (`/lw16/v1/erp/users`, `/wp/v2/users`), Plugins, Themes, WordPress- und WooCommerce-Einstellungen,
-  Webhooks, Anwendungspasswörter und der MCP-Zugang selbst. Jede Änderung steht im Audit-Protokoll
+  Webhooks, Anwendungspasswörter und der MCP-Zugang samt Schlüsselverwaltung (auch nicht lesend). Jede Änderung steht im Audit-Protokoll
   (`mcp_schreiben`, mit Methode, Pfad, Grund und Status).
 - **Datenbank:** Jede Abfrage wird geprüft (eine Anweisung, nur Lesebefehle, keine Variablen, kein
   `INTO OUTFILE`, kein `SLEEP`) und läuft zusätzlich in einer `START TRANSACTION READ ONLY` mit
@@ -45,7 +48,7 @@ anbietet. Neue ERP-Seiten und -Routen sind ohne Änderung am MCP-Server sofort m
 
 ## Einrichten in claude.ai (Connector)
 
-1. wp-admin → Verwaltung → **Claude-Zugang** → Schlüssel „nur lesen“ anlegen.
+1. ERP → Profilmenü → **Claude-Zugang** → Schlüssel „nur lesen“ anlegen.
 2. Die angezeigte **Adresse mit Schlüssel** kopieren (`…/wp-json/lw16/v1/mcp/lw16mcp_…`).
 3. claude.ai → Einstellungen → **Connectors** → „Eigenen Connector hinzufügen“. Name „Lindenweg16 ERP“,
    Adresse einfügen, die OAuth-Felder leer lassen.
@@ -66,7 +69,7 @@ Strippt der Webspace die Kopfzeile `Authorization` (manche Apache/CGI-Setups), g
 ## Täglicher Lagebericht automatisch
 
 **Weg A – geplante Aufgabe in Claude (empfohlen):** Mit eingerichtetem Connector eine geplante Aufgabe
-anlegen (z. B. werktags 7:30 Uhr), als Auftrag den Text von der Seite „Claude-Zugang“ einfügen
+anlegen (z. B. werktags 7:30 Uhr), als Auftrag den Text von der Seite „Claude-Zugang“ im ERP einfügen
 (identisch mit der Vorlage `tagesbericht`) und den Connector für die Aufgabe freigeben. Das Ergebnis
 kommt als Benachrichtigung oder Mail.
 

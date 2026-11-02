@@ -4,7 +4,7 @@
  *
  * Claude (claude.ai-Connector, Claude Code, geplante Aufgaben) spricht hier
  * das Model Context Protocol über HTTP. Anmeldung mit einem Schlüssel aus
- * Verwaltung → Claude-Zugang, entweder als Kopfzeile
+ * ERP → Profilmenü → Claude-Zugang, entweder als Kopfzeile
  * „Authorization: Bearer …“ oder – für Oberflächen, in denen man keine
  * Kopfzeile eintragen kann – als letzter Teil der Adresse
  * (/wp-json/lw16/v1/mcp/<schlüssel>).
@@ -113,7 +113,7 @@ class Server {
 				return new \WP_Error( 'lw16_mcp_throttled', 'Zu viele Fehlversuche. Bitte eine Minute warten.', array( 'status' => 429 ) );
 			}
 
-			return new \WP_Error( 'lw16_mcp_unauthorized', 'Gültiger Claude-Zugangsschlüssel nötig (Verwaltung → Claude-Zugang).', array( 'status' => 401 ) );
+			return new \WP_Error( 'lw16_mcp_unauthorized', 'Gültiger Claude-Zugangsschlüssel nötig (ERP → Profilmenü → Claude-Zugang).', array( 'status' => 401 ) );
 		}
 
 		if ( ! Throttle::hit( 'mcp_' . $entry['id'], 240 ) ) {

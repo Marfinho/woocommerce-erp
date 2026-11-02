@@ -53,6 +53,17 @@ class McpTokensTest extends TestCase {
 		$this->assertTrue( Tools::write_blocked( '/lw16/v1/mcp' ) );
 		$this->assertFalse( Tools::write_blocked( '/lw16/v1/erp/auftraege/12/bestaetigen' ) );
 		$this->assertFalse( Tools::write_blocked( '/wc/v3/orders/12' ) );
+		$this->assertTrue( Tools::write_blocked( '/lw16/v1/erp/claude' ) );
+	}
+
+	public function test_zugang_kann_sich_nicht_selbst_aufrufen() {
+		$this->assertTrue( Tools::self_route( '/lw16/v1/mcp' ) );
+		$this->assertTrue( Tools::self_route( '/lw16/v1/mcp/lw16mcp_abc' ) );
+		$this->assertTrue( Tools::self_route( '/lw16/v1/erp/claude' ) );
+		$this->assertTrue( Tools::self_route( '/LW16/v1/erp/claude/abc/loeschen' ) );
+		$this->assertTrue( Tools::self_route( '/lw16/v1/erp/claude?x=1' ) );
+		$this->assertFalse( Tools::self_route( '/lw16/v1/erp/claudette' ) );
+		$this->assertFalse( Tools::self_route( '/lw16/v1/erp/dashboard' ) );
 	}
 
 	public function test_pfade_werden_vereinheitlicht() {
