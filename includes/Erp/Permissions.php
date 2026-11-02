@@ -118,6 +118,7 @@ class Permissions {
 			'verkauf.kurzlinks'       => self::def( 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), __( 'Feste Adressen für Printmaterial verwalten, Aufrufe und Bestellungen nach Herkunft sehen.', 'lindenweg16' ), array( 'manage_woocommerce' ), $page ),
 			'verkauf.angebote'        => self::def( 'verkauf', __( 'Angebote', 'lindenweg16' ), __( 'Angebote für Händler und Sonderanfertigungen schreiben, als PDF verschicken und angenommene Angebote in einen Auftrag umwandeln.', 'lindenweg16' ), array( $production ), $page ),
 			'verkauf.reklamationen'   => self::def( 'verkauf', __( 'Reklamationen & Retouren', 'lindenweg16' ), __( 'Reklamationen und Rücksendungen als Fall mit Status führen, Ware zurück ins Lager oder in den Ausschuss buchen, Gründe auswerten.', 'lindenweg16' ), array( $capture ), $page ),
+			'verkauf.nachkauf'        => self::def( 'verkauf', __( 'Nachkauf', 'lindenweg16' ), __( 'Bestellrhythmus von Händlern und Stammkunden: wer bald wieder bestellt, wer wegzubleiben droht – mit Mailvorschlag und Nachbestell-Link.', 'lindenweg16' ), array( $production ), $page ),
 
 			// Fertigung.
 			'fertigung.workflow'      => self::def( 'fertigung', __( 'Workflow: Platten abarbeiten', 'lindenweg16' ), __( 'Den Auftragsablauf sehen, Platten rüsten, drucken, per QR-Code am Handy bearbeiten und die Ist-Menge melden.', 'lindenweg16' ), array( $capture ), $page ),
@@ -126,6 +127,7 @@ class Permissions {
 			'fertigung.konfigurator'  => self::def( 'fertigung', __( 'Konfigurator', 'lindenweg16' ), __( 'Produktkonfigurator pflegen.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.sollist'       => self::def( 'fertigung', __( 'Soll gegen Ist', 'lindenweg16' ), __( 'Gestempelte Druck- und Rüstzeiten gegen die Planzeiten. Planzeit übernehmen braucht zusätzlich „Stammdaten ändern“, die Marge „Preise, Kosten und Löhne sehen“.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.tagesplan'     => self::def( 'fertigung', __( 'Tagesplan', 'lindenweg16' ), __( 'Was heute auf welchem Drucker läuft, welche Platten in die Nacht gehören und was am Tag zu bestücken ist.', 'lindenweg16' ), array( $production ), $page ),
+			'fertigung.nachtschicht'  => self::def( 'fertigung', __( 'Nachtschicht-Planer', 'lindenweg16' ), __( 'Vorschlag, welche freigegebene Platte heute Abend auf welchen Drucker kommt – nach AMS-Belegung, Nachtfenster und Dringlichkeit; Push vor dem Feierabend.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.kapazitaet'    => self::def( 'fertigung', __( 'Kapazität', 'lindenweg16' ), __( 'Auslastung und Planung.', 'lindenweg16' ), array( $production ), $page ),
 			'fertigung.qualitaet'     => self::def( 'fertigung', __( 'Qualität', 'lindenweg16' ), __( 'Chargen, Prüfungen, Reklamationen.', 'lindenweg16' ), array( $capture ), $page ),
 			'fertigung.druckjournal'  => self::def( 'fertigung', __( 'Druckjournal', 'lindenweg16' ), __( 'Drucke protokollieren und nachsehen.', 'lindenweg16' ), array( $capture ), $page ),
@@ -160,6 +162,8 @@ class Permissions {
 			'finanzen.mahnwesen'      => self::def( 'finanzen', __( 'Offene Posten & Mahnungen', 'lindenweg16' ), __( 'Alle offenen Rechnungen mit Fälligkeit, Erinnerung und Mahnstufen per Mail, Mahngebühr und Protokoll.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 			'finanzen.steuer'         => self::def( 'finanzen', __( 'Steuer & DATEV', 'lindenweg16' ), __( 'Umsatzsteuer-Zahlen und Kleinunternehmergrenze im Blick, Buchungen als DATEV-Datei für den Steuerberater.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
 			'finanzen.liquiditaet'    => self::def( 'finanzen', __( 'Liquidität', 'lindenweg16' ), __( 'Vorschau auf den Kontostand der nächsten Wochen aus offenen Posten, Daueraufträgen, Löhnen und Einkäufen.', 'lindenweg16' ), array( 'lw16_mod_finanzen' ), $page ),
+			'finanzen.stundenlohn'    => self::def( 'finanzen', __( 'Ehrlicher Stundenlohn', 'lindenweg16' ), __( 'Was pro gearbeiteter Stunde bleibt – je Produkt, Kanal und Markt, aus Verkäufen, Herstellkosten und erfasster Zeit. Zeigt Kosten und Erlöse.', 'lindenweg16' ), array( $costs ), $page, array( 'finanzen.kosten' ) ),
+			'finanzen.rueckblick'     => self::def( 'finanzen', __( 'Wochenrückblick', 'lindenweg16' ), __( 'Die Woche als kurze Geschichte mit Umsatz, Bestsellern, Stundenlohn, Druckern und einem Tipp – freitags per Mail.', 'lindenweg16' ), array( $reports ), $page ),
 
 			// Verwaltung.
 			'verwaltung.zeit'         => self::def( 'verwaltung', __( 'Zeiterfassung', 'lindenweg16' ), __( 'Eigene Arbeitszeit erfassen.', 'lindenweg16' ), array( $capture ), $page ),

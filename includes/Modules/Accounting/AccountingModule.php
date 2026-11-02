@@ -553,6 +553,7 @@ class AccountingModule {
 		echo '<tr><th>' . esc_html__( 'Einnahmen gesamt', 'lindenweg16' ) . '</th><td>' . esc_html( self::euro( $rep['einnahmen'] ) ) . '</td></tr>';
 		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Shop (WooCommerce, abzgl. Refunds)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_shop'] ) ) . '</td></tr>';
 		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Aufträge ohne Shop (bezahlt)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_auftraege'] ) ) . '</td></tr>';
+		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Marktkasse (Tagesumsätze)', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_kasse'] ) ) . '</td></tr>';
 		echo '<tr><td style="padding-left:2em">' . esc_html__( 'Mahngebühren und Verzugszinsen', 'lindenweg16' ) . '</td><td>' . esc_html( self::euro( $rep['einnahmen_sonstige'] ) ) . '</td></tr>';
 		echo '<tr><th colspan="2">' . esc_html__( 'Ausgaben nach Kontengruppe (SKR03)', 'lindenweg16' ) . '</th></tr>';
 		foreach ( $rep['ausgaben_gruppen'] as $gruppe => $summe ) {
@@ -706,6 +707,9 @@ class AccountingModule {
 		$pdf->row( __( 'Shop (WooCommerce, abzgl. Refunds)', 'lindenweg16' ), self::euro( $rep['einnahmen_shop'] ), 10 );
 		if ( $rep['einnahmen_auftraege'] ) {
 			$pdf->row( __( 'Aufträge ohne Shop (bezahlt)', 'lindenweg16' ), self::euro( $rep['einnahmen_auftraege'] ), 10 );
+		}
+		if ( $rep['einnahmen_kasse'] ) {
+			$pdf->row( __( 'Marktkasse (Tagesumsätze)', 'lindenweg16' ), self::euro( $rep['einnahmen_kasse'] ), 10 );
 		}
 		if ( $rep['einnahmen_sonstige'] ) {
 			$pdf->row( __( 'Mahngebühren und Verzugszinsen', 'lindenweg16' ), self::euro( $rep['einnahmen_sonstige'] ), 10 );

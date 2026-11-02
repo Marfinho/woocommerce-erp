@@ -128,6 +128,18 @@ class Digest {
 		}
 		$out[] = array( 'title' => __( 'Bank', 'lindenweg16' ), 'lines' => $lines );
 
+		// Nachkauf: Händler, deren Bestellung in den nächsten Tagen fällig ist (nur sichere, noch nicht angeschrieben).
+		$lines = array();
+		$marks = get_option( 'lw16_erp_nachkauf', array() );
+		foreach ( Pages\Nachkauf::customers() as $c ) {
+			$m = is_array( $marks ) && isset( $marks[ $c['key'] ] ) ? $marks[ $c['key'] ] : array();
+			if ( $c['b2b'] && 'bald' === $c['state'] && $c['days_to'] <= 7 && $c['confidence'] >= 0.5 && ( empty( $m['mailed'] ) || $m['mailed'] <= $c['last'] ) && ( empty( $m['snooze'] ) || $m['snooze'] < $today ) ) {
+				/* translators: 1: Name, 2: Tage. */
+				$lines[] = sprintf( __( '%1$s bestellt üblicherweise in %2$d Tagen wieder – jetzt melden?', 'lindenweg16' ), $c['name'], max( 0, $c['days_to'] ) );
+			}
+		}
+		$out[] = array( 'title' => __( 'Nachkauf', 'lindenweg16' ), 'lines' => $lines );
+
 		// Liquidität.
 		$lines = array();
 		$liq   = Pages\Liquiditaet::overview()->get_data();

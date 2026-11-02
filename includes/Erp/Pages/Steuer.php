@@ -272,8 +272,15 @@ class Steuer {
 
 			$money = 'kasse' === (string) $base['referenz_typ'] ? (string) $s['kasse_konto'] : (string) $s['bank_konto'];
 			$acct  = self::account_of( $base, (string) $s['erloes_konto'] );
+			$is_in = 'einnahme' === $base['typ'];
 
-			if ( 'einnahme' === $base['typ'] ) {
+			// Ältere Buchungen des Marktumsatzes stehen als „Ausgabe“ auf einem Erlöskonto (8xxx): das ist eine Bareinnahme.
+			if ( 'beleg' === (string) $base['referenz_typ'] && '8' === substr( $acct, 0, 1 ) && 4 === strlen( $acct ) ) {
+				$is_in = true;
+				$money = (string) $s['kasse_konto'];
+			}
+
+			if ( $is_in ) {
 				$konto  = $money;
 				$gegen  = $acct;
 			} else {
@@ -413,11 +420,13 @@ class Steuer {
 		$shop = function_exists( 'wc_get_orders' ) ? (float) \Lindenweg16\Modules\Accounting\EuerCalculator::einnahmen( $from, $to ) : 0.0;
 		$t    = \Lindenweg16\Modules\Betrieb\OrderOpsRepository::table();
 		$man  = (float) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(SUM(manual_order_value), 0) FROM {$t} WHERE wc_order_id IS NULL AND order_status = 'bestaetigt' AND invoice_status <> 'storniert' AND manual_order_date >= %s AND manual_order_date <= %s", $from, $to ) ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$cash = (float) \Lindenweg16\Modules\Accounting\EuerCalculator::einnahmen_kasse( $from, $to );
 
 		return array(
 			'shop'    => round( $shop, 2 ),
 			'manuell' => round( $man, 2 ),
-			'summe'   => round( $shop + $man, 2 ),
+			'kasse'   => round( $cash, 2 ),
+			'summe'   => round( $shop + $man + $cash, 2 ),
 		);
 	}
 
@@ -470,7 +479,7 @@ class Steuer {
 	 */
 	public static function vat_with_manual( $from, $to ) {
 		$vat = self::vat_of( $from, $to );
-		$man = self::revenue_manual( $from, $to );
+		$man = self::revenue_manual( $from, $to ) + (float) \Lindenweg16\Modules\Accounting\EuerCalculator::einnahmen_kasse( $from, $to );
 
 		if ( $man > 0 ) {
 			$split            = self::vat_from_gross( $man, 19 );

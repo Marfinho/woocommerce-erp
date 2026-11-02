@@ -7,6 +7,36 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.75.0] – 2026-11-02
+
+### Neu: Nachtschicht-Planer (Produktion → Tagesplan)
+- Über Nacht wechselt niemand die Platte – jeder freie Drucker bekommt genau eine. Der Planer nimmt die **freigegebenen Platten** aus dem Workflow und den **Live-Zustand der Bambu-Drucker** und wählt je Drucker die Platte, die das Nachtfenster am besten füllt, deren **Material und Farbe schon im AMS** stecken (sonst „umrüsten“), die dringend ist (Lager leer oder unter Soll, lange freigegeben) und für die die Rolle reicht.
+- Drucker, die noch bis in die Nacht drucken oder offline sind, stehen mit Grund daneben; kurze Platten bleiben für den Tag.
+- Feierabend und Aufstehzeit einstellbar; eine Stunde vor dem Feierabend kommt der Plan als **Push-Nachricht** (Meldungsart „Nachtschicht“, im Profil einschalten).
+
+### Neu: Ehrlicher Stundenlohn (Zahlen → Berichte)
+- **Was pro gearbeiteter Stunde bleibt – je Produkt, Kanal und Markt.** Deckungsbeitrag = Erlös − Material/Maschine/Komponenten − Stand- und Kampagnenkosten; Stunden = Nachbearbeitung laut Kalkulation (hochgerechnet auf die erfassten Produktionsstunden), Packen/Versand je Bestellung, Vertriebszeit für Händler, Standzeit auf dem Markt (Kasse auf bis zu).
+- Zwei Werte: je Stunde an Produkt und Kunde – und **„alles“**, geteilt durch sämtliche erfassten Stunden inklusive Verwaltung und Marketing. Dazu ein paar Sätze: bestes/schwächstes Produkt, Kanal, Anteil Gemeinzeit.
+
+### Neu: Nachkauf (Verkauf → Kunden)
+- Aus dem **Bestellrhythmus** jedes Händlers und Stammkunden (mindestens zwei Bestellungen): wann die nächste Bestellung zu erwarten ist, wie sicher das ist und wer **überfällig** ist oder **verloren zu gehen droht**. Mit Lieblingsartikeln.
+- **Mailvorschlag** mit einem Klick – bei Händlern mit frischem, persönlichem **Nachbestell-Link**; Eintrag und Wiedervorlage in der Kundenakte. „Ruhe“ für Kunden, die sich schon gemeldet haben.
+- Fällige Händler stehen auch im täglichen Überblick.
+
+### Neu: Was wäre wenn (Liquidität)
+- Regler direkt in der Vorschau: Shop-Umsatz ±, Preise ±, Kunden zahlen später, **einmalige Ausgabe** in einer bestimmten Woche (neuer Drucker), Mehrkosten je Monat, **Aushilfe** (Stunden × Lohn), **Kunden fallen aus**. Die Kurve rechnet sofort neu, grau daneben der Plan ohne Änderung; die Annahmen bleiben im Browser gespeichert.
+
+### Neu: Wochenrückblick (Zahlen → Übersicht)
+- Die Woche als **kurze Geschichte**: Umsatz und Trend, Bestseller, Markt oder Kanal der Woche, Stundenlohn, Platten und Sorgenkind-Drucker, Lager, wer bald nachbestellt, Kontostand in vier Wochen – und **genau ein Tipp** für die nächste Woche. Freitags um 16 Uhr per Mail (einstellbar), auch frühere Wochen ansehbar.
+
+### Behoben: Marktkasse fehlte in der EÜR
+- Der Tagesumsatz der Marktkasse wird als Beleg auf einem Erlöskonto angelegt. Die EÜR hat solche Belege bei den Ausgaben richtig ausgelassen – aber **auch nicht als Einnahme gezählt**. Beim Festschreiben landete der Umsatz zudem als **Ausgabe** im Buchungsjournal und im DATEV-Export mit falschem Vorzeichen.
+- Jetzt: eigene EÜR-Zeile „Marktkasse (Tagesumsätze)“, zählt bei der Kleinunternehmergrenze und in der Umsatzsteuer mit, neue Journalbuchungen sind Einnahmen, und der DATEV-Export bucht ihn als Bareinnahme (Kasse an Erlöse) – auch für schon vorhandene falsche Buchungen. **Bitte die EÜR dieses Jahres noch einmal ansehen.** Bereits falsch gebuchte Journaleinträge bleiben stehen (GoBD); bei Bedarf mit dem Steuerberater stornieren und neu buchen.
+
+### Technisch
+- Neue Rechte `fertigung.nachtschicht`, `finanzen.stundenlohn` (braucht „Preise, Kosten und Löhne sehen“), `verkauf.nachkauf`, `finanzen.rueckblick`. Neue Meldungsart `nachtschicht` (von selbst aus).
+- Rechenkerne `Erp\NightShift`, `Erp\HourlyRate`, `Erp\Rhythm`, `Erp\Review` mit Tests; Was-wäre-wenn als reine Funktion `LW16ERP_UI.liquiScenario`.
+- Nicht in echtem WordPress geprüft (Unit-Tests, Browser mit Testdaten).
 ## [0.74.1] – 2026-11-01
 
 Fehlerbehebungen aus neuen Testszenarien (157 zusätzliche Tests für die ERP-Regeln).

@@ -100,9 +100,13 @@ class BuchungRepository {
 			? Kontenrahmen::label( $beleg->konto )
 			: (string) $beleg->eur_kategorie;
 
+		// Ein Beleg auf einem Erlöskonto (Tagesumsatz der Marktkasse) ist eine Einnahme, keine Ausgabe.
+		$konto_info = ! empty( $beleg->konto ) ? Kontenrahmen::get( $beleg->konto ) : null;
+		$typ        = $konto_info && 'einnahme' === $konto_info['typ'] ? 'einnahme' : 'ausgabe';
+
 		return self::create( array(
 			'buchungsdatum' => $beleg->datum,
-			'typ'           => 'ausgabe',
+			'typ'           => $typ,
 			'betrag'        => abs( (float) $beleg->betrag ),
 			'kategorie'     => $kategorie,
 			'beschreibung'  => trim( $beleg->haendler . ' – ' . $beleg->notiz, ' –' ),

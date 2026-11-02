@@ -109,6 +109,17 @@ class ErpSteuerTest extends TestCase {
 	}
 
 	public function test_euer_einnahmen_aus_teilen() {
-		$this->assertSame( array( 'shop' => 1000.0, 'auftraege' => 250.5, 'sonstige' => 5.0, 'summe' => 1255.5 ), \Lindenweg16\Modules\Accounting\EuerCalculator::income_parts( 1000, 250.499, 5 ) );
+		$this->assertSame( array( 'shop' => 1000.0, 'auftraege' => 250.5, 'sonstige' => 5.0, 'kasse' => 0.0, 'summe' => 1255.5 ), \Lindenweg16\Modules\Accounting\EuerCalculator::income_parts( 1000, 250.499, 5 ) );
+		$this->assertSame( 1355.5, \Lindenweg16\Modules\Accounting\EuerCalculator::income_parts( 1000, 250.5, 5, 100 )['summe'] );
+	}
+
+	public function test_datev_marktumsatz_ist_bareinnahme() {
+		$b = array(
+			array( 'id' => 1, 'buchungsnummer' => 'B1', 'buchungsdatum' => '2026-10-10', 'typ' => 'ausgabe', 'betrag' => 320, 'kategorie' => '8195 Erlöse als Kleinunternehmer §19 UStG', 'beschreibung' => 'Markt', 'referenz_typ' => 'beleg', 'referenz_id' => 7, 'storno_von_id' => null ),
+			array( 'id' => 2, 'buchungsnummer' => 'B2', 'buchungsdatum' => '2026-10-11', 'typ' => 'einnahme', 'betrag' => 200, 'kategorie' => '8195 Erlöse als Kleinunternehmer §19 UStG', 'beschreibung' => 'Markt', 'referenz_typ' => 'beleg', 'referenz_id' => 8, 'storno_von_id' => null ),
+		);
+		$r = Steuer::datev_rows( $b, array( 'bank_konto' => '1200', 'kasse_konto' => '1000', 'erloes_konto' => '8195' ) );
+		$this->assertSame( array( 'S', '1000', '8195' ), array( $r['rows'][0][1], $r['rows'][0][6], $r['rows'][0][7] ), 'Alte Ausgabe-Buchung wird zur Bareinnahme' );
+		$this->assertSame( array( 'S', '1000', '8195' ), array( $r['rows'][1][1], $r['rows'][1][6], $r['rows'][1][7] ) );
 	}
 }

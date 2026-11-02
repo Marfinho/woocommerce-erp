@@ -215,6 +215,7 @@ class ExportGenerator {
 		$csv .= '"Einnahmen gesamt";"' . number_format( $rep['einnahmen'], 2, ',', '' ) . '"' . self::NEWLINE;
 		$csv .= '"  Shop (WooCommerce, abzgl. Refunds)";"' . number_format( $rep['einnahmen_shop'], 2, ',', '' ) . '"' . self::NEWLINE;
 		$csv .= '"  Aufträge ohne Shop (bezahlt)";"' . number_format( $rep['einnahmen_auftraege'], 2, ',', '' ) . '"' . self::NEWLINE;
+		$csv .= '"  Marktkasse (Tagesumsätze)";"' . number_format( $rep['einnahmen_kasse'], 2, ',', '' ) . '"' . self::NEWLINE;
 		$csv .= '"  Mahngebühren und Verzugszinsen";"' . number_format( $rep['einnahmen_sonstige'], 2, ',', '' ) . '"' . self::NEWLINE;
 		foreach ( $rep['ausgaben_gruppen'] as $gruppe => $summe ) {
 			$csv .= '"Ausgabe: ' . $gruppe . '";"' . number_format( $summe, 2, ',', '' ) . '"' . self::NEWLINE;
