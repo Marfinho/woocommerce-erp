@@ -162,4 +162,59 @@ class BetriebPriceSyncTest extends TestCase {
 			file_get_contents( dirname( __DIR__ ) . '/includes/Admin/Menu.php' )
 		);
 	}
+	/**
+	 * Gibt der Shop Preise brutto ein, geht der Bruttopreis auf den Cent rüber.
+	 */
+	public function test_brutto_eingabe_schreibt_bruttopreis() {
+		$this->assertSame( array( 'amount' => '12.9', 'decimals' => 2 ), PriceSync::shop_amount( 12.9, false, 19.0 ) );
+		$this->assertSame( array( 'amount' => '20', 'decimals' => 2 ), PriceSync::shop_amount( '20.0000', false, 19.0 ) );
+	}
+
+	/**
+	 * Gibt der Shop Preise netto ein, wird zurückgerechnet – sonst stünde
+	 * im Shop der Bruttopreis plus noch einmal 19 %.
+	 */
+	public function test_netto_eingabe_rechnet_zurueck() {
+		$soll = PriceSync::shop_amount( 12.90, true, 19.0 );
+
+		$this->assertSame( 4, $soll['decimals'] );
+		$this->assertSame( '10.8403', $soll['amount'] );
+		$this->assertSame( 12.90, round( (float) $soll['amount'] * 1.19, 2 ) );
+	}
+
+	/**
+	 * Ohne Steuersatz (z. B. steuerfrei) bleibt der Preis, wie er ist.
+	 */
+	public function test_netto_eingabe_ohne_steuersatz() {
+		$this->assertSame( '12.9', PriceSync::shop_amount( 12.9, true, 0.0 )['amount'] );
+		$this->assertSame( '12.9', PriceSync::shop_amount( 12.9, true, null )['amount'] );
+	}
+
+	/**
+	 * Netto wird auf vier Stellen verglichen: Zwei Bruttopreise einen Cent
+	 * auseinander landen netto oft im selben Cent.
+	 */
+	public function test_nettopreise_werden_genauer_verglichen() {
+		$a = PriceSync::shop_amount( 12.95, true, 19.0 )['amount'];
+		$b = PriceSync::shop_amount( 12.96, true, 19.0 )['amount'];
+
+		$this->assertTrue( PriceSync::differs( $a, $b, 4 ) );
+		$this->assertFalse( PriceSync::differs( '10.8403', 10.8403, 4 ) );
+	}
+
+	/**
+	 * Varianten bekommen den Preis, der Normalpreis im Editor ist gesperrt
+	 * und ein täglicher Abgleich fängt Handänderungen im Shop.
+	 */
+	public function test_varianten_sperre_und_tagesabgleich_sind_verdrahtet() {
+		$quelle = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Betrieb/PriceSync.php' );
+
+		$this->assertStringContainsString( "is_type( 'variable' )", $quelle );
+		$this->assertStringContainsString( 'WC_Product_Variable::sync(', $quelle );
+		$this->assertStringContainsString( 'Scheduler::HOOK_ERP_DAILY', $quelle );
+		$this->assertStringContainsString( 'woocommerce_product_quick_edit_save', $quelle );
+		// readonly statt disabled: ein deaktiviertes Feld leerte den Preis.
+		$this->assertStringContainsString( 'prop("readonly",true)', $quelle );
+		$this->assertStringNotContainsString( 'regular_price\\"]").prop("disabled"', $quelle );
+	}
 }

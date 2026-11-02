@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.76.4] – 2026-11-02
+
+### Verbessert: Preise aus dem ERP-Katalog landen zuverlässig im Webshop
+- **Varianten:** Bei variablen Shop-Produkten (z. B. Farben) steht der Preis an jeder Variante, nicht am Hauptprodukt. Bisher wurde nur das Hauptprodukt beschrieben – der Shop zeigte weiter den alten Preis. Jetzt bekommt jede Variante den Preis aus dem ERP, die Preisspanne des Produkts wird neu berechnet.
+- **Netto-Eingabe:** Ist WooCommerce auf „Preise ohne Steuer eingeben“ gestellt, wird der Bruttopreis aus dem ERP mit dem Steuersatz des Produkts zurückgerechnet (auf vier Stellen, damit der Kunde genau den ERP-Bruttopreis sieht). Bisher landete der Bruttopreis als Nettopreis im Shop – 19 % zu teuer.
+- **Normalpreis im Shop gesperrt:** Im Produkt-Editor ist der Normalpreis verknüpfter Produkte schreibgeschützt, mit Hinweis „Preis kommt aus dem ERP“. Angebotspreise bleiben frei. Wird der Preis trotzdem geändert (Schnell- oder Massenbearbeitung), stellt das Plugin ihn am Ende der Anfrage zurück.
+- **Täglicher Abgleich:** Einmal am Tag gleicht der ERP-Tagesjob alle Preise ab – als Sicherheitsnetz, falls eine Übertragung ausgefallen ist.
+- Läuft im Shop ein Angebotspreis, sagt die Rückmeldung das dazu (Kunden sehen dann weiter den Angebotspreis).
+- Die Produktakte im ERP zeigt den Shop-Preis so, wie ihn der Kunde sieht (Variante, brutto).
+- Tests: `tests/BetriebPriceSyncTest.php` erweitert.
+
 ## [0.76.3] – 2026-11-02
 
 ### Neu: Türklingel über Home Assistant

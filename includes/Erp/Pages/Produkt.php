@@ -1004,13 +1004,15 @@ class Produkt {
 			return __( 'verknüpftes Shop-Produkt gibt es nicht mehr', 'lindenweg16' );
 		}
 
-		$price = $product->get_regular_price();
+		// Bei Varianten steht der Preis an der Variante, bei Netto-Eingabe
+		// netto – angezeigt wird, was der Kunde brutto sieht.
+		$price = PriceSync::shop_gross( $product );
 
-		if ( '' === $price || null === $price ) {
+		if ( null === $price ) {
 			return __( 'noch kein Normalpreis im Shop', 'lindenweg16' );
 		}
 
-		return number_format_i18n( (float) $price, 2 ) . ' €';
+		return number_format_i18n( $price, 2 ) . ' €';
 	}
 
 	/**
