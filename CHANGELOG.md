@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.76.0] – 2026-11-02
+
+### Neu: Mehrtägige Events (Marketing)
+- Bei einer Kampagne gibt es neben dem **Veranstaltungstag** (erster Tag) das optionale Feld **„Veranstaltung bis“** für den letzten Tag. Leer oder gleicher Tag = eintägig; ein Ende vor dem Start oder ohne Veranstaltungstag wird abgelehnt.
+- Der Zeitraum erscheint als „Start – Ende“ (Kampagnenliste, Verkauf), die Umsatzauswertung läuft bis zum letzten Veranstaltungstag (plus Nachlauf), der Zeitraumfilter in Buch → Marketing zählt ein Event, sobald ein Tag in den Zeitraum fällt, und die Belegvorschläge berücksichtigen den ganzen Zeitraum.
+- Neue Spalte `kampagnen.event_ende` (DB-Version 50, wird beim Update automatisch angelegt).
+
 ## [0.75.0] – 2026-11-02
 
 ### Neu: Nachtschicht-Planer (Produktion → Tagesplan)

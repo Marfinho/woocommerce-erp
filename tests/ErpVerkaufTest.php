@@ -186,6 +186,7 @@ class ErpVerkaufTest extends TestCase {
 
 	public function test_kampagnenzeitraum() {
 		$this->assertSame( '2026-05-01', Verkauf::campaign_period( array( 'event_datum' => '2026-05-01', 'start_datum' => '2026-04-01' ) ) );
+		$this->assertSame( '2026-05-01 – 2026-05-03', Verkauf::campaign_period( array( 'event_datum' => '2026-05-01', 'event_ende' => '2026-05-03', 'start_datum' => '2026-04-01' ) ) );
 		$this->assertSame( '2026-04-01 – 2026-04-30', Verkauf::campaign_period( array( 'start_datum' => '2026-04-01', 'ende_datum' => '2026-04-30' ) ) );
 		$this->assertSame( '2026-04-01', Verkauf::campaign_period( array( 'start_datum' => '2026-04-01' ) ) );
 	}

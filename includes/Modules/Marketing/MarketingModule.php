@@ -170,6 +170,11 @@ class MarketingModule {
 					<p class="description"><?php esc_html_e( 'Nur bei Events. Die Auswertung ordnet die Kampagne diesem Tag zu – auch wenn die Standgebühr steuerlich schon im Vorjahr abgeflossen ist.', 'lindenweg16' ); ?></p>
 				</td></tr>
 
+				<tr><th><?php esc_html_e( 'Veranstaltung bis', 'lindenweg16' ); ?></th><td>
+					<input type="date" name="event_ende" value="<?php echo esc_attr( $wert( 'event_ende' ) ); ?>">
+					<p class="description"><?php esc_html_e( 'Optional, nur bei mehrtägigen Events (z. B. ein Weihnachtsmarkt über mehrere Tage). Leer lassen für einen eintägigen Termin.', 'lindenweg16' ); ?></p>
+				</td></tr>
+
 				<tr><th><?php esc_html_e( 'Geplantes Budget (€)', 'lindenweg16' ); ?></th><td>
 					<input type="number" step="0.01" min="0" name="budget_geplant" class="small-text" value="<?php echo esc_attr( $wert( 'budget_geplant', '0' ) ); ?>">
 				</td></tr>
@@ -441,6 +446,7 @@ class MarketingModule {
 			'start_datum'    => $this->date_or_null( $_POST['start_datum'] ?? '' ),
 			'ende_datum'     => $this->date_or_null( $_POST['ende_datum'] ?? '' ),
 			'event_datum'    => $this->date_or_null( $_POST['event_datum'] ?? '' ),
+			'event_ende'     => $this->date_or_null( $_POST['event_ende'] ?? '' ),
 			'budget_geplant' => max( 0, (float) ( $_POST['budget_geplant'] ?? 0 ) ),
 			'utm_campaign'   => sanitize_text_field( wp_unslash( $_POST['utm_campaign'] ?? '' ) ),
 			'gutschein_code' => sanitize_text_field( wp_unslash( $_POST['gutschein_code'] ?? '' ) ),
@@ -636,6 +642,9 @@ class MarketingModule {
 	 */
 	public static function zeitraum_text( $k ) {
 		if ( ! empty( $k->event_datum ) ) {
+			if ( ! empty( $k->event_ende ) && $k->event_ende > $k->event_datum ) {
+				return $k->event_datum . ' – ' . $k->event_ende;
+			}
 			return (string) $k->event_datum;
 		}
 		if ( ! empty( $k->ende_datum ) ) {

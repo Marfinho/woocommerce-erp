@@ -95,6 +95,7 @@ class KampagnenRepository {
 			'start_datum'    => gmdate( 'Y-m-d' ),
 			'ende_datum'     => null,
 			'event_datum'    => null,
+			'event_ende'     => null,
 			'budget_geplant' => 0,
 			'utm_campaign'   => '',
 			'gutschein_code' => '',

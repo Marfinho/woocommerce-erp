@@ -110,7 +110,7 @@ class Marketing {
 	 * Werte werden mit einem Satz abgelehnt, statt sie still zu ändern.
 	 *
 	 * @param array  $in    Felder (Texte bereits bereinigt): name, typ, kanal, start_datum,
-	 *                      ende_datum, event_datum, budget_geplant, utm_campaign,
+	 *                      ende_datum, event_datum, event_ende, budget_geplant, utm_campaign,
 	 *                      gutschein_code, status, notiz.
 	 * @param string $heute Heutiges Datum (JJJJ-MM-TT).
 	 * @return array {errors: string[], data: array}
@@ -128,6 +128,7 @@ class Marketing {
 			'start_datum'    => $text( 'start_datum' ),
 			'ende_datum'     => $text( 'ende_datum' ),
 			'event_datum'    => $text( 'event_datum' ),
+			'event_ende'     => $text( 'event_ende' ),
 			'budget_geplant' => 0.0,
 			'utm_campaign'   => $text( 'utm_campaign' ),
 			'gutschein_code' => $text( 'gutschein_code' ),
@@ -149,6 +150,7 @@ class Marketing {
 			'start_datum' => __( 'Beginn', 'lindenweg16' ),
 			'ende_datum'  => __( 'Ende', 'lindenweg16' ),
 			'event_datum' => __( 'Veranstaltungstag', 'lindenweg16' ),
+			'event_ende'  => __( 'Veranstaltung bis', 'lindenweg16' ),
 		);
 		foreach ( $labels as $feld => $label ) {
 			if ( '' === $data[ $feld ] ) {
@@ -163,6 +165,16 @@ class Marketing {
 		}
 		if ( ! $errors && $data['ende_datum'] && $data['ende_datum'] < $data['start_datum'] ) {
 			$errors[] = __( 'Das Ende liegt vor dem Beginn. Bitte die Daten prüfen.', 'lindenweg16' );
+		}
+
+		if ( ! $errors && $data['event_ende'] ) {
+			if ( ! $data['event_datum'] ) {
+				$errors[] = __( 'Für „Veranstaltung bis“ braucht es zuerst den Veranstaltungstag.', 'lindenweg16' );
+			} elseif ( $data['event_ende'] < $data['event_datum'] ) {
+				$errors[] = __( 'Das Veranstaltungsende liegt vor dem Veranstaltungstag. Bitte die Daten prüfen.', 'lindenweg16' );
+			} elseif ( $data['event_ende'] === $data['event_datum'] ) {
+				$data['event_ende'] = null; // Eintägig.
+			}
 		}
 
 		$budget_raw = isset( $in['budget_geplant'] ) ? $in['budget_geplant'] : '';
@@ -369,7 +381,7 @@ class Marketing {
 	/**
 	 * Hinweise zum Stand einer Kampagne (fehlende Belege, Budget, nächste Schritte).
 	 *
-	 * @param array $f status, typ, start_datum, ende_datum, event_datum, today, cost_count
+	 * @param array $f status, typ, start_datum, ende_datum, event_datum, event_ende, today, cost_count
 	 *                 (Belege ohne Fahrtbeleg), budget_ampel, km_booked, has_attribution,
 	 *                 market_days, revenue.
 	 * @return array Liste aus {level: warn|info, text}; Warnungen zuerst.
@@ -382,7 +394,7 @@ class Marketing {
 		$status = (string) $get( 'status', 'geplant' );
 		$today  = (string) $get( 'today' );
 		$start  = (string) $get( 'start_datum' );
-		$ende   = (string) $get( 'event_datum' );
+		$ende   = (string) ( '' !== (string) $get( 'event_ende' ) ? $get( 'event_ende' ) : $get( 'event_datum' ) );
 		if ( '' === $ende ) {
 			$ende = (string) $get( 'ende_datum' );
 		}
@@ -444,6 +456,7 @@ class Marketing {
 			'start_datum'    => (string) $heute,
 			'ende_datum'     => null,
 			'event_datum'    => null,
+			'event_ende'     => null,
 			'budget_geplant' => isset( $k['budget_geplant'] ) ? round( max( 0, (float) $k['budget_geplant'] ), 2 ) : 0.0,
 			'utm_campaign'   => '',
 			'gutschein_code' => '',
@@ -708,6 +721,7 @@ class Marketing {
 				'start_datum'    => (string) $k->start_datum,
 				'ende_datum'     => (string) $k->ende_datum,
 				'event_datum'    => (string) $k->event_datum,
+				'event_ende'     => (string) ( $k->event_ende ?? '' ),
 				'budget_geplant' => (float) $k->budget_geplant,
 				'utm_campaign'   => (string) $k->utm_campaign,
 				'gutschein_code' => (string) $k->gutschein_code,
@@ -750,7 +764,7 @@ class Marketing {
 		foreach ( array( 'typ', 'status' ) as $f ) {
 			$clean[ $f ] = sanitize_key( isset( $in[ $f ] ) && is_scalar( $in[ $f ] ) ? (string) $in[ $f ] : '' );
 		}
-		foreach ( array( 'start_datum', 'ende_datum', 'event_datum' ) as $f ) {
+		foreach ( array( 'start_datum', 'ende_datum', 'event_datum', 'event_ende' ) as $f ) {
 			$clean[ $f ] = sanitize_text_field( isset( $in[ $f ] ) && is_scalar( $in[ $f ] ) ? (string) $in[ $f ] : '' );
 		}
 		$clean['notiz']          = sanitize_textarea_field( isset( $in['notiz'] ) && is_scalar( $in['notiz'] ) ? (string) $in['notiz'] : '' );
@@ -1106,6 +1120,7 @@ class Marketing {
 			'start_datum'     => (string) $k->start_datum,
 			'ende_datum'      => (string) $k->ende_datum,
 			'event_datum'     => (string) $k->event_datum,
+			'event_ende'      => (string) ( $k->event_ende ?? '' ),
 			'today'           => $today,
 			'cost_count'      => $cost_count,
 			'budget_ampel'    => (string) $budget['ampel'],

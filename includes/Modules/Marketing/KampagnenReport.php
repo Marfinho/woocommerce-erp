@@ -48,7 +48,11 @@ class KampagnenReport {
 			$von = $kampagne->event_datum;
 		}
 
-		$bis = $kampagne->ende_datum ? $kampagne->ende_datum : $kampagne->event_datum;
+		$event_ende = ! empty( $kampagne->event_ende ) ? $kampagne->event_ende : $kampagne->event_datum;
+		$bis        = $kampagne->ende_datum ? $kampagne->ende_datum : $event_ende;
+		if ( $bis && $event_ende && $event_ende > $bis ) {
+			$bis = $event_ende;
+		}
 		if ( ! $bis ) {
 			$bis = gmdate( 'Y-m-d' );
 		}

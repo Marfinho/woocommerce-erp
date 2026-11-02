@@ -806,11 +806,14 @@ class Verkauf {
 	/**
 	 * Zeitraum einer Kampagne als Text.
 	 *
-	 * @param array $k Felder: event_datum, start_datum, ende_datum.
+	 * @param array $k Felder: event_datum, event_ende, start_datum, ende_datum.
 	 * @return string
 	 */
 	public static function campaign_period( array $k ) {
 		if ( ! empty( $k['event_datum'] ) ) {
+			if ( ! empty( $k['event_ende'] ) && $k['event_ende'] > $k['event_datum'] ) {
+				return $k['event_datum'] . ' – ' . $k['event_ende'];
+			}
 			return (string) $k['event_datum'];
 		}
 

@@ -106,13 +106,14 @@
 	function campaignDialog(ui, existing, onSaved) {
 		var h = ui.h;
 		options(ui).then(function (o) {
-			var f = existing ? existing.fields : { name: '', typ: 'event', kanal: '', start_datum: o.today, ende_datum: '', event_datum: '', budget_geplant: 0, utm_campaign: '', gutschein_code: '', status: 'geplant', notiz: '' };
+			var f = existing ? existing.fields : { name: '', typ: 'event', kanal: '', start_datum: o.today, ende_datum: '', event_datum: '', event_ende: '', budget_geplant: 0, utm_campaign: '', gutschein_code: '', status: 'geplant', notiz: '' };
 			var name = input(ui, 'text', f.name, { required: 'required', maxlength: 190, placeholder: 'z. B. Weihnachtsmarkt Altstadt' });
 			var typ = select(ui, o.types, f.typ);
 			var kanal = input(ui, 'text', f.kanal, { placeholder: 'z. B. Google Ads, Wochenmarkt, Flyer' });
 			var start = input(ui, 'date', f.start_datum);
 			var ende = input(ui, 'date', f.ende_datum);
 			var event = input(ui, 'date', f.event_datum);
+			var eventEnde = input(ui, 'date', f.event_ende);
 			var budget = input(ui, 'text', f.budget_geplant ? decimal(f.budget_geplant) : '', { inputmode: 'decimal', placeholder: '0,00' });
 			var utm = input(ui, 'text', f.utm_campaign);
 			var code = input(ui, 'text', f.gutschein_code);
@@ -145,7 +146,7 @@
 				h('div', { class: 'mk-two' }, field(ui, 'Art', typ), field(ui, 'Status', status)),
 				field(ui, 'Kanal', kanal),
 				h('div', { class: 'mk-two' }, field(ui, 'Beginn', start), field(ui, 'Ende', ende)),
-				field(ui, 'Veranstaltungstag', event, 'Nur bei Events. Die Auswertung ordnet die Kampagne diesem Tag zu – auch wenn die Standgebühr steuerlich schon im Vorjahr abgeflossen ist.'),
+				h('div', { class: 'mk-two' }, field(ui, 'Veranstaltungstag', event, 'Nur bei Events. Die Auswertung ordnet die Kampagne diesem Tag zu – auch wenn die Standgebühr steuerlich schon im Vorjahr abgeflossen ist.'), field(ui, 'Veranstaltung bis (optional)', eventEnde, 'Nur bei mehrtägigen Events: letzter Tag. Leer = eintägig.')),
 				field(ui, 'Geplantes Budget (€)', budget),
 				field(ui, 'Kampagnenkennung (utm_campaign)', utm, 'WooCommerce merkt sich diese Kennung bei jeder Bestellung. Genau der Wert, der in der Anzeigen-URL als utm_campaign steht.'),
 				field(ui, 'Gutscheincode', code, 'Ein Code, den es nur bei dieser Kampagne gab – die einzige belastbare Brücke von einem Flyer zu einer späteren Shop-Bestellung.'),
@@ -165,7 +166,7 @@
 				run(ui, save, label, function () {
 					return ui.api('marketing/speichern', { method: 'POST', body: {
 						id: existing ? existing.id : 0, name: name.value, typ: typ.value, kanal: kanal.value,
-						start_datum: start.value, ende_datum: ende.value, event_datum: event.value,
+						start_datum: start.value, ende_datum: ende.value, event_datum: event.value, event_ende: eventEnde.value,
 						budget_geplant: budget.value, utm_campaign: utm.value, gutschein_code: code.value,
 						status: status.value, notiz: notiz.value
 					} });
