@@ -153,6 +153,7 @@ class ResetTool {
 					// nur an einer laufenden Anordnung, nicht an einem
 					// abgeschlossenen Geschäftsvorfall.
 					'bambu_plate_jobs',
+					'bambu_free_prints',
 					'slicing_jobs',
 				),
 			),

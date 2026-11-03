@@ -457,6 +457,55 @@ class MailRepository {
 	}
 
 	/**
+	 * Option mit den lokal gesetzten, am Server noch unbestätigten Markierungen.
+	 */
+	const PENDING_OPTION = 'lw16_mail_flags_pending';
+
+	/**
+	 * So lange (Sekunden) hält eine lokale Markierung dem Serverstand stand.
+	 */
+	const PENDING_TTL = 7 * DAY_IN_SECONDS;
+
+	/**
+	 * Lokal gesetzte Markierung merken, bis der Server sie bestätigt.
+	 *
+	 * Ohne diese Merkliste überschrieb der nächste Abgleich das Gelesen-Flag
+	 * mit dem Serverstand, solange der Hintergrundauftrag noch nicht (oder gar
+	 * nicht) durch war – die Mail kam als ungelesen zurück.
+	 *
+	 * @param int    $id     Nachricht.
+	 * @param string $column is_read, is_starred oder is_answered.
+	 * @param int    $value  0 oder 1.
+	 */
+	public static function remember_pending( $id, $column, $value ) {
+		$all                          = (array) get_option( self::PENDING_OPTION, array() );
+		$all[ (int) $id ][ $column ] = array( (int) $value, time() );
+		update_option( self::PENDING_OPTION, $all, false );
+	}
+
+	/**
+	 * Ausstehende Markierungen aller Nachrichten.
+	 *
+	 * @return array Nachrichten-ID => Spalte => {Wert, Zeitpunkt}.
+	 */
+	public static function pending_flags() {
+		return (array) get_option( self::PENDING_OPTION, array() );
+	}
+
+	/**
+	 * Ausstehende Markierungen speichern (nach dem Abgleich bereinigt).
+	 *
+	 * @param array $all Nachrichten-ID => Spalte => {Wert, Zeitpunkt}.
+	 */
+	public static function save_pending_flags( array $all ) {
+		if ( $all ) {
+			update_option( self::PENDING_OPTION, $all, false );
+		} else {
+			delete_option( self::PENDING_OPTION );
+		}
+	}
+
+	/**
 	 * Nachricht samt Anhängen und Notizen löschen.
 	 *
 	 * @param int $id Nachricht.

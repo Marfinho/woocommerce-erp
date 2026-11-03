@@ -426,6 +426,8 @@ class BambuPrinterRepository {
 		if ( array_key_exists( 'status', $data ) ) {
 			$update['status'] = substr( sanitize_key( (string) $data['status'] ), 0, 20 );
 
+			$update = array_merge( $update, self::track_runtime( $id, $update['status'] ) );
+
 			// Jeder Druck belegt die Platte – auch einer, der von Hand am
 			// Gerät, aus Bambu Studio oder der App gestartet wurde.
 			if ( self::is_printing_status( $update['status'] ) ) {
@@ -484,6 +486,130 @@ class BambuPrinterRepository {
 				)
 			);
 		}
+	}
+
+	/**
+	 * Laufzeit des Druckers mitzählen – für die Betriebsstunden.
+	 *
+	 * Die Stunden im Druckjournal entstehen nur, wenn die Werkstatt-Platte
+	 * gemeldet wird. Drucke von Hand, aus Bambu Studio oder der App und
+	 * Platten, die nie gemeldet werden, fehlten deshalb bei den
+	 * Betriebsstunden. Hier wird jeder Druck an der Statusmeldung gemessen
+	 * (Beginn bis Ende) und – sofern keine Platte dazu läuft, deren Stunden
+	 * das Journal schon bucht – als Zusatzlaufzeit am Drucker gesammelt.
+	 *
+	 * @param int    $id     Datensatz-ID.
+	 * @param string $status Neuer Zustand.
+	 * @return array Zusätzliche Spaltenwerte für das UPDATE.
+	 */
+	protected static function track_runtime( $id, $status ) {
+		global $wpdb;
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT printer_id, current_file, print_since, untracked_print_s FROM ' . self::table() . ' WHERE id = %d', (int) $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		);
+		if ( ! $row ) {
+			return array();
+		}
+
+		$now = current_time( 'mysql', true );
+
+		if ( self::is_printing_status( $status ) ) {
+			return empty( $row->print_since ) ? array( 'print_since' => $now ) : array();
+		}
+
+		if ( empty( $row->print_since ) ) {
+			return array();
+		}
+
+		$seconds = max( 0, strtotime( $now . ' UTC' ) - strtotime( $row->print_since . ' UTC' ) );
+		$out     = array( 'print_since' => null );
+
+		// Unter einer Minute ist es ein Fehlstart, über zwei Tage eine verpasste Meldung.
+		if ( $seconds < 60 || $seconds > 2 * DAY_IN_SECONDS ) {
+			return $out;
+		}
+
+		foreach ( \Lindenweg16\Erp\RunRepository::for_printer( $row->printer_id, 5 ) as $run ) {
+			if ( in_array( $run['status'], array( \Lindenweg16\Erp\RunFlow::DRUCKT, \Lindenweg16\Erp\RunFlow::ZU_MELDEN ), true ) ) {
+				return $out;
+			}
+		}
+
+		$out['untracked_print_s'] = (int) $row->untracked_print_s + $seconds;
+
+		$wpdb->insert(
+			self::free_prints_table(),
+			array(
+				'printer_id' => (string) $row->printer_id,
+				'file_name'  => mb_substr( (string) $row->current_file, 0, 255 ),
+				'end_state'  => substr( (string) $status, 0, 20 ),
+				'started_at' => $row->print_since,
+				'ended_at'   => $now,
+				'seconds'    => $seconds,
+			)
+		);
+
+		return $out;
+	}
+
+	/**
+	 * Tabelle der Drucke ohne Auftrag.
+	 *
+	 * @return string
+	 */
+	public static function free_prints_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'lw16_bambu_free_prints';
+	}
+
+	/**
+	 * Die letzten Drucke ohne Auftrag eines Druckers, neueste zuerst.
+	 *
+	 * @param string $printer_id Bambu-Drucker.
+	 * @param int    $limit      Wie viele.
+	 * @return array[] {file, state, started, ended, minutes} (Zeiten als Unix-Zeit)
+	 */
+	public static function free_prints( $printer_id, $limit = 20 ) {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT file_name, end_state, started_at, ended_at, seconds FROM ' . self::free_prints_table() . ' WHERE printer_id = %s ORDER BY ended_at DESC, id DESC LIMIT %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $printer_id,
+				(int) $limit
+			)
+		);
+
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$out[] = array(
+				'file'    => (string) $row->file_name,
+				'state'   => (string) $row->end_state,
+				'started' => strtotime( $row->started_at . ' UTC' ),
+				'ended'   => strtotime( $row->ended_at . ' UTC' ),
+				'minutes' => (int) round( $row->seconds / 60 ),
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Laufzeit der nicht über Platten gebuchten Drucke, in Stunden.
+	 *
+	 * @param int $device_id Gerät aus dem Gerätestamm.
+	 * @return float
+	 */
+	public static function untracked_hours( $device_id ) {
+		global $wpdb;
+
+		return (float) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COALESCE( SUM( untracked_print_s ), 0 ) / 3600 FROM ' . self::table() . ' WHERE geraet_id = %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $device_id
+			)
+		);
 	}
 
 	/**

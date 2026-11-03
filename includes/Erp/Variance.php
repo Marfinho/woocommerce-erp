@@ -63,7 +63,9 @@ class Variance {
 		$setup_at = self::ts( isset( $run['setup_at'] ) ? $run['setup_at'] : '' );
 
 		return array(
-			'setup' => null !== $setup_at && $setup_at < $print_at ? ( $print_at - $setup_at ) / 60.0 : 0.0,
+			'setup' => isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min']
+				? max( 0.0, (float) $run['setup_min'] )
+				: ( null !== $setup_at && $setup_at < $print_at ? ( $print_at - $setup_at ) / 60.0 : 0.0 ),
 			'print' => ( $end - $print_at ) / 60.0,
 		);
 	}

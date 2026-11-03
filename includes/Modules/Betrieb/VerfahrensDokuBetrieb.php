@@ -136,6 +136,7 @@ class VerfahrensDokuBetrieb {
 			'bambu_filament_catalog' => __( 'Katalog echter Bambu-Lab-Filamente (RFID-Filament-ID je Farbe), automatisch gesammelt aus AMS-Meldungen und hochgeladenen Slicing-Profilen; Grundlage der Farbauswahl bei Artikelrevision und Slicing-Profil', 'lindenweg16' ),
 			'bambu_jobs'          => __( '3MF-Druckaufträge der Bambu-Lab-Anbindung; referenziert die vorhandene Modelldatei statt sie zu kopieren, außer bei einem manuell hochgeladenen Einzeldruck', 'lindenweg16' ),
 			'bambu_plate_jobs'    => __( 'Automatisch angeordnete Druckplatten (mehrere Bauteile auf einem virtuellen Druckbett), samt der zusammengesetzten, noch ungeslicten Projekt-3MF', 'lindenweg16' ),
+			'bambu_free_prints'   => __( 'Drucke ohne Werkstatt-Platte (aus Bambu-App oder Bambu Studio gestartet) mit Datei, Zeitraum und Dauer; Grundlage der mitgezählten Betriebsstunden', 'lindenweg16' ),
 			'slicing_profiles'    => __( 'OrcaSlicer-Profildateien (Drucker/Filament/Prozess) je Material und Druckermodell für den Headless-Slicing-Worker', 'lindenweg16' ),
 			'slicing_jobs'        => __( 'Warteschlange des Headless-Slicing-Workers; das Worker-Token selbst liegt nicht hier, sondern gehasht in den Plugin-Einstellungen', 'lindenweg16' ),
 		);

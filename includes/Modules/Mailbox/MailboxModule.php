@@ -503,6 +503,7 @@ class MailboxModule {
 		MailRepository::update_message( (int) $msg['id'], array( $column => $on ? 1 : 0 ) );
 
 		if ( ! empty( $msg['uid'] ) && MailRepository::DRAFTS !== $msg['folder'] ) {
+			MailRepository::remember_pending( (int) $msg['id'], $column, $on ? 1 : 0 );
 			$op = 'seen' === $flag ? ( $on ? 'seen' : 'unseen' ) : ( $on ? 'flag' : 'unflag' );
 			Scheduler::enqueue_async( Scheduler::HOOK_MAIL_SERVER_OP, array( (int) $account['id'], $msg['folder'], (int) $msg['uid'], $op, '' ) );
 		}

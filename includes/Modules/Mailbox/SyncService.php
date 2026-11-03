@@ -22,6 +22,7 @@ namespace Lindenweg16\Modules\Mailbox;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Lock;
+use Lindenweg16\Core\Scheduler;
 use Lindenweg16\Core\Settings;
 
 /**
@@ -607,6 +608,8 @@ class SyncService {
 		$server  = $client->uid_fetch_meta( $min . ':*' );
 		$local   = MailRepository::local_uids( $account_id, $folder, $min );
 		$removed = 0;
+		$pending = MailRepository::pending_flags();
+		$dirty   = false;
 
 		foreach ( $local as $uid => $row ) {
 			if ( ! isset( $server[ $uid ] ) ) {
@@ -622,9 +625,38 @@ class SyncService {
 				'is_answered' => in_array( '\\answered', $flags, true ) ? 1 : 0,
 			);
 
+			// Lokal gesetzte, am Server noch nicht angekommene Markierungen gelten weiter
+			// und werden erneut zum Server geschickt, statt vom alten Serverstand überschrieben zu werden.
+			$id = (int) $row['id'];
+			if ( isset( $pending[ $id ] ) ) {
+				$ops = array(
+					'is_read'    => array( 'seen', 'unseen' ),
+					'is_starred' => array( 'flag', 'unflag' ),
+				);
+				foreach ( $pending[ $id ] as $column => $entry ) {
+					$expired = ( time() - (int) $entry[1] ) > MailRepository::PENDING_TTL;
+					if ( $expired || ! isset( $want[ $column ] ) || $want[ $column ] === (int) $entry[0] ) {
+						unset( $pending[ $id ][ $column ] );
+						$dirty = true;
+						continue;
+					}
+					$want[ $column ] = (int) $entry[0];
+					if ( isset( $ops[ $column ] ) ) {
+						Scheduler::enqueue_async( Scheduler::HOOK_MAIL_SERVER_OP, array( (int) $account_id, $folder, (int) $uid, $ops[ $column ][ $entry[0] ? 0 : 1 ], '' ) );
+					}
+				}
+				if ( ! $pending[ $id ] ) {
+					unset( $pending[ $id ] );
+				}
+			}
+
 			if ( (int) $row['is_read'] !== $want['is_read'] || (int) $row['is_starred'] !== $want['is_starred'] || (int) $row['is_answered'] !== $want['is_answered'] ) {
 				MailRepository::update_message( (int) $row['id'], $want );
 			}
+		}
+
+		if ( $dirty ) {
+			MailRepository::save_pending_flags( $pending );
 		}
 
 		return $removed;

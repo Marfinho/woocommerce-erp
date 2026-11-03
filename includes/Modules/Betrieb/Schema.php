@@ -951,6 +951,8 @@ class Schema {
 			current_file VARCHAR(255) NULL,
 			bed_clear TINYINT(1) NOT NULL DEFAULT 0,
 			bed_cleared_at DATETIME NULL,
+			print_since DATETIME NULL,
+			untracked_print_s INT UNSIGNED NOT NULL DEFAULT 0,
 			last_status_at DATETIME NULL,
 			ams_json LONGTEXT NULL,
 			snapshot_at DATETIME NULL,
@@ -958,6 +960,20 @@ class Schema {
 			PRIMARY KEY  (id),
 			UNIQUE KEY printer_id (printer_id),
 			KEY geraet_id (geraet_id)
+		) {$charset_collate};";
+
+		// Drucke ohne Auftrag: jeder Druck, den die Bridge am Drucker sieht und
+		// zu dem keine Werkstatt-Platte lief (Bambu-App, Bambu Studio, von Hand).
+		$t[] = "CREATE TABLE {$p}bambu_free_prints (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			file_name VARCHAR(255) NULL,
+			end_state VARCHAR(20) NULL,
+			started_at DATETIME NOT NULL,
+			ended_at DATETIME NOT NULL,
+			seconds INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY printer_ended (printer_id, ended_at)
 		) {$charset_collate};";
 
 		// Katalog echter Bambu-Lab-Filamente: jede eindeutige Bambu-

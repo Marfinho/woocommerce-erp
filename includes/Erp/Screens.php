@@ -242,6 +242,7 @@ class Screens {
 				'hours'  => round( PrintJobRepository::operating_hours( $device ) + PrintJobRepository::hours_elsewhere( $job_ids, $device ), 1 ),
 			) : null,
 			'linked'   => (bool) $device,
+			'free'     => BambuPrinterRepository::free_prints( $printer->printer_id, 20 ),
 		);
 	}
 

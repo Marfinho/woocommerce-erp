@@ -139,7 +139,8 @@ class PrintJobRepository {
 	}
 
 	/**
-	 * Betriebsstunden eines Druckers – Summe der Druckzeiten.
+	 * Betriebsstunden eines Druckers – Druckjournal plus mitgezählte Laufzeit
+	 * von Drucken ohne gemeldete Platte.
 	 *
 	 * @param int $printer_id Drucker.
 	 * @return float
@@ -147,12 +148,15 @@ class PrintJobRepository {
 	public static function operating_hours( $printer_id ) {
 		global $wpdb;
 		$table = self::table();
-		return (float) $wpdb->get_var(
+		$journal = (float) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COALESCE( SUM( print_time_h ), 0 ) FROM {$table} WHERE printer_id = %d AND voided_at IS NULL", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				(int) $printer_id
 			)
 		);
+
+		// Dazu die Laufzeit der Drucke, die nicht über eine gemeldete Platte liefen.
+		return $journal + \Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository::untracked_hours( (int) $printer_id );
 	}
 
 	/**

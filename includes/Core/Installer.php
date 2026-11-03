@@ -115,8 +115,15 @@ class Installer {
 	 * DB_VERSION 51: dauerbuchungen um auf_rechnung (Beleg erst mit der echten
 	 * Rechnung) und neue Tabelle dauerbuchung_offen (fällige Termine, die auf
 	 * ihre Rechnung warten), siehe DauerbuchungRepository.
+	 *
+	 * DB_VERSION 52: bambu_printers um print_since/untracked_print_s (Laufzeit
+	 * der Drucke, die nicht über eine Werkstatt-Platte liefen, für die
+	 * Betriebsstunden, siehe BambuPrinterRepository::track_runtime()).
+	 *
+	 * DB_VERSION 53: runs um setup_min (von Hand gesetzte Rüstzeit in Minuten)
+	 * und neue Tabelle bambu_free_prints (Drucke ohne Auftrag).
 	 */
-	const DB_VERSION = '51';
+	const DB_VERSION = '53';
 
 	/**
 	 * Aktivierungsroutine.
