@@ -267,7 +267,49 @@ class Procurement {
 			}
 		);
 
-		return array( 'order' => $order, 'open' => $open, 'done' => $done );
+		return array( 'order' => $order, 'open' => $open, 'done' => $done, 'items' => self::orderable_items() );
+	}
+
+	/**
+	 * Alle Kleinteile und Verbrauchsmaterialien, die sich von Hand als bestellt vermerken lassen.
+	 *
+	 * Auch solche, die den Meldebestand noch nicht erreicht haben (Vorratskauf,
+	 * Aktionspreis, Sammelbestellung).
+	 *
+	 * @return array Liste: type, item_id, label, unit, stock, supplier, price, order_url.
+	 */
+	public static function orderable_items() {
+		$out = array();
+
+		foreach ( ComponentRepository::all() as $c ) {
+			$out[] = array(
+				'type'      => 'component',
+				'item_id'   => (int) $c['id'],
+				'label'     => $c['code'] . ' – ' . $c['name'],
+				'unit'      => self::unit( 'component' ),
+				'stock'     => (float) $c['stock_qty'],
+				'qty'       => max( 1.0, (float) $c['min_order_qty'] ),
+				'supplier'  => (string) $c['supplier'],
+				'price'     => (float) $c['pack_price_net'],
+				'order_url' => (string) $c['order_url'],
+			);
+		}
+
+		foreach ( SupplyRepository::all() as $s ) {
+			$out[] = array(
+				'type'      => 'supply',
+				'item_id'   => (int) $s['id'],
+				'label'     => $s['name'],
+				'unit'      => (string) $s['unit'],
+				'stock'     => (float) $s['stock_qty'],
+				'qty'       => max( 1.0, (float) $s['min_order_qty'] ),
+				'supplier'  => (string) $s['supplier'],
+				'price'     => (float) $s['price_per_unit'],
+				'order_url' => (string) $s['order_url'],
+			);
+		}
+
+		return $out;
 	}
 
 	/**

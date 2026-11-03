@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.7] – 2026-11-03
+
+### Neu: Einkauf – Bestellung auch ohne Meldebestand vermerken
+- Auf der Einkaufsseite gibt es oben **„Bestellung vermerken – auch ohne Meldebestand“**: Kleinteil oder Verbrauchsmaterial wählen, Menge, Lieferant, Preis und Liefertermin eintragen, „Bestellt ✓“. Bisher ging das nur für Teile, die unter „Bestellen“ standen.
+- Die Bestellung wartet danach wie jede andere unter „Unterwegs“ auf den Wareneingang. Menge, Lieferant und Preis sind aus den Stammdaten vorbelegt.
+
 ## [0.78.6] – 2026-11-03
 
 ### Behoben: Platte sprang bei automatisch geslicter Datei nicht auf „Rüsten“

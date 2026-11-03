@@ -1983,8 +1983,26 @@
 			);
 		}
 
+		// Von Hand als bestellt vermerken - auch wenn der Meldebestand noch nicht erreicht ist.
+		function manualOrder(items) {
+			var holder = h('div');
+			var sel = h('select', { class: 'field', 'aria-label': 'Teil auswählen' }, h('option', { value: '' }, '– Teil wählen –'),
+				items.map(function (x, i) { return h('option', { value: String(i) }, x.label + ' (Bestand ' + num(x.stock) + ' ' + x.unit + ')'); }));
+			sel.addEventListener('change', function () {
+				holder.textContent = '';
+				if (sel.value === '') { return; }
+				var x = items[parseInt(sel.value, 10)];
+				holder.appendChild(orderForm({ type: x.type, item_id: x.item_id, item_ref: '', unit: x.unit, qty: x.qty, supplier: x.supplier, price: x.price, order_url: x.order_url }, load));
+			});
+			return h('details', { class: 'card', style: 'margin-bottom:12px' },
+				h('summary', null, 'Bestellung vermerken – auch ohne Meldebestand'),
+				h('p', { class: 'muted' }, 'Kleinteil oder Verbrauchsmaterial wählen, das du schon bestellt hast, obwohl der Bedarf noch nicht erreicht war. Es wartet dann unter „Unterwegs“ auf den Wareneingang.'),
+				sel, holder);
+		}
+
 		function paint(d) {
 			box.textContent = '';
+			box.appendChild(manualOrder(d.items || []));
 			var board = h('div', { class: 'board ship-board' });
 			[['Bestellen', d.order, orderCard, 'Nichts zu bestellen.'], ['Unterwegs', d.open, openCard, 'Nichts unterwegs.'], ['Eingegangen (14 Tage)', d.done, doneCard, 'Noch nichts eingegangen.']].forEach(function (c) {
 				var col = h('section', { class: 'col' }, h('h3', null, c[0], ' ', h('span', { class: 'count' }, String(c[1].length))));
