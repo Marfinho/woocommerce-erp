@@ -117,16 +117,54 @@
 		return H()('option', { value: value, selected: selected ? true : null }, label);
 	}
 
-	function kontoSelect(opt, current) {
+	/**
+	 * Konto-Suchfeld: tippen (Nummer oder Text) und aus den Vorschlägen wählen.
+	 * Verhält sich nach außen wie ein Select: `.value` ist die Kontonummer,
+	 * `change` feuert bei jeder gültigen Wahl. Bei `allowEmpty` ist „kein Konto“
+	 * erlaubt (Filter), sonst springt ein ungültiger Text auf das letzte Konto zurück.
+	 */
+	function kontoSelect(opt, current, allowEmpty) {
 		var h = H();
-		var sel = h('select', { class: 'field', 'aria-label': 'Kategorie' });
-		(opt.konten || []).forEach(function (g) {
-			var og = h('optgroup', { label: g.gruppe });
-			g.konten.forEach(function (k) { og.appendChild(h('option', { value: k.konto }, k.konto + ' ' + k.label)); });
-			sel.appendChild(og);
+		var byNr = {};
+		var dl = document.getElementById('lw16-konten-dl');
+		if (!dl) {
+			dl = h('datalist', { id: 'lw16-konten-dl' });
+			(opt.konten || []).forEach(function (g) {
+				g.konten.forEach(function (k) { dl.appendChild(h('option', { value: k.konto + ' ' + k.label }, g.gruppe)); });
+			});
+			document.body.appendChild(dl);
+		}
+		(opt.konten || []).forEach(function (g) { g.konten.forEach(function (k) { byNr[k.konto] = k.konto + ' ' + k.label; }); });
+
+		var nr = '';
+		var inp = h('input', {
+			class: 'field', type: 'text', list: 'lw16-konten-dl', autocomplete: 'off', spellcheck: 'false',
+			'aria-label': 'Kategorie', placeholder: allowEmpty ? 'Alle Kategorien – Nummer oder Text tippen' : 'Konto: Nummer oder Text tippen'
 		});
-		sel.value = current || opt.standardkonto;
-		return sel;
+		function resolve(text) {
+			text = String(text || '').trim();
+			if (text === '') { return allowEmpty ? '' : null; }
+			var m = /^(\d{4})(\s|$)/.exec(text);
+			if (m && byNr[m[1]]) { return m[1]; }
+			var low = text.toLowerCase(), hit = null, n = 0;
+			Object.keys(byNr).forEach(function (k) { if (byNr[k].toLowerCase().indexOf(low) !== -1) { hit = k; n++; } });
+			return n === 1 ? hit : null;
+		}
+		var native = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+		inp.__set = function (t) { native.set.call(inp, t); };
+		Object.defineProperty(inp, 'value', {
+			get: function () { return nr; },
+			set: function (v) { v = (v === undefined || v === null) ? '' : String(v); nr = byNr[v] ? v : (allowEmpty ? '' : nr); inp.__set(byNr[nr] || ''); }
+		});
+		inp.addEventListener('change', function () {
+			var r = resolve(native.get.call(inp));
+			if (r === null) { inp.__set(byNr[nr] || ''); return; }
+			nr = r;
+			inp.__set(byNr[nr] || '');
+		});
+		inp.addEventListener('focus', function () { inp.select(); });
+		inp.value = current;
+		return inp;
 	}
 
 	function findKonto(opt, nr) {
@@ -265,12 +303,7 @@
 
 			var von = h('input', { class: 'field', type: 'date', value: q.von, 'aria-label': 'Von' });
 			var bis = h('input', { class: 'field', type: 'date', value: q.bis, 'aria-label': 'Bis' });
-			var konto = h('select', { class: 'field', 'aria-label': 'Kategorie' }, h('option', { value: '' }, 'Alle Kategorien'));
-			(opt.konten || []).forEach(function (g) {
-				var og = h('optgroup', { label: g.gruppe });
-				g.konten.forEach(function (k) { og.appendChild(h('option', { value: k.konto }, k.konto + ' ' + k.label)); });
-				konto.appendChild(og);
-			});
+			var konto = kontoSelect(opt, q.konto, true);
 			konto.value = q.konto;
 			var quelle = h('select', { class: 'field', 'aria-label': 'Quelle' }, h('option', { value: '' }, 'Alle Quellen'),
 				h('option', { value: 'manuell' }, 'manuell'), h('option', { value: 'erechnung' }, 'E-Rechnung'), h('option', { value: 'wareneingang' }, 'Wareneingang'), h('option', { value: 'storno' }, 'Storno'));

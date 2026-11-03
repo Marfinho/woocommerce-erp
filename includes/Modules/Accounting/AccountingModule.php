@@ -434,19 +434,18 @@ class AccountingModule {
 				<tr><th><?php esc_html_e( 'Datum', 'lindenweg16' ); ?></th><td><input type="date" name="datum" id="lw16-datum" value="<?php echo esc_attr( gmdate( 'Y-m-d' ) ); ?>"></td></tr>
 				<tr><th><?php esc_html_e( 'Händler', 'lindenweg16' ); ?></th><td><input type="text" name="haendler" id="lw16-haendler" class="regular-text"></td></tr>
 				<tr><th><?php esc_html_e( 'Konto (Kostenart)', 'lindenweg16' ); ?></th><td>
-					<select name="konto" id="lw16-konto">
-						<?php foreach ( Kontenrahmen::grouped( 'ausgabe' ) as $gruppe => $konten ) : ?>
-							<optgroup label="<?php echo esc_attr( $gruppe ); ?>">
-								<?php foreach ( $konten as $nr => $k ) : ?>
-									<option value="<?php echo esc_attr( $nr ); ?>" <?php selected( Kontenrahmen::KONTO_SONSTIGES, $nr ); ?>
-										data-hinweis="<?php echo esc_attr( $k['hinweis'] ); ?>"
-										data-abzug="<?php echo esc_attr( (string) $k['abzugsfaehig'] ); ?>">
-										<?php echo esc_html( $nr . ' ' . $k['label'] ); ?>
-									</option>
-								<?php endforeach; ?>
-							</optgroup>
+					<input type="text" id="lw16-konto-text" class="regular-text" list="lw16-konten-dl" autocomplete="off"
+						value="<?php echo esc_attr( Kontenrahmen::label( Kontenrahmen::KONTO_SONSTIGES ) ); ?>"
+						placeholder="<?php esc_attr_e( 'Kontonummer oder Text eintippen', 'lindenweg16' ); ?>">
+					<input type="hidden" name="konto" id="lw16-konto" value="<?php echo esc_attr( Kontenrahmen::KONTO_SONSTIGES ); ?>">
+					<datalist id="lw16-konten-dl">
+						<?php foreach ( Kontenrahmen::all( 'ausgabe' ) as $nr => $k ) : ?>
+							<option value="<?php echo esc_attr( $nr . ' ' . $k['label'] ); ?>"
+								data-nr="<?php echo esc_attr( (string) $nr ); ?>"
+								data-hinweis="<?php echo esc_attr( $k['hinweis'] ); ?>"
+								data-abzug="<?php echo esc_attr( (string) $k['abzugsfaehig'] ); ?>"><?php echo esc_html( $k['gruppe'] ); ?></option>
 						<?php endforeach; ?>
-					</select>
+					</datalist>
 					<p class="description" id="lw16-konto-hinweis"></p>
 				</td></tr>
 				<?php $kampagnen = KampagnenRepository::options(); ?>
@@ -472,12 +471,24 @@ class AccountingModule {
 		<?php // Das Skript laeuft immer: PDFs kommen auch ohne Tesseract durch. ?>
 		<script>
 		(function(){
-			var kontoSelect = document.getElementById('lw16-konto');
+			var kontoText = document.getElementById('lw16-konto-text');
+			var kontoNr = document.getElementById('lw16-konto');
 			var kontoHinweis = document.getElementById('lw16-konto-hinweis');
+			var kontoOpts = document.querySelectorAll('#lw16-konten-dl option');
+			function findeKonto(text){
+				text = text.trim().toLowerCase();
+				var treffer = [];
+				for (var i = 0; i < kontoOpts.length; i++) {
+					var o = kontoOpts[i], v = o.value.toLowerCase();
+					if (v === text || o.getAttribute('data-nr') === text) { return o; }
+					if (text && v.indexOf(text) !== -1) { treffer.push(o); }
+				}
+				return treffer.length === 1 ? treffer[0] : null;
+			}
 			function zeigeHinweis(){
-				var opt = kontoSelect.options[kontoSelect.selectedIndex];
-				var text = opt.getAttribute('data-hinweis') || '';
-				var abzug = parseFloat(opt.getAttribute('data-abzug'));
+				var opt = findeKonto(kontoNr.value);
+				var text = opt ? (opt.getAttribute('data-hinweis') || '') : '';
+				var abzug = opt ? parseFloat(opt.getAttribute('data-abzug')) : 100;
 				if (abzug < 100) {
 					var kuerzung = '<?php echo esc_js( __( 'Achtung: nur ABZUG % dieses Betrags sind abziehbar.', 'lindenweg16' ) ); ?>'
 						.replace('ABZUG', String(abzug));
@@ -485,7 +496,13 @@ class AccountingModule {
 				}
 				kontoHinweis.textContent = text;
 			}
-			kontoSelect.addEventListener('change', zeigeHinweis);
+			kontoText.addEventListener('change', function(){
+				var o = findeKonto(kontoText.value);
+				if (o) { kontoNr.value = o.getAttribute('data-nr'); }
+				kontoText.value = findeKonto(kontoNr.value).value;
+				zeigeHinweis();
+			});
+			kontoText.addEventListener('focus', function(){ kontoText.select(); });
 			zeigeHinweis();
 
 			var fileInput = document.getElementById('lw16-beleg-foto');
