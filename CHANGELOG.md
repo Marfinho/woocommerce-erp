@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.82.0] – 2026-11-03
+
+### Neu: Mehrere Belege auf einmal hochladen
+- Im Belegdialog gibt es **„Mehrere Belege auf einmal (jede Datei ein Beleg)“**. Du wählst mehrere Fotos, PDFs oder E-Rechnungen; jede Datei wird ein eigener Beleg.
+- Die Dateien werden nacheinander ausgelesen und im gewohnten Formular gezeigt („Beleg 2 von 10“). Du speicherst, speicherst und schreibst fest, **überspringst** oder beendest den Stapel. Gespeichert wird nur, was du bestätigst.
+- Am Ende steht eine Zusammenfassung („7 von 10 Belegen gespeichert, 3 übersprungen“). „Datei wählen“ bleibt wie bisher für mehrseitige Belege (mehrere Fotos = Seiten eines Belegs).
+
 ## [0.81.1] – 2026-11-03
 
 ### Neu: Konto per Suchfeld wählen
