@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.80.1] – 2026-11-03
+
+### Geändert
+- **Anmeldung hält mindestens 14 Tage:** Auch ohne „Angemeldet bleiben“ (WordPress-Standard: 2 Tage) bleibt man 14 Tage angemeldet. Die Live-Anzeige behält ein Jahr.
+
 ## [0.80.0] – 2026-11-03
 
 ### Neu: Rüst-, Druck- und Wartezeiten sauber messen, Soll gegen Ist neu aufgebaut
