@@ -15,9 +15,9 @@ namespace Lindenweg16\Modules\Accounting;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Kuratierter Auszug aus SKR03 – nicht der volle Kontenrahmen, sondern die
- * Konten, die im Betrieb tatsächlich vorkommen. Über den Filter
- * `lw16_kontenrahmen` erweiterbar, ohne diese Datei anzufassen.
+ * Vollständiger SKR03 (Datei KontenrahmenSkr03.php, ~1.550 Konten). Die im
+ * Betrieb häufigen Konten sind darüber hinaus kuratiert: mit eigener Obergruppe,
+ * Hinweis und Abzugsfähigkeit. Über den Filter `lw16_kontenrahmen` anpassbar.
  */
 class Kontenrahmen {
 
@@ -61,6 +61,73 @@ class Kontenrahmen {
 	 * @return array
 	 */
 	public static function konten() {
+		$out = self::basis();
+
+		/**
+		 * Kontenrahmen erweitern oder anpassen.
+		 *
+		 * @param array $out Konten nach Nummer.
+		 */
+		return function_exists( 'apply_filters' ) ? apply_filters( 'lw16_kontenrahmen', $out ) : $out;
+	}
+
+	/**
+	 * Obergruppe eines Kontos nach Nummernkreis (für alle nicht kuratierten Konten).
+	 *
+	 * @param string $nr  Kontonummer.
+	 * @param string $typ Kontotyp.
+	 * @return string
+	 */
+	public static function gruppe_nach_nummer( $nr, $typ ) {
+		$n = (int) $nr;
+		$r = array(
+			array( 0, 'Anlagevermögen' ),
+			array( 1000, 'Umlaufvermögen und Geldkonten' ),
+			array( 1500, 'Forderungen und sonstige Vermögensgegenstände' ),
+			array( 1600, 'Verbindlichkeiten' ),
+			array( 1800, 'Privat und Eigenkapital' ),
+			array( 2000, 'Neutrale und außerordentliche Aufwendungen' ),
+			array( 2700, 'Neutrale und außerordentliche Erträge' ),
+			array( 3000, 'Wareneinsatz' ),
+			array( 4000, 'Sonstige betriebliche Aufwendungen' ),
+			array( 4100, 'Löhne und Gehälter' ),
+			array( 4200, 'Raumkosten' ),
+			array( 4300, 'Versicherungen und Beiträge' ),
+			array( 4500, 'Fahrzeugkosten' ),
+			array( 4600, 'Werbe- und Reisekosten' ),
+			array( 4800, 'Abschreibungen und Instandhaltung' ),
+			array( 4900, 'Verwaltungskosten' ),
+			array( 7000, 'Bestände' ),
+			array( 8000, 'Erlöse' ),
+			array( 8900, 'Erlösschmälerungen und Bestandsveränderungen' ),
+			array( 9000, 'Statistische Konten' ),
+		);
+		$name = 'Sonstiges';
+		foreach ( $r as $row ) {
+			if ( $n >= $row[0] ) {
+				$name = $row[1];
+			}
+		}
+		if ( 'ausgabe' === $typ && $n >= 2000 && $n < 3000 ) {
+			return 'Neutrale und außerordentliche Aufwendungen';
+		}
+		if ( 'einnahme' === $typ && $n >= 8000 ) {
+			return $n >= 8700 ? 'Erlösschmälerungen und Bestandsveränderungen' : 'Erlöse';
+		}
+		return $name;
+	}
+
+	/**
+	 * Kontenstamm vor dem Filter: voller SKR03 plus kuratierte Einträge.
+	 *
+	 * @return array
+	 */
+	private static function basis() {
+		static $cache = null;
+		if ( null !== $cache ) {
+			return $cache;
+		}
+
 		$konten = array(
 			// --- Erlöse ---------------------------------------------------
 			'8195' => array( 'Erlöse als Kleinunternehmer §19 UStG', 'Erlöse', 'einnahme', 100, '' ),
@@ -82,6 +149,8 @@ class Kontenrahmen {
 			'4610' => array( 'Streuartikel (Werbegeschenke bis 10 €)', 'Werbe- und Reisekosten', 'ausgabe', 100, '' ),
 			'4630' => array( 'Geschenke abzugsfähig', 'Werbe- und Reisekosten', 'ausgabe', 100, 'Nur bis zur Freigrenze je Empfänger und Jahr.' ),
 			'4650' => array( 'Bewirtungskosten', 'Werbe- und Reisekosten', 'ausgabe', 70, 'Geschäftliche Bewirtung ist nur zu 70 % abziehbar; Anlass und Teilnehmer gehören auf den Beleg.' ),
+			'4635' => array( 'Geschenke nicht abzugsfähig', 'Werbe- und Reisekosten', 'ausgabe', 0, 'Nicht abziehbar.' ),
+			'4654' => array( 'Nicht abzugsfähige Bewirtungskosten', 'Werbe- und Reisekosten', 'ausgabe', 0, 'Der nicht abziehbare Anteil der Bewirtung.' ),
 			'4653' => array( 'Aufmerksamkeiten', 'Werbe- und Reisekosten', 'ausgabe', 100, 'Kaffee und Kekse am Stand – im Gegensatz zur Bewirtung voll abziehbar.' ),
 			'4672' => array( 'Reisekosten Unternehmer: Fahrtkosten', 'Werbe- und Reisekosten', 'ausgabe', 100, 'Kilometerpauschale für Fahrten mit dem privaten Fahrzeug.' ),
 			'4674' => array( 'Reisekosten Unternehmer: Verpflegungsmehraufwand', 'Werbe- und Reisekosten', 'ausgabe', 100, 'Nur die gesetzlichen Pauschalen, keine Einzelbelege.' ),
@@ -112,6 +181,17 @@ class Kontenrahmen {
 		);
 
 		$out = array();
+		$voll = require __DIR__ . '/KontenrahmenSkr03.php';
+		foreach ( $voll as $nr => $row ) {
+			$out[ (string) $nr ] = array(
+				'konto'        => (string) $nr,
+				'label'        => $row[0],
+				'gruppe'       => self::gruppe_nach_nummer( (string) $nr, $row[1] ),
+				'typ'          => $row[1],
+				'abzugsfaehig' => 100.0,
+				'hinweis'      => '',
+			);
+		}
 		foreach ( $konten as $nr => $row ) {
 			$out[ (string) $nr ] = array(
 				'konto'        => (string) $nr,
@@ -123,12 +203,8 @@ class Kontenrahmen {
 			);
 		}
 
-		/**
-		 * Kontenrahmen erweitern oder anpassen.
-		 *
-		 * @param array $out Konten nach Nummer.
-		 */
-		return function_exists( 'apply_filters' ) ? apply_filters( 'lw16_kontenrahmen', $out ) : $out;
+		$cache = $out;
+		return $out;
 	}
 
 	/**

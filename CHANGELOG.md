@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.81.0] – 2026-11-03
+
+### Neu: Buchhaltung mit dem vollständigen SKR03
+- Der Kontenrahmen enthält jetzt **alle rund 1.550 SKR03-Konten** (Anlage- und Umlaufvermögen, Verbindlichkeiten, Eigenkapital, Aufwand, Erlöse, statistische Konten), nicht mehr nur den kuratierten Auszug. Daten in `includes/Modules/Accounting/KontenrahmenSkr03.php`.
+- Die bisher kuratierten Konten behalten Obergruppe, Hinweis und Abzugsfähigkeit (z. B. 4650 Bewirtung 70 %). Neu kuratiert: 4635 und 4654 (nicht abzugsfähig, 0 %).
+- Alle anderen Konten werden nach Nummernkreis gruppiert (z. B. 4100–4199 „Löhne und Gehälter“). Aufwands- und Erlöskonten erscheinen in der Kontenauswahl der Belege und in der EÜR, Bestands-, Kapital- und Statistikkonten sind nur im Kontenrahmen selbst enthalten.
+- Tests: `tests/KontenrahmenTest.php`.
+
 ## [0.80.0] – 2026-11-03
 
 ### Neu: Rüst-, Druck- und Wartezeiten sauber messen, Soll gegen Ist neu aufgebaut

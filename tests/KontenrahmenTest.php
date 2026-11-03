@@ -77,4 +77,28 @@ class KontenrahmenTest extends TestCase {
 		$this->assertSame( 100.0, Kontenrahmen::abziehbarer_betrag( '4980', 100.0 ) );
 		$this->assertSame( 70.0, Kontenrahmen::abziehbarer_betrag( '4650', 100.0 ) );
 	}
+
+	public function test_voller_skr03_ist_enthalten() {
+		$this->assertGreaterThan( 1500, count( Kontenrahmen::all() ) );
+		$this->assertTrue( Kontenrahmen::exists( '0027' ) );
+		$this->assertTrue( Kontenrahmen::exists( '1200' ) );
+		$this->assertTrue( Kontenrahmen::exists( '1800' ) );
+		$this->assertTrue( Kontenrahmen::exists( '4130' ) );
+		$this->assertTrue( Kontenrahmen::exists( '9000' ) );
+	}
+
+	public function test_kuratierte_konten_behalten_ihre_werte() {
+		$this->assertSame( 'Werbe- und Reisekosten', Kontenrahmen::gruppe( '4600' ) );
+		$this->assertSame( 70.0, Kontenrahmen::abzugsfaehig( '4650' ) );
+		$this->assertSame( 0.0, Kontenrahmen::abzugsfaehig( '4654' ) );
+	}
+
+	public function test_nicht_kuratierte_konten_bekommen_gruppe_und_typ() {
+		$lohn = Kontenrahmen::get( '4120' );
+		$this->assertSame( 'ausgabe', $lohn['typ'] );
+		$this->assertSame( 'Löhne und Gehälter', $lohn['gruppe'] );
+		$this->assertSame( 'bilanz', Kontenrahmen::get( '1200' )['typ'] );
+		$this->assertArrayNotHasKey( '1200', Kontenrahmen::all( 'ausgabe' ) );
+		$this->assertArrayHasKey( '8195', Kontenrahmen::all( 'einnahme' ) );
+	}
 }
