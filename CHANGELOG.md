@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.79.0] – 2026-11-03
+
+### Version 0.79
+- Sammelversion der letzten Änderungen: Filamentrolle als **aktiv** setzen (Verbrauch wird zuerst von ihr abgezogen, 0.78.4) und Bestellungen im Einkauf **auch ohne Meldebestand** vermerken (0.78.7).
+
 ## [0.78.7] – 2026-11-03
 
 ### Neu: Einkauf – Bestellung auch ohne Meldebestand vermerken
