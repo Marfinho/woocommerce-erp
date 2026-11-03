@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.7] – 2026-11-03
+
+### Lager: Positionen unter Soll sofort erkennbar
+- Zeilen unter dem Sollbestand haben eine farbige Kante und leichte Tönung (bernstein = unter Soll, rot = leer oder unter der Hälfte des Solls), die Bestandszahl ist eingefärbt, dazu ein **Füllstand gegen das Soll** („12 von 20“).
+- Was fehlt, steht in der Liste oben, das Knappste zuerst. Die Kachel „Unter Soll“ und der Filter „Unter Soll“ leuchten auf, sobald etwas fehlt.
+
 ## [0.78.6] – 2026-11-03
 
 ### Behoben: Platte sprang bei automatisch geslicter Datei nicht auf „Rüsten“

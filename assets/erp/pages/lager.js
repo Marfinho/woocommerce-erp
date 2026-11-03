@@ -36,6 +36,21 @@
 
 		function num(n) { return ui.qty(Number(n) || 0); }
 
+		// Wie knapp ist es? low = unter Soll, crit = leer oder unter der Hälfte des Solls.
+		function level(r) {
+			if (!r.flags.unter_soll) { return ''; }
+			return (Number(r.gesamt) <= 0 || (r.soll > 0 && Number(r.gesamt) < r.soll / 2)) ? 'crit' : 'low';
+		}
+
+		// Füllstand gegen das Soll: auf einen Blick, wie weit der Bestand vom Ziel entfernt ist.
+		function meter(r) {
+			if (r.soll === null || !(r.soll > 0)) { return null; }
+			var pct = Math.max(0, Math.min(100, Math.round(Number(r.gesamt) / r.soll * 100)));
+			return h('div', { class: 'lg-meter', title: num(r.gesamt) + ' von ' + num(r.soll) },
+				h('div', { class: 'bar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct, 'aria-label': 'Bestand gegen Soll' }, h('i', { style: 'width:' + pct + '%' })),
+				h('small', null, num(r.gesamt) + ' von ' + num(r.soll)));
+		}
+
 		function pills(items, current, onPick) {
 			return h('div', { class: 'pills', role: 'tablist' }, items.map(function (t) {
 				return h('button', { class: 'pill' + (t[0] === current ? ' on' : ''), type: 'button', role: 'tab', 'aria-selected': t[0] === current ? 'true' : 'false', onclick: function () { onPick(t[0]); } }, t[1]);
@@ -298,12 +313,17 @@
 				chipBox.textContent = '';
 				chipDefs.forEach(function (c) {
 					var n = c[0] === 'alle' ? d.rows.length : d.rows.filter(function (r) { return r.flags[c[0]]; }).length;
-					chipBox.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': state.f === c[0] ? 'true' : 'false', onclick: function () { state.f = c[0]; paint(); } }, c[1] + ' (' + n + ')'));
+					chipBox.appendChild(h('button', { class: 'chip' + (c[0] === 'unter_soll' && n > 0 ? ' lg-chip-low' : ''), type: 'button', 'aria-pressed': state.f === c[0] ? 'true' : 'false', onclick: function () { state.f = c[0]; paint(); } }, c[1] + ' (' + n + ')'));
 				});
 				var q = state.q.trim().toLowerCase();
 				var rows = d.rows.filter(function (r) {
 					return (state.f === 'alle' || r.flags[state.f]) && (!q || (r.sku + ' ' + r.name + ' ' + r.color_label).toLowerCase().indexOf(q) > -1);
 				});
+				// Was fehlt, steht oben – das Knappste zuerst; sonst bleibt die Reihenfolge.
+				var rank = { crit: 0, low: 1, '': 2 };
+				rows = rows.map(function (r, i) { return { r: r, i: i }; }).sort(function (a, b) {
+					return (rank[level(a.r)] - rank[level(b.r)]) || (a.i - b.i);
+				}).map(function (x) { return x.r; });
 				list.textContent = '';
 				if (!rows.length) {
 					list.appendChild(h('div', { class: 'card muted' }, d.rows.length ? 'Nichts gefunden. Suche oder Filter lockern.' : 'Noch keine Bewegungen gebucht.'));
@@ -313,7 +333,8 @@
 
 			function stockRow(r) {
 				var tags = h('div', { class: 'row-tags' });
-				if (r.flags.unter_soll) { tags.appendChild(h('span', { class: 'tag later' }, 'unter Soll (' + num(r.diff) + ')')); }
+				var lvl = level(r);
+				if (r.flags.unter_soll) { tags.appendChild(h('span', { class: 'tag ' + (lvl === 'crit' ? 'lg-crit' : 'later') }, (lvl === 'crit' ? 'deutlich ' : '') + 'unter Soll (' + num(r.diff) + ')')); }
 				if (r.flags.ohne_platz) { tags.appendChild(h('span', { class: 'tag later' }, num(r.unplaced) + ' ohne Platz')); }
 				if (r.flags.leer) { tags.appendChild(h('span', { class: 'tag' }, 'leer')); }
 				if (r.soll !== null && !r.flags.unter_soll) { tags.appendChild(h('span', { class: 'tag now' }, 'Soll ' + num(r.soll) + ' erreicht')); }
@@ -335,8 +356,8 @@
 					actions.appendChild(h('button', { class: 'btn', type: 'button', title: 'Alle Bewegungen dieses Artikels in dieser Farbe', onclick: function () { state.openJournal({ article_id: r.article_id, color: r.color }); } }, 'Verlauf'));
 				}
 
-				return h('article', { class: 'row-card lg-row' },
-					h('div', { class: 'row-main' }, h('b', null, r.sku), h('small', null, r.name + ' · ' + r.color_label), h('small', null, detail.join(' · ')), tags),
+				return h('article', { class: 'row-card lg-row' + (lvl ? ' lg-' + lvl : '') },
+					h('div', { class: 'row-main' }, h('b', null, r.sku), h('small', null, r.name + ' · ' + r.color_label), h('small', null, detail.join(' · ')), meter(r), tags),
 					h('div', { class: 'lg-num' }, h('span', { class: 'row-num' }, num(r.lager)), h('small', { class: 'muted' }, 'im Lager'), r.gesamt !== r.lager ? h('small', { class: 'muted' }, 'gesamt ' + num(r.gesamt)) : null),
 					actions);
 			}
@@ -528,7 +549,7 @@
 				head.textContent = '';
 				var tiles = h('div', { class: 'grid tiles' },
 					tile('Positionen', d.rows.length),
-					tile('Unter Soll', d.rows.filter(function (r) { return r.flags.unter_soll; }).length),
+					tile('Unter Soll', d.rows.filter(function (r) { return r.flags.unter_soll; }).length, true),
 					tile('Ohne Lagerplatz', d.rows.filter(function (r) { return r.flags.ohne_platz; }).length));
 				head.appendChild(tiles);
 				if (d.unresolved) {
@@ -548,8 +569,8 @@
 				if (!d.can_book) { body.appendChild(h('p', { class: 'muted lg-gap' }, h('span', { class: 'tag' }, 'Nur ansehen'), ' Bestand buchen darfst du nicht.')); }
 			}
 
-			function tile(label, value) {
-				return h('div', { class: 'tile' }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, String(value)));
+			function tile(label, value, warn) {
+				return h('div', { class: 'tile' + (warn && value > 0 ? ' lg-tile-low' : '') }, h('div', { class: 'lab' }, label), h('div', { class: 'val' }, String(value)));
 			}
 
 			function load() {

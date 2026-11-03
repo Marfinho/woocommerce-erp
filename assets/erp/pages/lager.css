@@ -47,3 +47,19 @@
 .lg-nr { font-size: 12px; font-variant-numeric: tabular-nums; }
 .lg-link { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: inherit; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--text-muted); text-underline-offset: 3px; }
 .lg-link:hover { text-decoration-color: currentColor; }
+
+/* Unter Soll: Kante, Tönung und Füllstand – Farben aus dem Design (warning/error) */
+.lg-row.lg-low, .lg-row.lg-crit { border-left-width: 5px; }
+.lg-row.lg-low { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 7%, var(--surface)); }
+.lg-row.lg-crit { border-color: color-mix(in srgb, var(--error) 45%, var(--line)); border-left-color: var(--error); background: color-mix(in srgb, var(--error) 8%, var(--surface)); }
+.lg-row.lg-low .row-num { color: var(--warning); }
+.lg-row.lg-crit .row-num { color: var(--error); }
+.tag.lg-crit { background: color-mix(in srgb, var(--error) 16%, var(--surface)); color: var(--error); font-weight: 700; }
+.lg-meter { display: grid; gap: 3px; max-width: 280px; margin: 4px 0 2px; }
+.lg-meter .bar { height: 8px; }
+.lg-meter small { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lg-low .lg-meter .bar i { background: var(--warning); }
+.lg-crit .lg-meter .bar i { background: var(--error); }
+.lg-tile-low { border-color: color-mix(in srgb, var(--warning) 50%, var(--line)); background: color-mix(in srgb, var(--warning) 8%, var(--surface)); }
+.lg-tile-low .val { color: var(--warning); }
+.chip.lg-chip-low:not([aria-pressed="true"]) { border-color: color-mix(in srgb, var(--warning) 55%, var(--line)); color: var(--warning); font-weight: 700; }
