@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.80.1] – 2026-11-03
+
+### Behoben: Beleg-Upload las gescannte PDFs nicht
+- Auf dem Server ist keine Texterkennung (Tesseract) eingerichtet. Fotos wurden deshalb schon im Browser gelesen, **gescannte PDFs** (ohne Textschicht) aber nicht: Es kam nur der Hinweis, Tesseract werde gebraucht.
+- Jetzt werden auch gescannte PDFs im Browser gelesen: Die ersten drei Seiten werden mit pdf.js in Bilder verwandelt und mit derselben Texterkennung wie die Fotos gelesen. Die Datei verlässt dabei das Gerät nicht, nur der gelesene Text geht an den Server.
+- Schlägt das Laden der Texterkennung oder des PDF-Lesers fehl (kein Internet, blockiert), steht jetzt genau das in der Meldung.
+
 ## [0.80.0] – 2026-11-03
 
 ### Neu: Rüst-, Druck- und Wartezeiten sauber messen, Soll gegen Ist neu aufgebaut
