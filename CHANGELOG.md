@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.5] – 2026-11-03
+
+### Behoben: Mails kamen immer wieder als ungelesen zurück
+- Öffnen/Markieren setzte das Gelesen-Flag nur lokal und schickte es im Hintergrund an den Mailserver. Der nächste Abgleich übernahm aber den **alten Serverstand** und setzte die Mail zurück auf ungelesen – sobald der Hintergrundauftrag noch nicht durch war oder fehlschlug, und ohne jeden neuen Versuch.
+- Lokal gesetzte Markierungen (gelesen/ungelesen, Stern) werden jetzt gemerkt, bis der Server sie bestätigt. Der Abgleich überschreibt sie bis dahin nicht und schickt sie erneut an den Server; nach 7 Tagen ohne Bestätigung gilt wieder der Serverstand.
+
+### Neu: Betriebsstunden der Drucker werden mitgezählt
+- Betriebsstunden entstanden bisher nur aus dem Druckjournal, also erst, wenn eine Werkstatt-Platte gemeldet wurde. Drucke von Hand, aus Bambu Studio/App und nie gemeldete Platten fehlten.
+- Die Statusmeldungen der Bambu-Bridge messen jetzt jeden Druck (Beginn bis Ende). Läuft keine Werkstatt-Platte dazu, wird die Laufzeit am Drucker gesammelt und zu den Betriebsstunden des verknüpften Geräts addiert (Wartungsfälligkeit, Düsentausch, Anzeige). Platten werden nicht doppelt gezählt.
+- Neue Spalten `print_since`, `untracked_print_s` an `bambu_printers` (DB-Version 52). Gezählt wird ab diesem Update.
+
 ## [0.78.4] – 2026-11-02
 
 ### Neu: Filamentrolle als „aktiv“ setzen

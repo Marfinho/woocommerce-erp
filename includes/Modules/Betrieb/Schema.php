@@ -951,6 +951,8 @@ class Schema {
 			current_file VARCHAR(255) NULL,
 			bed_clear TINYINT(1) NOT NULL DEFAULT 0,
 			bed_cleared_at DATETIME NULL,
+			print_since DATETIME NULL,
+			untracked_print_s INT UNSIGNED NOT NULL DEFAULT 0,
 			last_status_at DATETIME NULL,
 			ams_json LONGTEXT NULL,
 			snapshot_at DATETIME NULL,
