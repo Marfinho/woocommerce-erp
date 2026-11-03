@@ -73,6 +73,68 @@ class ErpVarianceTest extends TestCase {
 		$this->assertSame( '', Variance::margin_state( 0.40, 0.38, 1.2 ) );
 	}
 
+	public function test_messung_trennt_ruesten_druck_und_warten() {
+		$m = Variance::measure(
+			array(
+				'released_at'    => '2026-10-19 07:00:00',
+				'setup_at'       => '2026-10-19 08:00:00',
+				'setup_src'      => 'hand',
+				'setup_paused_s' => 600,
+				'print_at'       => '2026-10-19 08:30:00',
+				'print_src'      => 'drucker',
+				'print_end_at'   => '2026-10-19 11:30:00',
+				'reported_at'    => '2026-10-19 12:00:00',
+			)
+		);
+
+		$this->assertSame( 20.0, $m['setup'], '30 Minuten abzüglich 10 Minuten Pause.' );
+		$this->assertSame( 'hand', $m['setup_src'] );
+		$this->assertSame( 180.0, $m['print'] );
+		$this->assertSame( 'drucker', $m['print_src'] );
+		$this->assertSame( 60.0, $m['wait_before'] );
+		$this->assertSame( 30.0, $m['wait_after'] );
+		$this->assertFalse( $m['failed'] );
+	}
+
+	public function test_automatisches_ruesten_ist_keine_arbeitszeit() {
+		$run = array(
+			'setup_at'     => '2026-10-19 08:00:00',
+			'setup_src'    => 'auto',
+			'print_at'     => '2026-10-19 08:20:00',
+			'print_end_at' => '2026-10-19 09:20:00',
+		);
+
+		$this->assertNull( Variance::measure( $run )['setup'] );
+		$this->assertNull( Variance::measure( array_merge( $run, array( 'setup_src' => null ) ) )['setup'], 'Alte Platten ohne Herkunft zählen nicht.' );
+		$this->assertSame( 12.5, Variance::measure( array_merge( $run, array( 'setup_min' => '12.5' ) ) )['setup'], 'Von Hand gesetzt zählt immer.' );
+	}
+
+	public function test_druckzeit_ohne_dauer_ist_nicht_messbar() {
+		$m = Variance::measure( array( 'print_at' => '2026-10-19 08:00:00', 'print_end_at' => '2026-10-19 08:00:00' ) );
+
+		$this->assertNull( $m['print'] );
+		$this->assertNull( $m['print_src'] );
+	}
+
+	public function test_fehlgeschlagener_druck_ist_markiert() {
+		$m = Variance::measure( array( 'print_at' => '2026-10-19 08:00:00', 'print_end_at' => '2026-10-19 08:10:00', 'print_failed' => 1 ) );
+
+		$this->assertTrue( $m['failed'] );
+		$this->assertSame( 10.0, $m['print'] );
+	}
+
+	public function test_median_ist_robust_gegen_ausreisser() {
+		$this->assertSame( 12.0, Variance::median( array( 10, 12, 600 ) ) );
+		$this->assertSame( 11.0, Variance::median( array( 10, 12 ) ) );
+		$this->assertNull( Variance::median( array() ) );
+	}
+
+	public function test_reine_platte_erkennt_genau_einen_artikel() {
+		$this->assertSame( 7, Variance::pure_article( array( array( 'article_id' => 7, 'qty' => 4, 'color' => 'rot' ), array( 'article_id' => 7, 'qty' => 2, 'color' => 'blau' ) ) ) );
+		$this->assertSame( 0, Variance::pure_article( array( array( 'article_id' => 7, 'qty' => 4 ), array( 'article_id' => 8, 'qty' => 2 ) ) ) );
+		$this->assertSame( 0, Variance::pure_article( array() ) );
+	}
+
 	public function test_planzeit_nur_mit_recht_stammdaten_aendern() {
 		$rest = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Erp/RestApi.php' );
 

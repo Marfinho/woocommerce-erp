@@ -2162,7 +2162,7 @@
 	}
 
 	function viewVariance() {
-		pageHead('Soll gegen Ist', 'Gestempelte Druckzeit gegen die Planzeit – damit Plan und Kalkulation der Wirklichkeit folgen.', null);
+		pageHead('Soll gegen Ist', 'Rüsten, Druck und Warten getrennt gemessen – damit Plan und Kalkulation der Wirklichkeit folgen.', null);
 		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
@@ -2176,31 +2176,63 @@
 
 		function paint(d) {
 			box.textContent = '';
+			var q = d.quality;
+
+			if (!q.runs) {
+				box.appendChild(h('div', { class: 'notice' }, 'Noch keine Messwerte: Sobald Platten mit Druckstart und Meldung erledigt sind, erscheinen sie hier (letzte ' + d.days + ' Tage).'));
+				return;
+			}
+
+			function min1(v) { return v === null || v === undefined ? '–' : minTxt(v); }
+
+			// Datenqualität: Woher kommen die Zeiten, und was fließt nicht ein?
+			var src = [];
+			if (q.drucker) { src.push(q.drucker + ' vom Drucker'); }
+			if (q.abfrage) { src.push(q.abfrage + ' per Abfrage'); }
+			if (q.hand) { src.push(q.hand + ' von Hand'); }
+			box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' },
+				h('b', null, q.runs + ' erledigte Platten in ' + d.days + ' Tagen'),
+				h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Druckzeit: ' + (src.join(' · ') || 'keine') + (q.ohne_druckzeit ? ' · ' + q.ohne_druckzeit + ' ohne Druckzeit (nicht gewertet)' : '') + (q.fehlgeschlagen ? ' · ' + q.fehlgeschlagen + ' fehlgeschlagen (nicht gewertet)' : '')),
+				h('div', { class: 'muted small' }, 'Rüsten: ' + q.ruesten_hand + ' gemessen (von Hand) · ' + q.ruesten_ohne + ' nicht gemessen')
+			));
+
+			// Rüsten und Warten
+			var st = d.setup;
+			var stTags = h('div', { class: 'row-tags' });
+			if (st.factor !== null) { stTags.appendChild(h('span', { class: 'tag' + (st.factor > 1.1 ? ' later' : '') }, pct(st.factor) + ' · ' + st.n + ' Platten')); }
+			var perPrinter = st.by_printer.map(function (x) { return x.printer + ' ' + min1(x.median_min) + ' (' + x.n + ')'; }).join(' · ');
+			box.appendChild(h('div', { class: 'row-card', style: 'margin-bottom:14px' },
+				h('div', { class: 'row-main' },
+					h('b', null, 'Rüsten (Handarbeit)'),
+					h('small', null, 'Soll ' + min1(st.plan_min) + ' · Ist ' + (st.n ? min1(st.actual_min) + ' (Median)' : 'noch nicht gemessen – „Rüsten starten“ auf der Platte tippen')),
+					perPrinter ? h('small', { class: 'muted' }, 'Je Drucker: ' + perPrinter) : null,
+					h('small', { class: 'muted' }, 'Warten: Platte freigegeben bis Rüsten ' + min1(d.wait.before_min) + ' · Druck fertig bis gemeldet ' + min1(d.wait.after_min) + ' (jeweils Median)')
+				),
+				stTags
+			));
 
 			if (!d.articles.length) {
-				box.appendChild(h('div', { class: 'notice' }, 'Noch keine Messwerte: Sobald Platten mit Druckstart und Meldung erledigt sind, erscheinen sie hier (letzte ' + d.days + ' Tage).'));
+				box.appendChild(h('div', { class: 'notice' }, 'Noch keine auswertbare Druckzeit je Artikel.'));
 				return;
 			}
 
 			var worse = d.articles.filter(function (a) { return a.adjust && a.factor > 1; }).length;
 			var risky = d.articles.filter(function (a) { return a.margin && a.margin.state; }).length;
-			box.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' },
-				h('b', null, d.runs + ' Platten gemessen'),
-				h('small', { class: 'muted' }, ' · Rüsten im Schnitt ' + minTxt(d.setup_avg) + ' · ' + worse + ' Artikel brauchen deutlich länger als geplant' + (d.money ? ' · ' + risky + ' mit kritischer Marge' : ''))
-			));
+			box.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:8px' }, 'Druckzeit je Teil · ' + worse + ' Artikel brauchen deutlich länger als geplant' + (d.money ? ' · ' + risky + ' mit kritischer Marge' : '')));
 
 			var rows = h('div', { class: 'rows' });
 			d.articles.forEach(function (a) {
 				var m = a.margin;
 				var tags = h('div', { class: 'row-tags' });
-				tags.appendChild(h('span', { class: 'tag' + (a.adjust && a.factor > 1 ? ' later' : '') }, pct(a.factor) + ' · ' + a.runs + ' Platten'));
+				tags.appendChild(h('span', { class: 'tag' + (a.adjust && a.factor > 1 ? ' later' : '') }, pct(a.factor) + ' · ' + (a.estimated ? a.runs + ' Platten, geschätzt' : a.runs + ' reine Platten')));
 				if (m && m.state === 'verlust') { tags.appendChild(h('span', { class: 'tag later' }, 'Verlust: DB II ' + m.actual_db2.toFixed(2).replace('.', ',') + ' €')); }
 				else if (m && m.state === 'sinkt') { tags.appendChild(h('span', { class: 'tag later' }, 'Marge ' + pc(m.plan_pct) + ' → ' + pc(m.actual_pct))); }
 
 				rows.appendChild(h('div', { class: 'row-card' },
 					h('div', { class: 'row-main' },
 						h('b', null, a.sku + ' – ' + a.name),
-						h('small', null, 'Soll ' + minTxt(a.plan_min) + ' · Ist ' + minTxt(a.actual_min) + ' · Plattenzeit ' + String(a.plate_h).replace('.', ',') + ' h' + (a.adjust ? ' → ' + String(a.new_h).replace('.', ',') + ' h' : ''))
+						h('small', null, 'Je Teil: Soll ' + num(a.part_plan) + ' min · Ist ' + num(a.part_actual) + ' min · Plattenzeit ' + String(a.plate_h).replace('.', ',') + ' h' + (a.adjust ? ' → ' + String(a.new_h).replace('.', ',') + ' h' : '')),
+						a.estimated ? h('small', { class: 'muted' }, 'Nur gemischte Platten gemessen: Die Zeit ist anteilig verteilt. Eine reine Platte mit diesem Artikel macht den Wert exakt.') : null
 					),
 					tags,
 					a.adjust && d.edit ? h('button', {
@@ -2428,6 +2460,20 @@
 		run.primary = PRIMARY[next] || {};
 	}
 
+	// Rüstzeit in Sekunden bis jetzt (oder bis zum Ende): von Hand gesetzt, sonst gestoppt abzüglich Pausen.
+	function setupSeconds(run, now, end) {
+		if (run.setup_min !== null && run.setup_min !== undefined) { return run.setup_min * 60; }
+		var stop = end || now;
+		var paused = (run.setup_paused || 0) + (run.setup_pause_at && !end ? Math.max(0, now - run.setup_pause_at) : 0);
+		return Math.max(0, stop - (run.setup || stop) - paused);
+	}
+
+	function setupNote(run) {
+		if (run.setup_min !== null && run.setup_min !== undefined) { return 'von Hand'; }
+		if (run.setup_src !== 'hand') { return run.status === 'ruesten' ? 'Datei wird zum Drucker gebracht – zählt nicht als Arbeitszeit' : 'nicht gemessen'; }
+		return run.status === 'ruesten' ? (run.setup_pause_at ? 'pausiert' : 'läuft') : 'beendet';
+	}
+
 	function runAct(id, action, body) {
 		return api('runs/' + id + '/' + action, { method: 'POST', queue: true, body: body || {} });
 	}
@@ -2443,7 +2489,7 @@
 		var meta = [run.printer, run.est_minutes ? 'ca. ' + minTxt(run.est_minutes) : ''].filter(Boolean).join(' · ');
 		// Serverzeit: Die Uhr eines Handys geht selten genau.
 		var nowSec = Date.now() / 1000 + (S.skew || 0);
-		var line = run.status === 'ruesten' ? 'Rüstzeit ' + clock(nowSec - run.setup) : (run.status === 'druckt' ? 'Druckzeit ' + clock(nowSec - run.print) : itemsLine(run));
+		var line = run.status === 'ruesten' ? (run.setup_src === 'hand' ? 'Rüstzeit ' + clock(setupSeconds(run, nowSec)) + (run.setup_pause_at ? ' (Pause)' : '') : 'Vorbereitung ' + clock(nowSec - run.setup)) : (run.status === 'druckt' ? 'Druckzeit ' + clock(nowSec - run.print) : itemsLine(run));
 
 		var chips = [];
 		if (run.batch) { chips.push('Plan ' + run.batch); }
@@ -2479,6 +2525,11 @@
 			chips.length ? h('div', { class: 'chips' }, chips.map(function (c) { return h('span', { class: 'chip' }, c); })) : null,
 			h('div', { style: 'display:flex;gap:8px;margin-top:11px;flex-wrap:wrap' },
 				primary,
+				run.status === 'ruesten' && (run.setup_min === null || run.setup_min === undefined) ? h('button', { class: 'btn', type: 'button', onclick: function (e) {
+					var action = run.setup_src !== 'hand' ? 'ruesten' : (run.setup_pause_at ? 'weiter' : 'pause');
+					e.target.disabled = true;
+					runAct(run.id, action).then(function () { reload(); }).catch(function (err) { e.target.disabled = false; toast(err.message, true); });
+				} }, run.setup_src !== 'hand' ? 'Rüstzeit selbst messen' : (run.setup_pause_at ? 'Weiter' : 'Pause')) : null,
 				run.file && (run.status === 'freigegeben' || run.status === 'ruesten' || run.status === 'druckt') ? h('a', { class: 'btn', href: run.file.url }, ico('download'), '3MF') : null
 			)
 		);
@@ -2722,6 +2773,7 @@
 			var shiftLead = h('input', { class: 'field', type: 'number', id: 'ws-shift-lead', min: '0', max: '8', step: '0.5', value: String(s.shift_lead_h) });
 			var longH = h('input', { class: 'field', type: 'number', id: 'ws-long-h', min: '0.5', max: '48', step: '0.5', value: String(s.long_h) });
 			var weeks = h('input', { class: 'field', type: 'number', id: 'ws-weeks', min: '1', max: '26', value: String(s.weeks) });
+			var setupPlan = h('input', { class: 'field', type: 'number', id: 'ws-setup-plan', min: '0', max: '240', step: '0.5', value: String(s.setup_plan_min) });
 			var cover = h('input', { class: 'field', type: 'number', id: 'ws-cover', min: '0', max: '12', step: '0.5', value: String(s.cover_weeks) });
 
 			var fields = h('fieldset', { class: 'fieldset' }, h('legend', null, 'Was auf dem Etikett steht'));
@@ -2746,6 +2798,11 @@
 				h('div', null, h('label', { for: 'ws-long-h' }, 'Als lang gilt ab (Stunden Druck)'), longH)
 			));
 			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Tagsüber kommen die kurzen Platten zuerst, damit du sie wechseln kannst. Ab der Vorlaufzeit vor Feierabend steht die längste vorn: Sie wird gestartet und läuft über Nacht.'));
+			body.appendChild(h('h4', { class: 'sec' }, 'Rüsten'));
+			body.appendChild(h('div', { class: 'form-grid' },
+				h('div', null, h('label', { for: 'ws-setup-plan' }, 'Geplante Rüstzeit je Platte (Minuten)'), setupPlan)
+			));
+			body.appendChild(h('div', { class: 'muted small', style: 'margin-top:4px' }, 'Das ist das Soll für „Soll gegen Ist“. Gemessen wird die Handarbeit: Platte räumen, Filament und Düse prüfen, Datei laden – nicht die Zeit, in der die Datei zum Drucker hochgeladen wird.'));
 			body.appendChild(h('h4', { class: 'sec' }, 'Hochrechnung'));
 			body.appendChild(h('div', { class: 'form-grid' },
 				h('div', null, h('label', { for: 'ws-weeks' }, 'Verkaufsverlauf (Wochen)'), weeks),
@@ -2772,7 +2829,7 @@
 					label_fields: Object.keys(boxes).filter(function (k) { return boxes[k].checked; }),
 					weeks: parseInt(weeks.value, 10), cover_weeks: parseFloat(cover.value), hide_wpadmin: hide.checked ? 1 : 0, lock_wpadmin: lock.checked ? 1 : 0,
 					filament_lead_days: parseInt(fLead.value, 10), filament_safety_days: parseInt(fSafe.value, 10),
-					shift_end: shiftEnd.value, shift_lead_h: parseFloat(shiftLead.value), long_h: parseFloat(longH.value)
+					shift_end: shiftEnd.value, shift_lead_h: parseFloat(shiftLead.value), long_h: parseFloat(longH.value), setup_plan_min: parseFloat(setupPlan.value) || 0
 				} }).then(function () { toast('Gespeichert'); d.close(); }).catch(function (e) { save.disabled = false; toast(e.message, true); });
 			});
 			body.appendChild(save);
@@ -2850,9 +2907,15 @@
 					run.material && run.material.length ? materialRows(run.material) : h('div', { class: 'muted small', style: 'margin-top:8px' }, 'Für diese Artikel ist kein Gewicht hinterlegt.')
 				));
 				box.appendChild(setupEditButton());
-				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
+				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen – mit „Pause“ hältst du sie an')));
 			} else if (run.status === 'ruesten') {
-				box.appendChild(timeCard([['Rüstzeit', run.setup_min !== null && run.setup_min !== undefined ? clock(run.setup_min * 60) : clock(nowTs() - run.setup), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'läuft']]));
+				box.appendChild(timeCard([['Rüstzeit', clock(run.setup_src === 'hand' || (run.setup_min !== null && run.setup_min !== undefined) ? setupSeconds(run, nowTs()) : nowTs() - run.setup), setupNote(run)]]));
+				if (run.setup_min === null || run.setup_min === undefined) {
+					box.appendChild(h('button', { class: 'btn wide', type: 'button', onclick: function (e) {
+						e.target.disabled = true;
+						act(run.setup_src !== 'hand' ? 'ruesten' : (run.setup_pause_at ? 'weiter' : 'pause'));
+					} }, run.setup_src !== 'hand' ? 'Rüstzeit selbst messen' : (run.setup_pause_at ? 'Weiter' : 'Pause')));
+				}
 				box.appendChild(setupEditButton());
 				var qc2 = queueCard(run.queue);
 				if (qc2) { box.appendChild(qc2); }
@@ -2869,12 +2932,12 @@
 					h('div', { class: 'row-top muted small', style: 'margin-top:8px' }, h('span', null, pct !== null ? pct + ' %' : ''), live && live.nozzle !== null ? h('span', null, 'Düse ' + Math.round(live.nozzle) + ' °C · Bett ' + Math.round(live.bed) + ' °C') : null),
 					h('div', { class: 'muted small' }, live ? 'Live vom Drucker (Bambu)' : 'Schätzung nach Zeit – der Drucker meldet nichts')
 				));
-				box.appendChild(timeCard([['Rüstzeit', clock(setupSecs(run.print)), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'beendet'], ['Druckzeit', clock(nowTs() - run.print), 'läuft']]));
+				box.appendChild(timeCard([['Rüstzeit', clock(setupSeconds(run, nowTs(), run.print)), setupNote(run)], ['Druckzeit', clock(nowTs() - run.print), 'läuft' + (run.print_src === 'drucker' ? ' · Zeit vom Drucker' : '')]]));
 				box.appendChild(setupEditButton());
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck fertig ▶', function () { act('druckende'); }), h('button', { class: 'btn wide', type: 'button', onclick: function () { report = true; run.status = 'zu_melden'; paint(); } }, 'Direkt Ist-Menge melden')));
 			} else if (run.status === 'zu_melden') {
-				box.appendChild(timeCard([['Rüstzeit', clock(setupSecs(run.print || run.print_end || nowTs())), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'beendet'], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), 'beendet']]));
+				box.appendChild(timeCard([['Rüstzeit', clock(setupSeconds(run, nowTs(), run.print || run.print_end || nowTs())), setupNote(run)], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), (run.print_failed ? 'Druck fehlgeschlagen' : 'beendet') + (run.print_src === 'drucker' ? ' · Zeit vom Drucker' : '')]]));
 				box.appendChild(setupEditButton());
 				box.appendChild(reportForm());
 			} else if (run.status === 'erledigt') {
@@ -2917,12 +2980,6 @@
 			if (q.state === 'unclear') { row.appendChild(h('a', { class: 'btn', href: '#/bambu' }, 'Zu den Aufträgen')); }
 			if (row.childNodes.length) { card.appendChild(row); }
 			return card;
-		}
-
-		// Rüstzeit in Sekunden: von Hand gesetzt, sonst gestoppt.
-		function setupSecs(end) {
-			if (run.setup_min !== null && run.setup_min !== undefined) { return run.setup_min * 60; }
-			return Math.max(0, (end || nowTs()) - (run.setup || end || nowTs()));
 		}
 
 		function setupEditButton() {
@@ -3069,7 +3126,7 @@
 				var good = i.ok !== undefined ? i.ok : i.qty;
 				return h('div', { class: 'row-top' }, h('span', null, i.name), h('b', null, '+' + qty(good) + (i.bin ? ' → ' + i.bin : '') + (i.scrap ? ' · Ausschuss ' + qty(i.scrap) : '')));
 			}));
-			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock(run.setup_min !== null && run.setup_min !== undefined ? run.setup_min * 60 : (run.print || run.setup || 0) - (run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
+			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock(setupSeconds(run, run.print || run.setup || 0, run.print || run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
 
 			wrap.appendChild(h('div', { class: 'okmark' }, ico('check'), h('div', null, h('b', null, 'Platte ' + run.id + ' erledigt'), h('div', { class: 'muted' }, 'Im Lager eingebucht'))));
 			wrap.appendChild(rows);

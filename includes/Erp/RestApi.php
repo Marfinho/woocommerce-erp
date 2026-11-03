@@ -386,7 +386,7 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
-			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|ruestzeit|druckstart|druckende|melden|abbrechen|etikett|platte-frei|slicen|erneut)',
+			'/erp/runs/(?P<id>\d+)/(?P<action>ruesten|ruestzeit|pause|weiter|druckstart|druckende|melden|abbrechen|etikett|platte-frei|slicen|erneut)',
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'run_act' ),
