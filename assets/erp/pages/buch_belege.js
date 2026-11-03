@@ -677,7 +677,11 @@
 			hints: [],
 			erechnung: null,    // { id, format }
 			similar: [],
-			busy: false
+			busy: false,
+			queue: null,        // Stapel: Dateien, jede wird ein eigener Beleg
+			qi: 0,
+			qSaved: 0,
+			qSkipped: 0
 		};
 
 		var body = h('div', { class: 'bb-cap' });
@@ -750,11 +754,13 @@
 		/* ----- Schritt: Auswahl ----- */
 
 		function stepChoose() {
+			S.queue = null;
 			clear();
 			body.appendChild(h('p', { class: 'muted' }, 'Foto, PDF oder E-Rechnung: Die Felder werden, soweit möglich, automatisch ausgelesen. Du prüfst sie danach.'));
 			body.appendChild(h('div', { class: 'bb-choose' },
 				h('button', { class: 'btn primary bb-big', type: 'button', onclick: stepCamera }, 'Foto aufnehmen'),
 				h('button', { class: 'btn bb-big', type: 'button', onclick: stepFile }, 'Datei wählen (Foto, PDF, E-Rechnung)'),
+				h('button', { class: 'btn bb-big', type: 'button', onclick: stepBatch }, 'Mehrere Belege auf einmal (jede Datei ein Beleg)'),
 				h('button', { class: 'bb-link', type: 'button', onclick: function () { S.pages = []; stepForm(); } }, 'Ohne Datei von Hand erfassen')));
 		}
 
@@ -849,6 +855,48 @@
 			});
 		}
 
+		/* ----- Stapel: mehrere Dateien, jede ein eigener Beleg ----- */
+
+		function resetBeleg() {
+			S.pages.forEach(function (p) { if (p.url) { URL.revokeObjectURL(p.url); } });
+			S.pages = []; S.fields = {}; S.found = []; S.hints = []; S.ocrMessage = ''; S.ocrWarn = false;
+			S.erechnung = null; S.similar = [];
+		}
+
+		function startBatch(files) {
+			var ok = [], skipped = [];
+			[].slice.call(files || []).forEach(function (f) { (fileKind(f) ? ok : skipped).push(f); });
+			if (!ok.length) { return skipped.length ? skipped.map(function (f) { return '„' + f.name + '“ ist kein Foto, PDF oder XML.'; }) : []; }
+			S.queue = ok; S.qi = 0; S.qSaved = 0; S.qSkipped = skipped.length;
+			nextInBatch();
+			return [];
+		}
+
+		function endBatch() {
+			var n = S.qSaved, sk = S.qSkipped, total = S.queue ? S.queue.length : 0;
+			S.queue = null;
+			UI.toast(n + ' von ' + total + (total === 1 ? ' Beleg' : ' Belegen') + ' gespeichert' + (sk ? ', ' + sk + ' übersprungen' : '') + '.');
+			dlg.close();
+		}
+
+		function nextInBatch() {
+			if (!S.queue || S.qi >= S.queue.length) { endBatch(); return; }
+			resetBeleg();
+			var f = S.queue[S.qi];
+			busyView('Datei ' + (S.qi + 1) + ' von ' + S.queue.length + ' wird vorbereitet …');
+			var kind = fileKind(f);
+			if (kind === 'image') {
+				shrinkImage(f).then(function (r) { addBlobPage(r.blob, r.w, r.h, f.name.replace(/\.[^.]+$/, '') + '.jpg'); analyse(); }, function () {
+					S.qSkipped++; S.qi++;
+					UI.toast('„' + f.name + '“ kann der Browser nicht lesen und wurde übersprungen.');
+					nextInBatch();
+				});
+			} else {
+				S.pages = [{ kind: kind, file: f, name: f.name }];
+				analyse();
+			}
+		}
+
 		/* ----- Schritt: Datei ----- */
 
 		function stepFile() {
@@ -884,6 +932,22 @@
 			body.appendChild(list);
 			body.appendChild(next);
 			paintList();
+		}
+
+		function stepBatch() {
+			clear();
+			var msgBox = h('div');
+			var input = h('input', { type: 'file', accept: 'image/*,application/pdf,.xml,text/xml,application/xml', multiple: true, 'aria-label': 'Dateien wählen' });
+			input.addEventListener('change', function () {
+				msgBox.textContent = '';
+				var msgs = startBatch(input.files);
+				msgs.forEach(function (m) { msgBox.appendChild(notice(m, true)); });
+				input.value = '';
+			});
+			body.appendChild(h('p', { class: 'muted' }, 'Wähle mehrere Fotos, PDFs oder E-Rechnungen. Jede Datei wird ein eigener Beleg: Du prüfst sie nacheinander und speicherst oder überspringst sie. Es wird nichts gespeichert, bevor du bestätigst.'));
+			body.appendChild(h('div', { class: 'btn primary bb-big bb-file' }, 'Dateien wählen', input));
+			body.appendChild(msgBox);
+			body.appendChild(h('button', { class: 'btn', type: 'button', onclick: stepChoose }, 'Zurück'));
 		}
 
 		function filesDone(msgs) {
@@ -1222,10 +1286,11 @@
 					UI.toast(res.message);
 					var beleg = res.beleg || {};
 					beleg.festgeschrieben = !!res.festgeschrieben;
-					dlg.close();
 					if (typeof opts.onSaved === 'function') {
 						try { opts.onSaved(beleg); } catch (e) { if (window.console) { window.console.error(e); } }
 					}
+					if (S.queue) { S.qSaved++; S.qi++; nextInBatch(); return; }
+					dlg.close();
 				}).catch(function (e) {
 					busy(false);
 					var data = e.data || {};
@@ -1246,6 +1311,9 @@
 				dupHost.scrollIntoView({ block: 'center' });
 			}
 
+			if (S.queue) {
+				body.appendChild(h('div', { class: 'notice', role: 'status' }, h('b', null, 'Beleg ' + (S.qi + 1) + ' von ' + S.queue.length), S.qSaved ? ' · ' + S.qSaved + ' gespeichert' : ''));
+			}
 			// Kopf: Vorschau und Hinweise vom Auslesen.
 			var first = S.pages[0];
 			if (first) {
@@ -1273,9 +1341,10 @@
 
 			var save = h('button', { class: 'btn primary', type: 'button', onclick: function () { submit(false); } }, 'Speichern');
 			var saveFreeze = h('button', { class: 'btn', type: 'button', onclick: function () { askFreeze(); } }, 'Speichern und festschreiben');
-			var cancel = h('button', { class: 'btn', type: 'button', onclick: function () { dlg.close(); } }, 'Abbrechen');
+			var cancel = h('button', { class: 'btn', type: 'button', onclick: function () { if (S.queue) { endBatch(); } else { dlg.close(); } } }, S.queue ? 'Stapel beenden' : 'Abbrechen');
+			var skip = S.queue ? h('button', { class: 'btn', type: 'button', onclick: function () { S.qSkipped++; S.qi++; nextInBatch(); } }, 'Überspringen') : null;
 			buttons = [save, saveFreeze];
-			var bar = h('div', { class: 'bb-bar' }, save, saveFreeze, cancel);
+			var bar = h('div', { class: 'bb-bar' }, save, saveFreeze, skip, cancel);
 			body.appendChild(bar);
 
 			function askFreeze() {
@@ -1288,7 +1357,7 @@
 				bar.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () {
 					bar.textContent = '';
 					buttons = [save, saveFreeze];
-					bar.appendChild(save); bar.appendChild(saveFreeze); bar.appendChild(cancel);
+					bar.appendChild(save); bar.appendChild(saveFreeze); if (skip) { bar.appendChild(skip); } bar.appendChild(cancel);
 				} }, 'Zurück'));
 			}
 		}
