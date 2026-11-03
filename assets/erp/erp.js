@@ -1634,6 +1634,20 @@
 			}
 			right.appendChild(hist);
 
+			var free = h('div', { class: 'card' }, h('h3', null, 'Drucke ohne Auftrag'));
+			if (!d.free || !d.free.length) {
+				free.appendChild(h('p', { class: 'muted' }, 'Keine. Hier stehen Drucke aus Bambu-App oder Bambu Studio, zu denen keine Platte lief. Ihre Laufzeit zählt zu den Betriebsstunden.'));
+			} else {
+				free.appendChild(h('p', { class: 'muted small' }, 'Von der App oder von Hand gestartet, keine Platte dazu. Die Laufzeit zählt zu den Betriebsstunden.'));
+				free.appendChild(h('table', { class: 'list' },
+					h('thead', null, h('tr', null, h('th', null, 'Wann'), h('th', null, 'Datei'), h('th', { class: 'num' }, 'Dauer'), h('th', null, 'Ende'))),
+					h('tbody', null, d.free.map(function (f) {
+						return h('tr', null, h('td', null, when(f.ended)), h('td', null, f.file || '–'), h('td', { class: 'num' }, minTxt(f.minutes)), h('td', null, f.state === 'finish' ? 'fertig' : (f.state === 'failed' ? 'fehlgeschlagen' : f.state)));
+					}))
+				));
+			}
+			right.appendChild(free);
+
 			var conn = h('div', { class: 'card' }, h('h3', null, 'Verbindung'));
 			conn.appendChild(h('p', { class: d.linked ? 'muted' : '' }, d.linked ? 'Mit Gerät ' + d.device.code + ' verknüpft: Druckzeiten und Meldungen landen im Druckjournal.' : 'Mit keinem Gerät verknüpft. Ohne Verknüpfung lässt sich nichts ins Druckjournal buchen.'));
 			if (findItem('bambu')) { conn.appendChild(h('a', { class: 'btn', href: '#/seite/bambu' }, 'Verbindung bearbeiten')); }
@@ -2817,9 +2831,11 @@
 					h('div', { class: 'stepcard' }, h('div', { class: 'stepno alt' }, '2'), h('div', null, h('b', null, 'Material bereit?'), h('div', { class: 'muted small' }, 'Die Rolle wird beim Melden abgezogen'))),
 					run.material && run.material.length ? materialRows(run.material) : h('div', { class: 'muted small', style: 'margin-top:8px' }, 'Für diese Artikel ist kein Gewicht hinterlegt.')
 				));
+				box.appendChild(setupEditButton());
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Rüsten starten ▶', function () { act('ruesten'); }), h('div', { class: 'muted small center' }, 'Die Rüstzeit läuft ab dem Tippen')));
 			} else if (run.status === 'ruesten') {
-				box.appendChild(timeCard([['Rüstzeit', clock(nowTs() - run.setup), 'läuft']]));
+				box.appendChild(timeCard([['Rüstzeit', run.setup_min !== null && run.setup_min !== undefined ? clock(run.setup_min * 60) : clock(nowTs() - run.setup), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'läuft']]));
+				box.appendChild(setupEditButton());
 				var qc2 = queueCard(run.queue);
 				if (qc2) { box.appendChild(qc2); }
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
@@ -2835,11 +2851,13 @@
 					h('div', { class: 'row-top muted small', style: 'margin-top:8px' }, h('span', null, pct !== null ? pct + ' %' : ''), live && live.nozzle !== null ? h('span', null, 'Düse ' + Math.round(live.nozzle) + ' °C · Bett ' + Math.round(live.bed) + ' °C') : null),
 					h('div', { class: 'muted small' }, live ? 'Live vom Drucker (Bambu)' : 'Schätzung nach Zeit – der Drucker meldet nichts')
 				));
-				box.appendChild(timeCard([['Rüstzeit', clock(run.print - run.setup), 'beendet'], ['Druckzeit', clock(nowTs() - run.print), 'läuft']]));
+				box.appendChild(timeCard([['Rüstzeit', clock(setupSecs(run.print)), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'beendet'], ['Druckzeit', clock(nowTs() - run.print), 'läuft']]));
+				box.appendChild(setupEditButton());
 				if (run.file) { box.appendChild(h('a', { class: 'btn wide', href: run.file.url, style: 'margin-bottom:12px' }, ico('download'), '3MF herunterladen')); }
 				box.appendChild(h('div', { class: 'run-foot' }, bigButton('Druck fertig ▶', function () { act('druckende'); }), h('button', { class: 'btn wide', type: 'button', onclick: function () { report = true; run.status = 'zu_melden'; paint(); } }, 'Direkt Ist-Menge melden')));
 			} else if (run.status === 'zu_melden') {
-				box.appendChild(timeCard([['Rüstzeit', clock((run.print || run.print_end || nowTs()) - (run.setup || run.print || nowTs())), 'beendet'], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), 'beendet']]));
+				box.appendChild(timeCard([['Rüstzeit', clock(setupSecs(run.print || run.print_end || nowTs())), run.setup_min !== null && run.setup_min !== undefined ? 'von Hand' : 'beendet'], ['Druckzeit', clock((run.print_end || nowTs()) - (run.print || nowTs())), 'beendet']]));
+				box.appendChild(setupEditButton());
 				box.appendChild(reportForm());
 			} else if (run.status === 'erledigt') {
 				box.appendChild(doneCard());
@@ -2881,6 +2899,24 @@
 			if (q.state === 'unclear') { row.appendChild(h('a', { class: 'btn', href: '#/bambu' }, 'Zu den Aufträgen')); }
 			if (row.childNodes.length) { card.appendChild(row); }
 			return card;
+		}
+
+		// Rüstzeit in Sekunden: von Hand gesetzt, sonst gestoppt.
+		function setupSecs(end) {
+			if (run.setup_min !== null && run.setup_min !== undefined) { return run.setup_min * 60; }
+			return Math.max(0, (end || nowTs()) - (run.setup || end || nowTs()));
+		}
+
+		function setupEditButton() {
+			return h('button', { class: 'btn wide', type: 'button', onclick: function () {
+				var cur = run.setup_min !== null && run.setup_min !== undefined ? String(run.setup_min).replace('.', ',') : '';
+				var v = window.prompt('Rüstzeit in Minuten (leer lassen = gestoppte Zeit nehmen):', cur);
+				if (v === null) { return; }
+				runAct(id, 'ruestzeit', { minutes: v }).then(function (r) {
+					if (r && r.queued) { toast('Offline vorgemerkt'); return; }
+					run = r.run; run.fetched = Math.floor(Date.now() / 1000); toast(r.message); paint();
+				}).catch(function (e) { toast(e.message, true); });
+			} }, 'Rüstzeit ändern' + (run.setup_min !== null && run.setup_min !== undefined ? ' (von Hand: ' + minTxt(run.setup_min) + ')' : ''));
 		}
 
 		function timeCard(rows) {
@@ -3015,7 +3051,7 @@
 				var good = i.ok !== undefined ? i.ok : i.qty;
 				return h('div', { class: 'row-top' }, h('span', null, i.name), h('b', null, '+' + qty(good) + (i.bin ? ' → ' + i.bin : '') + (i.scrap ? ' · Ausschuss ' + qty(i.scrap) : '')));
 			}));
-			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock((run.print || run.setup || 0) - (run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
+			var times = h('div', { class: 'muted small' }, 'Rüsten ' + clock(run.setup_min !== null && run.setup_min !== undefined ? run.setup_min * 60 : (run.print || run.setup || 0) - (run.setup || 0)) + ' · Druck ' + clock((run.print_end || 0) - (run.print || 0)));
 
 			wrap.appendChild(h('div', { class: 'okmark' }, ico('check'), h('div', null, h('b', null, 'Platte ' + run.id + ' erledigt'), h('div', { class: 'muted' }, 'Im Lager eingebucht'))));
 			wrap.appendChild(rows);

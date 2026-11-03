@@ -171,6 +171,11 @@ class RunFlow {
 	public static function step_for_job( $run_status, $job_status ) {
 		$wartet = in_array( $run_status, array( self::FREIGEGEBEN, self::RUESTEN ), true );
 
+		// Die Datei wird gerade zum Drucker gebracht: Das Rüsten läuft.
+		if ( self::FREIGEGEBEN === $run_status && in_array( $job_status, array( 'claimed', 'uploading' ), true ) ) {
+			return array( 'ruesten' );
+		}
+
 		if ( $wartet && 'printing' === $job_status ) {
 			return array( 'druckstart' );
 		}

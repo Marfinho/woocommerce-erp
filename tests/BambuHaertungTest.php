@@ -139,6 +139,29 @@ class BambuHaertungTest extends TestCase {
 	}
 
 	/**
+	 * Wird die Datei zum Drucker gebracht (Auftrag angenommen oder wird
+	 * hochgeladen), beginnt das Rüsten – einmal, nicht bei jedem Abgleich.
+	 */
+	public function test_platte_ruestet_sobald_die_datei_unterwegs_ist() {
+		$this->assertSame( array( 'ruesten' ), RunFlow::step_for_job( RunFlow::FREIGEGEBEN, 'claimed' ) );
+		$this->assertSame( array( 'ruesten' ), RunFlow::step_for_job( RunFlow::FREIGEGEBEN, 'uploading' ) );
+		$this->assertSame( array(), RunFlow::step_for_job( RunFlow::RUESTEN, 'uploading' ) );
+	}
+
+	/**
+	 * Eine von Hand gesetzte Rüstzeit ersetzt die gestoppte.
+	 */
+	public function test_handgesetzte_ruestzeit_gilt_in_der_nachrechnung() {
+		$run = array( 'setup_at' => '2026-11-03 08:00:00', 'print_at' => '2026-11-03 08:05:00', 'print_end_at' => '2026-11-03 10:05:00', 'setup_min' => '20.0' );
+		$m   = \Lindenweg16\Erp\Variance::run_minutes( $run );
+		$this->assertEqualsWithDelta( 20.0, $m['setup'], 0.01 );
+
+		unset( $run['setup_min'] );
+		$m = \Lindenweg16\Erp\Variance::run_minutes( $run );
+		$this->assertEqualsWithDelta( 5.0, $m['setup'], 0.01 );
+	}
+
+	/**
 	 * Was nichts über den Druck aussagt, bewegt die Platte nicht.
 	 */
 	public function test_platte_bleibt_ohne_aussagekraeftigen_auftragsstatus() {

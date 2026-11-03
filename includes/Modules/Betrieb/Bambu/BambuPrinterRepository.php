@@ -506,7 +506,7 @@ class BambuPrinterRepository {
 		global $wpdb;
 
 		$row = $wpdb->get_row(
-			$wpdb->prepare( 'SELECT printer_id, print_since, untracked_print_s FROM ' . self::table() . ' WHERE id = %d', (int) $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->prepare( 'SELECT printer_id, current_file, print_since, untracked_print_s FROM ' . self::table() . ' WHERE id = %d', (int) $id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 		if ( ! $row ) {
 			return array();
@@ -537,6 +537,60 @@ class BambuPrinterRepository {
 		}
 
 		$out['untracked_print_s'] = (int) $row->untracked_print_s + $seconds;
+
+		$wpdb->insert(
+			self::free_prints_table(),
+			array(
+				'printer_id' => (string) $row->printer_id,
+				'file_name'  => mb_substr( (string) $row->current_file, 0, 255 ),
+				'end_state'  => substr( (string) $status, 0, 20 ),
+				'started_at' => $row->print_since,
+				'ended_at'   => $now,
+				'seconds'    => $seconds,
+			)
+		);
+
+		return $out;
+	}
+
+	/**
+	 * Tabelle der Drucke ohne Auftrag.
+	 *
+	 * @return string
+	 */
+	public static function free_prints_table() {
+		global $wpdb;
+		return $wpdb->prefix . 'lw16_bambu_free_prints';
+	}
+
+	/**
+	 * Die letzten Drucke ohne Auftrag eines Druckers, neueste zuerst.
+	 *
+	 * @param string $printer_id Bambu-Drucker.
+	 * @param int    $limit      Wie viele.
+	 * @return array[] {file, state, started, ended, minutes} (Zeiten als Unix-Zeit)
+	 */
+	public static function free_prints( $printer_id, $limit = 20 ) {
+		global $wpdb;
+
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT file_name, end_state, started_at, ended_at, seconds FROM ' . self::free_prints_table() . ' WHERE printer_id = %s ORDER BY ended_at DESC, id DESC LIMIT %d', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(string) $printer_id,
+				(int) $limit
+			)
+		);
+
+		$out = array();
+		foreach ( (array) $rows as $row ) {
+			$out[] = array(
+				'file'    => (string) $row->file_name,
+				'state'   => (string) $row->end_state,
+				'started' => strtotime( $row->started_at . ' UTC' ),
+				'ended'   => strtotime( $row->ended_at . ' UTC' ),
+				'minutes' => (int) round( $row->seconds / 60 ),
+			);
+		}
 
 		return $out;
 	}

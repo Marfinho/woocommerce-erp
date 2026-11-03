@@ -962,6 +962,20 @@ class Schema {
 			KEY geraet_id (geraet_id)
 		) {$charset_collate};";
 
+		// Drucke ohne Auftrag: jeder Druck, den die Bridge am Drucker sieht und
+		// zu dem keine Werkstatt-Platte lief (Bambu-App, Bambu Studio, von Hand).
+		$t[] = "CREATE TABLE {$p}bambu_free_prints (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			printer_id VARCHAR(50) NOT NULL,
+			file_name VARCHAR(255) NULL,
+			end_state VARCHAR(20) NULL,
+			started_at DATETIME NOT NULL,
+			ended_at DATETIME NOT NULL,
+			seconds INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (id),
+			KEY printer_ended (printer_id, ended_at)
+		) {$charset_collate};";
+
 		// Katalog echter Bambu-Lab-Filamente: jede eindeutige Bambu-
 		// Filament-ID (z. B. "GFA01"), die je in einem AMS gesteckt hat
 		// (RFID-erkannt, siehe BambuFilamentCatalogRepository::observe_ams())

@@ -7,6 +7,18 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.78.6] – 2026-11-03
+
+### Behoben: Platte sprang bei automatisch geslicter Datei nicht auf „Rüsten“
+- Der Abgleich mit dem Bambu-Auftrag kannte „Rüsten“ nie: Die Platte blieb auf „bereit“, bis der Druck lief, und die Rüstzeit wurde 0. Das hat nichts mit dem Raspberry-Update zu tun. Jetzt wechselt die Platte auf „Rüsten“, sobald die Bridge den Auftrag annimmt oder die Datei hochlädt.
+
+### Neu: Rüstzeit von Hand ändern
+- Auf der Plattenseite gibt es **„Rüstzeit ändern“** (bereit, rüsten, druckt, zu melden). Die Zeit in Minuten gilt statt der gestoppten, wird beim Melden als Arbeitszeit gebucht und fließt in die Nachrechnung ein. Leer lassen = wieder die gestoppte Zeit. Jede Änderung steht im Protokoll.
+- Neue Spalte `setup_min` an `runs` (DB-Version 53).
+
+### Neu: „Drucke ohne Auftrag“
+- Auf der Druckerseite steht eine Liste der Drucke, die aus der Bambu-App, Bambu Studio oder von Hand gestartet wurden (Zeit, Datei, Dauer, Ende). Neue Tabelle `bambu_free_prints`; erfasst wird ab diesem Update.
+
 ## [0.78.5] – 2026-11-03
 
 ### Behoben: Mails kamen immer wieder als ungelesen zurück

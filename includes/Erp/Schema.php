@@ -42,6 +42,7 @@ class Schema {
 			setup_at DATETIME NULL,
 			print_at DATETIME NULL,
 			print_end_at DATETIME NULL,
+			setup_min DECIMAL(8,1) NULL,
 			reported_at DATETIME NULL,
 			worker_id BIGINT UNSIGNED NULL,
 			failure_reason VARCHAR(30) NULL,

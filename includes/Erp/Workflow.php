@@ -806,6 +806,7 @@ class Workflow {
 			'est_minutes' => (int) $run['est_minutes'],
 			'released'    => $time( $run['released_at'] ),
 			'setup'       => $time( $run['setup_at'] ),
+			'setup_min'   => isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min'] ? (float) $run['setup_min'] : null,
 			'print'       => $time( $run['print_at'] ),
 			'print_end'   => $time( $run['print_end_at'] ),
 			'reported'    => $time( $run['reported_at'] ),
@@ -1166,7 +1167,12 @@ class Workflow {
 		}
 
 		$user_id = -1 === $user_id ? get_current_user_id() : (int) $user_id;
-		$step    = RunFlow::apply( $run['status'], $action );
+
+		if ( 'ruestzeit' === $action ) {
+			return self::set_setup_minutes( $run, $input, $user_id );
+		}
+
+		$step = RunFlow::apply( $run['status'], $action );
 
 		if ( ! $step['ok'] ) {
 			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Das geht bei dieser Platte gerade nicht – vermutlich hat sie jemand anders schon weitergeschaltet.', 'lindenweg16' ) );
@@ -1248,6 +1254,11 @@ class Workflow {
 		$print_end = $run['print_end_at'] ? $run['print_end_at'] : $now;
 		$print_h   = $run['print_at'] ? RunFlow::hours_between( $run['print_at'], $print_end ) : 0.0;
 		$setup_h   = $run['setup_at'] ? RunFlow::hours_between( $run['setup_at'], $run['print_at'] ? $run['print_at'] : $print_end ) : 0.0;
+
+		// Eine von Hand gesetzte Rüstzeit gilt statt der gestoppten.
+		if ( isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min'] ) {
+			$setup_h = round( max( 0.0, (float) $run['setup_min'] ) / 60, 3 );
+		}
 
 		$qtys = array();
 		foreach ( $check['items'] as $index => $item ) {
@@ -1434,6 +1445,37 @@ class Workflow {
 				'print_h' => $print_h,
 			),
 		);
+	}
+
+	/**
+	 * Rüstzeit einer Platte von Hand setzen (leer = wieder die gestoppte Zeit).
+	 *
+	 * Gilt bis zum Melden; danach ist die Zeit gebucht.
+	 *
+	 * @param array $run     Platte.
+	 * @param array $input   minutes: Minuten oder leer.
+	 * @param int   $user_id Handelnde Person.
+	 * @return array {ok, message, run, status}
+	 */
+	protected static function set_setup_minutes( array $run, array $input, $user_id ) {
+		if ( ! in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN, RunFlow::DRUCKT, RunFlow::ZU_MELDEN ), true ) ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Bei dieser Platte lässt sich die Rüstzeit nicht mehr ändern.', 'lindenweg16' ) );
+		}
+
+		$raw = isset( $input['minutes'] ) ? trim( str_replace( ',', '.', (string) $input['minutes'] ) ) : '';
+
+		if ( '' === $raw ) {
+			$minutes = null;
+		} elseif ( ! is_numeric( $raw ) || (float) $raw < 0 || (float) $raw > 1440 ) {
+			return array( 'ok' => false, 'status' => 422, 'message' => __( 'Die Rüstzeit muss zwischen 0 und 1440 Minuten liegen.', 'lindenweg16' ) );
+		} else {
+			$minutes = round( (float) $raw, 1 );
+		}
+
+		RunRepository::update( $run['id'], array( 'setup_min' => $minutes ) );
+		AuditLog::record( 'erp_platte_ruestzeit', 'run', $run['id'], array( 'minuten' => $minutes, 'vorher' => isset( $run['setup_min'] ) ? $run['setup_min'] : null ) );
+
+		return array( 'ok' => true, 'status' => 200, 'message' => __( 'Rüstzeit gespeichert.', 'lindenweg16' ), 'run' => self::view_by_id( $run['id'] ) );
 	}
 
 	/**
