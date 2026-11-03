@@ -122,8 +122,12 @@ class Installer {
 	 *
 	 * DB_VERSION 53: runs um setup_min (von Hand gesetzte Rüstzeit in Minuten)
 	 * und neue Tabelle bambu_free_prints (Drucke ohne Auftrag).
+	 *
+	 * DB_VERSION 54: runs um setup_src (Herkunft der Rüstzeit: hand/auto),
+	 * setup_paused_s/setup_pause_at (Pausen beim Rüsten), print_src (Herkunft der
+	 * Druckzeit: drucker/abfrage/hand) und print_failed (Druck fehlgeschlagen).
 	 */
-	const DB_VERSION = '53';
+	const DB_VERSION = '54';
 
 	/**
 	 * Aktivierungsroutine.

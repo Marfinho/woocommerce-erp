@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.80.0] – 2026-11-03
+
+### Neu: Rüst-, Druck- und Wartezeiten sauber messen, Soll gegen Ist neu aufgebaut
+- **Drei getrennte Zeiten je Platte:** Rüsten (Handarbeit), Druck (Maschine) und Warten (freigegeben bis Rüsten, Druck fertig bis gemeldet).
+- **Rüsten:** Auf der Platte und auf der Karte gibt es **Pause/Weiter**; Pausen zählen nicht zur Rüstzeit. Lief das „Rüsten“ nur, weil die Datei zum Drucker hochgeladen wurde, gilt es als Maschinenzeit: Mit **„Rüstzeit selbst messen“** startet man die Uhr neu. Als Arbeitszeit gebucht wird nur noch gemessene oder von Hand gesetzte Rüstzeit (bisher auch die Upload-Zeit).
+- **Druckzeit vom Drucker:** Start und Ende kommen aus dem Bambu-Auftrag statt aus dem Zeitpunkt der Abfrage. Die Quelle (Drucker, Abfrage, Hand) wird je Platte gespeichert und angezeigt. Fehlgeschlagene Drucke werden markiert.
+- **Soll gegen Ist:** Druckzeit **je Teil** aus reinen Platten (nur ein Artikel), als Median statt Mittelwert. Gemischte Platten zählen nur, wenn es für den Artikel keine reine gibt, und sind als „geschätzt“ markiert. Fehlgeschlagene Drucke und Platten ohne Druckzeit werden nicht gewertet, aber in der **Datenqualität** gezählt.
+- **Rüst-Soll:** Neue Einstellung „Geplante Rüstzeit je Platte“ (Workflow → Einstellungen → Rüsten). Soll gegen Ist zeigt Ist (Median) und Abweichung, auch je Drucker.
+- Neue Spalten an den Platten (`setup_src`, `setup_paused_s`, `setup_pause_at`, `print_src`, `print_failed`), DB-Version 54. Alte Platten ohne Herkunft zählen für das Rüsten nicht. Tests: `tests/ErpVarianceTest.php`.
+
 ## [0.79.0] – 2026-11-03
 
 ### Version 0.79

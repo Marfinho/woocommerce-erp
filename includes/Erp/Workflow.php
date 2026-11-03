@@ -111,6 +111,8 @@ class Workflow {
 			'shift_end'            => '17:00',
 			'shift_lead_h'         => 2.0,
 			'long_h'               => 4.0,
+			// Geplante Rüstzeit je Platte in Minuten (Soll für Soll gegen Ist).
+			'setup_plan_min'       => 10.0,
 		);
 	}
 
@@ -150,6 +152,7 @@ class Workflow {
 			'shift_end'            => preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', isset( $in['shift_end'] ) ? (string) $in['shift_end'] : '' ) ? (string) $in['shift_end'] : $def['shift_end'],
 			'shift_lead_h'         => min( 8.0, max( 0.0, (float) ( isset( $in['shift_lead_h'] ) ? $in['shift_lead_h'] : $def['shift_lead_h'] ) ) ),
 			'long_h'               => min( 48.0, max( 0.5, (float) ( isset( $in['long_h'] ) ? $in['long_h'] : $def['long_h'] ) ) ),
+			'setup_plan_min'       => min( 240.0, max( 0.0, round( (float) str_replace( ',', '.', (string) ( isset( $in['setup_plan_min'] ) ? $in['setup_plan_min'] : $def['setup_plan_min'] ) ), 1 ) ) ),
 		);
 
 		// Ohne irgendeinen Inhalt wäre das Etikett leer.
@@ -807,6 +810,11 @@ class Workflow {
 			'released'    => $time( $run['released_at'] ),
 			'setup'       => $time( $run['setup_at'] ),
 			'setup_min'   => isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min'] ? (float) $run['setup_min'] : null,
+			'setup_src'   => (string) $run['setup_src'],
+			'setup_paused' => (int) $run['setup_paused_s'],
+			'setup_pause_at' => $time( $run['setup_pause_at'] ),
+			'print_src'   => (string) $run['print_src'],
+			'print_failed' => ! empty( $run['print_failed'] ),
 			'print'       => $time( $run['print_at'] ),
 			'print_end'   => $time( $run['print_end_at'] ),
 			'reported'    => $time( $run['reported_at'] ),
@@ -1083,7 +1091,7 @@ class Workflow {
 			if ( in_array( $run['status'], array( RunFlow::FREIGEGEBEN, RunFlow::RUESTEN ), true ) && RunFlow::printer_started( $status ) ) {
 				self::act( $run['id'], 'druckstart', array(), 0 );
 			} elseif ( RunFlow::DRUCKT === $run['status'] && RunFlow::printer_ended( $status ) && $run['print_at'] && strtotime( $run['print_at'] . ' UTC' ) < time() - 120 ) {
-				self::act( $run['id'], 'druckende', array(), 0 );
+				self::act( $run['id'], 'druckende', array( 'failed' => 'failed' === $status ), 0 );
 			}
 		}
 	}
@@ -1172,6 +1180,27 @@ class Workflow {
 			return self::set_setup_minutes( $run, $input, $user_id );
 		}
 
+		if ( 'pause' === $action || 'weiter' === $action ) {
+			return self::pause_setup( $run, 'pause' === $action );
+		}
+
+		// Das Rüsten lief nur, weil die Datei zum Drucker hochgeladen wurde (Maschinenzeit):
+		// Wer selbst rüstet, startet die Uhr neu - ab jetzt zählt sie als Arbeitszeit.
+		if ( 'ruesten' === $action && RunFlow::RUESTEN === $run['status'] && $user_id && 'hand' !== (string) $run['setup_src'] ) {
+			RunRepository::update(
+				$run['id'],
+				array(
+					'setup_at'       => current_time( 'mysql', true ),
+					'setup_src'      => 'hand',
+					'setup_paused_s' => 0,
+					'setup_pause_at' => null,
+					'worker_id'      => $user_id,
+				)
+			);
+
+			return array( 'ok' => true, 'status' => 200, 'message' => __( 'Rüstzeit läuft – sie zählt jetzt als Arbeitszeit.', 'lindenweg16' ), 'run' => self::view_by_id( $run['id'] ) );
+		}
+
 		$step = RunFlow::apply( $run['status'], $action );
 
 		if ( ! $step['ok'] ) {
@@ -1186,23 +1215,72 @@ class Workflow {
 
 		switch ( $action ) {
 			case 'ruesten':
-				RunRepository::update( $run['id'], array( 'status' => RunFlow::RUESTEN, 'setup_at' => $now, 'worker_id' => $user_id ? $user_id : null ) );
-				break;
-
-			case 'druckstart':
+				// Von Hand gestartet zählt die Rüstzeit als Arbeitszeit; der automatische Start (Upload zum Drucker) nicht.
 				RunRepository::update(
 					$run['id'],
 					array(
-						'status'    => RunFlow::DRUCKT,
-						'setup_at'  => $run['setup_at'] ? $run['setup_at'] : $now,
-						'print_at'  => $now,
-						'worker_id' => $run['worker_id'] ? $run['worker_id'] : ( $user_id ? $user_id : null ),
+						'status'         => RunFlow::RUESTEN,
+						'setup_at'       => $now,
+						'setup_src'      => $user_id ? 'hand' : 'auto',
+						'setup_paused_s' => 0,
+						'setup_pause_at' => null,
+						'worker_id'      => $user_id ? $user_id : null,
+					)
+				);
+				break;
+
+			case 'druckstart':
+				// Die Zeit des Druckers (Bambu-Auftrag) ist genauer als der Zeitpunkt, an dem wir es bemerken.
+				$job      = $user_id ? null : self::queue_job_for_run( $run );
+				$print_at = $now;
+				$source   = $user_id ? 'hand' : 'abfrage';
+
+				if ( $job && ! empty( $job->started_at ) && $job->started_at <= $now ) {
+					$print_at = $job->started_at;
+					$source   = 'drucker';
+				}
+
+				$setup_at = $run['setup_at'] && $run['setup_at'] <= $print_at ? $run['setup_at'] : $print_at;
+				$paused_s = (int) $run['setup_paused_s'];
+
+				if ( $run['setup_pause_at'] ) {
+					$paused_s += max( 0, (int) strtotime( $print_at . ' UTC' ) - (int) strtotime( $run['setup_pause_at'] . ' UTC' ) );
+				}
+
+				RunRepository::update(
+					$run['id'],
+					array(
+						'status'         => RunFlow::DRUCKT,
+						'setup_at'       => $setup_at,
+						// Wurde das Rüsten übersprungen, gibt es keine Rüstzeit zu messen.
+						'setup_src'      => RunFlow::FREIGEGEBEN === $run['status'] ? null : $run['setup_src'],
+						'setup_paused_s' => $paused_s,
+						'setup_pause_at' => null,
+						'print_at'       => $print_at,
+						'print_src'      => $source,
+						'worker_id'      => $run['worker_id'] ? $run['worker_id'] : ( $user_id ? $user_id : null ),
 					)
 				);
 				break;
 
 			case 'druckende':
-				RunRepository::update( $run['id'], array( 'status' => RunFlow::ZU_MELDEN, 'print_end_at' => $now ) );
+				$end    = $now;
+				$failed = ! empty( $input['failed'] );
+				$job    = $user_id ? null : self::queue_job_for_run( $run );
+
+				if ( $job && 'failed' === (string) $job->status ) {
+					$failed = true;
+					$end    = ! empty( $job->updated_at ) ? $job->updated_at : $now;
+				} elseif ( $job && 'drucker' === (string) $run['print_src'] && ! empty( $job->completed_at ) ) {
+					$end = $job->completed_at;
+				}
+
+				// Ein Ende vor dem Start oder in der Zukunft ist unplausibel: dann gilt jetzt.
+				if ( $end > $now || ( $run['print_at'] && $end <= $run['print_at'] ) ) {
+					$end = $now;
+				}
+
+				RunRepository::update( $run['id'], array( 'status' => RunFlow::ZU_MELDEN, 'print_end_at' => $end, 'print_failed' => $failed ? 1 : 0 ) );
 				break;
 
 			case 'abbrechen':
@@ -1253,11 +1331,14 @@ class Workflow {
 		$now       = current_time( 'mysql', true );
 		$print_end = $run['print_end_at'] ? $run['print_end_at'] : $now;
 		$print_h   = $run['print_at'] ? RunFlow::hours_between( $run['print_at'], $print_end ) : 0.0;
-		$setup_h   = $run['setup_at'] ? RunFlow::hours_between( $run['setup_at'], $run['print_at'] ? $run['print_at'] : $print_end ) : 0.0;
+		$setup_h   = 0.0;
 
-		// Eine von Hand gesetzte Rüstzeit gilt statt der gestoppten.
+		// Als Arbeitszeit zählt nur, was von Hand gesetzt oder gestoppt wurde (abzüglich Pausen).
+		// Die Zeit, in der nur die Datei zum Drucker lief, ist Maschinenzeit und wird nicht gebucht.
 		if ( isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min'] ) {
 			$setup_h = round( max( 0.0, (float) $run['setup_min'] ) / 60, 3 );
+		} elseif ( 'hand' === (string) $run['setup_src'] && $run['setup_at'] ) {
+			$setup_h = max( 0.0, round( RunFlow::hours_between( $run['setup_at'], $run['print_at'] ? $run['print_at'] : $print_end ) - (int) $run['setup_paused_s'] / 3600, 3 ) );
 		}
 
 		$qtys = array();
@@ -1476,6 +1557,38 @@ class Workflow {
 		AuditLog::record( 'erp_platte_ruestzeit', 'run', $run['id'], array( 'minuten' => $minutes, 'vorher' => isset( $run['setup_min'] ) ? $run['setup_min'] : null ) );
 
 		return array( 'ok' => true, 'status' => 200, 'message' => __( 'Rüstzeit gespeichert.', 'lindenweg16' ), 'run' => self::view_by_id( $run['id'] ) );
+	}
+
+	/**
+	 * Rüsten pausieren oder fortsetzen: Die Pause zählt nicht zur Rüstzeit.
+	 *
+	 * @param array $run   Platte.
+	 * @param bool  $pause Pausieren (true) oder weiter (false).
+	 * @return array {ok, message, run, status}
+	 */
+	protected static function pause_setup( array $run, $pause ) {
+		if ( RunFlow::RUESTEN !== $run['status'] ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Pausieren geht nur, solange die Platte gerüstet wird.', 'lindenweg16' ) );
+		}
+
+		if ( 'hand' !== (string) $run['setup_src'] ) {
+			return array( 'ok' => false, 'status' => 409, 'message' => __( 'Die Rüstzeit läuft nicht von Hand. Erst „Rüstzeit selbst messen“ tippen.', 'lindenweg16' ) );
+		}
+
+		$now = current_time( 'mysql', true );
+
+		if ( $pause && ! $run['setup_pause_at'] ) {
+			RunRepository::update( $run['id'], array( 'setup_pause_at' => $now ) );
+			$message = __( 'Rüsten pausiert.', 'lindenweg16' );
+		} elseif ( ! $pause && $run['setup_pause_at'] ) {
+			$paused = max( 0, (int) strtotime( $now . ' UTC' ) - (int) strtotime( $run['setup_pause_at'] . ' UTC' ) );
+			RunRepository::update( $run['id'], array( 'setup_paused_s' => (int) $run['setup_paused_s'] + $paused, 'setup_pause_at' => null ) );
+			$message = __( 'Rüsten läuft weiter.', 'lindenweg16' );
+		} else {
+			$message = '';
+		}
+
+		return array( 'ok' => true, 'status' => 200, 'message' => $message, 'run' => self::view_by_id( $run['id'] ) );
 	}
 
 	/**

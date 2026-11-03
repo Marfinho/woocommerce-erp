@@ -71,6 +71,96 @@ class Variance {
 	}
 
 	/**
+	 * Vollständige Messung einer erledigten Platte - getrennt nach Rüsten, Druck und Warten.
+	 *
+	 * - Druck: Maschinenzeit von Druckstart bis Druckende (Quelle: drucker, abfrage, hand).
+	 * - Rüsten: nur Handarbeit. Von Hand gesetzt (setup_min) oder mit „Rüsten starten“
+	 *   gestoppt (setup_src = hand) abzüglich Pausen. Eine Zeit, die nur der Upload
+	 *   zum Drucker ausgelöst hat (setup_src = auto), ist keine Arbeitszeit und zählt nicht.
+	 * - Warten: freigegeben bis Rüsten (vor) und Druckende bis Meldung (nach).
+	 *
+	 * @param array $run Platte (Spalten der Tabelle runs).
+	 * @return array {print, print_src, failed, setup, setup_src, wait_before, wait_after} - Werte in
+	 *               Minuten oder null, wenn nicht messbar.
+	 */
+	public static function measure( array $run ) {
+		$print_at = self::ts( isset( $run['print_at'] ) ? $run['print_at'] : '' );
+		$end      = self::ts( isset( $run['print_end_at'] ) ? $run['print_end_at'] : '' );
+		$reported = self::ts( isset( $run['reported_at'] ) ? $run['reported_at'] : '' );
+		$setup_at = self::ts( isset( $run['setup_at'] ) ? $run['setup_at'] : '' );
+		$released = self::ts( isset( $run['released_at'] ) ? $run['released_at'] : '' );
+
+		$print = null;
+		if ( null !== $print_at ) {
+			$stop = null !== $end ? $end : $reported;
+			if ( null !== $stop && $stop > $print_at ) {
+				$print = ( $stop - $print_at ) / 60.0;
+			}
+		}
+
+		$setup     = null;
+		$setup_src = null;
+		if ( isset( $run['setup_min'] ) && null !== $run['setup_min'] && '' !== $run['setup_min'] ) {
+			$setup     = max( 0.0, (float) $run['setup_min'] );
+			$setup_src = 'hand';
+		} elseif ( isset( $run['setup_src'] ) && 'hand' === $run['setup_src'] && null !== $setup_at && null !== $print_at && $print_at > $setup_at ) {
+			$paused    = isset( $run['setup_paused_s'] ) ? max( 0, (int) $run['setup_paused_s'] ) : 0;
+			$setup     = max( 0.0, ( $print_at - $setup_at - $paused ) / 60.0 );
+			$setup_src = 'hand';
+		}
+
+		$src = isset( $run['print_src'] ) && in_array( $run['print_src'], array( 'drucker', 'abfrage', 'hand' ), true ) ? $run['print_src'] : 'abfrage';
+
+		return array(
+			'print'       => $print,
+			'print_src'   => null === $print ? null : $src,
+			'failed'      => ! empty( $run['print_failed'] ),
+			'setup'       => $setup,
+			'setup_src'   => $setup_src,
+			'wait_before' => null !== $setup_at && null !== $released && $setup_at > $released ? ( $setup_at - $released ) / 60.0 : null,
+			'wait_after'  => null !== $end && null !== $reported && $reported > $end ? ( $reported - $end ) / 60.0 : null,
+		);
+	}
+
+	/**
+	 * Median einer Liste - unempfindlich gegen Ausreißer (eine über Nacht liegen gebliebene Platte).
+	 *
+	 * @param array $values Zahlen.
+	 * @return float|null Null bei leerer Liste.
+	 */
+	public static function median( array $values ) {
+		$values = array_values( array_map( 'floatval', $values ) );
+		$n      = count( $values );
+
+		if ( 0 === $n ) {
+			return null;
+		}
+
+		sort( $values );
+		$mid = intdiv( $n, 2 );
+
+		return 1 === $n % 2 ? $values[ $mid ] : ( $values[ $mid - 1 ] + $values[ $mid ] ) / 2;
+	}
+
+	/**
+	 * Ist die Platte rein, also mit nur einem Artikel? Nur dann lässt sich die Zeit je Teil exakt messen.
+	 *
+	 * @param array $items Positionen (article_id, qty).
+	 * @return int Artikel-ID bei reiner Platte, sonst 0.
+	 */
+	public static function pure_article( array $items ) {
+		$ids = array();
+
+		foreach ( $items as $item ) {
+			if ( (float) ( isset( $item['qty'] ) ? $item['qty'] : 0 ) > 0 ) {
+				$ids[ (int) $item['article_id'] ] = true;
+			}
+		}
+
+		return 1 === count( $ids ) ? (int) array_key_first( $ids ) : 0;
+	}
+
+	/**
 	 * Zeitstempel lesen.
 	 *
 	 * @param string $value Y-m-d H:i:s (UTC) oder leer.
