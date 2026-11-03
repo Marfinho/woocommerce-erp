@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.81.1] – 2026-11-03
+
+### Neu: Konto per Suchfeld wählen
+- Wo ein Konto gewählt wird (Beleg erfassen und bearbeiten, Filter „Kategorie“ in der Belegliste, Beleg-Formular im Admin), ist das Dropdown durch ein **Suchfeld mit Vorschlägen** ersetzt: Nummer oder Text tippen („46“, „bewir“, „porto“), Konto aus der Liste wählen. Ein ungültiger Text springt auf das letzte Konto zurück, im Filter leert er die Auswahl.
+
 ## [0.81.0] – 2026-11-03
 
 ### Neu: Buchhaltung mit dem vollständigen SKR03
