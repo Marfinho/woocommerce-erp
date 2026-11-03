@@ -103,6 +103,13 @@ class ErpLiveTest extends TestCase {
 		$this->assertStringContainsString( "array( LiveViewer::class, 'can_open' )", $this->read( 'includes/Erp/RestApi.php' ) );
 	}
 
+	public function test_anmeldung_haelt_mindestens_14_tage() {
+		$src = $this->read( 'includes/Erp/LiveViewer.php' );
+
+		$this->assertStringContainsString( 'const MIN_SESSION = 14 * DAY_IN_SECONDS', $src );
+		$this->assertStringContainsString( 'max( (int) $seconds, self::MIN_SESSION )', $src );
+	}
+
 	public function test_abgelaufenes_token_wird_erneuert() {
 		$js = $this->read( 'assets/erp/erp.js' );
 
