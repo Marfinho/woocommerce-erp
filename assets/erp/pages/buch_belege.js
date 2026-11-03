@@ -923,26 +923,79 @@
 			return out;
 		}
 
-		/* Rückfall ohne Tesseract auf dem Server: Texterkennung im Browser (tesseract.js, einmal geladen). */
+		/* Rückfall ohne Tesseract auf dem Server: Texterkennung im Browser (tesseract.js, einmal geladen).
+		   Gescannte PDFs werden dafür mit pdf.js Seite für Seite in Bilder verwandelt. */
 		var TESS_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-		function loadTesseract() {
-			if (window.Tesseract) { return Promise.resolve(window.Tesseract); }
+		var PDFJS_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+		var PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+		function loadScript(src, ready, failMessage) {
+			if (ready()) { return Promise.resolve(ready()); }
 			return new Promise(function (resolve, reject) {
 				var sc = document.createElement('script');
-				sc.src = TESS_SRC;
-				sc.onload = function () { window.Tesseract ? resolve(window.Tesseract) : reject(new Error('Die Texterkennung konnte nicht geladen werden.')); };
-				sc.onerror = function () { reject(new Error('Die Texterkennung konnte nicht geladen werden (keine Internetverbindung?).')); };
+				sc.src = src;
+				sc.onload = function () { ready() ? resolve(ready()) : reject(new Error(failMessage)); };
+				sc.onerror = function () { reject(new Error(failMessage + ' (keine Internetverbindung oder blockiert?)')); };
 				document.head.appendChild(sc);
 			});
 		}
+		function loadTesseract() {
+			return loadScript(TESS_SRC, function () { return window.Tesseract; }, 'Die Texterkennung konnte nicht geladen werden.');
+		}
+		function loadPdfJs() {
+			return loadScript(PDFJS_SRC, function () { return window.pdfjsLib; }, 'Der PDF-Leser konnte nicht geladen werden.').then(function (lib) {
+				lib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+				return lib;
+			});
+		}
+
+		/* Die ersten Seiten eines PDFs als Bilder (Blob). */
+		function pdfToImages(file, maxPages) {
+			return loadPdfJs().then(function (lib) {
+				return file.arrayBuffer().then(function (buf) { return lib.getDocument({ data: buf }).promise; });
+			}).then(function (pdf) {
+				var blobs = [];
+				var n = Math.min(pdf.numPages, maxPages);
+				var chain = Promise.resolve();
+				var i;
+				for (i = 1; i <= n; i++) {
+					(function (no) {
+						chain = chain.then(function () {
+							return pdf.getPage(no).then(function (page) {
+								var vp = page.getViewport({ scale: 2 });
+								// Sehr große Seiten verkleinern: Der Speicher des Handys ist begrenzt.
+								var k = Math.min(1, 3000 / Math.max(vp.width, vp.height));
+								vp = page.getViewport({ scale: 2 * k });
+								var canvas = document.createElement('canvas');
+								canvas.width = Math.round(vp.width);
+								canvas.height = Math.round(vp.height);
+								return page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise.then(function () {
+									return new Promise(function (resolve) { canvas.toBlob(function (b) { resolve(b); }, 'image/png'); });
+								}).then(function (b) { if (b) { blobs.push(b); } });
+							});
+						});
+					})(i);
+				}
+				return chain.then(function () { return blobs; });
+			});
+		}
+
 		function browserOcr(pages) {
-			busyView('Foto wird im Browser gelesen … (beim ersten Mal wird die Texterkennung geladen, das kann etwas dauern)');
-			return loadTesseract().then(function (T) {
+			busyView('Beleg wird im Browser gelesen … (beim ersten Mal wird die Texterkennung geladen, das kann etwas dauern)');
+			var images = [];
+			return pages.slice(0, 4).reduce(function (chain, p) {
+				return chain.then(function () {
+					if (p.kind === 'pdf') {
+						return pdfToImages(p.file, 3).then(function (list) { images = images.concat(list); });
+					}
+					images.push(p.file || p.blob);
+				});
+			}, Promise.resolve()).then(loadTesseract).then(function (T) {
 				return T.createWorker('deu').then(function (worker) {
 					var texts = [];
-					return pages.slice(0, 4).reduce(function (chain, p) {
+					return images.reduce(function (chain, img) {
 						return chain.then(function () {
-							return worker.recognize(p.file || p.blob).then(function (r) { texts.push((r && r.data && r.data.text) || ''); });
+							return worker.recognize(img).then(function (r) { texts.push((r && r.data && r.data.text) || ''); });
 						});
 					}, Promise.resolve()).then(function () {
 						return worker.terminate();
@@ -996,8 +1049,8 @@
 					S.hints = o.hinweise;
 					S.ocrWarn = !o.erkannt;
 					S.ocrMessage = o.meldung;
-					// Server ohne Tesseract: Foto im Browser lesen. Das Foto verlässt dabei das Gerät nicht.
-					if (!o.erkannt && o.tesseract === false && first.kind === 'image') {
+					// Server ohne Tesseract: Foto oder PDF-Scan im Browser lesen. Die Datei verlässt dabei das Gerät nicht.
+					if (!o.erkannt && o.tesseract === false && (first.kind === 'image' || first.kind === 'pdf')) {
 						browserOcr(S.pages).then(function (b) { applyOcr(b); stepForm(); }).catch(function (e) {
 							S.ocrWarn = true;
 							S.ocrMessage = e.message + ' Bitte die Felder von Hand ausfüllen.';

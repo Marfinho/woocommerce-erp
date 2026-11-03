@@ -20,6 +20,18 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Alle anderen Konten werden nach Nummernkreis gruppiert (z. B. 4100–4199 „Löhne und Gehälter“). Aufwands- und Erlöskonten erscheinen in der Kontenauswahl der Belege und in der EÜR, Bestands-, Kapital- und Statistikkonten sind nur im Kontenrahmen selbst enthalten.
 - Tests: `tests/KontenrahmenTest.php`.
 
+## [0.80.2] – 2026-11-03
+
+### Behoben: Beleg-Upload las gescannte PDFs nicht
+- Auf dem Server ist keine Texterkennung (Tesseract) eingerichtet. Fotos wurden deshalb schon im Browser gelesen, **gescannte PDFs** (ohne Textschicht) aber nicht: Es kam nur der Hinweis, Tesseract werde gebraucht.
+- Jetzt werden auch gescannte PDFs im Browser gelesen: Die ersten drei Seiten werden mit pdf.js in Bilder verwandelt und mit derselben Texterkennung wie die Fotos gelesen. Die Datei verlässt dabei das Gerät nicht, nur der gelesene Text geht an den Server.
+- Schlägt das Laden der Texterkennung oder des PDF-Lesers fehl (kein Internet, blockiert), steht jetzt genau das in der Meldung.
+
+## [0.80.1] – 2026-11-03
+
+### Geändert
+- **Anmeldung hält mindestens 14 Tage:** Auch ohne „Angemeldet bleiben“ (WordPress-Standard: 2 Tage) bleibt man 14 Tage angemeldet. Die Live-Anzeige behält ein Jahr.
+
 ## [0.80.0] – 2026-11-03
 
 ### Neu: Rüst-, Druck- und Wartezeiten sauber messen, Soll gegen Ist neu aufgebaut
