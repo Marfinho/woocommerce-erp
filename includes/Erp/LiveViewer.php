@@ -30,6 +30,11 @@ class LiveViewer {
 	const SESSION = YEAR_IN_SECONDS;
 
 	/**
+	 * Mindestdauer der Anmeldung für alle: 14 Tage, auch ohne „Angemeldet bleiben“.
+	 */
+	const MIN_SESSION = 14 * DAY_IN_SECONDS;
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public static function register() {
@@ -73,14 +78,14 @@ class LiveViewer {
 	}
 
 	/**
-	 * Anmeldedauer: ein Jahr für die Live-Anzeige, sonst unverändert.
+	 * Anmeldedauer: ein Jahr für die Live-Anzeige, sonst mindestens 14 Tage.
 	 *
 	 * @param int $seconds Bisherige Dauer.
 	 * @param int $user_id Nutzer.
 	 * @return int
 	 */
 	public static function session_length( $seconds, $user_id ) {
-		return self::is_viewer( (int) $user_id ) ? self::SESSION : $seconds;
+		return self::is_viewer( (int) $user_id ) ? self::SESSION : max( (int) $seconds, self::MIN_SESSION );
 	}
 
 	/**
