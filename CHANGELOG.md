@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.87.0] – 2026-11-04
+
+### Neu: Affiliates – Link mit Code, Buchung der Auszahlungen, Schutz vor Eigenkäufen
+- **Link mit Code:** Zu jedem Affiliate gehört `lindenweg16.de/?aff=CODE`. Wer ihn öffnet, bekommt den Rabatt von selbst in den Warenkorb, sobald dort etwas liegt. Der Code steckt dafür in einem Cookie (Laufzeit wie das Empfehlungs-Cookie), das nur beim Klick auf den Link entsteht. Wer den Code selbst entfernt, bekommt ihn in dieser Sitzung nicht noch einmal; abgeschaltete Codes gelten nicht. Der Link steht in der Liste und beim Ambassador unter „Mein Konto“.
+- **Auszahlungen werden gebucht:** Jede festgehaltene Auszahlung wird ein festgeschriebener Eigenbeleg auf Werbekosten. Beim ersten Mal entsteht eine Kostenstelle „Affiliate: Name“ mit dem Code als Gutscheincode; Beleg und Umsatz stehen dann unter Marketing nebeneinander. Abschaltbar unter Einstellungen → Marketing („Affiliate-Auszahlungen automatisch als Beleg buchen“, Vorgabe an).
+- **Stornieren statt Minusbetrag:** Eine falsche Auszahlung wird mit Begründung storniert (Guthaben steigt wieder, der Beleg bekommt einen Gegenbeleg). Negative Beträge lassen sich nicht mehr eintragen. Beim Ambassador erscheinen stornierte Auszahlungen nicht.
+- **Eigenkäufe:** Der Code gilt nicht für das Konto und die Adressen des Affiliates (Warenkorb), die klassische Kasse bricht mit einem Hinweis ab, und was trotzdem durchkommt, zählt nicht für Umsatz und Provision („Eigenkauf nicht gezählt“). Ein Strohmann mit fremdem Konto und fremder Adresse bleibt unerkannt.
+- Betriebsanleitung: Kapitel B.15 um Link, Buchung, Storno und Eigenkäufe erweitert.
+
 ## [0.86.0] – 2026-11-04
 
 ### Neu: Rolle „Ambassador“ – Zahlen und Auszahlung für Affiliates unter „Mein Konto“
@@ -25,7 +34,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - **Auswertung je Affiliate** für 30 Tage, 90 Tage, 12 Monate oder alles: Bestellungen, Umsatz, Provision, auszahlbares Guthaben und was noch in der Wartezeit steckt. Gezählt werden bezahlte Bestellungen mit dem Code. Die Provision rechnet auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand und Steuer.
 - **Satz von damals:** Sobald eine Bestellung bezahlt ist, merkt sie sich den Provisionssatz. Eine spätere Änderung wirkt nur auf neue Bestellungen.
 - **Wartezeit:** Provision wird erst nach 30 Tagen auszahlbar (Einstellungen → Marketing → „Wartezeit für Affiliate-Provision“).
-- **Auszahlungen festhalten:** Betrag, Datum, Notiz. Das ERP überweist nichts. Auszahlungen werden nur angehängt; ein Fehler wird mit einem negativen Betrag und Notiz korrigiert. Mehr als das Guthaben lässt sich nicht eintragen.
+- **Auszahlungen festhalten:** Betrag, Datum, Notiz. Das ERP überweist nichts. Auszahlungen werden nur angehängt; ein Fehler wird mit einem negativen Betrag und Notiz korrigiert (seit 0.87.0: stattdessen Stornieren). Mehr als das Guthaben lässt sich nicht eintragen.
 - **Neue Rechte:** `verkauf.affiliates` (ansehen und anlegen) und `verkauf.affiliates.auszahlen` (Auszahlung festhalten; steht in keiner Vorlage). Anlegen, Ändern und Auszahlen stehen im Ereignisprotokoll.
 - Neues Kapitel B.15 in der Betriebsanleitung; der Verweis auf das Kapitel „Lagerplätze, Etiketten und Scannen“ wurde auf B.16 nachgezogen.
 

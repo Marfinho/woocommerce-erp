@@ -259,6 +259,7 @@ class Rules {
 				'ausgezahlt'  => 0.0,
 				'guthaben'    => 0.0,
 				'letzte_ts'   => 0,
+				'eigen'       => 0,
 			);
 		}
 
@@ -270,7 +271,16 @@ class Rules {
 				continue;
 			}
 
-			$id   = $by_code[ $code ];
+			$id = $by_code[ $code ];
+
+			// Eigenkäufe des Partners zählen nicht; sie werden nur gemeldet.
+			if ( ! empty( $s['eigen'] ) ) {
+				if ( (int) $s['ts'] >= $from ) {
+					$out[ $id ]['eigen']++;
+				}
+				continue;
+			}
+
 			$rate = isset( $s['rate'] ) && null !== $s['rate'] ? (float) $s['rate'] : (float) $partners[ $id ]['provision'];
 			$prov = self::commission( $s['base'], $rate );
 
@@ -295,7 +305,7 @@ class Rules {
 
 		foreach ( $payouts as $pay ) {
 			$id = isset( $pay['partner'] ) ? $pay['partner'] : 0;
-			if ( isset( $out[ $id ] ) ) {
+			if ( isset( $out[ $id ] ) && empty( $pay['storniert'] ) ) {
 				$out[ $id ]['ausgezahlt'] += (float) $pay['betrag'];
 			}
 		}
@@ -357,17 +367,15 @@ class Rules {
 	/**
 	 * Auszahlung prüfen.
 	 *
-	 * Ein positiver Betrag darf das Guthaben nicht übersteigen. Ein negativer Betrag
-	 * ist eine Korrektur (zu viel gebucht) und braucht eine Notiz.
+	 * Der Betrag muss positiv sein und darf das Guthaben nicht übersteigen. Eine falsche
+	 * Auszahlung wird nicht mit einem Minusbetrag berichtigt, sondern storniert.
 	 *
-	 * @param mixed  $betrag   Eingabe.
-	 * @param float  $guthaben Aktuelles Guthaben des Partners.
-	 * @param string $notiz    Notiz.
+	 * @param mixed $betrag   Eingabe.
+	 * @param float $guthaben Aktuelles Guthaben des Partners.
 	 * @return array [ 'betrag' => float, 'errors' => Meldungen ].
 	 */
-	public static function check_payout( $betrag, $guthaben, $notiz ) {
-		$errors = array();
-		$value  = self::number( $betrag );
+	public static function check_payout( $betrag, $guthaben ) {
+		$value = self::number( $betrag );
 
 		if ( null === $value || abs( $value ) < 0.005 ) {
 			return array(
@@ -376,19 +384,46 @@ class Rules {
 			);
 		}
 
-		$value = round( $value, 2 );
+		$value  = round( $value, 2 );
+		$errors = array();
 
-		if ( $value > round( (float) $guthaben, 2 ) + 0.001 ) {
+		if ( $value < 0 ) {
+			$errors[] = __( 'Der Betrag muss größer als 0 sein. Eine falsche Auszahlung stornierst du in der Liste der Auszahlungen.', 'lindenweg16' );
+		} elseif ( $value > round( (float) $guthaben, 2 ) + 0.001 ) {
 			$errors[] = __( 'Mehr als das auszahlbare Guthaben lässt sich nicht auszahlen. Provision wird erst nach der Wartezeit auszahlbar.', 'lindenweg16' );
-		}
-
-		if ( $value < 0 && '' === trim( (string) $notiz ) ) {
-			$errors[] = __( 'Eine Korrektur (negativer Betrag) braucht eine Notiz, warum.', 'lindenweg16' );
 		}
 
 		return array(
 			'betrag' => $value,
 			'errors' => $errors,
 		);
+	}
+
+	/**
+	 * Hat der Partner bei sich selbst gekauft?
+	 *
+	 * Verglichen wird das Konto und jede bekannte E-Mail-Adresse (Groß- und Kleinschreibung egal).
+	 *
+	 * @param string[] $own_emails Adressen des Partners (Kontaktadresse, Konto).
+	 * @param int      $own_user   Konto des Partners; 0 = keins.
+	 * @param string[] $emails     Adressen des Käufers (Rechnung, Konto).
+	 * @param int      $user       Konto des Käufers; 0 = Gast.
+	 * @return bool
+	 */
+	public static function is_self_purchase( array $own_emails, $own_user, array $emails, $user ) {
+		if ( (int) $own_user > 0 && (int) $own_user === (int) $user ) {
+			return true;
+		}
+
+		$own = array_filter( array_map( 'strtolower', array_map( 'trim', $own_emails ) ) );
+
+		foreach ( $emails as $email ) {
+			$email = strtolower( trim( (string) $email ) );
+			if ( '' !== $email && in_array( $email, $own, true ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

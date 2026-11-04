@@ -254,6 +254,11 @@ class Account {
 			echo '<p>' . esc_html( sprintf( __( 'Wer ihn im Warenkorb eingibt, spart %1$s %%. Du bekommst %2$s %% Provision auf den Warenwert.', 'lindenweg16' ), $this->percent( $p['rabatt'] ), $this->percent( $p['provision'] ) ) ) . '</p>';
 		}
 
+		if ( $p['aktiv'] ) {
+			echo '<p><label for="lw16-aff-link">' . esc_html__( 'Dein Link: Wer ihn öffnet, bekommt den Rabatt automatisch in den Warenkorb.', 'lindenweg16' ) . '</label><br>';
+			echo '<input type="text" id="lw16-aff-link" readonly value="' . esc_attr( AutoApply::link( $p['code'] ) ) . '" onclick="this.select()" style="width:100%;max-width:28em"></p>';
+		}
+
 		echo '<h3>' . esc_html__( 'Dein Kontostand', 'lindenweg16' ) . '</h3>';
 		echo '<table class="woocommerce-table shop_table"><tbody>';
 		echo '<tr><th>' . esc_html__( 'Auszahlbar', 'lindenweg16' ) . '</th><td><strong>' . esc_html( $this->eur( $all['guthaben'] ) ) . '</strong></td></tr>';
@@ -308,7 +313,7 @@ class Account {
 			array_filter(
 				array_reverse( Partners::payouts() ),
 				function ( $r ) use ( $p ) {
-					return (int) $r['partner'] === (int) $p['id'];
+					return (int) $r['partner'] === (int) $p['id'] && empty( $r['storniert'] );
 				}
 			)
 		);

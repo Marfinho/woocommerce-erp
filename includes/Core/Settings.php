@@ -41,6 +41,7 @@ class Settings {
 			'marketing_nachlauf_tage'   => 30,
 			'affiliate_wartezeit_tage'  => 30,
 			'affiliate_min_auszahlung'  => 20,
+			'affiliate_auto_buchen'     => 1,
 			// Loyalty.
 			'referral_cookie_tage'      => 30,
 			'referral_prozent'          => 5,

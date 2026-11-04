@@ -48,6 +48,21 @@ class ErpAffiliatesTest extends TestCase {
 		$this->assertStringContainsString( "wp_verify_nonce( \$nonce, 'lw16_aff_request' )", $src );
 	}
 
+	public function test_modul_haengt_link_wache_und_buchung_ein() {
+		$dir = dirname( __DIR__ ) . '/includes/Modules/Affiliate/';
+		$mod = file_get_contents( $dir . 'AffiliateModule.php' );
+
+		$this->assertStringContainsString( '( new AutoApply() )->register()', $mod );
+		$this->assertStringContainsString( '( new Guard() )->register()', $mod );
+
+		// Der Link-Parameter, die Wache am Gutschein und das Konto der Buchung.
+		$this->assertStringContainsString( "PARAM  = 'aff'", file_get_contents( $dir . 'AutoApply.php' ) );
+		$this->assertStringContainsString( "'woocommerce_coupon_is_valid'", file_get_contents( $dir . 'Guard.php' ) );
+		$this->assertStringContainsString( 'Kontenrahmen::KONTO_WERBUNG', file_get_contents( $dir . 'Booking.php' ) );
+		// Eigenkäufe zählen auch ohne Wache nicht für die Provision.
+		$this->assertStringContainsString( 'Rules::is_self_purchase', file_get_contents( $dir . 'Sales.php' ) );
+	}
+
 	public function test_seite_ist_als_script_registriert() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/affiliates.js' );
 
@@ -55,5 +70,6 @@ class ErpAffiliatesTest extends TestCase {
 		$this->assertStringContainsString( "ui.api('affiliates", $js );
 		$this->assertStringContainsString( "affiliates/auszahlung", $js );
 		$this->assertStringContainsString( "affiliates/ablehnen", $js );
+		$this->assertStringContainsString( "affiliates/storno", $js );
 	}
 }

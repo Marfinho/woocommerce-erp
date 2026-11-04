@@ -6,7 +6,7 @@
  * spart den Rabatt, der Partner bekommt Provision auf den Warenwert. Die Seite zeigt
  * Bestellungen, Umsatz, Provision und das auszahlbare Guthaben je Partner und hält
  * Auszahlungen fest. Recht: `verkauf.affiliates` (WordPress-Recht `manage_woocommerce`),
- * Auszahlungen zusätzlich `verkauf.affiliates.auszahlen`.
+ * Auszahlungen (und ihr Storno) zusätzlich `verkauf.affiliates.auszahlen`.
  *
  * Regeln stehen in `Modules\Affiliate\Rules`, Speicher in `Partners`, Bestellungen in `Sales`.
  *
@@ -21,6 +21,9 @@ use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\RestApi;
+use Lindenweg16\Modules\Accounting\BelegRepository;
+use Lindenweg16\Modules\Affiliate\AutoApply;
+use Lindenweg16\Modules\Affiliate\Booking;
 use Lindenweg16\Modules\Affiliate\Partners;
 use Lindenweg16\Modules\Affiliate\Rules;
 use Lindenweg16\Modules\Affiliate\Sales;
@@ -63,6 +66,16 @@ class Affiliates {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'payout' ),
+				'permission_callback' => $api->needs( array( 'verkauf.affiliates', 'verkauf.affiliates.auszahlen' ) ),
+			)
+		);
+
+		register_rest_route(
+			RestApi::NAMESPACE_V1,
+			'/erp/affiliates/storno',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'cancel' ),
 				'permission_callback' => $api->needs( array( 'verkauf.affiliates', 'verkauf.affiliates.auszahlen' ) ),
 			)
 		);
@@ -179,6 +192,7 @@ class Affiliates {
 				'plattform' => $p['plattform'],
 				'email'     => $p['email'],
 				'code'      => $p['code'],
+				'link'      => AutoApply::link( $p['code'] ),
 				'rabatt'    => (float) $p['rabatt'],
 				'provision' => (float) $p['provision'],
 				'aktiv'     => (bool) $p['aktiv'],
@@ -207,11 +221,17 @@ class Affiliates {
 				break;
 			}
 
+			$beleg = ! empty( $row['beleg'] ) ? BelegRepository::get( (int) $row['beleg'] ) : null;
+
 			$pay[] = array(
-				'datum'   => $row['datum'],
-				'partner' => isset( $partners[ $row['partner'] ] ) ? $partners[ $row['partner'] ]['name'] : '–',
-				'betrag'  => (float) $row['betrag'],
-				'notiz'   => $row['notiz'],
+				'id'        => (int) $row['id'],
+				'datum'     => $row['datum'],
+				'partner'   => isset( $partners[ $row['partner'] ] ) ? $partners[ $row['partner'] ]['name'] : '–',
+				'betrag'    => (float) $row['betrag'],
+				'notiz'     => $row['notiz'],
+				'beleg'     => $beleg && ! empty( $beleg->belegnummer ) ? $beleg->belegnummer : '',
+				'storniert' => ! empty( $row['storniert'] ),
+				'grund'     => isset( $row['grund'] ) ? $row['grund'] : '',
 			);
 		}
 
@@ -242,6 +262,7 @@ class Affiliates {
 				'ranges'   => Rules::ranges(),
 				'wartezeit' => self::wait_days(),
 				'can_pay'  => Access::can( 'verkauf.affiliates.auszahlen' ),
+				'buchen'   => Booking::enabled(),
 				'today'    => wp_date( 'Y-m-d' ),
 				'sample'   => home_url( '/' ),
 			)
@@ -326,22 +347,29 @@ class Affiliates {
 		}
 
 		$figures = self::figures( array( $id => $partners[ $id ] ), 0 );
-		$check   = Rules::check_payout( $request->get_param( 'betrag' ), $figures[ $id ]['guthaben'], $notiz );
+		$check   = Rules::check_payout( $request->get_param( 'betrag' ), $figures[ $id ]['guthaben'] );
 
 		if ( $check['errors'] ) {
 			return new WP_REST_Response( array( 'ok' => false, 'message' => implode( ' ', $check['errors'] ) ), 422 );
 		}
 
-		$row = Partners::add_payout( $id, $check['betrag'], $datum, $notiz );
-		if ( $row['betrag'] > 0 ) {
-			Partners::close_requests( $id, 'erledigt' );
+		$beleg = Booking::enabled() ? Booking::book( $partners[ $id ], $check['betrag'], $datum ) : 0;
+		$row   = Partners::add_payout( $id, $check['betrag'], $datum, $notiz, $beleg );
+		Partners::close_requests( $id, 'erledigt' );
+		AuditLog::record( 'affiliate_auszahlung', 'affiliate', $id, array( 'betrag' => $row['betrag'], 'datum' => $datum, 'beleg' => $beleg ) );
+
+		if ( $beleg ) {
+			$message = __( 'Auszahlung festgehalten und als Beleg gebucht. Die Überweisung machst du selbst bei deiner Bank.', 'lindenweg16' );
+		} elseif ( Booking::enabled() ) {
+			$message = __( 'Auszahlung festgehalten, aber nicht gebucht – der Beleg konnte nicht angelegt werden. Bitte von Hand buchen.', 'lindenweg16' );
+		} else {
+			$message = __( 'Auszahlung festgehalten. Gebucht wird sie nicht (Einstellung); die Überweisung machst du selbst bei deiner Bank.', 'lindenweg16' );
 		}
-		AuditLog::record( 'affiliate_auszahlung', 'affiliate', $id, array( 'betrag' => $row['betrag'], 'datum' => $datum ) );
 
 		return new WP_REST_Response(
 			array(
 				'ok'      => true,
-				'message' => __( 'Auszahlung festgehalten. Die Überweisung machst du selbst bei deiner Bank.', 'lindenweg16' ),
+				'message' => $message,
 			)
 		);
 	}
@@ -368,5 +396,42 @@ class Affiliates {
 		AuditLog::record( 'affiliate_anforderung_abgelehnt', 'affiliate', $id );
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Anforderung abgelehnt.', 'lindenweg16' ) ) );
+	}
+
+	/**
+	 * Eine Auszahlung stornieren: Der Beleg bekommt einen Gegenbeleg, das Guthaben steigt wieder.
+	 *
+	 * @param WP_REST_Request $request Anfrage (auszahlung, grund).
+	 * @return WP_REST_Response
+	 */
+	public static function cancel( WP_REST_Request $request ) {
+		$pid   = (int) $request->get_param( 'auszahlung' );
+		$grund = sanitize_text_field( (string) $request->get_param( 'grund' ) );
+
+		if ( '' === $grund ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Bitte kurz begründen, warum die Auszahlung storniert wird.', 'lindenweg16' ) ), 422 );
+		}
+
+		$row = Partners::cancel_payout( $pid, $grund );
+
+		if ( ! $row ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Diese Auszahlung gibt es nicht oder sie ist schon storniert. Bitte die Seite neu laden.', 'lindenweg16' ) ), 422 );
+		}
+
+		$p = Partners::get( $row['partner'] );
+		if ( $p && ! empty( $row['beleg'] ) ) {
+			Booking::cancel( $p, (int) $row['beleg'], $grund );
+		}
+
+		AuditLog::record( 'affiliate_auszahlung_storniert', 'affiliate', (int) $row['partner'], array( 'betrag' => $row['betrag'], 'grund' => $grund ) );
+
+		return new WP_REST_Response(
+			array(
+				'ok'      => true,
+				'message' => ! empty( $row['beleg'] )
+					? __( 'Auszahlung storniert, der Beleg ist mit einem Gegenbeleg zurückgenommen.', 'lindenweg16' )
+					: __( 'Auszahlung storniert. Sie war nicht gebucht, in der Buchhaltung ändert sich nichts.', 'lindenweg16' ),
+			)
+		);
 	}
 }

@@ -68,6 +68,7 @@ class SettingsPage {
 				'km_pauschale'            => array( __( 'Kilometerpauschale (€ je km)', 'lindenweg16' ), 'number' ),
 				'marketing_nachlauf_tage' => array( __( 'Nachlauffenster für Kampagnenumsatz (Tage)', 'lindenweg16' ), 'number' ),
 				'affiliate_wartezeit_tage' => array( __( 'Wartezeit für Affiliate-Provision (Tage nach Bestellung)', 'lindenweg16' ), 'number' ),
+				'affiliate_auto_buchen'    => array( __( 'Affiliate-Auszahlungen automatisch als Beleg buchen (Werbekosten, eigene Kostenstelle)', 'lindenweg16' ), 'checkbox' ),
 				'affiliate_min_auszahlung' => array( __( 'Mindestbetrag für eine Auszahlungsanforderung der Ambassadors (€)', 'lindenweg16' ), 'number' ),
 			),
 			__( 'Loyalty', 'lindenweg16' )        => array(

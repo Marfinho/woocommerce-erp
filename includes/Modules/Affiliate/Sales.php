@@ -34,7 +34,7 @@ class Sales {
 
 		$codes = array();
 		foreach ( $partners as $p ) {
-			$codes[ strtolower( $p['code'] ) ] = true;
+			$codes[ strtolower( $p['code'] ) ] = $p;
 		}
 
 		$args = array(
@@ -64,7 +64,14 @@ class Sales {
 					}
 
 					$rate = $order->get_meta( self::META_RATE );
+					$own  = $codes[ $code ];
 					$rows[] = array(
+						'eigen' => Rules::is_self_purchase(
+							Partners::own_emails( $own ),
+							(int) $own['user_id'],
+							array( $order->get_billing_email() ),
+							(int) $order->get_customer_id()
+						),
 						'order' => (int) $order->get_id(),
 						'code'  => $code,
 						'ts'    => (int) ( $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0 ),

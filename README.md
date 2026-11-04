@@ -691,6 +691,9 @@ vorhanden ist – nicht, was geplant war.
   `verkauf.affiliates.auszahlen`). Das ERP überweist nichts. Rolle `lw16_ambassador`
   (nur `read`) für verknüpfte Konten; `Account.php` zeigt unter Mein Konto den Punkt
   „Ambassador“ (Zahlen, Auszahlung anfordern; Option `lw16_affiliate_requests`).
+  Link `?aff=CODE` (`AutoApply`, Cookie `lw16_aff`), Schutz vor Eigenkäufen (`Guard`, dazu
+  `Rules::is_self_purchase()` in `Sales::collect()`), Auszahlungen als Beleg auf Werbekosten
+  mit eigener Kostenstelle (`Booking`, Einstellung `affiliate_auto_buchen`), Storno statt Minusbetrag.
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

@@ -161,17 +161,52 @@ class AffiliateTest extends TestCase {
 	}
 
 	public function test_auszahlung_pruefen() {
-		$ok = Rules::check_payout( '10,50', 20, '' );
+		$ok = Rules::check_payout( '10,50', 20 );
 		$this->assertSame( array(), $ok['errors'] );
 		$this->assertSame( 10.5, $ok['betrag'] );
 
-		$this->assertNotEmpty( Rules::check_payout( '25', 20, '' )['errors'] );
-		$this->assertNotEmpty( Rules::check_payout( '', 20, '' )['errors'] );
-		$this->assertNotEmpty( Rules::check_payout( '0', 20, '' )['errors'] );
+		$this->assertNotEmpty( Rules::check_payout( '25', 20 )['errors'] );
+		$this->assertNotEmpty( Rules::check_payout( '', 20 )['errors'] );
+		$this->assertNotEmpty( Rules::check_payout( '0', 20 )['errors'] );
 
-		// Korrektur braucht eine Notiz.
-		$this->assertNotEmpty( Rules::check_payout( '-5', 20, '' )['errors'] );
-		$this->assertSame( array(), Rules::check_payout( '-5', 20, 'zu viel überwiesen' )['errors'] );
+		// Ein Minusbetrag ist keine Korrektur mehr, sondern wird abgelehnt (Stornieren ist der Weg).
+		$this->assertNotEmpty( Rules::check_payout( '-5', 20 )['errors'] );
+	}
+
+	public function test_stornierte_auszahlung_und_eigenkauf_in_den_summen() {
+		$now      = 1000 * 86400;
+		$partners = array( 1 => array( 'code' => 'ANNA10', 'provision' => 10.0 ) );
+		$sales    = array(
+			array( 'code' => 'anna10', 'ts' => $now - 60 * 86400, 'base' => 100, 'total' => 119 ),
+			// Eigenkauf: zählt weder für Umsatz noch für Provision.
+			array( 'code' => 'anna10', 'ts' => $now - 60 * 86400, 'base' => 500, 'total' => 595, 'eigen' => true ),
+		);
+		$payouts  = array(
+			array( 'partner' => 1, 'betrag' => 6.0 ),
+			array( 'partner' => 1, 'betrag' => 4.0, 'storniert' => true ),
+		);
+
+		$r = Rules::summarize( $partners, $sales, $payouts, $now, 30, 0 );
+
+		$this->assertSame( 1, $r[1]['anzahl'] );
+		$this->assertSame( 1, $r[1]['eigen'] );
+		$this->assertSame( 10.0, $r[1]['auszahlbar'] );
+		$this->assertSame( 6.0, $r[1]['ausgezahlt'] );
+		$this->assertSame( 4.0, $r[1]['guthaben'] );
+	}
+
+	public function test_eigenkauf_erkennen() {
+		$own = array( 'Anna@Example.com' );
+
+		// Gleiche Adresse, egal wie geschrieben.
+		$this->assertTrue( Rules::is_self_purchase( $own, 0, array( ' anna@example.COM ' ), 0 ) );
+		// Gleiches Konto, andere Adresse.
+		$this->assertTrue( Rules::is_self_purchase( $own, 7, array( 'andere@example.com' ), 7 ) );
+		// Fremde Adresse, fremdes Konto, Gast.
+		$this->assertFalse( Rules::is_self_purchase( $own, 7, array( 'ben@example.com' ), 8 ) );
+		$this->assertFalse( Rules::is_self_purchase( $own, 7, array( '' ), 0 ) );
+		// Ohne bekannte Adresse und ohne Konto passt nichts (Gast mit leerer Adresse ist kein Treffer).
+		$this->assertFalse( Rules::is_self_purchase( array(), 0, array( '' ), 0 ) );
 	}
 
 	public function test_auszahlungsanforderung() {

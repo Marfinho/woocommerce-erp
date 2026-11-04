@@ -100,8 +100,9 @@
 
 		var form = h('form', null,
 			h('p', null, 'Auszahlbares Guthaben von ', h('b', null, p.name), ': ', h('b', null, eur(guthaben))),
-			h('p', { class: 'muted' }, 'Das ERP überweist nichts. Du überweist selbst und hältst es hier fest, damit das Guthaben stimmt.'),
-			field(ui, 'Betrag (€)', betrag, 'Ein negativer Betrag korrigiert eine zu hohe Auszahlung und braucht eine Notiz.'),
+			h('p', { class: 'muted' }, 'Das ERP überweist nichts. Du überweist selbst und hältst es hier fest, damit das Guthaben stimmt. '
+				+ (data.buchen ? 'Die Auszahlung wird zugleich als Beleg gebucht (Werbekosten, eigene Kostenstelle unter Marketing).' : 'Gebucht wird sie nicht – das ist in den Einstellungen so gewählt.')),
+			field(ui, 'Betrag (€)', betrag, 'Höchstens das auszahlbare Guthaben. Zu viel eingetragen? Dann später in der Liste stornieren.'),
 			field(ui, 'Datum der Überweisung', datum),
 			field(ui, 'Notiz', notiz),
 			err,
@@ -139,6 +140,31 @@
 			err.hidden = true;
 			go.disabled = true;
 			ui.api('affiliates/ablehnen', { method: 'POST', body: { partner: r.partner, notiz: notiz.value } }).then(function (res) {
+				ui.toast(res.message);
+				d.close();
+				onSaved();
+			}).catch(function (e) {
+				err.textContent = e.message;
+				err.hidden = false;
+			}).then(function () { go.disabled = false; });
+		});
+	}
+
+	function stornoDialog(ui, r, onSaved) {
+		var h = ui.h;
+		var grund = h('input', { class: 'field', type: 'text', maxlength: '190', placeholder: 'z. B. Betrag vertippt' });
+		var err = h('div', { class: 'notice warn', hidden: true });
+		var go = h('button', { class: 'btn primary', type: 'submit' }, 'Stornieren');
+		var form = h('form', null,
+			h('p', null, 'Auszahlung von ', h('b', null, eur(r.betrag)), ' an ', h('b', null, r.partner), ' vom ' + dateDe(r.datum) + ' stornieren?'),
+			h('p', { class: 'muted' }, r.beleg ? 'Der Beleg ' + r.beleg + ' wird mit einem Gegenbeleg zurückgenommen.' : 'Sie ist nicht gebucht; in der Buchhaltung ändert sich nichts.'),
+			field(ui, 'Begründung', grund), err, h('div', { style: 'margin-top:10px' }, go));
+		var d = ui.dlg('Auszahlung stornieren', form);
+		form.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			err.hidden = true;
+			go.disabled = true;
+			ui.api('affiliates/storno', { method: 'POST', body: { auszahlung: r.id, grund: grund.value } }).then(function (res) {
 				ui.toast(res.message);
 				d.close();
 				onSaved();
@@ -213,10 +239,11 @@
 					h('td', null, h('b', null, p.name), h('div', { class: 'muted' }, p.plattform || ''),
 						h('div', { class: 'muted' }, p.konto ? 'Konto: ' + p.konto : 'kein Konto'),
 						p.aktiv ? null : h('span', { class: 'tag later' }, 'abgeschaltet')),
-					h('td', null, h('code', null, p.code)),
+					h('td', null, h('code', null, p.code), h('div', null, h('a', { href: p.link, target: '_blank', rel: 'noopener', class: 'muted' }, 'Link mit Code'))),
 					h('td', { class: 'num' }, pct(p.rabatt)),
 					h('td', { class: 'num' }, pct(p.provision)),
-					h('td', { class: 'num' }, fmt(s.anzahl), s.letzte_ts ? h('div', { class: 'muted' }, 'zuletzt ' + dateDe(p.letzte)) : null),
+					h('td', { class: 'num' }, fmt(s.anzahl), s.letzte_ts ? h('div', { class: 'muted' }, 'zuletzt ' + dateDe(p.letzte)) : null,
+						s.eigen ? h('div', { class: 'muted' }, s.eigen + ' Eigenkauf nicht gezählt') : null),
 					h('td', { class: 'num' }, eur(s.umsatz)),
 					h('td', { class: 'num' }, eur(s.provision)),
 					h('td', { class: 'num' }, h('b', null, eur(s.guthaben)), s.wartend > 0 ? h('div', { class: 'muted' }, '+ ' + eur(s.wartend) + ' in Wartezeit') : null),
@@ -230,17 +257,21 @@
 				h('p', { class: 'muted' }, 'Die Provision rechnet auf den Warenwert netto: Positionen nach Rabatt und nach Erstattungen, ohne Versand und Steuer. Sie wird erst nach ' + d.wartezeit + ' Tagen auszahlbar (Widerruf und Rücksendungen; einstellbar unter Einstellungen → Marketing). Der Satz gilt ab dem Moment, in dem die Bestellung bezahlt ist – spätere Änderungen betreffen nur neue Bestellungen. „Auszahlbar“ ist das, was nach Abzug bisheriger Auszahlungen übrig ist.')));
 
 			var pt = h('table', { class: 'list' });
-			pt.appendChild(h('thead', null, h('tr', null, h('th', null, 'Datum'), h('th', null, 'Affiliate'), h('th', { class: 'num' }, 'Betrag'), h('th', null, 'Notiz'))));
+			pt.appendChild(h('thead', null, h('tr', null, h('th', null, 'Datum'), h('th', null, 'Affiliate'), h('th', { class: 'num' }, 'Betrag'), h('th', null, 'Beleg'), h('th', null, 'Notiz'), h('th', null, ''))));
 			var pb = h('tbody');
-			if (!d.payouts.length) { pb.appendChild(h('tr', null, h('td', { colspan: '4' }, 'Noch keine Auszahlung festgehalten.'))); }
+			if (!d.payouts.length) { pb.appendChild(h('tr', null, h('td', { colspan: '6' }, 'Noch keine Auszahlung festgehalten.'))); }
 			d.payouts.forEach(function (r) {
-				pb.appendChild(h('tr', null, h('td', null, dateDe(r.datum)), h('td', null, r.partner), h('td', { class: 'num' }, eur(r.betrag)), h('td', null, r.notiz)));
+				var last = r.storniert ? h('td', null, h('span', { class: 'tag later' }, 'storniert'), h('div', { class: 'muted' }, r.grund))
+					: h('td', null, d.can_pay ? h('button', { class: 'btn', type: 'button', onclick: function () { stornoDialog(ui, r, load); } }, 'Stornieren') : null);
+				pb.appendChild(h('tr', { style: r.storniert ? 'opacity:.6;text-decoration:line-through' : '' },
+					h('td', null, dateDe(r.datum)), h('td', null, r.partner), h('td', { class: 'num' }, eur(r.betrag)),
+					h('td', null, r.beleg || (r.storniert ? '' : '–')), h('td', null, r.notiz), last));
 			});
 			pt.appendChild(pb);
 			box.appendChild(h('div', { class: 'card' },
 				h('h3', null, 'Auszahlungen'),
 				h('div', { style: 'overflow-x:auto' }, pt),
-				h('p', { class: 'muted' }, 'Auszahlungen werden nur angehängt. Eine falsche Auszahlung korrigierst du mit einem negativen Betrag und einer Notiz.')));
+				h('p', { class: 'muted' }, 'Auszahlungen werden nie geändert oder gelöscht. Eine falsche Auszahlung stornierst du mit Begründung: Das Guthaben steigt wieder, und ein gebuchter Beleg bekommt einen Gegenbeleg.')));
 		}
 
 		function load() {

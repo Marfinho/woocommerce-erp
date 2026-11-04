@@ -6,6 +6,9 @@
  * - Partners.php  Partner, Auszahlungen und der Gutschein im Shop,
  * - Sales.php     Bestellungen mit Affiliate-Code,
  * - Account.php   „Ambassador“ unter „Mein Konto“ (Zahlen zum eigenen Code, Auszahlung anfordern),
+ * - AutoApply.php Link mit Code (`?aff=CODE`), der den Rabatt von selbst anwendet,
+ * - Guard.php     Eigenkäufe mit dem eigenen Code verhindern,
+ * - Booking.php   Auszahlungen als Beleg buchen (Werbekosten, eigene Kostenstelle),
  * - Seite im ERP: `Erp\Pages\Affiliates` (Verkauf → Marketing → Affiliates).
  *
  * Dieses Modul hält nur einen Haken: Sobald eine Bestellung mit Affiliate-Code
@@ -31,6 +34,8 @@ class AffiliateModule {
 	 */
 	public function register() {
 		( new Account() )->register();
+		( new AutoApply() )->register();
+		( new Guard() )->register();
 
 		// Die Rolle „Ambassador“ gibt es auch auf Installationen, die vor ihr eingerichtet wurden.
 		add_action( 'init', array( Roles::class, 'add_ambassador_role' ), 20 );

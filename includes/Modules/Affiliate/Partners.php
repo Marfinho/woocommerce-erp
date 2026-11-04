@@ -55,6 +55,7 @@ class Partners {
 					'angelegt'  => '',
 					'coupon_id' => 0,
 					'user_id'   => 0,
+					'kampagne_id' => 0,
 				),
 				$p,
 				array( 'id' => (int) $p['id'] )
@@ -74,6 +75,45 @@ class Partners {
 		$all = self::all();
 
 		return isset( $all[ (int) $id ] ) ? $all[ (int) $id ] : null;
+	}
+
+	/**
+	 * Partner zu einem Code (Groß- und Kleinschreibung egal).
+	 *
+	 * @param string $code Code.
+	 * @return array|null
+	 */
+	public static function by_code( $code ) {
+		foreach ( self::all() as $p ) {
+			if ( 0 === strcasecmp( $p['code'], (string) $code ) ) {
+				return $p;
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Alle E-Mail-Adressen, die zum Partner gehören: Kontaktadresse und Adresse des Kontos.
+	 *
+	 * @param array $p Partner.
+	 * @return string[]
+	 */
+	public static function own_emails( array $p ) {
+		$out = array();
+
+		if ( '' !== (string) $p['email'] ) {
+			$out[] = $p['email'];
+		}
+
+		if ( ! empty( $p['user_id'] ) ) {
+			$u = get_userdata( (int) $p['user_id'] );
+			if ( $u && $u->user_email ) {
+				$out[] = $u->user_email;
+			}
+		}
+
+		return $out;
 	}
 
 	/**
@@ -439,9 +479,10 @@ class Partners {
 	 * @param float  $betrag  Betrag in Euro (negativ = Korrektur).
 	 * @param string $datum   Datum Y-m-d.
 	 * @param string $notiz   Notiz.
+	 * @param int    $beleg   Beleg in der Buchhaltung (0 = nicht gebucht).
 	 * @return array Die gespeicherte Zeile.
 	 */
-	public static function add_payout( $partner, $betrag, $datum, $notiz ) {
+	public static function add_payout( $partner, $betrag, $datum, $notiz, $beleg = 0 ) {
 		$list   = self::payouts();
 		$ids    = array_map(
 			function ( $r ) {
@@ -456,12 +497,38 @@ class Partners {
 			'datum'   => $datum,
 			'notiz'   => $notiz,
 			'user'    => get_current_user_id(),
+			'beleg'   => (int) $beleg,
+			'storniert' => false,
+			'grund'   => '',
 		);
 		$list[] = $row;
 
 		update_option( self::OPTION_PAYOUTS, $list, false );
 
 		return $row;
+	}
+
+	/**
+	 * Eine Auszahlung als storniert markieren. Die Zeile bleibt stehen.
+	 *
+	 * @param int    $payout_id Kennung der Auszahlung.
+	 * @param string $grund     Begründung.
+	 * @return array|null Die Zeile oder null, wenn es sie nicht gibt oder sie schon storniert ist.
+	 */
+	public static function cancel_payout( $payout_id, $grund ) {
+		$list = self::payouts();
+
+		foreach ( $list as $i => $r ) {
+			if ( (int) $r['id'] === (int) $payout_id && empty( $r['storniert'] ) ) {
+				$list[ $i ]['storniert'] = true;
+				$list[ $i ]['grund']     = $grund;
+				update_option( self::OPTION_PAYOUTS, $list, false );
+
+				return $list[ $i ];
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -546,6 +613,21 @@ class Partners {
 
 		if ( $changed ) {
 			update_option( self::OPTION_REQUESTS, $list, false );
+		}
+	}
+
+	/**
+	 * Die Kostenstelle eines Partners festhalten.
+	 *
+	 * @param int $id       Partner.
+	 * @param int $kampagne Kostenstelle.
+	 */
+	public static function set_kampagne( $id, $kampagne ) {
+		$all = self::all();
+
+		if ( isset( $all[ (int) $id ] ) ) {
+			$all[ (int) $id ]['kampagne_id'] = (int) $kampagne;
+			update_option( self::OPTION_PARTNERS, array_values( $all ), false );
 		}
 	}
 }
