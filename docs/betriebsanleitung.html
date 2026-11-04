@@ -2454,7 +2454,7 @@ svg.sv{display:block;width:100%;height:auto}
 <figure class="schaubild" role="group" aria-label="Schaubild: Vom Influencer zur Auszahlung">
 <div class="sb-kopf">Schaubild · Vom Influencer zur Auszahlung</div>
 <ol class="fluss c5">
-	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Gesamtanteil, Konto-E-Mail</span></li>
+	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Gesamtanteil, Konto im Shop (Pflicht)</span></li>
 	<li class="ext"><b>Ambassador teilt auf</b><span>Rabatt für Follower und eigene Provision, z. B. 10 + 10</span></li>
 	<li class="erp"><b>Gutschein, Rolle, Link und Willkommensmail</b><span>der Code gilt sofort, die Mail sagt Danke und erklärt alles</span></li>
 	<li class="ext"><b>Influencer teilt den Link</b><span>Zuschauer kaufen mit dem Rabatt</span></li>
@@ -2486,25 +2486,25 @@ svg.sv{display:block;width:100%;height:auto}
 </div>
 
 <h3>Den Influencer zum Ambassador machen</h3>
-<p>Im selben Dialog gibt es das Feld <strong>Konto im Shop</strong>. Trägst du dort die E-Mail-Adresse ein, verknüpft das ERP den Affiliate mit diesem Konto und gibt ihm zusätzlich die Rolle <strong>Ambassador</strong>. Seine Kundenrolle bleibt, er kann also ganz normal weiter einkaufen.</p>
+<p>Im selben Dialog steht das Pflichtfeld <strong>Konto im Shop</strong>: <strong>Ohne Konto lässt sich kein Affiliate anlegen.</strong> Mit der E-Mail-Adresse verknüpft das ERP den Affiliate mit diesem Konto und gibt ihm zusätzlich die Rolle <strong>Ambassador</strong>. Seine Kundenrolle bleibt, er kann also ganz normal weiter einkaufen.</p>
 <ul>
 <li><strong>Hat er schon ein Konto</strong> (er hat sich im Shop registriert oder schon einmal bestellt), reicht die Adresse.</li>
 <li><strong>Hat er noch keins:</strong> Setze den Haken <em>Konto anlegen und Einladung mailen</em>. Das ERP legt das Konto an, und er bekommt die Mail von WordPress mit dem Link, ein Passwort zu setzen. Die Mail geht sofort raus.</li>
-<li><strong>Zugang entziehen:</strong> Feld leeren und speichern. Die Rolle wird ihm abgenommen, der Code und die Zahlen bleiben.</li>
-<li>Ein Konto gehört zu genau einem Affiliate. Wird das Konto in WordPress gelöscht, löst sich die Verknüpfung; der Affiliate bleibt.</li>
+<li><strong>Anderes Konto:</strong> Trage beim Ändern eine andere Adresse ein; die Rolle geht vom alten auf das neue Konto. <strong>Zugang beenden:</strong> Nimm bei „Code ist aktiv“ den Haken heraus. Der Gutschein wird abgeschaltet, der Ambassador kann keine Auszahlung mehr anfordern, die Zahlen bleiben.</li>
+<li>Ein Konto gehört zu genau einem Affiliate. Wird das Konto in WordPress gelöscht, löst sich die Verknüpfung; der Affiliate bleibt und braucht beim nächsten Speichern ein neues Konto.</li>
 </ul>
 <p>Die Rolle selbst gibt <strong>keine</strong> Rechte im ERP oder im wp-admin, nur das Lesen. Sie ist das Kennzeichen; ob jemand die Seite sieht, hängt an der Verknüpfung mit dem Affiliate.</p>
 
 <h3>Die Willkommensmail</h3>
-<p>Im Dialog steht der Haken <strong>Willkommensmail mit Dank und Anleitung senden</strong>, bei neuen Affiliates vorgesetzt. Beim Speichern geht die Mail an das verknüpfte Konto, sonst an die Kontaktadresse. Sie sagt kurz und herzlich Danke und was es dir bedeutet, und erklärt in vier Schritten, wie es funktioniert: der Code mit Rabatt und Provision, der Link, der Bereich unter „Mein Konto“ mit der Aufteilung, und die Auszahlung mit Wartezeit und Mindestbetrag. Dazu die Spielregel zu Eigenkäufen und der Hinweis auf eine Rechnung bei gewerblichen Influencern. Wurde das Konto gerade angelegt, steht darin auch, dass noch eine Mail von WordPress mit dem Link zum Passwort kommt.</p>
+<p>Im Dialog steht der Haken <strong>Willkommensmail mit Dank und Anleitung senden</strong>, bei neuen Affiliates vorgesetzt. Beim Speichern geht die Mail an die Adresse des Kontos. Sie sagt kurz und herzlich Danke und was es dir bedeutet, und erklärt in vier Schritten, wie es funktioniert: der Code mit Rabatt und Provision, der Link, der Bereich unter „Mein Konto“ mit der Aufteilung, und die Auszahlung mit Wartezeit und Mindestbetrag. Dazu die Spielregel zu Eigenkäufen und der Hinweis auf eine Rechnung bei gewerblichen Influencern. Wurde das Konto gerade angelegt, steht darin auch, dass noch eine Mail von WordPress mit dem Link zum Passwort kommt.</p>
 <ul>
 <li><strong>Noch einmal senden:</strong> Beim Ändern den Haken setzen. Dort steht, wann die Mail zuletzt rausging.</li>
 <li><strong>Text ändern:</strong> Der Wortlaut ist die Vorlage <em>Ambassador: Willkommen und Danke</em> unter <span class="weg">Einstellungen → E-Mail-Vorlagen</span>. Die Platzhalter wie <code>{vorname}</code>, <code>{code}</code> und <code>{link}</code> stehen darunter.</li>
-<li>Ohne E-Mail-Adresse (weder Konto noch Kontaktadresse) kann nichts gesendet werden; das ERP sagt es dir beim Speichern.</li>
+<li>Die Mail geht immer an die Adresse des Kontos, denn ein Konto ist Pflicht.</li>
 </ul>
 
 <h3>Der Ambassador teilt selbst auf</h3>
-<p>Du legst den <strong>Gesamtanteil</strong> fest, zum Beispiel 20 %. Der Influencer entscheidet unter „Mein Konto → Ambassador“, wie viel davon seine Follower als Rabatt bekommen und wie viel er selbst behält: 10 und 10, 5 und 15, 0 und 20 oder 20 und 0. Die Summe bleibt immer der Gesamtanteil. Er tippt den Rabatt ein, die Provision rechnet die Seite mit. Die Änderung gilt sofort für den Gutschein im Shop, aber nur für neue Bestellungen: Bezahlte Bestellungen behalten ihren Satz. Jede Änderung steht im Ereignisprotokoll. Ein Affiliate ohne Konto, oder mit abgeschaltetem Haken, kann nichts verstellen; du änderst die Aufteilung dann selbst über <strong>Ändern</strong>.</p>
+<p>Du legst den <strong>Gesamtanteil</strong> fest, zum Beispiel 20 %. Der Influencer entscheidet unter „Mein Konto → Ambassador“, wie viel davon seine Follower als Rabatt bekommen und wie viel er selbst behält: 10 und 10, 5 und 15, 0 und 20 oder 20 und 0. Die Summe bleibt immer der Gesamtanteil. Er tippt den Rabatt ein, die Provision rechnet die Seite mit. Die Änderung gilt sofort für den Gutschein im Shop, aber nur für neue Bestellungen: Bezahlte Bestellungen behalten ihren Satz. Jede Änderung steht im Ereignisprotokoll. Mit abgeschaltetem Haken kann der Affiliate nichts verstellen; du änderst die Aufteilung dann selbst über <strong>Ändern</strong>.</p>
 
 <h3>Was der Ambassador unter „Mein Konto“ sieht</h3>
 <p>Im Shop erscheint für ihn im Konto der Punkt <strong>Ambassador</strong> (andere Kunden sehen ihn nicht). Dort stehen:</p>

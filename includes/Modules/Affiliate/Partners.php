@@ -148,7 +148,7 @@ class Partners {
 	 * Neuen Partner anlegen und den Gutschein dazu erzeugen.
 	 *
 	 * @param array $in    Eingaben, siehe Rules::clean_partner().
-	 * @param array $konto Benutzerkonto: `email` und `anlegen` (siehe resolve_konto()).
+	 * @param array $konto Benutzerkonto, Pflicht: `email` und `anlegen` (siehe resolve_konto()).
 	 * @return array [ 'ok' => bool, 'errors' => Meldungen, 'id' => int ].
 	 */
 	public static function create( array $in, array $konto = array() ) {
@@ -157,6 +157,9 @@ class Partners {
 		$row    = $clean['row'];
 		$user   = self::resolve_konto( $konto, 0 );
 		$errors = array_merge( $errors, $user['errors'] );
+		if ( ! $user['errors'] ) {
+			$errors = array_merge( $errors, Rules::konto_errors( $user['user_id'], $user['create'] ) );
+		}
 
 		if ( ! $errors ) {
 			if ( self::code_used( $row['code'] ) || ( function_exists( 'wc_get_coupon_id_by_code' ) && wc_get_coupon_id_by_code( $row['code'] ) ) ) {
@@ -245,6 +248,9 @@ class Partners {
 				'errors'  => array(),
 			);
 		$errors = array_merge( $errors, $user['errors'] );
+		if ( ! $user['errors'] ) {
+			$errors = array_merge( $errors, Rules::konto_errors( $user['user_id'], $user['create'] ) );
+		}
 
 		if ( $errors ) {
 			return array(

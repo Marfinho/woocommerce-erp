@@ -35,8 +35,7 @@
 
 		var name = h('input', { class: 'field', type: 'text', maxlength: '80', value: p.name, placeholder: 'z. B. Anna Beispiel', required: 'required' });
 		var plattform = h('input', { class: 'field', type: 'text', maxlength: '120', value: p.plattform, placeholder: 'z. B. Instagram @anna.rides' });
-		var email = h('input', { class: 'field', type: 'email', value: p.email, placeholder: 'für Rückfragen und die Abrechnung' });
-		var konto = h('input', { class: 'field', type: 'email', value: p.konto || '', placeholder: 'E-Mail des Shop-Kontos, z. B. anna@example.com' });
+		var konto = h('input', { class: 'field', type: 'email', value: p.konto || '', placeholder: 'E-Mail des Shop-Kontos, z. B. anna@example.com', required: 'required' });
 		var anlegen = h('input', { type: 'checkbox' });
 		// Willkommensmail: bei neuen Affiliates und solchen, die noch keine bekamen, vorgesetzt.
 		var willkommen = h('input', { type: 'checkbox', checked: neu || !p.willkommen });
@@ -68,20 +67,19 @@
 		var form = h('form', null,
 			field(ui, 'Name', name),
 			field(ui, 'Kanal und Profil', plattform),
-			field(ui, 'E-Mail', email, 'Keine Bankdaten hier eintragen – die gehören nicht ins ERP.'),
-			field(ui, 'Konto im Shop (macht ihn zum Ambassador)', h('div', null, konto,
+			field(ui, 'Konto im Shop (Pflicht)', h('div', null, konto,
 				h('label', { style: 'display:block;margin-top:6px' }, anlegen, ' Konto anlegen und Einladung mailen, falls es noch keins gibt')),
-				'Mit dem Konto sieht der Influencer unter „Mein Konto → Ambassador“ seine Zahlen und kann eine Auszahlung anfordern. Leer lassen oder löschen entzieht ihm den Zugang.'),
+				'Das Konto macht den Influencer zum Ambassador: Er sieht unter „Mein Konto → Ambassador“ seine Zahlen und kann eine Auszahlung anfordern. Hier steht auch die Adresse für die Mails. Keine Bankdaten hier eintragen – die gehören nicht ins ERP.'),
 			neu ? field(ui, 'Rabattcode', code, 'Wird als Gutschein im Shop angelegt. Danach nicht mehr änderbar, nur abschaltbar – er steht in Videos und Beschreibungen.')
 				: field(ui, 'Rabattcode', h('div', null, h('code', null, p.code)), 'Der Code bleibt, wie er ist.'),
 			field(ui, 'Gesamtanteil (%)', gesamt, 'Was der Shop für diesen Affiliate hergibt, zum Beispiel 20. Er wird zwischen Kunden-Rabatt und Provision aufgeteilt.'),
 			field(ui, 'Davon Rabatt für Kunden (%)', rabatt, 'Z. B. 10 bei einem Gesamtanteil von 20. Bei 0 bekommen Kunden nichts, der Code ordnet dann nur Bestellungen zu.'),
 			h('p', null, 'Provision für den Affiliate: ', rest, h('small', { class: 'muted', style: 'display:block' }, 'Gesamtanteil minus Rabatt, auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand.')),
-			h('label', { style: 'display:block;margin-bottom:10px' }, teilen, ' Der Affiliate darf die Aufteilung selbst bestimmen (unter „Mein Konto“, braucht ein verknüpftes Konto)'),
+			h('label', { style: 'display:block;margin-bottom:10px' }, teilen, ' Der Affiliate darf die Aufteilung selbst bestimmen (unter „Mein Konto“)'),
 			h('label', { style: 'display:block;margin-bottom:10px' }, aktiv, ' Code ist aktiv (Kunden können ihn einlösen)'),
 			h('label', { style: 'display:block;margin-bottom:10px' }, willkommen,
 				' Willkommensmail mit Dank und Anleitung senden',
-				h('small', { class: 'muted', style: 'display:block' }, (!neu && p.willkommen) ? 'Schon gesendet am ' + dateDe(p.willkommen) + '. Mit dem Haken geht sie noch einmal raus.' : 'Geht an das Konto, sonst an die Kontaktadresse. Der Text steht unter Einstellungen → E-Mail-Vorlagen.')),
+				h('small', { class: 'muted', style: 'display:block' }, (!neu && p.willkommen) ? 'Schon gesendet am ' + dateDe(p.willkommen) + '. Mit dem Haken geht sie noch einmal raus.' : 'Geht an die Adresse des Kontos. Der Text steht unter Einstellungen → E-Mail-Vorlagen.')),
 			field(ui, 'Notiz', notiz),
 			err,
 			h('div', { style: 'display:flex;gap:8px;margin-top:10px' }, save)
@@ -93,7 +91,7 @@
 			ev.preventDefault();
 			err.hidden = true;
 			save.disabled = true;
-			var body = { name: name.value, plattform: plattform.value, email: email.value, gesamt: gesamt.value, rabatt: rabatt.value, teilen: teilen.checked, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked, willkommen: willkommen.checked };
+			var body = { name: name.value, plattform: plattform.value, email: p.email || '', gesamt: gesamt.value, rabatt: rabatt.value, teilen: teilen.checked, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked, willkommen: willkommen.checked };
 			if (neu) { body.code = code.value; } else { body.id = p.id; }
 			ui.api('affiliates', { method: 'POST', body: body }).then(function (res) {
 				ui.toast(res.message);

@@ -257,6 +257,14 @@ class AffiliateTest extends TestCase {
 		$this->assertSame( array(), Rules::check_request( 20, 20, false, 'x' )['errors'] );
 	}
 
+	public function test_konto_ist_pflicht() {
+		// Weder vorhandenes Konto noch Anlegen: Fehler.
+		$this->assertCount( 1, Rules::konto_errors( 0, false ) );
+		// Vorhandenes Konto oder anzulegendes Konto: in Ordnung.
+		$this->assertSame( array(), Rules::konto_errors( 12, false ) );
+		$this->assertSame( array(), Rules::konto_errors( 0, true ) );
+	}
+
 	public function test_zeitraum() {
 		$this->assertSame( 90, Rules::clean_days( null ) );
 		$this->assertSame( 90, Rules::clean_days( '7' ) );

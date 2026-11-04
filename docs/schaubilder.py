@@ -361,7 +361,7 @@ sb('vers-nachkauf', 'Wer bald wieder bestellt',
    ok('Oder „Ruhe“', 'wer sich gemeldet hat, wird nicht erneut vorgeschlagen'))
 
 sb('vers-affiliates', 'Vom Influencer zur Auszahlung',
-   du('Affiliate anlegen', 'Name, Code, Gesamtanteil, Konto-E-Mail'),
+   du('Affiliate anlegen', 'Name, Code, Gesamtanteil, Konto im Shop (Pflicht)'),
    ext('Ambassador teilt auf', 'Rabatt für Follower und eigene Provision, z. B. 10 + 10'),
    erp('Gutschein, Rolle, Link und Willkommensmail', 'der Code gilt sofort, die Mail sagt Danke und erklärt alles'),
    ext('Influencer teilt den Link', 'Zuschauer kaufen mit dem Rabatt'),

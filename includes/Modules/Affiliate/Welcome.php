@@ -58,25 +58,18 @@ class Welcome {
 	public static function placeholders( array $p, $konto_neu = false ) {
 		$wait     = max( 0, (int) Settings::get( 'affiliate_wartezeit_tage', 30 ) );
 		$min      = number_format( (float) Settings::get( 'affiliate_min_auszahlung', 20 ), 2, ',', '.' );
-		$has_user = ! empty( $p['user_id'] );
 		$account  = function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( Account::ENDPOINT ) : home_url( '/' );
 		$parts    = preg_split( '/\s+/', trim( (string) $p['name'] ) );
 		$first    = $parts && '' !== $parts[0] ? $parts[0] : (string) $p['name'];
 
-		if ( $has_user ) {
-			$bereich  = __( "3. DEIN BEREICH: ", 'lindenweg16' ) . $account . "\n" . __( 'Melde Dich an, und Du siehst Bestellungen, Warenwert und Provision zu Deinem Code.', 'lindenweg16' );
-			if ( ! empty( $p['teilen'] ) && $p['gesamt'] > 0 ) {
-				/* translators: %s: Gesamtanteil in Prozent. */
-				$bereich .= ' ' . sprintf( __( 'Und das Beste: Wie viel Rabatt Deine Follower bekommen und wie viel Du behältst, entscheidest Du selbst, zum Beispiel 10 und 10 oder 5 und 15. Die Summe bleibt %s %%.', 'lindenweg16' ), self::pct( $p['gesamt'] ) );
-			}
-
-			/* translators: 1: Tage, 2: Mindestbetrag. */
-			$auszahlung = sprintf( __( "4. DEINE AUSZAHLUNG\nDeine Provision wird %1\$s Tage nach der Bestellung auszahlbar, so lange kann noch etwas zurückgeschickt werden. Ab %2\$s € forderst Du sie in Deinem Bereich mit einem Klick an und sagst uns, wohin das Geld soll. Wir überweisen und tragen es ein, Du siehst alles dort.", 'lindenweg16' ), $wait, $min );
-		} else {
-			$bereich = __( "3. DEIN BEREICH\nEin Konto im Shop mit Deinen Zahlen richten wir Dir noch ein. Bis dahin sagen wir Dir Bescheid, wie es läuft.", 'lindenweg16' );
-			/* translators: %s: Tage. */
-			$auszahlung = sprintf( __( "4. DEINE AUSZAHLUNG\nDeine Provision wird %s Tage nach der Bestellung auszahlbar, so lange kann noch etwas zurückgeschickt werden. Schreib uns einfach, wenn Du sie ausgezahlt haben möchtest.", 'lindenweg16' ), $wait );
+		$bereich = __( '3. DEIN BEREICH: ', 'lindenweg16' ) . $account . "\n" . __( 'Melde Dich an, und Du siehst Bestellungen, Warenwert und Provision zu Deinem Code.', 'lindenweg16' );
+		if ( ! empty( $p['teilen'] ) && $p['gesamt'] > 0 ) {
+			/* translators: %s: Gesamtanteil in Prozent. */
+			$bereich .= ' ' . sprintf( __( 'Und das Beste: Wie viel Rabatt Deine Follower bekommen und wie viel Du behältst, entscheidest Du selbst, zum Beispiel 10 und 10 oder 5 und 15. Die Summe bleibt %s %%.', 'lindenweg16' ), self::pct( $p['gesamt'] ) );
 		}
+
+		/* translators: 1: Tage, 2: Mindestbetrag. */
+		$auszahlung = sprintf( __( "4. DEINE AUSZAHLUNG\nDeine Provision wird %1\$s Tage nach der Bestellung auszahlbar, so lange kann noch etwas zurückgeschickt werden. Ab %2\$s € forderst Du sie in Deinem Bereich mit einem Klick an und sagst uns, wohin das Geld soll. Wir überweisen und tragen es ein, Du siehst alles dort.", 'lindenweg16' ), $wait, $min );
 
 		return array(
 			'{vorname}'       => $first,
