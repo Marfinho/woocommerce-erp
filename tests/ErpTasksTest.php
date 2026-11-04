@@ -75,4 +75,27 @@ class ErpTasksTest extends TestCase {
 
 		$this->assertStringContainsString( "if ( ! \$everything && Access::can( 'finanzen.buchhaltung' ) )", $src );
 	}
+
+	public function test_auszahlung_aufgabe() {
+		$this->assertNull( Tasks::auszahlung_task( array(), true ) );
+
+		$offen = array(
+			array( 'name' => 'Anna', 'betrag' => 35.5 ),
+			array( 'name' => 'Ben', 'betrag' => 20.0 ),
+			array( 'name' => 'Cleo', 'betrag' => 10.0 ),
+		);
+
+		$t = Tasks::auszahlung_task( $offen, true );
+		$this->assertSame( 'auszahlung', $t['kind'] );
+		$this->assertSame( '3 Affiliate-Auszahlungen angefordert', $t['title'] );
+		$this->assertSame( 'Anna, Ben … · 65,50 €', $t['sub'] );
+		$this->assertSame( '#/seite/affiliates', $t['href'] );
+
+		$this->assertSame( '1 Affiliate-Auszahlung angefordert', Tasks::auszahlung_task( array( $offen[0] ), true )['title'] );
+
+		// An der Wand keine Namen und keine Beträge.
+		$wand = Tasks::auszahlung_task( $offen, false );
+		$this->assertStringNotContainsString( 'Anna', $wand['sub'] );
+		$this->assertStringNotContainsString( '€', $wand['sub'] );
+	}
 }

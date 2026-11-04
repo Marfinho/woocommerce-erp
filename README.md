@@ -697,7 +697,8 @@ vorhanden ist – nicht, was geplant war.
   Gesamtanteil je Partner (`gesamt`), davon Rabatt (`rabatt`) und Rest Provision; der Ambassador
   teilt unter Mein Konto selbst auf (`Partners::set_split()`, Flag `teilen`); der Satz je
   Bestellung ist Gesamtanteil minus tatsächlichem Rabatt (`Rules::rate_from_discount()`).
-  Willkommensmail (`Welcome`, Vorlage `ambassador_willkommen` in `MailTemplate`) bei der Aufnahme.
+  Willkommensmail (`Welcome`, Vorlage `ambassador_willkommen` in `MailTemplate`) bei der Aufnahme. Konto im Shop ist Pflicht.
+  Live-Bildschirm: Block `affiliates` (`Live::affiliates()`, Karte `lv-aff` in `live.js`).
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

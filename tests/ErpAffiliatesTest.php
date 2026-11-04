@@ -88,6 +88,20 @@ class ErpAffiliatesTest extends TestCase {
 		}
 	}
 
+	public function test_live_bildschirm_zeigt_die_ambassadors() {
+		$php = file_get_contents( dirname( __DIR__ ) . '/includes/Erp/Pages/Live.php' );
+		$js  = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/live.js' );
+
+		// Der Block hängt am Recht, auf dem Bildschirm sind alle Blöcke sichtbar.
+		$this->assertMatchesRegularExpression( "/\\\$all \\|\\| Access::can\\( 'verkauf\\.affiliates' \\)/", $php );
+		$this->assertStringContainsString( "\$blocks['affiliates']", $php );
+		$this->assertStringContainsString( 'b.affiliates', $js );
+		$this->assertStringContainsString( "'lv-aff'", $js );
+
+		// Keine Zahlungsangaben und keine Kundendaten auf der Wand.
+		$this->assertStringNotContainsString( "'ziel'", substr( $php, strpos( $php, 'function affiliates' ) ) );
+	}
+
 	public function test_seite_ist_als_script_registriert() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/affiliates.js' );
 
