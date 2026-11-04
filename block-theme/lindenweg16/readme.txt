@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -249,9 +249,13 @@ in languages/lindenweg16.pot.
 Filter: lindenweg16_free_shipping_threshold, lindenweg16_delivery_time,
 lindenweg16_shipping_page_url, lindenweg16_has_legal_plugin,
 lindenweg16_germanized_price_blocks, lindenweg16_newsletter_enabled.
+Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.0 =
+* Shop: redaktionelles Raster – erstes Produkt groß über zwei Spalten, dazwischen ein Zitat und ein Hinweis; die Einschübe erscheinen nur auf der ersten Seite ohne Filter und lassen sich über den Filter lindenweg16_shop_inserts ändern oder abschalten
 
 = 1.8.0 =
 * Mein Konto: Menü stand auf manchen Seiten rechts und der Inhalt in der schmalen linken Spalte – WooCommerces Clearfix wurde im Grid zur unsichtbaren ersten Zelle
