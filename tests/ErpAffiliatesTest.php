@@ -63,6 +63,31 @@ class ErpAffiliatesTest extends TestCase {
 		$this->assertStringContainsString( 'Rules::is_self_purchase', file_get_contents( $dir . 'Sales.php' ) );
 	}
 
+	public function test_willkommensmail_hat_vorlage_und_alle_platzhalter_sind_dokumentiert() {
+		require_once dirname( __DIR__ ) . '/includes/Core/MailTemplate.php';
+
+		$templates = \Lindenweg16\Core\MailTemplate::templates();
+		$this->assertArrayHasKey( 'ambassador_willkommen', $templates );
+
+		$tpl = $templates['ambassador_willkommen'];
+		$this->assertStringContainsString( 'DANKE', $tpl['text'] );
+
+		// Jeder Platzhalter im Text steht in der Dokumentation, außer dem allgemeinen {firmenname}.
+		preg_match_all( '/\{[a-z_]+\}/', $tpl['betreff'] . $tpl['text'], $m );
+		foreach ( array_unique( $m[0] ) as $ph ) {
+			if ( '{firmenname}' !== $ph ) {
+				$this->assertStringContainsString( $ph, $tpl['platzhalter'], $ph . ' fehlt in der Platzhalter-Liste' );
+			}
+		}
+
+		// Und die Klasse füllt jeden dokumentierten Platzhalter.
+		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Affiliate/Welcome.php' );
+		preg_match_all( '/\{[a-z_]+\}/', $tpl['platzhalter'], $doc );
+		foreach ( $doc[0] as $ph ) {
+			$this->assertStringContainsString( "'" . $ph . "'", $src, $ph . ' wird in Welcome.php nicht gefüllt' );
+		}
+	}
+
 	public function test_seite_ist_als_script_registriert() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/affiliates.js' );
 

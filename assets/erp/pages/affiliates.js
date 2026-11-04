@@ -38,6 +38,8 @@
 		var email = h('input', { class: 'field', type: 'email', value: p.email, placeholder: 'für Rückfragen und die Abrechnung' });
 		var konto = h('input', { class: 'field', type: 'email', value: p.konto || '', placeholder: 'E-Mail des Shop-Kontos, z. B. anna@example.com' });
 		var anlegen = h('input', { type: 'checkbox' });
+		// Willkommensmail: bei neuen Affiliates und solchen, die noch keine bekamen, vorgesetzt.
+		var willkommen = h('input', { type: 'checkbox', checked: neu || !p.willkommen });
 		var code = h('input', { class: 'field', type: 'text', maxlength: '32', value: p.code, placeholder: 'z. B. ANNA10', style: 'text-transform:uppercase' });
 		var gesamt = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.gesamt != null ? p.gesamt : (p.rabatt + p.provision)).replace('.', ',') });
 		var rabatt = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.rabatt).replace('.', ',') });
@@ -77,6 +79,9 @@
 			h('p', null, 'Provision für den Affiliate: ', rest, h('small', { class: 'muted', style: 'display:block' }, 'Gesamtanteil minus Rabatt, auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand.')),
 			h('label', { style: 'display:block;margin-bottom:10px' }, teilen, ' Der Affiliate darf die Aufteilung selbst bestimmen (unter „Mein Konto“, braucht ein verknüpftes Konto)'),
 			h('label', { style: 'display:block;margin-bottom:10px' }, aktiv, ' Code ist aktiv (Kunden können ihn einlösen)'),
+			h('label', { style: 'display:block;margin-bottom:10px' }, willkommen,
+				' Willkommensmail mit Dank und Anleitung senden',
+				h('small', { class: 'muted', style: 'display:block' }, (!neu && p.willkommen) ? 'Schon gesendet am ' + dateDe(p.willkommen) + '. Mit dem Haken geht sie noch einmal raus.' : 'Geht an das Konto, sonst an die Kontaktadresse. Der Text steht unter Einstellungen → E-Mail-Vorlagen.')),
 			field(ui, 'Notiz', notiz),
 			err,
 			h('div', { style: 'display:flex;gap:8px;margin-top:10px' }, save)
@@ -88,7 +93,7 @@
 			ev.preventDefault();
 			err.hidden = true;
 			save.disabled = true;
-			var body = { name: name.value, plattform: plattform.value, email: email.value, gesamt: gesamt.value, rabatt: rabatt.value, teilen: teilen.checked, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked };
+			var body = { name: name.value, plattform: plattform.value, email: email.value, gesamt: gesamt.value, rabatt: rabatt.value, teilen: teilen.checked, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked, willkommen: willkommen.checked };
 			if (neu) { body.code = code.value; } else { body.id = p.id; }
 			ui.api('affiliates', { method: 'POST', body: body }).then(function (res) {
 				ui.toast(res.message);

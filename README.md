@@ -697,6 +697,7 @@ vorhanden ist – nicht, was geplant war.
   Gesamtanteil je Partner (`gesamt`), davon Rabatt (`rabatt`) und Rest Provision; der Ambassador
   teilt unter Mein Konto selbst auf (`Partners::set_split()`, Flag `teilen`); der Satz je
   Bestellung ist Gesamtanteil minus tatsächlichem Rabatt (`Rules::rate_from_discount()`).
+  Willkommensmail (`Welcome`, Vorlage `ambassador_willkommen` in `MailTemplate`) bei der Aufnahme.
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

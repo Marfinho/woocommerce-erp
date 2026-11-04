@@ -57,6 +57,7 @@ class Partners {
 					'coupon_id' => 0,
 					'user_id'   => 0,
 					'kampagne_id' => 0,
+					'willkommen_ts' => 0,
 				),
 				$p,
 				array( 'id' => (int) $p['id'] )
@@ -207,9 +208,10 @@ class Partners {
 		self::sync_role( 0, $user_id );
 
 		return array(
-			'ok'     => true,
-			'errors' => array(),
-			'id'     => $id,
+			'ok'        => true,
+			'errors'    => array(),
+			'id'        => $id,
+			'konto_neu' => ! empty( $user['create'] ) && $user_id > 0,
 		);
 	}
 
@@ -267,8 +269,9 @@ class Partners {
 		self::sync_role( $old, $user_id );
 
 		return array(
-			'ok'     => true,
-			'errors' => array(),
+			'ok'        => true,
+			'errors'    => array(),
+			'konto_neu' => ! empty( $user['create'] ) && $user_id > 0,
 		);
 	}
 
@@ -685,5 +688,19 @@ class Partners {
 			'rabatt'    => $split['rabatt'],
 			'provision' => $split['provision'],
 		);
+	}
+
+	/**
+	 * Festhalten, dass die Willkommensmail rausgegangen ist.
+	 *
+	 * @param int $id Partner.
+	 */
+	public static function mark_welcomed( $id ) {
+		$all = self::all();
+
+		if ( isset( $all[ (int) $id ] ) ) {
+			$all[ (int) $id ]['willkommen_ts'] = time();
+			update_option( self::OPTION_PARTNERS, array_values( $all ), false );
+		}
 	}
 }

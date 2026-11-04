@@ -27,6 +27,7 @@ use Lindenweg16\Modules\Affiliate\Booking;
 use Lindenweg16\Modules\Affiliate\Partners;
 use Lindenweg16\Modules\Affiliate\Rules;
 use Lindenweg16\Modules\Affiliate\Sales;
+use Lindenweg16\Modules\Affiliate\Welcome;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -193,6 +194,7 @@ class Affiliates {
 				'email'     => $p['email'],
 				'code'      => $p['code'],
 				'link'      => AutoApply::link( $p['code'] ),
+				'willkommen' => $p['willkommen_ts'] ? wp_date( 'Y-m-d', (int) $p['willkommen_ts'] ) : '',
 				'gesamt'    => (float) $p['gesamt'],
 				'teilen'    => (bool) $p['teilen'],
 				'rabatt'    => (float) $p['rabatt'],
@@ -315,13 +317,26 @@ class Affiliates {
 			);
 		}
 
-		$saved = $id > 0 ? $id : $result['id'];
+		$saved   = $id > 0 ? $id : $result['id'];
+		$message = $id > 0 ? __( 'Gespeichert.', 'lindenweg16' ) : __( 'Affiliate angelegt. Der Rabattcode gilt ab sofort im Shop.', 'lindenweg16' );
 		AuditLog::record( $id > 0 ? 'affiliate_geaendert' : 'affiliate_angelegt', 'affiliate', $saved );
+
+		// Willkommensmail, wenn gewünscht.
+		if ( ! empty( $in['willkommen'] ) && 'false' !== $in['willkommen'] ) {
+			$p = Partners::get( $saved );
+
+			if ( $p && Welcome::send( $p, ! empty( $result['konto_neu'] ) ) ) {
+				AuditLog::record( 'affiliate_willkommen', 'affiliate', $saved );
+				$message .= ' ' . __( 'Die Willkommensmail ist raus.', 'lindenweg16' );
+			} elseif ( $p ) {
+				$message .= ' ' . __( 'Die Willkommensmail konnte nicht gesendet werden: Es ist keine gültige E-Mail-Adresse hinterlegt (Kontaktadresse oder Konto).', 'lindenweg16' );
+			}
+		}
 
 		return new WP_REST_Response(
 			array(
 				'ok'      => true,
-				'message' => $id > 0 ? __( 'Gespeichert.', 'lindenweg16' ) : __( 'Affiliate angelegt. Der Rabattcode gilt ab sofort im Shop.', 'lindenweg16' ),
+				'message' => $message,
 			)
 		);
 	}

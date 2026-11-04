@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.88.0">
+<meta name="anleitung-stand" content="0.89.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.88.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.89.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.88.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.89.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2456,7 +2456,7 @@ svg.sv{display:block;width:100%;height:auto}
 <ol class="fluss c5">
 	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Gesamtanteil, Konto-E-Mail</span></li>
 	<li class="ext"><b>Ambassador teilt auf</b><span>Rabatt für Follower und eigene Provision, z. B. 10 + 10</span></li>
-	<li class="erp"><b>Gutschein, Rolle und Link</b><span>der Code gilt sofort, der Link legt ihn in den Warenkorb</span></li>
+	<li class="erp"><b>Gutschein, Rolle, Link und Willkommensmail</b><span>der Code gilt sofort, die Mail sagt Danke und erklärt alles</span></li>
 	<li class="ext"><b>Influencer teilt den Link</b><span>Zuschauer kaufen mit dem Rabatt</span></li>
 	<li class="erp"><b>Bezahlte Bestellung zählt</b><span>Warenwert, Provision, Satz von damals; Eigenkäufe nicht</span></li>
 	<li class="warn"><b>Wartezeit</b><span>Provision wird erst nach 30 Tagen auszahlbar</span></li>
@@ -2494,6 +2494,14 @@ svg.sv{display:block;width:100%;height:auto}
 <li>Ein Konto gehört zu genau einem Affiliate. Wird das Konto in WordPress gelöscht, löst sich die Verknüpfung; der Affiliate bleibt.</li>
 </ul>
 <p>Die Rolle selbst gibt <strong>keine</strong> Rechte im ERP oder im wp-admin, nur das Lesen. Sie ist das Kennzeichen; ob jemand die Seite sieht, hängt an der Verknüpfung mit dem Affiliate.</p>
+
+<h3>Die Willkommensmail</h3>
+<p>Im Dialog steht der Haken <strong>Willkommensmail mit Dank und Anleitung senden</strong>, bei neuen Affiliates vorgesetzt. Beim Speichern geht die Mail an das verknüpfte Konto, sonst an die Kontaktadresse. Sie sagt kurz und herzlich Danke und was es dir bedeutet, und erklärt in vier Schritten, wie es funktioniert: der Code mit Rabatt und Provision, der Link, der Bereich unter „Mein Konto“ mit der Aufteilung, und die Auszahlung mit Wartezeit und Mindestbetrag. Dazu die Spielregel zu Eigenkäufen und der Hinweis auf eine Rechnung bei gewerblichen Influencern. Wurde das Konto gerade angelegt, steht darin auch, dass noch eine Mail von WordPress mit dem Link zum Passwort kommt.</p>
+<ul>
+<li><strong>Noch einmal senden:</strong> Beim Ändern den Haken setzen. Dort steht, wann die Mail zuletzt rausging.</li>
+<li><strong>Text ändern:</strong> Der Wortlaut ist die Vorlage <em>Ambassador: Willkommen und Danke</em> unter <span class="weg">Einstellungen → E-Mail-Vorlagen</span>. Die Platzhalter wie <code>{vorname}</code>, <code>{code}</code> und <code>{link}</code> stehen darunter.</li>
+<li>Ohne E-Mail-Adresse (weder Konto noch Kontaktadresse) kann nichts gesendet werden; das ERP sagt es dir beim Speichern.</li>
+</ul>
 
 <h3>Der Ambassador teilt selbst auf</h3>
 <p>Du legst den <strong>Gesamtanteil</strong> fest, zum Beispiel 20 %. Der Influencer entscheidet unter „Mein Konto → Ambassador“, wie viel davon seine Follower als Rabatt bekommen und wie viel er selbst behält: 10 und 10, 5 und 15, 0 und 20 oder 20 und 0. Die Summe bleibt immer der Gesamtanteil. Er tippt den Rabatt ein, die Provision rechnet die Seite mit. Die Änderung gilt sofort für den Gutschein im Shop, aber nur für neue Bestellungen: Bezahlte Bestellungen behalten ihren Satz. Jede Änderung steht im Ereignisprotokoll. Ein Affiliate ohne Konto, oder mit abgeschaltetem Haken, kann nichts verstellen; du änderst die Aufteilung dann selbst über <strong>Ändern</strong>.</p>
@@ -5206,7 +5214,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.88.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.89.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·
