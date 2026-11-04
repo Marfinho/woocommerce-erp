@@ -89,6 +89,21 @@ class Rules {
 	}
 
 	/**
+	 * Ein Affiliate braucht ein Konto im Shop: Ohne Konto gibt es keinen Ambassador-Bereich.
+	 *
+	 * @param int  $user_id Vorhandenes Konto (0 = keins).
+	 * @param bool $create  Das Konto soll angelegt werden.
+	 * @return string[] Meldungen; leer, wenn alles in Ordnung ist.
+	 */
+	public static function konto_errors( $user_id, $create ) {
+		if ( (int) $user_id > 0 || $create ) {
+			return array();
+		}
+
+		return array( __( 'Ein Konto im Shop ist Pflicht: Es macht den Affiliate zum Ambassador mit eigenem Bereich unter „Mein Konto“. Trage die E-Mail-Adresse ein; gibt es noch kein Konto, setze den Haken „Konto anlegen und Einladung mailen“.', 'lindenweg16' ) );
+	}
+
+	/**
 	 * Gesamtanteil in Rabatt für Kunden und Provision aufteilen.
 	 *
 	 * Der Gesamtanteil (zum Beispiel 20 %) ist das, was der Shop für diesen Affiliate hergibt.

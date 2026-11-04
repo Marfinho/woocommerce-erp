@@ -132,6 +132,12 @@ class MailTemplate {
 				'text'        => __( "Hallo {an},\n\n{von} schenkt Dir einen Gutschein über {betrag}.\n\n{text}\n\nGutscheincode: {code}\nGültig bis: {gueltig_bis}\n\nEinfach im Warenkorb unter \"Gutschein\" eingeben. Viel Freude damit!", 'lindenweg16' ),
 				'platzhalter' => '{von}, {an}, {text}, {code}, {betrag}, {gueltig_bis}',
 			),
+			'ambassador_willkommen' => array(
+				'label'       => __( 'Ambassador: Willkommen und Danke', 'lindenweg16' ),
+				'betreff'     => __( 'Danke, {vorname}! Willkommen im Ambassador-Programm', 'lindenweg16' ),
+				'text'        => __( "Hallo {vorname},\n\nDANKE! Wirklich. Schön, dass Du dabei bist.\n\nDu zeigst anderen, was wir mit Herzblut bauen, und das ist Gold wert. Ohne Leute wie Dich bleibt ein kleiner Shop ein Geheimtipp. Mit Dir wird er ein Gesprächsthema. Das bedeutet uns richtig viel.\n\nSo funktioniert's:\n\n1. DEIN CODE: {code}\nDeine Follower sparen {rabatt} % im Warenkorb. Du bekommst {provision} % vom Warenwert jeder Bestellung mit Deinem Code. Zusammen sind das {gesamt} %.\n\n2. DEIN LINK: {link}\nWer ihn öffnet, hat den Rabatt schon im Warenkorb, ganz ohne Code tippen. Perfekt für Stories, Bio und Videobeschreibung.\n\n{bereich}\n\n{auszahlung}\n\nFair Play: Käufe mit Deinem eigenen Code oder Deinen eigenen Adressen zählen nicht. Wer gewerblich unterwegs ist, schickt uns zur Auszahlung bitte eine Rechnung.\n\n{konto_hinweis}Fragen? Antworte einfach auf diese Mail.\n\nNoch einmal: Danke, dass Du das mit uns machst. Wir freuen uns riesig!\n\nHerzliche Grüße\n{firmenname}", 'lindenweg16' ),
+				'platzhalter' => '{vorname}, {code}, {link}, {rabatt}, {provision}, {gesamt}, {bereich}, {auszahlung}, {konto_hinweis}, {konto_url}, {wartezeit}, {mindestbetrag}',
+			),
 			'referral_review'    => array(
 				'label'       => __( 'Referral zur Prüfung (an Manager)', 'lindenweg16' ),
 				'betreff'     => __( '[{firmenname}] Referral zur Prüfung', 'lindenweg16' ),

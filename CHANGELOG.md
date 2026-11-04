@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.89.0] – 2026-11-04
+
+### Neu: Willkommensmail für Ambassadors
+- **Mail bei der Aufnahme:** Im Affiliate-Dialog gibt es den Haken „Willkommensmail mit Dank und Anleitung senden“ (bei neuen Affiliates vorgesetzt). Die Mail sagt Danke, was es uns bedeutet, und erklärt in vier Schritten: Code mit Rabatt und Provision, Link, Bereich unter Mein Konto mit der Aufteilung, Auszahlung mit Wartezeit und Mindestbetrag. Dazu Fair Play bei Eigenkäufen und der Hinweis auf eine Rechnung bei gewerblichen Influencern.
+- **Konto ist Pflicht:** Ein Affiliate lässt sich nur mit einem Konto im Shop anlegen (vorhandenes Konto per E-Mail oder mit dem Haken „Konto anlegen und Einladung mailen“). Das gilt auch beim Ändern: Affiliates aus früheren Versionen ohne Konto bekommen beim nächsten Speichern eines. Das Feld „E-Mail“ im Dialog entfällt, die Adresse des Kontos gilt. Zugang beenden geht über „Code ist aktiv“ (abschalten); ein anderes Konto eintragen überträgt die Rolle.
+- **Empfänger:** die Adresse des Kontos. Wurde das Konto gerade angelegt, steht in der Mail, dass noch eine Mail von WordPress mit dem Link zum Passwort kommt.
+- **Noch einmal senden** geht über den Haken beim Ändern; dort steht, wann die Mail zuletzt rausging. Das Senden steht im Ereignisprotokoll.
+- **Text änderbar:** Vorlage „Ambassador: Willkommen und Danke“ unter Einstellungen → E-Mail-Vorlagen.
+- Betriebsanleitung: Kapitel B.15 um die Willkommensmail ergänzt.
+
 ## [0.88.0] – 2026-11-04
 
 ### Neu: Gesamtanteil je Affiliate – der Ambassador teilt selbst auf
