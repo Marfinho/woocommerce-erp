@@ -300,12 +300,12 @@ function lindenweg16_shop_inserts( string $content ): string {
 		'lindenweg16_shop_inserts',
 		array(
 			'quote' => array(
-				'after' => 4,
+				'after' => 5,
 				'quote' => __( 'Alle Module, ein System, null Chaos.', 'lindenweg16' ),
 				'note'  => __( 'Haster Haken', 'lindenweg16' ),
 			),
 			'tip'   => array(
-				'after'   => 8,
+				'after'   => 7,
 				'eyebrow' => __( 'Im Basismodul', 'lindenweg16' ),
 				'title'   => __( 'Alles zum Aufhängen dabei.', 'lindenweg16' ),
 				'text'    => __( 'Zwei Wandhalter, Montagematerial und die Holzstange als Tragschiene.', 'lindenweg16' ),
