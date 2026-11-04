@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.87.0">
+<meta name="anleitung-stand" content="0.88.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.87.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.88.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.87.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.88.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2453,8 +2453,9 @@ svg.sv{display:block;width:100%;height:auto}
 <!-- schaubild:vers-affiliates -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Vom Influencer zur Auszahlung">
 <div class="sb-kopf">Schaubild · Vom Influencer zur Auszahlung</div>
-<ol class="fluss c4">
-	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Rabatt, Provision, Konto-E-Mail</span></li>
+<ol class="fluss c5">
+	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Gesamtanteil, Konto-E-Mail</span></li>
+	<li class="ext"><b>Ambassador teilt auf</b><span>Rabatt für Follower und eigene Provision, z. B. 10 + 10</span></li>
 	<li class="erp"><b>Gutschein, Rolle und Link</b><span>der Code gilt sofort, der Link legt ihn in den Warenkorb</span></li>
 	<li class="ext"><b>Influencer teilt den Link</b><span>Zuschauer kaufen mit dem Rabatt</span></li>
 	<li class="erp"><b>Bezahlte Bestellung zählt</b><span>Warenwert, Provision, Satz von damals; Eigenkäufe nicht</span></li>
@@ -2473,8 +2474,9 @@ svg.sv{display:block;width:100%;height:auto}
 <ol class="schritte">
 	<li><strong>Neuer Affiliate</strong> oben rechts. Name, Kanal und Profil (z. B. „Instagram @anna.rides“) und eine E-Mail für Rückfragen. Bankdaten gehören nicht ins ERP.</li>
 	<li><strong>Rabattcode</strong>: Das ERP schlägt aus dem Namen einen Code vor (aus „Anna Beispiel“ wird <code>ANNA</code>). Du kannst ihn ändern, etwa in <code>ANNA10</code>. Erlaubt sind Buchstaben ohne Umlaute, Ziffern, Bindestrich und Unterstrich, 3 bis 32 Zeichen.</li>
-	<li><strong>Rabatt für Kunden</strong> in Prozent auf den Warenkorb, zum Beispiel 10. Bei <strong>0</strong> bekommen Kunden nichts, der Code dient dann nur dazu, Bestellungen dem Influencer zuzuordnen.</li>
-	<li><strong>Provision für den Affiliate</strong> in Prozent, zum Beispiel 10.</li>
+	<li><strong>Gesamtanteil</strong> in Prozent, zum Beispiel 20: Das ist, was der Shop für diesen Influencer hergibt. Er wird zwischen Kunden und Influencer aufgeteilt.</li>
+	<li><strong>Davon Rabatt für Kunden</strong>, zum Beispiel 10. Der Rest ist die <strong>Provision</strong> (hier ebenfalls 10); das Formular rechnet sie beim Tippen aus. Bei Rabatt <strong>0</strong> bekommen Kunden nichts, der Code ordnet dann nur Bestellungen zu.</li>
+	<li>Der Haken <strong>Der Affiliate darf die Aufteilung selbst bestimmen</strong> ist vorgesetzt. Du legst also den Gesamtanteil fest, der Influencer verteilt ihn selbst (siehe unten). Nimm den Haken heraus, wenn du die Aufteilung festlegen willst.</li>
 	<li><strong>Affiliate anlegen.</strong> Gleichzeitig entsteht im Shop ein ganz normaler WooCommerce-Gutschein. Der Code gilt sofort.</li>
 </ol>
 
@@ -2493,10 +2495,13 @@ svg.sv{display:block;width:100%;height:auto}
 </ul>
 <p>Die Rolle selbst gibt <strong>keine</strong> Rechte im ERP oder im wp-admin, nur das Lesen. Sie ist das Kennzeichen; ob jemand die Seite sieht, hängt an der Verknüpfung mit dem Affiliate.</p>
 
+<h3>Der Ambassador teilt selbst auf</h3>
+<p>Du legst den <strong>Gesamtanteil</strong> fest, zum Beispiel 20 %. Der Influencer entscheidet unter „Mein Konto → Ambassador“, wie viel davon seine Follower als Rabatt bekommen und wie viel er selbst behält: 10 und 10, 5 und 15, 0 und 20 oder 20 und 0. Die Summe bleibt immer der Gesamtanteil. Er tippt den Rabatt ein, die Provision rechnet die Seite mit. Die Änderung gilt sofort für den Gutschein im Shop, aber nur für neue Bestellungen: Bezahlte Bestellungen behalten ihren Satz. Jede Änderung steht im Ereignisprotokoll. Ein Affiliate ohne Konto, oder mit abgeschaltetem Haken, kann nichts verstellen; du änderst die Aufteilung dann selbst über <strong>Ändern</strong>.</p>
+
 <h3>Was der Ambassador unter „Mein Konto“ sieht</h3>
 <p>Im Shop erscheint für ihn im Konto der Punkt <strong>Ambassador</strong> (andere Kunden sehen ihn nicht). Dort stehen:</p>
 <ul>
-<li>sein <strong>Code</strong>, der Rabatt für die Zuschauer und seine Provision,</li>
+<li>sein <strong>Code</strong>, der Gesamtanteil und die Aufteilung in Rabatt und Provision, mit dem Feld, sie zu ändern (siehe unten),</li>
 <li>sein <strong>Kontostand</strong>: auszahlbar, in Wartezeit, bisher ausgezahlt,</li>
 <li>seine <strong>Zahlen</strong> für 30 Tage, 90 Tage, 12 Monate oder alles: Zahl der Bestellungen, Warenwert netto und Provision. <strong>Kundendaten sieht er nie</strong>, nur diese Summen,</li>
 <li>die <strong>bisherigen Auszahlungen</strong>.</li>
@@ -2516,7 +2521,7 @@ svg.sv{display:block;width:100%;height:auto}
 <ul>
 <li>Gezählt werden <strong>bezahlte</strong> Bestellungen (in Bearbeitung, abgeschlossen), in denen der Code eingelöst wurde. Stornierte oder nicht bezahlte Bestellungen zählen nicht.</li>
 <li>Die Provision rechnet auf den <strong>Warenwert netto</strong>: Positionen nach Rabatt und nach Erstattungen, ohne Versand und ohne Steuer. Wird eine Bestellung erstattet, sinkt die Provision mit.</li>
-<li>Der Satz gilt ab dem Moment, in dem die Bestellung bezahlt ist. Änderst du die Provision später, betrifft das nur neue Bestellungen.</li>
+<li>Der Satz gilt ab dem Moment, in dem die Bestellung bezahlt ist. Genauer: Provision = Gesamtanteil minus der Rabatt, den der Kunde an dieser Bestellung bekommen hat. Rabatt und Provision ergeben so immer den Gesamtanteil, auch wenn der Influencer die Aufteilung ändert, während jemand schon im Warenkorb liegt. Änderungen betreffen nur neue Bestellungen.</li>
 <li>Die Provision wird erst nach der <strong>Wartezeit</strong> auszahlbar (Vorgabe 30 Tage: Widerruf und Rücksendungen sollen durch sein). Einstellbar unter <span class="weg">Einstellungen → Marketing</span>.</li>
 </ul>
 
@@ -5201,7 +5206,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.87.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.88.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

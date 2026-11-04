@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.88.0] – 2026-11-04
+
+### Neu: Gesamtanteil je Affiliate – der Ambassador teilt selbst auf
+- **Gesamtanteil statt zwei Zahlen:** Im Affiliate-Dialog legst du einen Prozentsatz fest (zum Beispiel 20 %) und davon den Rabatt für Kunden; der Rest ist die Provision. Das Formular rechnet sie beim Tippen aus. Bestehende Affiliates bekommen als Gesamtanteil die Summe ihres bisherigen Rabatts und ihrer Provision, nichts ändert sich.
+- **Der Ambassador bestimmt die Aufteilung:** Unter Mein Konto → Ambassador gibt es ein Feld für den Rabatt seiner Follower (0 bis zum Gesamtanteil, in halben Prozent). 10 + 10, 5 + 15, 0 + 20 – die Summe bleibt der Gesamtanteil. Der Gutschein im Shop wird sofort angepasst. Wer die Aufteilung selbst festlegen will, nimmt den Haken „Der Affiliate darf die Aufteilung selbst bestimmen“ heraus. Jede Änderung steht im Ereignisprotokoll.
+- **Konsistenter Satz je Bestellung:** Die Provision einer Bestellung ist jetzt der Gesamtanteil minus der Rabatt, den der Kunde an dieser Bestellung tatsächlich bekommen hat (aus den Gutscheindaten der Bestellung). Rabatt und Provision ergeben so auch dann den Gesamtanteil, wenn die Aufteilung zwischen Warenkorb und Zahlung geändert wird.
+- Betriebsanleitung: Kapitel B.15 beschreibt Gesamtanteil und Aufteilung.
+
 ## [0.87.0] – 2026-11-04
 
 ### Neu: Affiliates – Link mit Code, Buchung der Auszahlungen, Schutz vor Eigenkäufen
