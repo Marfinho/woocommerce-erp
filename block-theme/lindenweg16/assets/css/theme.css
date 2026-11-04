@@ -2066,6 +2066,92 @@ label {
 	text-decoration: none;
 }
 
+/* Redaktionelles Raster (Shop): erstes Produkt groß, dazwischen Zitat und Hinweis */
+.lw16-products--editorial .wc-block-product-template {
+	grid-auto-flow: dense;
+}
+
+body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child {
+	grid-column: span 2;
+}
+
+body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child .wp-block-post-title {
+	margin-top: 10px !important;
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--x-large) !important;
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1.05 !important;
+}
+
+@media (min-width: 782px) {
+	body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child {
+		grid-row: span 2;
+	}
+}
+
+.lw16-insert {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 8px;
+	padding: clamp(20px, 3vw, 32px);
+	border-radius: var(--lw-r-card);
+	list-style: none;
+}
+
+@media (min-width: 782px) {
+	.lw16-insert {
+		grid-column: span 2;
+	}
+}
+
+.lw16-insert--quote {
+	justify-content: space-between;
+	gap: 16px;
+	background: var(--lw-ink);
+	color: var(--lw-on-ink);
+}
+
+.lw16-insert--quote q {
+	quotes: none;
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--x-large);
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.12;
+	text-wrap: balance;
+}
+
+.lw16-insert--quote small {
+	font-family: var(--lw-font-mono);
+	font-size: var(--wp--preset--font-size--x-small);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.75;
+}
+
+.lw16-insert--tip {
+	background: var(--wp--preset--color--accent-1);
+	color: var(--lw-on-accent);
+}
+
+.lw16-insert--tip b {
+	font-family: var(--lw-font-heading);
+	font-size: var(--wp--preset--font-size--large);
+	font-weight: 800;
+	letter-spacing: -0.01em;
+	line-height: 1.15;
+}
+
+.lw16-insert__eyebrow {
+	font-family: var(--lw-font-mono);
+	font-size: 11px;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
 /* Ganze Karte klickbar über den Produktnamen */
 .wc-block-product .wp-block-post-title a::after {
 	content: "";

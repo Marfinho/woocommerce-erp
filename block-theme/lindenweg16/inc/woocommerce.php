@@ -270,3 +270,83 @@ function lindenweg16_wc_interactivity_rest_url(): void {
 	}
 }
 add_action( 'wp_enqueue_scripts', 'lindenweg16_wc_interactivity_rest_url' );
+
+
+/**
+ * Redaktionelles Raster im Shop: Zwischen den Produkten stehen ein Zitat und
+ * ein Hinweis, damit die Seite nicht wie ein reiner Katalog wirkt. Gilt nur für
+ * die Produktliste mit der Klasse lw16-products--editorial (Shop-Vorlage), auf
+ * der ersten Seite und ohne aktive Filter oder Suche.
+ *
+ * Texte lassen sich über den Filter lindenweg16_shop_inserts ändern oder
+ * leeren (leeres Array = keine Einschübe). Schlüssel: quote, tip; je Eintrag
+ * after (nach dem wievielten Produkt) und die Texte.
+ *
+ * @param string $content Gerenderte Produktliste.
+ */
+function lindenweg16_shop_inserts( string $content ): string {
+	if ( false === strpos( $content, 'lw16-products--editorial' ) || is_paged() ) {
+		return $content;
+	}
+	foreach ( array_keys( $_GET ) as $key ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( preg_match( '/^(s|orderby|min_price|max_price|rating_filter|stock_status|filter_.*|product_cat|product_tag)$/', (string) $key ) ) {
+			return $content;
+		}
+	}
+
+	$inserts = apply_filters(
+		'lindenweg16_shop_inserts',
+		array(
+			'quote' => array(
+				'after' => 4,
+				'quote' => __( 'Alle Module, ein System, null Chaos.', 'lindenweg16' ),
+				'note'  => __( 'Haster Haken', 'lindenweg16' ),
+			),
+			'tip'   => array(
+				'after'   => 8,
+				'eyebrow' => __( 'Im Basismodul', 'lindenweg16' ),
+				'title'   => __( 'Alles zum Aufhängen dabei.', 'lindenweg16' ),
+				'text'    => __( 'Zwei Wandhalter, Montagematerial und die Holzstange als Tragschiene.', 'lindenweg16' ),
+			),
+		)
+	);
+	if ( empty( $inserts ) || ! is_array( $inserts ) ) {
+		return $content;
+	}
+
+	return (string) preg_replace_callback(
+		'#(<ul[^>]*wc-block-product-template[^>]*>)(.*?)(</ul>)#s',
+		static function ( array $m ) use ( $inserts ): string {
+			$items = explode( '</li>', $m[2] );
+			$last  = array_pop( $items ); // Rest hinter dem letzten </li>.
+			$count = count( $items );
+			$out   = '';
+			foreach ( $items as $i => $item ) {
+				$out .= $item . '</li>';
+				foreach ( $inserts as $kind => $insert ) {
+					if ( ! is_array( $insert ) || (int) ( $insert['after'] ?? 0 ) !== $i + 1 || $count <= $i + 1 ) {
+						continue; // Kein Einschub am Ende der Liste.
+					}
+					if ( 'quote' === $kind ) {
+						$out .= sprintf(
+							'<li class="lw16-insert lw16-insert--quote"><q>%1$s</q><small>%2$s</small></li>',
+							esc_html( (string) ( $insert['quote'] ?? '' ) ),
+							esc_html( (string) ( $insert['note'] ?? '' ) )
+						);
+					} elseif ( 'tip' === $kind ) {
+						$out .= sprintf(
+							'<li class="lw16-insert lw16-insert--tip"><span class="lw16-insert__eyebrow">%1$s</span><b>%2$s</b><span>%3$s</span></li>',
+							esc_html( (string) ( $insert['eyebrow'] ?? '' ) ),
+							esc_html( (string) ( $insert['title'] ?? '' ) ),
+							esc_html( (string) ( $insert['text'] ?? '' ) )
+						);
+					}
+				}
+			}
+			return $m[1] . $out . $last . $m[3];
+		},
+		$content,
+		1
+	);
+}
+add_filter( 'render_block_woocommerce/product-collection', 'lindenweg16_shop_inserts' );
