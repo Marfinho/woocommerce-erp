@@ -39,3 +39,20 @@ jobs:
           mkdir /tmp/a /tmp/b
           unzip -q /tmp/alt.zip -d /tmp/a && unzip -q block-theme/dist/lindenweg16.zip -d /tmp/b
           diff -r /tmp/a /tmp/b
+
+  anleitung:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Betriebsanleitung prüfen (Aufbau, Verweise, Schaubilder, Stand gegen CHANGELOG)
+        run: python3 docs/anleitung.py check
+      - name: Betriebsanleitung als PDF bauen
+        run: |
+          google-chrome --headless=new --no-sandbox --disable-gpu --no-pdf-header-footer \
+            --print-to-pdf="$PWD/Betriebsanleitung.pdf" "file://$PWD/docs/betriebsanleitung.html"
+          test -s Betriebsanleitung.pdf
+      - uses: actions/upload-artifact@v4
+        with:
+          name: betriebsanleitung-pdf
+          path: Betriebsanleitung.pdf
+          retention-days: 14

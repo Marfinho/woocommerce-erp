@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.83.0] – 2026-11-03
+
+### Neu: Betriebsanleitung auf dem Stand des Plugins, mit Schaubildern und CI-Prüfung
+- **Aktualisiert:** Die Anleitung stand noch bei 0.34.1. Jetzt sind alle Funktionen bis 0.82 beschrieben. Dreizehn neue Kapitel: Inventur und Bestandswert (A.14), Einkauf und Bestellscheine (A.15), Tagesplan und Nachtschicht (A.18), Angebote (B.12), Reklamationen (B.13), Nachkauf (B.14), Urlaub und Abwesenheit (C.9), Bankabgleich und Vivid (D.11), Offene Posten und Mahnungen (D.12), Steuer und DATEV (D.13), Liquidität und Was wäre wenn (D.14), Live-Bildschirm (D.17) und Claude-Zugang (D.26).
+- **Ergänzt** in bestehenden Kapiteln: Rüst-, Druck- und Wartezeit je Platte, aktive Filamentrolle, Betriebsstunden und „Drucke ohne Auftrag“, Soll gegen Ist seit 0.80, Lagerprotokoll mit Filtern, Shop-Bestellungen ansehen und erstatten, Update über WordPress mit Kanal und Sicherung, Ereignisprotokoll, SKR03 mit Suchfeld, Belegstapel, Dauerbuchungen „auf Rechnung warten“, Stundenlohn und Wochenrückblick, Türklingel, neue automatische Läufe und eine Tabelle der neuen Rechte. Die Seitenleiste in Kapitel 2 zeigt alle heutigen Reiter.
+- **Korrigiert:** Mehrere Kapitelverweise zeigten auf das falsche Kapitel („Aufkleber … Kapitel A.9“ meinte Drucker und Wartung), „Bearbeiten und Erstatten bleibt in WooCommerce“, „Update ist ein Austausch des Ordners“ und die Angabe, Komponenten und Dauerbuchungen gebe es nur in der Klassischen Ansicht.
+- **Schaubilder:** Jedes der 85 Kapitel beginnt mit einem Schaubild (wer macht was, in welcher Reihenfolge, wo gibt es Pflichten), dazu 9 Schaubilder unter einzelnen Zwischenüberschriften und zwei gezeichnete Übersichten (Aufbau des Plugins, Dienste im Netz). Sie stehen in `docs/schaubilder.py`, funktionieren hell und dunkel, am Handy und im Druck.
+- **CI:** Neuer Job „anleitung“ in `.github/workflows/tests.yml`. `python3 docs/anleitung.py check` prüft Aufbau, Sprungmarken, Kapitelverweise, Bilder, ein Schaubild je Kapitel und dass der Stand der Anleitung nicht hinter einer Version mit `### Neu` im CHANGELOG zurückliegt. Der Job baut die Anleitung außerdem als PDF (Artefakt `betriebsanleitung-pdf`).
+- **Werkzeug:** `python3 docs/anleitung.py sync` vergibt Kapitelnummern, baut das Inhaltsverzeichnis, setzt den Stand und fügt die Schaubilder ein. Kapitelnummern und Verzeichnis werden nicht mehr von Hand gepflegt. Hinweis in `CLAUDE.md`.
+- Die neuen Kapitel haben keine Bildschirmfotos (keine Testinstallation zur Hand); die vorhandenen Fotos stammen noch aus der Zeit vor 0.65.
+
 ## [0.82.0] – 2026-11-03
 
 ### Neu: Mehrere Belege auf einmal hochladen

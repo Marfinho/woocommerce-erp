@@ -8,7 +8,8 @@ WooCommerce, ohne externen Sync.
 ## Betriebsanleitungen
 
 Eine bebilderte Anleitung in vier Teilen, je einer pro Aufgabe: **`docs/betriebsanleitung.html`**
-(im Browser öffnen).
+(im Browser öffnen, im ERP unter Profilmenü → Anleitungen). Jedes Kapitel beginnt mit einem Schaubild
+(was passiert), darunter steht, wie es im Einzelnen funktioniert.
 
 | Anleitung | Für wen | Datei |
 | --- | --- | --- |
@@ -19,6 +20,18 @@ Eine bebilderte Anleitung in vier Teilen, je einer pro Aufgabe: **`docs/betriebs
 
 Die Bildschirmfotos in `docs/bilder/` zeigen die Oberfläche unter `/erp` und stammen aus einer
 Testinstallation dieses Plugins mit erfundenen Beispieldaten – sie sind nicht nachgezeichnet.
+
+**Die Anleitung wird mit dem Code gepflegt – und im CI geprüft.**
+
+- Die Schaubilder stehen nicht von Hand im HTML, sondern in `docs/schaubilder.py`. Kapitelnummern,
+  Inhaltsverzeichnis, Schaubilder und der „Stand“ werden mit `python3 docs/anleitung.py sync` erzeugt.
+- `python3 docs/anleitung.py check` prüft (das tut die GitHub-Action „Tests → anleitung“): Aufbau und
+  Verschachtelung, Sprungmarken, Kapitelverweise (`Kapitel D.15` muss es geben), Bilder samt Alternativtext,
+  ein Schaubild je Kapitel, `sync` ohne Änderung – und, dass der Stand der Anleitung (`<meta
+  name="anleitung-stand">`) nicht hinter einer Version im CHANGELOG zurückliegt, die etwas „Neu“ bringt.
+- Wer eine neue Funktion mit `### Neu` im CHANGELOG einträgt, schreibt also auch das Kapitel dazu, hebt den Stand
+  an und führt `sync` aus – sonst wird das CI rot. Dieselbe Action baut die Anleitung als PDF
+  (Artefakt `betriebsanleitung-pdf`).
 
 ## Installation
 
@@ -88,7 +101,7 @@ erinnert daran.
   `define( 'LW16_REMOVE_ALL_DATA', true );` in `wp-config.php` werden Tabellen, Einstellungen, Rollen und Nutzermerker
   entfernt; Dateien bleiben liegen.
 - **Tests:** `composer install && vendor/bin/phpunit` (läuft ohne WordPress). Die GitHub-Action
-  `.github/workflows/tests.yml` führt PHPUnit, die Syntaxprüfung von PHP und JS, `block-theme/check-theme.py` und den
+  `.github/workflows/tests.yml` führt PHPUnit, die Syntaxprüfung von PHP und JS, `block-theme/check-theme.py`, die Prüfung der Betriebsanleitung (`docs/anleitung.py check`) und den
   Vergleich des Theme-ZIPs mit dem Quelltext bei jedem Push und Pull Request aus. Ende-zu-Ende-Tests gegen echtes
   WordPress und WooCommerce liegen in `tests/integration/` (Mailbox); der Bestell-, Rechnungs- und Storno-Fluss wurde
   zusätzlich von Hand in einer Testinstallation durchgespielt.
@@ -156,6 +169,7 @@ assets/js/                   (zusätzlich) ar-hint.js, ar-viewer.js, ar-admin.js
 assets/css/                  (zusätzlich) ar-view.css
 assets/models/demo/          Demo-Modelle des Konfigurators samt Erzeugerskript
 docs/betriebsanleitung.html  Betriebsanleitung in vier Teilen (Produktion, Versand, Personal, Administration)
+docs/schaubilder.py          Schaubilder je Kapitel; docs/anleitung.py erzeugt und prüft die Anleitung (sync/check)
 docs/bilder/                 Bildschirmfotos, aus einer laufenden Installation erzeugt
 ```
 
