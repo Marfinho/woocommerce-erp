@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.83.0">
+<meta name="anleitung-stand" content="0.84.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.83.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.84.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.83.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.84.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -339,6 +339,7 @@ svg.sv{display:block;width:100%;height:auto}
 		<li><a href="#pers-neuer"><span class="nr">C.15</span> Einen neuen Mitarbeiter anlegen</a></li>
 		<li><a href="#pers-datenschutz"><span class="nr">C.16</span> Datenschutz: was hier steht und was nicht</a></li>
 		<li><a href="#pers-fehler"><span class="nr">C.17</span> Wenn etwas nicht geht</a></li>
+		<li><a href="#pers-geraete"><span class="nr">C.18</span> Angemeldete Geräte</a></li>
 	</ol>
 	<p class="teilkopf"><a href="#teil-admin">Teil D – Administration</a> <span class="fuer">Für die Verwaltung</span></p>
 	<ol class="flach">
@@ -3189,6 +3190,31 @@ svg.sv{display:block;width:100%;height:auto}
 </tbody>
 </table>
 </div>
+<h2 id="pers-geraete"><span class="nr">C.18</span> Angemeldete Geräte</h2>
+<p><span class="weg">Profilmenü → Angemeldete Geräte</span> (am Handy: Mehr → Angemeldete Geräte)</p>
+<!-- schaubild:pers-geraete -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Wo bin ich angemeldet?">
+<div class="sb-kopf">Schaubild · Wo bin ich angemeldet?</div>
+<ol class="fluss c5">
+	<li class="du"><b>Profilmenü öffnen</b><span>Bild unten in der Leiste, am Handy unter „Mehr“</span></li>
+	<li class="du"><b>„Angemeldete Geräte“</b><span>zeigt Gerät, Browser, Anmeldezeit und gültig bis</span></li>
+	<li class="erp"><b>Jedes Gerät hat seine Anmeldung</b><span>Browser und App vom Home-Bildschirm getrennt; 14 Tage gültig</span></li>
+	<li class="warn"><b>Gerät verloren oder fremd?</b><span>„Alle anderen abmelden“ – sofort</span></li>
+	<li class="ok"><b>Nur dieses Gerät bleibt angemeldet</b><span>die anderen melden sich neu an</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="warn">Pflicht oder Ausnahme</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:pers-geraete -->
+
+<p>Jedes Gerät und jeder Browser hat eine <strong>eigene Anmeldung</strong>. Auch die App vom Home-Bildschirm und Safari auf demselben Handy sind getrennt: Man meldet sich in jedem einmal an. Eine neue Anmeldung meldet die anderen <em>nicht</em> ab. Die Anmeldung gilt mindestens <strong>14 Tage</strong>, die Live-Anzeige ein Jahr.</p>
+
+<ol class="schritte">
+<li>Im Profilmenü auf <strong>Angemeldete Geräte</strong> tippen.</li>
+<li>Die Liste zeigt je Anmeldung Gerät und Browser, Anmeldezeit, „gültig bis“ und die Adresse. Das Gerät, an dem du gerade sitzt, ist markiert.</li>
+<li>Ist ein Gerät dabei, das du nicht kennst, oder wurde eines verloren: <strong>Alle anderen abmelden</strong>. Nur dieses Gerät bleibt angemeldet.</li>
+</ol>
+
+<p>Du siehst und beendest nur deine eigenen Anmeldungen. Ein einzelnes Gerät kann man nicht gezielt abmelden.</p>
 </section>
 
 <section class="teil" id="teil-admin">
@@ -5075,7 +5101,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.83.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.84.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·
