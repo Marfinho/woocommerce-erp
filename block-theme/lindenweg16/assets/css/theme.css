@@ -2066,16 +2066,16 @@ label {
 	text-decoration: none;
 }
 
-/* Redaktionelles Raster (Shop): erstes Produkt groß, dazwischen Zitat und Hinweis */
+/* Redaktionelles Raster (Shop): erstes hervorgehobenes Produkt groß, dazwischen Zitat und Hinweis */
 .lw16-products--editorial .wc-block-product-template {
 	grid-auto-flow: dense;
 }
 
-body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child {
+.lw16-products--editorial .wc-block-product-template > .lw16-feature {
 	grid-column: span 2;
 }
 
-body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child .wp-block-post-title {
+.lw16-products--editorial .wc-block-product-template > .lw16-feature .wp-block-post-title {
 	margin-top: 10px !important;
 	font-family: var(--lw-font-heading);
 	font-size: var(--wp--preset--font-size--x-large) !important;
@@ -2085,7 +2085,7 @@ body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-bloc
 }
 
 @media (min-width: 782px) {
-	body:not(.paged) .lw16-products--editorial .wc-block-product-template > .wc-block-product:first-child {
+	.lw16-products--editorial .wc-block-product-template > .lw16-feature {
 		grid-row: span 2;
 	}
 }

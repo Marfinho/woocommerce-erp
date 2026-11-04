@@ -273,10 +273,12 @@ add_action( 'wp_enqueue_scripts', 'lindenweg16_wc_interactivity_rest_url' );
 
 
 /**
- * Redaktionelles Raster im Shop: Zwischen den Produkten stehen ein Zitat und
+ * Redaktionelles Raster im Shop: Das erste hervorgehobene Produkt (Stern in
+ * WooCommerce) steht groß vorn, zwischen den Produkten stehen ein Zitat und
  * ein Hinweis, damit die Seite nicht wie ein reiner Katalog wirkt. Gilt nur für
  * die Produktliste mit der Klasse lw16-products--editorial (Shop-Vorlage), auf
- * der ersten Seite und ohne aktive Filter oder Suche.
+ * der ersten Seite und ohne aktive Filter oder Suche. Ist nichts hervorgehoben,
+ * bleibt das Raster gleichmäßig.
  *
  * Texte lassen sich über den Filter lindenweg16_shop_inserts ändern oder
  * leeren (leeres Array = keine Einschübe). Schlüssel: quote, tip; je Eintrag
@@ -319,6 +321,22 @@ function lindenweg16_shop_inserts( string $content ): string {
 		static function ( array $m ) use ( $inserts ): string {
 			$items = explode( '</li>', $m[2] );
 			$last  = array_pop( $items ); // Rest hinter dem letzten </li>.
+
+			// Erstes hervorgehobenes Produkt groß markieren und nach vorn holen.
+			foreach ( $items as $i => $item ) {
+				$featured = (bool) preg_match( '/class="[^"]*\bfeatured\b/', $item );
+				if ( ! $featured && function_exists( 'wc_get_product' ) && preg_match( '/class="[^"]*\bpost-(\d+)\b/', $item, $id ) ) {
+					$product  = wc_get_product( (int) $id[1] );
+					$featured = $product && $product->is_featured();
+				}
+				if ( $featured ) {
+					$item = (string) preg_replace( '/class="/', 'class="lw16-feature ', $item, 1 );
+					unset( $items[ $i ] );
+					array_unshift( $items, $item );
+					break;
+				}
+			}
+			$items = array_values( $items );
 			$count = count( $items );
 			$out   = '';
 			foreach ( $items as $i => $item ) {
