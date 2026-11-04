@@ -2981,6 +2981,40 @@ table.variations select {
 	text-decoration: underline;
 }
 
+/* Shop: Filter als waagerechte Leiste über dem Raster statt als Seitenleiste */
+.lw16-shop-filters {
+	margin-block: 0 var(--wp--preset--spacing--40);
+}
+
+@media (min-width: 782px) {
+	.lw16-shop-filters .wc-block-product-filters {
+		padding: 20px 28px;
+		border-radius: var(--lw-r-card);
+		background: var(--lw-surface);
+		box-shadow: var(--lw-shadow-card);
+	}
+
+	.lw16-shop-filters .wc-block-product-filters__overlay-content {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: 18px clamp(24px, 4vw, 56px);
+	}
+
+	.lw16-shop-filters .wc-block-product-filters > .wp-block-heading:first-child,
+	.lw16-shop-filters .wc-block-product-filters__overlay-content > .wp-block-heading:first-child {
+		display: none;
+	}
+
+	.lw16-shop-filters .wp-block-woocommerce-product-filter-price {
+		min-width: 240px;
+	}
+}
+
+.lw16-shop-results {
+	margin-block-start: 0;
+}
+
 .lw16-shop-toolbar {
 	gap: 12px !important;
 }

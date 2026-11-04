@@ -13,16 +13,14 @@
 
 <!-- wp:woocommerce/store-notices {"align":"wide"} /-->
 
-<!-- wp:columns {"align":"wide","className":"lw16-shop-layout"} -->
-<div class="wp-block-columns alignwide lw16-shop-layout">
-<!-- wp:column {"width":"280px","className":"lw16-shop-sidebar"} -->
-<div class="wp-block-column lw16-shop-sidebar" style="flex-basis:280px">
+<!-- wp:group {"align":"wide","className":"lw16-shop-filters","layout":{"type":"default"}} -->
+<div class="wp-block-group alignwide lw16-shop-filters">
 <!-- wp:pattern {"slug":"lindenweg16/hidden-shop-filters"} /-->
 </div>
-<!-- /wp:column -->
+<!-- /wp:group -->
 
-<!-- wp:column {"className":"lw16-shop-results"} -->
-<div class="wp-block-column lw16-shop-results">
+<!-- wp:group {"align":"wide","className":"lw16-shop-results","layout":{"type":"default"}} -->
+<div class="wp-block-group alignwide lw16-shop-results">
 <!-- wp:group {"className":"lw16-shop-toolbar","layout":{"type":"flex","flexWrap":"wrap","justifyContent":"space-between"}} -->
 <div class="wp-block-group lw16-shop-toolbar">
 <!-- wp:woocommerce/product-results-count /-->
@@ -30,8 +28,8 @@
 </div>
 <!-- /wp:group -->
 
-<!-- wp:woocommerce/product-collection {"queryId":0,"query":{"woocommerceAttributes":[],"woocommerceStockStatus":["instock","outofstock","onbackorder"],"taxQuery":{},"isProductCollectionBlock":true,"perPage":12,"pages":0,"offset":0,"postType":"product","order":"asc","orderBy":"title","author":"","search":"","exclude":[],"sticky":"","inherit":true},"tagName":"div","dimensions":{"widthType":"fill","fixedWidth":""},"displayLayout":{"type":"flex","columns":3,"shrinkColumns":true},"convertedFromProducts":false,"queryContextIncludes":["collection"],"className":"lw16-products lw16-products--editorial"} -->
-<div class="wp-block-woocommerce-product-collection lw16-products lw16-products--editorial">
+<!-- wp:woocommerce/product-collection {"queryId":0,"query":{"woocommerceAttributes":[],"woocommerceStockStatus":["instock","outofstock","onbackorder"],"taxQuery":{},"isProductCollectionBlock":true,"perPage":12,"pages":0,"offset":0,"postType":"product","order":"asc","orderBy":"title","author":"","search":"","exclude":[],"sticky":"","inherit":true},"tagName":"div","dimensions":{"widthType":"fill","fixedWidth":""},"displayLayout":{"type":"flex","columns":3,"shrinkColumns":true},"convertedFromProducts":false,"queryContextIncludes":["collection"],"className":"lw16-products lw16-products--4 lw16-products--editorial"} -->
+<div class="wp-block-woocommerce-product-collection lw16-products lw16-products--4 lw16-products--editorial">
 <!-- wp:woocommerce/product-template -->
 <!-- wp:group {"className":"lw16-card-media","layout":{"type":"default"}} -->
 <div class="wp-block-group lw16-card-media">
@@ -61,9 +59,7 @@
 </div>
 <!-- /wp:woocommerce/product-collection -->
 </div>
-<!-- /wp:column -->
-</div>
-<!-- /wp:columns -->
+<!-- /wp:group -->
 </main>
 <!-- /wp:group -->
 
