@@ -137,7 +137,7 @@ class Affiliates {
 	 * @param int   $days     Zeitraum.
 	 * @return array Id => Kennzahlen.
 	 */
-	protected static function figures( array $partners, $days ) {
+	public static function figures( array $partners, $days ) {
 		$since = '';
 		foreach ( $partners as $p ) {
 			if ( '' === $since || $p['angelegt'] < $since ) {

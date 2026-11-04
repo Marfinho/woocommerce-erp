@@ -249,6 +249,38 @@
 			return c.el;
 		}
 
+		function affiliates(b) {
+			var c = card('Ambassadors · letzte 30 Tage', 'lv-aff');
+			if (!b.active) { c.body.appendChild(h('p', { class: 'muted' }, 'Noch kein Ambassador.')); return c.el; }
+			c.body.appendChild(h('div', { class: 'lv-stats three' },
+				big(int(b.orders), 'Bestellungen mit Code'),
+				big(eur(b.revenue), 'Umsatz'),
+				big(eur(b.provision), 'Provision')));
+			if (b.rows.length) {
+				var t = h('table', { class: 'lv-table' }, h('thead', null, h('tr', null,
+					h('th', null, 'Ambassador'), h('th', null, 'Code'), h('th', { class: 'num' }, 'Bestellungen'), h('th', { class: 'num' }, 'Umsatz'),
+					h('th', { class: 'num' }, 'Provision'), h('th', { class: 'num' }, 'Rabatt + Anteil'))));
+				var tb = h('tbody');
+				b.rows.slice(0, 4).forEach(function (a) {
+					tb.appendChild(h('tr', null,
+						h('td', null, h('b', null, a.name)), h('td', { class: 'sub' }, a.code),
+						h('td', { class: 'num' }, int(a.orders)), h('td', { class: 'num' }, eur(a.revenue)), h('td', { class: 'num' }, eur(a.provision)),
+						h('td', { class: 'num sub' }, pctTxt(a.discount) + ' + ' + pctTxt(a.share))));
+				});
+				t.appendChild(tb);
+				c.body.appendChild(t);
+			} else {
+				c.body.appendChild(h('p', { class: 'muted' }, b.active + ' Ambassador' + (b.active === 1 ? '' : 's') + ', noch keine Bestellung mit Code in den letzten 30 Tagen.'));
+			}
+			c.body.appendChild(h('p', { class: 'lv-note' }, 'Auszahlbar insgesamt: ' + eur(b.payable) + ' · ' + b.active + ' aktiv'));
+			if (b.requests) {
+				c.body.appendChild(h('div', { class: 'lv-alert' }, '⚠ ' + b.requests + (b.requests === 1 ? ' Auszahlung angefordert' : ' Auszahlungen angefordert')));
+			}
+			return c.el;
+		}
+
+		function pctTxt(n) { return String(n).replace('.', ',') + ' %'; }
+
 		function paint() {
 			grid.textContent = '';
 			var b = data.blocks;
@@ -267,7 +299,11 @@
 			});
 			if (side.childNodes.length) { mid.appendChild(side); }
 			if (mid.childNodes.length) { grid.appendChild(mid); }
-			if (b.campaigns) { grid.appendChild(campaigns(b.campaigns)); any = true; }
+			// Kampagnen und Ambassadors teilen sich die untere Reihe.
+			var bottom = h('div', { class: 'lv-bottom' });
+			if (b.campaigns) { bottom.appendChild(campaigns(b.campaigns)); any = true; }
+			if (b.affiliates) { bottom.appendChild(affiliates(b.affiliates)); any = true; }
+			if (bottom.childNodes.length) { grid.appendChild(bottom); }
 			fits.forEach(function (f) { f(); });
 			if (!any) { grid.appendChild(h('div', { class: 'lv-card' }, h('p', { class: 'muted' }, 'Für dein Profil gibt es keine Live-Zahlen. Verkauf, Berichte, Produktion und Marketing schalten Blöcke frei.'))); }
 		}

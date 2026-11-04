@@ -30,6 +30,7 @@ use Lindenweg16\Modules\Betrieb\Kpi;
 use Lindenweg16\Modules\Betrieb\KpiGoalRepository;
 use Lindenweg16\Modules\Betrieb\KpiMeter;
 use Lindenweg16\Modules\Betrieb\Reporting;
+use Lindenweg16\Modules\Affiliate\Partners;
 use Lindenweg16\Modules\Marketing\KampagnenReport;
 use Lindenweg16\Modules\Marketing\KampagnenRepository;
 use WP_REST_Response;
@@ -110,6 +111,10 @@ class Live {
 
 		if ( $all || Access::can( 'verkauf.marketing' ) ) {
 			$blocks['campaigns'] = self::cached( 'campaigns', 300, array( __CLASS__, 'campaigns' ) );
+		}
+
+		if ( $all || Access::can( 'verkauf.affiliates' ) ) {
+			$blocks['affiliates'] = self::cached( 'affiliates', 300, array( __CLASS__, 'affiliates' ) );
 		}
 
 		$blocks['tasks'] = $all ? self::cached( 'tasks', 60, array( __CLASS__, 'tasks_all' ) ) : self::tasks( false );
@@ -318,6 +323,75 @@ class Live {
 		}
 
 		return array( 'rows' => $rows );
+	}
+
+	/**
+	 * Ambassadors der letzten 30 Tage: Bestellungen, Umsatz und Provision, dazu was auszahlbar ist
+	 * und wie viele Auszahlungen angefordert wurden. Ohne Zahlungsangaben und ohne Kundendaten.
+	 *
+	 * @return array
+	 */
+	public static function affiliates() {
+		$partners = Partners::all();
+		$figures  = $partners ? Affiliates::figures( $partners, 30 ) : array();
+		$rows     = array();
+		$sum      = array(
+			'orders'    => 0,
+			'revenue'   => 0.0,
+			'provision' => 0.0,
+			'payable'   => 0.0,
+		);
+
+		foreach ( $partners as $id => $p ) {
+			$f = $figures[ $id ];
+
+			$sum['orders']    += $f['anzahl'];
+			$sum['revenue']   += $f['umsatz'];
+			$sum['provision'] += $f['provision'];
+			$sum['payable']   += max( 0.0, $f['guthaben'] );
+
+			if ( $f['anzahl'] > 0 ) {
+				$rows[] = array(
+					'name'      => (string) $p['name'],
+					'code'      => (string) $p['code'],
+					'orders'    => (int) $f['anzahl'],
+					'revenue'   => round( (float) $f['umsatz'], 2 ),
+					'provision' => round( (float) $f['provision'], 2 ),
+					'discount'  => (float) $p['rabatt'],
+					'share'     => (float) $p['provision'],
+				);
+			}
+		}
+
+		usort(
+			$rows,
+			function ( $a, $b ) {
+				return $b['provision'] <=> $a['provision'];
+			}
+		);
+
+		$active   = count( array_filter( $partners, function ( $p ) {
+			return $p['aktiv'];
+		} ) );
+		$requests = count(
+			array_filter(
+				Partners::requests(),
+				function ( $r ) use ( $partners ) {
+					return 'offen' === $r['status'] && isset( $partners[ $r['partner'] ] );
+				}
+			)
+		);
+
+		return array(
+			'active'    => $active,
+			'rows'      => array_slice( $rows, 0, 5 ),
+			'with_sales' => count( $rows ),
+			'orders'    => (int) $sum['orders'],
+			'revenue'   => round( $sum['revenue'], 2 ),
+			'provision' => round( $sum['provision'], 2 ),
+			'payable'   => round( $sum['payable'], 2 ),
+			'requests'  => $requests,
+		);
 	}
 
 	/**
