@@ -7,6 +7,18 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.85.0] – 2026-11-04
+
+### Neu: Affiliates – Influencer mit eigenem Rabattcode
+- **Verkauf → Marketing → Affiliates:** Meldet sich ein Influencer, der einen Code für seine Zuschauer möchte, legst du ihn hier an: Name, Kanal, Rabatt für Kunden in Prozent, Provision in Prozent. Der Rabattcode (aus dem Namen vorgeschlagen, z. B. `ANNA10`) entsteht gleichzeitig als normaler WooCommerce-Gutschein und gilt sofort.
+- **Der Code bleibt:** Er lässt sich nach dem Anlegen nicht ändern, und Affiliates werden nicht gelöscht, nur abgeschaltet (der Gutschein wird dann deaktiviert). Ein Code, den es im Shop schon gibt, wird abgelehnt.
+- **Auswertung je Affiliate** für 30 Tage, 90 Tage, 12 Monate oder alles: Bestellungen, Umsatz, Provision, auszahlbares Guthaben und was noch in der Wartezeit steckt. Gezählt werden bezahlte Bestellungen mit dem Code. Die Provision rechnet auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand und Steuer.
+- **Satz von damals:** Sobald eine Bestellung bezahlt ist, merkt sie sich den Provisionssatz. Eine spätere Änderung wirkt nur auf neue Bestellungen.
+- **Wartezeit:** Provision wird erst nach 30 Tagen auszahlbar (Einstellungen → Marketing → „Wartezeit für Affiliate-Provision“).
+- **Auszahlungen festhalten:** Betrag, Datum, Notiz. Das ERP überweist nichts. Auszahlungen werden nur angehängt; ein Fehler wird mit einem negativen Betrag und Notiz korrigiert. Mehr als das Guthaben lässt sich nicht eintragen.
+- **Neue Rechte:** `verkauf.affiliates` (ansehen und anlegen) und `verkauf.affiliates.auszahlen` (Auszahlung festhalten; steht in keiner Vorlage). Anlegen, Ändern und Auszahlen stehen im Ereignisprotokoll.
+- Neues Kapitel B.15 in der Betriebsanleitung; der Verweis auf das Kapitel „Lagerplätze, Etiketten und Scannen“ wurde auf B.16 nachgezogen.
+
 ## [0.84.0] – 2026-11-04
 
 ### Neu: Angemeldete Geräte

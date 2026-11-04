@@ -360,6 +360,14 @@ sb('vers-nachkauf', 'Wer bald wieder bestellt',
    erp('Eintrag + Wiedervorlage', 'in der Kundenakte'),
    ok('Oder „Ruhe“', 'wer sich gemeldet hat, wird nicht erneut vorgeschlagen'))
 
+sb('vers-affiliates', 'Vom Influencer zur Auszahlung',
+   du('Affiliate anlegen', 'Name, Code, Rabatt für Kunden, Provision'),
+   erp('Gutschein im Shop', 'entsteht gleichzeitig, gilt sofort'),
+   ext('Influencer teilt den Code', 'Zuschauer lösen ihn im Warenkorb ein'),
+   erp('Bezahlte Bestellung zählt', 'Umsatz, Provision, Satz von damals'),
+   warn('Wartezeit', 'Provision wird erst nach 30 Tagen auszahlbar'),
+   du('Überweisen, dann festhalten', 'Betrag und Datum eintragen, das Guthaben sinkt'))
+
 sb('vers-plaetze', 'Lagerplätze und Etiketten',
    du('Lagerplatz anlegen', 'Code, Bezeichnung, Art'),
    erp('Etikett als PDF', 'QR-Code + Klartext, Format DK-11201'),

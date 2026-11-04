@@ -39,6 +39,7 @@ class Settings {
 			// Marketing.
 			'km_pauschale'              => 0.30,
 			'marketing_nachlauf_tage'   => 30,
+			'affiliate_wartezeit_tage'  => 30,
 			// Loyalty.
 			'referral_cookie_tage'      => 30,
 			'referral_prozent'          => 5,

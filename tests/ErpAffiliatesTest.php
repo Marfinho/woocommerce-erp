@@ -1,0 +1,43 @@
+<?php
+/**
+ * Affiliates in der ERP-Oberfläche: Recht, Navigation, Seite.
+ *
+ * @package Lindenweg16
+ */
+
+use Lindenweg16\Erp\Navigation;
+use Lindenweg16\Erp\Permissions;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * Prüft, dass Recht, Menüeintrag, Script und Route zusammenpassen.
+ */
+class ErpAffiliatesTest extends TestCase {
+
+	public function test_rechte_sind_im_katalog() {
+		$catalog = Permissions::catalog();
+
+		$this->assertArrayHasKey( 'verkauf.affiliates', $catalog );
+		$this->assertSame( array( 'manage_woocommerce' ), $catalog['verkauf.affiliates']['caps'] );
+
+		// Auszahlen ist ein eigenes Recht und setzt die Seite voraus.
+		$this->assertArrayHasKey( 'verkauf.affiliates.auszahlen', $catalog );
+		$this->assertSame( array( 'verkauf.affiliates' ), $catalog['verkauf.affiliates.auszahlen']['requires'] );
+	}
+
+	public function test_navigation_fuehrt_die_native_seite_unter_marketing() {
+		$items = Navigation::items();
+
+		$this->assertSame( 'native', $items['affiliates']['kind'] );
+		$this->assertSame( 'verkauf.affiliates', $items['affiliates']['perm'] );
+		$this->assertSame( array( 'verkauf', 'Marketing' ), Navigation::place( 'affiliates' ) );
+	}
+
+	public function test_seite_ist_als_script_registriert() {
+		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/affiliates.js' );
+
+		$this->assertStringContainsString( "UI.pages['affiliates']", $js );
+		$this->assertStringContainsString( "ui.api('affiliates", $js );
+		$this->assertStringContainsString( "affiliates/auszahlung", $js );
+	}
+}
