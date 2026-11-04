@@ -694,6 +694,9 @@ vorhanden ist – nicht, was geplant war.
   Link `?aff=CODE` (`AutoApply`, Cookie `lw16_aff`), Schutz vor Eigenkäufen (`Guard`, dazu
   `Rules::is_self_purchase()` in `Sales::collect()`), Auszahlungen als Beleg auf Werbekosten
   mit eigener Kostenstelle (`Booking`, Einstellung `affiliate_auto_buchen`), Storno statt Minusbetrag.
+  Gesamtanteil je Partner (`gesamt`), davon Rabatt (`rabatt`) und Rest Provision; der Ambassador
+  teilt unter Mein Konto selbst auf (`Partners::set_split()`, Flag `teilen`); der Satz je
+  Bestellung ist Gesamtanteil minus tatsächlichem Rabatt (`Rules::rate_from_discount()`).
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

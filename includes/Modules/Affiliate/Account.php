@@ -146,6 +146,8 @@ class Account {
 	 * Auszahlung anfordern (POST auf der Ambassador-Seite).
 	 */
 	public function handle_request() {
+		$this->handle_split();
+
 		if ( 'POST' !== ( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : '' ) || empty( $_POST['lw16_aff_request'] ) || ! is_user_logged_in() ) {
 			return;
 		}
@@ -175,6 +177,43 @@ class Account {
 			AuditLog::record( 'affiliate_anforderung', 'affiliate', $p['id'], array( 'betrag' => $check['betrag'] ) );
 			$this->notify_shop( $p, $check['betrag'], $check['ziel'] );
 			set_transient( 'lw16_aff_msg_' . $uid, array( 'ok', __( 'Danke! Deine Auszahlung ist angefordert. Wir überweisen und melden uns, falls etwas fehlt.', 'lindenweg16' ) ), 5 * MINUTE_IN_SECONDS );
+		}
+
+		wp_safe_redirect( $back );
+		exit;
+	}
+
+	/**
+	 * Aufteilung ändern (POST auf der Ambassador-Seite): Rabatt für die Follower, der Rest ist die Provision.
+	 */
+	protected function handle_split() {
+		if ( 'POST' !== ( isset( $_SERVER['REQUEST_METHOD'] ) ? $_SERVER['REQUEST_METHOD'] : '' ) || empty( $_POST['lw16_aff_split'] ) || ! is_user_logged_in() ) {
+			return;
+		}
+
+		$nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+		$p     = $this->partner();
+		$back  = function_exists( 'wc_get_account_endpoint_url' ) ? wc_get_account_endpoint_url( self::ENDPOINT ) : home_url( '/' );
+		$uid   = get_current_user_id();
+
+		if ( ! $p || ! wp_verify_nonce( $nonce, 'lw16_aff_split' ) ) {
+			wp_safe_redirect( $back );
+			exit;
+		}
+
+		if ( empty( $p['teilen'] ) ) {
+			set_transient( 'lw16_aff_msg_' . $uid, array( 'error', __( 'Die Aufteilung ist bei dir festgelegt. Bitte melde dich bei uns, wenn du sie ändern möchtest.', 'lindenweg16' ) ), 5 * MINUTE_IN_SECONDS );
+		} else {
+			$res = Partners::set_split( $p['id'], isset( $_POST['rabatt'] ) ? sanitize_text_field( wp_unslash( $_POST['rabatt'] ) ) : '' );
+
+			if ( $res['ok'] ) {
+				AuditLog::record( 'affiliate_aufteilung', 'affiliate', $p['id'], array( 'rabatt_vorher' => $res['vorher'], 'rabatt' => $res['rabatt'], 'provision' => $res['provision'] ) );
+				/* translators: 1: Rabatt in Prozent, 2: Provision in Prozent. */
+				$text = sprintf( __( 'Gespeichert: %1$s %% Rabatt für deine Follower, %2$s %% für dich. Es gilt ab sofort für neue Bestellungen.', 'lindenweg16' ), $this->percent( $res['rabatt'] ), $this->percent( $res['provision'] ) );
+				set_transient( 'lw16_aff_msg_' . $uid, array( 'ok', $text ), 5 * MINUTE_IN_SECONDS );
+			} else {
+				set_transient( 'lw16_aff_msg_' . $uid, array( 'error', implode( ' ', $res['errors'] ) ), 5 * MINUTE_IN_SECONDS );
+			}
 		}
 
 		wp_safe_redirect( $back );
@@ -250,8 +289,19 @@ class Account {
 		if ( ! $p['aktiv'] ) {
 			echo '<p><em>' . esc_html__( 'Dein Code ist im Moment abgeschaltet.', 'lindenweg16' ) . '</em></p>';
 		} else {
-			/* translators: 1: Rabatt in Prozent, 2: Provision in Prozent. */
-			echo '<p>' . esc_html( sprintf( __( 'Wer ihn im Warenkorb eingibt, spart %1$s %%. Du bekommst %2$s %% Provision auf den Warenwert.', 'lindenweg16' ), $this->percent( $p['rabatt'] ), $this->percent( $p['provision'] ) ) ) . '</p>';
+			/* translators: 1: Rabatt in Prozent, 2: Provision in Prozent, 3: Gesamtanteil. */
+			echo '<p>' . esc_html( sprintf( __( 'Wer ihn im Warenkorb eingibt, spart %1$s %%. Du bekommst %2$s %% Provision auf den Warenwert. Zusammen sind das %3$s %%.', 'lindenweg16' ), $this->percent( $p['rabatt'] ), $this->percent( $p['provision'] ), $this->percent( $p['gesamt'] ) ) ) . '</p>';
+
+			if ( ! empty( $p['teilen'] ) && $p['gesamt'] > 0 ) {
+				echo '<form method="post" action="' . esc_url( $url ) . '">';
+				wp_nonce_field( 'lw16_aff_split' );
+				echo '<input type="hidden" name="lw16_aff_split" value="1">';
+				echo '<p><label for="lw16-aff-rabatt"><strong>' . esc_html__( 'Aufteilung bestimmst du:', 'lindenweg16' ) . '</strong> ' . esc_html__( 'Wie viel Prozent sparen deine Follower?', 'lindenweg16' ) . '</label><br>';
+				echo '<input type="number" id="lw16-aff-rabatt" name="rabatt" min="0" max="' . esc_attr( $p['gesamt'] ) . '" step="0.5" value="' . esc_attr( $p['rabatt'] ) . '" data-gesamt="' . esc_attr( $p['gesamt'] ) . '" style="width:6em" oninput="document.getElementById(\'lw16-aff-rest\').textContent=Math.max(0,this.dataset.gesamt-this.value).toFixed(1).replace(\'.\',\',\')"> %';
+				echo ' &nbsp; ' . esc_html__( 'Für dich bleiben:', 'lindenweg16' ) . ' <strong><span id="lw16-aff-rest">' . esc_html( number_format( (float) $p['provision'], 1, ',', '' ) ) . '</span> %</strong></p>';
+				echo '<p><button type="submit" class="button">' . esc_html__( 'Aufteilung speichern', 'lindenweg16' ) . '</button> <small>' . esc_html__( 'Gilt für neue Bestellungen; bezahlte Bestellungen behalten ihren Satz.', 'lindenweg16' ) . '</small></p>';
+				echo '</form>';
+			}
 		}
 
 		if ( $p['aktiv'] ) {

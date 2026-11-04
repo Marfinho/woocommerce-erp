@@ -39,8 +39,18 @@
 		var konto = h('input', { class: 'field', type: 'email', value: p.konto || '', placeholder: 'E-Mail des Shop-Kontos, z. B. anna@example.com' });
 		var anlegen = h('input', { type: 'checkbox' });
 		var code = h('input', { class: 'field', type: 'text', maxlength: '32', value: p.code, placeholder: 'z. B. ANNA10', style: 'text-transform:uppercase' });
+		var gesamt = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.gesamt != null ? p.gesamt : (p.rabatt + p.provision)).replace('.', ',') });
 		var rabatt = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.rabatt).replace('.', ',') });
-		var prov = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.provision).replace('.', ',') });
+		var rest = h('b', null, '');
+		var teilen = h('input', { type: 'checkbox', checked: p.teilen !== false });
+		function num(v) { var n = parseFloat(String(v).replace(',', '.')); return isNaN(n) ? null : n; }
+		function refresh() {
+			var g = num(gesamt.value), r = num(rabatt.value);
+			rest.textContent = (g === null || r === null || r < 0 || r > g) ? '–' : pct(Math.round((g - r) * 100) / 100);
+		}
+		gesamt.addEventListener('input', refresh);
+		rabatt.addEventListener('input', refresh);
+		refresh();
 		var aktiv = h('input', { type: 'checkbox', checked: !!p.aktiv });
 		var notiz = h('textarea', { class: 'field', rows: '3', maxlength: '500', placeholder: 'z. B. vereinbart am …, Auszahlung per PayPal' });
 		notiz.value = p.notiz || '';
@@ -62,8 +72,10 @@
 				'Mit dem Konto sieht der Influencer unter „Mein Konto → Ambassador“ seine Zahlen und kann eine Auszahlung anfordern. Leer lassen oder löschen entzieht ihm den Zugang.'),
 			neu ? field(ui, 'Rabattcode', code, 'Wird als Gutschein im Shop angelegt. Danach nicht mehr änderbar, nur abschaltbar – er steht in Videos und Beschreibungen.')
 				: field(ui, 'Rabattcode', h('div', null, h('code', null, p.code)), 'Der Code bleibt, wie er ist.'),
-			field(ui, 'Rabatt für Kunden (%)', rabatt, '0 ist erlaubt: dann dient der Code nur dazu, Bestellungen zuzuordnen.'),
-			field(ui, 'Provision für den Affiliate (%)', prov, 'Auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand. Eine Änderung gilt nur für neue Bestellungen.'),
+			field(ui, 'Gesamtanteil (%)', gesamt, 'Was der Shop für diesen Affiliate hergibt, zum Beispiel 20. Er wird zwischen Kunden-Rabatt und Provision aufgeteilt.'),
+			field(ui, 'Davon Rabatt für Kunden (%)', rabatt, 'Z. B. 10 bei einem Gesamtanteil von 20. Bei 0 bekommen Kunden nichts, der Code ordnet dann nur Bestellungen zu.'),
+			h('p', null, 'Provision für den Affiliate: ', rest, h('small', { class: 'muted', style: 'display:block' }, 'Gesamtanteil minus Rabatt, auf den Warenwert netto nach Rabatt und Erstattungen, ohne Versand.')),
+			h('label', { style: 'display:block;margin-bottom:10px' }, teilen, ' Der Affiliate darf die Aufteilung selbst bestimmen (unter „Mein Konto“, braucht ein verknüpftes Konto)'),
 			h('label', { style: 'display:block;margin-bottom:10px' }, aktiv, ' Code ist aktiv (Kunden können ihn einlösen)'),
 			field(ui, 'Notiz', notiz),
 			err,
@@ -76,7 +88,7 @@
 			ev.preventDefault();
 			err.hidden = true;
 			save.disabled = true;
-			var body = { name: name.value, plattform: plattform.value, email: email.value, rabatt: rabatt.value, provision: prov.value, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked };
+			var body = { name: name.value, plattform: plattform.value, email: email.value, gesamt: gesamt.value, rabatt: rabatt.value, teilen: teilen.checked, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked };
 			if (neu) { body.code = code.value; } else { body.id = p.id; }
 			ui.api('affiliates', { method: 'POST', body: body }).then(function (res) {
 				ui.toast(res.message);
@@ -241,7 +253,7 @@
 						p.aktiv ? null : h('span', { class: 'tag later' }, 'abgeschaltet')),
 					h('td', null, h('code', null, p.code), h('div', null, h('a', { href: p.link, target: '_blank', rel: 'noopener', class: 'muted' }, 'Link mit Code'))),
 					h('td', { class: 'num' }, pct(p.rabatt)),
-					h('td', { class: 'num' }, pct(p.provision)),
+					h('td', { class: 'num' }, pct(p.provision), h('div', { class: 'muted' }, 'von ' + pct(p.gesamt))),
 					h('td', { class: 'num' }, fmt(s.anzahl), s.letzte_ts ? h('div', { class: 'muted' }, 'zuletzt ' + dateDe(p.letzte)) : null,
 						s.eigen ? h('div', { class: 'muted' }, s.eigen + ' Eigenkauf nicht gezählt') : null),
 					h('td', { class: 'num' }, eur(s.umsatz)),

@@ -46,6 +46,32 @@ class AffiliateModule {
 	}
 
 	/**
+	 * Provisionssatz einer Bestellung: Gesamtanteil minus den Rabatt, den der Kunde bekommen hat.
+	 *
+	 * Der Rabatt steht als Gutscheindaten an der Bestellung. Fehlen sie, gilt der heutige Satz.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @param array     $p     Partner.
+	 * @return float
+	 */
+	protected function rate_for( $order, array $p ) {
+		foreach ( $order->get_items( 'coupon' ) as $item ) {
+			if ( 0 !== strcasecmp( (string) $item->get_code(), $p['code'] ) ) {
+				continue;
+			}
+
+			$info = $item->get_meta( 'coupon_info' );
+			$info = is_string( $info ) ? json_decode( $info, true ) : $info;
+
+			if ( is_array( $info ) && isset( $info['amount'] ) && isset( $info['discount_type'] ) && 'percent' === $info['discount_type'] ) {
+				return Rules::rate_from_discount( $p['gesamt'], (float) $info['amount'] );
+			}
+		}
+
+		return (float) $p['provision'];
+	}
+
+	/**
 	 * Provisionssatz an der Bestellung festhalten (nur beim ersten Mal).
 	 *
 	 * @param int $order_id Bestellung.
@@ -64,7 +90,7 @@ class AffiliateModule {
 
 		foreach ( Partners::all() as $p ) {
 			if ( in_array( strtolower( $p['code'] ), $used, true ) ) {
-				$order->update_meta_data( Sales::META_RATE, $p['provision'] );
+				$order->update_meta_data( Sales::META_RATE, $this->rate_for( $order, $p ) );
 				$order->update_meta_data( Sales::META_PARTNER, $p['id'] );
 				$order->save_meta_data();
 				return;

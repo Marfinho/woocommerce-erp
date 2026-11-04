@@ -89,12 +89,67 @@ class Rules {
 	}
 
 	/**
+	 * Gesamtanteil in Rabatt für Kunden und Provision aufteilen.
+	 *
+	 * Der Gesamtanteil (zum Beispiel 20 %) ist das, was der Shop für diesen Affiliate hergibt.
+	 * Davon bekommen die Kunden den Rabatt, den Rest behält der Affiliate: 10 + 10, 5 + 15 …
+	 * Die Summe ist immer der Gesamtanteil.
+	 *
+	 * @param mixed $gesamt Gesamtanteil in Prozent.
+	 * @param mixed $rabatt Rabatt für Kunden in Prozent.
+	 * @return array [ 'gesamt', 'rabatt', 'provision', 'errors' ].
+	 */
+	public static function split( $gesamt, $rabatt ) {
+		$errors = array();
+		$g      = self::number( $gesamt );
+		$r      = self::number( $rabatt );
+
+		if ( null === $g || $g < 0 || $g > 100 ) {
+			$errors[] = __( 'Der Gesamtanteil muss eine Zahl zwischen 0 und 100 Prozent sein.', 'lindenweg16' );
+			$g        = 0.0;
+		}
+
+		$g = round( $g, 2 );
+
+		if ( null === $r || $r < 0 || $r > $g ) {
+			if ( ! $errors ) {
+				/* translators: %s: Gesamtanteil. */
+				$errors[] = sprintf( __( 'Der Rabatt für Kunden muss zwischen 0 und dem Gesamtanteil (%s Prozent) liegen.', 'lindenweg16' ), rtrim( rtrim( number_format( $g, 2, ',', '' ), '0' ), ',' ) );
+			}
+			$r = 0.0;
+		}
+
+		$r = round( $r, 2 );
+
+		return array(
+			'gesamt'    => $g,
+			'rabatt'    => $r,
+			'provision' => round( $g - $r, 2 ),
+			'errors'    => $errors,
+		);
+	}
+
+	/**
+	 * Provisionssatz einer Bestellung aus dem Rabatt, den der Kunde tatsächlich bekommen hat.
+	 *
+	 * So bleibt die Summe aus Rabatt und Provision auch dann der Gesamtanteil, wenn der
+	 * Affiliate die Aufteilung ändert, während jemand schon im Warenkorb war.
+	 *
+	 * @param float $gesamt   Gesamtanteil des Affiliates.
+	 * @param float $discount Rabatt in Prozent, der an der Bestellung stand.
+	 * @return float
+	 */
+	public static function rate_from_discount( $gesamt, $discount ) {
+		return round( max( 0.0, (float) $gesamt - max( 0.0, (float) $discount ) ), 2 );
+	}
+
+	/**
 	 * Eingaben eines Partners prüfen und bereinigen.
 	 *
 	 * Der Code gilt nur für neue Partner: Er steht in Videos und Beschreibungen
 	 * und lässt sich danach nicht mehr ändern (nur abschalten).
 	 *
-	 * @param array $in     Eingaben (name, plattform, email, code, rabatt, provision, aktiv, notiz).
+	 * @param array $in     Eingaben (name, plattform, email, code, gesamt, rabatt, teilen, aktiv, notiz). Die Provision ergibt sich aus Gesamtanteil minus Rabatt.
 	 * @param bool  $is_new Neuer Partner?
 	 * @return array [ 'row' => bereinigte Felder, 'errors' => Meldungen ].
 	 */
@@ -122,18 +177,14 @@ class Rules {
 		}
 		$row['email'] = $email;
 
-		foreach ( array(
-			'rabatt'    => __( 'Der Rabatt für Kunden', 'lindenweg16' ),
-			'provision' => __( 'Die Provision', 'lindenweg16' ),
-		) as $key => $label ) {
-			$value = isset( $in[ $key ] ) ? self::number( $in[ $key ] ) : null;
-			if ( null === $value || $value < 0 || $value > 100 ) {
-				/* translators: %s: Name des Feldes. */
-				$errors[] = sprintf( __( '%s muss eine Zahl zwischen 0 und 100 Prozent sein.', 'lindenweg16' ), $label );
-				$value    = 0.0;
-			}
-			$row[ $key ] = round( $value, 2 );
-		}
+		// Gesamtanteil festlegen, davon Rabatt für Kunden; der Rest ist die Provision.
+		$split = self::split( isset( $in['gesamt'] ) ? $in['gesamt'] : null, isset( $in['rabatt'] ) ? $in['rabatt'] : null );
+		$errors = array_merge( $errors, $split['errors'] );
+
+		$row['gesamt']    = $split['gesamt'];
+		$row['rabatt']    = $split['rabatt'];
+		$row['provision'] = $split['provision'];
+		$row['teilen']    = ! isset( $in['teilen'] ) || ( ! empty( $in['teilen'] ) && 'false' !== $in['teilen'] && '0' !== $in['teilen'] );
 
 		$notiz = trim( isset( $in['notiz'] ) && is_string( $in['notiz'] ) ? $in['notiz'] : '' );
 		if ( mb_strlen( $notiz ) > 500 ) {

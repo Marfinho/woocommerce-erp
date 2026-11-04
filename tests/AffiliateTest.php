@@ -41,8 +41,8 @@ class AffiliateTest extends TestCase {
 			array(
 				'name'      => ' Anna ',
 				'code'      => 'anna10',
-				'rabatt'    => '10',
-				'provision' => '12,5',
+				'gesamt'    => '20',
+				'rabatt'    => '7,5',
 				'aktiv'     => true,
 			),
 			true
@@ -51,7 +51,10 @@ class AffiliateTest extends TestCase {
 		$this->assertSame( array(), $r['errors'] );
 		$this->assertSame( 'Anna', $r['row']['name'] );
 		$this->assertSame( 'ANNA10', $r['row']['code'] );
+		$this->assertSame( 20.0, $r['row']['gesamt'] );
+		$this->assertSame( 7.5, $r['row']['rabatt'] );
 		$this->assertSame( 12.5, $r['row']['provision'] );
+		$this->assertTrue( $r['row']['teilen'] );
 		$this->assertTrue( $r['row']['aktiv'] );
 	}
 
@@ -61,13 +64,13 @@ class AffiliateTest extends TestCase {
 				'name'      => '',
 				'email'     => 'kein-mail',
 				'code'      => 'x',
-				'rabatt'    => '150',
-				'provision' => 'viel',
+				'gesamt'    => '150',
+				'rabatt'    => '10',
 			),
 			true
 		);
 
-		$this->assertCount( 5, $r['errors'] );
+		$this->assertCount( 4, $r['errors'] );
 	}
 
 	public function test_code_wird_beim_aendern_nicht_gelesen() {
@@ -75,8 +78,8 @@ class AffiliateTest extends TestCase {
 			array(
 				'name'      => 'Anna',
 				'code'      => 'NEUERCODE',
+				'gesamt'    => 20,
 				'rabatt'    => 10,
-				'provision' => 10,
 			),
 			false
 		);
@@ -84,6 +87,34 @@ class AffiliateTest extends TestCase {
 		$this->assertSame( array(), $r['errors'] );
 		$this->assertArrayNotHasKey( 'code', $r['row'] );
 		$this->assertFalse( $r['row']['aktiv'] );
+	}
+
+	public function test_aufteilung_summe_bleibt_der_gesamtanteil() {
+		foreach ( array( array( 10, 10 ), array( 5, 15 ), array( 0, 20 ), array( 20, 0 ) ) as $pair ) {
+			$r = Rules::split( 20, $pair[0] );
+			$this->assertSame( array(), $r['errors'] );
+			$this->assertSame( 20.0, $r['rabatt'] + $r['provision'] );
+			$this->assertSame( (float) $pair[1], $r['provision'] );
+		}
+
+		$this->assertSame( 12.5, Rules::split( '20', '7,5' )['provision'] );
+	}
+
+	public function test_aufteilung_ablehnen() {
+		// Mehr Rabatt als Gesamtanteil, negativ, keine Zahl, ungültiger Gesamtanteil.
+		$this->assertNotEmpty( Rules::split( 20, 25 )['errors'] );
+		$this->assertNotEmpty( Rules::split( 20, -1 )['errors'] );
+		$this->assertNotEmpty( Rules::split( 20, 'viel' )['errors'] );
+		$this->assertNotEmpty( Rules::split( 120, 10 )['errors'] );
+		$this->assertNotEmpty( Rules::split( null, 0 )['errors'] );
+	}
+
+	public function test_provisionssatz_aus_dem_tatsaechlichen_rabatt() {
+		// Gesamtanteil 20: Hat der Kunde 10 % bekommen, bleiben 10; bei 5 sind es 15.
+		$this->assertSame( 10.0, Rules::rate_from_discount( 20, 10 ) );
+		$this->assertSame( 15.0, Rules::rate_from_discount( 20, 5 ) );
+		// Nie negativ, auch wenn der Rabatt über dem Gesamtanteil steht.
+		$this->assertSame( 0.0, Rules::rate_from_discount( 20, 25 ) );
 	}
 
 	public function test_codevorschlag_aus_dem_namen() {

@@ -43,11 +43,12 @@ class Partners {
 				continue;
 			}
 
-			$out[ (int) $p['id'] ] = array_merge(
+			$row = array_merge(
 				array(
 					'name'      => '',
 					'plattform' => '',
 					'email'     => '',
+					'gesamt'    => 0.0,
 					'rabatt'    => 0.0,
 					'provision' => 0.0,
 					'aktiv'     => true,
@@ -60,6 +61,16 @@ class Partners {
 				$p,
 				array( 'id' => (int) $p['id'] )
 			);
+
+			// Partner aus der Zeit vor dem Gesamtanteil: Rabatt und Provision ergeben ihn.
+			if ( ! isset( $p['gesamt'] ) ) {
+				$row['gesamt'] = round( (float) $row['rabatt'] + (float) $row['provision'], 2 );
+			}
+			if ( ! isset( $p['teilen'] ) ) {
+				$row['teilen'] = true;
+			}
+
+			$out[ (int) $p['id'] ] = $row;
 		}
 
 		return $out;
@@ -629,5 +640,50 @@ class Partners {
 			$all[ (int) $id ]['kampagne_id'] = (int) $kampagne;
 			update_option( self::OPTION_PARTNERS, array_values( $all ), false );
 		}
+	}
+
+	/**
+	 * Die Aufteilung ändern: Rabatt für Kunden, der Rest ist die Provision.
+	 *
+	 * Gilt sofort für den Gutschein im Shop. Bestellungen, die schon bezahlt sind, behalten ihren Satz.
+	 *
+	 * @param int   $id     Partner.
+	 * @param mixed $rabatt Neuer Rabatt in Prozent.
+	 * @return array [ 'ok' => bool, 'errors' => Meldungen, 'vorher' => float, 'rabatt' => float, 'provision' => float ].
+	 */
+	public static function set_split( $id, $rabatt ) {
+		$all = self::all();
+
+		if ( ! isset( $all[ (int) $id ] ) ) {
+			return array(
+				'ok'     => false,
+				'errors' => array( __( 'Diesen Affiliate gibt es nicht (mehr).', 'lindenweg16' ) ),
+			);
+		}
+
+		$p     = $all[ (int) $id ];
+		$split = Rules::split( $p['gesamt'], $rabatt );
+
+		if ( $split['errors'] ) {
+			return array(
+				'ok'     => false,
+				'errors' => $split['errors'],
+			);
+		}
+
+		$vorher                       = (float) $p['rabatt'];
+		$p['rabatt']                  = $split['rabatt'];
+		$p['provision']               = $split['provision'];
+		$p['coupon_id']               = self::sync_coupon( $p );
+		$all[ (int) $id ]             = $p;
+		update_option( self::OPTION_PARTNERS, array_values( $all ), false );
+
+		return array(
+			'ok'        => true,
+			'errors'    => array(),
+			'vorher'    => $vorher,
+			'rabatt'    => $split['rabatt'],
+			'provision' => $split['provision'],
+		);
 	}
 }

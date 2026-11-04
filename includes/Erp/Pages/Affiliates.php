@@ -193,6 +193,8 @@ class Affiliates {
 				'email'     => $p['email'],
 				'code'      => $p['code'],
 				'link'      => AutoApply::link( $p['code'] ),
+				'gesamt'    => (float) $p['gesamt'],
+				'teilen'    => (bool) $p['teilen'],
 				'rabatt'    => (float) $p['rabatt'],
 				'provision' => (float) $p['provision'],
 				'aktiv'     => (bool) $p['aktiv'],
