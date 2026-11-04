@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.0
+Stable tag: 1.9.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -253,6 +253,9 @@ Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.1 =
+* Shop: groß gesetzt wird das erste hervorgehobene Produkt (Stern in WooCommerce) statt des ersten der Liste; es rückt auf der ersten Seite nach vorn. Ohne hervorgehobenes Produkt bleibt das Raster gleichmäßig
 
 = 1.9.0 =
 * Shop: redaktionelles Raster – erstes Produkt groß über zwei Spalten, dazwischen ein Zitat und ein Hinweis; die Einschübe erscheinen nur auf der ersten Seite ohne Filter und lassen sich über den Filter lindenweg16_shop_inserts ändern oder abschalten
