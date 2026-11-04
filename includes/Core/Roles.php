@@ -56,6 +56,12 @@ class Roles {
 	const BETRIEB_ROLE = 'lw16_betrieb';
 
 	/**
+	 * Rolle für Affiliates („Ambassador“): nur Lesen, kein Zugriff auf Betrieb oder wp-admin.
+	 * Sie ersetzt die Kundenrolle nicht, sondern kommt dazu.
+	 */
+	const AMBASSADOR_ROLE = 'lw16_ambassador';
+
+	/**
 	 * Nutzermerker für das zuletzt gesetzte Profil.
 	 */
 	const PROFILE_META = 'lw16_betrieb_profil';
@@ -86,6 +92,16 @@ class Roles {
 		}
 
 		self::add_betrieb_role();
+		self::add_ambassador_role();
+	}
+
+	/**
+	 * Rolle lw16_ambassador anlegen (idempotent). Sie bringt nur das Recht „read“ mit.
+	 */
+	public static function add_ambassador_role() {
+		if ( ! get_role( self::AMBASSADOR_ROLE ) ) {
+			add_role( self::AMBASSADOR_ROLE, __( 'Ambassador', 'lindenweg16' ), array( 'read' => true ) );
+		}
 	}
 
 	/**

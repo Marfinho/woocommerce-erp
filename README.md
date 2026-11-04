@@ -131,6 +131,8 @@ includes/Modules/Accounting/ BelegRepository, BelegOcr, PdfText, EuerCalculator,
                              AccountingModule
 includes/Modules/Marketing/  Kontenrahmen-Gegenstueck: KampagnenRepository,
                              Kampagnenrechnung, KampagnenReport, MarketingModule
+includes/Modules/Affiliate/  Rules (reine Regeln), Partners (Partner, Auszahlungen, Gutschein),
+                             Sales (Bestellungen mit Code), AffiliateModule
 includes/Modules/Events/     EventPostType, EventFields, RsvpRechnung,
                              RsvpRepository, EventAdmin, EventFrontend,
                              EventsWidget, EventsSidebarWidget, EventsBlock,
@@ -679,6 +681,19 @@ vorhanden ist – nicht, was geplant war.
   Budget mit Ampel, Belegzuordnung mit Anteilen, Kilometergeld als Eigenbeleg,
   Umsatzzuordnung über Marktkasse, Gutscheincode und die Kampagnenkennung von
   WooCommerce.
+- **Affiliates:** Influencer mit eigenem Rabattcode (Verkauf → Marketing →
+  Affiliates, Recht `verkauf.affiliates`, Code `includes/Erp/Pages/Affiliates.php`,
+  `assets/erp/pages/affiliates.js`, `includes/Modules/Affiliate/`). Je Partner ein
+  WooCommerce-Gutschein in Prozent (`_lw16_affiliate_id`), Provision auf den
+  Warenwert netto nach Rabatt und Erstattungen, Satz je Bestellung festgehalten
+  (`_lw16_aff_provision`), Wartezeit (`affiliate_wartezeit_tage`, Vorgabe 30),
+  Auszahlungen nur angehängt (Option `lw16_affiliate_payouts`, Recht
+  `verkauf.affiliates.auszahlen`). Das ERP überweist nichts. Rolle `lw16_ambassador`
+  (nur `read`) für verknüpfte Konten; `Account.php` zeigt unter Mein Konto den Punkt
+  „Ambassador“ (Zahlen, Auszahlung anfordern; Option `lw16_affiliate_requests`).
+  Link `?aff=CODE` (`AutoApply`, Cookie `lw16_aff`), Schutz vor Eigenkäufen (`Guard`, dazu
+  `Rules::is_self_purchase()` in `Sales::collect()`), Auszahlungen als Beleg auf Werbekosten
+  mit eigener Kostenstelle (`Booking`, Einstellung `affiliate_auto_buchen`), Storno statt Minusbetrag.
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

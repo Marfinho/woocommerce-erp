@@ -33,6 +33,7 @@ use Lindenweg16\Modules\ArView\ArViewModule;
 use Lindenweg16\Modules\Mailbox\MailboxModule;
 use Lindenweg16\Modules\Gutschein\GutscheinModule;
 use Lindenweg16\Modules\Kurzlinks\KurzlinksModule;
+use Lindenweg16\Modules\Affiliate\AffiliateModule;
 
 /**
  * Singleton, das den Lebenszyklus des Plugins verwaltet.
@@ -132,6 +133,7 @@ class Plugin {
 			'mailbox'      => MailboxModule::class,
 			'gutschein'    => GutscheinModule::class,
 			'kurzlinks'    => KurzlinksModule::class,
+			'affiliate'    => AffiliateModule::class,
 		);
 
 		foreach ( $classes as $key => $class ) {
