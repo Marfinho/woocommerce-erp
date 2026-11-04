@@ -399,6 +399,13 @@ sb('pers-anmelden', 'Zur Zeiterfassung',
    du('„Zeit“ oben rechts', 'Uhrsymbol, auf jeder Seite'),
    ok('Zeitseite', 'Uhr, Nachtragen, Meine Woche'))
 
+sb('pers-geraete', 'Wo bin ich angemeldet?',
+   du('Profilmenü öffnen', 'Bild unten in der Leiste, am Handy unter „Mehr“'),
+   du('„Angemeldete Geräte“', 'zeigt Gerät, Browser, Anmeldezeit und gültig bis'),
+   erp('Jedes Gerät hat seine Anmeldung', 'Browser und App vom Home-Bildschirm getrennt; 14 Tage gültig'),
+   warn('Gerät verloren oder fremd?', '„Alle anderen abmelden“ – sofort'),
+   ok('Nur dieses Gerät bleibt angemeldet', 'die anderen melden sich neu an'))
+
 sb('pers-uhr', 'Die Stoppuhr',
    du('Uhr starten', 'wenn du anfängst'),
    erp('Merkt sich den Startzeitpunkt', 'läuft auch bei zugeklapptem Laptop weiter'),

@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.84.0] – 2026-11-04
+
+### Neu: Angemeldete Geräte
+- **Profilmenü → „Angemeldete Geräte“:** zeigt alle eigenen Anmeldungen (Gerät und Browser, Anmeldezeit, gültig bis, Adresse) und beendet mit einem Klick alle außer der aktuellen. Eine neue Anmeldung meldet andere Geräte nicht ab; Browser und App vom Home-Bildschirm haben je eine eigene Anmeldung.
+
 ## [0.83.0] – 2026-11-03
 
 ### Neu: Betriebsanleitung auf dem Stand des Plugins, mit Schaubildern und CI-Prüfung
