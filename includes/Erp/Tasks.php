@@ -15,6 +15,7 @@ namespace Lindenweg16\Erp;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Accounting\DauerbuchungRepository;
+use Lindenweg16\Modules\Affiliate\Partners;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
@@ -44,6 +45,7 @@ class Tasks {
 			'bestellen' => 6,
 			'lieferung' => 7,
 			'rechnung'  => 8,
+			'auszahlung' => 8,
 			'dauerbeleg' => 9,
 			'nachfassen' => 10,
 			'mail'      => 11,
@@ -284,6 +286,27 @@ class Tasks {
 			}
 		}
 
+		// Angeforderte Affiliate-Auszahlungen: nur für die, die sie festhalten dürfen.
+		// An der Wand steht nur die Anzahl, keine Namen und keine Beträge.
+		if ( self::$everything || Access::can( 'verkauf.affiliates.auszahlen' ) ) {
+			$partners = Partners::all();
+			$open     = array();
+
+			foreach ( Partners::requests() as $r ) {
+				if ( 'offen' === $r['status'] && isset( $partners[ $r['partner'] ] ) ) {
+					$open[] = array(
+						'name'   => (string) $partners[ $r['partner'] ]['name'],
+						'betrag' => (float) $r['betrag'],
+					);
+				}
+			}
+
+			$task = self::auszahlung_task( $open, ! $everything );
+			if ( $task ) {
+				$tasks[] = $task;
+			}
+		}
+
 		// Dauerbuchungen „auf Rechnung warten“: Termin fällig, Rechnung fehlt noch.
 		// Buchhaltung gehört nicht an die Wand (Händler und Beträge).
 		if ( ! $everything && Access::can( 'finanzen.buchhaltung' ) ) {
@@ -309,6 +332,40 @@ class Tasks {
 		self::$everything = false;
 
 		return self::sort( $tasks );
+	}
+
+	/**
+	 * Aufgabe „Auszahlung angefordert“ – reine Regel.
+	 *
+	 * @param array $offen   Offene Anforderungen (name, betrag), älteste zuerst.
+	 * @param bool  $details Namen und Gesamtbetrag zeigen (nicht an der Wand).
+	 * @return array|null Aufgabe oder null, wenn nichts offen ist.
+	 */
+	public static function auszahlung_task( array $offen, $details ) {
+		$n = count( $offen );
+		if ( 0 === $n ) {
+			return null;
+		}
+
+		$sub = __( 'Überweisen, dann festhalten oder ablehnen', 'lindenweg16' );
+
+		if ( $details ) {
+			$names = array();
+			$sum   = 0.0;
+			foreach ( $offen as $o ) {
+				$names[] = (string) $o['name'];
+				$sum    += (float) $o['betrag'];
+			}
+			$sub = implode( ', ', array_slice( $names, 0, 2 ) ) . ( count( $names ) > 2 ? ' …' : '' ) . ' · ' . number_format( $sum, 2, ',', '.' ) . ' €';
+		}
+
+		return array(
+			'kind'  => 'auszahlung',
+			'title' => self::count_text( $n, __( '%d Affiliate-Auszahlung angefordert', 'lindenweg16' ), __( '%d Affiliate-Auszahlungen angefordert', 'lindenweg16' ) ),
+			'sub'   => $sub,
+			'cta'   => __( 'Zu den Affiliates', 'lindenweg16' ),
+			'href'  => '#/seite/affiliates',
+		);
 	}
 
 	/**

@@ -9,7 +9,8 @@ und im Abschnitt „Umsetzungsstand“ der README.
 
 ## [0.90.0] – 2026-11-04
 
-### Neu: Ambassadors im Live-Bildschirm
+### Neu: Ambassadors im Live-Bildschirm und angeforderte Auszahlungen in „Heute“
+- **Aufgabe in „Heute“:** „N Affiliate-Auszahlungen angefordert“ mit Namen und Gesamtsumme, Knopf „Zu den Affiliates“. Sie erscheint nur mit dem Recht „Affiliate-Provision auszahlen“, verschwindet, sobald die Anforderung festgehalten oder abgelehnt ist, und steht auch in der Aufgabenkarte der Wand (dort nur die Anzahl, ohne Namen und Beträge).
 - Neue Karte **Ambassadors · letzte 30 Tage** neben den Kampagnen: Bestellungen mit Code, Umsatz und Provision insgesamt, dazu die besten vier mit Code, Aufteilung in Rabatt und Anteil und dem insgesamt Auszahlbaren. Angeforderte Auszahlungen erscheinen als orangefarbener Hinweis.
 - Auf der Wand erscheinen weder Zahlungsangaben noch Kundendaten. Die Zahlen sind bis zu fünf Minuten alt. Angemeldete Personen sehen die Karte mit dem Recht „Affiliates“, der Wandbildschirm immer. Unter 1200 px Breite stapeln sich Kampagnen und Ambassadors.
 - Betriebsanleitung: Kapitel D.17 beschreibt die Karte.
