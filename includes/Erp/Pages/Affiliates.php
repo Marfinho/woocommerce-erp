@@ -66,6 +66,16 @@ class Affiliates {
 				'permission_callback' => $api->needs( array( 'verkauf.affiliates', 'verkauf.affiliates.auszahlen' ) ),
 			)
 		);
+
+		register_rest_route(
+			RestApi::NAMESPACE_V1,
+			'/erp/affiliates/ablehnen',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'decline' ),
+				'permission_callback' => $api->needs( array( 'verkauf.affiliates', 'verkauf.affiliates.auszahlen' ) ),
+			)
+		);
 	}
 
 	/**
@@ -160,7 +170,10 @@ class Affiliates {
 			$total['wartend']   += $f['wartend'];
 			$total['guthaben']  += max( 0.0, $f['guthaben'] );
 
+			$konto = $p['user_id'] ? get_userdata( $p['user_id'] ) : false;
+
 			$list[] = array(
+				'konto'     => $konto ? $konto->user_email : '',
 				'id'        => $id,
 				'name'      => $p['name'],
 				'plattform' => $p['plattform'],
@@ -202,6 +215,19 @@ class Affiliates {
 			);
 		}
 
+		$requests = array();
+		foreach ( Partners::requests() as $r ) {
+			if ( 'offen' === $r['status'] && isset( $partners[ $r['partner'] ] ) ) {
+				$requests[] = array(
+					'partner' => (int) $r['partner'],
+					'name'    => $partners[ $r['partner'] ]['name'],
+					'betrag'  => (float) $r['betrag'],
+					'ziel'    => $r['ziel'],
+					'datum'   => wp_date( 'Y-m-d', $r['ts'] ),
+				);
+			}
+		}
+
 		foreach ( $total as $k => $v ) {
 			$total[ $k ] = is_float( $v ) ? round( $v, 2 ) : $v;
 		}
@@ -211,6 +237,7 @@ class Affiliates {
 				'partners' => $list,
 				'summe'    => $total,
 				'payouts'  => $pay,
+				'requests' => $requests,
 				'days'     => $days,
 				'ranges'   => Rules::ranges(),
 				'wartezeit' => self::wait_days(),
@@ -245,7 +272,15 @@ class Affiliates {
 			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'WooCommerce ist nicht aktiv – ohne den Shop gibt es keine Rabattcodes.', 'lindenweg16' ) ), 422 );
 		}
 
-		$result = $id > 0 ? Partners::update( $id, $in ) : Partners::create( $in );
+		$konto = array();
+		if ( array_key_exists( 'konto_email', $in ) ) {
+			$konto = array(
+				'email'   => is_string( $in['konto_email'] ) ? sanitize_email( $in['konto_email'] ) : '',
+				'anlegen' => ! empty( $in['konto_anlegen'] ) && 'false' !== $in['konto_anlegen'],
+			);
+		}
+
+		$result = $id > 0 ? Partners::update( $id, $in, $konto ) : Partners::create( $in, $konto );
 
 		if ( ! $result['ok'] ) {
 			return new WP_REST_Response(
@@ -298,6 +333,9 @@ class Affiliates {
 		}
 
 		$row = Partners::add_payout( $id, $check['betrag'], $datum, $notiz );
+		if ( $row['betrag'] > 0 ) {
+			Partners::close_requests( $id, 'erledigt' );
+		}
 		AuditLog::record( 'affiliate_auszahlung', 'affiliate', $id, array( 'betrag' => $row['betrag'], 'datum' => $datum ) );
 
 		return new WP_REST_Response(
@@ -306,5 +344,29 @@ class Affiliates {
 				'message' => __( 'Auszahlung festgehalten. Die Überweisung machst du selbst bei deiner Bank.', 'lindenweg16' ),
 			)
 		);
+	}
+
+	/**
+	 * Eine offene Anforderung ablehnen. Die Begründung sieht der Ambassador unter „Mein Konto“.
+	 *
+	 * @param WP_REST_Request $request Anfrage (partner, notiz).
+	 * @return WP_REST_Response
+	 */
+	public static function decline( WP_REST_Request $request ) {
+		$id    = (int) $request->get_param( 'partner' );
+		$notiz = sanitize_text_field( (string) $request->get_param( 'notiz' ) );
+
+		if ( ! Partners::open_request( $id ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Es liegt keine offene Anforderung vor. Bitte die Seite neu laden.', 'lindenweg16' ) ), 422 );
+		}
+
+		if ( '' === $notiz ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Bitte kurz begründen, warum nicht ausgezahlt wird. Der Ambassador sieht den Text.', 'lindenweg16' ) ), 422 );
+		}
+
+		Partners::close_requests( $id, 'abgelehnt', $notiz );
+		AuditLog::record( 'affiliate_anforderung_abgelehnt', 'affiliate', $id );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Anforderung abgelehnt.', 'lindenweg16' ) ) );
 	}
 }

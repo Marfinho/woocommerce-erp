@@ -361,12 +361,14 @@ sb('vers-nachkauf', 'Wer bald wieder bestellt',
    ok('Oder „Ruhe“', 'wer sich gemeldet hat, wird nicht erneut vorgeschlagen'))
 
 sb('vers-affiliates', 'Vom Influencer zur Auszahlung',
-   du('Affiliate anlegen', 'Name, Code, Rabatt für Kunden, Provision'),
-   erp('Gutschein im Shop', 'entsteht gleichzeitig, gilt sofort'),
+   du('Affiliate anlegen', 'Name, Code, Rabatt, Provision, Konto-E-Mail'),
+   erp('Gutschein und Rolle Ambassador', 'der Code gilt sofort, der Influencer bekommt Zugang'),
    ext('Influencer teilt den Code', 'Zuschauer lösen ihn im Warenkorb ein'),
-   erp('Bezahlte Bestellung zählt', 'Umsatz, Provision, Satz von damals'),
+   erp('Bezahlte Bestellung zählt', 'Warenwert, Provision, Satz von damals'),
    warn('Wartezeit', 'Provision wird erst nach 30 Tagen auszahlbar'),
-   du('Überweisen, dann festhalten', 'Betrag und Datum eintragen, das Guthaben sinkt'))
+   ext('Ambassador fordert an', 'unter Mein Konto, mit Zahlungsangabe'),
+   du('Überweisen, dann festhalten', 'oder ablehnen mit Begründung'),
+   ok('Guthaben sinkt', 'der Ambassador sieht die Auszahlung'))
 
 sb('vers-plaetze', 'Lagerplätze und Etiketten',
    du('Lagerplatz anlegen', 'Code, Bezeichnung, Art'),

@@ -36,6 +36,8 @@
 		var name = h('input', { class: 'field', type: 'text', maxlength: '80', value: p.name, placeholder: 'z. B. Anna Beispiel', required: 'required' });
 		var plattform = h('input', { class: 'field', type: 'text', maxlength: '120', value: p.plattform, placeholder: 'z. B. Instagram @anna.rides' });
 		var email = h('input', { class: 'field', type: 'email', value: p.email, placeholder: 'für Rückfragen und die Abrechnung' });
+		var konto = h('input', { class: 'field', type: 'email', value: p.konto || '', placeholder: 'E-Mail des Shop-Kontos, z. B. anna@example.com' });
+		var anlegen = h('input', { type: 'checkbox' });
 		var code = h('input', { class: 'field', type: 'text', maxlength: '32', value: p.code, placeholder: 'z. B. ANNA10', style: 'text-transform:uppercase' });
 		var rabatt = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.rabatt).replace('.', ',') });
 		var prov = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: String(p.provision).replace('.', ',') });
@@ -55,6 +57,9 @@
 			field(ui, 'Name', name),
 			field(ui, 'Kanal und Profil', plattform),
 			field(ui, 'E-Mail', email, 'Keine Bankdaten hier eintragen – die gehören nicht ins ERP.'),
+			field(ui, 'Konto im Shop (macht ihn zum Ambassador)', h('div', null, konto,
+				h('label', { style: 'display:block;margin-top:6px' }, anlegen, ' Konto anlegen und Einladung mailen, falls es noch keins gibt')),
+				'Mit dem Konto sieht der Influencer unter „Mein Konto → Ambassador“ seine Zahlen und kann eine Auszahlung anfordern. Leer lassen oder löschen entzieht ihm den Zugang.'),
 			neu ? field(ui, 'Rabattcode', code, 'Wird als Gutschein im Shop angelegt. Danach nicht mehr änderbar, nur abschaltbar – er steht in Videos und Beschreibungen.')
 				: field(ui, 'Rabattcode', h('div', null, h('code', null, p.code)), 'Der Code bleibt, wie er ist.'),
 			field(ui, 'Rabatt für Kunden (%)', rabatt, '0 ist erlaubt: dann dient der Code nur dazu, Bestellungen zuzuordnen.'),
@@ -71,7 +76,7 @@
 			ev.preventDefault();
 			err.hidden = true;
 			save.disabled = true;
-			var body = { name: name.value, plattform: plattform.value, email: email.value, rabatt: rabatt.value, provision: prov.value, aktiv: aktiv.checked, notiz: notiz.value };
+			var body = { name: name.value, plattform: plattform.value, email: email.value, rabatt: rabatt.value, provision: prov.value, aktiv: aktiv.checked, notiz: notiz.value, konto_email: konto.value, konto_anlegen: anlegen.checked };
 			if (neu) { body.code = code.value; } else { body.id = p.id; }
 			ui.api('affiliates', { method: 'POST', body: body }).then(function (res) {
 				ui.toast(res.message);
@@ -84,12 +89,12 @@
 		});
 	}
 
-	function payoutDialog(ui, p, data, onSaved) {
+	function payoutDialog(ui, p, data, onSaved, req) {
 		var h = ui.h;
 		var guthaben = p.stats.guthaben;
 		var betrag = h('input', { class: 'field', type: 'text', inputmode: 'decimal', value: guthaben > 0 ? String(guthaben).replace('.', ',') : '' });
 		var datum = h('input', { class: 'field', type: 'date', value: data.today, max: data.today });
-		var notiz = h('input', { class: 'field', type: 'text', maxlength: '190', placeholder: 'z. B. PayPal, Überweisung vom …' });
+		var notiz = h('input', { class: 'field', type: 'text', maxlength: '190', placeholder: 'z. B. PayPal, Überweisung vom …', value: req ? req.ziel : '' });
 		var err = h('div', { class: 'notice warn', hidden: true });
 		var save = h('button', { class: 'btn primary', type: 'submit' }, 'Auszahlung festhalten');
 
@@ -117,6 +122,30 @@
 				err.textContent = e.message;
 				err.hidden = false;
 			}).then(function () { save.disabled = false; });
+		});
+	}
+
+	function declineDialog(ui, r, onSaved) {
+		var h = ui.h;
+		var notiz = h('input', { class: 'field', type: 'text', maxlength: '190', placeholder: 'z. B. Betrag noch unter dem Mindestbetrag' });
+		var err = h('div', { class: 'notice warn', hidden: true });
+		var go = h('button', { class: 'btn primary', type: 'submit' }, 'Ablehnen');
+		var form = h('form', null,
+			h('p', null, 'Der Ambassador sieht die Begründung unter „Mein Konto“.'),
+			field(ui, 'Begründung', notiz), err, h('div', { style: 'margin-top:10px' }, go));
+		var d = ui.dlg('Anforderung von ' + r.name + ' ablehnen', form);
+		form.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			err.hidden = true;
+			go.disabled = true;
+			ui.api('affiliates/ablehnen', { method: 'POST', body: { partner: r.partner, notiz: notiz.value } }).then(function (res) {
+				ui.toast(res.message);
+				d.close();
+				onSaved();
+			}).catch(function (e) {
+				err.textContent = e.message;
+				err.hidden = false;
+			}).then(function () { go.disabled = false; });
 		});
 	}
 
@@ -148,6 +177,22 @@
 				presets.appendChild(h('button', { class: 'chip', type: 'button', 'aria-pressed': parseInt(k, 10) === d.days ? 'true' : 'false', onclick: function () { days = parseInt(k, 10); load(); } }, d.ranges[k]));
 			});
 
+			if (d.requests.length) {
+				var rq = h('div', { class: 'card', style: 'margin-bottom:14px' }, h('h3', null, 'Auszahlung angefordert'));
+				d.requests.forEach(function (r) {
+					var p = d.partners.filter(function (x) { return x.id === r.partner; })[0];
+					var row = h('div', { class: 'notice', style: 'margin-bottom:8px' },
+						h('b', null, r.name), ' möchte ', h('b', null, eur(r.betrag)), ' (angefordert am ' + dateDe(r.datum) + '). Zahlungsangabe: ', h('code', null, r.ziel), ' ');
+					if (d.can_pay && p) {
+						row.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function () { payoutDialog(ui, p, d, load, r); } }, 'Auszahlung festhalten'));
+						row.appendChild(document.createTextNode(' '));
+						row.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { declineDialog(ui, r, load); } }, 'Ablehnen'));
+					}
+					rq.appendChild(row);
+				});
+				box.appendChild(rq);
+			}
+
 			var tbl = h('table', { class: 'list' });
 			tbl.appendChild(h('thead', null, h('tr', null,
 				h('th', null, 'Affiliate'), h('th', null, 'Code'), h('th', { class: 'num' }, 'Rabatt'), h('th', { class: 'num' }, 'Provision'),
@@ -166,6 +211,7 @@
 				}
 				tb.appendChild(h('tr', null,
 					h('td', null, h('b', null, p.name), h('div', { class: 'muted' }, p.plattform || ''),
+						h('div', { class: 'muted' }, p.konto ? 'Konto: ' + p.konto : 'kein Konto'),
 						p.aktiv ? null : h('span', { class: 'tag later' }, 'abgeschaltet')),
 					h('td', null, h('code', null, p.code)),
 					h('td', { class: 'num' }, pct(p.rabatt)),

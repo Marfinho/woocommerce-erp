@@ -5,6 +5,7 @@
  * - Rules.php     Prüfen und Rechnen (rein),
  * - Partners.php  Partner, Auszahlungen und der Gutschein im Shop,
  * - Sales.php     Bestellungen mit Affiliate-Code,
+ * - Account.php   „Ambassador“ unter „Mein Konto“ (Zahlen zum eigenen Code, Auszahlung anfordern),
  * - Seite im ERP: `Erp\Pages\Affiliates` (Verkauf → Marketing → Affiliates).
  *
  * Dieses Modul hält nur einen Haken: Sobald eine Bestellung mit Affiliate-Code
@@ -18,6 +19,8 @@ namespace Lindenweg16\Modules\Affiliate;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Roles;
+
 /**
  * Hooks des Moduls.
  */
@@ -27,6 +30,12 @@ class AffiliateModule {
 	 * Hooks registrieren.
 	 */
 	public function register() {
+		( new Account() )->register();
+
+		// Die Rolle „Ambassador“ gibt es auch auf Installationen, die vor ihr eingerichtet wurden.
+		add_action( 'init', array( Roles::class, 'add_ambassador_role' ), 20 );
+		add_action( 'delete_user', array( Partners::class, 'forget_user' ) );
+
 		add_action( 'woocommerce_order_status_processing', array( $this, 'freeze_rate' ), 20, 1 );
 		add_action( 'woocommerce_order_status_completed', array( $this, 'freeze_rate' ), 20, 1 );
 	}

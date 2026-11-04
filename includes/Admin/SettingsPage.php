@@ -68,6 +68,7 @@ class SettingsPage {
 				'km_pauschale'            => array( __( 'Kilometerpauschale (€ je km)', 'lindenweg16' ), 'number' ),
 				'marketing_nachlauf_tage' => array( __( 'Nachlauffenster für Kampagnenumsatz (Tage)', 'lindenweg16' ), 'number' ),
 				'affiliate_wartezeit_tage' => array( __( 'Wartezeit für Affiliate-Provision (Tage nach Bestellung)', 'lindenweg16' ), 'number' ),
+				'affiliate_min_auszahlung' => array( __( 'Mindestbetrag für eine Auszahlungsanforderung der Ambassadors (€)', 'lindenweg16' ), 'number' ),
 			),
 			__( 'Loyalty', 'lindenweg16' )        => array(
 				'referral_cookie_tage'     => array( __( 'Referral-Cookie Laufzeit (Tage)', 'lindenweg16' ), 'number' ),

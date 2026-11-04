@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.85.0">
+<meta name="anleitung-stand" content="0.86.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.85.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.86.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.85.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.86.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2453,15 +2453,17 @@ svg.sv{display:block;width:100%;height:auto}
 <!-- schaubild:vers-affiliates -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Vom Influencer zur Auszahlung">
 <div class="sb-kopf">Schaubild · Vom Influencer zur Auszahlung</div>
-<ol class="fluss c3">
-	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Rabatt für Kunden, Provision</span></li>
-	<li class="erp"><b>Gutschein im Shop</b><span>entsteht gleichzeitig, gilt sofort</span></li>
+<ol class="fluss c4">
+	<li class="du"><b>Affiliate anlegen</b><span>Name, Code, Rabatt, Provision, Konto-E-Mail</span></li>
+	<li class="erp"><b>Gutschein und Rolle Ambassador</b><span>der Code gilt sofort, der Influencer bekommt Zugang</span></li>
 	<li class="ext"><b>Influencer teilt den Code</b><span>Zuschauer lösen ihn im Warenkorb ein</span></li>
-	<li class="erp"><b>Bezahlte Bestellung zählt</b><span>Umsatz, Provision, Satz von damals</span></li>
+	<li class="erp"><b>Bezahlte Bestellung zählt</b><span>Warenwert, Provision, Satz von damals</span></li>
 	<li class="warn"><b>Wartezeit</b><span>Provision wird erst nach 30 Tagen auszahlbar</span></li>
-	<li class="du"><b>Überweisen, dann festhalten</b><span>Betrag und Datum eintragen, das Guthaben sinkt</span></li>
+	<li class="ext"><b>Ambassador fordert an</b><span>unter Mein Konto, mit Zahlungsangabe</span></li>
+	<li class="du"><b>Überweisen, dann festhalten</b><span>oder ablehnen mit Begründung</span></li>
+	<li class="ok"><b>Guthaben sinkt</b><span>der Ambassador sieht die Auszahlung</span></li>
 </ol>
-<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="warn">Pflicht oder Ausnahme</span></p>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="warn">Pflicht oder Ausnahme</span> <span class="ok">Ergebnis</span></p>
 </figure>
 <!-- /schaubild:vers-affiliates -->
 
@@ -2481,6 +2483,34 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Ein Code steht in Videos, Beschreibungen und Stories. Deshalb lässt er sich nach dem Anlegen nicht mehr ändern, und einen Affiliate gibt es nicht zum Löschen. Willst du die Zusammenarbeit beenden, nimmst du bei <strong>Ändern</strong> den Haken „Code ist aktiv“ heraus: Der Gutschein im Shop wird abgeschaltet, die bisherigen Zahlen bleiben stehen. Gibt es den Code schon als anderen Gutschein im Shop, sagt dir das ERP das und legt nichts an.</p>
 </div>
 
+<h3>Den Influencer zum Ambassador machen</h3>
+<p>Im selben Dialog gibt es das Feld <strong>Konto im Shop</strong>. Trägst du dort die E-Mail-Adresse ein, verknüpft das ERP den Affiliate mit diesem Konto und gibt ihm zusätzlich die Rolle <strong>Ambassador</strong>. Seine Kundenrolle bleibt, er kann also ganz normal weiter einkaufen.</p>
+<ul>
+<li><strong>Hat er schon ein Konto</strong> (er hat sich im Shop registriert oder schon einmal bestellt), reicht die Adresse.</li>
+<li><strong>Hat er noch keins:</strong> Setze den Haken <em>Konto anlegen und Einladung mailen</em>. Das ERP legt das Konto an, und er bekommt die Mail von WordPress mit dem Link, ein Passwort zu setzen. Die Mail geht sofort raus.</li>
+<li><strong>Zugang entziehen:</strong> Feld leeren und speichern. Die Rolle wird ihm abgenommen, der Code und die Zahlen bleiben.</li>
+<li>Ein Konto gehört zu genau einem Affiliate. Wird das Konto in WordPress gelöscht, löst sich die Verknüpfung; der Affiliate bleibt.</li>
+</ul>
+<p>Die Rolle selbst gibt <strong>keine</strong> Rechte im ERP oder im wp-admin, nur das Lesen. Sie ist das Kennzeichen; ob jemand die Seite sieht, hängt an der Verknüpfung mit dem Affiliate.</p>
+
+<h3>Was der Ambassador unter „Mein Konto“ sieht</h3>
+<p>Im Shop erscheint für ihn im Konto der Punkt <strong>Ambassador</strong> (andere Kunden sehen ihn nicht). Dort stehen:</p>
+<ul>
+<li>sein <strong>Code</strong>, der Rabatt für die Zuschauer und seine Provision,</li>
+<li>sein <strong>Kontostand</strong>: auszahlbar, in Wartezeit, bisher ausgezahlt,</li>
+<li>seine <strong>Zahlen</strong> für 30 Tage, 90 Tage, 12 Monate oder alles: Zahl der Bestellungen, Warenwert netto und Provision. <strong>Kundendaten sieht er nie</strong>, nur diese Summen,</li>
+<li>die <strong>bisherigen Auszahlungen</strong>.</li>
+</ul>
+<p>Mit <strong>Auszahlung anfordern</strong> verlangt er sein ganzes auszahlbares Guthaben. Er sagt dazu, wohin das Geld soll (zum Beispiel seine PayPal-Adresse). Das geht ab einem Mindestbetrag (Vorgabe 20 €, einstellbar unter <span class="weg">Einstellungen → Marketing</span>) und nur einmal gleichzeitig. Die Zahlen auf seiner Seite können bis zu fünf Minuten hinterherhinken; beim Anfordern wird frisch gerechnet.</p>
+
+<h3>Eine Anforderung bearbeiten</h3>
+<p>Du bekommst eine Mail an die Firmen-Adresse aus den Einstellungen, und auf der Affiliates-Seite steht oben der Kasten <strong>Auszahlung angefordert</strong> mit Betrag und Zahlungsangabe. Zwei Wege:</p>
+<ul>
+<li><strong>Auszahlung festhalten:</strong> Du überweist selbst, klickst den Knopf und bestätigst Betrag und Datum (die Zahlungsangabe ist schon eingetragen). Die Anforderung gilt damit als erledigt, der Betrag steht beim Ambassador unter den Auszahlungen.</li>
+<li><strong>Ablehnen:</strong> mit einer kurzen Begründung. Der Ambassador sieht den Text unter „Mein Konto“ und kann neu anfordern.</li>
+</ul>
+<p>Beides verlangt das Recht <em>Affiliate-Provision auszahlen</em>.</p>
+
 <h3>Was die Seite zeigt</h3>
 <p>Oben stehen Bestellungen, Umsatz und Provision im gewählten Zeitraum, dazu <strong>Auszahlbar</strong> und <strong>In Wartezeit</strong>. Darunter hat jeder Affiliate eine Zeile mit Code, Satz, Bestellungen, Umsatz, verdienter Provision und dem Guthaben, das du ihm schuldest.</p>
 <ul>
@@ -2496,7 +2526,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <div class="kasten info">
 	<span class="titel">Buchhaltung und Steuer</span>
-	<p>Die Auszahlung ist hier nur festgehalten, nicht gebucht. Die Überweisung an den Influencer buchst du wie jede andere Ausgabe über einen Beleg (<a href="#adm-buchhaltung">Kapitel D.10</a>). Ob der Influencer Gewerbetreibender ist und eine Rechnung oder Gutschrift stellen muss, klärst du mit deiner Steuerberatung, bevor die erste Provision fließt.</p>
+	<p>Die Zahlungsangabe der Ambassadors (PayPal-Adresse oder IBAN) steht in der Anforderung. Gib sie nicht weiter und lösche die Mail, wenn du sie nicht mehr brauchst. Die Auszahlung ist hier nur festgehalten, nicht gebucht. Die Überweisung an den Influencer buchst du wie jede andere Ausgabe über einen Beleg (<a href="#adm-buchhaltung">Kapitel D.10</a>). Ob der Influencer Gewerbetreibender ist und eine Rechnung oder Gutschrift stellen muss, klärst du mit deiner Steuerberatung, bevor die erste Provision fließt.</p>
 </div>
 
 <h2 id="vers-plaetze"><span class="nr">B.16</span> Lagerplätze, Etiketten und Scannen</h2>
@@ -5154,7 +5184,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.85.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.86.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

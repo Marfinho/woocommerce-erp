@@ -33,11 +33,27 @@ class ErpAffiliatesTest extends TestCase {
 		$this->assertSame( array( 'verkauf', 'Marketing' ), Navigation::place( 'affiliates' ) );
 	}
 
+	public function test_rolle_ambassador_hat_nur_lesen() {
+		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Core/Roles.php' );
+
+		$this->assertStringContainsString( "AMBASSADOR_ROLE = 'lw16_ambassador'", $src );
+		$this->assertMatchesRegularExpression( '/add_role\(\s*self::AMBASSADOR_ROLE,[^;]*array\( \'read\' => true \)/s', $src );
+	}
+
+	public function test_account_seite_ist_nur_fuer_verknuepfte_konten() {
+		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Modules/Affiliate/Account.php' );
+
+		// Menüpunkt und Seite hängen am Partner des angemeldeten Kontos, die Anforderung am Nonce.
+		$this->assertStringContainsString( 'Partners::for_user( get_current_user_id() )', $src );
+		$this->assertStringContainsString( "wp_verify_nonce( \$nonce, 'lw16_aff_request' )", $src );
+	}
+
 	public function test_seite_ist_als_script_registriert() {
 		$js = file_get_contents( dirname( __DIR__ ) . '/assets/erp/pages/affiliates.js' );
 
 		$this->assertStringContainsString( "UI.pages['affiliates']", $js );
 		$this->assertStringContainsString( "ui.api('affiliates", $js );
 		$this->assertStringContainsString( "affiliates/auszahlung", $js );
+		$this->assertStringContainsString( "affiliates/ablehnen", $js );
 	}
 }

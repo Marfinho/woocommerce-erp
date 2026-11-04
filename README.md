@@ -688,7 +688,9 @@ vorhanden ist – nicht, was geplant war.
   Warenwert netto nach Rabatt und Erstattungen, Satz je Bestellung festgehalten
   (`_lw16_aff_provision`), Wartezeit (`affiliate_wartezeit_tage`, Vorgabe 30),
   Auszahlungen nur angehängt (Option `lw16_affiliate_payouts`, Recht
-  `verkauf.affiliates.auszahlen`). Das ERP überweist nichts.
+  `verkauf.affiliates.auszahlen`). Das ERP überweist nichts. Rolle `lw16_ambassador`
+  (nur `read`) für verknüpfte Konten; `Account.php` zeigt unter Mein Konto den Punkt
+  „Ambassador“ (Zahlen, Auszahlung anfordern; Option `lw16_affiliate_requests`).
 - **Events:** Social Rides, Märkte und Rennen als eigener Inhaltstyp, frei
   definierbare Zusatzfelder je Event (inklusive eingebetteter Komoot-Tour),
   Anmeldung mit Bestätigungslink auch ohne Benutzerkonto, Begleitpersonen mit

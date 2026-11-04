@@ -174,6 +174,23 @@ class AffiliateTest extends TestCase {
 		$this->assertSame( array(), Rules::check_payout( '-5', 20, 'zu viel überwiesen' )['errors'] );
 	}
 
+	public function test_auszahlungsanforderung() {
+		$ok = Rules::check_request( 35.5, 20, false, ' paypal@anna.de ' );
+		$this->assertSame( array(), $ok['errors'] );
+		$this->assertSame( 35.5, $ok['betrag'] );
+		$this->assertSame( 'paypal@anna.de', $ok['ziel'] );
+
+		// Unter dem Mindestbetrag, ohne Zahlungsangabe, mit offener Anforderung.
+		$this->assertCount( 1, Rules::check_request( 15, 20, false, 'x' )['errors'] );
+		$this->assertCount( 1, Rules::check_request( 50, 20, false, '  ' )['errors'] );
+		$this->assertCount( 1, Rules::check_request( 50, 20, true, 'x' )['errors'] );
+		$this->assertCount( 3, Rules::check_request( 0, 20, true, '' )['errors'] );
+
+		// Mindestbetrag 0 heißt: mindestens ein Cent, nie 0 €.
+		$this->assertNotEmpty( Rules::check_request( 0, 0, false, 'x' )['errors'] );
+		$this->assertSame( array(), Rules::check_request( 20, 20, false, 'x' )['errors'] );
+	}
+
 	public function test_zeitraum() {
 		$this->assertSame( 90, Rules::clean_days( null ) );
 		$this->assertSame( 90, Rules::clean_days( '7' ) );

@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.86.0] – 2026-11-04
+
+### Neu: Rolle „Ambassador“ – Zahlen und Auszahlung für Affiliates unter „Mein Konto“
+- **Rolle `lw16_ambassador`:** Im Affiliate-Dialog gibt es das Feld „Konto im Shop“. Mit der E-Mail-Adresse wird der Affiliate mit einem Shop-Konto verknüpft und das Konto bekommt zusätzlich die Rolle Ambassador (die Kundenrolle bleibt). Gibt es noch kein Konto, legt das ERP es auf Wunsch an (Haken „Konto anlegen und Einladung mailen“); WordPress schickt die Mail zum Passwort setzen. Feld leeren nimmt Rolle und Zugang wieder weg. Die Rolle hat nur das Recht „read“.
+- **Neuer Punkt „Ambassador“ unter Mein Konto** (nur für verknüpfte Konten): Code, Rabatt und Provision, Kontostand (auszahlbar, in Wartezeit, ausgezahlt), Zahlen für 30 Tage bis alles (Bestellungen, Warenwert netto, Provision) und die eigenen Auszahlungen. Kundendaten erscheinen nie.
+- **Auszahlung anfordern:** Der Ambassador verlangt sein ganzes auszahlbares Guthaben und nennt die Zahlungsangabe. Nur ab einem Mindestbetrag (Einstellungen → Marketing, Vorgabe 20 €) und nur eine offene Anforderung zugleich. Der Shop bekommt eine Mail an die Firmen-Adresse.
+- **Im ERP:** Offene Anforderungen stehen als Kasten oben auf der Affiliates-Seite. „Auszahlung festhalten“ übernimmt die Zahlungsangabe und schließt die Anforderung; „Ablehnen“ braucht eine Begründung, die der Ambassador sieht. Beides verlangt `verkauf.affiliates.auszahlen`.
+- Wird ein Konto gelöscht, löst sich die Verknüpfung; der Affiliate bleibt.
+- Betriebsanleitung: Kapitel B.15 um Ambassador-Zugang und Anforderungen erweitert.
+
 ## [0.85.0] – 2026-11-04
 
 ### Neu: Affiliates – Influencer mit eigenem Rabattcode

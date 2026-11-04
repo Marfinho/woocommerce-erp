@@ -311,6 +311,50 @@ class Rules {
 	}
 
 	/**
+	 * Auszahlungsanforderung eines Ambassadors prüfen.
+	 *
+	 * Angefordert wird immer das ganze auszahlbare Guthaben. Es muss den Mindestbetrag
+	 * erreichen, es darf keine Anforderung offen sein, und der Ambassador sagt, wohin das Geld soll.
+	 *
+	 * @param float  $guthaben  Auszahlbares Guthaben.
+	 * @param float  $min       Mindestbetrag.
+	 * @param bool   $has_open  Liegt schon eine offene Anforderung vor?
+	 * @param string $ziel      Zahlungsangabe (z. B. PayPal-Adresse).
+	 * @return array [ 'betrag' => float, 'ziel' => string, 'errors' => Meldungen ].
+	 */
+	public static function check_request( $guthaben, $min, $has_open, $ziel ) {
+		$errors = array();
+		$ziel   = trim( (string) $ziel );
+		$betrag = round( (float) $guthaben, 2 );
+		$min    = max( 0.01, round( (float) $min, 2 ) );
+
+		if ( $has_open ) {
+			$errors[] = __( 'Du hast schon eine Auszahlung angefordert. Sobald sie erledigt ist, kannst du die nächste anfordern.', 'lindenweg16' );
+		}
+
+		if ( '' === $ziel ) {
+			$errors[] = __( 'Bitte angeben, wohin das Geld soll, zum Beispiel deine PayPal-Adresse.', 'lindenweg16' );
+		} elseif ( mb_strlen( $ziel ) > 190 ) {
+			$errors[] = __( 'Die Zahlungsangabe darf höchstens 190 Zeichen haben.', 'lindenweg16' );
+		}
+
+		if ( $betrag < $min ) {
+			$errors[] = sprintf(
+				/* translators: 1: Mindestbetrag, 2: aktuelles Guthaben. */
+				__( 'Eine Auszahlung ist ab %1$s € möglich. Auszahlbar sind im Moment %2$s €.', 'lindenweg16' ),
+				number_format( $min, 2, ',', '.' ),
+				number_format( max( 0.0, $betrag ), 2, ',', '.' )
+			);
+		}
+
+		return array(
+			'betrag' => $betrag,
+			'ziel'   => $ziel,
+			'errors' => $errors,
+		);
+	}
+
+	/**
 	 * Auszahlung prüfen.
 	 *
 	 * Ein positiver Betrag darf das Guthaben nicht übersteigen. Ein negativer Betrag
