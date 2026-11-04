@@ -45,6 +45,11 @@ und im Abschnitt „Umsetzungsstand“ der README.
 - Jetzt werden auch gescannte PDFs im Browser gelesen: Die ersten drei Seiten werden mit pdf.js in Bilder verwandelt und mit derselben Texterkennung wie die Fotos gelesen. Die Datei verlässt dabei das Gerät nicht, nur der gelesene Text geht an den Server.
 - Schlägt das Laden der Texterkennung oder des PDF-Lesers fehl (kein Internet, blockiert), steht jetzt genau das in der Meldung.
 
+## [0.81.0] – 2026-11-04
+
+### Neu: Angemeldete Geräte
+- **Profilmenü → „Angemeldete Geräte“:** zeigt alle eigenen Anmeldungen (Gerät und Browser, Anmeldezeit, gültig bis, Adresse) und beendet mit einem Klick alle außer der aktuellen. Eine neue Anmeldung meldet andere Geräte nicht ab; Browser und App vom Home-Bildschirm haben je eine eigene Anmeldung.
+
 ## [0.80.1] – 2026-11-03
 
 ### Geändert

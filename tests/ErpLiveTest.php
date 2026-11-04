@@ -110,6 +110,16 @@ class ErpLiveTest extends TestCase {
 		$this->assertStringContainsString( 'max( (int) $seconds, self::MIN_SESSION )', $src );
 	}
 
+	public function test_angemeldete_geraete_sind_im_profilmenue() {
+		$php = $this->read( 'includes/Erp/Pages/Sitzungen.php' );
+
+		$this->assertStringContainsString( "'/erp/sitzungen'", $php );
+		$this->assertStringContainsString( 'destroy_others( wp_get_session_token() )', $php );
+		$this->assertStringContainsString( 'get_current_user_id()', $php, 'Nur die eigenen Sitzungen.' );
+		$this->assertStringContainsString( 'UI.sessionsDialog', $this->read( 'assets/erp/pages/sitzungen.js' ) );
+		$this->assertStringContainsString( 'UI.sessionsDialog()', $this->read( 'assets/erp/erp.js' ) );
+	}
+
 	public function test_abgelaufenes_token_wird_erneuert() {
 		$js = $this->read( 'assets/erp/erp.js' );
 

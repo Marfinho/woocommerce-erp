@@ -439,6 +439,7 @@
 		});
 		el.pop.appendChild(h('hr'));
 		el.pop.appendChild(h('button', { class: 'pop-item', type: 'button', onclick: function () { el.pop.hidden = true; if (UI.pushDialog) { UI.pushDialog(); } } }, ico('bell'), h('span', null, 'Benachrichtigungen')));
+		el.pop.appendChild(h('button', { class: 'pop-item', type: 'button', onclick: function () { el.pop.hidden = true; if (UI.sessionsDialog) { UI.sessionsDialog(); } } }, ico('lock'), h('span', null, 'Angemeldete Geräte')));
 		el.pop.appendChild(el.themeBtn);
 		el.pop.appendChild(h('a', { class: 'pop-item', href: boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
 		if (boot.user.full) { el.pop.appendChild(h('a', { class: 'pop-item', href: C.adminUrl }, ico('ext'), h('span', null, 'WordPress-Verwaltung'))); }
@@ -457,6 +458,7 @@
 			body.appendChild(h('a', { class: 'more-item', href: '#/seite/' + i.id, onclick: closeDlg }, ico('cog'), h('span', null, i.title)));
 		});
 		body.appendChild(h('button', { class: 'more-item', type: 'button', onclick: function () { closeDlg(); if (UI.pushDialog) { UI.pushDialog(); } } }, ico('bell'), h('span', null, 'Benachrichtigungen')));
+		body.appendChild(h('button', { class: 'more-item', type: 'button', onclick: function () { closeDlg(); if (UI.sessionsDialog) { UI.sessionsDialog(); } } }, ico('lock'), h('span', null, 'Angemeldete Geräte')));
 		body.appendChild(h('a', { class: 'more-item', href: S.boot.shop.url }, ico('shop'), h('span', null, 'Zum Shop')));
 		body.appendChild(h('a', { class: 'more-item', href: C.logout }, ico('logout'), h('span', null, 'Abmelden')));
 		dlg('Mehr', body);
