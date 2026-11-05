@@ -115,11 +115,11 @@ class ImportPage {
 					'contact_person' => __( 'Ansprechpartner', 'lindenweg16' ),
 					'phone'          => __( 'Telefon', 'lindenweg16' ),
 					'email'          => __( 'E-Mail', 'lindenweg16' ),
-					'type'           => __( 'Typ (leer = Händler)', 'lindenweg16' ),
+					'type'           => __( 'Typ', 'lindenweg16' ),
 					'status'         => __( 'Status', 'lindenweg16' ),
 					'source'         => __( 'Quelle', 'lindenweg16' ),
 					'follow_up_on'   => __( 'Wiedervorlage', 'lindenweg16' ),
-					'note'           => __( 'Notizen', 'lindenweg16' ),
+					'note'           => __( 'Notiz', 'lindenweg16' ),
 				),
 			),
 			'kontakte'     => array(

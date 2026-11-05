@@ -236,4 +236,14 @@ class ErpImportTest extends TestCase {
 		$this->assertSame( 'kunde', ImportPage::map_contact_status( ' KUNDE ' ) );
 		$this->assertSame( '', ImportPage::map_contact_status( 'irgendwas' ) );
 	}
+
+	public function test_dealer_sheet_maps_the_usual_header_row_completely() {
+		$header = array( 'Typ', 'Firma', 'Straße', 'PLZ', 'Ort', 'Ansprechpartner', 'Telefon', 'E-Mail', 'Quelle', 'Status', 'Wiedervorlage', 'Notiz' );
+		$sheets = ImportPage::sheets();
+		$map    = Import::suggest_mapping( $sheets['haendler']['fields'], $header );
+
+		$this->assertSame( 0, $map['type'] );
+		$this->assertSame( 11, $map['note'] );
+		$this->assertNotContains( '', $map );
+	}
 }
