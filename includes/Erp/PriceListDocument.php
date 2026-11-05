@@ -35,6 +35,9 @@ class PriceListDocument {
 	 */
 	const HISTORY_LIMIT = 5;
 
+	/** Artikelzeilen je Seite. */
+	const ROWS_PER_PAGE = 20;
+
 	/**
 	 * Adresse des Dokuments für einen Kontakt (öffnet in neuem Tab).
 	 *
@@ -266,11 +269,12 @@ class PriceListDocument {
 	/**
 	 * Das fertige HTML-Dokument.
 	 *
-	 * @param array $d     Daten aus Verkauf::price_list_data().
-	 * @param array $fonts Schriftname => Base64-Inhalt (WOFF2); leer = Systemschrift.
+	 * @param array  $d     Daten aus Verkauf::price_list_data().
+	 * @param array  $fonts Schriftname => Base64-Inhalt (WOFF2); leer = Systemschrift.
+	 * @param string $logo  Logo als SVG-Text; leer = Wortmarke.
 	 * @return string
 	 */
-	public static function render( array $d, array $fonts = array() ) {
+	public static function render( array $d, array $fonts = array(), $logo = '' ) {
 		$c       = $d['contact'];
 		$me      = isset( $d['sender'] ) ? $d['sender'] : array();
 		$steps   = self::tier_steps( $d['tiers'] );
@@ -296,15 +300,15 @@ class PriceListDocument {
 			. '<span>Im Druckdialog „Als PDF speichern“ wählen und „Kopf- und Fußzeilen“ ausschalten.</span></div>';
 
 		/* ---- Seite 1 ---- */
-		$html .= '<section class="page">';
-		$html .= self::band( $d['date'] );
+		$html .= '<section class="page"><div class="frame"></div><div class="inner">';
+		$html .= self::masthead( $logo, false );
+		$html .= '<div class="kicker mono">Händlerpreisliste · Stand ' . self::e( self::dmy( $d['date'] ) ) . '</div>';
 
-		$html .= '<div class="addr"><div class="from">' . self::e( implode( ' · ', array_filter( array( isset( $me['name'] ) ? $me['name'] : '', isset( $me['strasse'] ) ? $me['strasse'] : '', isset( $me['ort'] ) ? $me['ort'] : '' ) ) ) ) . '</div>'
-			. '<div class="to"><b>' . self::e( $c['company'] ) . '</b>'
+		$html .= '<div class="for"><span>Persönlich für</span><b>' . self::e( $c['company'] ) . '</b>'
 			. ( '' !== $c['person'] ? '<div>' . self::e( $c['person'] ) . '</div>' : '' )
 			. ( '' !== $c['address'] ? '<div>' . self::e( $c['address'] ) . '</div>' : '' )
-			. ( '' !== $c['vat_id'] ? '<div class="mono">USt-IdNr. ' . self::e( $c['vat_id'] ) . '</div>' : '' )
-			. '</div></div>';
+			. ( '' !== $c['vat_id'] ? '<div class="mono small">USt-IdNr. ' . self::e( $c['vat_id'] ) . '</div>' : '' )
+			. '</div>';
 
 		$html .= '<h1>Ihre Händlerpreise</h1>';
 		$html .= '<p class="lead">' . self::e( self::greeting( $c['person'] ) ) . '<br>' . self::e( self::intro( count( $orders ), $last_tn, $last ) ) . '</p>';
@@ -313,20 +317,25 @@ class PriceListDocument {
 			$html .= self::history_panel( $orders, $revenue, $last, $last_tn, $steps );
 		}
 
-		$html .= self::articles_table( $d['rows'], (float) $d['vat'] );
-		$html .= self::footer( $me );
-		$html .= '</section>';
+		$html .= self::callout( $stand, $steps, $ref );
+		$html .= '</div>' . self::footer( $me ) . '</section>';
 
-		/* ---- Seite 2 ---- */
-		$html .= '<section class="page">';
-		$html .= self::band( $d['date'] );
+		/* ---- Artikel: je Seite eine Handvoll Zeilen, damit nichts abgeschnitten wird ---- */
+		$chunks = $d['rows'] ? array_chunk( $d['rows'], self::ROWS_PER_PAGE ) : array( array() );
+
+		foreach ( $chunks as $n => $chunk ) {
+			$html .= '<section class="page"><div class="frame"></div><div class="inner">' . self::masthead( $logo, true );
+			$html .= self::articles_table( $chunk, (float) $d['vat'], $n > 0 );
+			$html .= '</div>' . self::footer( $me ) . '</section>';
+		}
+
+		/* ---- Staffel und Konditionen ---- */
+		$html .= '<section class="page"><div class="frame"></div><div class="inner">' . self::masthead( $logo, true );
 		$html .= '<h1>Je mehr Sie bestellen, desto mehr bleibt bei Ihnen</h1>';
 		$html .= '<p class="lead">Der Rabatt richtet sich nach dem Wert Ihrer Bestellung. Mit jeder Stufe steigt nicht nur der Satz – er gilt auch für den ganzen Bestellwert, nicht nur für den Teil darüber.</p>';
 		$html .= self::steps_table( $steps, $stand, $last_tn );
-		$html .= self::callout( $stand, $steps, $ref );
 		$html .= self::terms( $d );
-		$html .= self::footer( $me );
-		$html .= '</section>';
+		$html .= '</div>' . self::footer( $me ) . '</section>';
 
 		return $html . '</body></html>';
 	}
@@ -388,13 +397,14 @@ class PriceListDocument {
 	 * Artikeltabelle.
 	 *
 	 * @param array $rows Zeilen aus Verkauf::price_list_rows().
+	 * @param float $vat  Umsatzsteuersatz als Anteil; 0 = ohne Ausweis.
 	 * @return string
 	 */
-	protected static function articles_table( array $rows, $vat = 0.0 ) {
-		$out = '<h2>Artikel und Händlerpreise</h2>';
+	protected static function articles_table( array $rows, $vat = 0.0, $more = false ) {
+		$out = '<h2 class="sec first">Artikel und Händlerpreise' . ( $more ? ' (Fortsetzung)' : '' ) . '</h2>';
 
 		if ( ! $rows ) {
-			return $out . '<p class="muted">Zurzeit sind keine Artikel mit Händlerpreis hinterlegt.</p>';
+			return $out . '<p class="muted center">Zurzeit sind keine Artikel mit Händlerpreis hinterlegt.</p>';
 		}
 
 		$out .= '<table class="art"><thead><tr><th>Nr.</th><th>Artikel</th><th class="num">Empfohlener VK'
@@ -420,7 +430,7 @@ class PriceListDocument {
 	 */
 	protected static function steps_table( array $steps, array $stand, $last_tn ) {
 		if ( ! $steps ) {
-			return '<p class="muted">Die Mengenstaffel wird individuell vereinbart.</p>';
+			return '<p class="muted center">Die Mengenstaffel wird individuell vereinbart.</p>';
 		}
 
 		$out = '<table class="steps"><thead><tr><th>Stufe</th><th class="num">ab Bestellwert</th><th class="num">Rabatt</th><th class="num">Sie sparen</th><th class="num">Sie zahlen</th><th class="num">Mehr gespart<br><small>als in der Stufe davor</small></th></tr></thead><tbody>';
@@ -451,22 +461,37 @@ class PriceListDocument {
 			return '';
 		}
 
+		$box = static function ( $label, $head, $text ) {
+			return '<div class="callout"><span class="lab">' . self::e( $label ) . '</span><b>' . self::e( $head ) . '</b><p>' . self::e( $text ) . '</p></div>';
+		};
+
 		if ( null === $ref ) {
 			$s = $steps[0];
 
-			return '<div class="callout"><b>Schon ab ' . self::e( self::eur( $s['min'] ) ) . ' Bestellwert</b> sparen Sie ' . self::e( self::eur( $s['discount'] ) ) . ' (' . self::e( self::pct( $s['pct'] ) ) . '). Wer mehr bestellt, kommt in die höheren Stufen – bis zu ' . self::e( self::pct( end( $steps )['pct'] ) ) . ' Rabatt.</div>';
+			return $box(
+				'Ihr Einstieg',
+				'Schon ab ' . self::eur( $s['min'] ) . ' Bestellwert sparen Sie ' . self::eur( $s['discount'] ) . ' (' . self::pct( $s['pct'] ) . ').',
+				'Wer mehr bestellt, kommt in die höheren Stufen – bis zu ' . self::pct( end( $steps )['pct'] ) . ' Rabatt.'
+			);
 		}
 
 		if ( ! $stand['next'] ) {
-			return '<div class="callout"><b>Sie sind in unserer höchsten Stufe.</b> Mit Ihrer letzten Bestellung (Bestellwert rund ' . self::e( self::eur( $ref ) ) . ') haben Sie bereits den besten Satz von ' . self::e( self::pct( $stand['current']['pct'] ) ) . ' erreicht.</div>';
+			return $box(
+				'Ihre Stufe',
+				'Sie sind in unserer höchsten Stufe.',
+				'Mit Ihrer letzten Bestellung (Bestellwert rund ' . self::eur( $ref ) . ') haben Sie bereits den besten Satz von ' . self::pct( $stand['current']['pct'] ) . ' erreicht.'
+			);
 		}
 
 		$n = $stand['next'];
 
-		return '<div class="callout"><b>Nur ' . self::e( self::eur( $stand['missing'] ) ) . ' mehr Bestellwert – und Sie sind in Stufe „' . self::e( $n['name'] ) . '“.</b> '
-			. 'Ihre letzte Bestellung lag bei rund ' . self::e( self::eur( $ref ) ) . '. Ab ' . self::e( self::eur( $n['min'] ) ) . ' gelten ' . self::e( self::pct( $n['pct'] ) ) . ' Rabatt'
-			. ( $stand['current'] ? ' statt ' . self::e( self::pct( $stand['current']['pct'] ) ) : '' )
-			. ' – bei diesem Bestellwert sparen Sie damit ' . self::e( self::eur( $stand['gain'] ) ) . ' mehr.</div>';
+		return $box(
+			'Ihr nächster Schritt',
+			'Nur ' . self::eur( $stand['missing'] ) . ' mehr Bestellwert – und Sie sind in Stufe „' . $n['name'] . '“.',
+			'Ihre letzte Bestellung lag bei rund ' . self::eur( $ref ) . '. Ab ' . self::eur( $n['min'] ) . ' gelten ' . self::pct( $n['pct'] ) . ' Rabatt'
+			. ( $stand['current'] ? ' statt ' . self::pct( $stand['current']['pct'] ) : '' )
+			. ' – bei diesem Bestellwert sparen Sie damit ' . self::eur( $stand['gain'] ) . ' mehr.'
+		);
 	}
 
 	/**
@@ -484,7 +509,7 @@ class PriceListDocument {
 		$items[] = 'Der Bestellwert für die Stufe wird zum empfohlenen Verkaufspreis gerechnet, vor Rabatt. Nicht rabattfähige Positionen zählen nicht mit.';
 		$items[] = 'Preise freibleibend, Stand ' . self::dmy( $d['date'] ) . '.';
 
-		$out = '<h2>Konditionen</h2><ul class="terms">';
+		$out = '<h2 class="sec">Konditionen</h2><ul class="terms">';
 
 		foreach ( $items as $i ) {
 			$out .= '<li>' . self::e( $i ) . '</li>';
@@ -494,24 +519,29 @@ class PriceListDocument {
 	}
 
 	/**
-	 * Kopfband mit Wortmarke und Stand.
+	 * Kopf wie auf dem Karton-Flyer: Logo mittig, Tagline, feine Linie mit rotem Punkt.
 	 *
-	 * @param string $date Stand.
+	 * @param string $logo    Logo als SVG-Text; leer = Wortmarke.
+	 * @param bool   $compact Kleiner (Folgeseite).
 	 * @return string
 	 */
-	protected static function band( $date ) {
-		return '<header class="band"><div class="mark"><span class="dot"></span><b>Lindenweg 16</b><em>Haster Haken</em></div>'
-			. '<div class="stand mono">Händlerpreisliste · Stand ' . self::e( self::dmy( $date ) ) . '</div></header>';
+	protected static function masthead( $logo, $compact ) {
+		$mark = '' !== $logo
+			? '<img class="logo" alt="Haster Haken" src="data:image/svg+xml;base64,' . base64_encode( $logo ) . '">'
+			: '<div class="wordmark">Lindenweg 16 <em>Haster Haken</em></div>';
+
+		return '<header class="mast' . ( $compact ? ' small' : '' ) . '">' . $mark
+			. '<div class="tagline">Handgemacht aus Haste</div><div class="rule"><i></i></div></header>';
 	}
 
 	/**
-	 * Fußzeile.
+	 * Fußzeile mit dem Leitsatz der Marke.
 	 *
 	 * @param array $me Absender.
 	 * @return string
 	 */
 	protected static function footer( array $me ) {
-		$parts = array( 'Lindenweg 16 · Handgemacht in Haste' );
+		$parts = array( 'lindenweg16.de' );
 
 		foreach ( array( 'email', 'telefon' ) as $k ) {
 			if ( ! empty( $me[ $k ] ) ) {
@@ -519,11 +549,12 @@ class PriceListDocument {
 			}
 		}
 
-		return '<footer class="foot">' . self::e( implode( ' · ', $parts ) ) . '</footer>';
+		return '<footer class="foot"><div class="promise">Ihre Zufriedenheit ist uns das Wichtigste</div><div>' . self::e( implode( ' · ', $parts ) ) . '</div></footer>';
 	}
 
 	/**
-	 * Gestaltung nach CI: Schwarz als Hauptfarbe, Rot nur als Akzent.
+	 * Gestaltung wie der Karton-Flyer: Cremepapier, feiner Rahmen, zentrierte Texte.
+	 * Schwarz ist Hauptfarbe, Rot bleibt Akzent, Holzton wärmt.
 	 *
 	 * @param array $fonts Schriftname => Base64 (WOFF2).
 	 * @return string
@@ -544,54 +575,66 @@ class PriceListDocument {
 		}
 
 		return $css . <<<'CSS'
-:root{--ink:#151515;--on-ink:#F1EFEE;--red:#EC1443;--tint:#FBD9E0;--paper:#E8E6E3;--wood:#D9C3A5}
+:root{--ink:#151515;--red:#EC1443;--tint:#FBD9E0;--paper:#FAF8F4;--wood:#D9C3A5;--wood-soft:#F1E6D3;--muted:#6B6A63;--line:#D9D4CA}
 *{box-sizing:border-box}
 html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{margin:0;background:#cfcdca;color:var(--ink);font:9.6pt/1.45 "Inter",system-ui,sans-serif}
+body{margin:0;background:#cfcdca;color:var(--ink);font:9.4pt/1.5 "Inter",system-ui,sans-serif}
 .mono{font-family:"DM Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;padding:10px 16px;background:var(--ink);color:var(--on-ink);font-size:10pt}
+.toolbar{position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;padding:10px 16px;background:var(--ink);color:#F1EFEE;font-size:10pt}
 .toolbar button{background:var(--red);color:#fff;border:0;border-radius:6px;padding:8px 14px;font:600 10pt "Inter",sans-serif;cursor:pointer}
 .toolbar span{opacity:.75}
-.page{position:relative;width:210mm;min-height:297mm;margin:12px auto;background:#fff;padding:0 16mm 22mm;overflow:hidden;page-break-after:always;break-after:page}
+.page{position:relative;width:210mm;height:297mm;margin:12px auto;background:var(--paper);overflow:hidden;page-break-after:always;break-after:page}
 .page:last-of-type{page-break-after:auto;break-after:auto}
-.band{display:flex;justify-content:space-between;align-items:center;margin:0 -16mm 9mm;padding:7mm 16mm;background:var(--ink);color:var(--on-ink);border-bottom:2.2mm solid var(--red)}
-.mark{display:flex;align-items:baseline;gap:3mm}
-.mark .dot{display:inline-block;width:3mm;height:3mm;border-radius:50%;background:var(--red);align-self:center}
-.mark b{font:700 17pt "Bricolage Grotesque",sans-serif;letter-spacing:-.01em}
-.mark em{font:500 10pt "Bricolage Grotesque",sans-serif;font-style:normal;color:var(--wood)}
-.stand{font-size:8.4pt;color:var(--on-ink);opacity:.85}
-h1{font:700 21pt/1.12 "Bricolage Grotesque",sans-serif;letter-spacing:-.015em;margin:0 0 3mm}
-h2{font:700 12pt "Bricolage Grotesque",sans-serif;margin:6mm 0 2.5mm}
-.lead{margin:0 0 5mm;max-width:150mm}
-.muted{color:#5b5855}
-.addr{display:flex;justify-content:space-between;gap:10mm;margin-bottom:8mm}
-.addr .from{font-size:7.2pt;color:#6a6764;border-bottom:.2mm solid #bbb;align-self:flex-start;padding-bottom:1mm;max-width:80mm}
-.addr .to{min-width:70mm;line-height:1.4}
-.panel{background:var(--paper);border-left:1.6mm solid var(--red);border-radius:1mm;padding:4mm 5mm;margin:0 0 4mm}
-.panel h2{margin:0 0 2.5mm}
-.tiles{display:flex;gap:4mm;margin-bottom:3mm}
-.tile{flex:1;background:#fff;border-radius:1.5mm;padding:2.5mm 3mm}
-.tile span{display:block;font-size:7.4pt;color:#6a6764;text-transform:uppercase;letter-spacing:.04em}
+.frame{position:absolute;inset:8mm;border:.3mm solid var(--ink);pointer-events:none}
+.inner{position:absolute;inset:8mm;padding:9mm 15mm 30mm;text-align:center}
+.mast{display:flex;flex-direction:column;align-items:center}
+.mast .logo{display:block;width:47mm;height:auto}
+.mast.small .logo{width:30mm}
+.wordmark{font:800 20pt "Bricolage Grotesque",sans-serif;letter-spacing:-.01em}
+.wordmark em{font:500 11pt "Bricolage Grotesque",sans-serif;font-style:normal;color:var(--muted)}
+.tagline{margin-top:1.5mm;font-size:6.8pt;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+.rule{display:flex;align-items:center;gap:3mm;width:50mm;margin:4mm auto 4mm}
+.rule:before,.rule:after{content:"";flex:1;height:.25mm;background:var(--ink)}
+.rule i{width:1.7mm;height:1.7mm;background:var(--red);transform:rotate(45deg)}
+.mast.small .rule{margin:3mm auto 3mm}
+.kicker{font-size:7.6pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:5mm}
+.for{margin:0 auto 6mm;line-height:1.45}
+.for span{display:block;font-size:6.8pt;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:1mm}
+.for b{font:700 12.5pt "Bricolage Grotesque",sans-serif}
+.small{font-size:8.4pt}
+h1{font:700 22pt/1.12 "Bricolage Grotesque",sans-serif;letter-spacing:-.015em;margin:0 auto 3.5mm;max-width:150mm}
+h2{font:700 12.5pt "Bricolage Grotesque",sans-serif;margin:0 0 3mm}
+h2.sec{margin:7mm 0 3mm}
+h2.sec.first{margin-top:2mm;font-size:15pt}
+.lead{margin:0 auto 6mm;max-width:132mm}
+.muted{color:var(--muted)}
+.center{text-align:center}
+.panel{margin:0 0 2mm;padding:4.5mm 5mm 3.5mm;background:#fff;border:.25mm solid var(--line);border-radius:1.5mm}
+.tiles{display:flex;gap:3.5mm;margin-bottom:3mm}
+.tile{flex:1;padding:2.6mm 2mm;background:var(--paper);border:.25mm solid var(--line);border-radius:1.2mm}
+.tile span{display:block;font-size:6.6pt;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}
 .tile b{display:block;font-size:13pt;font-weight:500;margin-top:.8mm}
-.tile em{display:block;font-style:normal;font-size:8pt;color:#6a6764}
-table{width:100%;border-collapse:collapse}
-th{font:600 7.6pt "Inter",sans-serif;text-transform:uppercase;letter-spacing:.04em;text-align:left;color:#5b5855;padding:1.6mm 2mm;border-bottom:.35mm solid var(--ink);vertical-align:bottom}
+.tile em{display:block;font-style:normal;font-size:7.8pt;color:var(--muted)}
+table{width:100%;border-collapse:collapse;text-align:left}
+th{font:600 6.9pt "Inter",sans-serif;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);padding:1.6mm 2mm;border-bottom:.3mm solid var(--ink);vertical-align:bottom}
 th small{font-weight:400;text-transform:none;letter-spacing:0}
-td{padding:1.9mm 2mm;border-bottom:.2mm solid #d8d5d1;vertical-align:top}
+td{padding:1.8mm 2mm;border-bottom:.2mm solid var(--line);vertical-align:top}
 .num{text-align:right;white-space:nowrap}
 .strong{font-weight:500}
-.hist td,.hist th{padding:1.2mm 2mm;font-size:8.6pt}
-.hist th{border-bottom-color:#9a9794}
-.art tbody tr:nth-child(even){background:#faf9f8}
+.hist td,.hist th{padding:1.1mm 2mm;font-size:8.4pt}
+.hist th{border-bottom-color:var(--line)}
 .steps td{padding:2.6mm 2mm}
-.steps tr.mine{background:var(--tint)}
-.tag{display:inline-block;margin-left:1.5mm;padding:.3mm 1.6mm;border-radius:2mm;background:var(--red);color:#fff;font-size:6.6pt;font-weight:600;letter-spacing:.03em;text-transform:uppercase;vertical-align:1px}
-.note{font-size:8pt;color:#6a6764;margin:1.5mm 0 0}
-.callout{margin:6mm 0 0;padding:4.5mm 5.5mm;background:var(--ink);color:var(--on-ink);border-left:2mm solid var(--red);border-radius:1mm;font-size:10.4pt;line-height:1.5}
-.callout b{color:#fff}
-.terms{margin:0;padding-left:4.5mm}
+.steps tr.mine{background:var(--wood-soft)}
+.tag{display:inline-block;margin-left:1.5mm;padding:.3mm 1.7mm;border-radius:2mm;background:var(--red);color:#fff;font-size:6.2pt;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:1px}
+.note{font-size:7.8pt;color:var(--muted);margin:2mm 0 0}
+.callout{margin:7mm auto 0;padding:5mm 7mm 4.5mm;max-width:150mm;background:var(--wood-soft);border:.3mm solid var(--wood);border-radius:1.5mm}
+.callout .lab{display:block;font-size:6.8pt;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--red);margin-bottom:1.5mm}
+.callout b{display:block;font:700 12.5pt/1.25 "Bricolage Grotesque",sans-serif;margin-bottom:1.5mm}
+.callout p{margin:0}
+.terms{list-style:none;margin:0 auto;padding:0;max-width:135mm;font-size:8.4pt;color:var(--muted)}
 .terms li{margin:0 0 1.2mm}
-.foot{position:absolute;left:16mm;right:16mm;bottom:9mm;padding-top:2.5mm;border-top:.25mm solid #c9c6c2;font-size:7.8pt;color:#6a6764;text-align:center}
+.foot{position:absolute;left:8mm;right:8mm;bottom:8mm;padding:0 15mm 7mm;text-align:center;font-size:7.8pt;color:var(--muted)}
+.foot .promise{font-size:6.6pt;letter-spacing:.2em;text-transform:uppercase;margin-bottom:1mm}
 @page{size:A4;margin:0}
 @media print{body{background:#fff}.no-print{display:none!important}.page{margin:0;box-shadow:none}}
 CSS;
@@ -626,6 +669,24 @@ CSS;
 	}
 
 	/**
+	 * Logo des Haster Haken als SVG-Text, auf die Marke zugeschnitten.
+	 *
+	 * @return string Leer, wenn die Datei fehlt (dann steht die Wortmarke).
+	 */
+	public static function load_logo() {
+		$file = LW16_PLUGIN_DIR . 'branding/haster-haken/haster-haken-logo.svg';
+
+		if ( ! is_readable( $file ) ) {
+			return '';
+		}
+
+		$svg = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+
+		// Der Rand der Datei ist Leerraum; die Marke füllt den Ausschnitt.
+		return (string) preg_replace( '/viewBox="[^"]*" width="\d+" height="\d+"/', 'viewBox="112 52 416 316"', $svg, 1 );
+	}
+
+	/**
 	 * Auslieferung der Preisliste (admin-post).
 	 */
 	public static function serve() {
@@ -645,7 +706,7 @@ CSS;
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 		header( 'X-Robots-Tag: noindex, nofollow' );
-		echo self::render( Verkauf::price_list_data( $id ), self::load_fonts() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		echo self::render( Verkauf::price_list_data( $id ), self::load_fonts(), self::load_logo() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		exit;
 	}
 }

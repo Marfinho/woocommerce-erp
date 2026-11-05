@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.92.1] – 2026-11-05
+
+### Geändert
+- **Händlerpreisliste im Stil des Karton-Flyers:** Statt Formular-Optik mit schwarzem Kopfband jetzt Cremepapier mit feinem Rahmen, dem echten Haster-Haken-Logo mittig, Tagline „Handgemacht aus Haste“, zentrierten Texten und Rot nur als Akzent. Die Stufenhinweise stehen in Holzton, die Fußzeile trägt den Leitsatz „Ihre Zufriedenheit ist uns das Wichtigste“.
+- **Neuer Aufbau:** Seite 1 ist persönlich (Händler, Stand bei uns, nächster Schritt), danach folgen die Artikel – bei vielen Artikeln über mehrere Seiten, nichts wird mehr abgeschnitten –, zuletzt Staffel und Konditionen.
+
 ## [0.92.0] – 2026-11-05
 
 ### Neu: Händlerpreisliste als Dokument im Erscheinungsbild
