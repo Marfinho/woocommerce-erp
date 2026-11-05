@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.91.0] – 2026-11-05
+
+### Neu: Händler per CSV hochladen
+- Neues Blatt **Händler (Adressliste)** im Import (Profilmenü → Import & Doku): Firma, Straße, PLZ, Ort, Ansprechpartner, Telefon, E-Mail, Typ, Status, Quelle, Wiedervorlage und Notizen. Ohne Typ gilt „Händler“.
+- **Keine Dubletten:** Wer schon da ist (gleiche E-Mail, sonst gleiche Firma am gleichen Ort), wird aktualisiert; leere Zellen der Datei überschreiben nichts. Die Vorschau markiert solche Zeilen als „vorhandener Händler wird aktualisiert“.
+- Auf der Seite Kontakte / B2B führt der Knopf **Händler per CSV** direkt zum Import.
+- Betriebsanleitung: Kapitel D.19 um den Händler-Import ergänzt.
+
 ## [0.90.0] – 2026-11-04
 
 ### Neu: Ambassadors im Live-Bildschirm und angeforderte Auszahlungen in „Heute“

@@ -225,4 +225,15 @@ class ErpImportTest extends TestCase {
 			$this->assertContains( $field, $known, $field );
 		}
 	}
+
+	public function test_dealer_sheet_needs_a_company_and_maps_status_words() {
+		$sheets = ImportPage::sheets();
+
+		$this->assertArrayHasKey( 'haendler', $sheets );
+		$this->assertStringContainsString( '(Pflicht)', $sheets['haendler']['fields']['company'] );
+		$this->assertArrayHasKey( 'zip', $sheets['haendler']['fields'] );
+		$this->assertSame( 'muster_abgegeben', ImportPage::map_contact_status( 'Muster abgegeben' ) );
+		$this->assertSame( 'kunde', ImportPage::map_contact_status( ' KUNDE ' ) );
+		$this->assertSame( '', ImportPage::map_contact_status( 'irgendwas' ) );
+	}
 }

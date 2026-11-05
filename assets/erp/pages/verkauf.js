@@ -145,7 +145,7 @@
 				function (r) { location.hash = '#/kontakt/' + r.id; });
 		} }, 'Kontakt anlegen');
 
-		ui.pageHead('Kontakte / B2B', 'Händler, Vereine und Firmen – mit Konditionen, Bestellungen und Nachbestell-Link.', [newBtn, ui.classicBtn(item)]);
+		ui.pageHead('Kontakte / B2B', 'Händler, Vereine und Firmen – mit Konditionen, Bestellungen und Nachbestell-Link.', [newBtn, h('a', { class: 'btn', href: '#/seite/import' }, 'Händler per CSV'), ui.classicBtn(item)]);
 
 		var search = h('input', { class: 'field', type: 'search', placeholder: 'Suchen: Firma, Ort, Ansprechpartner …', 'aria-label': 'Kontakte suchen' });
 		var typ = h('select', { class: 'field', 'aria-label': 'Typ' });
