@@ -21,6 +21,7 @@ use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\StockLedger;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 
 /**
@@ -159,6 +160,46 @@ class Catalog {
 		}
 
 		return array( 'rows' => $rows, 'counts' => $counts, 'flags' => self::flag_texts(), 'money' => (bool) $with_money );
+	}
+
+	/**
+	 * Links zum Produktetikett (PDF) – nur mit dem Recht „Etikettendrucker“
+	 * und nur für Produkte, die im Shop stehen.
+	 *
+	 * @param int $id    Artikel; 0 für den Bogen aller Shop-Produkte.
+	 * @param int $wc_id Shop-Produkt (0 = keins, dann gibt es auch kein Etikett).
+	 * @return array|null {pdf, sheet, printer}
+	 */
+	public static function label_links( $id, $wc_id ) {
+		if ( ! Access::can( 'verwaltung.etiketten' ) || $wc_id < 1 ) {
+			return array( 'pdf' => '', 'sheet' => '', 'printer' => false );
+		}
+
+		$settings = Workflow::settings();
+		$url      = static function ( array $args ) use ( $settings ) {
+			return wp_nonce_url(
+				add_query_arg(
+					array_merge(
+						array(
+							'action' => 'lw16_betrieb_labels',
+							'was[]'  => 'products',
+							'format' => $settings['label_roll'],
+						),
+						$args
+					),
+					admin_url( 'admin-post.php' )
+				),
+				'lw16_betrieb_export'
+			);
+		};
+
+		$article = $id ? ArticleRepository::find( (int) $id ) : null;
+
+		return array(
+			'pdf'     => $article ? $url( array( 'code' => (string) $article['sku'] ) ) : '',
+			'sheet'   => $url( array() ),
+			'printer' => '' !== $settings['label_printer'],
+		);
 	}
 
 	/**

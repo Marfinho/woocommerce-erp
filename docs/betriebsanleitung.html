@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.92.0">
+<meta name="anleitung-stand" content="0.93.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.92.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.93.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.92.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.93.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -1448,6 +1448,35 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="kasten merke">
 	<span class="titel">Ein Produkt darf sich nicht selbst enthalten</span>
 	<p>Wenn du versuchst, das Set in die Stückliste des Sets zu legen, weist das ERP das ab. Das ist kein Fehler, sondern verhindert eine Rechnung, die nie zu Ende käme.</p>
+</div>
+
+<h3>Etikett drucken</h3>
+<!-- schaubild:prod-artikel|Etikett drucken -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Vom Shop-Produkt zum Etikett">
+<div class="sb-kopf">Schaubild · Vom Shop-Produkt zum Etikett</div>
+<ol class="fluss c5">
+	<li class="du"><b>Produkt öffnen</b><span>Katalog → Produkte → Übersicht, Karte „Etikett“</span></li>
+	<li class="erp"><b>Etikett zusammenstellen</b><span>Produktname, Foto aus dem Shop, Artikel-Nr.</span></li>
+	<li class="du"><b>Wählen</b><span>Als PDF öffnen oder Etikett drucken (Anzahl)</span></li>
+	<li class="ext"><b>Etikettendrucker</b><span>druckt auf die eingestellte Rolle</span></li>
+	<li class="ok"><b>Etikett am Modul</b><span>Name, Bild und Artikel-Nr. auf einen Blick</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:prod-artikel|Etikett drucken -->
+
+<p>Für jedes Produkt, das im Shop steht, gibt es ein Etikett mit <strong>Produktname</strong>, einem <strong>Foto des Moduls</strong> (das Produktbild aus dem Shop) und der <strong>Artikel-Nr.</strong> Es klebt am Modul, am Karton oder am Regal. Dafür braucht es das Recht <em>Etikettendrucker</em>; ohne es fehlt die Karte.</p>
+
+<ol class="schritte">
+	<li>Öffne das Produkt und bleib auf der <strong>Übersicht</strong>. Dort steht die Karte <strong>Etikett</strong> – nur bei Produkten, die mit dem Shop verknüpft sind (Stammdaten, Feld <em>Shop-Produkt</em>).</li>
+	<li><strong>Als PDF öffnen</strong> zeigt das Etikett in einem neuen Tab, zum Ansehen oder zum Drucken mit dem Druckdialog.</li>
+	<li><strong>Etikett drucken</strong> schickt es direkt an den Etikettendrucker. Trag vorher die <strong>Anzahl</strong> ein, wenn du mehrere brauchst. Welcher Drucker und welche Rolle gelten, steht in den Workflow-Einstellungen (Kapitel A.3 und D.20); es sind dieselben wie bei den Plattenetiketten.</li>
+	<li>Alle Shop-Produkte auf einmal: Oben auf der Produktliste liegt <strong>Etiketten aller Shop-Produkte als PDF</strong>.</li>
+</ol>
+
+<div class="kasten merke">
+	<span class="titel">Kein Bild, kein Problem</span>
+	<p>Hat das Shop-Produkt kein Produktbild, druckt das ERP das Etikett ohne Foto, nur mit Name und Artikel-Nr. Der Name stammt aus dem Shop; ist er lang, wird er auf bis zu drei Zeilen umgebrochen. Ändere Name oder Bild im Shop, gilt es beim nächsten Druck.</p>
 </div>
 
 <p>Die Reiter <strong>Kalkulation</strong> und <strong>Shop</strong> behandelt Kapitel D.9: Herstellkosten, Preisebenen und die Übertragung des Preises in den Shop.</p>
@@ -5226,7 +5255,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.92.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.93.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

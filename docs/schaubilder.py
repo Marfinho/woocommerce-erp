@@ -182,6 +182,13 @@ sb('prod-artikel', 'Ein Produkt bis zur Verkaufsreife',
    du('Stückliste', 'Position + Menge je Stück'),
    ok('Kalkulation und Shop', 'ab hier rechnet das ERP den Preis'))
 
+sb('prod-artikel|Etikett drucken', 'Vom Shop-Produkt zum Etikett',
+   du('Produkt öffnen', 'Katalog → Produkte → Übersicht, Karte „Etikett“'),
+   erp('Etikett zusammenstellen', 'Produktname, Foto aus dem Shop, Artikel-Nr.'),
+   du('Wählen', 'Als PDF öffnen oder Etikett drucken (Anzahl)'),
+   ext('Etikettendrucker', 'druckt auf die eingestellte Rolle'),
+   ok('Etikett am Modul', 'Name, Bild und Artikel-Nr. auf einen Blick'))
+
 sb('prod-lager', 'Der Bestand ist eine Summe',
    erp('Alle Bewegungen', 'Zugang, Abgang, Korrektur, Umlagerung, Kommission'),
    ok('Bestand', 'die Summe – kein Feld, das man verstellt'),

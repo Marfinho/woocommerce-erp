@@ -20,6 +20,7 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Erp\Access;
 use Lindenweg16\Erp\ProductFile;
 use Lindenweg16\Erp\RestApi;
+use Lindenweg16\Erp\Workflow;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuFilamentCatalogRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
@@ -28,6 +29,9 @@ use Lindenweg16\Modules\Betrieb\BomResolver;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
+use Lindenweg16\Modules\Betrieb\LabelPdf;
+use Lindenweg16\Modules\Betrieb\LabelSheet;
+use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
 use Lindenweg16\Modules\Betrieb\ModelFile;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
 use Lindenweg16\Modules\Betrieb\PriceSync;
@@ -52,6 +56,7 @@ class Produkt {
 		$edit  = $api->needs( array( 'fertigung.artikel', 'fertigung.stammdaten.edit' ) );
 		$money = $api->needs( array( 'fertigung.artikel', 'finanzen.kosten' ) );
 		$price = $api->needs( array( 'fertigung.artikel', 'fertigung.stammdaten.edit', 'finanzen.kosten' ) );
+		$label = $api->needs( array( 'fertigung.artikel', 'verwaltung.etiketten' ) );
 		$base  = '/erp/produkte/(?P<id>\d+)';
 		$rev   = $base . '/revisionen/(?P<rid>\d+)';
 
@@ -93,6 +98,9 @@ class Produkt {
 		$route( $base . '/kalkulation/preis', 'POST', array( __CLASS__, 'calc_adopt' ), $price );
 		$route( '/erp/preise/shop', 'POST', array( __CLASS__, 'prices_push_all' ), $price );
 
+		// Etikett (Name, Foto, Artikel-Nr.) an den Etikettendrucker schicken.
+		$route( $base . '/etikett', 'POST', array( __CLASS__, 'label_print' ), $label );
+
 		// Beschaffung.
 		$route( $base . '/beschaffung', 'GET', array( __CLASS__, 'sourcing_get' ), $view );
 		$route( $base . '/beschaffung', 'POST', array( __CLASS__, 'sourcing_save' ), $edit );
@@ -123,6 +131,61 @@ class Produkt {
 	 */
 	protected static function done( $message, array $extra = array(), $status = 200 ) {
 		return new WP_REST_Response( array_merge( array( 'ok' => true, 'message' => $message ), $extra ), $status );
+	}
+
+	/**
+	 * Produktetikett in die Druck-Warteschlange legen.
+	 *
+	 * Gedruckt wird auf dem Etikettendrucker und der Rolle aus den
+	 * Einstellungen (wie beim Spulen-Etikett); `anzahl` Exemplare.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function label_print( WP_REST_Request $request ) {
+		$article = self::article( $request );
+
+		if ( ! $article ) {
+			return self::no_article();
+		}
+
+		if ( (int) $article['wc_product_id'] < 1 ) {
+			return self::fail( __( 'Dieses Produkt ist nicht mit dem Shop verknüpft – ein Etikett gibt es nur für Shop-Produkte.', 'lindenweg16' ) );
+		}
+
+		$settings = Workflow::settings();
+
+		if ( '' === $settings['label_printer'] ) {
+			return self::fail( __( 'Kein Etikettendrucker eingestellt – das Etikett wurde nicht gedruckt. Du kannst es als PDF öffnen.', 'lindenweg16' ) );
+		}
+
+		$labels = LabelPdf::product_labels( array( (int) $article['id'] ) );
+
+		if ( ! $labels ) {
+			return self::fail( __( 'Das Shop-Produkt gibt es nicht mehr – bitte die Verknüpfung in den Stammdaten prüfen.', 'lindenweg16' ) );
+		}
+
+		$count  = max( 1, min( 50, (int) $request->get_param( 'anzahl' ) ) );
+		$roll   = LabelSheet::roll( $settings['label_roll'] );
+		$width  = LabelSheet::is_landscape( $roll ) ? (float) $roll['h'] : (float) $roll['w'];
+		$height = LabelSheet::is_landscape( $roll ) ? (float) $roll['w'] : (float) $roll['h'];
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$labels = $i ? LabelPdf::product_labels( array( (int) $article['id'] ) ) : $labels;
+			$pdf    = LabelPdf::build_roll( array( $labels[0] ), $settings['label_roll'] );
+			$job    = $pdf ? PrintQueueService::enqueue_pdf_labels( $settings['label_printer'], $pdf->output(), 'product_label', $width, $height, $settings['label_roll'] ) : 0;
+
+			if ( ! $job ) {
+				return self::fail( __( 'Der Druckjob konnte nicht angelegt werden – ist der Etikettendrucker richtig eingestellt?', 'lindenweg16' ) );
+			}
+		}
+
+		return self::done(
+			1 === $count
+				? __( 'Etikett geht an den Drucker.', 'lindenweg16' )
+				/* translators: %d: Anzahl Etiketten. */
+				: sprintf( __( '%d Etiketten gehen an den Drucker.', 'lindenweg16' ), $count )
+		);
 	}
 
 	/**
