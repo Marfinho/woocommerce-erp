@@ -7,6 +7,23 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.92.1] – 2026-11-05
+
+### Geändert
+- **Händlerpreisliste im Stil des Karton-Flyers:** Statt Formular-Optik mit schwarzem Kopfband jetzt Cremepapier mit feinem Rahmen, dem echten Haster-Haken-Logo mittig, Tagline „Handgemacht aus Haste“, zentrierten Texten und Rot nur als Akzent. Die Stufenhinweise stehen in Holzton, die Fußzeile trägt den Leitsatz „Ihre Zufriedenheit ist uns das Wichtigste“.
+- **Neuer Aufbau:** Seite 1 ist persönlich (Händler, Stand bei uns, nächster Schritt), danach folgen die Artikel – bei vielen Artikeln über mehrere Seiten, nichts wird mehr abgeschnitten –, zuletzt Staffel und Konditionen.
+
+## [0.92.0] – 2026-11-05
+
+### Neu: Händlerpreisliste als Dokument im Erscheinungsbild
+- **Knopf „Preisliste als PDF“ in der Kundenakte** öffnet ein eigenes Dokument (DIN A4, zwei Seiten) in den CI-Farben: schwarzes Kopfband mit rotem Akzent, Bricolage Grotesque, Inter und DM Mono. Die Schriften stecken im Dokument, es steht also allein. Über „Als PDF speichern oder drucken“ wird daraus das PDF, das du dem Händler schickst.
+- **Persönlich je Händler:** Empfänger mit Anschrift und USt-IdNr., Anrede mit Namen (bei mehreren Ansprechpartnern ohne), Zahlungsziel aus der Kondition. Es gilt die Staffel des Kontakts, sonst die Standardstaffel.
+- **Bestellhistorie:** Hat der Händler schon bestellt, zeigt das Dokument Anzahl, Bestellwert gesamt, die letzten fünf Bestellungen mit Rabatt und die Stufe, in der er zuletzt eingekauft hat; diese Stufe ist in der Tabelle markiert. Entwürfe und stornierte Bestellungen zählen nicht.
+- **Ersparnis bei mehr Umsatz:** Die Staffeltabelle zeigt je Stufe, was der Händler beim Mindestbestellwert spart, was er zahlt und was er mehr spart als in der Stufe davor. Ein Kasten nennt, wie viel bis zur nächsten Stufe fehlt und was sie bringt – bei Neukunden stattdessen den Einstieg in die erste Stufe, in der höchsten Stufe den Hinweis darauf. Der Bezugswert ist der Bestellwert der letzten Bestellung, zurückgerechnet auf den Wert vor Rabatt (eine Näherung).
+- Ohne Umsatzsteuer (Kleinunternehmer) entfallen „brutto“ und „netto“ in den Spaltenköpfen; in den Konditionen steht der Hinweis auf § 19 UStG.
+- Die Schnittstelle `kontakte/<id>/preisliste` liefert zusätzlich Stufennamen, Absender und Bestellungen. Neu im Recht `verkauf.kontakte`: `admin-post.php?action=lw16_erp_pricelist`.
+- Betriebsanleitung: Kapitel zur Kontaktakte beschreibt die Preisliste neu.
+
 ## [0.91.1] – 2026-11-05
 
 ### Behoben

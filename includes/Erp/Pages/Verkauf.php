@@ -1303,6 +1303,7 @@ class Verkauf {
 					'days'   => (int) $resolved['payment_terms_days'],
 				),
 				'terms'      => $terms,
+				'pricelist'  => \Lindenweg16\Erp\PriceListDocument::url( $id ),
 				'orders'     => $orders,
 				'open'       => $open,
 				'commission' => $commission,
@@ -1358,41 +1359,108 @@ class Verkauf {
 	 * @return WP_REST_Response
 	 */
 	public static function contact_price_list( WP_REST_Request $request ) {
-		$id      = (int) $request['id'];
-		$contact = ContactRepository::find( $id );
+		$id = (int) $request['id'];
 
-		if ( ! $contact ) {
+		if ( ! ContactRepository::find( $id ) ) {
 			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
 		}
 
+		return new WP_REST_Response( self::price_list_data( $id ) );
+	}
+
+	/**
+	 * Alles, was die Preisliste eines Händlers braucht.
+	 *
+	 * Gemeinsame Quelle für die Schnittstelle und das Dokument
+	 * (PriceListDocument): Empfänger, gültige Stufen mit Namen, Händlerpreise
+	 * und die bestätigten Bestellungen mit dem Rabatt, mit dem sie liefen.
+	 *
+	 * @param int $id Kontakt (muss es geben).
+	 * @return array
+	 */
+	public static function price_list_data( $id ) {
+		$id       = (int) $id;
+		$contact  = ContactRepository::find( $id );
 		$settings = \Lindenweg16\Modules\Betrieb\CalculationContext::settings();
 		$vat      = isset( $settings['vat_rate'] ) ? (float) $settings['vat_rate'] : 0.19;
 		$resolved = DiscountResolver::tiers_for_contact( $id, gmdate( 'Y-m-d' ) );
 		$tiers    = array();
 
 		foreach ( $resolved['tiers'] as $tier ) {
-			$tiers[] = array( 'min' => (float) $tier['min_order_value'], 'pct' => (float) $tier['discount_pct'] );
+			$tiers[] = array(
+				'name' => isset( $tier['tier_name'] ) ? (string) $tier['tier_name'] : '',
+				'min'  => (float) $tier['min_order_value'],
+				'pct'  => (float) $tier['discount_pct'],
+			);
 		}
 
 		$profile = ContactRepository::profile( $id );
+		$company = \Lindenweg16\Erp\Kit::company();
 
-		return new WP_REST_Response(
-			array(
-				'date'    => gmdate( 'Y-m-d' ),
-				'vat'     => $vat,
-				'shop'    => get_bloginfo( 'name' ),
-				'contact' => array(
-					'company' => (string) $contact['company'],
-					'person'  => (string) $contact['contact_person'],
-					'address' => trim( (string) $contact['street'] . ', ' . trim( $contact['zip'] . ' ' . $contact['city'] ), ' ,' ),
-					'vat_id'  => $profile ? (string) $profile['vat_id'] : '',
-				),
-				'tiers'   => $tiers,
-				'days'    => (int) $resolved['payment_terms_days'],
-				'source'  => (string) $resolved['source'],
-				'rows'    => self::price_list_rows( ArticleRepository::all(), $vat ),
-			)
+		return array(
+			'date'    => gmdate( 'Y-m-d' ),
+			'vat'     => $vat,
+			'shop'    => get_bloginfo( 'name' ),
+			'sender'  => array(
+				'name'    => $company['name'],
+				'strasse' => $company['strasse'],
+				'ort'     => $company['ort'],
+				'email'   => $company['email'],
+				'telefon' => $company['telefon'],
+			),
+			'contact' => array(
+				'company' => (string) $contact['company'],
+				'person'  => (string) $contact['contact_person'],
+				'address' => trim( (string) $contact['street'] . ', ' . trim( $contact['zip'] . ' ' . $contact['city'] ), ' ,' ),
+				'vat_id'  => $profile ? (string) $profile['vat_id'] : '',
+			),
+			'tiers'   => $tiers,
+			'days'    => (int) $resolved['payment_terms_days'],
+			'source'  => (string) $resolved['source'],
+			'rows'    => self::price_list_rows( ArticleRepository::all(), $vat ),
+			'orders'  => self::price_list_orders( self::order_rows( array( 'contact_id' => $id, 'limit' => 1000 ) ) ),
 		);
+	}
+
+	/**
+	 * Bestätigte Bestellungen eines Händlers für die Preisliste – reine Regel.
+	 *
+	 * Entwürfe und Stornos zählen nicht: Sie haben dem Händler keine Stufe
+	 * eingebracht. Neueste zuerst; bei gleichem Datum die höhere Nummer.
+	 *
+	 * @param array $rows Zeilen aus order_rows() (status, value, raw).
+	 * @return array Liste aus number, date, value, pct.
+	 */
+	public static function price_list_orders( array $rows ) {
+		$out = array();
+
+		foreach ( $rows as $row ) {
+			if ( 'bestaetigt' !== $row['status'] ) {
+				continue;
+			}
+
+			$o     = $row['raw'];
+			$out[] = array(
+				'number' => (int) $o['wc_order_id'] ? '#' . (int) $o['wc_order_id'] : 'A-' . (int) $o['id'],
+				'date'   => substr( (string) OrderOpsRepository::order_date( $o ), 0, 10 ),
+				'value'  => round( (float) $row['value'], 2 ),
+				'pct'    => (float) $o['applied_discount_pct'],
+				'sort'   => (int) $o['id'],
+			);
+		}
+
+		usort(
+			$out,
+			static function ( $a, $b ) {
+				return array( $b['date'], $b['sort'] ) <=> array( $a['date'], $a['sort'] );
+			}
+		);
+
+		foreach ( $out as $i => $o ) {
+			unset( $out[ $i ]['sort'] );
+		}
+
+		return $out;
 	}
 
 	/**
