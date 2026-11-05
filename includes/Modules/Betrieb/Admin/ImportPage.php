@@ -105,6 +105,23 @@ class ImportPage {
 					'phase_block' => __( 'Block', 'lindenweg16' ),
 				),
 			),
+			'haendler'     => array(
+				'label'  => __( 'Händler (Adressliste)', 'lindenweg16' ),
+				'fields' => array(
+					'company'        => __( 'Firma (Pflicht)', 'lindenweg16' ),
+					'street'         => __( 'Straße', 'lindenweg16' ),
+					'zip'            => __( 'PLZ', 'lindenweg16' ),
+					'city'           => __( 'Ort', 'lindenweg16' ),
+					'contact_person' => __( 'Ansprechpartner', 'lindenweg16' ),
+					'phone'          => __( 'Telefon', 'lindenweg16' ),
+					'email'          => __( 'E-Mail', 'lindenweg16' ),
+					'type'           => __( 'Typ (leer = Händler)', 'lindenweg16' ),
+					'status'         => __( 'Status', 'lindenweg16' ),
+					'source'         => __( 'Quelle', 'lindenweg16' ),
+					'follow_up_on'   => __( 'Wiedervorlage', 'lindenweg16' ),
+					'note'           => __( 'Notizen', 'lindenweg16' ),
+				),
+			),
 			'kontakte'     => array(
 				'label'  => __( '12 Kontakte B2B', 'lindenweg16' ),
 				'fields' => array(
@@ -315,6 +332,8 @@ class ImportPage {
 				return $this->import_time( $record, $commit );
 			case 'kontakte':
 				return $this->import_contact( $record, $commit );
+			case 'haendler':
+				return $this->import_dealer( $record, $commit );
 		}
 
 		return array( 'error' => __( 'Unbekanntes Blatt.', 'lindenweg16' ) );
@@ -499,6 +518,69 @@ class ImportPage {
 		$result = ContactRepository::save( $record );
 
 		return array( 'error' => $result['errors'] ? implode( ' ', $result['errors'] ) : '' );
+	}
+
+	/**
+	 * Händler aus einer Adressliste.
+	 *
+	 * Ohne Typ gilt „Händler“. Wer schon da ist (gleiche E-Mail, sonst gleiche
+	 * Firma am gleichen Ort), wird aktualisiert statt doppelt angelegt; leere
+	 * Zellen der Datei überschreiben dabei nichts.
+	 *
+	 * @param array $record Werte.
+	 * @param bool  $commit Schreiben.
+	 * @return array
+	 */
+	protected function import_dealer( array $record, $commit ) {
+		$record['type']   = empty( $record['type'] ) ? 'haendler' : self::map_contact_type( $record['type'] );
+		$record['status'] = empty( $record['status'] ) ? '' : self::map_contact_status( $record['status'] );
+
+		if ( empty( $record['company'] ) ) {
+			return array( 'error' => __( 'Firma fehlt.', 'lindenweg16' ) );
+		}
+
+		if ( ! empty( $record['email'] ) && ! is_email( $record['email'] ) ) {
+			return array( 'error' => sprintf( /* translators: %s: Adresse. */ __( '„%s“ ist keine E-Mail-Adresse.', 'lindenweg16' ), $record['email'] ) );
+		}
+
+		if ( ! $commit ) {
+			return array( 'error' => '' );
+		}
+
+		$existing = ContactRepository::find_duplicate(
+			isset( $record['email'] ) ? $record['email'] : '',
+			$record['company'],
+			isset( $record['city'] ) ? $record['city'] : ''
+		);
+
+		if ( $existing ) {
+			$record = array_merge( $existing, array_filter( $record, static function ( $v ) {
+				return '' !== trim( (string) $v );
+			} ) );
+			$record['contact_id'] = (int) $existing['id'];
+		}
+
+		$result = ContactRepository::save( $record );
+
+		return array( 'error' => $result['errors'] ? implode( ' ', $result['errors'] ) : '' );
+	}
+
+	/**
+	 * Status aus freiem Text.
+	 *
+	 * @param string $raw Rohwert.
+	 * @return string Schlüssel oder leer.
+	 */
+	public static function map_contact_status( $raw ) {
+		$raw = strtolower( trim( (string) $raw ) );
+
+		foreach ( ContactRepository::status_labels() as $key => $label ) {
+			if ( $raw === $key || $raw === strtolower( $label ) ) {
+				return $key;
+			}
+		}
+
+		return '';
 	}
 
 	/**

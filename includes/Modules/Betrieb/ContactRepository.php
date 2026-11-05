@@ -105,6 +105,39 @@ class ContactRepository {
 	}
 
 	/**
+	 * Vorhandenen Kontakt zu einer Adresse finden: zuerst über die E-Mail,
+	 * sonst über Firma und Ort (Groß-/Kleinschreibung egal).
+	 *
+	 * @param string $email   E-Mail.
+	 * @param string $company Firma.
+	 * @param string $city    Ort.
+	 * @return array|null
+	 */
+	public static function find_duplicate( $email, $company, $city = '' ) {
+		global $wpdb;
+		$table = self::table();
+
+		if ( '' !== trim( (string) $email ) ) {
+			$row = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM {$table} WHERE email = %s ORDER BY id ASC LIMIT 1", sanitize_email( $email ) ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				ARRAY_A
+			);
+			if ( $row ) {
+				return $row;
+			}
+		}
+
+		return $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE LOWER(company) = LOWER(%s) AND LOWER(COALESCE(city, '')) = LOWER(%s) ORDER BY id ASC LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				sanitize_text_field( $company ),
+				sanitize_text_field( $city )
+			),
+			ARRAY_A
+		);
+	}
+
+	/**
 	 * Fällige Wiedervorlagen.
 	 *
 	 * Ein Händlerkontakt ohne Termin zum Nachfassen ist kein Kontakt.

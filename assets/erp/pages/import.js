@@ -303,7 +303,7 @@
 				go.addEventListener('click', function () {
 					msg.textContent = '';
 					var d = ui.dlg('Import durchführen?', h('div', { class: 'im-dlg' },
-						h('p', null, fmt(res.valid) + ' Datensätze werden in „' + sheetOf(st.sheet).label + '“ geschrieben' + (res.updated ? ' (davon ' + fmt(res.updated) + ' vorhandene Artikel, die aktualisiert werden)' : '') + '. Das lässt sich nicht mit einem Klick zurücknehmen.'),
+						h('p', null, fmt(res.valid) + ' Datensätze werden in „' + sheetOf(st.sheet).label + '“ geschrieben' + (res.updated ? ' (davon ' + fmt(res.updated) + ' vorhandene Datensätze, die aktualisiert werden)' : '') + '. Das lässt sich nicht mit einem Klick zurücknehmen.'),
 						h('div', { class: 'im-actions' },
 							h('button', { class: 'btn', type: 'button', onclick: function () { d.close(); } }, 'Abbrechen'),
 							h('button', { class: 'btn primary', type: 'button', onclick: function () { d.close(); runImport(go, msg); } }, 'Ja, importieren'))));

@@ -818,12 +818,21 @@ class Import {
 				$error = implode( ' ', $norm['errors'] );
 			} else {
 				$known = 'artikel' === $sheet['key'] && '' !== $norm['record']['sku'] && ArticleRepository::find_by_sku( strtoupper( $norm['record']['sku'] ) );
+				if ( ! $known && 'haendler' === $sheet['key'] ) {
+					$known = (bool) \Lindenweg16\Modules\Betrieb\ContactRepository::find_duplicate(
+						isset( $norm['record']['email'] ) ? $norm['record']['email'] : '',
+						isset( $norm['record']['company'] ) ? $norm['record']['company'] : '',
+						isset( $norm['record']['city'] ) ? $norm['record']['city'] : ''
+					);
+				}
 				$out   = $runner->record( $sheet['key'], $norm['record'], $commit );
 				$error = (string) $out['error'];
 
 				if ( '' === $error && $known ) {
 					$updated++;
-					$note = __( 'vorhandener Artikel wird aktualisiert', 'lindenweg16' );
+					$note = 'haendler' === $sheet['key']
+						? __( 'vorhandener Händler wird aktualisiert', 'lindenweg16' )
+						: __( 'vorhandener Artikel wird aktualisiert', 'lindenweg16' );
 				}
 			}
 
