@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.92.0] – 2026-11-05
+
+### Neu: Mailverkehr in der Kundenakte
+- **Klick auf die E-Mail-Adresse** in der Akte öffnet den ERP-Mailer mit leerer neuer Mail an diese Adresse (statt des Mail-Programms des Rechners). Wer kein Postfach zum Senden hat, behält den bisherigen `mailto:`-Link.
+- Neue Karte **Mailverkehr** in der Akte: die letzten 30 Mails von und an die Adresse des Kontakts und die Rechnungsadresse aus dem Profil, mit Richtung, Datum und „ungelesen“. Ein Klick öffnet die Mail in der Mailbox. Der Knopf **Mail schreiben** steht direkt darüber.
+- Es erscheinen nur Mails aus Postfächern, die du lesen darfst; ohne Mailbox-Recht fehlt die Karte.
+- Betriebsanleitung: Kapitel B.11 ergänzt.
+
 ## [0.91.1] – 2026-11-05
 
 ### Behoben

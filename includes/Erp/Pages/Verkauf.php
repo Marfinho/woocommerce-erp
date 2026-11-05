@@ -35,6 +35,8 @@ use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;
 use Lindenweg16\Modules\Loyalty\LoyaltyTiers;
 use Lindenweg16\Modules\Loyalty\LoyaltyTriggers;
+use Lindenweg16\Modules\Mailbox\MailboxAccess;
+use Lindenweg16\Modules\Mailbox\MailRepository;
 use Lindenweg16\Modules\Marketing\KampagnenReport;
 use Lindenweg16\Modules\Marketing\KampagnenRepository;
 use Lindenweg16\Modules\Marketing\Kampagnenrechnung;
@@ -1322,7 +1324,72 @@ class Verkauf {
 				'quotes'     => Access::can( 'verkauf.angebote' ) ? Angebote::for_contact( $id ) : null,
 				'dunning'    => Access::can( 'finanzen.mahnwesen' ) ? Mahnwesen::for_contact( $id ) : null,
 				'rma'        => Access::can( 'verkauf.reklamationen' ) ? Reklamationen::for_contact( $id ) : null,
+				'mails'      => self::contact_mails( $contact ),
 			)
+		);
+	}
+
+	/**
+	 * Mailverkehr mit einem Kontakt aus den Postfächern, die der Nutzer lesen darf.
+	 *
+	 * Gesucht wird über die E-Mail des Kontakts und die Rechnungsadresse im Profil.
+	 * Ohne Recht auf die Mailbox (oder ohne Adresse) bleibt es null.
+	 *
+	 * @param array $contact Kontakt.
+	 * @return array|null {addresses, rows, can_send}
+	 */
+	protected static function contact_mails( array $contact ) {
+		if ( ! Access::can( 'verwaltung.mailbox' ) || ! MailboxAccess::can_open() ) {
+			return null;
+		}
+
+		$profile   = ContactRepository::profile( (int) $contact['id'] );
+		$addresses = array();
+
+		foreach ( array( (string) $contact['email'], $profile && ! empty( $profile['billing_email'] ) ? (string) $profile['billing_email'] : '' ) as $mail ) {
+			$mail = strtolower( trim( $mail ) );
+			if ( '' !== $mail && is_email( $mail ) && ! in_array( $mail, $addresses, true ) ) {
+				$addresses[] = $mail;
+			}
+		}
+
+		$accounts = MailRepository::accounts_for_user( get_current_user_id(), MailboxAccess::is_manager() );
+		$ids      = array_map( 'intval', array_column( $accounts, 'id' ) );
+		$sender   = 0;
+
+		foreach ( $accounts as $a ) {
+			if ( MailboxAccess::allows( $a['level'], 'send' ) && ! empty( $a['active'] ) ) {
+				$sender = (int) $a['id'];
+				break;
+			}
+		}
+
+		$rows = array();
+
+		foreach ( $addresses as $mail ) {
+			foreach ( MailRepository::messages_for_email( $mail, $ids, 30 ) as $m ) {
+				$rows[ (int) $m['id'] ] = array(
+					'id'      => (int) $m['id'],
+					'account' => (int) $m['account_id'],
+					'out'     => strtolower( (string) $m['from_email'] ) !== $mail,
+					'subject' => (string) $m['subject'],
+					'ts'      => Postfach::to_ts( $m['sent_at'] ),
+					'unread'  => empty( $m['is_read'] ),
+				);
+			}
+		}
+
+		usort(
+			$rows,
+			static function ( $a, $b ) {
+				return $b['ts'] <=> $a['ts'];
+			}
+		);
+
+		return array(
+			'addresses' => $addresses,
+			'rows'      => array_slice( $rows, 0, 30 ),
+			'sender'    => $sender,
 		);
 	}
 

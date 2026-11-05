@@ -226,14 +226,15 @@
 			paint();
 		}
 
-		function openCompose(mode, ref) {
+		function openCompose(mode, ref, prefill) {
 			var acc = currentAccount();
 			if (!acc) { return; }
 			st.openId = 0;
 			st.mail = null;
 			st.compose = { loading: true };
 			paint();
-			ui.api('postfach/schreiben?account=' + acc.id + '&mode=' + mode + (ref ? '&ref=' + ref : '')).then(function (d) {
+			ui.api('postfach/schreiben?account=' + acc.id + '&mode=' + mode + (ref ? '&ref=' + ref : '') +
+				(prefill && prefill.to ? '&to=' + encodeURIComponent(prefill.to) : '')).then(function (d) {
 				if (!alive()) { return; }
 				st.compose = { values: d.values, senders: d.senders, account: d.account, signature: d.signature, mode: mode, busy: false };
 				paint();
@@ -639,7 +640,22 @@
 
 		/* ---------- Start ---------- */
 
-		loadOverview(0).then(loadList).then(sync).catch(function (e) {
+		// Sprung von der Kontaktakte: #/seite/mailbox/neu/<Adresse> schreibt, …/mail/<Postfach>-<Nr> öffnet eine Mail.
+		var jump = (location.hash || '').replace(/^#\/?/, '').split('/').slice(2);
+		var jumpArg = '';
+		try { jumpArg = decodeURIComponent(jump[1] || ''); } catch (e) { jumpArg = ''; }
+		if (jump[0] === 'neu' || jump[0] === 'mail') {
+			try { history.replaceState(null, '', '#/seite/mailbox'); } catch (e) { /* nur Komfort */ }
+		}
+
+		loadOverview(jump[0] === 'mail' ? parseInt(jumpArg, 10) || 0 : 0).then(loadList).then(function () {
+			if (jump[0] === 'neu' && /^[^@\s]+@[^@\s]+$/.test(jumpArg)) { openCompose('new', 0, { to: jumpArg }); return; }
+			if (jump[0] === 'mail') {
+				var nr = parseInt(jumpArg.split('-')[1], 10);
+				if (nr) { openMail(nr); return; }
+			}
+			return sync();
+		}).catch(function (e) {
 			root.textContent = '';
 			root.appendChild(h('div', { class: 'notice warn' }, e.message));
 		});
