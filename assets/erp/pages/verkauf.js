@@ -367,7 +367,7 @@
 			box.appendChild(h('div', { class: 'page-head' },
 				h('div', null, h('h2', null, c.company), h('p', { class: 'muted', style: 'margin:4px 0 0' }, [d.types[c.type] || c.type, d.status[c.status] || c.status].join(' · '))),
 				h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' },
-					h('a', { class: 'btn', href: '#/kontakt/' + id + '/preisliste' }, 'Preisliste'),
+					h('a', { class: 'btn', href: d.pricelist, target: '_blank', rel: 'noopener' }, 'Preisliste als PDF'),
 					h('button', { class: 'btn primary', type: 'button', onclick: function () {
 						formDialog(ui, 'Stammdaten ändern', contactFields(ui, c, d.types, d.status), 'Speichern', function (body) { return post('', body); }, load);
 					} }, 'Stammdaten ändern'))));

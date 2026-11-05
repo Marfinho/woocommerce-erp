@@ -63,6 +63,7 @@ class Shell {
 			add_action( 'admin_post_lw16_erp_run_file', array( $this, 'serve_run_file' ) );
 			add_action( 'admin_post_lw16_erp_payslip_pdf', array( PayslipPdf::class, 'serve_pdf' ) );
 			add_action( 'admin_post_lw16_erp_payslip_csv', array( PayslipPdf::class, 'serve_csv' ) );
+			add_action( 'admin_post_lw16_erp_pricelist', array( PriceListDocument::class, 'serve' ) );
 		}
 
 		\Lindenweg16\Core\Lazy::rest( RestApi::class );

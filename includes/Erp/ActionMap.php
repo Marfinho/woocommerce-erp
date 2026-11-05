@@ -81,6 +81,7 @@ class ActionMap {
 			'lw16_erp_run_file'           => array( 'fertigung.workflow' ),
 			'lw16_erp_payslip_pdf'        => array( 'verwaltung.loehne' ),
 			'lw16_erp_payslip_csv'        => array( 'verwaltung.loehne' ),
+			'lw16_erp_pricelist'          => array( 'verkauf.kontakte' ),
 
 			// Druckjournal, Produktion.
 			'lw16_betrieb_save_printjob'  => array( 'fertigung.druckjournal' ),
