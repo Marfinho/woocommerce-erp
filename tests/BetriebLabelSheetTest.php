@@ -458,5 +458,27 @@ class BetriebLabelSheetTest extends TestCase {
 			);
 		}
 	}
-}
+	/**
+	 * Produktnamen werden umgebrochen, nie breiter als die Zeile, und
+	 * zu lange enden mit Auslassungspunkten.
+	 */
+	public function test_umbruch_fuer_produktnamen() {
+		$mass = static function ( $text ) {
+			return mb_strlen( $text ) * 6;
+		};
 
+		$this->assertSame( array(), LabelSheet::wrap( '  ', 100, 3, $mass ) );
+		$this->assertSame( array( 'Haken' ), LabelSheet::wrap( 'Haken', 100, 3, $mass ) );
+
+		$zeilen = LabelSheet::wrap( 'Wandregal-Modul Eiche Natur Large mit Haken', 100, 3, $mass );
+		$this->assertSame( array( 'Wandregal-Modul', 'Eiche Natur', 'Large mit Haken' ), $zeilen );
+
+		$kurz = LabelSheet::wrap( 'Wandregal-Modul Eiche Natur Large mit Haken', 100, 2, $mass );
+		$this->assertCount( 2, $kurz );
+		$this->assertStringEndsWith( '…', $kurz[1] );
+
+		foreach ( LabelSheet::wrap( 'Donaudampfschifffahrtsgesellschaft', 60, 5, $mass ) as $zeile ) {
+			$this->assertLessThanOrEqual( 60, $mass( $zeile ) );
+		}
+	}
+}

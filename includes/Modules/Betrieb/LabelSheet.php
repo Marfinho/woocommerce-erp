@@ -502,6 +502,105 @@ class LabelSheet {
 	}
 
 	/**
+	 * Einen Text in höchstens $max_lines Zeilen umbrechen.
+	 *
+	 * Gebrochen wird an Leerzeichen und Bindestrichen; ein einzelnes Wort,
+	 * das allein nicht passt, wird hart getrennt. Passt der Rest nicht mehr,
+	 * endet die letzte Zeile mit Auslassungspunkten. Das Mass der Zeichen
+	 * liefert der Aufrufer, damit die Regel ohne PDF prüfbar bleibt.
+	 *
+	 * @param string   $text      Text.
+	 * @param float    $max_width Breite einer Zeile.
+	 * @param int      $max_lines Höchstzahl der Zeilen.
+	 * @param callable $measure   Breite eines Textstücks: function ( string ): float.
+	 * @return string[]
+	 */
+	public static function wrap( $text, $max_width, $max_lines, $measure ) {
+		$text      = trim( preg_replace( '/\s+/u', ' ', (string) $text ) );
+		$max_lines = max( 1, (int) $max_lines );
+
+		if ( '' === $text ) {
+			return array();
+		}
+
+		$words = preg_split( '/(?<=-)|\s/u', $text, -1, PREG_SPLIT_NO_EMPTY );
+		$lines = array();
+		$line  = '';
+		$glue  = '';
+
+		foreach ( $words as $word ) {
+			// Nach einem Bindestrich folgt kein Leerzeichen.
+			$try = '' === $line ? $word : $line . $glue . $word;
+
+			if ( $measure( $try ) <= $max_width ) {
+				$line = $try;
+				$glue = ( '-' === substr( $word, -1 ) ) ? '' : ' ';
+				continue;
+			}
+
+			if ( '' !== $line ) {
+				$lines[] = $line;
+				$line    = '';
+			}
+
+			// Ein Wort, das allein zu breit ist, hart trennen.
+			while ( $measure( $word ) > $max_width && self::length( $word ) > 1 ) {
+				$cut = self::length( $word ) - 1;
+				while ( $cut > 1 && $measure( self::slice( $word, 0, $cut ) ) > $max_width ) {
+					--$cut;
+				}
+				$lines[] = self::slice( $word, 0, $cut );
+				$word    = self::slice( $word, $cut );
+			}
+
+			$line = $word;
+			$glue = ( '-' === substr( $word, -1 ) ) ? '' : ' ';
+		}
+
+		if ( '' !== $line ) {
+			$lines[] = $line;
+		}
+
+		if ( count( $lines ) > $max_lines ) {
+			$lines                   = array_slice( $lines, 0, $max_lines );
+			$last                    = $lines[ $max_lines - 1 ];
+			$lines[ $max_lines - 1 ] = self::slice( $last, 0, max( 1, self::length( $last ) - 1 ) ) . '…';
+
+			while ( self::length( $lines[ $max_lines - 1 ] ) > 2 && $measure( $lines[ $max_lines - 1 ] ) > $max_width ) {
+				$lines[ $max_lines - 1 ] = self::slice( $lines[ $max_lines - 1 ], 0, self::length( $lines[ $max_lines - 1 ] ) - 2 ) . '…';
+			}
+		}
+
+		return $lines;
+	}
+
+	/**
+	 * Zeichenzahl, mehrbytesicher.
+	 *
+	 * @param string $text Text.
+	 * @return int
+	 */
+	protected static function length( $text ) {
+		return function_exists( 'mb_strlen' ) ? mb_strlen( $text ) : strlen( $text );
+	}
+
+	/**
+	 * Teilstück, mehrbytesicher.
+	 *
+	 * @param string   $text   Text.
+	 * @param int      $start  Anfang.
+	 * @param int|null $length Länge.
+	 * @return string
+	 */
+	protected static function slice( $text, $start, $length = null ) {
+		if ( function_exists( 'mb_substr' ) ) {
+			return null === $length ? mb_substr( $text, $start ) : mb_substr( $text, $start, $length );
+		}
+
+		return null === $length ? substr( $text, $start ) : substr( $text, $start, $length );
+	}
+
+	/**
 	 * Text auf eine Breite kürzen. Gekürzt wird mit Auslassungspunkten,
 	 * damit erkennbar bleibt, dass etwas fehlt.
 	 *

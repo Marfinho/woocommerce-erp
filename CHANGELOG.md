@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.93.0] – 2026-11-05
+
+### Neu: Produktetikett aus dem ERP drucken
+- In der **Produktakte** (Übersicht) gibt es für jedes Produkt, das im Shop steht, die Karte **Etikett**: Produktname, ein **Foto des Moduls** (Produktbild aus dem Shop) und die **Artikel-Nr.** auf einem Etikett.
+- **Als PDF öffnen** oder **Etikett drucken** (mit Anzahl) direkt an den Etikettendrucker; Drucker und Rolle sind dieselben wie bei den Plattenetiketten. Lange Namen werden auf bis zu drei Zeilen umgebrochen, fehlt das Bild, steht der Text allein.
+- Oben auf der Produktliste: **Etiketten aller Shop-Produkte als PDF**.
+- Nur mit dem Recht „Etikettendrucker“; ohne Shop-Verknüpfung gibt es kein Etikett.
+- Betriebsanleitung: Kapitel A.12 um „Etikett drucken“ ergänzt.
+
 ## [0.92.0] – 2026-11-05
 
 ### Neu: Mailverkehr in der Kundenakte

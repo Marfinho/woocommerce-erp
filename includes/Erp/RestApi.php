@@ -579,7 +579,10 @@ class RestApi {
 	 * @return WP_REST_Response
 	 */
 	public function produkte() {
-		return new WP_REST_Response( Catalog::listing( Access::can( 'finanzen.kosten' ) ) );
+		$list                = Catalog::listing( Access::can( 'finanzen.kosten' ) );
+		$list['label_sheet'] = Catalog::label_links( 0, 1 )['sheet'];
+
+		return new WP_REST_Response( $list );
 	}
 
 	/**
@@ -598,6 +601,7 @@ class RestApi {
 		$file['shop_edit'] = $file['shop'] && Access::can( 'verkauf.shop_products' ) && current_user_can( 'edit_products' );
 		$file['edit']      = Access::can( 'fertigung.stammdaten.edit' );
 		$file['money']     = Access::can( 'finanzen.kosten' );
+		$file['label']     = Catalog::label_links( (int) $request['id'], (int) ( $file['shop']['id'] ?? 0 ) );
 
 		return new WP_REST_Response( $file );
 	}

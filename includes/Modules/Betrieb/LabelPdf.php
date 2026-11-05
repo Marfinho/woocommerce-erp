@@ -68,6 +68,107 @@ class LabelPdf {
 	}
 
 	/**
+	 * Etiketten der Produkte, die im Shop stehen.
+	 *
+	 * Je Etikett: Produktname, ein Foto des Moduls und die Artikelnummer.
+	 * Aufgenommen werden nur Artikel mit Shop-Verknüpfung, deren Produkt
+	 * es im Shop auch (noch) gibt.
+	 *
+	 * @param int[] $only_ids Nur diese Artikel (leer = alle).
+	 * @return array
+	 */
+	public static function product_labels( array $only_ids = array() ) {
+		$out = array();
+
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			return $out;
+		}
+
+		foreach ( ArticleRepository::all() as $article ) {
+			$wc_id = (int) $article['wc_product_id'];
+
+			if ( $wc_id < 1 || ( $only_ids && ! in_array( (int) $article['id'], $only_ids, true ) ) ) {
+				continue;
+			}
+
+			$product = wc_get_product( $wc_id );
+
+			if ( ! $product ) {
+				continue;
+			}
+
+			$name = trim( wp_strip_all_tags( (string) $product->get_name() ) );
+
+			$out[] = array(
+				'code'    => (string) $article['sku'],
+				'name'    => '' !== $name ? $name : (string) $article['name'],
+				'payload' => ScanResolver::PREFIX_ARTICLE . $article['sku'],
+				'kind'    => __( 'Produkt', 'lindenweg16' ),
+				'produkt' => true,
+				'image'   => self::product_image( (int) $product->get_image_id() ),
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Das Produktfoto als JPEG-Datei, klein genug für ein Etikett.
+	 *
+	 * Das PDF bettet nur JPEG ein. Andere Formate (PNG, WebP) werden in eine
+	 * Temporärdatei umgewandelt; sie wird nach dem Einbetten gelöscht.
+	 *
+	 * @param int $attachment_id Mediathek-Eintrag.
+	 * @return array|null {path, temp} oder null ohne Bild.
+	 */
+	protected static function product_image( $attachment_id ) {
+		if ( $attachment_id < 1 || ! function_exists( 'get_attached_file' ) ) {
+			return null;
+		}
+
+		$file = get_attached_file( $attachment_id );
+		$size = function_exists( 'image_get_intermediate_size' ) ? image_get_intermediate_size( $attachment_id, 'medium' ) : false;
+
+		if ( $size && ! empty( $size['path'] ) ) {
+			$uploads = wp_get_upload_dir();
+			$klein   = trailingslashit( $uploads['basedir'] ) . $size['path'];
+			$file    = is_readable( $klein ) ? $klein : $file;
+		}
+
+		if ( ! $file || ! is_readable( $file ) ) {
+			return null;
+		}
+
+		$info = @getimagesize( $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+
+		if ( $info && IMAGETYPE_JPEG === $info[2] ) {
+			return array( 'path' => $file, 'temp' => false );
+		}
+
+		if ( ! function_exists( 'wp_get_image_editor' ) ) {
+			return null;
+		}
+
+		$editor = wp_get_image_editor( $file );
+
+		if ( is_wp_error( $editor ) ) {
+			return null;
+		}
+
+		$editor->resize( 400, 400, false );
+		$editor->set_quality( 88 );
+		$tmp   = wp_tempnam( 'lw16-etikett' );
+		$saved = $editor->save( $tmp . '.jpg', 'image/jpeg' );
+		@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+
+		if ( is_wp_error( $saved ) || empty( $saved['path'] ) ) {
+			return null;
+		}
+
+		return array( 'path' => $saved['path'], 'temp' => true );
+	}
+
+	/**
 	 * Etiketten der Drucker.
 	 *
 	 * Anders als Lagerplatz und Artikel trägt ein Druckeretikett keinen
@@ -227,6 +328,11 @@ class LabelPdf {
 		// würde abgeschnitten.
 		$padding = LabelSheet::padding( $cell['h'] );
 
+		if ( ! empty( $label['produkt'] ) ) {
+			self::render_product( $pdf, $cell, $label, $padding );
+			return;
+		}
+
 		// Fehlerkorrektur Q: Ein Etikett im Lager bekommt Staub, Fett und
 		// Kratzer ab. Die höhere Stufe kostet Fläche und spart Ärger.
 		$matrix = QrCode::matrix( $label['payload'], 'Q' );
@@ -330,5 +436,112 @@ class LabelPdf {
 		$name = LabelSheet::shorten( $label['name'], (int) ( $breite / ( $klein * 0.52 ) ) );
 		$pdf->set_color( '#6E7882' );
 		$pdf->text_xy( $name, $cell['x'] + ( $cell['w'] - $pdf->text_width( $name, $klein ) ) / 2, $y + $gross + 2, $klein );
+	}
+
+	/**
+	 * Produktetikett: Foto des Moduls, Produktname, Artikelnummer.
+	 *
+	 * Breites Etikett: Foto links, Text rechts. Quadratisches oder hohes
+	 * Etikett: Foto oben, Text darunter. Fehlt das Foto, nimmt der Text die
+	 * ganze Breite.
+	 *
+	 * @param Pdf   $pdf     Dokument.
+	 * @param array $cell    Feld.
+	 * @param array $label   Etikett mit image {path, temp}, code, name.
+	 * @param float $padding Rand.
+	 */
+	protected static function render_product( Pdf $pdf, array $cell, array $label, $padding ) {
+		$image   = ! empty( $label['image']['path'] ) ? $label['image'] : null;
+		$stapel  = LabelSheet::is_stacked( $cell );
+		$innen_w = $cell['w'] - 2 * $padding;
+		$innen_h = $cell['h'] - 2 * $padding;
+
+		if ( $stapel ) {
+			// Foto oben (höchstens 55 % der Höhe), Text darunter.
+			$bild_h = $image ? min( $innen_w, $innen_h * 0.55 ) : 0;
+			$bild_w = $bild_h;
+			$bild_x = $cell['x'] + ( $cell['w'] - $bild_w ) / 2;
+			$bild_y = $cell['y'] + $padding;
+			$text_x = $cell['x'] + $padding;
+			$text_w = $innen_w;
+			$text_y = $cell['y'] + $padding + ( $image ? $bild_h + 4 : 0 );
+			$text_h = $cell['y'] + $cell['h'] - $padding - $text_y;
+		} else {
+			$bild_h = $image ? $innen_h : 0;
+			$bild_w = $image ? min( $innen_h, $innen_w * 0.42 ) : 0;
+			$bild_x = $cell['x'] + $padding;
+			$bild_y = $cell['y'] + $padding;
+			$text_x = $cell['x'] + $padding + ( $image ? $bild_w + $padding : 0 );
+			$text_w = $cell['x'] + $cell['w'] - $padding - $text_x;
+			$text_y = $cell['y'] + $padding;
+			$text_h = $innen_h;
+		}
+
+		if ( $image ) {
+			$box = min( $bild_w, $bild_h );
+			$pdf->image_jpeg_at( $image['path'], $bild_x + ( $bild_w - $box ) / 2, $bild_y + ( $bild_h - $box ) / 2, $box, $box );
+
+			if ( ! empty( $image['temp'] ) ) {
+				@unlink( $image['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink
+			}
+		}
+
+		if ( $text_w < 30 ) {
+			return;
+		}
+
+		// Die Artikelnummer ist das, was man liest: groß und fett, am Fuß
+		// des Textblocks. Der Name füllt den Platz darüber.
+		$nummer_pt = max( 8.0, min( 16.0, $text_h / 3 ) );
+		$kopf_pt   = max( 6.0, $nummer_pt * 0.5 );
+
+		// Die Breitenschätzung des PDF-Erzeugers gilt für Kleinbuchstaben;
+		// Artikelnummern bestehen aus Großbuchstaben und Ziffern und sind
+		// etwa ein Drittel breiter. Mit Zuschlag rechnen, sonst läuft die
+		// Nummer über den Rand des Etiketts.
+		$nummer = (string) $label['code'];
+		while ( $nummer_pt > 6.0 && 1.35 * $pdf->text_width( $nummer, $nummer_pt, true ) > $text_w ) {
+			$nummer_pt -= 0.5;
+		}
+		$nummer = LabelSheet::shorten( $nummer, (int) ( $text_w / ( $nummer_pt * 0.54 * 1.35 ) ) );
+
+		$nummer_y = $text_y + $text_h - $nummer_pt;
+		$kopf_y   = $nummer_y - $kopf_pt - 1;
+
+		$pdf->set_color( '#6E7882' );
+		$pdf->text_xy( __( 'Artikel-Nr.', 'lindenweg16' ), $text_x, $kopf_y, $kopf_pt );
+		$pdf->set_color( '#000000' );
+		$pdf->text_xy( $nummer, $text_x, $nummer_y, $nummer_pt, true );
+
+		// Name: so groß wie möglich, bis zu drei Zeilen, im Rest über der Nummer.
+		$name_h = $kopf_y - 3 - $text_y;
+		$name   = (string) $label['name'];
+
+		if ( $name_h < 7 || '' === trim( $name ) ) {
+			return;
+		}
+
+		for ( $pt = min( 14.0, $name_h ); $pt >= 6.0; $pt -= 0.5 ) {
+			$zeilen_max = max( 1, (int) floor( $name_h / ( $pt * 1.15 ) ) );
+			$zeilen     = LabelSheet::wrap(
+				$name,
+				$text_w,
+				min( 3, $zeilen_max ),
+				static function ( $t ) use ( $pdf, $pt ) {
+					return 1.15 * $pdf->text_width( $t, $pt, true );
+				}
+			);
+
+			$passt = count( $zeilen ) <= min( 3, $zeilen_max ) && ! preg_match( '/…$/u', end( $zeilen ) );
+
+			if ( $passt || $pt <= 6.0 ) {
+				break;
+			}
+		}
+
+		$pdf->set_color( '#000000' );
+		foreach ( $zeilen as $i => $zeile ) {
+			$pdf->text_xy( $zeile, $text_x, $text_y + $i * $pt * 1.15, $pt, true );
+		}
 	}
 }

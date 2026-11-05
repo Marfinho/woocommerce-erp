@@ -2285,6 +2285,7 @@
 			});
 			if (!rows.length) { box.appendChild(h('div', { class: 'notice' }, filter === 'alle' ? 'Keine Produkte gefunden.' : 'Hier ist nichts auffällig.')); return; }
 
+			if (data.label_sheet) { box.appendChild(h('p', null, h('a', { class: 'btn', href: data.label_sheet, target: '_blank', rel: 'noopener' }, 'Etiketten aller Shop-Produkte als PDF'))); }
 			var list = h('div', { class: 'rows' });
 			rows.forEach(function (r) {
 				var tags = h('div', { class: 'row-tags' });
@@ -2393,6 +2394,28 @@
 				tz.appendChild(h('p', { class: 'muted' }, 'Noch keine gemessenen Platten.'));
 			}
 			cards.appendChild(tz);
+
+			if (d.label && d.label.pdf) {
+				var lc = h('div', { class: 'card' }, h('h3', null, 'Etikett'),
+					h('p', { class: 'muted' }, 'Produktname, Foto des Moduls und Artikel-Nr. ' + d.sku + ' auf einem Etikett.'));
+				var count = h('input', { type: 'number', min: '1', max: '50', value: '1', 'aria-label': 'Anzahl Etiketten', style: 'width:70px' });
+				var actions = h('div', { class: 'pf-actions' },
+					h('a', { class: 'btn', href: d.label.pdf, target: '_blank', rel: 'noopener' }, 'Als PDF öffnen'));
+				if (d.label.printer) {
+					actions.appendChild(count);
+					actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) {
+						var btn = e.target;
+						btn.disabled = true;
+						api('produkte/' + d.id + '/etikett', { method: 'POST', body: { anzahl: parseInt(count.value, 10) || 1 } })
+							.then(function (x) { btn.disabled = false; toast(x.message); })
+							.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+					} }, 'Etikett drucken'));
+				} else {
+					lc.appendChild(h('p', { class: 'muted' }, 'Zum direkten Drucken fehlt ein Etikettendrucker in den Einstellungen.'));
+				}
+				lc.appendChild(actions);
+				cards.appendChild(lc);
+			}
 			box.appendChild(cards);
 		}
 	}
