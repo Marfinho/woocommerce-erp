@@ -1024,6 +1024,15 @@ class Postfach {
 			$vals = array_merge( $vals, self::reply_values( $ref, $mode, (string) $account['email'], MailboxView::fmt_date( $ref['sent_at'], true ) ) );
 		}
 
+		// Neue Mail mit Empfänger (und Betreff) aus einem Link, z. B. von der Kontaktakte.
+		if ( ! $ref && ! in_array( $mode, array( 'reply', 'replyall', 'forward', 'draft' ), true ) ) {
+			$to = sanitize_email( (string) $request->get_param( 'to' ) );
+			if ( is_email( $to ) ) {
+				$vals['to']      = $to;
+				$vals['subject'] = sanitize_text_field( (string) $request->get_param( 'subject' ) );
+			}
+		}
+
 		$senders = array();
 		foreach ( MailRepository::accounts_for_user( get_current_user_id(), MailboxAccess::is_manager() ) as $a ) {
 			if ( MailboxAccess::allows( $a['level'], 'send' ) && ! empty( $a['active'] ) ) {

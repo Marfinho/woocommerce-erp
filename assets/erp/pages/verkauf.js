@@ -386,6 +386,7 @@
 			box.appendChild(commission(d, classic));
 			var more = erpExtra(d);
 			if (more) { box.appendChild(more); }
+			if (d.mails) { box.appendChild(mailTraffic(d)); }
 			box.appendChild(activities(d));
 		}
 
@@ -485,13 +486,36 @@
 			return card;
 		}
 
+		// Mit Mailbox-Recht und Sende-Postfach öffnet die Adresse den ERP-Mailer, sonst das Mail-Programm.
+		function mailHref(d, email) {
+			return d.mails && d.mails.sender ? '#/seite/mailbox/neu/' + encodeURIComponent(email) : 'mailto:' + email;
+		}
+
+		function mailTraffic(d) {
+			var m = d.mails;
+			var card = h('div', { class: 'card vk-gap' }, h('h3', null, 'Mailverkehr'));
+			if (!m.addresses.length) { card.appendChild(h('p', { class: 'muted' }, 'Keine E-Mail-Adresse hinterlegt – dann lässt sich auch kein Mailverkehr zuordnen.')); return card; }
+			card.appendChild(h('p', { class: 'muted', style: 'margin:0 0 8px' }, m.addresses.join(', ')));
+			if (m.sender) {
+				card.appendChild(h('p', { style: 'margin:0 0 8px' }, h('a', { class: 'btn', href: '#/seite/mailbox/neu/' + encodeURIComponent(m.addresses[0]) }, 'Mail schreiben')));
+			}
+			if (!m.rows.length) { card.appendChild(h('p', { class: 'muted' }, 'Noch kein Mailverkehr in deinen Postfächern.')); return card; }
+			card.appendChild(h('div', { class: 'rows' }, m.rows.map(function (r) {
+				var when = r.ts ? new Date(r.ts * 1000).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+				return h('a', { class: 'row-card', href: '#/seite/mailbox/mail/' + r.account + '-' + r.id },
+					h('div', { class: 'row-main' }, h('b', null, (r.out ? '→ ' : '← ') + (r.subject || '(ohne Betreff)')), h('small', null, when + (r.out ? ' · gesendet' : ' · empfangen'))),
+					r.unread && !r.out ? h('div', { class: 'row-tags' }, h('span', { class: 'tag now' }, 'ungelesen')) : null);
+			})));
+			return card;
+		}
+
 		function stamm(d) {
 			var c = d.contact;
 			return h('div', { class: 'card' }, h('h3', null, 'Stammdaten'),
 				kv(ui, 'Anschrift', [c.street, [c.zip, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ')),
 				kv(ui, 'Ansprechpartner', c.contact_person),
 				kv(ui, 'Telefon', c.phone ? h('a', { href: 'tel:' + c.phone }, c.phone) : ''),
-				kv(ui, 'E-Mail', c.email ? h('a', { href: 'mailto:' + c.email }, c.email) : ''),
+				kv(ui, 'E-Mail', c.email ? h('a', { href: mailHref(d, c.email), title: d.mails && d.mails.sender ? 'Im ERP-Mailer schreiben' : 'Mail-Programm öffnen' }, c.email) : ''),
 				kv(ui, 'Herkunft', c.source),
 				kv(ui, 'Notiz', c.note));
 		}
