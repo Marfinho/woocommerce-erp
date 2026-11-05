@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.91.1] – 2026-11-05
+
+### Behoben
+- Händler-Import: Die Spalten „Typ“ und „Notiz“ werden jetzt automatisch zugeordnet (vorher blieben sie auf „nicht importieren“, die Notizen gingen verloren).
+
 ## [0.91.0] – 2026-11-05
 
 ### Neu: Händler per CSV hochladen
