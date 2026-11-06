@@ -12,8 +12,10 @@ namespace Lindenweg16\Erp\Pages;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Erp\Flow;
 use Lindenweg16\Erp\Presence;
 use Lindenweg16\Erp\RestApi;
+use WP_REST_Request;
 use WP_REST_Response;
 
 /**
@@ -36,6 +38,28 @@ class Besucher {
 				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
 			)
 		);
+
+		register_rest_route(
+			RestApi::NAMESPACE_V1,
+			'/erp/besucher/wege',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'flow' ),
+				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
+			)
+		);
+	}
+
+	/**
+	 * Wege: Übergänge zwischen Seiten im gewählten Zeitraum.
+	 *
+	 * @param WP_REST_Request $request Anfrage (tage, seite).
+	 * @return WP_REST_Response
+	 */
+	public static function flow( WP_REST_Request $request ) {
+		$page = Presence::clean_path( (string) $request->get_param( 'seite' ) );
+
+		return new WP_REST_Response( Flow::snapshot( $request->get_param( 'tage' ), '' === (string) $request->get_param( 'seite' ) ? '' : $page ) );
 	}
 
 	/**

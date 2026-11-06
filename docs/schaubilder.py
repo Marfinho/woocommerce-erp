@@ -718,7 +718,8 @@ sb('adm-live|Besucher jetzt', 'Wer ist gerade auf der Website – ohne Cookie',
    erp('Seite meldet sich alle 25 Sekunden', 'mit einer Zufallsnummer, die nur im Tab lebt'),
    erp('Server hält nur die Seite fest', 'Pfad, Titel, Bereich, Gerät – keine IP-Adresse, kein Browsername'),
    du('„Besucher jetzt“ ansehen', 'Verkauf → Besucher jetzt, aktualisiert alle 10 Sekunden'),
-   warn('Tab zu oder 90 Sekunden still', 'die Seite verschwindet aus der Anzeige'))
+   warn('Tab zu oder 90 Sekunden still', 'die Seite verschwindet aus der Anzeige'),
+   erp('Reiter „Wege“', 'zählt nur Schritte von Seite A nach B je Tag, ohne zu merken, wer es war'))
 
 sb('adm-pruefung', 'Zwei Prüfungen',
    du('Systemprüfung', 'nach größeren Änderungen'),

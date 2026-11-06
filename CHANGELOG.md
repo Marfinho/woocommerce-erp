@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.95.0] – 2026-11-06
+
+### Neu: Wege auf der Website – von welcher Seite zu welcher
+- Die Seite **Besucher jetzt** hat den Reiter **Wege** (7, 30 oder 90 Tage): die **häufigsten Wege** von Seite zu Seite, **Einstiegsseiten**, **Gekommen von** (Suchmaschine, soziales Netz), und für eine gewählte Seite **Davor** und **Danach**. Dazu die Quote Warenkorb → Kasse.
+- **Ohne Cookie und ohne Kennung:** Gezählt wird je Tag nur „von Seite A nach Seite B: n“ aus der Verweisseite, die der Browser beim Laden ohnehin mitschickt. Es wird nicht gespeichert, welche Aufrufe zusammengehören; der ganze Weg einer Person lässt sich daraus nicht herauslesen.
+- Wege mit weniger als 3 Fällen werden nur als Summe gezeigt; Zähler werden nach 90 Tagen gelöscht. Warenkorb, Kasse und Bestätigung erscheinen nur als Bereich ohne Pfad. Neuladen, Lesezeichen und Direktaufruf zählen als „Direkt / Neuladen“.
+- Neue Tabelle `flow` (DB-Version 56).
+- Betriebsanleitung: Kapitel D.17, Abschnitt „Besucher jetzt“, um „Wege“ ergänzt.
+
 ## [0.94.0] – 2026-11-06
 
 ### Neu: Besucher jetzt – wer gerade auf der Website ist, ohne Cookie

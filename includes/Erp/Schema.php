@@ -90,6 +90,17 @@ class Schema {
 			KEY seen_ts (seen_ts)
 		) {$charset_collate};";
 
+		// Wege auf der Website: je Tag und Seitenpaar eine Zahl (siehe Flow). Keine Kennung, kein
+		// Zusammenhang zwischen Aufrufen; `pair` ist ein Hash und hält den Schlüssel kurz.
+		$t[] = "CREATE TABLE {$p}flow (
+			day DATE NOT NULL,
+			pair CHAR(32) NOT NULL,
+			from_path VARCHAR(100) NOT NULL DEFAULT '',
+			to_path VARCHAR(100) NOT NULL DEFAULT '',
+			views INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (day, pair)
+		) {$charset_collate};";
+
 		/* -----------------------------------------------------------------
 		 * Finanzen: Bankabgleich, Mahnwesen
 		 * --------------------------------------------------------------- */

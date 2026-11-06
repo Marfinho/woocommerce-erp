@@ -135,6 +135,7 @@ class Traffic {
 				// Gezählt wird jede neu geöffnete Seite einmal, Wiedermeldungen nicht.
 				if ( $new && empty( $body['h'] ) ) {
 					self::record( self::classify( $path ) );
+					Flow::record( Flow::source( isset( $body['r'] ) ? $body['r'] : '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), $clean['path'], time() );
 				}
 			}
 		}

@@ -128,8 +128,10 @@ class Installer {
 	 * Druckzeit: drucker/abfrage/hand) und print_failed (Druck fehlgeschlagen).
 	 *
 	 * DB_VERSION 55: Tabelle presence (wer ist gerade auf der Website, ohne Cookie, siehe Erp\Presence).
+	 *
+	 * DB_VERSION 56: Tabelle flow (anonyme Tageszähler der Übergänge zwischen Seiten, siehe Erp\Flow).
 	 */
-	const DB_VERSION = '55';
+	const DB_VERSION = '56';
 
 	/**
 	 * Aktivierungsroutine.

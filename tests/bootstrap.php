@@ -413,6 +413,7 @@ require $lw16_root . '/includes/Erp/Payroll.php';
 require $lw16_root . '/includes/Erp/Payslips.php';
 require $lw16_root . '/includes/Erp/Traffic.php';
 require $lw16_root . '/includes/Erp/Presence.php';
+require $lw16_root . '/includes/Erp/Flow.php';
 require $lw16_root . '/includes/Erp/PayslipPdf.php';
 require $lw16_root . '/includes/Erp/Catalog.php';
 require $lw16_root . '/includes/Erp/OrderContact.php';
