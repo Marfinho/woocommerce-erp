@@ -154,7 +154,8 @@
 
 		function traffic(b) {
 			var c = card('Website', 'lv-traffic');
-			c.body.appendChild(h('div', { class: 'lv-stats three' },
+			c.body.appendChild(h('div', { class: 'lv-stats' },
+				big(int(b.online || 0), 'jetzt online'),
 				big(int(b.last30), 'letzte 30 Min.'),
 				big(int(b.today), 'Aufrufe heute', delta(b.today, b.yesterday, int(b.yesterday))),
 				big(int(b.ar_today), 'AR angezeigt')));

@@ -73,6 +73,46 @@ class Schema {
 			PRIMARY KEY  (day, hour, slot, section)
 		) {$charset_collate};";
 
+		// Wer ist gerade auf der Website: eine Zeile je offener Seite, ohne Cookie und ohne
+		// IP-Adresse. Die Kennung ist eine Zufallszahl aus dem Arbeitsspeicher des Tabs und
+		// wechselt mit jedem Seitenaufruf. Zeilen verschwinden beim Schließen, spätestens nach
+		// 30 Minuten (siehe Presence).
+		$t[] = "CREATE TABLE {$p}presence (
+			token VARCHAR(20) NOT NULL,
+			first_ts INT UNSIGNED NOT NULL,
+			seen_ts INT UNSIGNED NOT NULL,
+			path VARCHAR(190) NOT NULL DEFAULT '',
+			title VARCHAR(100) NOT NULL DEFAULT '',
+			section VARCHAR(16) NOT NULL DEFAULT '',
+			ref VARCHAR(64) NOT NULL DEFAULT '',
+			dev CHAR(1) NOT NULL DEFAULT '',
+			PRIMARY KEY  (token),
+			KEY seen_ts (seen_ts)
+		) {$charset_collate};";
+
+		// Wege auf der Website: je Tag und Seitenpaar eine Zahl (siehe Flow). Keine Kennung, kein
+		// Zusammenhang zwischen Aufrufen; `pair` ist ein Hash und hält den Schlüssel kurz.
+		$t[] = "CREATE TABLE {$p}flow (
+			day DATE NOT NULL,
+			pair CHAR(32) NOT NULL,
+			from_path VARCHAR(100) NOT NULL DEFAULT '',
+			to_path VARCHAR(100) NOT NULL DEFAULT '',
+			views INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (day, pair)
+		) {$charset_collate};";
+
+		// Anonyme Tageszähler für Produktansichten, Warenkorb, Suche, 404 und Kampagnen (siehe Stat).
+		$t[] = "CREATE TABLE {$p}stat (
+			day DATE NOT NULL,
+			kind VARCHAR(8) NOT NULL,
+			hash CHAR(32) NOT NULL,
+			label VARCHAR(120) NOT NULL DEFAULT '',
+			extra VARCHAR(100) NOT NULL DEFAULT '',
+			n INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (day, kind, hash),
+			KEY kind_day (kind, day)
+		) {$charset_collate};";
+
 		/* -----------------------------------------------------------------
 		 * Finanzen: Bankabgleich, Mahnwesen
 		 * --------------------------------------------------------------- */

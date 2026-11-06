@@ -177,7 +177,7 @@ class Catalog {
 
 		$settings = Workflow::settings();
 		$url      = static function ( array $args ) use ( $settings ) {
-			return wp_nonce_url(
+			return Shell::nonce_url(
 				add_query_arg(
 					array_merge(
 						array(

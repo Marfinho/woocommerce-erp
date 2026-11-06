@@ -24,6 +24,7 @@ use Lindenweg16\Erp\RunFlow;
 use Lindenweg16\Erp\RunRepository;
 use Lindenweg16\Erp\Screens;
 use Lindenweg16\Erp\Tasks;
+use Lindenweg16\Erp\Presence;
 use Lindenweg16\Erp\Traffic;
 use Lindenweg16\Modules\ArView\Stats;
 use Lindenweg16\Modules\Betrieb\Kpi;
@@ -408,6 +409,7 @@ class Live {
 		}
 
 		$snap['ar_today'] = $ar;
+		$snap['online']   = Presence::snapshot()['online'];
 
 		return $snap;
 	}

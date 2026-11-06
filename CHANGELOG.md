@@ -7,6 +7,44 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.96.1] – 2026-11-06
+
+### Behoben
+- Produktetikett (PDF und Bogen aller Shop-Produkte): Die Links in der Produktakte tragen das „&“ jetzt unverändert statt als „&#038;“ – sonst kamen Prüfzahl und Nummer nicht an („Der Link ist abgelaufen“).
+
+## [0.96.0] – 2026-11-06
+
+### Neu: Einblicke ohne Einwilligung – Produkte, Kampagnen, Suche, Fehlerseiten
+- Die Seite **Besucher jetzt** hat vier neue Reiter (7, 30 oder 90 Tage):
+  - **Produkte:** Trichter je Produkt – Ansichten → in den Warenkorb → Bestellungen, mit Quoten und Hinweisen („viel angesehen, nie im Warenkorb“, „oft im Warenkorb, selten gekauft“).
+  - **Kampagnen:** Besuche je `utm_source` und Kampagne (auch von den QR-Codes der Kurzlinks) neben Bestellungen und Umsatz je Quelle aus WooCommerce, mit Quote.
+  - **Suche:** häufigste Suchbegriffe der Shop-Suche und was gesucht, aber nicht gefunden wurde.
+  - **Fehlerseiten:** Adressen, die es nicht gibt (404), und die Seite, auf der der kaputte Link steht.
+- **Ohne Cookie und ohne Kennung:** Es sind anonyme Tageszähler (neue Tabelle `stat`, DB-Version 57). Gezählt wird nicht, wer es war. Angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“ zählen nicht. Aufbewahrung 90 Tage.
+- Suchbegriffe und Fehleradressen erscheinen erst ab 2 gleichen Fällen; Begriffe mit @, Link oder langen Zahlen werden gar nicht gespeichert. Das Skript meldet von der Adresse nur `utm_source` und `utm_campaign`, nie Suchbegriffe oder andere Parameter.
+- Hinweis: Bestellungen mit Quelle liefert WooCommerce selbst; ohne Zustimmung des Kunden erfasst es keine Herkunft, deshalb stehen viele Bestellungen unter „unbekannt“.
+- Betriebsanleitung: Kapitel D.17, Abschnitt „Besucher jetzt“, um die vier Reiter ergänzt.
+
+## [0.95.0] – 2026-11-06
+
+### Neu: Wege auf der Website – von welcher Seite zu welcher
+- Die Seite **Besucher jetzt** hat den Reiter **Wege** (7, 30 oder 90 Tage): die **häufigsten Wege** von Seite zu Seite, **Einstiegsseiten**, **Gekommen von** (Suchmaschine, soziales Netz), und für eine gewählte Seite **Davor** und **Danach**. Dazu die Quote Warenkorb → Kasse.
+- **Ohne Cookie und ohne Kennung:** Gezählt wird je Tag nur „von Seite A nach Seite B: n“ aus der Verweisseite, die der Browser beim Laden ohnehin mitschickt. Es wird nicht gespeichert, welche Aufrufe zusammengehören; der ganze Weg einer Person lässt sich daraus nicht herauslesen.
+- Wege mit weniger als 3 Fällen werden nur als Summe gezeigt; Zähler werden nach 90 Tagen gelöscht. Warenkorb, Kasse und Bestätigung erscheinen nur als Bereich ohne Pfad. Neuladen, Lesezeichen und Direktaufruf zählen als „Direkt / Neuladen“.
+- Neue Tabelle `flow` (DB-Version 56).
+- Betriebsanleitung: Kapitel D.17, Abschnitt „Besucher jetzt“, um „Wege“ ergänzt.
+
+## [0.94.0] – 2026-11-06
+
+### Neu: Besucher jetzt – wer gerade auf der Website ist, ohne Cookie
+- Neue ERP-Seite **Verkauf → Besucher jetzt** (Recht „Besucher jetzt“): wie viele Seiten gerade offen sind, **auf welchen Seiten** (Titel und Pfad), wie viele davon im **Warenkorb oder in der Kasse**, Handy oder Rechner, **seit wann** und **woher** sie kamen (nur der Host einer fremden Verweisseite, z. B. Suchmaschine oder Instagram). Aktualisiert sich alle 10 Sekunden.
+- Im **Live-Bildschirm** zeigt die Karte „Website“ zusätzlich **jetzt online**.
+- **Ohne Einwilligungsbanner:** Es wird nichts im Browser gespeichert oder ausgelesen (kein Cookie, kein localStorage) und auf dem Server weder IP-Adresse noch Browserkennung abgelegt. Jede geöffnete Seite meldet sich alle 25 Sekunden mit einer Zufallsnummer, die nur im Arbeitsspeicher des Tabs lebt und mit jedem Seitenaufruf wechselt. Die Zeile verschwindet beim Schließen des Tabs, spätestens nach 30 Minuten.
+- Gezählt werden **offene Seiten, keine Menschen** (zwei Tabs zählen doppelt; ein Tab im Hintergrund oder ohne Bedienung seit 10 Minuten zählt nicht mehr mit). Warenkorb, Kasse und Bestellbestätigung erscheinen nur als Bereich, nie mit Pfad oder Titel; Suchbegriffe und Parameter werden abgeschnitten.
+- Nicht gezählt werden angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“. Der Tageszähler der Seitenaufrufe zählt jetzt jede neu geöffnete Seite einmal (Meldungen zum Wachhalten zählen nicht mit).
+- Neue Tabelle `presence` (DB-Version 55).
+- Betriebsanleitung: Kapitel D.17 um „Besucher jetzt“ ergänzt.
+
 ## [0.93.0] – 2026-11-05
 
 ### Neu: Produktetikett aus dem ERP drucken

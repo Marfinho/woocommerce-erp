@@ -126,8 +126,14 @@ class Installer {
 	 * DB_VERSION 54: runs um setup_src (Herkunft der Rüstzeit: hand/auto),
 	 * setup_paused_s/setup_pause_at (Pausen beim Rüsten), print_src (Herkunft der
 	 * Druckzeit: drucker/abfrage/hand) und print_failed (Druck fehlgeschlagen).
+	 *
+	 * DB_VERSION 55: Tabelle presence (wer ist gerade auf der Website, ohne Cookie, siehe Erp\Presence).
+	 *
+	 * DB_VERSION 56: Tabelle flow (anonyme Tageszähler der Übergänge zwischen Seiten, siehe Erp\Flow).
+	 *
+	 * DB_VERSION 57: Tabelle stat (anonyme Tageszähler: Produktansichten, Warenkorb, Suche, 404, Kampagnen, siehe Erp\Insights).
 	 */
-	const DB_VERSION = '54';
+	const DB_VERSION = '57';
 
 	/**
 	 * Aktivierungsroutine.
