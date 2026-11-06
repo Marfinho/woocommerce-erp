@@ -101,6 +101,18 @@ class Schema {
 			PRIMARY KEY  (day, pair)
 		) {$charset_collate};";
 
+		// Anonyme Tageszähler für Produktansichten, Warenkorb, Suche, 404 und Kampagnen (siehe Stat).
+		$t[] = "CREATE TABLE {$p}stat (
+			day DATE NOT NULL,
+			kind VARCHAR(8) NOT NULL,
+			hash CHAR(32) NOT NULL,
+			label VARCHAR(120) NOT NULL DEFAULT '',
+			extra VARCHAR(100) NOT NULL DEFAULT '',
+			n INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY  (day, kind, hash),
+			KEY kind_day (kind, day)
+		) {$charset_collate};";
+
 		/* -----------------------------------------------------------------
 		 * Finanzen: Bankabgleich, Mahnwesen
 		 * --------------------------------------------------------------- */

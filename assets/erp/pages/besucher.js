@@ -22,26 +22,32 @@
 		var h = ui.h;
 		ui.pageHead('Besucher jetzt', 'Wer gerade auf der Website ist und wo – anonym, ohne Cookie und ohne Einwilligungsbanner.', ui.classicBtn(item));
 
-		var tabs = h('div', { style: 'display:flex;gap:8px;margin-bottom:14px' });
+		var tabs = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px' });
 		var box = h('div');
 		var wege = h('div', { style: 'display:none' });
-		var btnJetzt = h('button', { class: 'pill on', type: 'button' }, 'Jetzt');
-		var btnWege = h('button', { class: 'pill', type: 'button' }, 'Wege');
-		tabs.appendChild(btnJetzt);
-		tabs.appendChild(btnWege);
+		var ein = h('div', { style: 'display:none' });
+		var TABS = [['jetzt', 'Jetzt'], ['wege', 'Wege'], ['produkte', 'Produkte'], ['kampagnen', 'Kampagnen'], ['suche', 'Suche'], ['fehler', 'Fehlerseiten']];
+		var btns = {};
+		var current = 'jetzt';
+		TABS.forEach(function (t) {
+			var b = h('button', { class: 'pill' + (t[0] === 'jetzt' ? ' on' : ''), type: 'button' }, t[1]);
+			b.addEventListener('click', function () { show(t[0]); });
+			btns[t[0]] = b;
+			tabs.appendChild(b);
+		});
 		ui.view().appendChild(tabs);
 		ui.view().appendChild(box);
 		ui.view().appendChild(wege);
+		ui.view().appendChild(ein);
 
-		function show(w) {
-			box.style.display = w ? 'none' : '';
-			wege.style.display = w ? '' : 'none';
-			btnJetzt.className = 'pill' + (w ? '' : ' on');
-			btnWege.className = 'pill' + (w ? ' on' : '');
-			if (w) { loadWege(); }
+		function show(key) {
+			current = key;
+			box.style.display = key === 'jetzt' ? '' : 'none';
+			wege.style.display = key === 'wege' ? '' : 'none';
+			ein.style.display = key === 'jetzt' || key === 'wege' ? 'none' : '';
+			TABS.forEach(function (t) { btns[t[0]].className = 'pill' + (t[0] === key ? ' on' : ''); });
+			if (key === 'wege') { loadWege(); } else if (key !== 'jetzt') { loadEin(); }
 		}
-		btnJetzt.addEventListener('click', function () { show(false); });
-		btnWege.addEventListener('click', function () { show(true); });
 
 		var days = 30;
 		var seite = '';
@@ -118,6 +124,78 @@
 			return ui.api('besucher/wege?tage=' + days + (seite ? '&seite=' + encodeURIComponent(seite) : '')).then(paintWege).catch(function (e) {
 				wege.textContent = '';
 				wege.appendChild(h('div', { class: 'notice warn' }, e.message || 'Nicht erreichbar.'));
+			});
+		}
+
+		function fmtEur(n) { return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n); }
+		function pctTxt(n) { return n === null ? '–' : String(n).replace('.', ',') + ' %'; }
+
+		function rangeBar(reload) {
+			var bar = h('div', { style: 'display:flex;gap:8px;margin-bottom:14px' });
+			[7, 30, 90].forEach(function (n) {
+				var b = h('button', { class: 'pill' + (n === days ? ' on' : ''), type: 'button' }, n + ' Tage');
+				b.addEventListener('click', function () { days = n; reload(); });
+				bar.appendChild(b);
+			});
+			return bar;
+		}
+
+		function table(head, rows) {
+			var t = h('table', { class: 'list' });
+			t.appendChild(h('thead', null, h('tr', null, head.map(function (c) { return h('th', { class: c[1] ? 'num' : '' }, c[0]); }))));
+			var b = h('tbody');
+			rows.forEach(function (r) { b.appendChild(h('tr', null, r.map(function (c, i) { return h('td', { class: head[i][1] ? 'num' : '' }, c); }))); });
+			t.appendChild(b);
+			return t;
+		}
+
+		var HINTS = {
+			nie_im_warenkorb: 'Viel angesehen, nie im Warenkorb: Bild, Preis oder Text prüfen.',
+			nie_gekauft: 'Im Warenkorb, aber nie gekauft: Versandkosten oder Kasse prüfen.',
+			warenkorb_abbruch: 'Wird oft in den Warenkorb gelegt, selten gekauft.'
+		};
+
+		function paintEin(d) {
+			ein.textContent = '';
+			ein.appendChild(rangeBar(loadEin));
+			var note = function (t) { return h('p', { class: 'muted', style: 'margin-top:8px' }, t); };
+
+			if (current === 'produkte') {
+				var rows = d.products.map(function (p) {
+					return [h('span', null, h('b', null, p.name), p.hint ? h('div', { class: 'muted', style: 'font-size:12.5px' }, HINTS[p.hint]) : null),
+						String(p.views), String(p.carts), String(p.orders), pctTxt(p.cart_rate), pctTxt(p.buy_rate)];
+				});
+				ein.appendChild(h('div', { class: 'card' }, h('h3', null, 'Produkt-Trichter'),
+					rows.length ? table([['Produkt'], ['Ansichten', 1], ['In den Warenkorb', 1], ['Bestellungen', 1], ['Ansicht → Warenkorb', 1], ['Ansicht → Kauf', 1]], rows) : h('p', { class: 'muted' }, 'Noch keine Daten.'),
+					note('Ansichten und Warenkorb zählen anonym je Seitenaufruf; Bestellungen kommen aus dem Shop (bezahlt oder in Bearbeitung). Ein Produkt kann auch über andere Wege gekauft werden, die Quoten sind daher Richtwerte. Angemeldete Personen zählen nicht.')));
+			} else if (current === 'kampagnen') {
+				var kr = d.campaigns.map(function (k) {
+					return [h('span', null, h('b', null, k.source), k.campaigns.length ? h('div', { class: 'muted', style: 'font-size:12.5px' }, k.campaigns.slice(0, 5).map(function (c) { return c.name + ' (' + c.visits + ')'; }).join(' · ')) : null),
+						String(k.visits), String(k.orders), k.orders ? fmtEur(k.revenue) : '–', pctTxt(k.rate)];
+				});
+				ein.appendChild(h('div', { class: 'card' }, h('h3', null, 'Besuche und Bestellungen nach Quelle'),
+					kr.length ? table([['Quelle'], ['Besuche', 1], ['Bestellungen', 1], ['Umsatz', 1], ['Besuch → Kauf', 1]], kr) : h('p', { class: 'muted' }, 'Noch keine Besuche mit utm_source. Beispiel für einen Link: ?utm_source=instagram&utm_campaign=herbst – die Kurzlinks tragen das für QR-Codes.'),
+					note('Besuche zählen den Einstieg über einen Link mit utm_source. Bestellungen mit Quelle liefert WooCommerce selbst; ohne Zustimmung des Kunden erfasst es keine Herkunft, deshalb stehen viele Bestellungen unter „unbekannt“ und die Quote ist zu niedrig angesetzt.')));
+			} else if (current === 'suche') {
+				var sr = d.search.rows.map(function (r) { return [r.label, String(r.n)]; });
+				var mr = d.misses.rows.map(function (r) { return [r.label, String(r.n)]; });
+				var two = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px' });
+				two.appendChild(h('div', { class: 'card' }, h('h3', null, 'Häufigste Suchen'), sr.length ? table([['Suchbegriff'], ['Mal', 1]], sr) : h('p', { class: 'muted' }, 'Noch keine Daten.')));
+				two.appendChild(h('div', { class: 'card' }, h('h3', null, 'Gesucht, nichts gefunden'), mr.length ? table([['Suchbegriff'], ['Mal', 1]], mr) : h('p', { class: 'muted' }, 'Keine – oder zu selten (unter 2 Mal).')));
+				ein.appendChild(two);
+				ein.appendChild(note('Begriffe erscheinen erst ab 2 gleichen Suchen; Begriffe mit @, Link oder langen Zahlen werden gar nicht gespeichert. ' + (d.search.hidden + d.misses.hidden) + ' seltene Suchen sind nicht einzeln aufgeführt.'));
+			} else if (current === 'fehler') {
+				var er = d.e404.rows.map(function (r) { return [h('code', null, r.label), r.extra ? (r.extra.charAt(0) === '@' ? r.extra.slice(1) : (r.extra || 'Direkt')) : 'Direkt / unbekannt', String(r.n)]; });
+				ein.appendChild(h('div', { class: 'card' }, h('h3', null, 'Adressen, die es nicht gibt'),
+					er.length ? table([['Adresse'], ['Link steht auf'], ['Mal', 1]], er) : h('p', { class: 'muted' }, 'Keine Fehlerseiten in diesem Zeitraum (oder erst ab 2 gleichen Aufrufen).'),
+					note('„Link steht auf“ ist die Seite, von der der Besucher kam – dort ist der kaputte Link. Direkt oder unbekannt: Tippfehler, Lesezeichen, alte Flyer oder QR-Codes. Dateien wie Bilder und Systemadressen werden ignoriert.')));
+			}
+		}
+
+		function loadEin() {
+			return ui.api('besucher/einblicke?tage=' + days).then(paintEin).catch(function (e) {
+				ein.textContent = '';
+				ein.appendChild(h('div', { class: 'notice warn' }, e.message || 'Nicht erreichbar.'));
 			});
 		}
 

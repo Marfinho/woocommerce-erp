@@ -7,6 +7,19 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.96.0] – 2026-11-06
+
+### Neu: Einblicke ohne Einwilligung – Produkte, Kampagnen, Suche, Fehlerseiten
+- Die Seite **Besucher jetzt** hat vier neue Reiter (7, 30 oder 90 Tage):
+  - **Produkte:** Trichter je Produkt – Ansichten → in den Warenkorb → Bestellungen, mit Quoten und Hinweisen („viel angesehen, nie im Warenkorb“, „oft im Warenkorb, selten gekauft“).
+  - **Kampagnen:** Besuche je `utm_source` und Kampagne (auch von den QR-Codes der Kurzlinks) neben Bestellungen und Umsatz je Quelle aus WooCommerce, mit Quote.
+  - **Suche:** häufigste Suchbegriffe der Shop-Suche und was gesucht, aber nicht gefunden wurde.
+  - **Fehlerseiten:** Adressen, die es nicht gibt (404), und die Seite, auf der der kaputte Link steht.
+- **Ohne Cookie und ohne Kennung:** Es sind anonyme Tageszähler (neue Tabelle `stat`, DB-Version 57). Gezählt wird nicht, wer es war. Angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“ zählen nicht. Aufbewahrung 90 Tage.
+- Suchbegriffe und Fehleradressen erscheinen erst ab 2 gleichen Fällen; Begriffe mit @, Link oder langen Zahlen werden gar nicht gespeichert. Das Skript meldet von der Adresse nur `utm_source` und `utm_campaign`, nie Suchbegriffe oder andere Parameter.
+- Hinweis: Bestellungen mit Quelle liefert WooCommerce selbst; ohne Zustimmung des Kunden erfasst es keine Herkunft, deshalb stehen viele Bestellungen unter „unbekannt“.
+- Betriebsanleitung: Kapitel D.17, Abschnitt „Besucher jetzt“, um die vier Reiter ergänzt.
+
 ## [0.95.0] – 2026-11-06
 
 ### Neu: Wege auf der Website – von welcher Seite zu welcher

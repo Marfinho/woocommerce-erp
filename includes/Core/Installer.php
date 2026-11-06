@@ -130,8 +130,10 @@ class Installer {
 	 * DB_VERSION 55: Tabelle presence (wer ist gerade auf der Website, ohne Cookie, siehe Erp\Presence).
 	 *
 	 * DB_VERSION 56: Tabelle flow (anonyme Tageszähler der Übergänge zwischen Seiten, siehe Erp\Flow).
+	 *
+	 * DB_VERSION 57: Tabelle stat (anonyme Tageszähler: Produktansichten, Warenkorb, Suche, 404, Kampagnen, siehe Erp\Insights).
 	 */
-	const DB_VERSION = '56';
+	const DB_VERSION = '57';
 
 	/**
 	 * Aktivierungsroutine.

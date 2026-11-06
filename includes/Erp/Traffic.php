@@ -79,11 +79,14 @@ class Traffic {
 		// Variablen und gilt für diesen einen Seitenaufruf (siehe Presence). Melden: beim Laden,
 		// dann alle 25 Sekunden, solange der Tab sichtbar ist und in den letzten 10 Minuten
 		// bedient wurde; beim Schließen ein Abschied, damit die Seite sofort aus der Anzeige geht.
+		$pid = function_exists( 'is_singular' ) && is_singular( 'product' ) ? (int) get_queried_object_id() : 0;
+
 		$js = '(function(){try{if(navigator.doNotTrack==="1"||window.doNotTrack==="1"){return;}'
 			. 'var u=' . wp_json_encode( $url ) . ',k="",i,a=Date.now();'
 			. 'for(i=0;i<14;i++){k+=Math.floor(Math.random()*36).toString(36);}'
 			. 'function s(m){var d={k:k,p:location.pathname};'
-			. 'if(m==="v"){d.t=document.title;d.r=document.referrer;d.w=innerWidth;}'
+			. 'if(m==="v"){d.t=document.title;d.r=document.referrer;d.w=innerWidth;' . ( $pid ? 'd.i=' . $pid . ';' : '' )
+			. 'd.q=(location.search.match(/[?&]utm_(?:source|campaign)=[^&]*/g)||[]).join("");}'
 			. 'else if(m==="h"){d.h=1;d.t=document.title;d.w=innerWidth;}'
 			. 'else{d.x=1;}'
 			. 'navigator.sendBeacon&&navigator.sendBeacon(u,new Blob([JSON.stringify(d)],{type:"text/plain"}));}'
@@ -135,6 +138,7 @@ class Traffic {
 				// Gezählt wird jede neu geöffnete Seite einmal, Wiedermeldungen nicht.
 				if ( $new && empty( $body['h'] ) ) {
 					self::record( self::classify( $path ) );
+					Insights::on_view( $body, time() );
 					Flow::record( Flow::source( isset( $body['r'] ) ? $body['r'] : '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), $clean['path'], time() );
 				}
 			}

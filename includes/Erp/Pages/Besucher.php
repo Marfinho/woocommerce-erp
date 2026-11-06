@@ -13,6 +13,7 @@ namespace Lindenweg16\Erp\Pages;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Erp\Flow;
+use Lindenweg16\Erp\Insights;
 use Lindenweg16\Erp\Presence;
 use Lindenweg16\Erp\RestApi;
 use WP_REST_Request;
@@ -48,6 +49,26 @@ class Besucher {
 				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
 			)
 		);
+
+		register_rest_route(
+			RestApi::NAMESPACE_V1,
+			'/erp/besucher/einblicke',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'insights' ),
+				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
+			)
+		);
+	}
+
+	/**
+	 * Einblicke: Produkt-Trichter, Kampagnen, Suche, Fehlerseiten.
+	 *
+	 * @param WP_REST_Request $request Anfrage (tage).
+	 * @return WP_REST_Response
+	 */
+	public static function insights( WP_REST_Request $request ) {
+		return new WP_REST_Response( Insights::snapshot( $request->get_param( 'tage' ) ) );
 	}
 
 	/**
