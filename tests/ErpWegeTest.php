@@ -56,7 +56,8 @@ class ErpWegeTest extends TestCase {
 		$this->assertSame( array( array( 'path' => '@google.com', 'count' => 5 ) ), $s['sources'], 'Seltene Quellen (unter 3) fehlen.' );
 		$this->assertSame( 4, $s['cart']['in'] );
 		$this->assertSame( 3, $s['cart']['to_kasse'] );
-		$this->assertSame( '@google.com', $s['before'][0]['path'] );
+		$this->assertSame( '/shop', $s['before'][0]['path'] );
+		$this->assertSame( '@google.com', $s['before'][1]['path'] );
 		$this->assertSame( '/warenkorb', $s['after'][0]['path'] );
 		$this->assertSame( array(), Flow::summarize( $rows )['before'] );
 		$this->assertSame( array(), Flow::summarize( array() )['transitions'] );
