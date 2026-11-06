@@ -7,6 +7,17 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.94.0] – 2026-11-06
+
+### Neu: Besucher jetzt – wer gerade auf der Website ist, ohne Cookie
+- Neue ERP-Seite **Verkauf → Besucher jetzt** (Recht „Besucher jetzt“): wie viele Seiten gerade offen sind, **auf welchen Seiten** (Titel und Pfad), wie viele davon im **Warenkorb oder in der Kasse**, Handy oder Rechner, **seit wann** und **woher** sie kamen (nur der Host einer fremden Verweisseite, z. B. Suchmaschine oder Instagram). Aktualisiert sich alle 10 Sekunden.
+- Im **Live-Bildschirm** zeigt die Karte „Website“ zusätzlich **jetzt online**.
+- **Ohne Einwilligungsbanner:** Es wird nichts im Browser gespeichert oder ausgelesen (kein Cookie, kein localStorage) und auf dem Server weder IP-Adresse noch Browserkennung abgelegt. Jede geöffnete Seite meldet sich alle 25 Sekunden mit einer Zufallsnummer, die nur im Arbeitsspeicher des Tabs lebt und mit jedem Seitenaufruf wechselt. Die Zeile verschwindet beim Schließen des Tabs, spätestens nach 30 Minuten.
+- Gezählt werden **offene Seiten, keine Menschen** (zwei Tabs zählen doppelt; ein Tab im Hintergrund oder ohne Bedienung seit 10 Minuten zählt nicht mehr mit). Warenkorb, Kasse und Bestellbestätigung erscheinen nur als Bereich, nie mit Pfad oder Titel; Suchbegriffe und Parameter werden abgeschnitten.
+- Nicht gezählt werden angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“. Der Tageszähler der Seitenaufrufe zählt jetzt jede neu geöffnete Seite einmal (Meldungen zum Wachhalten zählen nicht mit).
+- Neue Tabelle `presence` (DB-Version 55).
+- Betriebsanleitung: Kapitel D.17 um „Besucher jetzt“ ergänzt.
+
 ## [0.93.0] – 2026-11-05
 
 ### Neu: Produktetikett aus dem ERP drucken

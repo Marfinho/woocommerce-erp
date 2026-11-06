@@ -713,6 +713,13 @@ sb('adm-live', 'Was die Wand zeigt',
    erp('Aufgaben aus „Heute“', 'Wandnutzer: alle, ohne persönliche Mails'),
    warn('Verbindung weg?', 'der letzte Stand bleibt stehen'))
 
+sb('adm-live|Besucher jetzt', 'Wer ist gerade auf der Website – ohne Cookie',
+   ext('Besucher öffnet eine Seite', 'ohne Einwilligungsbanner, nichts wird im Browser gespeichert'),
+   erp('Seite meldet sich alle 25 Sekunden', 'mit einer Zufallsnummer, die nur im Tab lebt'),
+   erp('Server hält nur die Seite fest', 'Pfad, Titel, Bereich, Gerät – keine IP-Adresse, kein Browsername'),
+   du('„Besucher jetzt“ ansehen', 'Verkauf → Besucher jetzt, aktualisiert alle 10 Sekunden'),
+   warn('Tab zu oder 90 Sekunden still', 'die Seite verschwindet aus der Anzeige'))
+
 sb('adm-pruefung', 'Zwei Prüfungen',
    du('Systemprüfung', 'nach größeren Änderungen'),
    erp('Sucht Widersprüche', 'zurückgezogene Revision, stillgelegte Position, Gerät ohne Daten'),

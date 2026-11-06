@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.93.0">
+<meta name="anleitung-stand" content="0.94.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.93.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.94.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.93.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.94.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -4605,6 +4605,31 @@ svg.sv{display:block;width:100%;height:auto}
 <h3>Wandbildschirm und angemeldete Personen</h3>
 <p>Für den Bildschirm an der Wand gibt es einen eigenen Nutzer mit der Rolle <code>lw16_live</code>: Er sieht nur die Live-Seite und bleibt <strong>ein Jahr angemeldet</strong>, damit niemand den Bildschirm alle paar Tage neu anmelden muss. Der Wandbildschirm sieht <strong>alle Aufgaben, ohne persönliche Mails</strong>. Angemeldete Personen sehen im Live-Bildschirm nur die Aufgaben, die ihre Rechte hergeben.</p>
 
+<h3>Besucher jetzt</h3>
+<!-- schaubild:adm-live|Besucher jetzt -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Wer ist gerade auf der Website – ohne Cookie">
+<div class="sb-kopf">Schaubild · Wer ist gerade auf der Website – ohne Cookie</div>
+<ol class="fluss c5">
+	<li class="ext"><b>Besucher öffnet eine Seite</b><span>ohne Einwilligungsbanner, nichts wird im Browser gespeichert</span></li>
+	<li class="erp"><b>Seite meldet sich alle 25 Sekunden</b><span>mit einer Zufallsnummer, die nur im Tab lebt</span></li>
+	<li class="erp"><b>Server hält nur die Seite fest</b><span>Pfad, Titel, Bereich, Gerät – keine IP-Adresse, kein Browsername</span></li>
+	<li class="du"><b>„Besucher jetzt“ ansehen</b><span>Verkauf → Besucher jetzt, aktualisiert alle 10 Sekunden</span></li>
+	<li class="warn"><b>Tab zu oder 90 Sekunden still</b><span>die Seite verschwindet aus der Anzeige</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="warn">Pflicht oder Ausnahme</span></p>
+</figure>
+<!-- /schaubild:adm-live|Besucher jetzt -->
+
+<p><span class="weg">Verkauf → Marketing → Besucher jetzt</span></p>
+<p>Die Seite zeigt, wie viele Seiten der Website <strong>gerade</strong> offen sind und wo: die beliebtesten Seiten mit Titel und Pfad, wie viele Personen im <strong>Warenkorb</strong> oder in der <strong>Kasse</strong> sind, Handy oder Rechner, seit wann eine Seite offen ist und woher der Besucher kam (nur der Name der Verweisseite, z. B. Suchmaschine oder Instagram). Die Zahlen aktualisieren sich alle 10 Sekunden; im Live-Bildschirm steht <strong>jetzt online</strong> auf der Karte Website. Voraussetzung: das Recht <em>Besucher jetzt</em>.</p>
+<p><strong>Warum ohne Einwilligungsbanner?</strong> Die Anzeige speichert nichts im Browser des Besuchers und liest nichts aus: kein Cookie, kein lokaler Speicher. Jede geöffnete Seite meldet sich alle 25 Sekunden mit einer Zufallsnummer, die nur im Arbeitsspeicher dieses einen Tabs lebt und beim nächsten Seitenaufruf neu gewürfelt wird – sie erkennt also nie jemanden wieder. Auf dem Server werden keine IP-Adresse und kein Browsername abgelegt. Gespeichert wird je offener Seite nur: Pfad ohne Parameter, Seitentitel, Bereich, Gerät, Herkunftsseite und zwei Zeitpunkte. Die Zeile verschwindet beim Schließen des Tabs, spätestens nach 30 Minuten. Warenkorb, Kasse und Bestellbestätigung erscheinen nur als Bereich, nie mit Pfad oder Titel.</p>
+<ul>
+<li><strong>Offene Seiten, keine Menschen:</strong> Wer zwei Tabs offen hat, zählt doppelt. Ein Tab im Hintergrund oder ohne Bedienung seit 10 Minuten zählt nicht mehr mit; eine Seite ohne Meldung seit 90 Sekunden auch nicht.</li>
+<li><strong>Nicht gezählt</strong> werden angemeldete Personen (auch du selbst – zum Testen ein privates Fenster nehmen), Suchmaschinen und Browser mit „Do Not Track“.</li>
+<li><strong>Zwischengespeicherte Seiten</strong> stören nicht: Die Meldung kommt aus einem kleinen Skript am Seitenende, nicht aus PHP.</li>
+<li>Die Datenschutzerklärung der Website sollte die Anzeige kurz erwähnen (berechtigtes Interesse, keine Cookies, keine IP-Speicherung). Wer es rechtlich prüfen lassen will: Das Konzept entspricht den cookielosen Zählern gängiger Statistikdienste, nur ohne Weitergabe an Dritte.</li>
+</ul>
+
 <h3>Technik in Kürze</h3>
 <p>Die Anzeige fragt alle 15 Sekunden nach, hält den Bildschirm wach und behält bei einem Verbindungsabbruch den letzten Stand. Schrift und Abstände skalieren mit der Bildschirmgröße, unter 1200 px Breite stapeln sich die Spalten. Die Schriften liegen im Plugin (<code>assets/vendor/lindenweg16-fonts/</code>); der Bildschirm lädt nichts aus dem Internet.</p>
 
@@ -5255,7 +5280,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.93.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.94.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

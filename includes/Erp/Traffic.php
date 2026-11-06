@@ -4,9 +4,10 @@
  *
  * Gezählt wird, wie oft Seiten der Website angesehen werden, in welchem
  * Bereich (Start, Shop, Warenkorb, Kasse, Inhalt) und in welchem
- * Zehn-Minuten-Fenster. Es wird nichts über Personen gespeichert: keine
- * Adresse, kein Cookie, keine Kennung, kein Seitenpfad. Das ist deshalb
+ * Zehn-Minuten-Fenster. Der Zähler selbst speichert nichts über Personen: keine
+ * Adresse, kein Cookie, keine Kennung, keinen Seitenpfad. Das ist deshalb
  * eine Zählung von Aufrufen, keine von Besuchern: Wer dreimal lädt, zählt dreimal.
+ * Wer gerade auf welcher Seite ist, hält `Presence` kurzlebig fest (ebenfalls ohne Cookie).
  *
  * Ein Skript am Seitenende meldet den Aufruf. Der Zähler läuft damit auch auf
  * Seiten, die ein Seiten-Cache ausliefert, ohne dass PHP sie noch erzeugt.
@@ -73,9 +74,29 @@ class Traffic {
 		$parts = wp_parse_url( rest_url( 'lw16/v1/pv' ) );
 		$url   = ( isset( $parts['path'] ) ? $parts['path'] : '/' ) . ( isset( $parts['query'] ) ? '?' . $parts['query'] : '' );
 
-		// sendBeacon als einfacher Text: keine Vorabfrage des Browsers, kein Cookie;
-		// „Do Not Track“ wird respektiert.
-		echo '<script>(function(){try{if(navigator.doNotTrack==="1"||window.doNotTrack==="1"){return;}var b=new Blob([JSON.stringify({p:location.pathname})],{type:"text/plain"});if(navigator.sendBeacon){navigator.sendBeacon(' . wp_json_encode( $url ) . ',b);}}catch(e){}})();</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		// sendBeacon als einfacher Text: keine Vorabfrage des Browsers, kein Cookie, nichts im
+		// Speicher des Browsers; „Do Not Track“ wird respektiert. Die Kennung k lebt nur in dieser
+		// Variablen und gilt für diesen einen Seitenaufruf (siehe Presence). Melden: beim Laden,
+		// dann alle 25 Sekunden, solange der Tab sichtbar ist und in den letzten 10 Minuten
+		// bedient wurde; beim Schließen ein Abschied, damit die Seite sofort aus der Anzeige geht.
+		$js = '(function(){try{if(navigator.doNotTrack==="1"||window.doNotTrack==="1"){return;}'
+			. 'var u=' . wp_json_encode( $url ) . ',k="",i,a=Date.now();'
+			. 'for(i=0;i<14;i++){k+=Math.floor(Math.random()*36).toString(36);}'
+			. 'function s(m){var d={k:k,p:location.pathname};'
+			. 'if(m==="v"){d.t=document.title;d.r=document.referrer;d.w=innerWidth;}'
+			. 'else if(m==="h"){d.h=1;d.t=document.title;d.w=innerWidth;}'
+			. 'else{d.x=1;}'
+			. 'navigator.sendBeacon&&navigator.sendBeacon(u,new Blob([JSON.stringify(d)],{type:"text/plain"}));}'
+			. 's("v");'
+			. 'function b(){a=Date.now();}'
+			. '["scroll","mousemove","keydown","touchstart","click"].forEach(function(e){addEventListener(e,b,{passive:true});});'
+			. 'setInterval(function(){if(!document.hidden&&Date.now()-a<600000){s("h");}},25000);'
+			. 'document.addEventListener("visibilitychange",function(){if(!document.hidden){s("h");}});'
+			. 'addEventListener("pagehide",function(){s("x");});'
+			. 'addEventListener("pageshow",function(e){if(e.persisted){s("h");}});'
+			. '}catch(e){}})();';
+
+		echo '<script>' . $js . '</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 	}
 
 	/**
@@ -98,12 +119,46 @@ class Traffic {
 
 		if ( ! self::is_bot( $ua ) ) {
 			$body = json_decode( (string) $request->get_body(), true );
-			$path = is_array( $body ) && isset( $body['p'] ) && is_string( $body['p'] ) ? $body['p'] : '';
+			$body = is_array( $body ) ? $body : array();
+			$path = isset( $body['p'] ) && is_string( $body['p'] ) ? $body['p'] : '';
+			$kid  = Presence::clean_token( isset( $body['k'] ) ? $body['k'] : '' );
 
-			self::record( self::classify( $path ) );
+			if ( '' === $kid ) {
+				// Älteres Skript einer zwischengespeicherten Seite: nur zählen.
+				self::record( self::classify( $path ) );
+			} elseif ( ! empty( $body['x'] ) ) {
+				Presence::leave( $kid );
+			} else {
+				$clean = self::presence_data( $body, $path );
+				$new   = Presence::touch( $kid, $clean, time() );
+
+				// Gezählt wird jede neu geöffnete Seite einmal, Wiedermeldungen nicht.
+				if ( $new && empty( $body['h'] ) ) {
+					self::record( self::classify( $path ) );
+				}
+			}
 		}
 
 		return new \WP_REST_Response( null, 204 );
+	}
+
+	/**
+	 * Angaben einer Meldung für die Anwesenheit bereinigen – reine Regel.
+	 *
+	 * @param array  $body Meldung des Browsers.
+	 * @param string $path Pfad.
+	 * @return array {path, title, ref, dev}
+	 */
+	public static function presence_data( array $body, $path ) {
+		$clean = Presence::clean_path( $path );
+		$sec   = self::classify( $clean );
+
+		return array(
+			'path'  => $clean,
+			'title' => Presence::clean_title( isset( $body['t'] ) ? $body['t'] : '', $sec ),
+			'ref'   => Presence::clean_referrer( isset( $body['r'] ) ? $body['r'] : '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ),
+			'dev'   => Presence::device( isset( $body['w'] ) ? $body['w'] : 0 ),
+		);
 	}
 
 	/**

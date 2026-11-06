@@ -73,6 +73,23 @@ class Schema {
 			PRIMARY KEY  (day, hour, slot, section)
 		) {$charset_collate};";
 
+		// Wer ist gerade auf der Website: eine Zeile je offener Seite, ohne Cookie und ohne
+		// IP-Adresse. Die Kennung ist eine Zufallszahl aus dem Arbeitsspeicher des Tabs und
+		// wechselt mit jedem Seitenaufruf. Zeilen verschwinden beim Schließen, spätestens nach
+		// 30 Minuten (siehe Presence).
+		$t[] = "CREATE TABLE {$p}presence (
+			token VARCHAR(20) NOT NULL,
+			first_ts INT UNSIGNED NOT NULL,
+			seen_ts INT UNSIGNED NOT NULL,
+			path VARCHAR(190) NOT NULL DEFAULT '',
+			title VARCHAR(100) NOT NULL DEFAULT '',
+			section VARCHAR(16) NOT NULL DEFAULT '',
+			ref VARCHAR(64) NOT NULL DEFAULT '',
+			dev CHAR(1) NOT NULL DEFAULT '',
+			PRIMARY KEY  (token),
+			KEY seen_ts (seen_ts)
+		) {$charset_collate};";
+
 		/* -----------------------------------------------------------------
 		 * Finanzen: Bankabgleich, Mahnwesen
 		 * --------------------------------------------------------------- */
