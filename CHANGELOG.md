@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.96.1] – 2026-11-06
+
+### Behoben
+- Produktetikett (PDF und Bogen aller Shop-Produkte): Die Links in der Produktakte tragen das „&“ jetzt unverändert statt als „&#038;“ – sonst kamen Prüfzahl und Nummer nicht an („Der Link ist abgelaufen“).
+
 ## [0.96.0] – 2026-11-06
 
 ### Neu: Einblicke ohne Einwilligung – Produkte, Kampagnen, Suche, Fehlerseiten
