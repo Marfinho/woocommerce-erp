@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.96.1">
+<meta name="anleitung-stand" content="0.97.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.96.1</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.97.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.96.1</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.97.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -3687,12 +3687,14 @@ svg.sv{display:block;width:100%;height:auto}
 <!-- schaubild:adm-farben -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Farben und Lagerhoheit">
 <div class="sb-kopf">Schaubild · Farben und Lagerhoheit</div>
-<ol class="fluss c3">
+<ol class="fluss c4">
 	<li class="du"><b>Attribut pa_farbe in WooCommerce</b><span>ein Begriff je Farbe</span></li>
 	<li class="erp"><b>Gespeichert wird der Slug</b><span>nie der Anzeigename</span></li>
 	<li class="du"><b>Standardfarbe setzen</b><span>für Positionen ohne Farbe</span></li>
 	<li class="du"><b>Lagerhoheit</b><span>erst einschalten, wenn Artikel mit Shop-Produkten verknüpft sind</span></li>
 	<li class="erp"><b>Betrieb bucht die Abgänge</b><span>das alte Lager-Modul lässt diese in Ruhe</span></li>
+	<li class="du"><b>Bestand 0 im Shop wählen</b><span>ausverkauft oder bestellbar, für alle Produkte</span></li>
+	<li class="erp"><b>Regel gilt sofort in allen Shop-Produkten</b><span>auch bei Sets mit Bestand 0</span></li>
 	<li class="warn"><b>Beide buchen = doppelt abgezogen</b></li>
 </ol>
 <p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="warn">Pflicht oder Ausnahme</span></p>
@@ -3733,6 +3735,23 @@ svg.sv{display:block;width:100%;height:auto}
 	<span class="titel">Reihenfolge beachten</span>
 	<p>Schalte die Übernahme erst ein, wenn die Artikel angelegt <em>und</em> mit ihren Shop-Produkten verknüpft sind. Sonst laufen Verkäufe von Produkten ohne Artikelzuordnung ins Leere.</p>
 </div>
+
+<h3>Bestand 0 im Shop</h3>
+
+<p>Das ERP schreibt den Bestand in die Shop-Produkte. Die Einstellung <em>Bestand 0 im Shop</em> legt fest, was ein Kunde sieht, wenn ein Produkt keinen Bestand hat. Sie gilt für alle Produkte gleichzeitig, auch für Sets, deren Bestand nur über Fertigungsaufträge steigt.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Stellung</th><th>Im Shop</th></tr></thead>
+<tbody>
+<tr><td><strong>Ausverkauft, nicht bestellbar</strong></td><td>Das Produkt ist nicht kaufbar. Das ist die Grundeinstellung.</td></tr>
+<tr><td><strong>Bestellbar, Kunde wird auf die Lieferzeit hingewiesen</strong></td><td>Das Produkt bleibt bestellbar, der Kunde bekommt den Hinweis, dass es nachgeliefert wird.</td></tr>
+<tr><td><strong>Bestellbar ohne Hinweis</strong></td><td>Das Produkt bleibt bestellbar, ohne Hinweis.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Beim Speichern wird die Regel gleich in alle Shop-Produkte geschrieben. Eine Nachbestell-Einstellung im WooCommerce-Produkt-Editor wird überschrieben, denn die Regel gilt nur hier an einer Stelle. Der Bestand bleibt unverändert; bestellte Stücke ohne Bestand erscheinen weiter in den Aufträgen, damit du sie rechtzeitig baust.</p>
 
 <h3>Nachbestellseite und Wochenmail</h3>
 <p>Auf derselben Seite stehen zwei weitere Einstellungen: ob die Nachbestellseite für Händler <em>in das Website-Design eingebettet</em> oder als schlichte eigene Seite mit Logo erscheint, und ob die <strong>wöchentliche Zusammenfassung per E-Mail</strong> verschickt wird – Kennzahlen, Alarme, Beschaffung, Wartung und Wiedervorlagen der vergangenen Woche. Gespeichert wird alles mit <strong>Speichern</strong> unten.</p>
@@ -5297,7 +5316,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.96.1</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.97.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

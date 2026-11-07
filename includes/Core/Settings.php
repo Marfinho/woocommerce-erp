@@ -81,6 +81,7 @@ class Settings {
 			'betrieb_default_color'     => 'anthrazit',
 			'betrieb_lagerhoheit'       => 1,
 			'betrieb_shop_bestand'      => 1,
+			'betrieb_shop_nachbestellung' => 'no',
 			'update_kanal'              => 'main',
 			'lager_altmodul_aus'        => 0,
 			'filament_rolle_g'          => 1000,

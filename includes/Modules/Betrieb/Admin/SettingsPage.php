@@ -15,6 +15,7 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
+use Lindenweg16\Modules\Betrieb\WooStockSync;
 use Lindenweg16\Modules\Betrieb\BetriebAudit;
 use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\Consistency;
@@ -284,7 +285,9 @@ class SettingsPage {
 		$default   = isset( $_POST['betrieb_default_color'] ) ? sanitize_text_field( wp_unslash( $_POST['betrieb_default_color'] ) ) : 'anthrazit';
 		$hoheit    = empty( $_POST['betrieb_lagerhoheit'] ) ? 0 : 1;
 		$shop      = empty( $_POST['betrieb_shop_bestand'] ) ? 0 : 1;
-		$mail      = empty( $_POST['betrieb_wochenmail'] ) ? 0 : 1;
+		$nachbest  = isset( $_POST['betrieb_shop_nachbestellung'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_shop_nachbestellung'] ) ) : 'no';
+		$nachbest  = in_array( $nachbest, array( 'notify', 'yes' ), true ) ? $nachbest : 'no';
+		$mail     = empty( $_POST['betrieb_wochenmail'] ) ? 0 : 1;
 		$layout    = isset( $_POST['betrieb_reorder_layout'] ) ? sanitize_key( wp_unslash( $_POST['betrieb_reorder_layout'] ) ) : 'theme';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
@@ -294,10 +297,15 @@ class SettingsPage {
 				'betrieb_default_color'   => ColorRegistry::normalize( $default ),
 				'betrieb_lagerhoheit'     => $hoheit,
 				'betrieb_shop_bestand'    => $shop,
+				'betrieb_shop_nachbestellung' => $nachbest,
 				'betrieb_wochenmail'      => $mail,
 				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
 		);
+
+		if ( WooStockSync::is_active() ) {
+			WooStockSync::sync_all();
+		}
 
 		$this->redirect_back( __( 'Einstellungen gespeichert.', 'lindenweg16' ), 'success' );
 	}
@@ -377,6 +385,24 @@ class SettingsPage {
 			checked( (bool) Settings::get( 'betrieb_shop_bestand', 1 ), true, false ),
 			esc_html__( 'Das ERP führt den Bestand und überträgt ihn in die Shop-Produkte', 'lindenweg16' ),
 			esc_html__( 'Lager minus offene Bestellungen wird nach jeder Buchung in WooCommerce geschrieben, WooCommerces eigener Lagerabzug ruht für diese Produkte. Wirkt nur bei aktiver Lagerhoheit.', 'lindenweg16' )
+		);
+
+		$nachbest = WooStockSync::backorder_mode();
+
+		printf(
+			'<tr><th scope="row">%1$s</th><td><select name="betrieb_shop_nachbestellung">'
+			. '<option value="no"%2$s>%3$s</option>'
+			. '<option value="notify"%4$s>%5$s</option>'
+			. '<option value="yes"%6$s>%7$s</option>'
+			. '</select><p class="description">%8$s</p></td></tr>',
+			esc_html__( 'Bestand 0 im Shop', 'lindenweg16' ),
+			selected( $nachbest, 'no', false ),
+			esc_html__( 'Ausverkauft, nicht bestellbar', 'lindenweg16' ),
+			selected( $nachbest, 'notify', false ),
+			esc_html__( 'Bestellbar, Kunde wird auf die Lieferzeit hingewiesen', 'lindenweg16' ),
+			selected( $nachbest, 'yes', false ),
+			esc_html__( 'Bestellbar ohne Hinweis', 'lindenweg16' ),
+			esc_html__( 'Gilt für alle Produkte, die das ERP in den Shop überträgt. Die Regel wird beim Speichern gleich in die Produkte geschrieben. Eine Einstellung im Produkt-Editor wird überschrieben.', 'lindenweg16' )
 		);
 
 		$layout = Settings::get( 'betrieb_reorder_layout' );
