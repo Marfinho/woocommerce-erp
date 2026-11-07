@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.0] – 2026-11-07
+
+### Neu: Bestand 0 im Shop – bestellbar statt ausverkauft
+- Neue Einstellung **Bestand 0 im Shop** unter Einstellungen → Farben & Lager (auch im WordPress-Backend unter Betrieb → Einstellungen). Drei Stellungen: **Ausverkauft, nicht bestellbar** (bisheriges Verhalten und Standard), **Bestellbar, Kunde wird auf die Lieferzeit hingewiesen** und **Bestellbar ohne Hinweis**.
+- Sie gilt für alle Produkte, die das ERP in den Shop überträgt, also auch für Sets (BASE, DAILY, FULL STACK, GARAGE), deren Bestand nur über Fertigungsaufträge steigt. Ohne diese Einstellung blieb ein Set bei Bestand 0 im Shop „ausverkauft“, auch wenn alle Module da waren.
+- Beim Speichern wird die Regel gleich in alle Shop-Produkte geschrieben, nicht erst zur vollen Stunde. Der Bestand selbst bleibt unverändert und wird weiter im ERP geführt.
+
+### Behoben
+- Die Nachbestell-Option im Produkt-Editor wurde bei jedem Speichern auf „Nein“ zurückgestellt, weil die Bestandsübergabe sie fest vorgab. Jetzt entscheidet die neue globale Einstellung.
+
 ## [0.96.1] – 2026-11-06
 
 ### Behoben

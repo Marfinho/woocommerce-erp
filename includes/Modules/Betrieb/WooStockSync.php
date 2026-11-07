@@ -422,26 +422,49 @@ class WooStockSync {
 	}
 
 	/**
+	 * Was gilt im Shop bei Bestand 0?
+	 *
+	 * Eine Einstellung für alle Produkte (ERP → Einstellungen → Farben & Lager):
+	 * `no` = ausverkauft, nicht kaufbar; `notify` = bestellbar, Kunde wird auf
+	 * die Lieferzeit hingewiesen; `yes` = bestellbar ohne Hinweis.
+	 *
+	 * @return string no|notify|yes.
+	 */
+	public static function backorder_mode() {
+		$mode = (string) Settings::get( 'betrieb_shop_nachbestellung', 'no' );
+
+		return in_array( $mode, array( 'notify', 'yes' ), true ) ? $mode : 'no';
+	}
+
+	/**
 	 * Menge setzen, wenn sie sich ändert.
 	 *
-	 * Rückstand bestellen ist aus: Was nicht da ist, ist nicht kaufbar.
+	 * Ob bei Bestand 0 noch bestellt werden darf, bestimmt die globale
+	 * Einstellung „Bestand 0 im Shop“ (Standard: nein, was nicht da ist, ist
+	 * nicht kaufbar).
 	 *
 	 * @param \WC_Product $product Produkt oder Variante.
 	 * @param int         $qty     Menge.
 	 * @return bool Wurde geschrieben?
 	 */
 	protected static function write_quantity( $product, $qty ) {
-		$status = $qty > 0 ? 'instock' : 'outofstock';
+		$mode = self::backorder_mode();
+
+		if ( $qty > 0 ) {
+			$status = 'instock';
+		} else {
+			$status = 'no' === $mode ? 'outofstock' : 'onbackorder';
+		}
 
 		if ( $product->get_manage_stock()
 			&& (int) $product->get_stock_quantity() === (int) $qty
-			&& 'no' === $product->get_backorders()
+			&& $mode === $product->get_backorders()
 			&& $product->get_stock_status() === $status ) {
 			return false;
 		}
 
 		$product->set_manage_stock( true );
-		$product->set_backorders( 'no' );
+		$product->set_backorders( $mode );
 		$product->set_stock_quantity( (int) $qty );
 		$product->set_stock_status( $status );
 		$product->save();

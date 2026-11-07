@@ -595,6 +595,8 @@ sb('adm-farben', 'Farben und Lagerhoheit',
    du('Standardfarbe setzen', 'für Positionen ohne Farbe'),
    du('Lagerhoheit', 'erst einschalten, wenn Artikel mit Shop-Produkten verknüpft sind'),
    erp('Betrieb bucht die Abgänge', 'das alte Lager-Modul lässt diese in Ruhe'),
+   du('Bestand 0 im Shop wählen', 'ausverkauft oder bestellbar, für alle Produkte'),
+   erp('Regel gilt sofort in allen Shop-Produkten', 'auch bei Sets mit Bestand 0'),
    warn('Beide buchen = doppelt abgezogen', ''))
 
 sb('adm-staffel', 'Rabatte für Händler',

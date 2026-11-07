@@ -1381,6 +1381,7 @@ class Verwaltung {
 				'colors'     => $colors,
 				'hoheit'     => (bool) StockOwnership::is_active(),
 				'shop_bestand' => (bool) Settings::get( 'betrieb_shop_bestand', 1 ),
+				'nachbestellung' => WooStockSync::backorder_mode(),
 				'altmodul_aus' => StockOwnership::legacy_disabled(),
 				'altmodul_offen' => array_slice( StockOwnership::open_legacy_products(), 0, 20 ),
 				'wochenmail' => (bool) Settings::get( 'betrieb_wochenmail', 1 ),
@@ -1410,6 +1411,10 @@ class Verwaltung {
 			$hinweis  = ' ' . __( 'Das alte Lager-Modul bleibt an: Es gibt noch nicht übernommene Produkte.', 'lindenweg16' );
 		}
 
+		$nachbestellung = sanitize_key( self::str( $p, 'nachbestellung' ) );
+		$nachbestellung = in_array( $nachbestellung, array( 'notify', 'yes' ), true ) ? $nachbestellung : 'no';
+		$geaendert      = $nachbestellung !== WooStockSync::backorder_mode();
+
 		Settings::update(
 			array(
 				'lager_altmodul_aus'      => $altmodul,
@@ -1417,10 +1422,17 @@ class Verwaltung {
 				'betrieb_default_color'   => ColorRegistry::normalize( '' === $default ? 'anthrazit' : $default ),
 				'betrieb_lagerhoheit'     => empty( $p['hoheit'] ) ? 0 : 1,
 				'betrieb_shop_bestand'    => empty( $p['shop_bestand'] ) ? 0 : 1,
+				'betrieb_shop_nachbestellung' => $nachbestellung,
 				'betrieb_wochenmail'      => empty( $p['wochenmail'] ) ? 0 : 1,
 				'betrieb_reorder_layout'  => 'schlicht' === $layout ? 'schlicht' : 'theme',
 			)
 		);
+
+		// Neue Regel gleich in alle Shop-Produkte schreiben, nicht erst zur vollen Stunde.
+		if ( $geaendert && WooStockSync::is_active() ) {
+			WooStockSync::sync_all();
+			$hinweis .= ' ' . __( 'Die neue Regel für Bestand 0 ist in den Shop-Produkten angekommen.', 'lindenweg16' );
+		}
 
 		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Einstellungen gespeichert.', 'lindenweg16' ) . $hinweis ) );
 	}
