@@ -85,4 +85,12 @@ class LastschutzTest extends TestCase {
 		$this->assertStringNotContainsString( '30 Tage Rückgabe', $bar . $product, 'Die AGB kennen nur das gesetzliche Widerrufsrecht.' );
 		$this->assertStringNotContainsString( 'SEPA', substr( $fn, strpos( $fn, 'function lindenweg16_default_payment_methods' ), 400 ), 'Die Kasse bietet keine Lastschrift an.' );
 	}
+	public function test_kasse_zeigt_die_checkboxen_von_germanized() {
+		$tpl = $this->read( 'block-theme/lindenweg16/templates/page-checkout.html' );
+		$inc = $this->read( 'block-theme/lindenweg16/inc/woocommerce.php' );
+
+		$this->assertStringContainsString( '<!-- wp:woocommerce-germanized/checkout-checkboxes -->', $tpl, 'Nur dieser Block zeigt AGB und Widerrufsbelehrung aus Germanized.' );
+		$this->assertStringNotContainsString( 'wp:woocommerce/checkout-terms-block', $tpl, 'Sonst stünden zwei Zustimmungen untereinander.' );
+		$this->assertStringContainsString( "add_filter( 'render_block_woocommerce/checkout', 'lindenweg16_checkout_terms_fallback'", $inc, 'Ohne Germanized gilt wieder die AGB-Checkbox von WooCommerce.' );
+	}
 }

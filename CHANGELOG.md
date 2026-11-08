@@ -14,6 +14,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 
 ### Behoben
 - Systemprotokoll: Der Job `lw16_postpurchase_mails` wurde stündlich eingeplant, obwohl ihn niemand abhört (die Nachkauf-Mails laufen im täglichen Loyalty-Lauf). Er scheiterte jede Stunde und stand als kritischer Fehler im Protokoll. Er wird nicht mehr eingeplant, schon eingeplante Läufe werden entfernt.
+- Theme 1.9.3, Kasse: Die rechtliche Checkbox kam aus WooCommerce („Du musst unseren Allgemeine Geschäftsbedingungen und unserer Datenschutzerklärung zustimmen …“), ohne Widerrufsbelehrung. Germanized ersetzt diesen Block nur in der Kassenseite, die Kasse kommt aber aus dem Theme-Template. Das Template trägt jetzt den Germanized-Block „Rechtliche Checkboxen“ (AGB und Widerrufsbestimmungen, Text unter Germanized → Checkboxen); ohne aktives Germanized gilt automatisch wieder die WooCommerce-Checkbox.
 - Theme 1.9.3: Footer „Alle Preise inkl. MwSt.“ bei Kleinunternehmern durch den § 19-Hinweis ersetzt; „30 Tage Rückgabe“ durch „14 Tage Widerrufsrecht“; Versandschwelle der Vertrauensleiste aus der Versandart statt fest „ab 50 €“; „SEPA-Lastschrift“ aus den Standard-Zahlarten im Footer entfernt.
 
 ## [0.97.4] – 2026-11-08

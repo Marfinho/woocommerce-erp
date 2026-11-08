@@ -255,6 +255,7 @@ Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 == Changelog ==
 
 = 1.9.3 =
+* Kasse: rechtliche Checkboxen von Germanized (AGB und Widerrufsbestimmungen) statt der AGB-Checkbox von WooCommerce; ohne Germanized gilt automatisch wieder die WooCommerce-Checkbox
 * Rechtliches: Footer zeigt bei Kleinunternehmern (§ 19 UStG, Germanized) „Alle Preise sind Endpreise, keine MwSt. gem. § 19 UStG“ statt „inkl. MwSt.“
 * Vertrauens-Chips: „14 Tage Widerrufsrecht“ statt „30 Tage Rückgabe“; die Versandschwelle kommt aus der Versandart „Kostenlose Lieferung“ (bisher fest „ab 50 €“)
 * Footer: „SEPA-Lastschrift“ aus den Standard-Zahlarten entfernt, die Kasse bietet sie nicht an
