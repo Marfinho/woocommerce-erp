@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.3] – 2026-11-08
+
+### Behoben
+- Konfigurator: Die Fehlermeldung nach „In den Warenkorb“ kam bei Gästen nie an (keine Shop-Sitzung, Seiten-Cache). Sie reist jetzt in der Adresse mit und steht über dem Konfigurator.
+
 ## [0.97.2] – 2026-11-08
 
 ### Behoben

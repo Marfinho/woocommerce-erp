@@ -36,6 +36,7 @@ class Frontend {
 	const SHORTCODE = 'lw16_konfigurator';
 	const NONCE     = 'lw16_haken_warenkorb';
 	const ACTION    = 'lw16_haken_warenkorb';
+	const ERROR_VAR = 'haken_fehler';
 
 	/**
 	 * Zeilen im Ersatzformular, wenn kein JavaScript läuft.
@@ -301,10 +302,25 @@ class Frontend {
 		// Scheitert das Absenden (Teil nicht bestellbar, Farbe fehlt …), kommt
 		// der Kunde mit der Meldung hierher zurück. Ohne diese Ausgabe sähe er
 		// nur die unveränderte Seite – „es passiert nichts“.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nur eine Anzeige, jede Wirkung entsteht erst beim Absenden.
+		$fehler = isset( $_GET[ self::ERROR_VAR ] ) ? sanitize_textarea_field( wp_unslash( $_GET[ self::ERROR_VAR ] ) ) : '';
+
+		if ( '' !== $fehler ) {
+			if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+				define( 'DONOTCACHEPAGE', true );
+			}
+
+			echo '<div class="lw16-haken__meldungen"><ul class="woocommerce-error" role="alert">';
+
+			foreach ( array_filter( explode( "\n", $fehler ) ) as $zeile ) {
+				echo '<li>' . esc_html( $zeile ) . '</li>';
+			}
+
+			echo '</ul></div>';
+		}
+
 		if ( function_exists( 'wc_print_notices' ) ) {
-			echo '<div class="lw16-haken__meldungen woocommerce-notices-wrapper">';
 			wc_print_notices();
-			echo '</div>';
 		}
 
 		$this->render_form( $catalog, $config );
@@ -670,14 +686,11 @@ class Frontend {
 		$result = CartIntegration::add( $config );
 
 		if ( ! $result['ok'] ) {
-			foreach ( $result['errors'] as $error ) {
-				if ( function_exists( 'wc_add_notice' ) ) {
-					wc_add_notice( $error, 'error' );
-				}
-			}
-
+			// Die Meldung reist in der Adresse mit: Gäste haben oft noch keine
+			// WooCommerce-Sitzung, und Seiten-Caches verschlucken Notices.
 			$back = $return ? $return : home_url( '/' );
 			$back = add_query_arg( ConfigCodec::QUERY_VAR, rawurlencode( ConfigCodec::encode( $config ) ), $back );
+			$back = add_query_arg( self::ERROR_VAR, rawurlencode( substr( implode( "\n", $result['errors'] ), 0, 600 ) ), $back );
 
 			wp_safe_redirect( $back );
 			exit;
