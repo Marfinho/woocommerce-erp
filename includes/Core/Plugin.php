@@ -78,6 +78,9 @@ class Plugin {
 		Scheduler::watch_failures();
 		( new EventLog() )->register();
 
+		// Block-Kasse: Neuberechnung des PayPal-Schutzes ohne Rechnungsadresse nicht ablehnen.
+		( new StoreApiCompat() )->register();
+
 		// Einmaliger Rewrite-Flush nach Aktivierung.
 		add_action( 'init', array( $this, 'maybe_flush_rewrite' ), 99 );
 

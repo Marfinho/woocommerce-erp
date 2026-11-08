@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.4] – 2026-11-08
+
+### Behoben
+- Kasse: Beim Öffnen erschien jedem Kunden ein roter Fehler „Fehlende(r) Parameter: billing_address“. Auslöser ist der reCAPTCHA-Schutz von WooCommerce PayPal Payments, der die Summen der Kasse ohne Rechnungsadresse neu berechnen lässt. Diese Neuberechnung bekommt jetzt die Adresse aus den Kundendaten im Warenkorb. Die eigentliche Bestellung ist davon nicht berührt.
+
 ## [0.97.3] – 2026-11-08
 
 ### Behoben
