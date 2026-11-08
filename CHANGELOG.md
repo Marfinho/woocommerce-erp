@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.2] – 2026-11-08
+
+### Behoben
+- Preise aus dem ERP kamen im Shop nicht an: Die Übertragung lief nur beim Speichern eines Artikels. Artikel, die davor angelegt oder übernommen wurden, blieben im Shop auf dem alten Preis. Der Preis wird jetzt zusätzlich stündlich mit dem Shop abgeglichen (zusammen mit dem Bestand); ein laufendes Angebot im Shop bleibt unberührt.
+
 ## [0.97.1] – 2026-11-08
 
 ### Behoben

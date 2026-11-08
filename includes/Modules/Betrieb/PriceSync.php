@@ -10,6 +10,7 @@ namespace Lindenweg16\Modules\Betrieb;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\Scheduler;
 
 /**
  * Der Preis eines Artikels steht im Betrieb – und muss im Shop stehen.
@@ -38,6 +39,19 @@ class PriceSync {
 	 */
 	public function register() {
 		add_action( 'lw16_betrieb_article_saved', array( $this, 'on_article_saved' ), 10, 3 );
+		add_action( Scheduler::HOOK_SHOP_STOCK, array( __CLASS__, 'reconcile' ), 30 );
+	}
+
+	/**
+	 * Stündlicher Abgleich: Preise, die nie übertragen wurden, holen nach.
+	 *
+	 * Die Übertragung beim Speichern erreicht nur Artikel, die nach ihrer
+	 * Einführung gespeichert wurden. Alles davor (Altbestand, Migration,
+	 * Preis direkt gesetzt) blieb im Shop auf dem alten Preis stehen. Wer
+	 * schon übereinstimmt, wird nicht angefasst (Status „gleich“).
+	 */
+	public static function reconcile() {
+		self::push_all();
 	}
 
 	/**
