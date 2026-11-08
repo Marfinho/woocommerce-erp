@@ -10,7 +10,7 @@ und im Abschnitt „Umsetzungsstand“ der README.
 ## [0.97.5] – 2026-11-08
 
 ### Neu
-- Lastschutz für die Besucherzählung: Jede geöffnete Seite meldete sich bisher beim Laden und danach alle 25 Sekunden beim Server – jede Meldung eine volle WordPress-Anfrage mit eigener Datenbankverbindung (rund 1 s). Bei viel Besuch frisst das die Verbindungen, die der Shop zum Verkaufen braucht. Unter Verwaltung → Einstellungen → „Besucherzählung (Live-Dashboard)“ lassen sich jetzt der 25-Sekunden-Takt und die ganze Zählung abschalten. Ohne Takt meldet sich jede Seite genau einmal; ganz aus gibt es kein Skript, und Meldungen alter, zwischengespeicherter Seiten werden sofort verworfen. Standard bleibt wie bisher.
+- Lastschutz für die Besucherzählung: Jede geöffnete Seite meldete sich bisher beim Laden und danach alle 25 Sekunden beim Server – jede Meldung eine volle WordPress-Anfrage mit eigener Datenbankverbindung (rund 1 s). Bei viel Besuch frisst das die Verbindungen, die der Shop zum Verkaufen braucht. Unter Verwaltung → Einstellungen → Plugin (Firma, DHL, …) → „Besucherzählung (Live-Dashboard)“ lassen sich jetzt der 25-Sekunden-Takt und die ganze Zählung abschalten. Ohne Takt meldet sich jede Seite genau einmal; ganz aus gibt es kein Skript, und Meldungen alter, zwischengespeicherter Seiten werden sofort verworfen. Standard bleibt wie bisher.
 
 ### Behoben
 - Systemprotokoll: Der Job `lw16_postpurchase_mails` wurde stündlich eingeplant, obwohl ihn niemand abhört (die Nachkauf-Mails laufen im täglichen Loyalty-Lauf). Er scheiterte jede Stunde und stand als kritischer Fehler im Protokoll. Er wird nicht mehr eingeplant, schon eingeplante Läufe werden entfernt.
