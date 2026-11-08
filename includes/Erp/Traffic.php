@@ -19,6 +19,7 @@
 
 namespace Lindenweg16\Erp;
 
+use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Throttle;
 
 defined( 'ABSPATH' ) || exit;
@@ -62,10 +63,44 @@ class Traffic {
 	}
 
 	/**
+	 * Wie viel der Browser meldet – reine Regel.
+	 *
+	 * Jede Meldung ist eine volle WordPress-Anfrage mit eigener Datenbankverbindung.
+	 * Bei viel Besuch lässt sich deshalb erst der 25-Sekunden-Takt und dann die
+	 * ganze Zählung abschalten (Einstellungen → Besucherzählung).
+	 *
+	 * @param mixed $zaehlen Seitenaufrufe zählen.
+	 * @param mixed $takt    Offene Seiten melden sich regelmäßig.
+	 * @return string aus | aufruf | live.
+	 */
+	public static function mode( $zaehlen, $takt ) {
+		if ( ! $zaehlen ) {
+			return 'aus';
+		}
+
+		return $takt ? 'live' : 'aufruf';
+	}
+
+	/**
+	 * Eingestellter Meldeumfang.
+	 *
+	 * @return string aus | aufruf | live.
+	 */
+	public static function current_mode() {
+		return self::mode( Settings::get( 'besucher_zaehlen', 1 ), Settings::get( 'besucher_live_takt', 1 ) );
+	}
+
+	/**
 	 * Skript am Seitenende, nur für anonyme Besucher.
 	 */
 	public function beacon() {
 		if ( is_admin() || is_user_logged_in() || is_preview() || is_customize_preview() || is_feed() || is_404() ) {
+			return;
+		}
+
+		$mode = self::current_mode();
+
+		if ( 'aus' === $mode ) {
 			return;
 		}
 
@@ -91,12 +126,15 @@ class Traffic {
 			. 'else{d.x=1;}'
 			. 'navigator.sendBeacon&&navigator.sendBeacon(u,new Blob([JSON.stringify(d)],{type:"text/plain"}));}'
 			. 's("v");'
-			. 'function b(){a=Date.now();}'
-			. '["scroll","mousemove","keydown","touchstart","click"].forEach(function(e){addEventListener(e,b,{passive:true});});'
-			. 'setInterval(function(){if(!document.hidden&&Date.now()-a<600000){s("h");}},25000);'
-			. 'document.addEventListener("visibilitychange",function(){if(!document.hidden){s("h");}});'
-			. 'addEventListener("pagehide",function(){s("x");});'
-			. 'addEventListener("pageshow",function(e){if(e.persisted){s("h");}});'
+			// Ohne Takt bleibt es bei der einen Meldung je Seitenaufruf.
+			. ( 'live' === $mode
+				? 'function b(){a=Date.now();}'
+				. '["scroll","mousemove","keydown","touchstart","click"].forEach(function(e){addEventListener(e,b,{passive:true});});'
+				. 'setInterval(function(){if(!document.hidden&&Date.now()-a<600000){s("h");}},25000);'
+				. 'document.addEventListener("visibilitychange",function(){if(!document.hidden){s("h");}});'
+				. 'addEventListener("pagehide",function(){s("x");});'
+				. 'addEventListener("pageshow",function(e){if(e.persisted){s("h");}});'
+				: '' )
 			. '}catch(e){}})();';
 
 		echo '<script>' . $js . '</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -109,6 +147,24 @@ class Traffic {
 	 * @return \WP_REST_Response
 	 */
 	public function collect( \WP_REST_Request $request ) {
+		// Abgeschaltet: Seiten aus einem Seiten-Cache tragen das Skript noch. Sofort
+		// antworten, ohne Drossel-Zähler und ohne Schreibzugriff.
+		$mode = self::current_mode();
+
+		if ( 'aus' === $mode ) {
+			return new \WP_REST_Response( null, 204 );
+		}
+
+		// Ohne Takt zählen nur neue Aufrufe; Wiedermeldungen und Abschiede älterer
+		// Seiten werden gleich verworfen.
+		if ( 'aufruf' === $mode ) {
+			$peek = json_decode( (string) $request->get_body(), true );
+
+			if ( is_array( $peek ) && ( ! empty( $peek['h'] ) || ! empty( $peek['x'] ) ) ) {
+				return new \WP_REST_Response( null, 204 );
+			}
+		}
+
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 
 		// Offener Endpunkt: pro Adresse höchstens 120 Meldungen je Minute (das

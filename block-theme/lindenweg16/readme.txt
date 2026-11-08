@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.2
+Stable tag: 1.9.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -253,6 +253,11 @@ Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.3 =
+* Rechtliches: Footer zeigt bei Kleinunternehmern (§ 19 UStG, Germanized) „Alle Preise sind Endpreise, keine MwSt. gem. § 19 UStG“ statt „inkl. MwSt.“
+* Vertrauens-Chips: „14 Tage Widerrufsrecht“ statt „30 Tage Rückgabe“; die Versandschwelle kommt aus der Versandart „Kostenlose Lieferung“ (bisher fest „ab 50 €“)
+* Footer: „SEPA-Lastschrift“ aus den Standard-Zahlarten entfernt, die Kasse bietet sie nicht an
 
 = 1.9.2 =
 * Shop: Filter stehen als waagerechte Leiste über dem Raster statt in einer Seitenleiste; das Raster hat auf breiten Bildschirmen vier Spalten. Kategorieseiten behalten ihre Seitenleiste

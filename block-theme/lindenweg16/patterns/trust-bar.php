@@ -10,9 +10,16 @@
  * @package Lindenweg16
  */
 
+// Schwelle aus der Versandart „Kostenlose Lieferung“, damit der Chip nie etwas
+// anderes verspricht als die Kasse rechnet.
+$lindenweg16_free = function_exists( 'lindenweg16_free_shipping_threshold' ) ? lindenweg16_free_shipping_threshold() : 0.0;
+
 $lindenweg16_chips = array(
-	'truck'  => __( 'Versand in 48 h, ab 50 € kostenlos', 'lindenweg16' ),
-	'return' => __( '30 Tage Rückgabe', 'lindenweg16' ),
+	'truck'  => $lindenweg16_free > 0
+		/* translators: %s: Betrag, z. B. „40 €“. */
+		? sprintf( __( 'Kostenloser Versand ab %s', 'lindenweg16' ), number_format_i18n( $lindenweg16_free, floor( $lindenweg16_free ) === $lindenweg16_free ? 0 : 2 ) . ' €' )
+		: __( 'Versand aus Haste', 'lindenweg16' ),
+	'return' => __( '14 Tage Widerrufsrecht', 'lindenweg16' ),
 	'lock'   => __( 'Sicher bezahlen', 'lindenweg16' ),
 	'chat'   => __( 'Echte Menschen am Telefon', 'lindenweg16' ),
 );

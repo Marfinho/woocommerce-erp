@@ -61,6 +61,10 @@ class SettingsPage {
 				'rechnung_auto_storno' => array( __( 'Rechnung samt Einnahmebuchung automatisch stornieren, wenn die Bestellung storniert oder erstattet wird', 'lindenweg16' ), 'checkbox' ),
 				'betrieb_storno_lager' => array( __( 'Lagerabgang automatisch zurückbuchen, wenn die Bestellung storniert oder erstattet wird (nur wenn die Ware nicht schon beim Kunden ist)', 'lindenweg16' ), 'checkbox' ),
 			),
+			__( 'Besucherzählung (Live-Dashboard)', 'lindenweg16' ) => array(
+				'besucher_zaehlen'   => array( __( 'Seitenaufrufe zählen. Jeder Aufruf meldet sich einmal beim Server; aus = keine Zählung und keine Live-Anzeige', 'lindenweg16' ), 'checkbox' ),
+				'besucher_live_takt' => array( __( 'Offene Seiten melden sich alle 25 Sekunden für die Live-Anzeige. Bei viel Besuch ausschalten: Jede Meldung belegt kurz eine Datenbankverbindung', 'lindenweg16' ), 'checkbox' ),
+			),
 			__( 'Oberfläche', 'lindenweg16' )     => array(
 				'erp_klassisch_umleiten' => array( __( 'Betriebsseiten im wp-admin (Lager, Aufträge, Versand, Artikel …) leiten ins ERP um. Die klassische Ansicht bleibt im ERP erreichbar.', 'lindenweg16' ), 'checkbox' ),
 			),

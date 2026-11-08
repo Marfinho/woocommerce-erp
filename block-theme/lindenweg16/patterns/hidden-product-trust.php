@@ -30,7 +30,7 @@
 		<p class="is-style-chip lw16-icon lw16-icon--truck"><?php esc_html_e( 'Versand aus Haste', 'lindenweg16' ); ?></p>
 		<!-- /wp:paragraph -->
 		<!-- wp:paragraph {"className":"is-style-chip lw16-icon lw16-icon--return"} -->
-		<p class="is-style-chip lw16-icon lw16-icon--return"><?php esc_html_e( '30 Tage Rückgabe', 'lindenweg16' ); ?></p>
+		<p class="is-style-chip lw16-icon lw16-icon--return"><?php esc_html_e( '14 Tage Widerrufsrecht', 'lindenweg16' ); ?></p>
 		<!-- /wp:paragraph -->
 		<!-- wp:paragraph {"className":"is-style-chip lw16-icon lw16-icon--lock"} -->
 		<p class="is-style-chip lw16-icon lw16-icon--lock"><?php esc_html_e( 'Sichere Zahlung', 'lindenweg16' ); ?></p>

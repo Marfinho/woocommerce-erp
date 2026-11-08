@@ -204,7 +204,6 @@ class Scheduler {
 			self::HOOK_DAILY_LOYALTY  => DAY_IN_SECONDS,
 			self::HOOK_DHL_TRACKING   => 3 * HOUR_IN_SECONDS,
 			self::HOOK_CART_REMINDERS => HOUR_IN_SECONDS,
-			self::HOOK_POSTPURCHASE   => DAY_IN_SECONDS,
 			self::HOOK_WEEKLY_DIGEST  => WEEK_IN_SECONDS,
 			self::HOOK_WEEKLY_EXPORT  => WEEK_IN_SECONDS,
 			self::HOOK_DAILY_STOCK       => DAY_IN_SECONDS,
@@ -222,6 +221,13 @@ class Scheduler {
 			self::HOOK_ERP_BANK_SYNC         => HOUR_IN_SECONDS,
 			self::HOOK_ERP_DAILY             => DAY_IN_SECONDS,
 		);
+
+		// Altlast: Diesen Job hört niemand ab (die Nachkauf-Mails laufen im
+		// täglichen Loyalty-Lauf). Eingeplant scheiterte er jede Stunde und
+		// meldete das als kritischen Fehler.
+		if ( function_exists( 'as_unschedule_all_actions' ) ) {
+			as_unschedule_all_actions( self::HOOK_POSTPURCHASE, array(), self::GROUP );
+		}
 
 		foreach ( $recurring as $hook => $interval ) {
 			if ( ! as_has_scheduled_action( $hook, array(), self::GROUP ) ) {

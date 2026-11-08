@@ -464,12 +464,36 @@ function lindenweg16_front_image( string $slot ): ?array {
 }
 
 /**
+ * Preishinweis unten im Footer, passend zur Steuereinstellung des Shops.
+ *
+ * Kleinunternehmer (§ 19 UStG, Germanized) weisen keine Umsatzsteuer aus; dort
+ * darf nicht „inkl. MwSt.“ stehen.
+ *
+ * @return string Format mit %s für die Jahreszahl.
+ */
+function lindenweg16_footer_price_note(): string {
+	if ( function_exists( 'wc_tax_enabled' ) && wc_tax_enabled() && 'incl' === get_option( 'woocommerce_tax_display_shop' ) ) {
+		/* translators: %s: Jahreszahl. */
+		return __( '© %s Lindenweg16 · Alle Preise inkl. MwSt.', 'lindenweg16' );
+	}
+
+	if ( 'yes' === get_option( 'woocommerce_gzd_small_enterprise' ) ) {
+		/* translators: %s: Jahreszahl. */
+		return __( '© %s Lindenweg16 · Alle Preise sind Endpreise, keine MwSt. gem. § 19 UStG', 'lindenweg16' );
+	}
+
+	/* translators: %s: Jahreszahl. */
+	return __( '© %s Lindenweg16', 'lindenweg16' );
+}
+
+/**
  * Zahlungsarten für die Pillen im Footer – unter Design → Lindenweg16 pflegbar.
  *
  * @return string[]
  */
 function lindenweg16_default_payment_methods(): array {
-	return array( 'PayPal', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay', __( 'SEPA-Lastschrift', 'lindenweg16' ) );
+	// Nur, was die Kasse wirklich anbietet (WooPayments: Karte, Apple Pay, Google Pay; dazu PayPal).
+	return array( 'PayPal', 'Visa', 'Mastercard', 'Apple Pay', 'Google Pay' );
 }
 
 /**
