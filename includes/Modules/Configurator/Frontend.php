@@ -297,6 +297,16 @@ class Frontend {
 		$config = $this->config_from_request( $catalog, (string) $atts['basis'] );
 
 		ob_start();
+
+		// Scheitert das Absenden (Teil nicht bestellbar, Farbe fehlt …), kommt
+		// der Kunde mit der Meldung hierher zurück. Ohne diese Ausgabe sähe er
+		// nur die unveränderte Seite – „es passiert nichts“.
+		if ( function_exists( 'wc_print_notices' ) ) {
+			echo '<div class="lw16-haken__meldungen woocommerce-notices-wrapper">';
+			wc_print_notices();
+			echo '</div>';
+		}
+
 		$this->render_form( $catalog, $config );
 
 		return (string) ob_get_clean();

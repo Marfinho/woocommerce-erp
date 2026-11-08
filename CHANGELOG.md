@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.1] – 2026-11-08
+
+### Behoben
+- Konfigurator: „In den Warenkorb“ schien nichts zu tun, wenn sich die Konfiguration nicht hinzufügen ließ (z. B. Teil nicht bestellbar oder in der Farbe nicht vorhanden). Die Fehlermeldung wurde zwar abgelegt, aber auf der Konfigurator-Seite nie angezeigt. Sie steht jetzt über dem Konfigurator.
+
 ## [0.97.0] – 2026-11-07
 
 ### Neu: Bestand 0 im Shop – bestellbar statt ausverkauft
