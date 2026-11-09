@@ -7,6 +7,18 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.1] – 2026-11-09
+
+Befunde aus dem Testkauf vom 9. November.
+
+### Behoben
+- **Gutschein nur noch mit gewähltem Wert:** Der Warenkorb-Knopf auf der Gutschein-Kachel (Startseite, Shop, leerer Warenkorb) legte den Gutschein ohne Wertwahl zum Grundpreis von 10 € ab, obwohl 25–100 € angeboten werden. Bei Germanized-Gutscheinen (`_gc_is_voucher`) führt der Knopf in Listen jetzt als „Wert wählen“ auf die Produktseite. Ein Warenkorb-Zugang ohne `gc_voucher_value` wird abgelehnt, über die Store-API wie über `?add-to-cart=`. Neue Klasse `Gutschein\WertPflicht`.
+- **Lieferzeit bei Nachbestellung:** Warenkorb und Kasse zeigten bei Mengen über dem Bestand nur „Verfügbar bei Nachbestellung“ ohne Frist. Jede Position über dem Bestand trägt jetzt „Lieferzeit: Wird für dich gefertigt – Versand in ca. X Tagen“ (bei Teilbestand „1 sofort, der Rest: …“), auch in Bestellung, Bestätigungsmail und Rechnung. X kommt aus der ERP-Schätzung, ohne Schätzung gelten 7 Tage (`Promise::DEFAULT_MADE_TO_ORDER_DAYS`). Auch ohne eingeschaltete Lieferzeit-Anzeige der Prognose steht bei nachbestellbarer Ware ohne Bestand dieser Text statt „Verfügbar bei Nachbestellung“.
+- **Keine Warteliste mehr bei bestellbarer Ware:** Die Sets zeigten „Benachrichtige mich, wenn wieder verfügbar“ und zugleich „In den Warenkorb“. Die Warteliste erscheint nur noch, wenn das Produkt wirklich nicht bestellbar ist.
+
+### Geändert
+- Nachbestellbare Ware ohne Bestand heißt im Shop „Wird für dich gefertigt – Versand in ca. X Tagen“ statt „Zurzeit nicht auf Lager – lieferbar in ca. X Tagen“. Nicht nachbestellbare Ware behält den alten Text. Tests: `tests/ShopVerfuegbarkeitTest.php`.
+
 ## [0.99.0] – 2026-11-09
 
 ### Neu
