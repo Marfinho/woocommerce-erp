@@ -216,6 +216,10 @@ class Konfigurator {
 		this.preis = wurzel.querySelector( '[data-lw16-preis]' );
 		this.lieferHinweis = wurzel.querySelector( '[data-lw16-liefer]' );
 		this.knopfKaufen = wurzel.querySelector( '.lw16-haken__kaufen' );
+		this.setBox = wurzel.querySelector( '[data-lw16-set]' );
+		this.feldAlsSet = wurzel.querySelector( '[data-lw16-als-set]' );
+		this.gewaehltesSet = null;
+		this.sets = this.katalog.sets || [];
 		this.meldung = wurzel.querySelector( '[data-lw16-meldung]' );
 		this.buehne = wurzel.querySelector( '[data-lw16-ansicht]' );
 		this.hinweis = wurzel.querySelector( '[data-lw16-ansicht-hinweis]' );
@@ -342,6 +346,28 @@ class Konfigurator {
 			this.zustand.menge = Math.min( Math.max( menge || 1, 1 ), this.grenzen.max_menge );
 			this.aktualisiere();
 		} );
+
+		// Der gewöhnliche Warenkorb-Knopf bestellt immer die Einzelteile –
+		// auch wenn ein früherer Klick auf den Set-Knopf (Zurück im Browser)
+		// das Feld noch gefüllt hat.
+		this.form.addEventListener( 'submit', () => {
+			if ( this.feldAlsSet ) {
+				this.feldAlsSet.value = '';
+			}
+		} );
+
+		if ( this.setBox && this.feldAlsSet ) {
+			this.setBox.querySelector( '[data-lw16-set-knopf]' ).addEventListener( 'click', () => {
+				if ( ! this.gewaehltesSet ) {
+					return;
+				}
+
+				this.feldCode.value = this.code();
+				this.feldAlsSet.value = String( this.gewaehltesSet.article );
+				// submit() löst kein submit-Ereignis aus; das Feld bleibt also gesetzt.
+				this.form.submit();
+			} );
+		}
 
 		this.angebot.hidden = false;
 		this.angebot.querySelectorAll( '[data-lw16-hinzufuegen]' ).forEach( ( knopf ) => {
@@ -631,6 +657,81 @@ class Konfigurator {
 		this.zeichnePreis();
 		this.zeichneChip();
 		this.zeichneModulpreise();
+		this.zeichneSet();
+	}
+
+	/**
+	 * Das Set, dem die Zusammenstellung genau entspricht – gleiche Länge,
+	 * gleiche Module in gleicher Zahl. Wo sie sitzen, zählt nicht. Dieselbe
+	 * Regel prüft SetMatcher.php beim Absenden noch einmal.
+	 *
+	 * @returns {object|null}
+	 */
+	passendesSet() {
+		const gezaehlt = new Map();
+
+		this.zustand.module.forEach( ( eintrag ) => {
+			gezaehlt.set( eintrag.artikel, ( gezaehlt.get( eintrag.artikel ) || 0 ) + 1 );
+		} );
+
+		return this.sets.find( ( set ) => set.base === this.zustand.basis
+			&& set.modules.length === gezaehlt.size
+			&& set.modules.every( ( m ) => gezaehlt.get( m.article ) === m.qty )
+			&& null !== this.preisVon( set ) ) || null;
+	}
+
+	/**
+	 * Vorschlag „Das gibt es als Set“ zeigen oder verbergen.
+	 *
+	 * Vorgeschlagen wird ein Set nur, wenn es nicht teurer ist als die Teile
+	 * einzeln. Ist ein Teil einzeln gerade nicht lieferbar, das Set aber
+	 * schon, ist das Set der Weg zur Bestellung – dann ohne Preisvergleich.
+	 */
+	zeichneSet() {
+		if ( ! this.setBox ) {
+			return;
+		}
+
+		const set = this.passendesSet();
+		const knopf = this.setBox.querySelector( '[data-lw16-set-knopf]' );
+
+		this.gewaehltesSet = null;
+
+		if ( ! set ) {
+			this.setBox.hidden = true;
+			return;
+		}
+
+		const format = new Intl.NumberFormat( document.documentElement.lang || 'de-DE', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		} );
+		const betrag = ( wert ) => format.format( wert * this.zustand.menge ) + ' ' + this.katalog.currency;
+		const teile = [ this.basis(), ...this.zustand.module.map( ( e ) => this.module.get( e.artikel ) ) ];
+		const preise = teile.map( ( teil ) => ( teil ? this.preisVon( teil ) : null ) );
+		const setpreis = this.preisVon( set );
+		let text;
+
+		if ( preise.includes( null ) ) {
+			text = this.texte.set_gleich.replace( '%s', betrag( setpreis ) );
+		} else {
+			const einzeln = preise.reduce( ( a, b ) => a + b, 0 );
+
+			if ( setpreis > einzeln + 0.001 ) {
+				this.setBox.hidden = true;
+				return;
+			}
+
+			text = setpreis < einzeln - 0.001
+				? this.texte.set_spart.replace( '%1$s', betrag( setpreis ) ).replace( '%2$s', betrag( einzeln ) ).replace( '%3$s', betrag( einzeln - setpreis ) )
+				: this.texte.set_gleich.replace( '%s', betrag( setpreis ) );
+		}
+
+		this.setBox.querySelector( '[data-lw16-set-titel]' ).textContent = this.texte.set_titel.replace( '%s', set.name );
+		this.setBox.querySelector( '[data-lw16-set-text]' ).textContent = text;
+		knopf.textContent = this.texte.set_knopf;
+		this.gewaehltesSet = set;
+		this.setBox.hidden = false;
 	}
 
 	/**

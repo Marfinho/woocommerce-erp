@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.0] – 2026-11-09
+
+### Neu
+- **Konfigurator schlägt Sets vor:** Entspricht die Wunschkonfiguration genau einem Set (gleiche Länge, gleiche Module in gleicher Zahl, Position egal), erscheint über dem Warenkorb-Knopf „Das gibt es als Set: …“ mit Setpreis, Einzelpreis und Ersparnis. „Als Set in den Warenkorb“ legt das Set-Produkt statt der Einzelteile in den Warenkorb; die Anordnung der Module und der Konfigurationscode stehen an der Bestellposition. Der Server prüft beim Absenden selbst, ob die Zusammenstellung wirklich dem Set entspricht.
+- Als Set gilt ein aktiver, verkaufbarer Artikel mit Shop-Produkt, dessen Stückliste nur aus Konfigurator-Teilen besteht (genau ein Basismodul, ganze Stückzahlen; Komponenten zählen nicht). Ein Set, das teurer wäre als die Teile einzeln, wird nicht vorgeschlagen. Neue Klasse `SetMatcher`, Tests: `tests/KonfiguratorSetMatcherTest.php`. Anleitung: Kapitel „Set-Vorschlag im Konfigurator“.
+
 ## [0.98.8] – 2026-11-09
 
 ### Geändert

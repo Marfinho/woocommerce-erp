@@ -25,7 +25,7 @@ class Catalog {
 	/**
 	 * Vollständige Angebotsdaten.
 	 *
-	 * @return array {bases, modules, colors, default_color, currency}
+	 * @return array {bases, modules, sets, colors, default_color, currency}
 	 */
 	public static function payload() {
 		// Je Seitenaufruf wird der Katalog zweimal gebraucht – einmal für
@@ -65,12 +65,69 @@ class Catalog {
 		$cache = array(
 			'bases'         => $bases,
 			'modules'       => $modules,
+			'sets'          => self::sets( $context, $bases, $modules, $colors ),
 			'colors'        => self::colors( $colors ),
 			'default_color' => ColorRegistry::default_color(),
 			'currency'      => self::currency(),
 		);
 
 		return $cache;
+	}
+
+	/**
+	 * Sets, die der Kunde im Konfigurator nachbauen kann.
+	 *
+	 * Ein Set taucht nur auf, wenn sein Basismodul und alle seine Module
+	 * im Katalog stehen und es selbst im Shop bestellbar ist. Der Preis
+	 * kommt wie bei den Teilen aus dem Shop – gerechnet wird er hier nicht.
+	 *
+	 * @param array $context Stammdaten.
+	 * @param array $bases   Basismodule im Katalog.
+	 * @param array $modules Module im Katalog.
+	 * @param array $colors  Bekannte Farben.
+	 * @return array
+	 */
+	protected static function sets( array $context, array $bases, array $modules, array $colors ) {
+		$offered = array_merge( wp_list_pluck( $bases, 'article' ), wp_list_pluck( $modules, 'article' ) );
+		$sets    = array();
+
+		foreach ( SetMatcher::from_context( $context ) as $set ) {
+			$needed = array_merge( array( $set['base'] ), array_keys( $set['modules'] ) );
+
+			if ( array_diff( $needed, $offered ) ) {
+				continue;
+			}
+
+			$offer = self::prices(
+				array(
+					'wc_product_id' => $set['wc_product_id'],
+					'name'          => $set['name'],
+				),
+				$colors
+			);
+
+			if ( ! $offer['prices'] ) {
+				continue;
+			}
+
+			$list = array();
+			foreach ( $set['modules'] as $article => $qty ) {
+				$list[] = array(
+					'article' => (int) $article,
+					'qty'     => (int) $qty,
+				);
+			}
+
+			$sets[] = array(
+				'article' => (int) $set['article'],
+				'name'    => (string) $set['name'],
+				'base'    => (int) $set['base'],
+				'modules' => $list,
+				'prices'  => $offer['prices'],
+			);
+		}
+
+		return $sets;
 	}
 
 	/**

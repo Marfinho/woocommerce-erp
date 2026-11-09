@@ -586,6 +586,49 @@
 	color: var(--lw16-gedaempft);
 }
 
+/* Set-Vorschlag ------------------------------------------------------ */
+
+.lw16-haken__set {
+	display: grid;
+	gap: 0.4rem;
+	justify-items: start;
+	margin: 0 0 1rem;
+	padding: 1rem 1.2rem;
+	border: 2px solid var(--lw16-sticker);
+	border-radius: var(--lw16-r-karte);
+	background: color-mix(in srgb, var(--lw16-sticker) 22%, var(--lw16-karte));
+	color: var(--lw16-text);
+	animation: lw16-haken-pop var(--lw16-mittel) var(--lw16-feder);
+}
+
+.lw16-haken__set[hidden] {
+	display: none;
+}
+
+.lw16-haken__settitel {
+	font-family: var(--lw16-kopf);
+	font-size: 1.05rem;
+}
+
+.lw16-haken__settext {
+	margin: 0;
+	font-size: 0.9rem;
+	color: var(--lw16-gedaempft);
+}
+
+.lw16-haken__setknopf {
+	min-height: 44px;
+	margin-top: 0.3rem;
+	padding: 0.6em 1.4em;
+	border: 0;
+	border-radius: var(--lw16-r-pille);
+	background: var(--lw16-sticker);
+	color: var(--lw16-auf-sticker);
+	font: inherit;
+	font-weight: 600;
+	cursor: pointer;
+}
+
 /* Abschluss ---------------------------------------------------------- */
 
 .lw16-haken__abschluss {
