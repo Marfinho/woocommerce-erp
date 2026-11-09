@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.4] – 2026-11-09
+
+### Behoben
+- Theme 1.9.9, Kasse: Mit 1.9.7 war versehentlich der Abschnitt „Kasse, Feinschliff“ aus dem Stylesheet gefallen (Express-Kasse als Karte, runde Adresskarte, Bestellübersicht ohne graue Fläche, Preise bündig). Er ist wieder da.
+- Kasse: Die Punktekarte hatte keinen Innenabstand; Text und „Alle“ klebten am Rand. Sie nutzt jetzt die CI-Farben (Rosa für Überschriften, Rot für „Anwenden“, Punkte in Weiß).
+- Kasse: Felder, Adresskarte und Wunschort-Karten in zartem Rosa aus dem CI (accent-2) statt Blaugrau.
+
 ## [0.98.3] – 2026-11-09
 
 ### Geändert
