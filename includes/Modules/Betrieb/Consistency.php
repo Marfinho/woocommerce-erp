@@ -540,8 +540,14 @@ class Consistency {
 				);
 			}
 
+			// Mehrere Artikel auf einem Produkt sind erlaubt, wenn jeder für
+			// eine andere Shop-Variante steht (Typ, Holz). Doppelt ist nur
+			// dieselbe Variante zweimal.
+			$variant = Variants::format( Variants::parse( isset( $article['wc_variant'] ) ? (string) $article['wc_variant'] : '' ) );
+			$slot    = $product . '|' . $variant;
+
 			if ( $product ) {
-				if ( isset( $belegt[ $product ] ) ) {
+				if ( isset( $belegt[ $slot ] ) ) {
 					$out[] = self::finding(
 						'fehler',
 						__( 'Shop', 'lindenweg16' ),
@@ -549,13 +555,15 @@ class Consistency {
 							/* translators: 1: Produkt-ID, 2: erster Artikel, 3: zweiter Artikel. */
 							__( 'Shop-Produkt %1$d ist mit zwei Artikeln verknüpft: %2$s und %3$s.', 'lindenweg16' ),
 							$product,
-							$belegt[ $product ],
+							$belegt[ $slot ],
 							self::label( $article )
 						),
-						__( 'Ein Verkauf würde von beiden abbuchen. Eine der beiden Verknüpfungen lösen.', 'lindenweg16' )
+						'' === $variant
+							? __( 'Ein Verkauf würde nur einen davon treffen. Eine Verknüpfung lösen oder jedem Artikel seine Shop-Variante zuweisen (z. B. Schuhsystem SPD und SPD-SL).', 'lindenweg16' )
+							: __( 'Beide stehen für dieselbe Shop-Variante. Einem der beiden eine andere Variante zuweisen.', 'lindenweg16' )
 					);
 				} else {
-					$belegt[ $product ] = self::label( $article );
+					$belegt[ $slot ] = self::label( $article );
 				}
 			}
 		}

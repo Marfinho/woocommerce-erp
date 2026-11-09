@@ -122,6 +122,12 @@ class PriceSync {
 			return true;
 		}
 
+		// Eine andere Shop-Variante: Sie kennt den Preis noch nicht.
+		if ( array_key_exists( 'wc_variant', $after )
+			&& (string) ( isset( $before['wc_variant'] ) ? $before['wc_variant'] : '' ) !== (string) $after['wc_variant'] ) {
+			return true;
+		}
+
 		if ( ! array_key_exists( 'price_gross', $after ) ) {
 			return false;
 		}
@@ -185,12 +191,45 @@ class PriceSync {
 			return self::result( 'fehlt', __( 'Das verknüpfte Shop-Produkt gibt es nicht mehr.', 'lindenweg16' ) );
 		}
 
-		if ( ! self::differs( $product->get_regular_price(), $preis ) ) {
+		// Bei einem variablen Produkt tragen die Varianten den Preis – und
+		// zwar die, hinter denen dieser Artikel steht (Typ, Holz). Hat das
+		// Produkt nur einen Artikel, sind das alle.
+		$targets = array( $product );
+
+		if ( $product->is_type( 'variable' ) ) {
+			$targets = array();
+			$ctx     = OrderLines::context();
+
+			foreach ( $product->get_children() as $child_id ) {
+				$variation = wc_get_product( (int) $child_id );
+
+				if ( $variation && OrderLines::article_for_product_object( $variation, $ctx ) === (int) $article['id'] ) {
+					$targets[] = $variation;
+				}
+			}
+
+			if ( ! $targets ) {
+				return self::result( 'fehlt', __( 'Im Shop-Produkt gibt es keine Variante zu diesem Artikel.', 'lindenweg16' ) );
+			}
+		}
+
+		$changed = 0;
+
+		foreach ( $targets as $target ) {
+			if ( self::differs( $target->get_regular_price(), $preis ) ) {
+				$target->set_regular_price( (string) round( (float) $preis, 2 ) );
+				$target->save();
+				$changed++;
+			}
+		}
+
+		if ( ! $changed ) {
 			return self::result( 'gleich', __( 'Der Shop steht bereits auf diesem Preis.', 'lindenweg16' ) );
 		}
 
-		$product->set_regular_price( (string) round( (float) $preis, 2 ) );
-		$product->save();
+		if ( $product->is_type( 'variable' ) && class_exists( '\\WC_Product_Variable' ) ) {
+			\WC_Product_Variable::sync( $product->get_id() );
+		}
 
 		self::store_margin( (int) $article['id'], $wc_id, (float) $preis );
 

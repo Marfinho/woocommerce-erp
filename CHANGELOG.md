@@ -7,6 +7,19 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.1] – 2026-11-09
+
+### Neu
+- **Varianten mit eigenem Artikel:** Im Shop gibt es jedes Produkt einmal, wählbar nach Farbe (Module), Farbe und Holz (Basismodul) oder Farbe und Typ (Schuhhalter: SPD, SPD-SL …). Im ERP ist jeder Typ und jedes Holz ein eigener Artikel mit eigener Stückliste, eigenem Bestand und eigenem Konfigurator-Modell. Neues Feld **Shop-Variante** in den Stammdaten des Artikels (z. B. `pa_schuhsystem=spd`, Auswahl aus den Merkmalen des Shop-Produkts); die Farbe bleibt die Bestandsachse innerhalb des Artikels. DB_VERSION 58 (`articles.wc_variant`).
+- Lagerabgang, Reservierung, Pickliste, Bedarf, Prognose, Lieferhinweis, Paketgewicht, Nachkauf und Stundenlohn ermitteln den Artikel jetzt aus der bestellten Variante (`Variants`, `OrderLines`). Gibt es zur Variante keinen Artikel, wird auf den ersten des Produkts gebucht und im Ereignisprotokoll gemeldet.
+- **Sets mit Wahl:** Steckt in einem Set ein Modul mit Varianten, wählt der Kunde auch am Set Holz und Typ. Die Stückliste tauscht das Modul gegen das gewählte Geschwister (gleiches Shop-Produkt, passende Variante). Ein solches Set wird beim Verkauf aus seinen Modulen gepackt: Abgebucht, reserviert und gepickt werden die Module in der Farbe des Sets, samt den Kleinteilen direkt im Set. Shop-Bestand der Set-Variante: so viele, wie sich aus den freien Modulen packen lassen.
+- Konfigurator: Teile mit Shop-Variante zeigen nur deren Preise und legen genau diese Variante in den Warenkorb. Der Set-Vorschlag erkennt ein Set auch mit anderen Varianten (Walnuss, SPD-SL) und legt die passende Set-Variante in den Warenkorb. Anleitung: Kapitel „Varianten: Farbe, Holz und Schuhsystem“.
+
+### Geändert
+- Der Preis eines Artikels geht bei variablen Shop-Produkten an die Varianten, hinter denen der Artikel steht (bisher an das Elternprodukt, wo er keine Wirkung hatte).
+- Systemprüfung: Mehrere Artikel auf einem Shop-Produkt sind kein Fehler mehr, wenn jeder für eine andere Shop-Variante steht.
+- Shop-Bestand wird je Shop-Produkt abgeglichen; ändert sich der Bestand eines Moduls, werden die Sets nachgezogen, die daraus gepackt werden.
+
 ## [0.99.0] – 2026-11-09
 
 ### Neu

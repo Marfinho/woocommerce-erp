@@ -230,6 +230,31 @@ class BetriebConsistencyTest extends TestCase {
 	}
 
 	/**
+	 * Zwei Artikel für verschiedene Shop-Varianten desselben Produkts sind gewollt.
+	 */
+	public function test_varianten_auf_einem_produkt() {
+		$befunde = Consistency::check_shop_links(
+			array(
+				1 => $this->artikel( array( 'wc_variant' => 'pa_schuhsystem=spd' ) ),
+				2 => $this->artikel( array( 'id' => 2, 'sku' => 'HH-002', 'wc_variant' => 'pa_schuhsystem=spd-sl' ) ),
+			),
+			array()
+		);
+
+		$this->assertSame( array(), $befunde );
+
+		$doppelt = Consistency::check_shop_links(
+			array(
+				1 => $this->artikel( array( 'wc_variant' => 'pa_schuhsystem=spd' ) ),
+				2 => $this->artikel( array( 'id' => 2, 'sku' => 'HH-002', 'wc_variant' => 'pa_schuhsystem=SPD' ) ),
+			),
+			array()
+		);
+
+		$this->assertCount( 1, $doppelt );
+	}
+
+	/**
 	 * Eine Verknüpfung ins Leere.
 	 */
 	public function test_verknuepfung_ins_leere() {

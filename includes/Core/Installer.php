@@ -132,8 +132,11 @@ class Installer {
 	 * DB_VERSION 56: Tabelle flow (anonyme Tageszähler der Übergänge zwischen Seiten, siehe Erp\Flow).
 	 *
 	 * DB_VERSION 57: Tabelle stat (anonyme Tageszähler: Produktansichten, Warenkorb, Suche, 404, Kampagnen, siehe Erp\Insights).
+	 *
+	 * DB_VERSION 58: articles um wc_variant (Merkmale der Shop-Variante, für die der Artikel steht, z. B.
+	 * `pa_schuhsystem=spd`; siehe Modules\Betrieb\Variants). dbDelta legt die Spalte an, leer = ganzes Produkt.
 	 */
-	const DB_VERSION = '57';
+	const DB_VERSION = '58';
 
 	/**
 	 * Aktivierungsroutine.

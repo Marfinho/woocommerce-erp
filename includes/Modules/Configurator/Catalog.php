@@ -16,6 +16,7 @@ namespace Lindenweg16\Modules\Configurator;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\Variants;
 
 /**
  * Baut die Angebotsdaten des Konfigurators.
@@ -98,10 +99,13 @@ class Catalog {
 				continue;
 			}
 
+			// Die Fassung mit gewähltem Holz oder Typ hat den Preis ihrer
+			// Variante des Set-Produkts.
 			$offer = self::prices(
 				array(
 					'wc_product_id' => $set['wc_product_id'],
 					'name'          => $set['name'],
+					'wc_variant'    => isset( $set['variant'] ) ? (string) $set['variant'] : '',
 				),
 				$colors
 			);
@@ -354,6 +358,9 @@ class Catalog {
 		$key      = 'attribute_' . $taxonomy;
 		$prices   = array();
 		$sold_out = array();
+		// Steht das Teil für eine bestimmte Variante (Schuhsystem, Holz),
+		// zählen nur deren Varianten.
+		$pairs = Variants::parse( isset( $part['wc_variant'] ) ? (string) $part['wc_variant'] : '' );
 
 		foreach ( $product->get_available_variations() as $variation ) {
 			$child = wc_get_product( (int) $variation['variation_id'] );
@@ -363,6 +370,10 @@ class Catalog {
 			}
 
 			$attributes = isset( $variation['attributes'] ) ? (array) $variation['attributes'] : array();
+
+			if ( $pairs && ! Variants::fits( $pairs, $attributes ) ) {
+				continue;
+			}
 			$value      = isset( $attributes[ $key ] ) ? (string) $attributes[ $key ] : '';
 
 			if ( ! $child->is_in_stock() ) {

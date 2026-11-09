@@ -463,6 +463,27 @@ class ArticleRepository {
 			'notes'              => isset( $input['notes'] ) ? sanitize_textarea_field( $input['notes'] ) : null,
 		);
 
+		// Die Merkmale der Shop-Variante nur übernehmen, wenn das Formular sie
+		// mitschickt: Wer sie nicht kennt (Import, Kasse), soll sie nicht löschen.
+		if ( array_key_exists( 'wc_variant', $input ) ) {
+			$data['wc_variant'] = $data['wc_product_id'] ? Variants::format( Variants::parse( (string) $input['wc_variant'] ) ) : '';
+
+			if ( '' !== trim( (string) $input['wc_variant'] ) && '' === $data['wc_variant'] && $data['wc_product_id'] ) {
+				$errors[] = __( 'Die Shop-Variante bitte als Merkmal=Ausprägung angeben, z. B. pa_schuhsystem=spd.', 'lindenweg16' );
+			}
+
+			if ( '' !== $data['wc_variant'] ) {
+				$twin = self::find_variant_twin( (int) $data['wc_product_id'], $data['wc_variant'], $id );
+				if ( $twin ) {
+					$errors[] = sprintf(
+						/* translators: %s: Artikelnummer. */
+						__( 'Diese Shop-Variante ist schon mit %s verknüpft.', 'lindenweg16' ),
+						$twin
+					);
+				}
+			}
+		}
+
 		// Ein verkäuflicher Artikel braucht einen Preis, sonst rechnet die
 		// Kalkulation gegen null und meldet einen Deckungsbeitrag von minus
 		// den Fixkosten.
@@ -478,6 +499,34 @@ class ArticleRepository {
 			'data'   => $data,
 			'errors' => $errors,
 		);
+	}
+
+	/**
+	 * Ein anderer Artikel mit demselben Produkt und denselben Merkmalen?
+	 *
+	 * @param int      $product_id Shop-Produkt.
+	 * @param string   $variant    Merkmale (format()).
+	 * @param int|null $id         Eigene ID.
+	 * @return string Artikelnummer des anderen oder leer.
+	 */
+	protected static function find_variant_twin( $product_id, $variant, $id ) {
+		global $wpdb;
+
+		if ( ! $product_id || ! isset( $wpdb ) ) {
+			return '';
+		}
+
+		$table = self::table();
+		$sku   = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT sku FROM {$table} WHERE wc_product_id = %d AND wc_variant = %s AND id <> %d AND status <> 'ausgelaufen' LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $product_id,
+				(string) $variant,
+				(int) $id
+			)
+		);
+
+		return $sku ? (string) $sku : '';
 	}
 
 	/**

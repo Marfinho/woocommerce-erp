@@ -103,12 +103,11 @@ class WooStockSync {
 			return;
 		}
 
-		$map = StockOwnership::article_map();
+		$ctx = OrderLines::context();
 
 		foreach ( $order->get_items() as $item ) {
-			$product_id = (int) $item->get_product_id();
-			if ( isset( $map[ $product_id ] ) ) {
-				self::queue( $map[ $product_id ] );
+			foreach ( OrderLines::for_item( $item, $ctx ) as $line ) {
+				self::queue( (int) $line['article_id'] );
 			}
 		}
 	}
@@ -123,8 +122,7 @@ class WooStockSync {
 			return;
 		}
 
-		$article_id = StockOwnership::article_for_product( (int) $product_id );
-		if ( $article_id ) {
+		foreach ( OrderLines::articles_of_product( (int) $product_id ) as $article_id ) {
 			self::queue( $article_id );
 		}
 	}
@@ -240,6 +238,12 @@ class WooStockSync {
 	/**
 	 * Mehrere Artikel abgleichen.
 	 *
+	 * Abgeglichen wird je Shop-Produkt: Hinter einem Produkt können mehrere
+	 * Artikel stehen (eine Variante je Typ oder Holz), und ein Set mit
+	 * wählbaren Modulen hat den Bestand seiner Module. Ändert sich der
+	 * Bestand eines Moduls, wird deshalb auch jedes Set nachgezogen, in das
+	 * es gepackt wird.
+	 *
 	 * @param int[] $article_ids Artikel.
 	 * @return array {geprueft, geaendert, ohne_produkt}
 	 */
@@ -253,31 +257,54 @@ class WooStockSync {
 		self::$running = true;
 
 		try {
-			$balances  = count( $article_ids ) === 1 ? StockRepository::balances( (int) reset( $article_ids ) ) : StockRepository::balances();
-			$lines     = WooIntegration::open_order_lines();
-			$articles  = ArticleRepository::all_by_id();
+			$ctx      = OrderLines::context();
+			$products = ShopStock::products_for( array_map( 'intval', $article_ids ), $ctx );
+			$free     = self::free_units( $ctx );
 
 			foreach ( $article_ids as $article_id ) {
-				$article_id = (int) $article_id;
-				$wc_id      = isset( $articles[ $article_id ]['wc_product_id'] ) ? (int) $articles[ $article_id ]['wc_product_id'] : 0;
-				$product    = $wc_id ? wc_get_product( $wc_id ) : null;
+				$article = isset( $ctx['articles'][ (int) $article_id ] ) ? (array) $ctx['articles'][ (int) $article_id ] : array();
+				if ( empty( $article['wc_product_id'] ) ) {
+					$result['ohne_produkt']++;
+				}
+			}
+
+			foreach ( $products as $product_id ) {
+				$product = wc_get_product( (int) $product_id );
 
 				if ( ! $product ) {
 					$result['ohne_produkt']++;
 					continue;
 				}
 
-				$stock    = ShopStock::stock_by_color( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() );
-				$reserved = ShopStock::reserved_by_color( $lines, $article_id );
-
 				$result['geprueft']++;
-				$result['geaendert'] += self::write_product( $product, $stock, $reserved );
+				$result['geaendert'] += self::write_product( $product, $free, $ctx );
 			}
 		} finally {
 			self::$running = false;
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Freie Menge je Artikel und Farbe: Lager minus offene Bestellungen.
+	 *
+	 * @param array $ctx Kontext.
+	 * @return array article_id => color => Menge.
+	 */
+	protected static function free_units( array $ctx ) {
+		$balances = StockRepository::balances();
+		$lines    = WooIntegration::open_order_lines();
+		$free     = array();
+
+		foreach ( array_keys( $ctx['articles'] ) as $article_id ) {
+			$free[ (int) $article_id ] = ShopStock::free(
+				ShopStock::stock_by_color( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() ),
+				ShopStock::reserved_by_color( $lines, (int) $article_id )
+			);
+		}
+
+		return $free;
 	}
 
 	/**
@@ -299,26 +326,35 @@ class WooStockSync {
 
 	/**
 	 * Sollmengen eines Shop-Produkts: bei einfachen Produkten es selbst,
-	 * bei variablen jede Variante nach ihrer Farbe.
+	 * bei variablen jede Variante nach ihrem Artikel und ihrer Farbe.
 	 *
-	 * @param \WC_Product $product  Produkt.
-	 * @param array       $stock    color => Lagerbestand.
-	 * @param array       $reserved color => reservierte Menge.
-	 * @return array Produkt-ID => array( product => Objekt, qty => Stück ).
+	 * @param \WC_Product $product Produkt.
+	 * @param array       $free    article_id => color => freie Menge.
+	 * @param array       $ctx     Kontext.
+	 * @return array Produkt-ID => array( product => Objekt, qty => Stück, article_id => Artikel ).
 	 */
-	protected static function targets( $product, array $stock, array $reserved ) {
+	protected static function targets( $product, array $free, array $ctx ) {
+		$group = isset( $ctx['groups'][ (int) $product->get_id() ] ) ? $ctx['groups'][ (int) $product->get_id() ] : array();
+
+		if ( ! $group ) {
+			return array();
+		}
+
 		if ( ! $product->is_type( 'variable' ) ) {
+			$pick = Variants::pick( $group, array() );
+
 			return array(
 				$product->get_id() => array(
-					'product' => $product,
-					'qty'     => ShopStock::simple_quantity( $stock, $reserved ),
+					'product'    => $product,
+					'qty'        => ShopStock::simple_units( $free, (int) $pick['article_id'], $ctx ),
+					'article_id' => (int) $pick['article_id'],
 				),
 			);
 		}
 
-		$taxonomy   = ColorRegistry::taxonomy();
-		$variations = array();
-		$objects    = array();
+		$color_key = Variants::key( ColorRegistry::taxonomy() );
+		$default   = ColorRegistry::default_color();
+		$out       = array();
 
 		foreach ( $product->get_children() as $child_id ) {
 			$variation = wc_get_product( $child_id );
@@ -326,17 +362,14 @@ class WooStockSync {
 				continue;
 			}
 
-			$attributes              = $variation->get_attributes();
-			$variations[ $child_id ] = ColorRegistry::normalize( isset( $attributes[ $taxonomy ] ) ? $attributes[ $taxonomy ] : '' );
-			$objects[ $child_id ]    = $variation;
-		}
+			$attrs = OrderLines::variation_attributes( $variation );
+			$color = isset( $attrs[ $color_key ] ) ? ColorRegistry::normalize( $attrs[ $color_key ] ) : '';
+			$pick  = Variants::pick( $group, $attrs );
 
-		$out = array();
-
-		foreach ( ShopStock::per_variation( $variations, ShopStock::available( $stock, $reserved ), ColorRegistry::default_color() ) as $child_id => $qty ) {
 			$out[ $child_id ] = array(
-				'product' => $objects[ $child_id ],
-				'qty'     => $qty,
+				'product'    => $variation,
+				'qty'        => ShopStock::variant_units( $free, (int) $pick['article_id'], '' === $color ? $default : $color, $attrs, $ctx ),
+				'article_id' => (int) $pick['article_id'],
 			);
 		}
 
@@ -346,12 +379,12 @@ class WooStockSync {
 	/**
 	 * Bestand in ein Shop-Produkt schreiben.
 	 *
-	 * @param \WC_Product $product  Produkt.
-	 * @param array       $stock    color => Lagerbestand.
-	 * @param array       $reserved color => reservierte Menge.
+	 * @param \WC_Product $product Produkt.
+	 * @param array       $free    article_id => color => freie Menge.
+	 * @param array       $ctx     Kontext.
 	 * @return int Anzahl geänderter Produkte beziehungsweise Varianten.
 	 */
-	protected static function write_product( $product, array $stock, array $reserved ) {
+	protected static function write_product( $product, array $free, array $ctx ) {
 		$changed = 0;
 
 		// Bei variablen Produkten liegt der Bestand an den Varianten; ein
@@ -362,7 +395,7 @@ class WooStockSync {
 			$changed++;
 		}
 
-		foreach ( self::targets( $product, $stock, $reserved ) as $target ) {
+		foreach ( self::targets( $product, $free, $ctx ) as $target ) {
 			$changed += self::write_quantity( $target['product'], $target['qty'] ) ? 1 : 0;
 		}
 
@@ -387,21 +420,17 @@ class WooStockSync {
 			return $rows;
 		}
 
-		$balances = StockRepository::balances();
-		$lines    = WooIntegration::open_order_lines();
+		$ctx  = OrderLines::context();
+		$free = self::free_units( $ctx );
 
-		foreach ( ArticleRepository::all_by_id() as $article_id => $article ) {
-			$wc_id   = (int) $article['wc_product_id'];
-			$product = $wc_id ? wc_get_product( $wc_id ) : null;
+		foreach ( array_keys( $ctx['groups'] ) as $wc_id ) {
+			$product = wc_get_product( (int) $wc_id );
 
 			if ( ! $product ) {
 				continue;
 			}
 
-			$stock    = ShopStock::stock_by_color( isset( $balances[ $article_id ] ) ? $balances[ $article_id ] : array() );
-			$reserved = ShopStock::reserved_by_color( $lines, $article_id );
-
-			foreach ( self::targets( $product, $stock, $reserved ) as $target ) {
+			foreach ( self::targets( $product, $free, $ctx ) as $target ) {
 				$shop = $target['product']->get_manage_stock() ? (int) $target['product']->get_stock_quantity() : null;
 
 				if ( null !== $shop && $shop === (int) $target['qty'] ) {
@@ -409,7 +438,7 @@ class WooStockSync {
 				}
 
 				$rows[] = array(
-					'article_id' => (int) $article_id,
+					'article_id' => (int) $target['article_id'],
 					'product_id' => (int) $target['product']->get_id(),
 					'name'       => (string) $target['product']->get_name(),
 					'expected'   => (int) $target['qty'],

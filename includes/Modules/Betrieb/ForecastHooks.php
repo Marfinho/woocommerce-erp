@@ -39,8 +39,8 @@ class ForecastHooks {
 			return $text;
 		}
 
-		$parent = $product->is_type( 'variation' ) ? (int) $product->get_parent_id() : (int) $product->get_id();
-		$id     = StockOwnership::article_for_product( $parent );
+		// Hinter jeder Variante kann ein eigener Artikel stehen (Typ, Holz).
+		$id = OrderLines::article_for_product_object( $product );
 
 		if ( ! $id ) {
 			return $text;

@@ -22,6 +22,7 @@ namespace Lindenweg16\Modules\Configurator;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
+use Lindenweg16\Modules\Betrieb\Variants;
 
 /**
  * Findet Produkt, Variante und Preis zu einem Teil.
@@ -82,7 +83,7 @@ class ShopLink {
 		$buyable      = $product;
 
 		if ( $product->is_type( 'variable' ) ) {
-			$match = self::find_variation( $product, $color );
+			$match = self::find_variation( $product, $color, Variants::parse( isset( $part['wc_variant'] ) ? (string) $part['wc_variant'] : '' ) );
 
 			if ( ! $match ) {
 				return $fail(
@@ -124,11 +125,16 @@ class ShopLink {
 	/**
 	 * Die Variante zu einer Farbe suchen.
 	 *
+	 * Steht das Teil für eine bestimmte Variante (Schuhsystem, Holz), muss
+	 * die Variante auch dazu passen; ein „beliebig“ wird mit dem Merkmal des
+	 * Teils gefüllt, damit der Warenkorb die Wahl kennt.
+	 *
 	 * @param \WC_Product_Variable $product Variables Produkt.
 	 * @param string               $color   Farb-Slug.
+	 * @param array                $pairs   Merkmale des Teils (Variants::parse()).
 	 * @return array|null {id, attributes}
 	 */
-	protected static function find_variation( $product, $color ) {
+	protected static function find_variation( $product, $color, array $pairs = array() ) {
 		$taxonomy = ColorRegistry::taxonomy();
 		$key      = 'attribute_' . $taxonomy;
 		$color    = (string) $color;
@@ -143,9 +149,22 @@ class ShopLink {
 				continue;
 			}
 
+			if ( $pairs && ! Variants::fits( $pairs, $attributes ) ) {
+				continue;
+			}
+
+			$chosen = '' === $value ? array_merge( $attributes, array( $key => $color ) ) : $attributes;
+
+			foreach ( $chosen as $name => $current ) {
+				$short = Variants::key( $name );
+				if ( '' === (string) $current && isset( $pairs[ $short ] ) ) {
+					$chosen[ $name ] = $pairs[ $short ];
+				}
+			}
+
 			return array(
 				'id'         => (int) $variation['variation_id'],
-				'attributes' => '' === $value ? array_merge( $attributes, array( $key => $color ) ) : $attributes,
+				'attributes' => $chosen,
 			);
 		}
 

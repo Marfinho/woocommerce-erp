@@ -14,7 +14,6 @@ use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
-use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Production\DhlTracking;
 
 /**
@@ -111,7 +110,7 @@ class DhlShipping {
 			$product_id = (int) $item->get_product_id();
 			$einzeln    = 0.0;
 
-			$article_id = StockOwnership::article_for_product( $product_id );
+			$article_id = \Lindenweg16\Modules\Betrieb\OrderLines::article_for_item( $item );
 
 			if ( $article_id ) {
 				$article = ArticleRepository::find( $article_id );

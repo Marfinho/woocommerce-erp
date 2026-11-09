@@ -443,6 +443,16 @@ der Anzeigename. Auflösung je Bestellposition: Variantenattribut → eindeutige
 Produktattribut → Standardfarbe → `ungeklaert`. Ungeklärte Bewegungen werden
 gebucht und gemeldet, nie verworfen.
 
+**Varianten (Holz, Schuhsystem)**
+
+Ein Shop-Produkt, mehrere Artikel: Jeder Typ bzw. jedes Holz ist ein eigener
+Artikel, verknüpft mit demselben Shop-Produkt und der Shop-Variante, für die
+er steht (`articles.wc_variant`, z. B. `pa_schuhsystem=spd`). Die Farbe bleibt
+die Bestandsachse innerhalb des Artikels. Auflösung je Bestellposition und je
+Shop-Variante in `Variants` (reine Regeln) und `OrderLines` (WooCommerce). Ein
+Set mit wählbaren Modulen wird beim Verkauf aus seinen Modulen gepackt; die
+Stückliste tauscht das Modul gegen das gewählte Geschwister.
+
 **Lagerhoheit**
 
 Betrieb bucht die Lagerabgänge genau der Produkte, die über `wc_product_id`

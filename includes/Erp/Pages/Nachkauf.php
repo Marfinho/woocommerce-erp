@@ -63,12 +63,8 @@ class Nachkauf {
 
 		$today    = current_time( 'Y-m-d' );
 		$articles = ArticleRepository::all_by_id();
-		$by_wc    = array();
-		foreach ( $articles as $a ) {
-			if ( ! empty( $a['wc_product_id'] ) ) {
-				$by_wc[ (int) $a['wc_product_id'] ] = (int) $a['id'];
-			}
-		}
+		// Die Variante entscheidet den Artikel (Typ, Holz).
+		$vctx  = \Lindenweg16\Modules\Betrieb\Variants::context( $articles, \Lindenweg16\Modules\Betrieb\BomRepository::all_by_parent() );
 		$label = function ( $aid, $fallback ) use ( $articles ) {
 			return $aid && isset( $articles[ $aid ] ) ? (string) $articles[ $aid ]['name'] : (string) $fallback;
 		};
@@ -92,7 +88,7 @@ class Nachkauf {
 				$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $op['wc_order_id'] ) : null;
 				if ( $order ) {
 					foreach ( $order->get_items() as $it ) {
-						$aid                       = isset( $by_wc[ (int) $it->get_product_id() ] ) ? $by_wc[ (int) $it->get_product_id() ] : 0;
+						$aid                       = \Lindenweg16\Modules\Betrieb\OrderLines::article_for_item( $it, $vctx );
 						$groups[ $key ]['items'][] = array( 'article_id' => $aid, 'label' => $label( $aid, $it->get_name() ), 'qty' => (float) $it->get_quantity() );
 					}
 				}
@@ -130,7 +126,7 @@ class Nachkauf {
 				$groups[ $key ]['dates'][] = $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d' ) : '';
 				$groups[ $key ]['value']  += (float) $order->get_total();
 				foreach ( $order->get_items() as $it ) {
-					$aid                       = isset( $by_wc[ (int) $it->get_product_id() ] ) ? $by_wc[ (int) $it->get_product_id() ] : 0;
+					$aid                       = \Lindenweg16\Modules\Betrieb\OrderLines::article_for_item( $it, $vctx );
 					$groups[ $key ]['items'][] = array( 'article_id' => $aid, 'label' => $label( $aid, $it->get_name() ), 'qty' => (float) $it->get_quantity() );
 				}
 			}

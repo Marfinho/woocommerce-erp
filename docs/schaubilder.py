@@ -627,6 +627,13 @@ sb('adm-stammdaten|Set-Vorschlag im Konfigurator', 'Wunschkonfiguration wird zum
    erp('Schlägt das Set vor', 'Setpreis gegen Einzelpreise, nur wenn nicht teurer'),
    ok('Eine Position zum Setpreis', 'Anordnung und Code an der Bestellung'))
 
+sb('adm-stammdaten|Varianten: Farbe, Holz und Schuhsystem', 'Ein Shop-Produkt, mehrere Artikel',
+   du('Je Typ oder Holz ein Artikel', 'eigene Stückliste, eigenes Druckteil oder Brett'),
+   du('Shop-Produkt + Shop-Variante', 'z. B. Schuhsystem: SPD, Farbe bleibt frei'),
+   ext('Kunde wählt im Shop', 'Farbe und Typ bzw. Holz, auch im Set'),
+   erp('Variante → Artikel', 'Set: Module nach Wahl getauscht und gepackt'),
+   ok('Richtiger Abgang und Bestand', 'je Variante, je Farbe, Set nach Modulen'))
+
 sb('adm-stammdaten|AR-Ansicht „An deiner Wand ansehen“', 'AR in fünf Schritten',
    du('Modell vorbereiten', 'GLB, Meter, keine Kompression'),
    du('Am Produkt hinterlegen', 'Box „3D-Modell (AR)“'),
