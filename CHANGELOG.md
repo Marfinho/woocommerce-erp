@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.9] – 2026-11-09
+
+### Behoben
+- Theme 1.9.4, Kasse: Optik vereinheitlicht. Express-Kasse (Apple Pay, Google Pay) ist jetzt eine Karte mit runden Ecken statt eines eckigen Rahmens, die Lieferadresse hat runde Ecken, die Bestellübersicht hat keine zweite graue Fläche mehr, der doppelte Einzelpreis und die lange Beschreibung der Positionen entfallen, und die Preise stehen bündig innerhalb der Karte.
+
 ## [0.97.8] – 2026-11-09
 
 ### Behoben
