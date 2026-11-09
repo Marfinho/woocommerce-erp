@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.9
+Stable tag: 1.9.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -253,6 +253,9 @@ Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.10 =
+* Mini-Warenkorb: Schließen-Knopf nicht mehr von der Ecke abgeschnitten; PayPal-Knöpfe nebeneinander
 
 = 1.9.9 =
 * Kasse: Abschnitt „Feinschliff“ (Express-Kasse, Adresskarte, Bestellübersicht) wiederhergestellt; Felder in zartem CI-Rosa; Punktekarte mit Innenabstand und CI-Farben

@@ -5004,6 +5004,58 @@ table.variations select {
 	white-space: nowrap;
 }
 
+/*
+ * Schließen-Knopf: Neuere WooCommerce-Versionen setzen ihn ohne den Wrapper
+ * „__close-wrapper“ – die Regeln oben greifen dann nicht, der Knopf sitzt an der
+ * Ecke und wird von der runden Drawer-Ecke abgeschnitten.
+ */
+.wc-block-components-drawer .wc-block-components-drawer__close {
+	position: absolute !important;
+	top: 16px !important;
+	right: 16px !important;
+	left: auto !important;
+	z-index: 3;
+	width: 40px !important;
+	min-width: 40px !important;
+	height: 40px !important;
+	min-height: 40px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	color: var(--lw-text) !important;
+}
+
+.wc-block-components-drawer .wc-block-components-drawer__close svg {
+	margin: auto;
+}
+
+/* Bezahlknöpfe (PayPal, Später bezahlen …) in der Fußleiste nebeneinander statt untereinander. */
+.wc-block-mini-cart__footer-actions > :not(.wc-block-components-button):not(.wc-gzd-block-mini-cart-notices) {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+
+.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) {
+	display: flex !important;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: stretch;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+}
+
+.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) > * {
+	flex: 1 1 0;
+	min-width: 0;
+	margin: 0 !important;
+}
+
+@media (max-width: 380px) {
+	.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) {
+		flex-direction: column;
+	}
+}
+
 .wc-block-mini-cart__products-table {
 	table-layout: fixed;
 	width: 100% !important;

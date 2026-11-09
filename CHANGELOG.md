@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.5] – 2026-11-09
+
+### Behoben
+- Theme 1.9.10, Mini-Warenkorb: Der Schließen-Knopf (X) saß an der Ecke und wurde von der runden Drawer-Ecke abgeschnitten; er hat jetzt 16 px Abstand. „Zahlen mit PayPal“ und „Später bezahlen“ stehen nebeneinander statt untereinander.
+
 ## [0.98.4] – 2026-11-09
 
 ### Behoben
