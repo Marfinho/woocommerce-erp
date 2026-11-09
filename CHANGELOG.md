@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.7] – 2026-11-09
+
+### Behoben
+- Theme 1.9.12, Kasse: Die DHL-Wunschort-Auswahl (Keine, Ablageort, Nachbar) wird jetzt gezielt über die echten Klassen des DHL-Plugins gestaltet (`.wc-stc-checkout-dhl`, WooCommerce-Akkordeon). Jede Option ist eine Karte mit Rahmen, das Radio steht mittig in der Zeile, die gewählte Option hat den dunklen Rahmen. Die bisherige Näherung über Klassenfragmente entfällt.
+- Kasse: Felder, Adresskarte und Wunschort-Karten in hellem Beige aus dem CI (accent-4) statt Rosa.
+
 ## [0.98.6] – 2026-11-09
 
 ### Geändert

@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.11
+Stable tag: 1.9.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -253,6 +253,9 @@ Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.12 =
+* Kasse: DHL-Wunschort gezielt gestaltet (jede Option eine Karte, Radio mittig); Felder in hellem Beige (accent-4) statt Rosa
 
 = 1.9.11 =
 * Kasse: rechtliche Checkboxen (AGB, Widerruf) in der rechten Spalte direkt über dem Bestell-Button
