@@ -4576,6 +4576,29 @@ table.variations select {
 	color: var(--lw-primary);
 }
 
+/* Die rechtlichen Checkboxen stehen in der rechten Spalte, direkt über dem Bestell-Button. */
+.wc-block-checkout__sidebar .wc-gzd-checkboxes {
+	margin: 16px 0 0;
+	padding: 18px 20px;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes :is(.wc-gzd-checkbox, .wc-block-components-checkbox) {
+	margin: 0;
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes :is(.wc-gzd-checkbox, .wc-block-components-checkbox) + :is(.wc-gzd-checkbox, .wc-block-components-checkbox),
+.wc-block-checkout__sidebar .wc-gzd-checkboxes > div + div {
+	margin-top: 12px;
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes a {
+	color: var(--lw-text);
+	text-underline-offset: 2px;
+}
+
 /* Ist ein Rechtstexte-Plugin aktiv, fällt der Theme-Hinweis weg (PHP), hier nur Absicherung. */
 .lw16-legal-plugin .lw16-price-note {
 	display: none;
