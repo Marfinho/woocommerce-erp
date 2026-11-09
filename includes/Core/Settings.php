@@ -92,6 +92,10 @@ class Settings {
 			'gebuehren_automatisch'     => 1,
 			'rechnung_auto_storno'      => 1,
 			'betrieb_storno_lager'      => 1,
+			// Besucherzählung (Live-Dashboard). Jede Meldung ist eine volle
+			// WordPress-Anfrage; bei viel Besuch lassen sich beide abschalten.
+			'besucher_zaehlen'          => 1,
+			'besucher_live_takt'        => 1,
 			// Reporting.
 			'digest_wochentag'          => 1, // Montag.
 			'export_email'              => get_bloginfo( 'admin_email' ),

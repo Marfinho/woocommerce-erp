@@ -7,6 +7,21 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.5] – 2026-11-08
+
+### Neu
+- Lastschutz für die Besucherzählung: Jede geöffnete Seite meldete sich bisher beim Laden und danach alle 25 Sekunden beim Server – jede Meldung eine volle WordPress-Anfrage mit eigener Datenbankverbindung (rund 1 s). Bei viel Besuch frisst das die Verbindungen, die der Shop zum Verkaufen braucht. Unter Verwaltung → Einstellungen → Plugin (Firma, DHL, …) → „Besucherzählung (Live-Dashboard)“ lassen sich jetzt der 25-Sekunden-Takt und die ganze Zählung abschalten. Ohne Takt meldet sich jede Seite genau einmal; ganz aus gibt es kein Skript, und Meldungen alter, zwischengespeicherter Seiten werden sofort verworfen. Standard bleibt wie bisher.
+
+### Behoben
+- Systemprotokoll: Der Job `lw16_postpurchase_mails` wurde stündlich eingeplant, obwohl ihn niemand abhört (die Nachkauf-Mails laufen im täglichen Loyalty-Lauf). Er scheiterte jede Stunde und stand als kritischer Fehler im Protokoll. Er wird nicht mehr eingeplant, schon eingeplante Läufe werden entfernt.
+- Theme 1.9.3, Kasse: Die rechtliche Checkbox kam aus WooCommerce („Du musst unseren Allgemeine Geschäftsbedingungen und unserer Datenschutzerklärung zustimmen …“), ohne Widerrufsbelehrung. Germanized ersetzt diesen Block nur in der Kassenseite, die Kasse kommt aber aus dem Theme-Template. Das Template trägt jetzt den Germanized-Block „Rechtliche Checkboxen“ (AGB und Widerrufsbestimmungen, Text unter Germanized → Checkboxen); ohne aktives Germanized gilt automatisch wieder die WooCommerce-Checkbox.
+- Theme 1.9.3: Footer „Alle Preise inkl. MwSt.“ bei Kleinunternehmern durch den § 19-Hinweis ersetzt; „30 Tage Rückgabe“ durch „14 Tage Widerrufsrecht“; Versandschwelle der Vertrauensleiste aus der Versandart statt fest „ab 50 €“; „SEPA-Lastschrift“ aus den Standard-Zahlarten im Footer entfernt.
+
+## [0.97.4] – 2026-11-08
+
+### Behoben
+- Kasse: Beim Öffnen erschien jedem Kunden ein roter Fehler „Fehlende(r) Parameter: billing_address“. Auslöser ist der reCAPTCHA-Schutz von WooCommerce PayPal Payments, der die Summen der Kasse ohne Rechnungsadresse neu berechnen lässt. Diese Neuberechnung bekommt jetzt die Adresse aus den Kundendaten im Warenkorb. Die eigentliche Bestellung ist davon nicht berührt.
+
 ## [0.97.3] – 2026-11-08
 
 ### Behoben

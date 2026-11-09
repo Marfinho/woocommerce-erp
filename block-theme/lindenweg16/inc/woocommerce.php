@@ -368,3 +368,30 @@ function lindenweg16_shop_inserts( string $content ): string {
 	);
 }
 add_filter( 'render_block_woocommerce/product-collection', 'lindenweg16_shop_inserts' );
+
+/**
+ * Rechtliche Checkboxen der Kasse.
+ *
+ * Das Kassen-Template trägt den Block von Germanized („Rechtliche Checkboxen“:
+ * AGB, Widerrufsbelehrung, Datenschutz – Text unter WooCommerce → Einstellungen →
+ * Germanized → Checkboxen). Germanized tauscht diesen Block bei der Einrichtung
+ * nur in der Kassenseite aus, nicht in einem Theme-Template. Ist Germanized nicht
+ * aktiv, kennt niemand den Block; dann gilt wieder die AGB-Checkbox von WooCommerce,
+ * damit die Kasse nie ohne Zustimmung bleibt.
+ *
+ * @param string $content Gerenderter Kassen-Block.
+ * @return string
+ */
+function lindenweg16_checkout_terms_fallback( string $content ): string {
+	if ( class_exists( 'WooCommerce_Germanized' ) || false === strpos( $content, 'woocommerce-germanized/checkout-checkboxes' ) && false === strpos( $content, 'wp-block-woocommerce-germanized-checkout-checkboxes' ) ) {
+		return $content;
+	}
+
+	return str_replace(
+		array( 'woocommerce-germanized/checkout-checkboxes', 'wp-block-woocommerce-germanized-checkout-checkboxes' ),
+		array( 'woocommerce/checkout-terms-block', 'wp-block-woocommerce-checkout-terms-block' ),
+		$content
+	);
+}
+add_filter( 'render_block_woocommerce/checkout', 'lindenweg16_checkout_terms_fallback', 5 );
+

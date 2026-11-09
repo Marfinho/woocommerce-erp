@@ -59,7 +59,7 @@ need = {
     "product-search-results": ["woocommerce/product-collection", '"inherit":true', "woocommerce/product-template"],
     "single-product": ["woocommerce/product-image-gallery", "woocommerce/product-price", "woocommerce/add-to-cart-with-options", "woocommerce/product-details", "woocommerce/breadcrumbs"],
     "page-cart": ["woocommerce/cart", "woocommerce/filled-cart-block", "woocommerce/empty-cart-block", "woocommerce/proceed-to-checkout-block"],
-    "page-checkout": ["woocommerce/checkout", "woocommerce/checkout-terms-block", "woocommerce/checkout-actions-block", "Zahlungspflichtig bestellen", "woocommerce/checkout-order-summary-block"],
+    "page-checkout": ["woocommerce/checkout", "woocommerce-germanized/checkout-checkboxes", "woocommerce/checkout-actions-block", "Zahlungspflichtig bestellen", "woocommerce/checkout-order-summary-block"],
     "order-confirmation": ["woocommerce/order-confirmation-status", "woocommerce/order-confirmation-summary", "woocommerce/order-confirmation-totals"],
 }
 required = ["index", "front-page", "home", "single", "page", "archive", "search", "404", *need.keys()]

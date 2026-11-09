@@ -205,6 +205,7 @@ require $lw16_root . '/includes/Core/EventLog.php';
 require $lw16_root . '/includes/Core/Throttle.php';
 require $lw16_root . '/includes/Core/HashChain.php';
 require $lw16_root . '/includes/Core/Settings.php';
+require $lw16_root . '/includes/Core/StoreApiCompat.php';
 require $lw16_root . '/includes/Core/ResetTool.php';
 require $lw16_root . '/includes/Core/Privacy.php';
 require $lw16_root . '/includes/Core/Updater.php';
