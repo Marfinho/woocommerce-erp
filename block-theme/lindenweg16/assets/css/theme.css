@@ -4584,6 +4584,25 @@ table.variations select {
 	color: var(--lw-primary);
 }
 
+/*
+ * PayPal „Später bezahlen“-Hinweis (kommt vom PayPal-Plugin in die rechte Spalte):
+ * ruhig als kleine, helle Karte statt loser Text am Spaltenrand. Der Wortlaut samt
+ * „Achtung! Kredite können bei Verzug zu Kosten führen“ bleibt unverändert.
+ */
+.wc-block-checkout__sidebar .ppcp-messages {
+	margin: 12px 0 0 !important;
+	padding: 12px 16px;
+	border-radius: var(--lw-r-field);
+	background: var(--lw-surface-muted);
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--x-small);
+	line-height: 1.5;
+}
+
+.wc-block-checkout__sidebar .ppcp-messages:empty {
+	display: none;
+}
+
 /* Die rechtlichen Checkboxen stehen in der rechten Spalte, direkt über dem Bestell-Button. */
 .wc-block-checkout__sidebar .wc-gzd-checkboxes {
 	margin: 16px 0 0;

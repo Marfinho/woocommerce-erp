@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.8] – 2026-11-09
+
+### Geändert
+- Theme 1.9.13, Kasse: Der PayPal-Hinweis „Bezahlen Sie nach 30 Tagen mit PayPal …“ steht als kleine, helle Karte in der rechten Spalte statt als loser Text. Der Wortlaut bleibt unverändert; das Plugin setzt ihn selbst dorthin, eine Verschiebung zu den Zahlungsoptionen ist ohne Eingriff in die Kasse nicht sicher möglich.
+
 ## [0.98.7] – 2026-11-09
 
 ### Behoben
