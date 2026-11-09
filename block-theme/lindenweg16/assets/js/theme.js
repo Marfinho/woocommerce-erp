@@ -249,6 +249,15 @@
 				return pending;
 			}
 
+			// Ohne diesen Cookie ist der Warenkorb leer (WooCommerce setzt ihn beim ersten
+			// Artikel und löscht ihn beim Leeren). Dann keine Anfrage an den Server: Jede
+			// Store-API-Anfrage belegt eine Datenbankverbindung, und dieser Code läuft auf
+			// jeder Seite, auch auf denen aus dem Seiten-Cache.
+			if ( document.cookie.indexOf( 'woocommerce_items_in_cart=' ) === -1 ) {
+				cartTotal = 0;
+				return Promise.resolve( cartTotal );
+			}
+
 			pending = window
 				.fetch( config.storeApi, { credentials: 'same-origin', headers: { Accept: 'application/json' } } )
 				.then( function ( response ) {

@@ -93,4 +93,15 @@ class LastschutzTest extends TestCase {
 		$this->assertStringNotContainsString( 'wp:woocommerce/checkout-terms-block', $tpl, 'Sonst stünden zwei Zustimmungen untereinander.' );
 		$this->assertStringContainsString( "add_filter( 'render_block_woocommerce/checkout', 'lindenweg16_checkout_terms_fallback'", $inc, 'Ohne Germanized gilt wieder die AGB-Checkbox von WooCommerce.' );
 	}
+
+	public function test_versandanzeige_fragt_leeren_warenkorb_nicht_ab() {
+		$js    = $this->read( 'block-theme/lindenweg16/assets/js/theme.js' );
+		$load  = substr( $js, strpos( $js, 'function loadCart()' ) );
+		$check = strpos( $load, "document.cookie.indexOf( 'woocommerce_items_in_cart=' )" );
+		$fetch = strpos( $load, '.fetch( config.storeApi' );
+
+		$this->assertNotFalse( $check, 'Ohne Warenkorb-Cookie keine Store-API-Anfrage.' );
+		$this->assertNotFalse( $fetch );
+		$this->assertLessThan( $fetch, $check, 'Die Prüfung muss vor der Anfrage stehen.' );
+	}
 }
