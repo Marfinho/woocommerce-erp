@@ -106,14 +106,19 @@
 		if ( ! d || ! d.points ) {
 			return null;
 		}
+		var guest = /^Mit Kundenkonto/.test( d.text );
 		return el( 'div', { className: 'lw16-cart-points' },
-			el( 'span', { className: 'lw16-cart-points__main' }, d.text ),
+			el( 'p', { className: 'lw16-cart-points__eyebrow' }, 'Prämienpunkte' ),
+			el( 'p', { className: 'lw16-cart-points__row' },
+				el( 'span', { className: 'lw16-cart-points__zahl' }, '+' + num( d.points ) ),
+				el( 'span', { className: 'lw16-cart-points__main' }, guest ? 'Punkte sammelst du hier mit einem Kundenkonto' : 'Punkte sammelst du mit dieser Bestellung' )
+			),
 			d.detail ? el( 'small', null, d.detail ) : null
 		);
 	}
 
 	function Box( props ) {
-		return el( wp.element.Fragment, null, el( Redeem, props ), el( Points, props ) );
+		return el( 'div', { className: 'lw16-punktekarte' }, el( Points, props ), el( Redeem, props ) );
 	}
 
 	wp.plugins.registerPlugin( 'lw16-praemienpunkte', {
