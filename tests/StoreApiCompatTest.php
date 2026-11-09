@@ -39,4 +39,24 @@ class StoreApiCompatTest extends TestCase {
 		$this->assertSame( '', $out['email'] );
 		$this->assertCount( 11, $out );
 	}
+
+	/**
+	 * Die Kasse schickt die Neuberechnung als PUT (Method-Override); der Fix muss sie sehen.
+	 */
+	public function test_handles_put_from_method_override() {
+		$this->assertTrue( StoreApiCompat::handles_method( 'PUT' ) );
+		$this->assertTrue( StoreApiCompat::handles_method( 'post' ) );
+		$this->assertTrue( StoreApiCompat::handles_method( 'PATCH' ) );
+		$this->assertFalse( StoreApiCompat::handles_method( 'GET' ) );
+		$this->assertFalse( StoreApiCompat::handles_method( 'DELETE' ) );
+	}
+
+	/**
+	 * Ohne geladene Kundendaten wird der Warenkorb geladen statt aufzugeben.
+	 */
+	public function test_loads_cart_before_giving_up() {
+		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Core/StoreApiCompat.php' );
+		$this->assertStringContainsString( 'wc_load_cart()', $src );
+		$this->assertStringNotContainsString( "'POST' !== \$request->get_method()", $src, 'Nur POST zu prüfen übersieht die PUT-Neuberechnung der Kasse.' );
+	}
 }

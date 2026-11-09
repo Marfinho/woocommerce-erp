@@ -38,7 +38,9 @@ class StoreApiCompat {
 	 * @return mixed
 	 */
 	public function complete_calc_totals( $result, $server, $request ) {
-		if ( ! $request instanceof \WP_REST_Request || 'POST' !== $request->get_method() ) {
+		// Die Kasse schickt die Neuberechnung als POST mit „X-HTTP-Method-Override: PUT“;
+		// WordPress hat die Methode hier schon auf PUT umgestellt.
+		if ( ! $request instanceof \WP_REST_Request || ! self::handles_method( $request->get_method() ) ) {
 			return $result;
 		}
 		if ( self::ROUTE !== untrailingslashit( (string) $request->get_route() ) ) {
@@ -47,7 +49,17 @@ class StoreApiCompat {
 		if ( ! self::needs_billing( (array) $request->get_params() ) ) {
 			return $result;
 		}
-		if ( ! function_exists( 'WC' ) || ! WC()->customer ) {
+		if ( ! function_exists( 'WC' ) ) {
+			return $result;
+		}
+
+		// Vor dem Routen-Aufruf hat die Store-API Sitzung und Warenkorb meist noch
+		// nicht geladen. wc_load_cart() tut nur das, was die Route gleich ohnehin tut.
+		if ( ! WC()->customer && function_exists( 'wc_load_cart' ) ) {
+			wc_load_cart();
+		}
+
+		if ( ! WC()->customer ) {
 			return $result;
 		}
 
@@ -56,6 +68,16 @@ class StoreApiCompat {
 		$request->set_param( 'billing_address', $billing );
 
 		return $result;
+	}
+
+	/**
+	 * Methoden der Kassen-Route, über die eine Neuberechnung kommt – reine Regel.
+	 *
+	 * @param string $method HTTP-Methode (nach Method-Override).
+	 * @return bool
+	 */
+	public static function handles_method( $method ) {
+		return in_array( strtoupper( (string) $method ), array( 'POST', 'PUT', 'PATCH' ), true );
 	}
 
 	/**
