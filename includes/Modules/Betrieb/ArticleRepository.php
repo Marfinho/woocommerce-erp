@@ -306,6 +306,7 @@ class ArticleRepository {
 
 		$wpdb->delete( $p . 'bom', array( 'parent_article_id' => $id ) );
 		$wpdb->delete( $p . 'article_revisions', array( 'article_id' => $id ) );
+		$wpdb->delete( $p . 'article_images', array( 'article_id' => $id ) );
 		$wpdb->delete( $p . 'article_sourcing', array( 'article_id' => $id ) );
 		$wpdb->delete( $p . 'stock_targets', array( 'article_id' => $id ) );
 		$wpdb->delete( self::table(), array( 'id' => $id ) );

@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.4] – 2026-11-09
+
+### Neu
+- **Fotos je Variante, im ERP hochgeladen:** Neuer Reiter **Fotos** in der Produktakte (/erp → Produkt). Dort lassen sich beliebig viele Fotos hochladen (JPG, PNG, WebP, bis 15 MB, bis 20 auf einmal), sortieren, entfernen und auf Merkmale einschränken (z. B. nur Farbe Schwarz, beim Set nur Holz Walnuss). Wählt der Kunde im Shop eine Variante, zeigt die Produktseite alle Fotos des Artikels dahinter, mit Slider, Zoom und Lightbox von WooCommerce. Ohne eigene Fotos bleibt die Galerie des Produkts. Das erste Foto wird zum Bild der Shop-Variante (Warenkorb, Kasse, Bestellmail); ein von Hand gesetztes Variantenbild bleibt unberührt.
+- **Text je Variante:** Im selben Reiter (jetzt **Fotos & Texte**) lassen sich Kurztext und Beschreibung für den Shop am Artikel pflegen. Wählt der Kunde die Variante, ersetzen sie den Kurztext unter dem Preis und den Reiter „Beschreibung“; leer bleibt der Text des Produkts.
+- **Sets zeigen ihre Module:** Hinter den Fotos eines Sets folgt in der Galerie das Hauptbild jedes enthaltenen Moduls in der gewählten Variante (Walnuss-Basismodul, SPD-SL-Schuhhalter). Hauptbild ist das erste ERP-Foto des Moduls, sonst sein Produktbild.
+- Neue Tabelle `article_images`, Artikel um `shop_short` und `shop_description` (DB_VERSION 59), Klassen `ArticleImages`, `VariantGallery`, Routen `erp/produkte/<id>/fotos`, Skript `assets/js/variant-gallery.js`. Tests: `tests/BetriebArticleImagesTest.php`, `tests/BetriebVariantGalleryTest.php`. Anleitung: Kapitel „Fotos und Texte je Variante“.
+
 ## [0.99.3] – 2026-11-09
 
 ### Neu

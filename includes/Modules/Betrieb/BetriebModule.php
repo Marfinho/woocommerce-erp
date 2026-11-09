@@ -143,6 +143,7 @@ class BetriebModule {
 		( new WooIntegration() )->register();
 		( new WooStockSync() )->register();
 		( new ForecastHooks() )->register();
+		( new VariantGallery() )->register();
 		( new PriceSync() )->register();
 		( new OrderMirror() )->register();
 		( new WeeklyMail() )->register();

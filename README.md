@@ -453,6 +453,14 @@ Shop-Variante in `Variants` (reine Regeln) und `OrderLines` (WooCommerce). Ein
 Set mit wählbaren Modulen wird beim Verkauf aus seinen Modulen gepackt; die
 Stückliste tauscht das Modul gegen das gewählte Geschwister.
 
+**Fotos je Variante**
+
+Fotos und Shop-Texte werden im ERP am Artikel gepflegt (Reiter *Fotos & Texte*, Tabelle
+`article_images`, optional auf Merkmale eingeschränkt). Die Produktseite
+tauscht beim Wählen einer Variante die Galerie gegen die Fotos des Artikels
+dahinter (`VariantGallery`, `assets/js/variant-gallery.js`); das erste Foto
+wird zum Bild der Shop-Variante.
+
 **Lagerhoheit**
 
 Betrieb bucht die Lagerabgänge genau der Produkte, die über `wc_product_id`

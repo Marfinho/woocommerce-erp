@@ -135,8 +135,11 @@ class Installer {
 	 *
 	 * DB_VERSION 58: articles um wc_variant (Merkmale der Shop-Variante, für die der Artikel steht, z. B.
 	 * `pa_schuhsystem=spd`; siehe Modules\Betrieb\Variants). dbDelta legt die Spalte an, leer = ganzes Produkt.
+	 *
+	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
+	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 */
-	const DB_VERSION = '58';
+	const DB_VERSION = '59';
 
 	/**
 	 * Aktivierungsroutine.

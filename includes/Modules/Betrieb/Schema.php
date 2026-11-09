@@ -61,6 +61,8 @@ class Schema {
 			created_by BIGINT UNSIGNED NULL,
 			pos_only TINYINT(1) NOT NULL DEFAULT 0,
 			image_id BIGINT UNSIGNED NULL,
+			shop_short TEXT NULL,
+			shop_description MEDIUMTEXT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY sku (sku),
 			KEY barcode (barcode),
@@ -158,6 +160,21 @@ class Schema {
 			PRIMARY KEY  (id),
 			KEY parent_article_id (parent_article_id),
 			KEY child (child_type, child_id)
+		) {$charset_collate};";
+
+		// Fotos eines Artikels für den Shop: Je Shop-Variante zeigt die
+		// Produktseite die Fotos des Artikels dahinter (siehe ArticleImages).
+		$t[] = "CREATE TABLE {$p}article_images (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			article_id BIGINT UNSIGNED NOT NULL,
+			attachment_id BIGINT UNSIGNED NOT NULL,
+			tags VARCHAR(255) NOT NULL DEFAULT '',
+			sort_order INT NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY article_id (article_id),
+			KEY attachment_id (attachment_id)
 		) {$charset_collate};";
 
 		$t[] = "CREATE TABLE {$p}article_revisions (

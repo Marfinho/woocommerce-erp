@@ -6,6 +6,7 @@
  *   bom          Stückliste
  *   calc         Kalkulation (nur mit dem Recht „Preise, Kosten und Löhne sehen“)
  *   beschaffung  Lieferanten, Mindestmenge, Lieferzeit (Zukauf und Hybrid)
+ *   fotos        Fotos und Texte für den Shop (je Variante)
  *
  * Server: includes/Erp/Pages/Produkt.php. Klassisches ES5, kein innerHTML mit Daten.
  */
@@ -1024,6 +1025,159 @@
 				});
 
 				return h('div', { class: 'card', style: 'margin-top:14px' }, h('h3', null, 'Neue Konditionen festschreiben'), el);
+			}
+
+			load();
+		});
+	};
+
+	/* ====================================================================
+	 * Fotos für den Shop
+	 * ================================================================== */
+
+	function uploadPhotos(ui, path, files) {
+		var C = ui.config;
+		var fd = new FormData();
+		Array.prototype.forEach.call(files, function (file) { fd.append('foto[]', file, file.name); });
+
+		return fetch(C.rest + path, {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'X-WP-Nonce': C.nonce },
+			body: fd
+		}).then(function (res) {
+			return res.json().catch(function () { return null; }).then(function (json) {
+				if (!res.ok || !json || json.ok === false) {
+					var text;
+					if (json && json.code === 'rest_cookie_invalid_nonce') { text = 'Die Sitzung ist abgelaufen – bitte die Seite neu laden und noch einmal hochladen.'; }
+					else if (json && json.message) { text = json.message; }
+					else if (res.status === 413) { text = 'Die Fotos sind zusammen zu groß für den Server. Bitte weniger auf einmal hochladen.'; }
+					else if (res.status === 403) { text = 'Dafür fehlt dir die Berechtigung (Stammdaten ändern).'; }
+					else { text = 'Das Hochladen hat nicht geklappt (' + res.status + ').'; }
+					throw new Error(text);
+				}
+				return json;
+			});
+		});
+	}
+
+	UI.productTabs['fotos'] = function (d, box, ui) {
+		shell(d, box, ui, 'fotos', function (s) {
+			var kit = s.kit, h = ui.h;
+			s.loading();
+
+			function load(note) {
+				ui.api('produkte/' + d.id + '/fotos').then(function (r) { render(r, note); }).catch(s.fail);
+			}
+
+			function render(r, note) {
+				var out = h('div');
+				out.appendChild(h('h3', { class: 'pf-h' }, 'Texte für den Shop'));
+				out.appendChild(textCard(r));
+				out.appendChild(h('h3', { class: 'pf-h', style: 'margin-top:18px' }, 'Fotos für den Shop'));
+				out.appendChild(h('p', { class: 'muted' }, 'Wählt ein Kunde im Shop die Variante, hinter der dieser Artikel steht' + (r.variant ? ' (' + r.variant + ')' : '') + ', zeigt die Produktseite genau diese Fotos. Das erste ist das Hauptbild; es erscheint auch im Warenkorb und in der Bestellmail. Ohne Zuordnung gilt ein Foto für alle Varianten dieses Artikels.'));
+				if (!r.shop) {
+					out.appendChild(kit.notice('Dieser Artikel ist mit keinem Shop-Produkt verknüpft. Die Fotos werden gespeichert, im Shop aber erst gezeigt, wenn unter Stammdaten ein Shop-Produkt gewählt ist.', true));
+				}
+				if (r.modules && r.modules.length) {
+					out.appendChild(h('p', { class: 'muted' }, 'Hinter den Fotos des Sets zeigt der Shop automatisch das Hauptbild jedes enthaltenen Moduls in der gewählten Variante: ' + r.modules.join(', ') + '.'));
+				}
+				if (note) { out.appendChild(kit.notice(note)); }
+
+				// Hochladen.
+				var msg = kit.msg();
+				var input = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', multiple: true, class: 'field' });
+				var send = h('button', { class: 'btn primary', type: 'button' }, 'Fotos hochladen');
+				send.addEventListener('click', function () {
+					if (!input.files || !input.files.length) { kit.say(msg, 'Bitte zuerst ein oder mehrere Fotos wählen.', true); return; }
+					kit.run(send, msg, function () { return uploadPhotos(ui, 'produkte/' + d.id + '/fotos', input.files); }, 'Wird hochgeladen …')
+						.then(function (res) { if (res) { ui.toast(res.message); render(res, res.message); } });
+				});
+				out.appendChild(h('div', { class: 'card' },
+					kit.field('Fotos wählen', input, 'JPG, PNG oder WebP, bis 15 MB je Foto, bis zu 20 auf einmal. Am besten quadratisch, mindestens 1200 × 1200 Pixel.'),
+					h('div', { class: 'pf-actions' }, send), msg));
+
+				// Liste.
+				if (!r.photos.length) {
+					out.appendChild(h('div', { class: 'card', style: 'margin-top:12px' }, h('p', { class: 'muted' }, 'Noch keine Fotos. Solange keine da sind, zeigt der Shop die Fotos des Produkts.')));
+					s.paint(out);
+					return;
+				}
+
+				var grid = h('div', { class: 'pf-fotos' });
+				r.photos.forEach(function (p, i) {
+					grid.appendChild(photoCard(r, p, i));
+				});
+				out.appendChild(grid);
+				s.paint(out);
+			}
+
+			function textCard(r) {
+				var msg = kit.msg();
+				var shortF = kit.area(r.texts.short, 3);
+				var longF = kit.area(r.texts.description, 8);
+				var save = h('button', { class: 'btn primary', type: 'button' }, 'Texte speichern');
+				save.addEventListener('click', function () {
+					kit.run(save, msg, function () {
+						return kit.post('produkte/' + d.id + '/shoptext', { short: shortF.value, description: longF.value });
+					}, 'Wird gespeichert …').then(function (res) { if (res) { ui.toast(res.message); kit.say(msg, res.message, false); } });
+				});
+				return h('div', { class: 'card' },
+					h('p', { class: 'muted', style: 'margin-top:0' }, 'Wählt der Kunde die Variante dieses Artikels, ersetzen diese Texte den Kurztext unter dem Preis und die Beschreibung im Reiter „Beschreibung“. Leer lassen = der Text des Produkts bleibt. Absätze durch eine Leerzeile trennen.'),
+					kit.field('Kurztext', shortF, 'Ein bis zwei Sätze, z. B. „Für Rennradschuhe mit SPD-SL-Cleats …“'),
+					kit.field('Beschreibung', longF),
+					h('div', { class: 'pf-actions' }, save), msg);
+			}
+
+			function photoCard(r, p, i) {
+				var msg = kit.msg();
+				var card = h('div', { class: 'card pf-foto' });
+				card.appendChild(h('a', { href: p.full, target: '_blank', rel: 'noopener' }, h('img', { src: p.thumb, alt: p.name, loading: 'lazy' })));
+				card.appendChild(h('div', { class: 'pf-foto-head' }, h('b', null, i === 0 ? 'Hauptbild' : 'Foto ' + (i + 1))));
+
+				function post(body, label) {
+					return kit.run(label, msg, function () { return kit.post('produkte/' + d.id + '/fotos/' + p.id, body); })
+						.then(function (res) { if (res) { ui.toast(res.message); render(res); } });
+				}
+
+				// Zuordnung zu Merkmalen.
+				if (r.choices.length) {
+					var boxes = [];
+					var fs = h('div', { class: 'pf-foto-tags' }, h('span', { class: 'pf-lab' }, 'Nur zeigen bei'));
+					r.choices.forEach(function (g) {
+						var line = h('div', { class: 'pf-foto-group' }, h('small', { class: 'muted' }, g.label + ':'));
+						g.values.forEach(function (v) {
+							var cb = h('input', { type: 'checkbox', checked: p.tags.indexOf(v.value) > -1 });
+							cb.value = v.value;
+							boxes.push(cb);
+							cb.addEventListener('change', function () {
+								var tags = boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.value; });
+								kit.post('produkte/' + d.id + '/fotos/' + p.id, { tags: tags }).then(function (res) {
+									kit.say(msg, res.message, false);
+								}).catch(function (e) { kit.say(msg, e.message, true); });
+							});
+							line.appendChild(h('label', { class: 'pf-check' }, cb, h('span', null, v.label)));
+						});
+						fs.appendChild(line);
+					});
+					fs.appendChild(h('small', { class: 'pf-hint' }, 'Nichts angehakt = alle Varianten.'));
+					card.appendChild(fs);
+				}
+
+				var up = h('button', { class: 'btn', type: 'button', disabled: i === 0 }, '← Nach vorn');
+				var down = h('button', { class: 'btn', type: 'button', disabled: i === r.photos.length - 1 }, 'Nach hinten →');
+				var rm = h('button', { class: 'btn', type: 'button' }, 'Entfernen');
+				up.addEventListener('click', function () { post({ move: 'hoch' }, up); });
+				down.addEventListener('click', function () { post({ move: 'runter' }, down); });
+				rm.addEventListener('click', function () {
+					if (!window.confirm('Dieses Foto entfernen? Es verschwindet auch aus dem Shop.')) { return; }
+					kit.run(rm, msg, function () { return kit.post('produkte/' + d.id + '/fotos/' + p.id + '/entfernen'); })
+						.then(function (res) { if (res) { ui.toast(res.message); render(res); } });
+				});
+				card.appendChild(h('div', { class: 'pf-actions' }, up, down, rm));
+				card.appendChild(msg);
+
+				return card;
 			}
 
 			load();
