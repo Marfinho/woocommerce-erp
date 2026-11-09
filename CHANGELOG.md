@@ -7,6 +7,16 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.6] – 2026-11-09
+
+### Geändert
+- Theme 1.9.11, Kasse: Die rechtlichen Checkboxen (AGB, Widerrufsbestimmungen) stehen jetzt in der rechten Spalte direkt über dem Bestell-Button statt am Ende des Formulars. Sie sind dafür im Kassen-Template in den Block „Kassen-Summe“ gewandert und als Karte gestaltet. Hat die Seite eine im Website-Editor gespeicherte Kassen-Vorlage, greift die Änderung erst nach „Vorlage zurücksetzen“.
+
+## [0.98.5] – 2026-11-09
+
+### Behoben
+- Theme 1.9.10, Mini-Warenkorb: Der Schließen-Knopf (X) saß an der Ecke und wurde von der runden Drawer-Ecke abgeschnitten; er hat jetzt 16 px Abstand. „Zahlen mit PayPal“ und „Später bezahlen“ stehen nebeneinander statt untereinander.
+
 ## [0.98.4] – 2026-11-09
 
 ### Behoben

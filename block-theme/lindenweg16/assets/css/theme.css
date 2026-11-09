@@ -4576,6 +4576,29 @@ table.variations select {
 	color: var(--lw-primary);
 }
 
+/* Die rechtlichen Checkboxen stehen in der rechten Spalte, direkt über dem Bestell-Button. */
+.wc-block-checkout__sidebar .wc-gzd-checkboxes {
+	margin: 16px 0 0;
+	padding: 18px 20px;
+	border-radius: var(--lw-r-card);
+	background: var(--lw-surface);
+	box-shadow: var(--lw-shadow-card);
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes :is(.wc-gzd-checkbox, .wc-block-components-checkbox) {
+	margin: 0;
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes :is(.wc-gzd-checkbox, .wc-block-components-checkbox) + :is(.wc-gzd-checkbox, .wc-block-components-checkbox),
+.wc-block-checkout__sidebar .wc-gzd-checkboxes > div + div {
+	margin-top: 12px;
+}
+
+.wc-block-checkout__sidebar .wc-gzd-checkboxes a {
+	color: var(--lw-text);
+	text-underline-offset: 2px;
+}
+
 /* Ist ein Rechtstexte-Plugin aktiv, fällt der Theme-Hinweis weg (PHP), hier nur Absicherung. */
 .lw16-legal-plugin .lw16-price-note {
 	display: none;
@@ -5002,6 +5025,58 @@ table.variations select {
 
 .wc-block-mini-cart__footer-actions .wc-block-components-button__text {
 	white-space: nowrap;
+}
+
+/*
+ * Schließen-Knopf: Neuere WooCommerce-Versionen setzen ihn ohne den Wrapper
+ * „__close-wrapper“ – die Regeln oben greifen dann nicht, der Knopf sitzt an der
+ * Ecke und wird von der runden Drawer-Ecke abgeschnitten.
+ */
+.wc-block-components-drawer .wc-block-components-drawer__close {
+	position: absolute !important;
+	top: 16px !important;
+	right: 16px !important;
+	left: auto !important;
+	z-index: 3;
+	width: 40px !important;
+	min-width: 40px !important;
+	height: 40px !important;
+	min-height: 40px !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	color: var(--lw-text) !important;
+}
+
+.wc-block-components-drawer .wc-block-components-drawer__close svg {
+	margin: auto;
+}
+
+/* Bezahlknöpfe (PayPal, Später bezahlen …) in der Fußleiste nebeneinander statt untereinander. */
+.wc-block-mini-cart__footer-actions > :not(.wc-block-components-button):not(.wc-gzd-block-mini-cart-notices) {
+	grid-column: 1 / -1;
+	min-width: 0;
+}
+
+.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) {
+	display: flex !important;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: stretch;
+	gap: 8px;
+	width: 100%;
+	min-width: 0;
+}
+
+.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) > * {
+	flex: 1 1 0;
+	min-width: 0;
+	margin: 0 !important;
+}
+
+@media (max-width: 380px) {
+	.wc-block-mini-cart__footer-actions :is(.ppcp-button-minicart, .ppc-button-wrapper, [id*="ppc-button"], [class*="ppc-button"]) {
+		flex-direction: column;
+	}
 }
 
 .wc-block-mini-cart__products-table {
