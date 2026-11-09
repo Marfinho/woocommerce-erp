@@ -180,6 +180,125 @@ class CartIntegration {
 	}
 
 	/**
+	 * Eine Konfiguration als fertiges Set in den Warenkorb legen.
+	 *
+	 * Der Kunde hat sich genau die Teile eines Sets zusammengestellt und den
+	 * Vorschlag angenommen. Statt Basismodul und Modulen einzeln landet dann
+	 * das Set-Produkt im Warenkorb – eine Position zum Setpreis des Shops.
+	 * Seine Anordnung bleibt als Angabe an der Position erhalten.
+	 *
+	 * Ob die Konfiguration wirklich dem Set entspricht, prüft der Server
+	 * selbst. Der Browser nennt nur, welches Set gemeint ist.
+	 *
+	 * @param array $config     Konfiguration: base, color, qty, modules.
+	 * @param int   $set_article Artikel des Sets.
+	 * @return array {ok, errors, count}
+	 */
+	public static function add_set( array $config, $set_article ) {
+		$fail = static function ( array $errors ) {
+			return array(
+				'ok'     => false,
+				'errors' => $errors,
+				'count'  => 0,
+			);
+		};
+
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return $fail( array( __( 'Der Warenkorb steht gerade nicht zur Verfügung.', 'lindenweg16' ) ) );
+		}
+
+		$context = PartRepository::context( true );
+		$checked = Layout::validate( $config, $context );
+
+		if ( $checked['errors'] ) {
+			return $fail( $checked['errors'] );
+		}
+
+		$set = SetMatcher::match( SetMatcher::from_context( $context ), (int) $config['base'], $checked['modules'] );
+
+		if ( ! $set || (int) $set['article'] !== (int) $set_article ) {
+			return $fail( array( __( 'Diese Zusammenstellung entspricht keinem Set mehr. Bitte lege sie einzeln in den Warenkorb.', 'lindenweg16' ) ) );
+		}
+
+		$color    = isset( $config['color'] ) ? (string) $config['color'] : '';
+		$qty      = max( 1, min( Layout::MAX_QTY, isset( $config['qty'] ) ? (int) $config['qty'] : 1 ) );
+		$resolved = ShopLink::resolve(
+			array(
+				'wc_product_id' => $set['wc_product_id'],
+				'name'          => $set['name'],
+			),
+			$color
+		);
+
+		if ( ! $resolved['ok'] ) {
+			return $fail( array( $resolved['error'] ) );
+		}
+
+		$base = $context['parts'][ (int) $config['base'] ];
+		$code = ConfigCodec::encode(
+			array(
+				'base'    => (int) $config['base'],
+				'color'   => $color,
+				'modules' => $checked['modules'],
+			)
+		);
+
+		$key = WC()->cart->add_to_cart(
+			$resolved['product_id'],
+			$qty,
+			$resolved['variation_id'],
+			$resolved['variation'],
+			array(
+				self::KEY => array(
+					'group'     => substr( md5( uniqid( (string) wp_rand(), true ) ), 0, 8 ),
+					'role'      => 'set',
+					'name'      => $set['name'],
+					'pos'       => null,
+					'code'      => $code,
+					'index'     => 0,
+					'base'      => $base['name'],
+					'anordnung' => self::arrangement( $checked['modules'], $context['parts'] ),
+				),
+			)
+		);
+
+		if ( ! $key ) {
+			return $fail( array( __( 'Das Set ließ sich nicht in den Warenkorb legen.', 'lindenweg16' ) ) );
+		}
+
+		return array(
+			'ok'     => true,
+			'errors' => array(),
+			'count'  => 1,
+			'code'   => $code,
+		);
+	}
+
+	/**
+	 * Die Anordnung der Module als lesbarer Text, von unten nach oben.
+	 *
+	 * @param array $modules Geprüfte Module [['article', 'pos'], …].
+	 * @param array $parts   Teile nach Artikel-ID.
+	 * @return string z. B. „Flaschenhalter 0 mm, Brillenhalter 240 mm“.
+	 */
+	public static function arrangement( array $modules, array $parts ) {
+		usort(
+			$modules,
+			static function ( $a, $b ) {
+				return (float) $a['pos'] <=> (float) $b['pos'];
+			}
+		);
+
+		$text = array();
+		foreach ( $modules as $module ) {
+			$name   = isset( $parts[ $module['article'] ]['name'] ) ? $parts[ $module['article'] ]['name'] : '#' . $module['article'];
+			$text[] = $name . ' ' . Layout::format_mm( $module['pos'] ) . ' mm';
+		}
+
+		return implode( ', ', $text );
+	}
+
+	/**
 	 * Die Konfiguration an der Warenkorbposition anzeigen.
 	 *
 	 * @param array $data Bisherige Angaben.
@@ -202,6 +321,17 @@ class CartIntegration {
 				strtoupper( $meta['group'] )
 			),
 		);
+
+		if ( 'set' === $meta['role'] && ! empty( $meta['anordnung'] ) ) {
+			$data[] = array(
+				'key'   => __( 'Anordnung', 'lindenweg16' ),
+				'value' => sprintf(
+					/* translators: %s: Module mit Position, von unten nach oben. */
+					__( '%s (von unten)', 'lindenweg16' ),
+					$meta['anordnung']
+				),
+			);
+		}
 
 		if ( 'modul' === $meta['role'] && null !== $meta['pos'] ) {
 			$data[] = array(
@@ -249,9 +379,13 @@ class CartIntegration {
 			);
 		}
 
-		// Der Code steht nur an der Basiszeile: Einmal je Konfiguration
-		// genügt, und dort wird er gesucht.
-		if ( 'basis' === $meta['role'] ) {
+		if ( 'set' === $meta['role'] && ! empty( $meta['anordnung'] ) ) {
+			$item->add_meta_data( __( 'Anordnung', 'lindenweg16' ), $meta['anordnung'] . ' ' . __( '(von unten)', 'lindenweg16' ), true );
+		}
+
+		// Der Code steht nur an der Basiszeile (beim Set an seiner einzigen
+		// Zeile): Einmal je Konfiguration genügt, und dort wird er gesucht.
+		if ( 'basis' === $meta['role'] || 'set' === $meta['role'] ) {
 			$item->add_meta_data( __( 'Konfigurationscode', 'lindenweg16' ), $meta['code'], true );
 		}
 

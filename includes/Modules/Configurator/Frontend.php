@@ -187,6 +187,13 @@ class Frontend {
 				'nicht_lieferbar'       => __( 'Nicht lieferbar', 'lindenweg16' ),
 				'nicht_lieferbar_liste' => __( 'Gerade nicht lieferbar: %s. Nimm es heraus oder wähle eine andere Farbe oder Länge.', 'lindenweg16' ),
 				'modul_nicht_lieferbar' => __( 'Dieses Modul ist gerade nicht lieferbar.', 'lindenweg16' ),
+				/* translators: %s: Name des Sets. */
+				'set_titel'    => __( 'Das gibt es als Set: %s', 'lindenweg16' ),
+				/* translators: 1: Setpreis, 2: Preis der Teile einzeln, 3: Ersparnis. */
+				'set_spart'    => __( 'Genau deine Zusammenstellung. Im Set %1$s statt %2$s einzeln – du sparst %3$s. Deine Anordnung bleibt, wie sie ist.', 'lindenweg16' ),
+				/* translators: %s: Setpreis. */
+				'set_gleich'   => __( 'Genau deine Zusammenstellung, im Set für %s. Deine Anordnung bleibt, wie sie ist.', 'lindenweg16' ),
+				'set_knopf'    => __( 'Als Set in den Warenkorb', 'lindenweg16' ),
 			),
 			'grenzen' => array(
 				'max_module' => Layout::MAX_MODULES,
@@ -569,6 +576,19 @@ class Frontend {
 					</div>
 				</section>
 
+				<?php
+				// Entspricht die Auswahl genau einem Set, schlägt das Skript es
+				// hier vor. Der Knopf schickt dasselbe Formular, nur mit `als_set`.
+				// Er ist bewusst kein Absendeknopf: Sonst wäre er der erste im
+				// Formular, und die Eingabetaste im Millimeterfeld bestellte das Set.
+				?>
+				<input type="hidden" name="als_set" value="" data-lw16-als-set>
+				<div class="lw16-haken__set" data-lw16-set role="status" hidden>
+					<strong class="lw16-haken__settitel" data-lw16-set-titel></strong>
+					<p class="lw16-haken__settext" data-lw16-set-text></p>
+					<button type="button" class="lw16-haken__setknopf button" data-lw16-set-knopf></button>
+				</div>
+
 				<div class="lw16-haken__abschluss">
 					<div class="lw16-haken__summe">
 						<span class="lw16-haken__summenname"><?php esc_html_e( 'Gesamt', 'lindenweg16' ); ?></span>
@@ -670,6 +690,7 @@ class Frontend {
 		$modules  = isset( $_POST['modul'] ) ? array_map( 'intval', (array) wp_unslash( $_POST['modul'] ) ) : array();
 		$position = isset( $_POST['position'] ) ? array_map( 'strval', (array) wp_unslash( $_POST['position'] ) ) : array();
 		$return   = isset( $_POST['rueckkehr'] ) ? esc_url_raw( wp_unslash( $_POST['rueckkehr'] ) ) : '';
+		$as_set   = isset( $_POST['als_set'] ) ? (int) $_POST['als_set'] : 0;
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 		$config = self::config_from_post( $code, $base, $color, $modules, $position );
@@ -683,7 +704,7 @@ class Frontend {
 			$config['color'] = ColorRegistry::default_color();
 		}
 
-		$result = CartIntegration::add( $config );
+		$result = $as_set > 0 ? CartIntegration::add_set( $config, $as_set ) : CartIntegration::add( $config );
 
 		if ( ! $result['ok'] ) {
 			// Die Meldung reist in der Adresse mit: Gäste haben oft noch keine
@@ -697,7 +718,10 @@ class Frontend {
 		}
 
 		if ( function_exists( 'wc_add_notice' ) ) {
-			wc_add_notice( __( 'Der konfigurierte Haken liegt im Warenkorb.', 'lindenweg16' ), 'success' );
+			wc_add_notice(
+				$as_set > 0 ? __( 'Der konfigurierte Haken liegt als Set im Warenkorb.', 'lindenweg16' ) : __( 'Der konfigurierte Haken liegt im Warenkorb.', 'lindenweg16' ),
+				'success'
+			);
 		}
 
 		wp_safe_redirect( function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/' ) );

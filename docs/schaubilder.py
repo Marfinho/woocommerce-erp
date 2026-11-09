@@ -620,6 +620,13 @@ sb('adm-stammdaten', 'Stammdaten, Konfigurator und AR',
    du('AR: GLB-Modell, Maßstab 1 Einheit = 1 m', 'unkomprimiert'),
    ext('Besucher am Handy', 'Hinweis, AR-Seite, Kamera'))
 
+sb('adm-stammdaten|Set-Vorschlag im Konfigurator', 'Wunschkonfiguration wird zum Set',
+   du('Set als Artikel mit Stückliste', 'Basismodul + Module, ganze Stück, Shop-Produkt verknüpft'),
+   ext('Kunde stellt zusammen', 'Länge und Module, Anordnung frei'),
+   erp('Vergleicht mit allen Sets', 'gleiche Teile in gleicher Zahl, Position egal'),
+   erp('Schlägt das Set vor', 'Setpreis gegen Einzelpreise, nur wenn nicht teurer'),
+   ok('Eine Position zum Setpreis', 'Anordnung und Code an der Bestellung'))
+
 sb('adm-stammdaten|AR-Ansicht „An deiner Wand ansehen“', 'AR in fünf Schritten',
    du('Modell vorbereiten', 'GLB, Meter, keine Kompression'),
    du('Am Produkt hinterlegen', 'Box „3D-Modell (AR)“'),
