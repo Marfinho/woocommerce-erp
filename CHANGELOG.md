@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.4] – 2026-11-09
+
+### Neu
+- **Fotos je Variante, im ERP hochgeladen:** Neuer Reiter **Fotos** in der Produktakte (/erp → Produkt). Dort lassen sich beliebig viele Fotos hochladen (JPG, PNG, WebP, bis 15 MB, bis 20 auf einmal), sortieren, entfernen und auf Merkmale einschränken (z. B. nur Farbe Schwarz, beim Set nur Holz Walnuss). Wählt der Kunde im Shop eine Variante, zeigt die Produktseite alle Fotos des Artikels dahinter, mit Slider, Zoom und Lightbox von WooCommerce. Ohne eigene Fotos bleibt die Galerie des Produkts. Das erste Foto wird zum Bild der Shop-Variante (Warenkorb, Kasse, Bestellmail); ein von Hand gesetztes Variantenbild bleibt unberührt.
+- Neue Tabelle `article_images` (DB_VERSION 59), Klassen `ArticleImages`, `VariantGallery`, Routen `erp/produkte/<id>/fotos`, Skript `assets/js/variant-gallery.js`. Tests: `tests/BetriebArticleImagesTest.php`. Anleitung: Kapitel „Fotos je Variante“.
+
 ## [0.99.3] – 2026-11-09
 
 ### Neu

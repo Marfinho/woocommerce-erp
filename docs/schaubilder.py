@@ -634,6 +634,13 @@ sb('adm-stammdaten|Varianten: Farbe, Holz und Schuhsystem', 'Ein Shop-Produkt, m
    erp('Variante → Artikel', 'Set: Module nach Wahl getauscht und gepackt'),
    ok('Richtiger Abgang und Bestand', 'je Variante, je Farbe, Set nach Modulen'))
 
+sb('adm-stammdaten|Fotos je Variante', 'Fotos am Artikel, Galerie je Variante',
+   du('Produkt öffnen, Reiter Fotos', '/erp → Produkt, z. B. M-SHR-SPDSL'),
+   du('Fotos hochladen und ordnen', 'erstes = Hauptbild; optional nur bei Farbe/Holz'),
+   ext('Kunde wählt die Variante', 'z. B. Schuhsystem SPD-SL'),
+   erp('Tauscht die ganze Galerie', 'alle Fotos des Artikels hinter der Variante'),
+   ok('Passendes Bild überall', 'Produktseite, Warenkorb, Bestellmail'))
+
 sb('adm-stammdaten|AR-Ansicht „An deiner Wand ansehen“', 'AR in fünf Schritten',
    du('Modell vorbereiten', 'GLB, Meter, keine Kompression'),
    du('Am Produkt hinterlegen', 'Box „3D-Modell (AR)“'),

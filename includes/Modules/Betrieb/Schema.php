@@ -160,6 +160,21 @@ class Schema {
 			KEY child (child_type, child_id)
 		) {$charset_collate};";
 
+		// Fotos eines Artikels für den Shop: Je Shop-Variante zeigt die
+		// Produktseite die Fotos des Artikels dahinter (siehe ArticleImages).
+		$t[] = "CREATE TABLE {$p}article_images (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			article_id BIGINT UNSIGNED NOT NULL,
+			attachment_id BIGINT UNSIGNED NOT NULL,
+			tags VARCHAR(255) NOT NULL DEFAULT '',
+			sort_order INT NOT NULL DEFAULT 0,
+			created_at DATETIME NOT NULL,
+			created_by BIGINT UNSIGNED NULL,
+			PRIMARY KEY  (id),
+			KEY article_id (article_id),
+			KEY attachment_id (attachment_id)
+		) {$charset_collate};";
+
 		$t[] = "CREATE TABLE {$p}article_revisions (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			article_id BIGINT UNSIGNED NOT NULL,

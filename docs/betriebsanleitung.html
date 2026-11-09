@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.99.3">
+<meta name="anleitung-stand" content="0.99.4">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.3</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.4</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.3</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.4</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -3982,6 +3982,37 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Sobald in seiner Stückliste ein Modul steht, das Varianten hat. Das heißt: Sobald es neben <code>M-BSM</code> ein zweites Basismodul mit Holz-Variante gibt, werden alle Sets mit Basismodul beim Verkauf gepackt. Ein vorher montierter Set-Bestand wird dann nicht mehr abgebucht. Ihn am besten vorher per Korrektur in seine Module zurückbuchen.</p>
 </div>
 
+<h3 id="adm-variantenfotos">Fotos je Variante</h3>
+<!-- schaubild:adm-stammdaten|Fotos je Variante -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Fotos am Artikel, Galerie je Variante">
+<div class="sb-kopf">Schaubild · Fotos am Artikel, Galerie je Variante</div>
+<ol class="fluss c5">
+	<li class="du"><b>Produkt öffnen, Reiter Fotos</b><span>/erp → Produkt, z. B. M-SHR-SPDSL</span></li>
+	<li class="du"><b>Fotos hochladen und ordnen</b><span>erstes = Hauptbild; optional nur bei Farbe/Holz</span></li>
+	<li class="ext"><b>Kunde wählt die Variante</b><span>z. B. Schuhsystem SPD-SL</span></li>
+	<li class="erp"><b>Tauscht die ganze Galerie</b><span>alle Fotos des Artikels hinter der Variante</span></li>
+	<li class="ok"><b>Passendes Bild überall</b><span>Produktseite, Warenkorb, Bestellmail</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:adm-stammdaten|Fotos je Variante -->
+
+<p>Die Fotos für den Shop werden im ERP am Artikel hochgeladen, nicht in wp-admin. Weil hinter jeder Shop-Variante ein eigener Artikel steht (siehe oben, Schuhhalter SPD und SPD-SL, Basismodul je Holz), hat jede Variante ihre eigenen Fotos. Wählt der Kunde auf der Produktseite eine Variante, wechselt die ganze Galerie auf die Fotos dieses Artikels, mit Vorschaubildern, Zoom und Vollbild.</p>
+
+<ol>
+	<li>Unter <span class="weg">/erp → Katalog → Produkt</span> den Artikel öffnen, z. B. <code>M-SHR-SPDSL</code>, und den Reiter <strong>Fotos</strong> wählen.</li>
+	<li><em>Fotos wählen</em>, mehrere auf einmal sind möglich (JPG, PNG oder WebP, bis 15 MB je Foto). <em>Fotos hochladen</em>.</li>
+	<li>Mit <em>Nach vorn</em> und <em>Nach hinten</em> die Reihenfolge festlegen. Das erste Foto ist das Hauptbild. Es wird auch zum Bild der Variante im Warenkorb, in der Kasse und in der Bestellmail.</li>
+	<li>Bei Bedarf unter <em>Nur zeigen bei</em> Merkmale anhaken, z. B. Farbe Schwarz. Dann erscheint das Foto nur bei dieser Farbe. Nichts angehakt heißt: alle Varianten dieses Artikels. Merkmale, die der Artikel schon festlegt (beim Schuhhalter SPD-SL das Schuhsystem), stehen nicht zur Wahl.</li>
+</ol>
+
+<p>Bei einem <strong>Set</strong> ist das Set selbst der Artikel. Seine Fotos lädt man deshalb am Set hoch und schränkt sie auf das Holz ein: das Walnuss-Foto auf „Holz: Walnuss“, das Buche-Foto auf „Holz: Buche“.</p>
+
+<div class="kasten merke">
+	<span class="titel">Wenn keine Fotos da sind</span>
+	<p>Hat ein Artikel keine eigenen Fotos, zeigt der Shop wie bisher die Fotos des Produkts. Ein Bild, das jemand im Shop direkt an einer Variante gesetzt hat, überschreibt das ERP nicht. Entfernt man ein Foto im ERP, verschwindet es auch aus dem Shop. Aus der Mediathek wird es nur gelöscht, wenn es sonst nirgends verwendet wird.</p>
+</div>
+
 <h3 id="adm-ar">AR-Ansicht „An deiner Wand ansehen“</h3>
 <!-- schaubild:adm-stammdaten|AR-Ansicht „An deiner Wand ansehen“ -->
 <figure class="schaubild" role="group" aria-label="Schaubild: AR in fünf Schritten">
@@ -5448,7 +5479,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.3</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.4</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

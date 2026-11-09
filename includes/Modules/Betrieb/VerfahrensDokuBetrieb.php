@@ -82,6 +82,7 @@ class VerfahrensDokuBetrieb {
 		$tables = array(
 			'articles'          => __( 'Artikelstamm mit Beschaffungsweg (Druck, Zukauf, Hybrid)', 'lindenweg16' ),
 			'article_revisions' => __( 'Versioniertes Druckprofil je Artikel; nur eine Revision ist aktiv', 'lindenweg16' ),
+			'article_images'    => __( 'Fotos je Artikel für die Galerie der Shop-Variante (Mediendatei, Reihenfolge, Einschränkung auf Merkmale)', 'lindenweg16' ),
 			'article_sourcing'  => __( 'Beschaffungsdaten, historisiert über valid_from', 'lindenweg16' ),
 			'components'        => __( 'Kleinteile mit Gebindegröße; der Stückpreis wird gerechnet', 'lindenweg16' ),
 			'bom'               => __( 'Stückliste, rekursiv über Artikel und Komponenten', 'lindenweg16' ),

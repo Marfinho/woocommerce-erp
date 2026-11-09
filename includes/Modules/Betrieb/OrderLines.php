@@ -211,10 +211,11 @@ class OrderLines {
 	 * Für die Auswahl „Shop-Variante“ am Artikel: je Merkmal und Ausprägung
 	 * ein Eintrag `pa_schuhsystem=spd` mit lesbarer Beschriftung.
 	 *
-	 * @param \WC_Product $product Produkt.
+	 * @param \WC_Product $product    Produkt.
+	 * @param bool        $with_color Auch die Farbe anbieten (für die Fotos).
 	 * @return array Liste {value, label}.
 	 */
-	public static function product_choices( $product ) {
+	public static function product_choices( $product, $with_color = false ) {
 		if ( ! is_object( $product ) || ! method_exists( $product, 'is_type' ) || ! $product->is_type( 'variable' ) ) {
 			return array();
 		}
@@ -230,7 +231,7 @@ class OrderLines {
 			$name = (string) $attribute->get_name();
 			$key  = Variants::key( $name );
 
-			if ( '' === $key || $color === $key ) {
+			if ( '' === $key || ( $color === $key && ! $with_color ) ) {
 				continue;
 			}
 

@@ -213,6 +213,7 @@ class ResetTool {
 		return array(
 			'articles',
 			'article_revisions',
+			'article_images',
 			'article_sourcing',
 			'components',
 			'bom',

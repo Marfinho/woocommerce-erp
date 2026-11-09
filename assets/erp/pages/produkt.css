@@ -40,3 +40,11 @@ label.btn.busy { opacity: .5; pointer-events: none; }
 .pf-neg { color: var(--error); }
 .pf-pos-ok { color: var(--success); }
 .pf-ul { margin: 6px 0 0 18px; padding: 0; list-style: disc; }
+
+/* Fotos für den Shop */
+.pf-fotos { display: grid; gap: 12px; margin-top: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); }
+.pf-foto img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; background: #f3f3f3; }
+.pf-foto-head { margin: 8px 0 4px; }
+.pf-foto-tags { display: grid; gap: 6px; margin: 6px 0 10px; }
+.pf-foto-group { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.pf-foto .pf-actions { flex-wrap: wrap; gap: 6px; }

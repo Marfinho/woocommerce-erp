@@ -2308,7 +2308,7 @@
 		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 	}
 
-	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['shop', 'Shop']];
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['fotos', 'Fotos'], ['shop', 'Shop']];
 
 	function viewProduct(id, sub) {
 		var f = findItem('artikel');
@@ -2335,7 +2335,7 @@
 			PRODUCT_TABS.forEach(function (t) {
 				if (t[0] === 'shop' && !d.shop_edit) { return; }
 				if (t[0] === 'beschaffung' && ['zukauf', 'hybrid'].indexOf(d.sourcing) < 0) { return; }
-				if (t[0] === 'stamm' && !d.edit) { return; }
+				if ((t[0] === 'stamm' || t[0] === 'fotos') && !d.edit) { return; }
 				pills.appendChild(h('a', { class: 'pill' + ((sub || '') === t[0] ? ' on' : ''), href: '#/produkt/' + d.id + (t[0] ? '/' + t[0] : '') }, t[1]));
 			});
 			box.appendChild(pills);
