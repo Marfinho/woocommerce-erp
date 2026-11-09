@@ -64,6 +64,8 @@ class StoreApiCompat {
 
 		$get = new \WP_REST_Request( 'GET', self::ROUTE );
 		$get->set_query_params( self::query_for_state( (array) $request->get_query_params() ) );
+		// Die Store-API prüft auch bei GET /checkout die Nonce bzw. das Cart-Token.
+		$get->set_headers( self::headers_for_state( (array) $request->get_headers() ) );
 
 		return rest_do_request( $get );
 	}
@@ -77,6 +79,18 @@ class StoreApiCompat {
 	public static function query_for_state( array $query ) {
 		unset( $query['__experimental_calc_totals'], $query['_method'] );
 		return $query;
+	}
+
+	/**
+	 * Kopfzeilen für den Kassenstand: alle der Neuberechnung (Nonce, Cart-Token,
+	 * Sprache …) außer denen des Inhalts, den GET nicht hat – reine Regel.
+	 *
+	 * @param array<string, mixed> $headers Kopfzeilen (WordPress-Form: Schlüssel klein mit Unterstrich).
+	 * @return array<string, mixed>
+	 */
+	public static function headers_for_state( array $headers ) {
+		unset( $headers['content_type'], $headers['content_length'], $headers['x_http_method_override'] );
+		return $headers;
 	}
 
 	/**

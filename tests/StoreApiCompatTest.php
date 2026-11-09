@@ -56,4 +56,22 @@ class StoreApiCompatTest extends TestCase {
 		$this->assertStringNotContainsString( "set_param( 'billing_address'", $src, 'Eine ergänzte Adresse schob die Neuberechnung in die Bestellprüfung.' );
 		$this->assertStringNotContainsString( "'POST' !== \$request->get_method()", $src, 'Nur POST zu prüfen übersieht die PUT-Neuberechnung der Kasse.' );
 	}
+
+	/**
+	 * Nonce und Cart-Token reisen mit, Inhaltsangaben nicht.
+	 */
+	public function test_headers_for_state_keep_nonce() {
+		$out = StoreApiCompat::headers_for_state(
+			array(
+				'nonce'                  => array( 'abc' ),
+				'cart_token'             => array( 'tok' ),
+				'content_type'           => array( 'application/json' ),
+				'content_length'         => array( '2' ),
+				'x_http_method_override' => array( 'PUT' ),
+			)
+		);
+		$this->assertSame( array( 'nonce' => array( 'abc' ), 'cart_token' => array( 'tok' ) ), $out );
+		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Core/StoreApiCompat.php' );
+		$this->assertStringContainsString( '$get->set_headers( self::headers_for_state(', $src, 'Ohne Nonce lehnt die Store-API GET /checkout mit 401 ab.' );
+	}
 }

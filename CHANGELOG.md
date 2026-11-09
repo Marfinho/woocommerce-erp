@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.8] – 2026-11-09
+
+### Behoben
+- Kasse: Die Antwort mit dem Kassenstand (0.97.7) wurde von der Store-API mit „Nonce-Header fehlt“ abgelehnt, weil die interne Anfrage die Kopfzeilen nicht mitnahm. Nonce und Cart-Token der Neuberechnung werden jetzt übernommen.
+
 ## [0.97.7] – 2026-11-09
 
 ### Behoben
