@@ -844,7 +844,8 @@ tr.lw16-cart-points td {
 	display: grid;
 	gap: 18px;
 	margin: 16px 0 0;
-	padding: 22px;
+	padding: 22px !important;
+	box-sizing: border-box;
 	border-radius: var(--lw16-r-card);
 	background: var(--lw16-ink);
 	color: var(--lw16-on-ink);
@@ -869,7 +870,7 @@ tr.lw16-cart-points td {
 
 .lw16-cart-points__eyebrow {
 	margin: 0;
-	color: var(--lw16-accent-1);
+	color: var(--lw16-accent-2);
 	font-size: var(--lw16-fs-x-small);
 	font-weight: 600;
 	letter-spacing: 0.08em;
@@ -891,7 +892,7 @@ tr.lw16-cart-points td {
 	line-height: 1;
 	letter-spacing: -0.03em;
 	font-variant-numeric: tabular-nums;
-	color: var(--lw16-accent-1);
+	color: var(--lw16-on-ink);
 }
 
 .lw16-punktekarte .lw16-cart-points__main {
@@ -924,7 +925,7 @@ tr.lw16-cart-points td {
 }
 
 .lw16-punktekarte .lw16-redeem-box__title {
-	color: var(--lw16-accent-1);
+	color: var(--lw16-accent-2);
 	font-size: var(--lw16-fs-x-small);
 	font-weight: 600;
 	letter-spacing: 0.08em;
@@ -948,8 +949,8 @@ tr.lw16-cart-points td {
 }
 
 .lw16-punktekarte .lw16-redeem-box__row input:focus {
-	border-color: var(--lw16-accent-1) !important;
-	box-shadow: 0 0 0 4px color-mix(in srgb, var(--lw16-accent-1) 25%, transparent) !important;
+	border-color: var(--lw16-accent-2) !important;
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--lw16-accent-2) 25%, transparent) !important;
 }
 
 .lw16-punktekarte .lw16-redeem-box__all,
@@ -961,11 +962,11 @@ tr.lw16-cart-points td {
 
 .lw16-punktekarte .lw16-redeem-box__apply {
 	background: var(--lw16-accent-1);
-	color: var(--lw16-ink);
+	color: #fff;
 }
 
 .lw16-punktekarte .lw16-redeem-box .lw16-redeem-box__check input[type="checkbox"] {
-	accent-color: var(--lw16-accent-1);
+	accent-color: var(--lw16-accent-2);
 }
 
 .lw16-punktekarte .lw16-redeem-box__error {
