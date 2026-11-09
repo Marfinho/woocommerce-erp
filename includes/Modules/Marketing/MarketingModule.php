@@ -31,6 +31,8 @@ class MarketingModule {
 		add_action( 'admin_post_lw16_kampagne_zuordnen', array( $this, 'handle_zuordnen' ) );
 		add_action( 'admin_post_lw16_kampagne_loesen', array( $this, 'handle_loesen' ) );
 		add_action( 'admin_post_lw16_kampagne_km', array( $this, 'handle_km' ) );
+
+		( new Saisonleiste() )->register();
 	}
 
 	/* --------------------------------------------------------------------

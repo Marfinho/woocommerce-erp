@@ -24,6 +24,7 @@ class RetentionModule {
 		( new AccountOverview() )->register();
 		( new CartTracking() )->register();
 		( new PostPurchase() )->register();
+		( new ReviewLink() )->register();
 
 		add_action( 'lw16_dashboard_widgets', array( $this, 'render_most_wished_widget' ) );
 	}

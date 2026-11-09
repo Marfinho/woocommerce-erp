@@ -74,6 +74,8 @@ class SettingsPage {
 				'affiliate_wartezeit_tage' => array( __( 'Wartezeit für Affiliate-Provision (Tage nach Bestellung)', 'lindenweg16' ), 'number' ),
 				'affiliate_auto_buchen'    => array( __( 'Affiliate-Auszahlungen automatisch als Beleg buchen (Werbekosten, eigene Kostenstelle)', 'lindenweg16' ), 'checkbox' ),
 				'affiliate_min_auszahlung' => array( __( 'Mindestbetrag für eine Auszahlungsanforderung der Ambassadors (€)', 'lindenweg16' ), 'number' ),
+				'weihnacht_leiste'         => array( __( 'Weihnachts-Leiste über dem Shop zeigen (1. November bis Stichtag „rechtzeitig unterm Baum“, danach bis 23. Dezember Gutschein-Hinweis)', 'lindenweg16' ), 'checkbox' ),
+				'weihnacht_stichtag'       => array( __( 'Stichtag für Lieferung vor Weihnachten (TT.MM.)', 'lindenweg16' ), 'text' ),
 			),
 			__( 'Loyalty', 'lindenweg16' )        => array(
 				'referral_cookie_tage'     => array( __( 'Referral-Cookie Laufzeit (Tage)', 'lindenweg16' ), 'number' ),

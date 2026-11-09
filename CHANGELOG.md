@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.2] – 2026-11-09
+
+### Neu
+- **Weihnachts-Leiste im Shop:** Vom 1. November bis zum Stichtag steht über jeder Shop-Seite „Weihnachten: Bestellt bis 14.12. – rechtzeitig unterm Baum.“, danach bis 23. Dezember der Hinweis auf den Gutschein, ab 24. Dezember nichts. Kunden können sie schließen (je Phase und Jahr im Browser gemerkt), in der Kasse erscheint sie nie. Schalter und Stichtag unter Einstellungen → Marketing (`weihnacht_leiste`, `weihnacht_stichtag`). Neue Klasse `Marketing\Saisonleiste`, Tests: `tests/SaisonleisteTest.php`. Anleitung: Kapitel „Weihnachts-Leiste im Shop“.
+- **Bewerten ohne Kundenkonto:** Die Bewertungsanfrage-Mail enthält je Produkt einen signierten Link (`?lw16_bewerten=<Bestellung>.<Signatur>`). Auf diesem Aufruf zeigt die Produktseite das Bewertungsformular auch Gastkäufern, vorbelegt mit Vorname, Initial und E-Mail der Bestellung. Bisher sahen Gäste nur „Nur angemeldete Kunden, die dieses Produkt gekauft haben, dürfen eine Rezension abgeben.“ Die Kaufprüfung beim Absenden bleibt unverändert. Neue Klasse `Retention\ReviewLink`, Tests: `tests/ReviewLinkTest.php`. Anleitung: Kapitel „Bewertungen von Gastkäufern“.
+
+### Geändert
+- Theme 1.9.15, Warenkorb: Der Fortschritt „Noch X € bis zum kostenlosen Versand“ steht jetzt auch auf der Warenkorb-Seite über der Summen-Karte und zählt bei Mengenänderungen mit, nicht nur im Mini-Warenkorb.
+
 ## [0.99.1] – 2026-11-09
 
 Befunde aus dem Testkauf vom 9. November.
