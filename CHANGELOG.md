@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.3] – 2026-11-09
+
+### Geändert
+- Theme 1.9.8, Leistung: Die Versandkosten-Anzeige im Mini-Warenkorb fragte auf jeder Seite den Warenkorb ab, auch bei leerem Warenkorb und auf Seiten aus dem Seiten-Cache. Jede dieser Anfragen belegt eine der 20 Datenbankverbindungen des Hosters. Ohne den Cookie `woocommerce_items_in_cart` (Warenkorb leer) entfällt die Abfrage jetzt.
+
 ## [0.98.2] – 2026-11-09
 
 ### Geändert
