@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.1] – 2026-11-09
+
+### Behoben
+- Theme 1.9.6, Kasse und Warenkorb: Eingabefelder, Adresskarte und Wunschort-Karten sind in einem hellen Blaugrau aus dem CI (statt Beige-Grau) mit feinem Rahmen.
+
 ## [0.98.0] – 2026-11-09
 
 ### Behoben

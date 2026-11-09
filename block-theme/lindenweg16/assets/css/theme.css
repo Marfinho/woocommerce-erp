@@ -3395,6 +3395,23 @@ table.variations select {
 	margin-top: 0 !important;
 }
 
+/*
+ * Felder, Adresskarte, Wunschort-Karten: statt des warmen Beige-Grau ein sehr
+ * helles Blaugrau aus dem CI (accent-3), passend zum Anthrazit der Buttons.
+ */
+.wc-block-checkout,
+.wc-block-cart {
+	--lw-surface-muted: color-mix(in srgb, var(--lw-accent-3) 22%, var(--lw-surface));
+	--lw-line: color-mix(in srgb, var(--lw-accent-3) 70%, var(--lw-surface));
+}
+
+.wc-block-components-text-input input,
+.wc-block-components-textarea,
+.wc-blocks-components-select .wc-blocks-components-select__select,
+.wc-block-components-combobox .wc-block-components-combobox-control input.components-combobox-control__input {
+	border-color: var(--lw-line) !important;
+}
+
 .wc-block-components-sidebar-layout {
 	gap: clamp(16px, 3vw, 40px);
 	margin-inline: 0 !important;
