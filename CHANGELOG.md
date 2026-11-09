@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.7] – 2026-11-09
+
+### Behoben
+- Kasse: Die Neuberechnung beim Öffnen der Kasse (`__experimental_calc_totals`, ohne Rechnungsadresse) wird jetzt mit dem aktuellen Kassenstand beantwortet (`GET /wc/store/v1/checkout`, gleiche Form samt Summen), ohne sie an die Kassen-Route zu geben. Die in 0.97.6 ergänzte Rechnungsadresse schob sie in die Prüfung der Bestellung und zeigte stattdessen „Keine Zahlungsart angegeben“ und „Eine gültige E-Mail-Adresse ist erforderlich“. Der Shop wurde deshalb auf 0.97.5 zurückgesetzt; 0.97.7 ersetzt 0.97.6.
+
 ## [0.97.6] – 2026-11-09
 
 ### Behoben

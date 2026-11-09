@@ -10,13 +10,20 @@ namespace Lindenweg16\Core;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Der reCAPTCHA-Schutz von WooCommerce PayPal Payments ruft beim Öffnen der Kasse
- * `/wc/store/v1/checkout?__experimental_calc_totals=true` ohne Rechnungsadresse auf.
- * WooCommerce verlangt dort `billing_address` und antwortet mit 400 („Fehlende(r)
- * Parameter: billing_address“). Die Kasse zeigt das jedem Kunden als roten Fehler
- * an. Diese Klasse ergänzt bei genau diesen Neuberechnungen die Adresse aus den
- * Kundendaten des Warenkorbs. Die eigentliche Bestellung (ohne
- * `__experimental_calc_totals`) bleibt unberührt.
+ * Die Block-Kasse schickt beim Öffnen und beim Wechsel der Zahlungsart eine
+ * Neuberechnung an `/wc/store/v1/checkout?__experimental_calc_totals=true` – ohne
+ * Rechnungsadresse und oft ohne Zahlungsart. WooCommerce lehnt sie hier mit 400 ab
+ * („Fehlende(r) Parameter: billing_address“), die Kasse zeigt das jedem Kunden als
+ * roten Fehler. Eine ergänzte Adresse (0.97.4–0.97.6) schob die Anfrage nur weiter in
+ * die Prüfung der Bestellung („Keine Zahlungsart angegeben“, „gültige E-Mail-Adresse
+ * erforderlich“).
+ *
+ * Gebraucht wird von dieser Anfrage nur der aktuelle Stand der Kasse samt Summen.
+ * Genau den liefert `GET /wc/store/v1/checkout` in derselben Form. Fehlt die
+ * Rechnungsadresse, antwortet diese Klasse deshalb mit diesem Stand, ohne die
+ * Anfrage an die Kassen-Route zu geben: keine Prüfung, kein Bestellpfad, nichts wird
+ * gespeichert. Die eigentliche Bestellung (ohne `__experimental_calc_totals`) und
+ * jede Neuberechnung mit Rechnungsadresse bleiben unberührt.
  */
 class StoreApiCompat {
 
@@ -26,21 +33,23 @@ class StoreApiCompat {
 	 * Hooks registrieren.
 	 */
 	public function register() {
-		add_filter( 'rest_pre_dispatch', array( $this, 'complete_calc_totals' ), 10, 3 );
+		add_filter( 'rest_pre_dispatch', array( $this, 'answer_calc_totals' ), 10, 3 );
 	}
 
 	/**
-	 * Fehlende Rechnungsadresse bei einer Neuberechnung ergänzen.
+	 * Neuberechnung ohne Rechnungsadresse mit dem aktuellen Kassenstand beantworten.
 	 *
-	 * @param mixed            $result  Bisheriges Ergebnis (wird unverändert weitergereicht).
+	 * @param mixed            $result  Bisheriges Ergebnis.
 	 * @param \WP_REST_Server  $server  Server.
 	 * @param \WP_REST_Request $request Anfrage.
-	 * @return mixed
+	 * @return mixed Unverändertes Ergebnis oder die Antwort von GET /checkout.
 	 */
-	public function complete_calc_totals( $result, $server, $request ) {
-		// Die Kasse schickt die Neuberechnung als POST mit „X-HTTP-Method-Override: PUT“;
-		// WordPress hat die Methode hier schon auf PUT umgestellt.
-		if ( ! $request instanceof \WP_REST_Request || ! self::handles_method( $request->get_method() ) ) {
+	public function answer_calc_totals( $result, $server, $request ) {
+		if ( null !== $result || ! $request instanceof \WP_REST_Request ) {
+			return $result;
+		}
+		// Die Kasse schickt die Neuberechnung als POST mit „X-HTTP-Method-Override: PUT“.
+		if ( ! self::handles_method( $request->get_method() ) ) {
 			return $result;
 		}
 		if ( self::ROUTE !== untrailingslashit( (string) $request->get_route() ) ) {
@@ -49,25 +58,25 @@ class StoreApiCompat {
 		if ( ! self::needs_billing( (array) $request->get_params() ) ) {
 			return $result;
 		}
-		if ( ! function_exists( 'WC' ) ) {
+		if ( ! function_exists( 'rest_do_request' ) ) {
 			return $result;
 		}
 
-		// Vor dem Routen-Aufruf hat die Store-API Sitzung und Warenkorb meist noch
-		// nicht geladen. wc_load_cart() tut nur das, was die Route gleich ohnehin tut.
-		if ( ! WC()->customer && function_exists( 'wc_load_cart' ) ) {
-			wc_load_cart();
-		}
+		$get = new \WP_REST_Request( 'GET', self::ROUTE );
+		$get->set_query_params( self::query_for_state( (array) $request->get_query_params() ) );
 
-		if ( ! WC()->customer ) {
-			return $result;
-		}
+		return rest_do_request( $get );
+	}
 
-		$customer = WC()->customer;
-		$billing  = self::billing_from( (array) $customer->get_billing(), (array) $customer->get_shipping() );
-		$request->set_param( 'billing_address', $billing );
-
-		return $result;
+	/**
+	 * Abfrageparameter für den Kassenstand: alles außer der Neuberechnung – reine Regel.
+	 *
+	 * @param array<string, mixed> $query Abfrageparameter der Neuberechnung.
+	 * @return array<string, mixed>
+	 */
+	public static function query_for_state( array $query ) {
+		unset( $query['__experimental_calc_totals'], $query['_method'] );
+		return $query;
 	}
 
 	/**
@@ -91,25 +100,5 @@ class StoreApiCompat {
 			return false;
 		}
 		return empty( $params['billing_address'] );
-	}
-
-	/**
-	 * Rechnungsadresse aus den Kundendaten; leere Felder kommen aus der Lieferadresse.
-	 *
-	 * @param array<string, mixed> $billing  Rechnungsdaten des Kunden.
-	 * @param array<string, mixed> $shipping Lieferdaten des Kunden.
-	 * @return array<string, string>
-	 */
-	public static function billing_from( array $billing, array $shipping ) {
-		$keys = array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'email', 'phone' );
-		$out  = array();
-		foreach ( $keys as $key ) {
-			$value = isset( $billing[ $key ] ) ? (string) $billing[ $key ] : '';
-			if ( '' === $value && isset( $shipping[ $key ] ) && ! in_array( $key, array( 'email' ), true ) ) {
-				$value = (string) $shipping[ $key ];
-			}
-			$out[ $key ] = $value;
-		}
-		return $out;
 	}
 }
