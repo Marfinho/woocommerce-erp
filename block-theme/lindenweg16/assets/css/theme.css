@@ -3411,7 +3411,7 @@ table.variations select {
 .wc-block-cart .wp-block-woocommerce-cart-order-summary-block,
 .wc-block-checkout__main .wc-block-components-checkout-step,
 .wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block,
-.wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content {
+.wc-block-checkout__main .wc-block-components-express-payment--checkout {
 	border-radius: var(--lw-r-card) !important;
 	background: var(--lw-surface);
 	box-shadow: var(--lw-shadow-card);
@@ -3749,6 +3749,166 @@ table.variations select {
 .wc-block-components-totals-coupon-link {
 	color: var(--lw-text) !important;
 	font-weight: 600;
+}
+
+/*
+ * Kasse, Feinschliff: Express-Kasse als Karte, Adresskarte mit runden Ecken,
+ * Bestellübersicht ohne verschachtelte graue Fläche, Preise bündig in der Karte.
+ */
+.wc-block-checkout__main .wc-block-components-express-payment--checkout {
+	margin-bottom: 16px !important;
+	padding: clamp(16px, 3vw, 28px) !important;
+	border: 0 !important;
+}
+
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__content,
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__event-buttons {
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	background: transparent !important;
+}
+
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__title-container {
+	position: static;
+	margin: 0 0 12px;
+}
+
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__title-container::before,
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__title-container::after {
+	display: none !important;
+}
+
+.wc-block-components-express-payment__title,
+.wc-block-components-express-payment__title-container .wc-block-components-title {
+	margin: 0;
+	padding: 0 !important;
+	background: transparent !important;
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+}
+
+.wc-block-components-express-payment--checkout .wc-block-components-express-payment__event-buttons > li {
+	padding: 0 !important;
+}
+
+.wc-block-components-express-payment--checkout :is(button, .gpay-card-info-container, .apple-pay-button, [id*="apple-pay"], [id*="google-pay"]) {
+	border-radius: var(--lw-r-field) !important;
+	min-height: 52px;
+	overflow: hidden;
+}
+
+.wc-block-components-express-payment-continue-rule {
+	margin: 16px 0 !important;
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--small);
+}
+
+.wc-block-components-express-payment-continue-rule::before,
+.wc-block-components-express-payment-continue-rule::after {
+	border-color: var(--lw-line) !important;
+}
+
+/* Lieferadresse (zusammengefasst) */
+.wc-block-components-address-card {
+	padding: 14px 16px !important;
+	border: 1.5px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-field) !important;
+	background: var(--lw-surface-muted) !important;
+}
+
+.wc-block-components-address-card a.wc-block-components-address-card__edit {
+	color: var(--lw-text) !important;
+	font-weight: 600;
+}
+
+/* Bestellübersicht: eine Karte, Positionen ohne eigenen Hintergrund */
+.wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content,
+.wc-block-checkout__sidebar .wc-block-components-order-summary,
+.wc-block-checkout__sidebar .wc-block-components-order-summary__content {
+	margin: 0 !important;
+	padding: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: transparent !important;
+	box-shadow: none !important;
+}
+
+.wc-block-components-sidebar .wp-block-woocommerce-checkout-order-summary-block .wc-block-components-totals-wrapper {
+	padding-inline: 0 !important;
+}
+
+.wc-block-components-order-summary-item {
+	display: grid !important;
+	grid-template-columns: 56px minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 4px 14px;
+	padding: 14px 0 !important;
+	border-bottom: 1px solid var(--lw-line);
+}
+
+.wc-block-components-order-summary-item:last-child {
+	border-bottom: 0;
+}
+
+.wc-block-components-order-summary-item > * {
+	min-width: 0;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+.wc-block-components-order-summary-item__image {
+	width: 56px !important;
+}
+
+.wc-block-components-order-summary-item__image img {
+	border-radius: 12px;
+}
+
+.wc-block-components-order-summary-item__total-price {
+	text-align: right;
+	white-space: nowrap;
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+}
+
+/* Einzelpreis doppelt zur Zeilensumme und die lange Beschreibung machen die Zeile unruhig. */
+.wc-block-components-order-summary-item__individual-prices,
+.wc-block-components-order-summary-item__description .wc-block-components-product-metadata__description {
+	display: none !important;
+}
+
+.wc-block-components-order-summary-item__description .wc-block-components-product-name {
+	font-size: var(--wp--preset--font-size--small);
+	font-weight: 600;
+}
+
+.wc-block-components-order-summary-item__description .wc-block-components-product-details {
+	margin: 4px 0 0;
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--x-small);
+}
+
+.wc-block-components-order-summary-item__description .wc-block-components-product-badge {
+	display: inline-block;
+	margin-top: 6px;
+	padding: 3px 10px;
+	border-radius: var(--lw-r-pill);
+	background: var(--lw-surface-muted);
+	color: var(--lw-text-muted);
+	font-size: var(--wp--preset--font-size--x-small);
+}
+
+.wc-block-components-order-summary-item__quantity {
+	border: 2px solid var(--lw-surface) !important;
+	background: var(--lw-ink) !important;
+	color: var(--lw-on-ink) !important;
+	box-shadow: none !important;
+}
+
+.wc-block-components-sidebar .wc-block-components-totals-item__value {
+	font-size: var(--wp--preset--font-size--small);
 }
 
 /* Mobil: besonders gut bedienbar */
