@@ -3982,35 +3982,37 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Sobald in seiner Stückliste ein Modul steht, das Varianten hat. Das heißt: Sobald es neben <code>M-BSM</code> ein zweites Basismodul mit Holz-Variante gibt, werden alle Sets mit Basismodul beim Verkauf gepackt. Ein vorher montierter Set-Bestand wird dann nicht mehr abgebucht. Ihn am besten vorher per Korrektur in seine Module zurückbuchen.</p>
 </div>
 
-<h3 id="adm-variantenfotos">Fotos je Variante</h3>
-<!-- schaubild:adm-stammdaten|Fotos je Variante -->
-<figure class="schaubild" role="group" aria-label="Schaubild: Fotos am Artikel, Galerie je Variante">
-<div class="sb-kopf">Schaubild · Fotos am Artikel, Galerie je Variante</div>
+<h3 id="adm-variantenfotos">Fotos und Texte je Variante</h3>
+<!-- schaubild:adm-stammdaten|Fotos und Texte je Variante -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Fotos und Texte am Artikel, je Variante im Shop">
+<div class="sb-kopf">Schaubild · Fotos und Texte am Artikel, je Variante im Shop</div>
 <ol class="fluss c5">
-	<li class="du"><b>Produkt öffnen, Reiter Fotos</b><span>/erp → Produkt, z. B. M-SHR-SPDSL</span></li>
-	<li class="du"><b>Fotos hochladen und ordnen</b><span>erstes = Hauptbild; optional nur bei Farbe/Holz</span></li>
+	<li class="du"><b>Produkt öffnen, Reiter Fotos &amp; Texte</b><span>/erp → Produkt, z. B. M-SHR-SPDSL</span></li>
+	<li class="du"><b>Texte schreiben, Fotos hochladen</b><span>erstes Foto = Hauptbild; optional nur bei Farbe/Holz</span></li>
 	<li class="ext"><b>Kunde wählt die Variante</b><span>z. B. Schuhsystem SPD-SL</span></li>
-	<li class="erp"><b>Tauscht die ganze Galerie</b><span>alle Fotos des Artikels hinter der Variante</span></li>
-	<li class="ok"><b>Passendes Bild überall</b><span>Produktseite, Warenkorb, Bestellmail</span></li>
+	<li class="erp"><b>Tauscht Galerie und Texte</b><span>Set: dahinter die Hauptbilder seiner Module</span></li>
+	<li class="ok"><b>Passend überall</b><span>Produktseite, Warenkorb, Bestellmail</span></li>
 </ol>
 <p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
 </figure>
-<!-- /schaubild:adm-stammdaten|Fotos je Variante -->
+<!-- /schaubild:adm-stammdaten|Fotos und Texte je Variante -->
 
-<p>Die Fotos für den Shop werden im ERP am Artikel hochgeladen, nicht in wp-admin. Weil hinter jeder Shop-Variante ein eigener Artikel steht (siehe oben, Schuhhalter SPD und SPD-SL, Basismodul je Holz), hat jede Variante ihre eigenen Fotos. Wählt der Kunde auf der Produktseite eine Variante, wechselt die ganze Galerie auf die Fotos dieses Artikels, mit Vorschaubildern, Zoom und Vollbild.</p>
+<p>Fotos und Texte für den Shop werden im ERP am Artikel gepflegt, nicht in wp-admin. Hinter jeder Shop-Variante steht ein eigener Artikel (siehe oben: Schuhhalter SPD und SPD-SL, Basismodul je Holz), deshalb hat jede Variante ihre eigenen Fotos und Texte. Wählt der Kunde auf der Produktseite eine Variante, wechseln die ganze Galerie (mit Vorschaubildern, Zoom und Vollbild), der Kurztext unter dem Preis und die Beschreibung.</p>
 
 <ol>
-	<li>Unter <span class="weg">/erp → Katalog → Produkt</span> den Artikel öffnen, z. B. <code>M-SHR-SPDSL</code>, und den Reiter <strong>Fotos</strong> wählen.</li>
-	<li><em>Fotos wählen</em>, mehrere auf einmal sind möglich (JPG, PNG oder WebP, bis 15 MB je Foto). <em>Fotos hochladen</em>.</li>
+	<li>Unter <span class="weg">/erp → Katalog → Produkt</span> den Artikel öffnen, z. B. <code>M-SHR-SPDSL</code>, und den Reiter <strong>Fotos &amp; Texte</strong> wählen.</li>
+	<li><strong>Texte:</strong> Kurztext und Beschreibung eintragen und <em>Texte speichern</em>. Leer lassen heißt: Der Shop zeigt den Text des Produkts. Absätze werden durch eine Leerzeile getrennt.</li>
+	<li><strong>Fotos:</strong> <em>Fotos wählen</em> (mehrere auf einmal, JPG, PNG oder WebP, bis 15 MB je Foto) und <em>Fotos hochladen</em>.</li>
 	<li>Mit <em>Nach vorn</em> und <em>Nach hinten</em> die Reihenfolge festlegen. Das erste Foto ist das Hauptbild. Es wird auch zum Bild der Variante im Warenkorb, in der Kasse und in der Bestellmail.</li>
 	<li>Bei Bedarf unter <em>Nur zeigen bei</em> Merkmale anhaken, z. B. Farbe Schwarz. Dann erscheint das Foto nur bei dieser Farbe. Nichts angehakt heißt: alle Varianten dieses Artikels. Merkmale, die der Artikel schon festlegt (beim Schuhhalter SPD-SL das Schuhsystem), stehen nicht zur Wahl.</li>
 </ol>
 
-<p>Bei einem <strong>Set</strong> ist das Set selbst der Artikel. Seine Fotos lädt man deshalb am Set hoch und schränkt sie auf das Holz ein: das Walnuss-Foto auf „Holz: Walnuss“, das Buche-Foto auf „Holz: Buche“.</p>
+<h4>Sets</h4>
+<p>Ein Set ist im ERP ein einziger Artikel. Seine eigenen Fotos lädt man am Set hoch und schränkt sie auf das Holz ein: das Walnuss-Foto auf „Holz: Walnuss“, das Buche-Foto auf „Holz: Buche“. <strong>Hinter den Fotos des Sets</strong> zeigt die Galerie automatisch das Hauptbild jedes Moduls, das im Set steckt, und zwar in der gewählten Variante: bei „Walnuss, SPD-SL“ das Walnuss-Basismodul und den SPD-SL-Schuhhalter. Hauptbild eines Moduls ist sein erstes Foto im ERP, sonst sein Produktbild im Shop. Hat das Set selbst keine Fotos, stehen vorn die Fotos des Set-Produkts.</p>
 
 <div class="kasten merke">
-	<span class="titel">Wenn keine Fotos da sind</span>
-	<p>Hat ein Artikel keine eigenen Fotos, zeigt der Shop wie bisher die Fotos des Produkts. Ein Bild, das jemand im Shop direkt an einer Variante gesetzt hat, überschreibt das ERP nicht. Entfernt man ein Foto im ERP, verschwindet es auch aus dem Shop. Aus der Mediathek wird es nur gelöscht, wenn es sonst nirgends verwendet wird.</p>
+	<span class="titel">Wenn nichts gepflegt ist</span>
+	<p>Ohne eigene Fotos und Texte zeigt der Shop wie bisher die des Produkts. Ein Bild, das jemand im Shop direkt an einer Variante gesetzt hat, überschreibt das ERP nicht. Entfernt man ein Foto im ERP, verschwindet es auch aus dem Shop. Aus der Mediathek wird es nur gelöscht, wenn es sonst nirgends verwendet wird.</p>
 </div>
 
 <h3 id="adm-ar">AR-Ansicht „An deiner Wand ansehen“</h3>

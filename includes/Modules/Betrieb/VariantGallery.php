@@ -66,10 +66,15 @@ class VariantGallery {
 	}
 
 	/**
-	 * Bildfolgen eines Produkts.
+	 * Bildfolgen und Texte eines Produkts.
+	 *
+	 * Je Variante: die Fotos des Artikels dahinter (sonst die des
+	 * Produkts), bei einem Set dahinter das Hauptbild jedes enthaltenen
+	 * Moduls in der gewählten Variante. Dazu Kurztext und Beschreibung des
+	 * Artikels, wenn welche gepflegt sind.
 	 *
 	 * @param \WC_Product_Variable $product Produkt.
-	 * @return array|null {sets: [Markup], variations: [{attrs, set}]}; null ohne eigene Fotos.
+	 * @return array|null {sets, texts, variations: [{attrs, set, text}]}; null, wenn nichts zu tauschen ist.
 	 */
 	public static function data( $product ) {
 		$ctx   = OrderLines::cached_context();
@@ -79,16 +84,23 @@ class VariantGallery {
 			return null;
 		}
 
-		$rows = ArticleImages::for_articles( array_keys( $group ) );
-
-		if ( ! $rows ) {
-			return null;
+		// Fotos der eigenen Artikel und aller Module, die in ihnen stecken
+		// (samt Geschwistern, denn die Wahl kann tauschen).
+		$ids = array_keys( $group );
+		foreach ( array_keys( $group ) as $article_id ) {
+			foreach ( self::module_rows( $article_id, $ctx ) as $child ) {
+				$ids = array_merge( $ids, array( $child ), array_keys( Variants::group_of( $child, $ctx ) ) );
+			}
 		}
+		$rows = ArticleImages::for_articles( array_unique( $ids ) );
 
 		$default = array_values( array_filter( array_merge( array( (int) $product->get_image_id() ), array_map( 'intval', (array) $product->get_gallery_image_ids() ) ) ) );
 		$sets    = array( implode( ',', $default ) => 0 );
 		$markup  = array( self::markup( $default ) );
+		$texts   = array( null );
+		$by_text = array();
 		$list    = array();
+		$changes = false;
 
 		foreach ( $product->get_children() as $child_id ) {
 			$variation = wc_get_product( (int) $child_id );
@@ -97,29 +109,121 @@ class VariantGallery {
 				continue;
 			}
 
+			$attrs   = OrderLines::variation_attributes( $variation );
 			$article = OrderLines::article_for_product_object( $variation, $ctx );
-			$images  = isset( $rows[ $article ] ) ? ArticleImages::select( $rows[ $article ], OrderLines::variation_attributes( $variation ) ) : array();
-			$key     = $images ? implode( ',', $images ) : implode( ',', $default );
+			$own     = isset( $rows[ $article ] ) ? ArticleImages::select( $rows[ $article ], $attrs ) : array();
+			$modules = self::module_images( $article, $attrs, $rows, $ctx );
+			$images  = array_values( array_unique( array_merge( $own ? $own : $default, $modules ) ) );
+			$key     = implode( ',', $images );
 
 			if ( ! isset( $sets[ $key ] ) ) {
 				$sets[ $key ] = count( $markup );
 				$markup[]     = self::markup( $images );
 			}
 
+			$text = self::texts( $article, $ctx );
+			$tkey = $text ? md5( wp_json_encode( $text ) ) : '';
+			if ( $text && ! isset( $by_text[ $tkey ] ) ) {
+				$by_text[ $tkey ] = count( $texts );
+				$texts[]          = $text;
+			}
+
+			$set_index  = $sets[ $key ];
+			$text_index = $text ? $by_text[ $tkey ] : 0;
+			$changes    = $changes || $set_index > 0 || $text_index > 0;
+
 			$list[] = array(
 				'attrs' => (array) $variation->get_variation_attributes(),
-				'set'   => $sets[ $key ],
+				'set'   => $set_index,
+				'text'  => $text_index,
 			);
 		}
 
-		// Nur die Galerie des Produkts: nichts zu tauschen.
-		if ( count( $markup ) < 2 ) {
+		if ( ! $changes ) {
 			return null;
 		}
 
 		return array(
 			'sets'       => $markup,
+			'texts'      => $texts,
 			'variations' => $list,
+		);
+	}
+
+	/**
+	 * Direkt enthaltene Module eines Artikels, die ein Shop-Produkt haben.
+	 *
+	 * @param int   $article_id Artikel (Set).
+	 * @param array $ctx        Kontext.
+	 * @return int[]
+	 */
+	protected static function module_rows( $article_id, array $ctx ) {
+		$out = array();
+
+		foreach ( isset( $ctx['bom'][ (int) $article_id ] ) ? (array) $ctx['bom'][ (int) $article_id ] : array() as $row ) {
+			$row   = (array) $row;
+			$child = isset( $row['child_id'] ) ? (int) $row['child_id'] : 0;
+
+			if ( 'artikel' === ( isset( $row['child_type'] ) ? $row['child_type'] : '' ) && ! empty( $ctx['articles'][ $child ]['wc_product_id'] ) ) {
+				$out[] = $child;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Hauptbilder der Module eines Sets in der gewählten Variante.
+	 *
+	 * Hauptbild ist das erste ERP-Foto des Moduls (passend zur Variante),
+	 * sonst das Produktbild im Shop.
+	 *
+	 * @param int   $article_id Set.
+	 * @param array $attrs      Merkmale der Variante.
+	 * @param array $rows       Fotos je Artikel.
+	 * @param array $ctx        Kontext.
+	 * @return int[]
+	 */
+	public static function module_images( $article_id, array $attrs, array $rows, array $ctx ) {
+		$out = array();
+
+		foreach ( self::module_rows( $article_id, $ctx ) as $child ) {
+			$child  = Variants::swap( $child, $attrs, $ctx );
+			$images = isset( $rows[ $child ] ) ? ArticleImages::select( $rows[ $child ], $attrs ) : array();
+
+			if ( $images ) {
+				$out[] = (int) $images[0];
+				continue;
+			}
+
+			$product = ! empty( $ctx['articles'][ $child ]['wc_product_id'] ) ? wc_get_product( (int) $ctx['articles'][ $child ]['wc_product_id'] ) : null;
+			if ( $product && $product->get_image_id() ) {
+				$out[] = (int) $product->get_image_id();
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Kurztext und Beschreibung eines Artikels, fertig für die Seite.
+	 *
+	 * @param int   $article_id Artikel.
+	 * @param array $ctx        Kontext.
+	 * @return array|null {short, long}; leere Teile = Text des Produkts.
+	 */
+	protected static function texts( $article_id, array $ctx ) {
+		$article = isset( $ctx['articles'][ (int) $article_id ] ) ? (array) $ctx['articles'][ (int) $article_id ] : array();
+		$short   = isset( $article['shop_short'] ) ? trim( (string) $article['shop_short'] ) : '';
+		$long    = isset( $article['shop_description'] ) ? trim( (string) $article['shop_description'] ) : '';
+
+		if ( '' === $short && '' === $long ) {
+			return null;
+		}
+
+		return array(
+			'short' => '' === $short ? '' : wpautop( wp_kses_post( $short ) ),
+			'long'  => '' === $long ? '' : wpautop( wp_kses_post( $long ) ),
 		);
 	}
 

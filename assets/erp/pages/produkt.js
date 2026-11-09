@@ -6,7 +6,7 @@
  *   bom          Stückliste
  *   calc         Kalkulation (nur mit dem Recht „Preise, Kosten und Löhne sehen“)
  *   beschaffung  Lieferanten, Mindestmenge, Lieferzeit (Zukauf und Hybrid)
- *   fotos        Fotos für den Shop (Galerie je Variante)
+ *   fotos        Fotos und Texte für den Shop (je Variante)
  *
  * Server: includes/Erp/Pages/Produkt.php. Klassisches ES5, kein innerHTML mit Daten.
  */
@@ -1072,10 +1072,15 @@
 
 			function render(r, note) {
 				var out = h('div');
-				out.appendChild(h('h3', { class: 'pf-h' }, 'Fotos für den Shop'));
+				out.appendChild(h('h3', { class: 'pf-h' }, 'Texte für den Shop'));
+				out.appendChild(textCard(r));
+				out.appendChild(h('h3', { class: 'pf-h', style: 'margin-top:18px' }, 'Fotos für den Shop'));
 				out.appendChild(h('p', { class: 'muted' }, 'Wählt ein Kunde im Shop die Variante, hinter der dieser Artikel steht' + (r.variant ? ' (' + r.variant + ')' : '') + ', zeigt die Produktseite genau diese Fotos. Das erste ist das Hauptbild; es erscheint auch im Warenkorb und in der Bestellmail. Ohne Zuordnung gilt ein Foto für alle Varianten dieses Artikels.'));
 				if (!r.shop) {
 					out.appendChild(kit.notice('Dieser Artikel ist mit keinem Shop-Produkt verknüpft. Die Fotos werden gespeichert, im Shop aber erst gezeigt, wenn unter Stammdaten ein Shop-Produkt gewählt ist.', true));
+				}
+				if (r.modules && r.modules.length) {
+					out.appendChild(h('p', { class: 'muted' }, 'Hinter den Fotos des Sets zeigt der Shop automatisch das Hauptbild jedes enthaltenen Moduls in der gewählten Variante: ' + r.modules.join(', ') + '.'));
 				}
 				if (note) { out.appendChild(kit.notice(note)); }
 
@@ -1105,6 +1110,23 @@
 				});
 				out.appendChild(grid);
 				s.paint(out);
+			}
+
+			function textCard(r) {
+				var msg = kit.msg();
+				var shortF = kit.area(r.texts.short, 3);
+				var longF = kit.area(r.texts.description, 8);
+				var save = h('button', { class: 'btn primary', type: 'button' }, 'Texte speichern');
+				save.addEventListener('click', function () {
+					kit.run(save, msg, function () {
+						return kit.post('produkte/' + d.id + '/shoptext', { short: shortF.value, description: longF.value });
+					}, 'Wird gespeichert …').then(function (res) { if (res) { ui.toast(res.message); kit.say(msg, res.message, false); } });
+				});
+				return h('div', { class: 'card' },
+					h('p', { class: 'muted', style: 'margin-top:0' }, 'Wählt der Kunde die Variante dieses Artikels, ersetzen diese Texte den Kurztext unter dem Preis und die Beschreibung im Reiter „Beschreibung“. Leer lassen = der Text des Produkts bleibt. Absätze durch eine Leerzeile trennen.'),
+					kit.field('Kurztext', shortF, 'Ein bis zwei Sätze, z. B. „Für Rennradschuhe mit SPD-SL-Cleats …“'),
+					kit.field('Beschreibung', longF),
+					h('div', { class: 'pf-actions' }, save), msg);
 			}
 
 			function photoCard(r, p, i) {

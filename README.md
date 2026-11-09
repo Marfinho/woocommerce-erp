@@ -455,7 +455,7 @@ Stückliste tauscht das Modul gegen das gewählte Geschwister.
 
 **Fotos je Variante**
 
-Fotos werden im ERP am Artikel hochgeladen (Reiter *Fotos*, Tabelle
+Fotos und Shop-Texte werden im ERP am Artikel gepflegt (Reiter *Fotos & Texte*, Tabelle
 `article_images`, optional auf Merkmale eingeschränkt). Die Produktseite
 tauscht beim Wählen einer Variante die Galerie gegen die Fotos des Artikels
 dahinter (`VariantGallery`, `assets/js/variant-gallery.js`); das erste Foto

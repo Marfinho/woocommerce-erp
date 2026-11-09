@@ -64,6 +64,44 @@ class ProduktFotos {
 		$route( $base, 'POST', array( __CLASS__, 'upload' ) );
 		$route( $base . '/(?P<fid>\d+)', 'POST', array( __CLASS__, 'update' ) );
 		$route( $base . '/(?P<fid>\d+)/entfernen', 'POST', array( __CLASS__, 'remove' ) );
+		$route( '/erp/produkte/(?P<id>\d+)/shoptext', 'POST', array( __CLASS__, 'save_texts' ) );
+	}
+
+	/**
+	 * Kurztext und Beschreibung der Shop-Variante speichern.
+	 *
+	 * Leer heißt: Der Shop zeigt den Text des Produkts.
+	 *
+	 * @param WP_REST_Request $request Anfrage: short, description.
+	 * @return WP_REST_Response
+	 */
+	public static function save_texts( WP_REST_Request $request ) {
+		global $wpdb;
+
+		$article = self::article( $request );
+
+		if ( ! $article ) {
+			return self::fail( __( 'Dieses Produkt gibt es nicht (mehr). Bitte die Seite neu laden.', 'lindenweg16' ), 404 );
+		}
+
+		$params = (array) $request->get_json_params();
+		$data   = array(
+			'shop_short'       => trim( wp_kses_post( (string) ( isset( $params['short'] ) ? $params['short'] : '' ) ) ),
+			'shop_description' => trim( wp_kses_post( (string) ( isset( $params['description'] ) ? $params['description'] : '' ) ) ),
+		);
+
+		$before = array(
+			'shop_short'       => isset( $article['shop_short'] ) ? (string) $article['shop_short'] : '',
+			'shop_description' => isset( $article['shop_description'] ) ? (string) $article['shop_description'] : '',
+		);
+
+		if ( false === $wpdb->update( ArticleRepository::table(), array_merge( $data, array( 'updated_at' => current_time( 'mysql', true ) ) ), array( 'id' => (int) $article['id'] ) ) ) {
+			return self::fail( __( 'Die Texte ließen sich nicht speichern. Bitte noch einmal versuchen.', 'lindenweg16' ), 500 );
+		}
+
+		\Lindenweg16\Modules\Betrieb\BetriebAudit::record( 'update', 'articles', (int) $article['id'], $before, $data, __( 'Shop-Texte der Variante', 'lindenweg16' ) );
+
+		return new WP_REST_Response( self::payload( ArticleRepository::find( (int) $article['id'] ), __( 'Texte gespeichert.', 'lindenweg16' ) ) );
 	}
 
 	/**
@@ -143,7 +181,33 @@ class ProduktFotos {
 			'variant' => isset( $article['wc_variant'] ) ? (string) $article['wc_variant'] : '',
 			'choices' => ArticleImages::choices( $article ),
 			'photos'  => $photos,
+			'texts'   => array(
+				'short'       => isset( $article['shop_short'] ) ? (string) $article['shop_short'] : '',
+				'description' => isset( $article['shop_description'] ) ? (string) $article['shop_description'] : '',
+			),
+			'modules' => self::modules( $article ),
 		);
+	}
+
+	/**
+	 * Module eines Sets, deren Hauptbild die Galerie des Sets ergänzt.
+	 *
+	 * @param array $article Artikel.
+	 * @return string[] Bezeichnungen.
+	 */
+	protected static function modules( array $article ) {
+		$out      = array();
+		$articles = ArticleRepository::all_by_id();
+
+		foreach ( \Lindenweg16\Modules\Betrieb\BomRepository::for_article( (int) $article['id'] ) as $row ) {
+			$row   = (array) $row;
+			$child = (int) $row['child_id'];
+			if ( 'artikel' === $row['child_type'] && ! empty( $articles[ $child ]['wc_product_id'] ) ) {
+				$out[] = $articles[ $child ]['sku'] . ' – ' . $articles[ $child ]['name'];
+			}
+		}
+
+		return $out;
 	}
 
 	/**

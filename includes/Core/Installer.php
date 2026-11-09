@@ -137,7 +137,7 @@ class Installer {
 	 * `pa_schuhsystem=spd`; siehe Modules\Betrieb\Variants). dbDelta legt die Spalte an, leer = ganzes Produkt.
 	 *
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
-	 * Modules\Betrieb\ArticleImages).
+	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 */
 	const DB_VERSION = '59';
 

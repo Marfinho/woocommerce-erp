@@ -2308,7 +2308,7 @@
 		api('produkte').then(function (d) { data = d; drawChips(); paintList(); }).catch(function (e) { box.textContent = ''; box.appendChild(h('div', { class: 'notice warn' }, e.message)); });
 	}
 
-	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['fotos', 'Fotos'], ['shop', 'Shop']];
+	var PRODUCT_TABS = [['', 'Übersicht'], ['stamm', 'Stammdaten'], ['rev', '3MF und Revisionen'], ['bom', 'Stückliste'], ['calc', 'Kalkulation'], ['beschaffung', 'Beschaffung'], ['fotos', 'Fotos & Texte'], ['shop', 'Shop']];
 
 	function viewProduct(id, sub) {
 		var f = findItem('artikel');

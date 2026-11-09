@@ -8,6 +8,9 @@
  * Bei jeder Änderung wird die passende Folge gesucht und die Galerie
  * ersetzt; WooCommerce startet sie neu (Slider, Zoom, Lightbox).
  *
+ * Dazu Kurztext (post-excerpt) und Beschreibung (Reiter „Beschreibung“):
+ * texts[i] mit {short, long}; leer oder texts[0] = Text des Produkts.
+ *
  * Klassisches ES5, keine Abhängigkeit außer jQuery und wc-single-product.
  */
 (function () {
@@ -17,7 +20,16 @@
 	if (!D || !D.sets || !D.variations) { return; }
 
 	var current = 0;
+	var currentText = 0;
 	var timer = null;
+	var original = { short: null, long: null };
+
+	function textTargets() {
+		return {
+			short: document.querySelector('.wp-block-post-excerpt__excerpt, .woocommerce-product-details__short-description'),
+			long: document.querySelector('#tab-description')
+		};
+	}
 
 	// Gewählte Ausprägungen: attribute_pa_farbe => weiss.
 	function selected() {
@@ -39,8 +51,8 @@
 		return out;
 	}
 
-	// Die Bildfolge der gewählten Variante; 0 = Galerie des Produkts.
-	function setFor(sel) {
+	// Die gewählte Variante oder null.
+	function variationFor(sel) {
 		for (var i = 0; i < D.variations.length; i++) {
 			var v = D.variations[i];
 			var ok = true;
@@ -51,10 +63,24 @@
 				if (sel[key] === undefined || (want !== '' && sel[key] !== want)) { ok = false; break; }
 			}
 
-			if (ok) { return v.set; }
+			if (ok) { return v; }
 		}
 
-		return 0;
+		return null;
+	}
+
+	function showText(index) {
+		if (index === currentText || !D.texts) { return; }
+		var t = textTargets();
+		var text = D.texts[index] || null;
+
+		['short', 'long'].forEach(function (part) {
+			if (!t[part] || original[part] === null) { return; }
+			// Markup vom Server (wp_kses_post), sonst der ursprüngliche Text.
+			t[part].innerHTML = text && text[part] ? text[part] : original[part];
+		});
+
+		currentText = index;
 	}
 
 	function show(index) {
@@ -91,7 +117,9 @@
 
 	function update() {
 		timer = null;
-		show(setFor(selected()));
+		var v = variationFor(selected());
+		show(v ? v.set : 0);
+		showText(v && v.text ? v.text : 0);
 	}
 
 	function later() {
@@ -100,6 +128,10 @@
 	}
 
 	function start() {
+		var t = textTargets();
+		if (t.short) { original.short = t.short.innerHTML; }
+		if (t.long) { original.long = t.long.innerHTML; }
+
 		var form = document.querySelector('.wc-block-add-to-cart-with-options, form.variations_form') || document.body;
 
 		if (window.MutationObserver) {
