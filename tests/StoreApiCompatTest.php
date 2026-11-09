@@ -26,21 +26,6 @@ class StoreApiCompatTest extends TestCase {
 	}
 
 	/**
-	 * Leere Rechnungsfelder kommen aus der Lieferadresse, die E-Mail nie.
-	 */
-	public function test_billing_from_falls_back_to_shipping() {
-		$out = StoreApiCompat::billing_from(
-			array( 'city' => 'Hamburg', 'country' => 'DE', 'email' => '' ),
-			array( 'city' => 'Berlin', 'postcode' => '10115', 'address_1' => 'Musterstr. 1', 'email' => 'x@example.com' )
-		);
-		$this->assertSame( 'Hamburg', $out['city'] );
-		$this->assertSame( '10115', $out['postcode'] );
-		$this->assertSame( 'Musterstr. 1', $out['address_1'] );
-		$this->assertSame( '', $out['email'] );
-		$this->assertCount( 11, $out );
-	}
-
-	/**
 	 * Die Kasse schickt die Neuberechnung als PUT (Method-Override); der Fix muss sie sehen.
 	 */
 	public function test_handles_put_from_method_override() {
@@ -52,11 +37,23 @@ class StoreApiCompatTest extends TestCase {
 	}
 
 	/**
-	 * Ohne geladene Kundendaten wird der Warenkorb geladen statt aufzugeben.
+	 * Für den Kassenstand fällt nur die Neuberechnung weg, alles andere bleibt.
 	 */
-	public function test_loads_cart_before_giving_up() {
+	public function test_query_for_state_drops_calc_totals_only() {
+		$this->assertSame(
+			array( '_locale' => 'site' ),
+			StoreApiCompat::query_for_state( array( '__experimental_calc_totals' => 'true', '_locale' => 'site', '_method' => 'PUT' ) )
+		);
+	}
+
+	/**
+	 * Keine Adresse ergänzen und nie in den Bestellpfad: Die Antwort kommt von GET /checkout.
+	 */
+	public function test_answers_with_checkout_state_instead_of_injecting() {
 		$src = file_get_contents( dirname( __DIR__ ) . '/includes/Core/StoreApiCompat.php' );
-		$this->assertStringContainsString( 'wc_load_cart()', $src );
+		$this->assertStringContainsString( "new \\WP_REST_Request( 'GET', self::ROUTE )", $src );
+		$this->assertStringContainsString( 'return rest_do_request( $get );', $src );
+		$this->assertStringNotContainsString( "set_param( 'billing_address'", $src, 'Eine ergänzte Adresse schob die Neuberechnung in die Bestellprüfung.' );
 		$this->assertStringNotContainsString( "'POST' !== \$request->get_method()", $src, 'Nur POST zu prüfen übersieht die PUT-Neuberechnung der Kasse.' );
 	}
 }
