@@ -18,6 +18,7 @@ Befunde aus dem Testkauf vom 9. November.
 
 ### Geändert
 - Nachbestellbare Ware ohne Bestand heißt im Shop „Wird für dich gefertigt – Versand in ca. X Tagen“ statt „Zurzeit nicht auf Lager – lieferbar in ca. X Tagen“. Nicht nachbestellbare Ware behält den alten Text. Tests: `tests/ShopVerfuegbarkeitTest.php`.
+- Theme 1.9.14, Startseite: Der Hero-Aufkleber heißt „Lagerware in 48 h“ statt „Versand in 48 h“. Sets werden nach der Bestellung gefertigt und brauchen länger.
 
 ## [0.99.0] – 2026-11-09
 
