@@ -27,5 +27,6 @@ class GutscheinModule {
 	public function register() {
 		( new Produkt() )->register();
 		( new Versand() )->register();
+		( new WertPflicht() )->register();
 	}
 }

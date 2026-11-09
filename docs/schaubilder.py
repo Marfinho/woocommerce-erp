@@ -714,6 +714,20 @@ sb('adm-kasse|Wie die Anmeldung abläuft', 'Eine Event-Anmeldung',
    ext('Absage über denselben Link', ''),
    erp('Erster der Warteliste rückt nach', 'Gruppen nur geschlossen'))
 
+sb('adm-kasse|Weihnachts-Leiste im Shop', 'Die Leiste durch die Saison',
+   du('Stichtag eintragen', 'Einstellungen → Plugin → Marketing'),
+   erp('Ab 1. November', '„Bestellt bis … – rechtzeitig unterm Baum“'),
+   erp('Nach dem Stichtag', 'Gutschein-Hinweis bis 23. Dezember'),
+   ext('Kunde schließt die Leiste', 'bleibt für diese Phase zu'),
+   ok('Ab 24. Dezember weg', 'nächstes Jahr wieder von selbst'))
+
+sb('adm-kasse|Bewertungen von Gastkäufern', 'Vom Kauf zur Bewertung ohne Kundenkonto',
+   ext('Kunde bestellt als Gast', ''),
+   erp('Bewertungsmail nach 12 Tagen', 'je Produkt ein persönlicher Link'),
+   ext('Klickt den Link', 'Formular offen, Name und E-Mail vorbelegt'),
+   erp('Prüft die E-Mail gegen die Käufe', 'fremde Adresse wird abgelehnt'),
+   ok('Bewertung mit „verifizierter Besitzer“', ''))
+
 sb('adm-berichte', 'Ziele, Rückblick und Abschluss',
    du('Quartal wählen, Ziele eintragen', 'leer = kein Ziel'),
    erp('Rechnet beim Rasterwechsel um', 'Summen verteilt, Quoten bleiben'),

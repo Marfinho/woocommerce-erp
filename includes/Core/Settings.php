@@ -76,6 +76,9 @@ class Settings {
 			'postpurchase_review_tage'  => 12,
 			'review_bonus_punkte'       => 20,
 			'review_min_zeichen'        => 15,
+			// Weihnachts-Leiste im Shop.
+			'weihnacht_leiste'          => 1,
+			'weihnacht_stichtag'        => '14.12.',
 			// Betrieb.
 			'betrieb_color_attribute'   => 'pa_farbe',
 			'betrieb_default_color'     => 'anthrazit',
