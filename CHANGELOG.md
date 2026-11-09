@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.97.6] – 2026-11-09
+
+### Behoben
+- Kasse: Der rote Fehler „Fehlende(r) Parameter: billing_address“ kam trotz 0.97.4 weiter. Die Neuberechnung schickt WooCommerce selbst (nicht nur der reCAPTCHA-Schutz von PayPal), und zwar als POST mit „X-HTTP-Method-Override: PUT“; der Fix prüfte nur auf POST und griff nie. Er gilt jetzt für POST, PUT und PATCH und lädt den Warenkorb, falls die Kundendaten vor dem Routenaufruf noch nicht geladen sind.
+
 ## [0.97.5] – 2026-11-08
 
 ### Neu
