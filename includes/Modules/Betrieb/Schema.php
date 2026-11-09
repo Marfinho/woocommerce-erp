@@ -44,6 +44,7 @@ class Schema {
 			name VARCHAR(255) NOT NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'entwicklung',
 			wc_product_id BIGINT UNSIGNED NULL,
+			wc_variant VARCHAR(190) NOT NULL DEFAULT '',
 			legacy_produkt_id BIGINT UNSIGNED NULL,
 			sourcing_type VARCHAR(20) NOT NULL DEFAULT 'druck',
 			sellable TINYINT(1) NOT NULL DEFAULT 1,

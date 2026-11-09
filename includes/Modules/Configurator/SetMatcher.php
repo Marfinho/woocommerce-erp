@@ -28,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
+use Lindenweg16\Modules\Betrieb\Variants;
 
 /**
  * Findet Sets und gleicht Konfigurationen mit ihnen ab.
@@ -69,18 +70,148 @@ class SetMatcher {
 				continue;
 			}
 
-			$sets[] = array_merge(
-				array(
-					'article'       => $parent_id,
-					'sku'           => (string) $article['sku'],
-					'name'          => (string) $article['name'],
-					'wc_product_id' => (int) $article['wc_product_id'],
-				),
-				$set
-			);
+			// Ein Set mit wählbaren Modulen (Holz am Basismodul, Typ am
+			// Schuhhalter) gibt es in jeder Kombination: je eine Fassung
+			// mit den tatsächlichen Teilen und den Merkmalen, die die
+			// Variante des Set-Produkts auswählen.
+			foreach ( self::variants_of( $set, $parts, $articles ) as $variant ) {
+				$sets[] = array_merge(
+					array(
+						'article'       => $parent_id,
+						'sku'           => (string) $article['sku'],
+						'name'          => (string) $article['name'],
+						'wc_product_id' => (int) $article['wc_product_id'],
+					),
+					$variant
+				);
+			}
 		}
 
 		return $sets;
+	}
+
+	/**
+	 * Höchstzahl der Fassungen eines Sets – gegen eine Kombinationsexplosion.
+	 */
+	const MAX_VARIANTS = 64;
+
+	/**
+	 * Die Fassungen eines Sets nach Wahl der Varianten.
+	 *
+	 * Jedes Teil der Stückliste darf gegen ein Geschwister (gleiches
+	 * Shop-Produkt, andere Shop-Variante) getauscht werden, sofern es ein
+	 * Konfigurator-Teil ist. Kombinationen mit widersprüchlichen Merkmalen
+	 * (zwei Schuhhalter, einer SPD, einer SPD-SL) entfallen: Das Set-Produkt
+	 * kennt je Merkmal nur eine Wahl.
+	 *
+	 * @param array $set      {base, modules} aus from_rows().
+	 * @param array $parts    Teile nach Artikel-ID.
+	 * @param array $articles Artikel nach ID.
+	 * @return array Liste von {base, modules, attrs, variant}.
+	 */
+	protected static function variants_of( array $set, array $parts, array $articles ) {
+		$groups = Variants::groups( $articles );
+
+		$siblings = static function ( $child ) use ( $groups, $articles, $parts ) {
+			$product = isset( $articles[ $child ]['wc_product_id'] ) ? (int) $articles[ $child ]['wc_product_id'] : 0;
+			$group   = $product && isset( $groups[ $product ] ) ? $groups[ $product ] : array( $child => array() );
+			$out     = array();
+
+			if ( ! isset( $group[ $child ] ) ) {
+				$group[ $child ] = Variants::parse( isset( $articles[ $child ]['wc_variant'] ) ? (string) $articles[ $child ]['wc_variant'] : '' );
+			}
+
+			foreach ( $group as $id => $pairs ) {
+				if ( (int) $id === (int) $child || ( $pairs && isset( $parts[ (int) $id ] ) ) ) {
+					$out[ (int) $id ] = (int) $id === (int) $child ? $group[ $child ] : $pairs;
+				}
+			}
+
+			return $out;
+		};
+
+		// Slots: das Basismodul und je Modul so viele Plätze wie Stück.
+		$slots = array( array( 'role' => 'base', 'options' => $siblings( (int) $set['base'] ) ) );
+		foreach ( $set['modules'] as $child => $qty ) {
+			for ( $i = 0; $i < (int) $qty; $i++ ) {
+				$slots[] = array( 'role' => 'module', 'options' => $siblings( (int) $child ) );
+			}
+		}
+
+		$combos = array(
+			array(
+				'base'    => 0,
+				'modules' => array(),
+				'attrs'   => array(),
+			),
+		);
+
+		foreach ( $slots as $slot ) {
+			$next = array();
+
+			foreach ( $combos as $combo ) {
+				foreach ( $slot['options'] as $id => $pairs ) {
+					$attrs = $combo['attrs'];
+					$clash = false;
+
+					foreach ( $pairs as $key => $value ) {
+						if ( isset( $attrs[ $key ] ) && $attrs[ $key ] !== $value ) {
+							$clash = true;
+							break;
+						}
+						$attrs[ $key ] = $value;
+					}
+
+					if ( $clash ) {
+						continue;
+					}
+
+					$new          = $combo;
+					$new['attrs'] = $attrs;
+
+					if ( 'base' === $slot['role'] ) {
+						$new['base'] = (int) $id;
+					} else {
+						$new['modules'][ (int) $id ] = ( isset( $new['modules'][ (int) $id ] ) ? $new['modules'][ (int) $id ] : 0 ) + 1;
+					}
+
+					$next[] = $new;
+
+					if ( count( $next ) > self::MAX_VARIANTS * 4 ) {
+						break 2;
+					}
+				}
+			}
+
+			$combos = $next;
+		}
+
+		$out  = array();
+		$seen = array();
+
+		foreach ( $combos as $combo ) {
+			ksort( $combo['modules'] );
+			ksort( $combo['attrs'] );
+			$key = $combo['base'] . '|' . http_build_query( $combo['modules'] );
+
+			if ( isset( $seen[ $key ] ) ) {
+				continue;
+			}
+
+			$seen[ $key ] = true;
+			$out[]        = array(
+				'base'    => $combo['base'],
+				'modules' => $combo['modules'],
+				'attrs'   => $combo['attrs'],
+				'variant' => Variants::format( $combo['attrs'] ),
+			);
+
+			if ( count( $out ) >= self::MAX_VARIANTS ) {
+				break;
+			}
+		}
+
+		return $out;
 	}
 
 	/**

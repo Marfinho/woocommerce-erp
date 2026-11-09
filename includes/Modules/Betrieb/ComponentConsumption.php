@@ -281,6 +281,18 @@ class ComponentConsumption {
 	}
 
 	/**
+	 * Kleinteile in gegebener Menge abbuchen (gepacktes Set).
+	 *
+	 * @param array  $needed   component_id => Menge.
+	 * @param string $ref_type Herkunft.
+	 * @param int    $ref_id   Herkunfts-ID.
+	 * @return array
+	 */
+	public static function book_components( array $needed, $ref_type, $ref_id ) {
+		return self::book( $needed, $ref_type, $ref_id );
+	}
+
+	/**
 	 * Verpackungsmaterial einer Bestellung pauschal abbuchen.
 	 *
 	 * @param int $order_op_id Bestellung.

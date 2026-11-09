@@ -99,7 +99,7 @@ class Forecast {
 			return $cached;
 		}
 
-		$map = \Lindenweg16\Modules\Betrieb\StockOwnership::article_map();
+		$ctx = \Lindenweg16\Modules\Betrieb\OrderLines::context();
 		$out = array();
 
 		$orders = wc_get_orders(
@@ -113,10 +113,9 @@ class Forecast {
 
 		foreach ( (array) $orders as $order ) {
 			foreach ( $order->get_items() as $item ) {
-				$article_id = isset( $map[ (int) $item->get_product_id() ] ) ? (int) $map[ (int) $item->get_product_id() ] : 0;
-
-				if ( $article_id ) {
-					$out[ $article_id ] = ( isset( $out[ $article_id ] ) ? $out[ $article_id ] : 0.0 ) + (float) $item->get_quantity();
+				foreach ( \Lindenweg16\Modules\Betrieb\OrderLines::for_item( $item, $ctx ) as $line ) {
+					$article_id         = (int) $line['article_id'];
+					$out[ $article_id ] = ( isset( $out[ $article_id ] ) ? $out[ $article_id ] : 0.0 ) + (float) $line['qty'];
 				}
 			}
 		}

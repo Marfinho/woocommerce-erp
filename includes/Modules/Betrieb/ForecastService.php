@@ -646,7 +646,7 @@ class ForecastService {
 
 		$cur_start = strtotime( Period::bucket( 'woche', self::today() )['von'] . ' UTC' );
 		$start     = $cur_start - (int) $weeks * 7 * DAY_IN_SECONDS;
-		$map       = StockOwnership::article_map();
+		$ctx       = OrderLines::context();
 		$out       = array();
 		$page      = 1;
 
@@ -669,21 +669,20 @@ class ForecastService {
 					continue;
 				}
 
+				// Die Variante entscheidet den Artikel; ein gepacktes Set zählt
+				// als Verkauf seiner Module, denn deren Bestand geht ab.
 				foreach ( $order->get_items() as $item ) {
-					$article_id = isset( $map[ (int) $item->get_product_id() ] ) ? (int) $map[ (int) $item->get_product_id() ] : 0;
+					foreach ( OrderLines::for_item( $item, $ctx ) as $line ) {
+						$article_id = (int) $line['article_id'];
+						$color      = (string) $line['color'];
+						$qty        = (float) $line['qty'];
 
-					if ( ! $article_id ) {
-						continue;
-					}
-
-					$color = ColorRegistry::resolve_order_item( $item )['color'];
-					$qty   = (float) $item->get_quantity();
-
-					foreach ( array( $color, '*' ) as $c ) {
-						if ( ! isset( $out[ $article_id ][ $c ] ) ) {
-							$out[ $article_id ][ $c ] = array_fill( 0, (int) $weeks, 0.0 );
+						foreach ( array( $color, '*' ) as $c ) {
+							if ( ! isset( $out[ $article_id ][ $c ] ) ) {
+								$out[ $article_id ][ $c ] = array_fill( 0, (int) $weeks, 0.0 );
+							}
+							$out[ $article_id ][ $c ][ $i ] += $qty;
 						}
-						$out[ $article_id ][ $c ][ $i ] += $qty;
 					}
 				}
 			}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.99.2">
+<meta name="anleitung-stand" content="0.99.3">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.2</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.3</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.2</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.3</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -3932,6 +3932,56 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Fast immer steht in seiner Stückliste ein Artikel, der im Konfigurator kein Teil ist – dann kann der Kunde das Set gar nicht nachbauen. Abhilfe: das fehlende Modul als Teil im Konfigurator anlegen oder die Stückliste des Sets berichtigen. Ein Set, das teurer wäre als seine Teile einzeln, schlägt der Konfigurator ebenfalls nicht vor.</p>
 </div>
 
+<h3 id="adm-varianten">Varianten: Farbe, Holz und Schuhsystem</h3>
+<!-- schaubild:adm-stammdaten|Varianten: Farbe, Holz und Schuhsystem -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Ein Shop-Produkt, mehrere Artikel">
+<div class="sb-kopf">Schaubild · Ein Shop-Produkt, mehrere Artikel</div>
+<ol class="fluss c5">
+	<li class="du"><b>Je Typ oder Holz ein Artikel</b><span>eigene Stückliste, eigenes Druckteil oder Brett</span></li>
+	<li class="du"><b>Shop-Produkt + Shop-Variante</b><span>z. B. Schuhsystem: SPD, Farbe bleibt frei</span></li>
+	<li class="ext"><b>Kunde wählt im Shop</b><span>Farbe und Typ bzw. Holz, auch im Set</span></li>
+	<li class="erp"><b>Variante → Artikel</b><span>Set: Module nach Wahl getauscht und gepackt</span></li>
+	<li class="ok"><b>Richtiger Abgang und Bestand</b><span>je Variante, je Farbe, Set nach Modulen</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:adm-stammdaten|Varianten: Farbe, Holz und Schuhsystem -->
+
+<p>Im Shop gibt es jedes Produkt nur einmal. Die Varianten wählt der Kunde auf der Produktseite: bei den Modulen die <strong>Farbe</strong>, beim Basismodul (BSM) <strong>Farbe und Holz</strong>, beim Schuhhalter (SHR) <strong>Farbe und Typ</strong> (SPD, SPD-SL …). Im ERP ist jeder Typ und jedes Holz ein <strong>eigener Artikel</strong>, denn ein Schuhhalter für SPD-SL ist ein anderes Druckteil als einer für SPD, und ein Basismodul aus Walnuss braucht ein anderes Brett als eines aus Fichte. Die Farbe bleibt, was sie war: Sie wird innerhalb eines Artikels geführt, wie bisher.</p>
+
+<h4>Einrichten im Shop</h4>
+<ol>
+	<li>Unter <span class="weg">Produkte → Attribute</span> je Merkmal ein Attribut anlegen, z. B. <em>Holz</em> (Kürzel <code>holz</code>, im Shop dann <code>pa_holz</code>) mit Fichte, Ahorn, Walnuss und <em>Schuhsystem</em> (<code>pa_schuhsystem</code>) mit SPD, SPD-SL. Bitte globale Attribute nehmen, keine am Produkt eingetippten – deren Kürzel ändern sich, sobald jemand die Schreibweise anpasst.</li>
+	<li>Das Produkt auf <em>Variables Produkt</em> stellen, Farbe und Holz bzw. Schuhsystem als „Für Varianten verwenden“ markieren und die Varianten anlegen (<em>Varianten aus allen Attributen erstellen</em>).</li>
+	<li>Bestand muss an den Varianten nicht gepflegt werden. Das ERP schreibt ihn selbst; die Felder sind gesperrt.</li>
+</ol>
+
+<h4>Einrichten im ERP</h4>
+<ol>
+	<li>Je Typ bzw. Holz einen Artikel anlegen, z. B. <code>M-SHR-SPD</code> und <code>M-SHR-SPDSL</code>, jeder mit seiner eigenen Stückliste (eigenes Druckteil, Klemmring, Schrauben). Am schnellsten geht das, indem man den bisherigen Artikel als Vorlage nimmt.</li>
+	<li>In den Stammdaten jedes dieser Artikel dasselbe <strong>Shop-Produkt</strong> wählen und darunter die <strong>Shop-Variante</strong>, für die er steht, z. B. <em>Schuhsystem: SPD</em>. Die Auswahl zeigt die Merkmale des Shop-Produkts (ohne Farbe).</li>
+	<li>Der Preis steht wie immer am Artikel. Beim Speichern bekommen genau die Varianten des Shop-Produkts diesen Preis, hinter denen der Artikel steht. So kann Walnuss teurer sein als Fichte.</li>
+	<li>Für den Konfigurator jeden dieser Artikel als eigenes Teil anlegen, mit eigenem Modell. Im Konfigurator erscheinen sie dann nebeneinander, z. B. „Schuhhalter SPD“ und „Schuhhalter SPD-SL“.</li>
+</ol>
+
+<p>Ein Artikel, an dem keine Shop-Variante steht, gilt für das ganze Produkt, so wie bisher. Hat ein Produkt nur einen Artikel, muss nichts eingetragen werden. Die Systemprüfung meldet zwei Artikel auf demselben Produkt nur dann als Fehler, wenn sie für dieselbe Variante stehen.</p>
+
+<h4>Was dann passiert</h4>
+<ul>
+	<li><strong>Verkauf:</strong> Bestellt ein Kunde „Schuhhalter, Schwarz, SPD-SL“, bucht das ERP den Abgang von <code>M-SHR-SPDSL</code> in Schwarz. Reservierung, Pickliste, Bedarf und Prognose rechnen genauso.</li>
+	<li><strong>Bestand im Shop:</strong> Jede Variante bekommt den freien Bestand ihres Artikels in ihrer Farbe.</li>
+	<li><strong>Keine passende Variante:</strong> Gibt es zu einer bestellten Variante keinen Artikel, wird auf den ersten Artikel des Produkts gebucht und im Ereignisprotokoll gemeldet. Eine Bestellung wird nie verworfen.</li>
+</ul>
+
+<h4>Sets mit Wahl</h4>
+<p>Steckt in einem Set ein Modul mit Varianten (der Schuhhalter in GARAGE und FULL STACK, das Basismodul in jedem Set), wählt der Kunde auch am Set Farbe, Holz und Typ. Dazu bekommt das Set-Produkt im Shop dieselben Attribute wie die Module (<code>pa_holz</code>, <code>pa_schuhsystem</code>). In der Stückliste des Sets bleibt der bisherige Artikel stehen, z. B. <code>M-SHR-SPD</code>. Beim Verkauf tauscht das ERP ihn gegen das gewählte Geschwister aus, also gegen den Artikel mit demselben Shop-Produkt und der gewählten Variante.</p>
+<p>Ein solches Set lässt sich nicht auf Vorrat montieren, weil erst die Bestellung sagt, was hineinkommt. Es wird deshalb <strong>beim Verkauf aus seinen Modulen gepackt</strong>: Abgebucht, reserviert und gepickt werden die Module in der Farbe des Sets, nicht das Set selbst. Kleinteile, die direkt in der Stückliste des Sets stehen (Beutel, Montageset), gehen dabei mit ab. Im Shop hat jede Set-Variante so viel Bestand, wie sich aus den freien Modulen packen lässt. Der Konfigurator erkennt ein Set auch dann, wenn der Kunde andere Varianten wählt (Walnuss, SPD-SL), und legt die passende Set-Variante in den Warenkorb.</p>
+
+<div class="kasten merke">
+	<span class="titel">Ab wann ein Set gepackt wird</span>
+	<p>Sobald in seiner Stückliste ein Modul steht, das Varianten hat. Das heißt: Sobald es neben <code>M-BSM</code> ein zweites Basismodul mit Holz-Variante gibt, werden alle Sets mit Basismodul beim Verkauf gepackt. Ein vorher montierter Set-Bestand wird dann nicht mehr abgebucht. Ihn am besten vorher per Korrektur in seine Module zurückbuchen.</p>
+</div>
+
 <h3 id="adm-ar">AR-Ansicht „An deiner Wand ansehen“</h3>
 <!-- schaubild:adm-stammdaten|AR-Ansicht „An deiner Wand ansehen“ -->
 <figure class="schaubild" role="group" aria-label="Schaubild: AR in fünf Schritten">
@@ -5398,7 +5448,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.2</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.3</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

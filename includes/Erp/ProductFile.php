@@ -23,7 +23,7 @@ class ProductFile {
 	/**
 	 * Felder des Artikelformulars.
 	 */
-	const ARTICLE_FIELDS = array( 'sku', 'name', 'status', 'sourcing_type', 'sellable', 'discountable', 'default_bin_id', 'wc_product_id', 'price_gross', 'dealer_price', 'weight_g', 'postprocessing_min', 'load_rating_kg', 'barcode', 'notes' );
+	const ARTICLE_FIELDS = array( 'sku', 'name', 'status', 'sourcing_type', 'sellable', 'discountable', 'default_bin_id', 'wc_product_id', 'wc_variant', 'price_gross', 'dealer_price', 'weight_g', 'postprocessing_min', 'load_rating_kg', 'barcode', 'notes' );
 
 	/**
 	 * Felder des Revisionsformulars.

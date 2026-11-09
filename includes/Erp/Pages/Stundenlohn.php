@@ -78,13 +78,8 @@ class Stundenlohn {
 			return $ku ? (float) $gross : (float) $gross / 1.19;
 		};
 		$articles = ArticleRepository::all_by_id();
-		$by_wc    = array();
-		foreach ( $articles as $a ) {
-			if ( ! empty( $a['wc_product_id'] ) ) {
-				$by_wc[ (int) $a['wc_product_id'] ] = (int) $a['id'];
-			}
-		}
 
+		$vctx     = \Lindenweg16\Modules\Betrieb\Variants::context( $articles, \Lindenweg16\Modules\Betrieb\BomRepository::all_by_parent() );
 		$ctx      = \Lindenweg16\Modules\Betrieb\CalculationContext::build();
 		$settings = \Lindenweg16\Modules\Betrieb\CalculationContext::settings();
 		$costs    = array();
@@ -112,8 +107,7 @@ class Stundenlohn {
 				$orders[] = array( 'key' => $key, 'channel' => $channel, 'market' => '', 'handling_min' => $op && null !== $op['handling_minutes'] ? (float) $op['handling_minutes'] : null );
 
 				foreach ( $order->get_items() as $item ) {
-					$pid = (int) $item->get_variation_id() ? (int) $item->get_variation_id() : (int) $item->get_product_id();
-					$aid = isset( $by_wc[ $pid ] ) ? $by_wc[ $pid ] : ( isset( $by_wc[ (int) $item->get_product_id() ] ) ? $by_wc[ (int) $item->get_product_id() ] : 0 );
+					$aid = \Lindenweg16\Modules\Betrieb\OrderLines::article_for_item( $item, $vctx );
 					$qty = (float) $item->get_quantity() - abs( (float) $order->get_qty_refunded_for_item( $item->get_id() ) );
 					if ( $qty <= 0 ) {
 						continue;

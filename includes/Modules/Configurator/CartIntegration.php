@@ -226,6 +226,9 @@ class CartIntegration {
 			array(
 				'wc_product_id' => $set['wc_product_id'],
 				'name'          => $set['name'],
+				// Holz und Typ der gewählten Module wählen die Variante des
+				// Sets; beim Verkauf werden genau diese Module gepackt.
+				'wc_variant'    => isset( $set['variant'] ) ? (string) $set['variant'] : '',
 			),
 			$color
 		);

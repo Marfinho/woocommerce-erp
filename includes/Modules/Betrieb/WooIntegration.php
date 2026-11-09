@@ -188,38 +188,32 @@ class WooIntegration {
 
 		// Einmal laden statt je Position: Beide Tabellen sind klein, die
 		// Auflösung läuft aber je Position mehrfach durch sie hindurch.
-		$ctx = array(
-			'bom'      => BomRepository::all_by_parent(),
-			'articles' => ArticleRepository::all_by_id(),
-		);
+		// Dazu die Gruppen der Shop-Varianten: Welcher Artikel hinter welcher
+		// Variante steht und welche Sets aus ihren Modulen gepackt werden.
+		$ctx = OrderLines::context();
 
 		// Wurde die Bestellung gepickt, ist bekannt, aus welchem Fach die Ware
 		// kam. Ohne diese Zuordnung bliebe der Abgang platzlos und der
 		// Fachbestand stünde dauerhaft zu hoch.
-		$bins      = PicklistRepository::bins_for_order( (int) $order_id );
-		$zuordnung = StockOwnership::article_map();
+		$bins = PicklistRepository::bins_for_order( (int) $order_id );
 
 		// Erst alle Positionen sammeln, dann gegen das Konto rechnen: Was für
 		// diese Bestellung schon als Verkauf gebucht ist, wird nicht noch
 		// einmal gebucht (Wiederaufnahme nach einem abgebrochenen Lauf).
 		$lines = array();
 
+		$unclear = 0;
+
 		foreach ( $order->get_items() as $item ) {
-			$product_id = (int) $item->get_product_id();
-			$article_id = isset( $zuordnung[ $product_id ] ) ? $zuordnung[ $product_id ] : 0;
+			// Kein Betrieb-Artikel: keine Zeile, das Lager-Modul ist zuständig.
+			// Ein Set mit wählbaren Modulen ergibt eine Zeile je Modul.
+			foreach ( OrderLines::for_item( $item, $ctx ) as $line ) {
+				$lines[] = $line;
 
-			if ( ! $article_id ) {
-				// Kein Betrieb-Artikel: Das Lager-Modul ist zuständig.
-				continue;
+				if ( empty( $line['exact'] ) ) {
+					$unclear++;
+				}
 			}
-
-			$color   = ColorRegistry::resolve_order_item( $item );
-			$lines[] = array(
-				'article_id' => $article_id,
-				'color'      => $color['color'],
-				'resolved'   => $color['resolved_from'],
-				'qty'        => (float) $item->get_quantity(),
-			);
 		}
 
 		$open = StockLedger::unbooked( StockRepository::active_by_ref( 'wc_order', (int) $order_id ), $lines );
@@ -246,11 +240,7 @@ class WooIntegration {
 					'bin_id'        => isset( $bins[ $article_id ] ) ? $bins[ $article_id ] : 0,
 					'ref_type'      => 'wc_order',
 					'ref_id'        => (int) $order_id,
-					'note'          => sprintf(
-						/* translators: %s: Quelle der Farbzuordnung. */
-						__( 'Farbe ermittelt aus: %s', 'lindenweg16' ),
-						$line['resolved']
-					),
+					'note'          => self::line_note( $line, $ctx ),
 				)
 			);
 
@@ -259,6 +249,17 @@ class WooIntegration {
 			}
 
 			ComponentConsumption::consume_for_sale( $article_id, $qty, 'wc_order', (int) $order_id );
+
+			// Kleinteile, die direkt im Set liegen (gepacktes Set), anteilig
+			// zur noch offenen Menge.
+			if ( ! empty( $line['components'] ) && $line['qty'] > 0 ) {
+				$share = $qty / (float) $line['qty'];
+				$parts = array();
+				foreach ( $line['components'] as $component_id => $need ) {
+					$parts[ (int) $component_id ] = (float) $need * $share;
+				}
+				ComponentConsumption::book_components( $parts, 'wc_order', (int) $order_id );
+			}
 
 			ComponentConsumption::book_assemblies(
 				ComponentConsumption::assemblies_at_sale( $article_id, $qty, $ctx ),
@@ -272,6 +273,9 @@ class WooIntegration {
 
 		$order->update_meta_data( self::META_BOOKED, current_time( 'mysql' ) );
 		Log::normal( 'lager', 'Bestellung #' . (int) $order_id . ' ins Lager gebucht (' . count( $lines ) . ' Positionen)', array( 'order_id' => (int) $order_id ) );
+		if ( $unclear ) {
+			Log::attention( 'lager', 'Bestellung #' . (int) $order_id . ': ' . $unclear . ' Position(en) ohne passende Shop-Variante - auf den ersten Artikel des Produkts gebucht', array( 'order_id' => (int) $order_id ) );
+		}
 		if ( $unresolved ) {
 			Log::attention( 'lager', 'Bestellung #' . (int) $order_id . ': ' . $unresolved . ' Position(en) ohne eindeutige Farbe gebucht', array( 'order_id' => (int) $order_id ) );
 			$order->add_order_note(
@@ -283,6 +287,36 @@ class WooIntegration {
 			);
 		}
 		$order->save();
+	}
+
+	/**
+	 * Buchungstext einer Lagerzeile.
+	 *
+	 * @param array $line Zeile aus OrderLines::for_item().
+	 * @param array $ctx  Kontext.
+	 * @return string
+	 */
+	protected static function line_note( array $line, array $ctx ) {
+		$note = sprintf(
+			/* translators: %s: Quelle der Farbzuordnung. */
+			__( 'Farbe ermittelt aus: %s', 'lindenweg16' ),
+			$line['resolved']
+		);
+
+		if ( ! empty( $line['set_id'] ) ) {
+			$set   = isset( $ctx['articles'][ (int) $line['set_id'] ] ) ? (array) $ctx['articles'][ (int) $line['set_id'] ] : array();
+			$note .= ' · ' . sprintf(
+				/* translators: %s: Artikelnummer des Sets. */
+				__( 'aus Set %s gepackt', 'lindenweg16' ),
+				isset( $set['sku'] ) ? $set['sku'] : '#' . (int) $line['set_id']
+			);
+		}
+
+		if ( empty( $line['exact'] ) ) {
+			$note .= ' · ' . __( 'Shop-Variante ohne passenden Artikel', 'lindenweg16' );
+		}
+
+		return $note;
 	}
 
 	/**
@@ -322,8 +356,10 @@ class WooIntegration {
 
 		// Einmal die Zuordnung Produkt zu Artikel, statt je Position eine
 		// Abfrage: Bei zweihundert offenen Bestellungen waren das schnell
-		// mehrere hundert Abfragen für eine einzige Pickliste.
-		$zuordnung = StockOwnership::article_map();
+		// mehrere hundert Abfragen für eine einzige Pickliste. Die Variante
+		// entscheidet den Artikel, ein Set mit wählbaren Modulen reserviert
+		// und pickt seine Module.
+		$ctx = OrderLines::context();
 
 		foreach ( (array) $orders as $order ) {
 			if ( $order->get_meta( self::META_BOOKED ) ) {
@@ -331,20 +367,15 @@ class WooIntegration {
 			}
 
 			foreach ( $order->get_items() as $item ) {
-				$product_id = (int) $item->get_product_id();
-				$article_id = isset( $zuordnung[ $product_id ] ) ? $zuordnung[ $product_id ] : 0;
-
-				if ( ! $article_id ) {
-					continue;
+				foreach ( OrderLines::for_item( $item, $ctx ) as $line ) {
+					$lines[] = array(
+						'article_id'  => (int) $line['article_id'],
+						'color'       => $line['color'],
+						'qty'         => (float) $line['qty'],
+						'wc_order_id' => (int) $order->get_id(),
+						'set_id'      => (int) $line['set_id'],
+					);
 				}
-
-				$color   = ColorRegistry::resolve_order_item( $item );
-				$lines[] = array(
-					'article_id'  => $article_id,
-					'color'       => $color['color'],
-					'qty'         => (float) $item->get_quantity(),
-					'wc_order_id' => (int) $order->get_id(),
-				);
 			}
 		}
 

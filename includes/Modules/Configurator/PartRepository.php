@@ -139,6 +139,7 @@ class PartRepository {
 				'sort_order'    => (int) $row['sort_order'],
 				'is_active'     => $active ? 1 : 0,
 				'wc_product_id' => (int) $article['wc_product_id'],
+				'wc_variant'    => isset( $article['wc_variant'] ) ? (string) $article['wc_variant'] : '',
 				'placement'     => ModelPlacement::for_browser( $row ),
 			);
 

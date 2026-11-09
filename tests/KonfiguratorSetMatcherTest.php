@@ -150,6 +150,56 @@ class KonfiguratorSetMatcherTest extends TestCase {
 
 		$this->assertSame( array(), SetMatcher::sets( $this->parts(), $this->articles(), $bom ) );
 	}
+	/**
+	 * Mit Holz- und Typ-Varianten gibt es das Set in jeder Kombination; der
+	 * Abgleich nennt die Merkmale, die die Set-Variante auswählen.
+	 */
+	public function test_set_mit_varianten() {
+		$parts                 = $this->parts();
+		$parts[12]             = array( 'role' => 'basis', 'name' => 'Basismodul Walnuss' );
+		$parts[11]             = array( 'role' => 'modul', 'name' => 'Schuhhalter SPD-SL' );
+		$articles              = $this->articles();
+		$articles[3]['wc_variant']  = 'pa_holz=fichte';
+		$articles[12]          = array_merge( $articles[3], array( 'id' => 12, 'sku' => 'M-BSM-WAL', 'wc_variant' => 'pa_holz=walnuss' ) );
+		$articles[10]['wc_variant'] = 'pa_schuhsystem=spd';
+		$articles[11]          = array_merge( $articles[10], array( 'id' => 11, 'sku' => 'M-SHR-SL', 'wc_variant' => 'pa_schuhsystem=spd-sl' ) );
+		$articles[25]          = array( 'id' => 25, 'sku' => 'S-SCHUH', 'name' => 'SCHUH', 'wc_product_id' => 492, 'status' => 'aktiv', 'sellable' => 1, 'pos_only' => 0 );
+		$bom                   = $this->bom();
+		$bom[25]               = array(
+			array( 'child_type' => 'artikel', 'child_id' => 3, 'qty' => '1' ),
+			array( 'child_type' => 'artikel', 'child_id' => 10, 'qty' => '1' ),
+		);
+
+		$sets  = SetMatcher::sets( $parts, $articles, $bom );
+		$schuh = array_values( array_filter( $sets, static function ( $set ) { return 'S-SCHUH' === $set['sku']; } ) );
+
+		$this->assertCount( 4, $schuh );
+
+		$set = SetMatcher::match( $sets, 12, array( array( 'article' => 11, 'pos' => 100 ) ) );
+
+		$this->assertSame( 'S-SCHUH', $set['sku'] );
+		$this->assertSame( 'pa_holz=walnuss&pa_schuhsystem=spd-sl', $set['variant'] );
+	}
+
+	/**
+	 * Zwei gleiche Module mit verschiedenem Typ passen in kein Set-Produkt.
+	 */
+	public function test_widerspruechliche_varianten_entfallen() {
+		$parts                      = $this->parts();
+		$parts[11]                  = array( 'role' => 'modul', 'name' => 'Schuhhalter SPD-SL' );
+		$articles                   = $this->articles();
+		$articles[10]['wc_variant'] = 'pa_schuhsystem=spd';
+		$articles[11]               = array_merge( $articles[10], array( 'id' => 11, 'sku' => 'M-SHR-SL', 'wc_variant' => 'pa_schuhsystem=spd-sl' ) );
+		$bom                        = $this->bom();
+		$bom[22]                    = array(
+			array( 'child_type' => 'artikel', 'child_id' => 3, 'qty' => '1' ),
+			array( 'child_type' => 'artikel', 'child_id' => 10, 'qty' => '2' ),
+		);
+		$sets = SetMatcher::sets( $parts, $articles, $bom );
+
+		$this->assertNull( SetMatcher::match( $sets, 3, array( array( 'article' => 10, 'pos' => 0 ), array( 'article' => 11, 'pos' => 300 ) ) ) );
+		$this->assertNotNull( SetMatcher::match( $sets, 3, array( array( 'article' => 11, 'pos' => 0 ), array( 'article' => 11, 'pos' => 300 ) ) ) );
+	}
 }
 
 /**

@@ -320,7 +320,11 @@ class Produkt {
 		$rows = array();
 
 		foreach ( (array) $products as $product ) {
-			$rows[] = array( 'id' => (int) $product->get_id(), 'label' => trim( $product->get_name() . ' ' . ( $product->get_sku() ? '(' . $product->get_sku() . ')' : '' ) ) );
+			$rows[] = array(
+				'id'       => (int) $product->get_id(),
+				'label'    => trim( $product->get_name() . ' ' . ( $product->get_sku() ? '(' . $product->get_sku() . ')' : '' ) ),
+				'variants' => \Lindenweg16\Modules\Betrieb\OrderLines::product_choices( $product ),
+			);
 		}
 
 		return $rows;
@@ -343,6 +347,7 @@ class Produkt {
 			'discountable'       => (bool) $a['discountable'],
 			'default_bin_id'     => (int) $a['default_bin_id'],
 			'wc_product_id'      => (int) $a['wc_product_id'],
+			'wc_variant'         => isset( $a['wc_variant'] ) ? (string) $a['wc_variant'] : '',
 			'price_gross'        => self::plain( $a['price_gross'] ),
 			'dealer_price'       => self::plain( $a['dealer_price'] ),
 			'weight_g'           => self::plain( $a['weight_g'] ),
@@ -371,6 +376,7 @@ class Produkt {
 					'discountable'       => true,
 					'default_bin_id'     => 0,
 					'wc_product_id'      => 0,
+					'wc_variant'         => '',
 					'price_gross'        => '',
 					'dealer_price'       => '',
 					'weight_g'           => '',

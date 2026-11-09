@@ -188,6 +188,31 @@
 		f.wc_product_id = options.shop.length
 			? kit.select(options.shop.map(function (p) { return { value: p.id, label: p.label }; }), a.wc_product_id, '— keine Verknüpfung —')
 			: kit.num(a.wc_product_id ? a.wc_product_id : '', { inputmode: 'numeric' });
+		// Shop-Variante: Für welche Variante des Shop-Produkts steht dieser Artikel?
+		// Die Auswahl richtet sich nach dem gewählten Produkt.
+		f.wc_variant = h('select', { class: 'field' });
+		function variantOptions() {
+			var pid = String(f.wc_product_id.value || '');
+			var product = options.shop.filter(function (p) { return String(p.id) === pid; })[0];
+			var list = product && product.variants ? product.variants : [];
+			var current = f.wc_variant.value || a.wc_variant || '';
+			f.wc_variant.innerHTML = '';
+			f.wc_variant.appendChild(h('option', { value: '' }, '— ganzes Produkt —'));
+			var found = current === '';
+			list.forEach(function (v) {
+				var op = h('option', { value: v.value }, v.label);
+				if (v.value === current) { op.selected = true; found = true; }
+				f.wc_variant.appendChild(op);
+			});
+			if (!found) {
+				var extra = h('option', { value: current }, current + ' (nicht im Shop-Produkt)');
+				extra.selected = true;
+				f.wc_variant.appendChild(extra);
+			}
+			f.wc_variant.disabled = !pid || pid === '0';
+		}
+		variantOptions();
+		f.wc_product_id.addEventListener('change', function () { f.wc_variant.value = ''; a.wc_variant = ''; variantOptions(); });
 		f.notes = kit.area(a.notes, 3);
 		f.reason = kit.text('', { placeholder: 'z. B. Preis nach Materialerhöhung angepasst' });
 
@@ -214,6 +239,8 @@
 			h('div', { class: 'pf-grid' },
 				kit.field('Barcode', f.barcode, 'Fremder Barcode zugekaufter Ware (EAN); wird beim Scannen erkannt.'),
 				kit.field(options.shop.length ? 'Shop-Produkt' : 'Shop-Produkt (Nummer)', f.wc_product_id, 'Nötig für Lagerabgang beim Verkauf und Produktbild.')),
+			h('div', { class: 'pf-grid' },
+				kit.field('Shop-Variante', f.wc_variant, 'Nur wenn mehrere Artikel hinter einem Shop-Produkt stehen, z. B. Schuhhalter SPD und SPD-SL: Für welchen Typ (welches Holz) steht dieser Artikel? Die Farbe wählt der Kunde zusätzlich, sie wird hier nicht festgelegt.')),
 			kit.field('Notiz', f.notes),
 			isNew ? null : kit.field('Begründung der Änderung', f.reason, 'Erscheint im Protokoll.'),
 			msg,
@@ -227,7 +254,7 @@
 				sellable: f.sellable.input.checked, discountable: f.discountable.input.checked,
 				price_gross: f.price_gross.value, dealer_price: f.dealer_price.value, weight_g: f.weight_g.value,
 				postprocessing_min: f.postprocessing_min.value, load_rating_kg: f.load_rating_kg.value, barcode: f.barcode.value,
-				default_bin_id: f.default_bin_id.value, wc_product_id: f.wc_product_id.value, notes: f.notes.value
+				default_bin_id: f.default_bin_id.value, wc_product_id: f.wc_product_id.value, wc_variant: f.wc_variant.value, notes: f.notes.value
 			};
 			if (!isNew) { body.reason = f.reason.value; }
 			kit.run(save, msg, function () {
