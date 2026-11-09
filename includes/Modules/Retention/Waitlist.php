@@ -56,6 +56,11 @@ class Waitlist {
 		if ( ! $product ) {
 			return;
 		}
+		// Wer ohne Bestand bestellen kann, braucht keine Warteliste: Die Seite
+		// zeigt dann „Wird für dich gefertigt“ mit Lieferzeit und den Warenkorb.
+		if ( \Lindenweg16\Modules\Betrieb\ForecastHooks::made_to_order( $product ) ) {
+			return;
+		}
 		// Zuständigkeit klären: Kennt Betrieb das Produkt, gilt sein
 		// Bewegungskonto. Der Bestand der abgelösten Verwaltung ist seit
 		// der Übernahme eine eingefrorene Zahl und taugt nicht mehr als

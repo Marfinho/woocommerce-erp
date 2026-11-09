@@ -214,7 +214,7 @@
 		} );
 	}
 
-	/* 4. Mini-Cart: Fortschritt bis zum kostenlosen Versand ------------ */
+	/* 4. Mini-Cart und Warenkorb: Fortschritt bis zum kostenlosen Versand */
 
 	function formatMoney( amount, fs ) {
 		var fixed = amount.toFixed( fs.decimals );
@@ -233,6 +233,9 @@
 				return number + ' ' + fs.symbol;
 		}
 	}
+
+	// Wo der Balken erscheint: Fuß des Mini-Carts und Kopf der Summen-Karte im Warenkorb.
+	var FREESHIP_TARGETS = '.wc-block-mini-cart__footer, .wc-block-cart .wp-block-woocommerce-cart-totals-block';
 
 	function initFreeShipping() {
 		var fs = config.freeShipping;
@@ -332,14 +335,14 @@
 		}
 
 		function renderAll() {
-			document.querySelectorAll( '.wc-block-mini-cart__footer' ).forEach( render );
+			document.querySelectorAll( FREESHIP_TARGETS ).forEach( render );
 		}
 
 		function refresh() {
 			loadCart().then( renderAll );
 		}
 
-		// Der Drawer wird erst beim Öffnen gerendert – darauf warten.
+		// Drawer und Warenkorb-Block werden erst nach dem Laden gerendert – darauf warten.
 		var observer = new MutationObserver( function ( mutations ) {
 			for ( var i = 0; i < mutations.length; i++ ) {
 				var added = mutations[ i ].addedNodes;
@@ -348,7 +351,7 @@
 					if ( node.nodeType !== 1 ) {
 						continue;
 					}
-					if ( node.matches( '.wc-block-mini-cart__footer' ) || node.querySelector( '.wc-block-mini-cart__footer' ) ) {
+					if ( node.matches( FREESHIP_TARGETS ) || node.querySelector( FREESHIP_TARGETS ) ) {
 						refresh();
 						return;
 					}
@@ -362,16 +365,16 @@
 			document.addEventListener( name, refresh );
 		} );
 
-		// Mengen im Drawer ändern: kurz warten, bis WooCommerce gespeichert hat.
+		// Mengen im Drawer oder Warenkorb ändern: kurz warten, bis WooCommerce gespeichert hat.
 		var debounce;
 		document.addEventListener( 'click', function ( event ) {
-			if ( event.target.closest && event.target.closest( '.wc-block-mini-cart__drawer .wc-block-components-quantity-selector, .wc-block-mini-cart__drawer .wc-block-cart-item__remove-link' ) ) {
+			if ( event.target.closest && event.target.closest( '.wc-block-mini-cart__drawer .wc-block-components-quantity-selector, .wc-block-mini-cart__drawer .wc-block-cart-item__remove-link, .wc-block-cart .wc-block-components-quantity-selector, .wc-block-cart .wc-block-cart-item__remove-link' ) ) {
 				window.clearTimeout( debounce );
 				debounce = window.setTimeout( refresh, 900 );
 			}
 		} );
 
-		if ( document.querySelector( '.wc-block-mini-cart__footer' ) ) {
+		if ( document.querySelector( FREESHIP_TARGETS ) ) {
 			refresh();
 		}
 	}

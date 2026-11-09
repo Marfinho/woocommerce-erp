@@ -78,7 +78,7 @@ $lindenweg16_shop = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_per
 				<!-- /wp:paragraph -->
 
 				<!-- wp:paragraph {"className":"is-style-sticker lw16-hero__sticker lw16-hero__sticker--bottom lw16-icon lw16-icon--truck","backgroundColor":"accent-4"} -->
-				<p class="is-style-sticker lw16-hero__sticker lw16-hero__sticker--bottom lw16-icon lw16-icon--truck has-accent-4-background-color has-background"><?php esc_html_e( 'Versand in 48 h', 'lindenweg16' ); ?></p>
+				<p class="is-style-sticker lw16-hero__sticker lw16-hero__sticker--bottom lw16-icon lw16-icon--truck has-accent-4-background-color has-background"><?php esc_html_e( 'Lagerware in 48 h', 'lindenweg16' ); ?></p>
 				<!-- /wp:paragraph -->
 			</div>
 			<!-- /wp:group -->

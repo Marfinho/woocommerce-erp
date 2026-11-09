@@ -105,11 +105,17 @@ class PostPurchase {
 		}
 		$bonus = (int) Settings::get( 'review_bonus_punkte', 20 );
 
+		// Persönlicher Link je Produkt: Auch wer als Gast bestellt hat, sieht damit
+		// das Bewertungsformular (siehe ReviewLink).
 		$links = array();
 		foreach ( $order->get_items() as $item ) {
-			$permalink = get_permalink( $item->get_product_id() );
-			if ( $permalink ) {
-				$links[] = $item->get_name() . ': ' . $permalink . '#reviews';
+			$product_id = (int) $item->get_product_id();
+			if ( isset( $links[ $product_id ] ) ) {
+				continue;
+			}
+			$url = ReviewLink::url( $order, $product_id );
+			if ( '' !== $url ) {
+				$links[ $product_id ] = $item->get_name() . ': ' . $url;
 			}
 		}
 

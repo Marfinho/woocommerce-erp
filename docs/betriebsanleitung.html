@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.99.0">
+<meta name="anleitung-stand" content="0.99.2">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.2</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.2</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -4479,6 +4479,56 @@ svg.sv{display:block;width:100%;height:auto}
 
 <p>Kosten kommen aus zugeordneten Belegen und aus der Kilometerpauschale (in den Einstellungen änderbar, wird als Eigenbeleg gebucht). Gegenübergestellt werden Marktkassenumsatz und nachgewiesener Shop-Umsatz. Daraus entstehen Umsatz je Euro Werbekosten und Kosten je Bestellung. Eine neue Kampagne legst du mit dem Knopf oben auf der Seite an.</p>
 
+<h3 id="adm-weihnachtsleiste">Weihnachts-Leiste im Shop</h3>
+<!-- schaubild:adm-kasse|Weihnachts-Leiste im Shop -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Die Leiste durch die Saison">
+<div class="sb-kopf">Schaubild · Die Leiste durch die Saison</div>
+<ol class="fluss c5">
+	<li class="du"><b>Stichtag eintragen</b><span>Einstellungen → Plugin → Marketing</span></li>
+	<li class="erp"><b>Ab 1. November</b><span>„Bestellt bis … – rechtzeitig unterm Baum“</span></li>
+	<li class="erp"><b>Nach dem Stichtag</b><span>Gutschein-Hinweis bis 23. Dezember</span></li>
+	<li class="ext"><b>Kunde schließt die Leiste</b><span>bleibt für diese Phase zu</span></li>
+	<li class="ok"><b>Ab 24. Dezember weg</b><span>nächstes Jahr wieder von selbst</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:adm-kasse|Weihnachts-Leiste im Shop -->
+
+<p><span class="weg">Profilmenü → Einstellungen → Plugin → Marketing</span></p>
+
+<p>Vom <strong>1. November</strong> bis zum Stichtag steht über dem Kopf jeder Shop-Seite eine schmale Leiste: <em>„Weihnachten: Bestellt bis 14.12. – rechtzeitig unterm Baum.“</em> mit einem Link in den Shop. Nach dem Stichtag wechselt sie bis einschließlich 23. Dezember zu <em>„Zu knapp für die Post? Ein Gutschein passt immer.“</em> mit Link zum Gutschein. Ab dem 24. Dezember erscheint nichts mehr, im nächsten Jahr beginnt sie von selbst wieder. In der Kasse steht die Leiste nie.</p>
+
+<ul>
+	<li><strong>Weihnachts-Leiste über dem Shop zeigen</strong> schaltet sie ganz ab oder an.</li>
+	<li><strong>Stichtag</strong> als <em>TT.MM.</em>, zum Beispiel <em>14.12.</em> Rechne vom Tag aus zurück, an dem ein Paket spätestens ankommen muss: Fertigung der Sets (etwa 7 Tage) plus DHL-Laufzeit im Weihnachtsgeschäft. Ein Datum vor dem 1. November oder ab dem 24. Dezember gilt nicht; dann nimmt der Shop den 14.12.</li>
+</ul>
+
+<p>Ein Kunde kann die Leiste mit dem Kreuz schließen. Sein Browser merkt sich das für die laufende Phase; zum Gutschein-Hinweis erscheint sie wieder.</p>
+
+<h3 id="adm-bewertung-gast">Bewertungen von Gastkäufern</h3>
+<!-- schaubild:adm-kasse|Bewertungen von Gastkäufern -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Vom Kauf zur Bewertung ohne Kundenkonto">
+<div class="sb-kopf">Schaubild · Vom Kauf zur Bewertung ohne Kundenkonto</div>
+<ol class="fluss c5">
+	<li class="ext"><b>Kunde bestellt als Gast</b></li>
+	<li class="erp"><b>Bewertungsmail nach 12 Tagen</b><span>je Produkt ein persönlicher Link</span></li>
+	<li class="ext"><b>Klickt den Link</b><span>Formular offen, Name und E-Mail vorbelegt</span></li>
+	<li class="erp"><b>Prüft die E-Mail gegen die Käufe</b><span>fremde Adresse wird abgelehnt</span></li>
+	<li class="ok"><b>Bewertung mit „verifizierter Besitzer“</b></li>
+</ol>
+<p class="sb-leg"><span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:adm-kasse|Bewertungen von Gastkäufern -->
+
+<p>Bewerten darf im Shop nur, wer das Produkt gekauft hat. WooCommerce erkennt das von sich aus nur bei angemeldeten Kunden, und die meisten bestellen als Gast. Die <strong>Bewertungsanfrage</strong> (<span class="weg">Einstellungen → Plugin → Kundenbindung</span>, standardmäßig 12 Tage nach Abschluss der Bestellung) enthält deshalb je Produkt einen <strong>persönlichen Link</strong>. Wer ihn öffnet, sieht auf der Produktseite das Bewertungsformular, Name (Vorname und Initial) und E-Mail aus der Bestellung sind schon eingetragen.</p>
+
+<p>Der Link gilt nur für die Produkte dieser einen Bestellung. Beim Absenden prüft WooCommerce die E-Mail-Adresse gegen die Käufe: Wer sie gegen eine fremde Adresse tauscht, wird abgelehnt. Angenommene Bewertungen tragen das Zeichen „verifizierter Besitzer“.</p>
+
+<div class="kasten merke">
+	<span class="titel">Punkte gibt es nur mit Kundenkonto</span>
+	<p>Der Text der Bewertungsanfrage verspricht Bonuspunkte. Punkte kann der Shop aber nur einem Kundenkonto gutschreiben. Ein Gast bekommt für seine Bewertung keine. Passe den Text unter <span class="weg">Einstellungen → E-Mail-Vorlagen</span> (Vorlage <em>Bewertungsanfrage</em>) an, wenn das missverständlich ist.</p>
+</div>
+
 <h3>Events</h3>
 <p>In WordPress: <span class="weg">Events</span> – ein eigener Menüpunkt neben Lindenweg16. Events werden wie Seiten im WordPress-Editor gepflegt und haben keine ERP-Seite.</p>
 
@@ -5348,7 +5398,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.2</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

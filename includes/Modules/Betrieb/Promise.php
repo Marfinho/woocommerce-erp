@@ -92,14 +92,55 @@ class Promise {
 	}
 
 	/**
-	 * Kurztext für die Produktseite im Shop - reine Regel.
+	 * Lieferzusage in Tagen, wenn das ERP keine Schätzung hat.
 	 *
-	 * @param int        $available Sofort verfügbar.
-	 * @param array|null $estimate  Ergebnis von earliest() für eine Einheit.
-	 * @param int        $low       Bis zu dieser Menge heißt es „nur noch“.
+	 * Eine bestellbare Ware ohne Lieferzeit darf es nicht geben: Die Lieferzeit
+	 * gehört vor dem Kauf auf die Seite. Sieben Tage entsprechen dem, was die
+	 * Sets mit Schätzung heute zeigen.
+	 */
+	const DEFAULT_MADE_TO_ORDER_DAYS = 7;
+
+	/**
+	 * Tage bis zum Versand aus einer Schätzung in Wochen - reine Regel.
+	 *
+	 * Rechnet wie die späte Zusage: 70 % der Kapazität plus Versandtage.
+	 *
+	 * @param float|null $weeks Wochen aus earliest(), null = keine Schätzung.
+	 * @return int
+	 */
+	public static function days_for_weeks( $weeks ) {
+		if ( null === $weeks ) {
+			return self::DEFAULT_MADE_TO_ORDER_DAYS;
+		}
+
+		return max( 1, (int) ceil( (float) $weeks / self::EFFICIENCY_LOW * 7 ) + self::SHIPPING_DAYS );
+	}
+
+	/**
+	 * Text für eine Ware, die nach der Bestellung gefertigt wird - reine Regel.
+	 *
+	 * @param int $days Tage bis zum Versand.
 	 * @return string
 	 */
-	public static function shop_text( $available, $estimate, $low = 3 ) {
+	public static function made_to_order_text( $days ) {
+		/* translators: %d: Tage. */
+		return sprintf( __( 'Wird für dich gefertigt – Versand in ca. %d Tagen', 'lindenweg16' ), max( 1, (int) $days ) );
+	}
+
+	/**
+	 * Kurztext für die Produktseite im Shop - reine Regel.
+	 *
+	 * Ist nichts am Lager, die Ware aber nachbestellbar, heißt sie „Wird für
+	 * dich gefertigt“ mit Versandzusage statt „Zurzeit nicht auf Lager“: Der
+	 * Kunde kann kaufen, und die Seite sagt ihm, wann es kommt.
+	 *
+	 * @param int        $available     Sofort verfügbar.
+	 * @param array|null $estimate      Ergebnis von earliest() für eine Einheit.
+	 * @param int        $low           Bis zu dieser Menge heißt es „nur noch“.
+	 * @param bool       $made_to_order Ware ist ohne Bestand bestellbar (Nachbestellung).
+	 * @return string
+	 */
+	public static function shop_text( $available, $estimate, $low = 3, $made_to_order = false ) {
 		if ( $available > $low ) {
 			return __( 'Auf Lager', 'lindenweg16' );
 		}
@@ -109,11 +150,15 @@ class Promise {
 			return sprintf( __( 'Nur noch %d auf Lager', 'lindenweg16' ), $available );
 		}
 
-		if ( is_array( $estimate ) && ! empty( $estimate['date_to'] ) && null !== $estimate['weeks'] ) {
-			$days = (int) ceil( $estimate['weeks'] / self::EFFICIENCY_LOW * 7 ) + self::SHIPPING_DAYS;
+		$has_estimate = is_array( $estimate ) && ! empty( $estimate['date_to'] ) && null !== $estimate['weeks'];
 
+		if ( $made_to_order ) {
+			return self::made_to_order_text( self::days_for_weeks( $has_estimate ? $estimate['weeks'] : null ) );
+		}
+
+		if ( $has_estimate ) {
 			/* translators: %d: Tage. */
-			return sprintf( __( 'Zurzeit nicht auf Lager - lieferbar in ca. %d Tagen', 'lindenweg16' ), max( 1, $days ) );
+			return sprintf( __( 'Zurzeit nicht auf Lager - lieferbar in ca. %d Tagen', 'lindenweg16' ), self::days_for_weeks( $estimate['weeks'] ) );
 		}
 
 		return __( 'Zurzeit nicht auf Lager', 'lindenweg16' );
