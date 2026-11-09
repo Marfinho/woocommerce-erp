@@ -3745,6 +3745,71 @@ table.variations select {
 	min-height: 52px;
 }
 
+/* Gutschein: Feld über die ganze Breite, Button darunter */
+.wc-block-components-totals-coupon__content {
+	padding-bottom: 4px;
+}
+
+.wc-block-components-totals-coupon__form {
+	display: flex !important;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 10px;
+}
+
+.wc-block-components-totals-coupon__form .wc-block-components-totals-coupon__input {
+	flex: none;
+	width: 100%;
+	margin: 0 !important;
+}
+
+.wc-block-components-totals-coupon__form .wc-block-components-totals-coupon__input input {
+	width: 100%;
+}
+
+.wc-block-components-totals-coupon__form .wc-block-components-totals-coupon__button {
+	width: 100%;
+	flex: none;
+	margin: 0 !important;
+	border-radius: var(--lw-r-field) !important;
+	font-weight: 700;
+}
+
+/*
+ * DHL-Wunschzustellung (Germanized): Auswahl als einzelne Karten statt einer
+ * eckigen Tabelle; die gewählte Option trägt den Primärrahmen.
+ */
+:is(.wc-gzd-dhl-preferred-location, .wc-gzd-dhl-preferred-delivery, [class*="dhl-preferred"], [class*="dhl-wunsch"]) :is(.wc-block-components-radio-control, .wc-block-components-radio-control--highlight-checked) {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+:is(.wc-gzd-dhl-preferred-location, .wc-gzd-dhl-preferred-delivery, [class*="dhl-preferred"], [class*="dhl-wunsch"]) :is(.wc-block-components-radio-control__option, .wc-block-components-radio-control-accordion-option) {
+	min-height: 52px;
+	margin: 0 !important;
+	padding: 0 16px 0 52px !important;
+	border: 1.5px solid var(--lw-line) !important;
+	border-radius: var(--lw-r-field) !important;
+	background: var(--lw-surface-muted);
+	box-shadow: none !important;
+	transition: border-color var(--lw-fast) ease, background-color var(--lw-fast) ease;
+}
+
+:is(.wc-gzd-dhl-preferred-location, .wc-gzd-dhl-preferred-delivery, [class*="dhl-preferred"], [class*="dhl-wunsch"]) .wc-block-components-radio-control__option:hover {
+	border-color: var(--lw-text-muted) !important;
+}
+
+:is(.wc-gzd-dhl-preferred-location, .wc-gzd-dhl-preferred-delivery, [class*="dhl-preferred"], [class*="dhl-wunsch"]) :is(.wc-block-components-radio-control__option--checked-option-highlighted, .wc-block-components-radio-control__option:has(input:checked)) {
+	border-color: var(--lw-primary) !important;
+	background: var(--lw-surface);
+	box-shadow: var(--lw-ring) !important;
+}
+
+:is(.wc-gzd-dhl-preferred-location, .wc-gzd-dhl-preferred-delivery, [class*="dhl-preferred"], [class*="dhl-wunsch"]) .wc-block-components-radio-control--highlight-checked::after {
+	display: none !important;
+}
+
 .wc-block-components-panel__button,
 .wc-block-components-totals-coupon-link {
 	color: var(--lw-text) !important;

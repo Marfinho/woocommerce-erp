@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.0] – 2026-11-09
+
+### Behoben
+- Theme 1.9.5, Kasse: Das Gutschein-Feld steht über die ganze Breite, der Button „Anwenden“ darunter. Die DHL-Wunschort-Auswahl (Keine, Ablageort, Nachbar) besteht aus einzelnen Karten mit runden Ecken statt einer eckigen Tabelle.
+
 ## [0.97.9] – 2026-11-09
 
 ### Behoben
