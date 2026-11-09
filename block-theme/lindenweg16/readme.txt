@@ -3,7 +3,7 @@ Contributors: lindenweg16
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.1
-Stable tag: 1.9.6
+Stable tag: 1.9.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 WC requires at least: 10.0
@@ -253,6 +253,9 @@ Filter: lindenweg16_shop_inserts (Zitat und Hinweis im Shop-Raster).
 Aktion: lindenweg16_newsletter_confirmed (bei jeder bestätigten Adresse).
 
 == Changelog ==
+
+= 1.9.7 =
+* Kasse: DHL-Wunschort als einzelne Auswahlkarten ohne doppelte Rahmen; Prämienpunkte als dunkle Karte (Plugin 0.98.2)
 
 = 1.9.6 =
 * Kasse: Felder, Adresskarte und Wunschort-Karten in hellem CI-Blaugrau statt Beige-Grau

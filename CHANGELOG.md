@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.98.2] – 2026-11-09
+
+### Geändert
+- Theme 1.9.7, Kasse: Die DHL-Wunschort-Auswahl (Keine, Ablageort, Nachbar) besteht aus einzelnen Karten; die doppelten eckigen Rahmen des Plugins sind entfernt, das Radio steht in der Zeile.
+- Kasse und Warenkorb: Prämienpunkte als dunkle Karte wie im Konto. Oben die Punkte dieser Bestellung groß in Sand („+66“), darunter Einlösen mit Eingabefeld, „Alle“ und Anwenden in hellem Sand.
+
 ## [0.98.1] – 2026-11-09
 
 ### Behoben

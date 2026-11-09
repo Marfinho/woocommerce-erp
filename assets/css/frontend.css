@@ -839,6 +839,139 @@ tr.lw16-cart-points td {
 	font-weight: 600;
 }
 
+/* Prämienpunkte an der Kasse: dunkle Karte wie die Prämienkarte im Konto */
+.lw16-punktekarte {
+	display: grid;
+	gap: 18px;
+	margin: 16px 0 0;
+	padding: 22px;
+	border-radius: var(--lw16-r-card);
+	background: var(--lw16-ink);
+	color: var(--lw16-on-ink);
+}
+
+.lw16-punktekarte:empty {
+	display: none;
+}
+
+.lw16-punktekarte .lw16-cart-points {
+	display: grid;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	background: none;
+	color: inherit;
+}
+
+.lw16-punktekarte .lw16-cart-points::before {
+	content: none;
+}
+
+.lw16-cart-points__eyebrow {
+	margin: 0;
+	color: var(--lw16-accent-1);
+	font-size: var(--lw16-fs-x-small);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.lw16-cart-points__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 4px 12px;
+	margin: 0;
+}
+
+.lw16-cart-points__zahl {
+	font-family: var(--lw16-font-heading);
+	font-size: clamp(2.5rem, 2rem + 2vw, 3.25rem);
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: -0.03em;
+	font-variant-numeric: tabular-nums;
+	color: var(--lw16-accent-1);
+}
+
+.lw16-punktekarte .lw16-cart-points__main {
+	flex: 1 1 140px;
+	font-weight: 500;
+}
+
+.lw16-punktekarte .lw16-cart-points small {
+	color: inherit;
+	opacity: 0.75;
+}
+
+.lw16-punktekarte .lw16-redeem-box {
+	margin: 0;
+	padding: 18px 0 0;
+	border: 0;
+	border-top: 1px solid color-mix(in srgb, var(--lw16-on-ink) 16%, transparent);
+	border-radius: 0;
+	background: none;
+	color: inherit;
+}
+
+.lw16-punktekarte .lw16-cart-points + .lw16-redeem-box {
+	margin-top: 0;
+}
+
+.lw16-punktekarte > .lw16-redeem-box:first-child {
+	padding-top: 0;
+	border-top: 0;
+}
+
+.lw16-punktekarte .lw16-redeem-box__title {
+	color: var(--lw16-accent-1);
+	font-size: var(--lw16-fs-x-small);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.lw16-punktekarte .lw16-redeem-box__points small,
+.lw16-punktekarte .lw16-redeem-box small {
+	color: inherit;
+	opacity: 0.75;
+}
+
+.lw16-punktekarte .lw16-redeem-box__row input {
+	border-color: transparent !important;
+	background: color-mix(in srgb, var(--lw16-on-ink) 12%, transparent) !important;
+	color: var(--lw16-on-ink) !important;
+}
+
+.lw16-punktekarte .lw16-redeem-box__row input::placeholder {
+	color: color-mix(in srgb, var(--lw16-on-ink) 55%, transparent);
+}
+
+.lw16-punktekarte .lw16-redeem-box__row input:focus {
+	border-color: var(--lw16-accent-1) !important;
+	box-shadow: 0 0 0 4px color-mix(in srgb, var(--lw16-accent-1) 25%, transparent) !important;
+}
+
+.lw16-punktekarte .lw16-redeem-box__all,
+.lw16-punktekarte .lw16-redeem-box__remove {
+	border-color: color-mix(in srgb, var(--lw16-on-ink) 35%, transparent);
+	background: transparent;
+	color: var(--lw16-on-ink);
+}
+
+.lw16-punktekarte .lw16-redeem-box__apply {
+	background: var(--lw16-accent-1);
+	color: var(--lw16-ink);
+}
+
+.lw16-punktekarte .lw16-redeem-box .lw16-redeem-box__check input[type="checkbox"] {
+	accent-color: var(--lw16-accent-1);
+}
+
+.lw16-punktekarte .lw16-redeem-box__error {
+	color: var(--lw16-accent-4);
+}
+
 .lw16-presale-hinweis {
 	margin: 0 0 1em;
 	padding: 0.75em 1em;
