@@ -19,6 +19,7 @@
 
 namespace Lindenweg16\Erp;
 
+use Lindenweg16\Core\Installer;
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Throttle;
 
@@ -141,28 +142,103 @@ class Traffic {
 	}
 
 	/**
-	 * Eine Meldung entgegennehmen.
+	 * Ist das die Adresse der Meldung? Reine Regel.
+	 *
+	 * @param string $uri        REQUEST_URI.
+	 * @param string $rest_route Parameter rest_route (Permalinks „Einfach“).
+	 * @param string $prefix     REST-Präfix (meist wp-json).
+	 * @return bool
+	 */
+	public static function is_beacon_route( $uri, $rest_route = '', $prefix = 'wp-json' ) {
+		$re = '#^/lw16/v1/pv/?$#';
+
+		if ( '' !== (string) $rest_route ) {
+			return 1 === preg_match( $re, (string) $rest_route );
+		}
+
+		$path   = (string) parse_url( (string) $uri, PHP_URL_PATH ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url
+		$prefix = '/' . trim( (string) $prefix, '/' );
+		$at     = strpos( $path, $prefix . '/' );
+
+		if ( false === $at ) {
+			return false;
+		}
+
+		return 1 === preg_match( $re, substr( $path, $at + strlen( $prefix ) ) );
+	}
+
+	/**
+	 * Schnellweg: die Meldung beantworten, bevor das ERP, das Theme und die
+	 * REST-Schnittstelle starten.
+	 *
+	 * Die Meldung ist die mit Abstand häufigste Anfrage an die Website: einmal je
+	 * Seitenaufruf und danach alle 25 Sekunden je offener Seite. Über den normalen
+	 * REST-Weg startet jede davon alle Module, das Theme und sämtliche Routen von
+	 * WooCommerce – für ein paar Zeilen in drei kleinen Tabellen. Gebraucht wird
+	 * davon nichts: Der Zähler arbeitet nur mit der Datenbank und den Einstellungen.
+	 *
+	 * Aufgerufen aus `plugins_loaded`, unmittelbar vor dem Start des Plugins.
+	 * Steht ein Datenbank-Upgrade an, läuft die Anfrage den normalen Weg
+	 * (dort legt der Installer die Tabellen an).
+	 */
+	public static function maybe_serve() {
+		// phpcs:disable WordPress.Security.ValidatedSanitizedInput, WordPress.Security.NonceVerification
+		if ( ! isset( $_SERVER['REQUEST_METHOD'] ) || 'POST' !== $_SERVER['REQUEST_METHOD'] ) {
+			return;
+		}
+
+		$prefix = function_exists( 'rest_get_url_prefix' ) ? rest_get_url_prefix() : 'wp-json';
+		$route  = isset( $_GET['rest_route'] ) ? (string) wp_unslash( $_GET['rest_route'] ) : '';
+
+		if ( ! self::is_beacon_route( isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '', $route, $prefix ) ) {
+			return;
+		}
+		// phpcs:enable
+
+		if ( get_option( Installer::DB_VERSION_OPTION ) !== Installer::DB_VERSION ) {
+			return;
+		}
+
+		self::handle( (string) file_get_contents( 'php://input' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+
+		status_header( 204 );
+		header( 'Cache-Control: no-store' );
+		exit;
+	}
+
+	/**
+	 * Eine Meldung entgegennehmen (normaler REST-Weg).
 	 *
 	 * @param \WP_REST_Request $request Anfrage.
 	 * @return \WP_REST_Response
 	 */
 	public function collect( \WP_REST_Request $request ) {
+		self::handle( (string) $request->get_body() );
+
+		return new \WP_REST_Response( null, 204 );
+	}
+
+	/**
+	 * Eine Meldung verarbeiten. Die Antwort ist immer leer.
+	 *
+	 * @param string $raw Inhalt der Anfrage (JSON als Text).
+	 */
+	public static function handle( $raw ) {
 		// Abgeschaltet: Seiten aus einem Seiten-Cache tragen das Skript noch. Sofort
 		// antworten, ohne Drossel-Zähler und ohne Schreibzugriff.
 		$mode = self::current_mode();
 
 		if ( 'aus' === $mode ) {
-			return new \WP_REST_Response( null, 204 );
+			return;
 		}
+
+		$body = json_decode( (string) $raw, true );
+		$body = is_array( $body ) ? $body : array();
 
 		// Ohne Takt zählen nur neue Aufrufe; Wiedermeldungen und Abschiede älterer
 		// Seiten werden gleich verworfen.
-		if ( 'aufruf' === $mode ) {
-			$peek = json_decode( (string) $request->get_body(), true );
-
-			if ( is_array( $peek ) && ( ! empty( $peek['h'] ) || ! empty( $peek['x'] ) ) ) {
-				return new \WP_REST_Response( null, 204 );
-			}
+		if ( 'aufruf' === $mode && ( ! empty( $body['h'] ) || ! empty( $body['x'] ) ) ) {
+			return;
 		}
 
 		$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
@@ -172,35 +248,33 @@ class Traffic {
 		$origin = isset( $_SERVER['HTTP_ORIGIN'] ) ? (string) wp_unslash( $_SERVER['HTTP_ORIGIN'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$fremd  = '' !== $origin && wp_parse_url( $origin, PHP_URL_HOST ) !== wp_parse_url( home_url(), PHP_URL_HOST );
 
-		if ( $fremd || ! Throttle::hit( 'pv', 120 ) ) {
-			return new \WP_REST_Response( null, 204 );
+		if ( $fremd || ! Throttle::hit( 'pv', 120 ) || self::is_bot( $ua ) ) {
+			return;
 		}
 
-		if ( ! self::is_bot( $ua ) ) {
-			$body = json_decode( (string) $request->get_body(), true );
-			$body = is_array( $body ) ? $body : array();
-			$path = isset( $body['p'] ) && is_string( $body['p'] ) ? $body['p'] : '';
-			$kid  = Presence::clean_token( isset( $body['k'] ) ? $body['k'] : '' );
+		$path = isset( $body['p'] ) && is_string( $body['p'] ) ? $body['p'] : '';
+		$kid  = Presence::clean_token( isset( $body['k'] ) ? $body['k'] : '' );
 
-			if ( '' === $kid ) {
-				// Älteres Skript einer zwischengespeicherten Seite: nur zählen.
-				self::record( self::classify( $path ) );
-			} elseif ( ! empty( $body['x'] ) ) {
-				Presence::leave( $kid );
-			} else {
-				$clean = self::presence_data( $body, $path );
-				$new   = Presence::touch( $kid, $clean, time() );
-
-				// Gezählt wird jede neu geöffnete Seite einmal, Wiedermeldungen nicht.
-				if ( $new && empty( $body['h'] ) ) {
-					self::record( self::classify( $path ) );
-					Insights::on_view( $body, time() );
-					Flow::record( Flow::source( isset( $body['r'] ) ? $body['r'] : '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), $clean['path'], time() );
-				}
-			}
+		if ( '' === $kid ) {
+			// Älteres Skript einer zwischengespeicherten Seite: nur zählen.
+			self::record( self::classify( $path ) );
+			return;
 		}
 
-		return new \WP_REST_Response( null, 204 );
+		if ( ! empty( $body['x'] ) ) {
+			Presence::leave( $kid );
+			return;
+		}
+
+		$clean = self::presence_data( $body, $path );
+		$new   = Presence::touch( $kid, $clean, time() );
+
+		// Gezählt wird jede neu geöffnete Seite einmal, Wiedermeldungen nicht.
+		if ( $new && empty( $body['h'] ) ) {
+			self::record( self::classify( $path ) );
+			Insights::on_view( $body, time() );
+			Flow::record( Flow::source( isset( $body['r'] ) ? $body['r'] : '', (string) wp_parse_url( home_url(), PHP_URL_HOST ) ), $clean['path'], time() );
+		}
 	}
 
 	/**

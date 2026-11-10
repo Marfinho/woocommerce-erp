@@ -66,6 +66,12 @@ class MailTemplate {
 				'text'        => __( "Gute Nachricht! \"{produktname}\" ist wieder auf Lager.\n\nHier ansehen: {produktlink}", 'lindenweg16' ),
 				'platzhalter' => '{produktname}, {produktlink}',
 			),
+			'warteliste_bestaetigen' => array(
+				'label'       => __( 'Warteliste: Anmeldung bestätigen', 'lindenweg16' ),
+				'betreff'     => __( 'Bitte bestätige deine Anmeldung: {produktname}', 'lindenweg16' ),
+				'text'        => __( "Du möchtest benachrichtigt werden, sobald \"{produktname}\" wieder auf Lager ist.\n\nBitte bestätige das mit einem Klick:\n{bestaetigungslink}\n\nWarst du das nicht? Dann musst du nichts tun – ohne Bestätigung schreiben wir dir nicht, und die Anmeldung wird nach sieben Tagen gelöscht.", 'lindenweg16' ),
+				'platzhalter' => '{produktname}, {bestaetigungslink}',
+			),
 			'mindestbestand'     => array(
 				'label'       => __( 'Mindestbestand unterschritten', 'lindenweg16' ),
 				'betreff'     => __( '[{firmenname}] Mindestbestand unterschritten: {produktname}', 'lindenweg16' ),
