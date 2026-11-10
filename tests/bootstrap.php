@@ -210,6 +210,7 @@ require $lw16_root . '/includes/Core/ResetTool.php';
 require $lw16_root . '/includes/Core/Privacy.php';
 require $lw16_root . '/includes/Core/Updater.php';
 require $lw16_root . '/includes/Modules/Retention/Wishlist.php';
+require $lw16_root . '/includes/Modules/Retention/Waitlist.php';
 require $lw16_root . '/includes/Erp/ShiftOrder.php';
 require $lw16_root . '/includes/Core/Rollback.php';
 require $lw16_root . '/includes/Modules/Accounting/PdfText.php';

@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.6] – 2026-11-10
+
+### Geändert
+- **Warteliste nur noch mit Bestätigung (Double-Opt-in):** Das Formular „Benachrichtige mich, wenn wieder verfügbar“ ist offen, bisher konnte jeder beliebige fremde Adressen eintragen, die später eine Mail bekamen. Jetzt geht zuerst eine Bestätigungsmail mit signiertem Link raus (`?lw16_wl=<Anmeldung>.<Signatur>`); benachrichtigt wird nur, wer ihn anklickt. Angemeldete Kunden mit ihrer eigenen Kontoadresse gelten sofort als bestätigt. Unbestätigte Anmeldungen verfallen nach sieben Tagen. Die Meldung „Neu auf der Warteliste“ im ERP kommt erst mit der Bestätigung.
+- Schutz vor Missbrauch: höchstens fünf Anmeldungen je Minute und Adresse (IP), höchstens drei unbestätigte Anmeldungen je E-Mail-Adresse, keine zweite Bestätigungsmail für dieselbe Anmeldung.
+- Die Produktseite zeigt nach dem Absenden eine Rückmeldung über dem Formular (bisher keine).
+- Neue Mailvorlage `warteliste_bestaetigen`, Spalte `warteliste.bestaetigt` (DB_VERSION 60; bestehende Anmeldungen gelten als bestätigt). Tests: `tests/WaitlistTest.php`.
+
 ## [0.99.5] – 2026-11-10
 
 ### Geändert

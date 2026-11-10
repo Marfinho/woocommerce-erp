@@ -138,8 +138,11 @@ class Installer {
 	 *
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
 	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
+	 *
+	 * DB_VERSION 60: warteliste um bestaetigt (Double-Opt-in, siehe Modules\Retention\Waitlist). Vorbelegung 1:
+	 * Anmeldungen von vor der Umstellung gelten als bestätigt, neue trägt das Formular ausdrücklich mit 0 ein.
 	 */
-	const DB_VERSION = '59';
+	const DB_VERSION = '60';
 
 	/**
 	 * Aktivierungsroutine.
@@ -593,6 +596,7 @@ class Installer {
 			email VARCHAR(191) NOT NULL,
 			user_id BIGINT UNSIGNED NULL,
 			benachrichtigt TINYINT(1) NOT NULL DEFAULT 0,
+			bestaetigt TINYINT(1) NOT NULL DEFAULT 1,
 			erstellt_am DATETIME NOT NULL,
 			PRIMARY KEY  (id),
 			KEY produkt_id (produkt_id),
