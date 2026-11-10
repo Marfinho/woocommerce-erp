@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.5] – 2026-11-10
+
+### Geändert
+- **Besucherzählung entlastet den Server:** Die Meldung des Browsers (`/wp-json/lw16/v1/pv`, einmal je Seitenaufruf und alle 25 Sekunden je offener Seite) wird jetzt beantwortet, bevor das ERP, das Theme und die REST-Schnittstelle starten (`Erp\Traffic::maybe_serve()`, aufgerufen in `plugins_loaded`). Bisher lud jede Meldung alle Module, das Theme und sämtliche REST-Routen von WooCommerce. Gezählt wird unverändert: Drossel, Ursprungsprüfung, Bot-Filter und die Schalter unter Einstellungen → Besucherzählung gelten weiter, beide Wege nutzen dieselbe Methode (`Traffic::handle()`). Steht ein Datenbank-Upgrade an, läuft die Meldung den bisherigen Weg.
+- **Wunschliste:** Produktlisten fragen für angemeldete Kunden nicht mehr je Produkt in der Datenbank nach, ob es gemerkt ist. Die Merkliste wird je Seitenaufruf einmal geladen.
+- **Vorab-Verkauf (Pre-Sale):** Ob ein Artikel für den Kunden gesperrt ist, wird je Seitenaufruf nur einmal je Artikel ermittelt. WooCommerce fragt je Produkt mehrfach; bisher wurden dabei jedes Mal Kategorien und Merkmale neu zusammengesucht.
+- **Lieferzeit im Shop:** Beim Neuaufbau der Verfügbarkeit (alle zehn Minuten) werden die aktiven Revisionen in einer Abfrage geladen statt in einer je knappem Artikel.
+- Tests: `tests/ErpBesucherTest.php` (Schnellweg), `tests/WishlistTest.php`.
+
 ## [0.99.4] – 2026-11-09
 
 ### Neu

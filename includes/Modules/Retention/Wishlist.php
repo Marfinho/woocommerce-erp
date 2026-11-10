@@ -144,6 +144,7 @@ class Wishlist {
 		global $wpdb;
 		if ( $this->has( $user_id, $pid ) ) {
 			$wpdb->delete( self::table(), array( 'user_id' => $user_id, 'woo_product_id' => $pid ) );
+			unset( self::$merkliste[ $user_id ] );
 			wp_send_json_success( array( 'active' => false ) );
 		}
 		$wpdb->insert(
@@ -151,19 +152,55 @@ class Wishlist {
 			array( 'user_id' => $user_id, 'woo_product_id' => $pid, 'hinzugefuegt_am' => current_time( 'mysql' ) ),
 			array( '%d', '%d', '%s' )
 		);
+		unset( self::$merkliste[ $user_id ] );
 		wp_send_json_success( array( 'active' => true ) );
 	}
 
 	/**
+	 * Gemerkte Produkte je Nutzer in dieser Anfrage (Nutzer => Produkt => true).
+	 *
+	 * @var array
+	 */
+	protected static $merkliste = array();
+
+	/**
 	 * Prüfen, ob Produkt gemerkt ist.
+	 *
+	 * Die Merkliste wird je Anfrage einmal geladen: Eine Produktliste fragt
+	 * für jedes Produkt, und das wäre sonst je Produkt eine eigene Abfrage.
 	 *
 	 * @param int $user_id Nutzer.
 	 * @param int $pid     Produkt.
 	 * @return bool
 	 */
 	public function has( $user_id, $pid ) {
-		global $wpdb;
-		return (bool) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . self::table() . ' WHERE user_id = %d AND woo_product_id = %d', $user_id, $pid ) ); // phpcs:ignore
+		$user_id = (int) $user_id;
+
+		if ( ! isset( self::$merkliste[ $user_id ] ) ) {
+			global $wpdb;
+			$ids = $wpdb->get_col( $wpdb->prepare( 'SELECT woo_product_id FROM ' . self::table() . ' WHERE user_id = %d', $user_id ) ); // phpcs:ignore
+			self::$merkliste[ $user_id ] = self::index_ids( $ids );
+		}
+
+		return isset( self::$merkliste[ $user_id ][ (int) $pid ] );
+	}
+
+	/**
+	 * Liste von Produktnummern zum Nachschlagen aufbereiten – reine Regel.
+	 *
+	 * @param mixed $ids Produktnummern aus der Datenbank.
+	 * @return array Produkt => true.
+	 */
+	public static function index_ids( $ids ) {
+		$out = array();
+
+		foreach ( (array) $ids as $id ) {
+			if ( (int) $id > 0 ) {
+				$out[ (int) $id ] = true;
+			}
+		}
+
+		return $out;
 	}
 
 	/**

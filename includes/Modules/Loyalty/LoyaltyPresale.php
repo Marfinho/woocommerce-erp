@@ -25,6 +25,17 @@ class LoyaltyPresale {
 	protected static $tier_cache = array();
 
 	/**
+	 * Ergebnis von blocking() je Kunde und Artikel in dieser Anfrage.
+	 *
+	 * WooCommerce fragt je Produkt mehrfach, ob es kaufbar ist. Ohne den
+	 * Merker würden bei laufendem Pre-Sale jedes Mal Kategorien und Merkmale
+	 * des Produkts neu zusammengesucht.
+	 *
+	 * @var array
+	 */
+	protected static $blocking_cache = array();
+
+	/**
 	 * Hooks registrieren.
 	 */
 	public function register() {
@@ -77,7 +88,8 @@ class LoyaltyPresale {
 		$presale['id'] = $id;
 		$list[]        = $presale;
 		update_option( self::OPTION, $list, false );
-		self::$cache = null;
+		self::$cache          = null;
+		self::$blocking_cache = array();
 		return $id;
 	}
 
@@ -101,7 +113,8 @@ class LoyaltyPresale {
 			return false;
 		}
 		update_option( self::OPTION, $keep, false );
-		self::$cache = null;
+		self::$cache          = null;
+		self::$blocking_cache = array();
 		return true;
 	}
 
@@ -187,16 +200,22 @@ class LoyaltyPresale {
 		if ( ! $product instanceof \WC_Product || current_user_can( 'manage_woocommerce' ) ) {
 			return null;
 		}
+		$today   = current_time( 'Y-m-d' );
 		$running = array_filter(
 			self::all(),
-			function ( $p ) {
-				return LoyaltyRules::presale_running( $p, current_time( 'Y-m-d' ) );
+			function ( $p ) use ( $today ) {
+				return LoyaltyRules::presale_running( $p, $today );
 			}
 		);
 		if ( ! $running ) {
 			return null;
 		}
-		return LoyaltyRules::presale_blocking( $running, current_time( 'Y-m-d' ), self::tier_index(), self::subject( $product ) );
+
+		$key = get_current_user_id() . ':' . (int) $product->get_id();
+		if ( ! array_key_exists( $key, self::$blocking_cache ) ) {
+			self::$blocking_cache[ $key ] = LoyaltyRules::presale_blocking( $running, $today, self::tier_index(), self::subject( $product ) );
+		}
+		return self::$blocking_cache[ $key ];
 	}
 
 	/**

@@ -1172,11 +1172,12 @@ class ForecastService {
 			return $cached;
 		}
 
-		$balances = StockRepository::balances();
-		$lines    = WooIntegration::open_order_lines();
-		$cap      = self::capacity();
-		$backlog  = null;
-		$out      = array();
+		$balances  = StockRepository::balances();
+		$lines     = WooIntegration::open_order_lines();
+		$cap       = self::capacity();
+		$backlog   = null;
+		$revisions = null;
+		$out       = array();
 
 		foreach ( ArticleRepository::all_by_id() as $id => $article ) {
 			$stock    = ShopStock::stock_by_color( isset( $balances[ $id ] ) ? $balances[ $id ] : array() );
@@ -1191,7 +1192,12 @@ class ForecastService {
 					$backlog = ProductionPlan::totals( self::plan_steps() )['total'];
 				}
 
-				$revision = RevisionRepository::active_for_article( $id );
+				// Alle aktiven Revisionen in einer Abfrage statt einer je knappem Artikel.
+				if ( null === $revisions ) {
+					$revisions = RevisionRepository::active_by_article();
+				}
+
+				$revision = isset( $revisions[ $id ] ) ? $revisions[ $id ] : null;
 				$per_part = $revision ? CostCalculator::print_time_per_part( $revision ) : 0.0;
 				$hands    = ( (float) $article['postprocessing_min'] + $cap['plate_min'] / ( $revision ? max( 1, (int) $revision['parts_per_plate'] ) : 1 ) ) / 60;
 				$est      = Promise::earliest( 0, 1, $per_part, $hands, $backlog['machine_h'], $backlog['operator_h'], $cap['machine_h'], $cap['operator_h'], time() );

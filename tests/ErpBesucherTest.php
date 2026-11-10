@@ -138,4 +138,36 @@ class ErpBesucherTest extends TestCase {
 		$this->assertStringContainsString( "ui.api('besucher')", $js );
 		$this->assertStringNotContainsString( 'innerHTML', $js, 'Seitentitel kommen von außen: nur als Text einsetzen.' );
 	}
+
+	public function test_schnellweg_erkennt_nur_die_meldung() {
+		$this->assertTrue( Traffic::is_beacon_route( '/wp-json/lw16/v1/pv' ) );
+		$this->assertTrue( Traffic::is_beacon_route( '/wp-json/lw16/v1/pv/' ) );
+		$this->assertTrue( Traffic::is_beacon_route( '/wp-json/lw16/v1/pv?x=1' ) );
+		$this->assertTrue( Traffic::is_beacon_route( '/shop/index.php/wp-json/lw16/v1/pv' ), 'Unterverzeichnis' );
+		$this->assertTrue( Traffic::is_beacon_route( '/index.php', '/lw16/v1/pv' ), 'Permalinks „Einfach“' );
+		$this->assertTrue( Traffic::is_beacon_route( '/api/lw16/v1/pv', '', 'api' ), 'eigenes REST-Präfix' );
+
+		$this->assertFalse( Traffic::is_beacon_route( '/wp-json/lw16/v1/pvx' ) );
+		$this->assertFalse( Traffic::is_beacon_route( '/wp-json/lw16/v1/pv/mehr' ) );
+		$this->assertFalse( Traffic::is_beacon_route( '/wp-json/lw16/v1/erp/besucher' ) );
+		$this->assertFalse( Traffic::is_beacon_route( '/wp-json/wc/v3/lw16/v1/pv' ), 'fremder Namensraum' );
+		$this->assertFalse( Traffic::is_beacon_route( '/lw16/v1/pv' ), 'ohne REST-Präfix' );
+		$this->assertFalse( Traffic::is_beacon_route( '/index.php', '/lw16/v1/erp/besucher' ) );
+		$this->assertFalse( Traffic::is_beacon_route( '/' ) );
+	}
+
+	public function test_schnellweg_laeuft_vor_dem_plugin_start_und_teilt_die_regeln() {
+		$main    = $this->read( 'lindenweg16.php' );
+		$traffic = $this->read( 'includes/Erp/Traffic.php' );
+
+		$serve = strpos( $main, 'Traffic::maybe_serve()' );
+		$this->assertNotFalse( $serve, 'Der Schnellweg wird nicht aufgerufen.' );
+		$this->assertLessThan( strpos( $main, 'Plugin::instance()->boot()' ), $serve, 'Der Schnellweg muss vor dem Start des Plugins laufen.' );
+		$this->assertGreaterThan( strpos( $main, "class_exists( 'WooCommerce' )" ), $serve, 'Ohne WooCommerce bleibt das Plugin still.' );
+
+		// Beide Wege verarbeiten die Meldung mit derselben Methode: Drossel,
+		// Ursprungsprüfung und Bot-Filter gelten auf dem Schnellweg genauso.
+		$this->assertSame( 2, substr_count( $traffic, 'self::handle(' ) );
+		$this->assertStringContainsString( 'Installer::DB_VERSION', $traffic, 'Bei anstehendem Upgrade läuft der normale Weg.' );
+	}
 }
