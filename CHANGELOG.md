@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.8] – 2026-11-12
+
+### Geändert
+
+- Die beiden A4-Anleitungen zum Ausdrucken (Basismodul, Module) liegen jetzt unter `assets/montage/`:
+  neuer Ablauf mit Anzeichen-Clips, „Schuhhalter / SHR“ und QR-Code zu den Online-Anleitungen auf Seite 2.
+
 ## [0.99.7] – 2026-11-12
 
 ### Geändert
