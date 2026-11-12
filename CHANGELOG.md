@@ -7,6 +7,13 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.99.7] – 2026-11-12
+
+### Geändert
+
+- Montagevideos (Basismodul und Module, je MP4 und WebM) liegen jetzt unter `assets/montage/` im Plugin
+  und werden von den Anleitungsseiten eingebunden.
+
 ## [0.99.6] – 2026-11-10
 
 ### Geändert
