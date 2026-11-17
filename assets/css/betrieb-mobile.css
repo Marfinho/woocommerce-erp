@@ -358,3 +358,6 @@ body.lw16-mobile {
 	text-align: center;
 	margin: 10px 0;
 }
+
+/* Anmerkung: Beschriftung über dem Feld. */
+.lw16-reorder__note label { display: block; margin-bottom: 4px; }

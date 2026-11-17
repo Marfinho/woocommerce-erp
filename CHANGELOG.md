@@ -7,6 +7,19 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.101.0] – 2026-11-17
+
+### Neu: Händlerkonto – Nachbestellen unter „Mein Konto“
+- Händler (B2B-Kontakte) können ein **Kundenkonto im Shop** bekommen. Angemeldet finden sie unter **Mein Konto** den Reiter **Nachbestellen**: Artikelliste mit Vorbelegung aus der letzten Bestellung, Bestellwert, Rabattstufe und nächste Stufe live, darunter **Ihre Anfragen und Aufträge** (Positionen, Status, Wert). Alles im Design des Shops.
+- In der Kundenakte (Verkauf → Kontakte / B2B) gibt es den Abschnitt **Kundenkonto im Shop**: **Konto anlegen und einladen**, **Einladung erneut senden**, **Verknüpfung lösen**. Neue Konten bekommen Anschrift und Telefon als Rechnungsadresse und eine Mail zum Passwort-Festlegen (über die Passwort-Seite von WooCommerce). Ein vorhandenes Kundenkonto mit derselben Adresse wird freigeschaltet statt doppelt angelegt. Mitarbeiterkonten lassen sich nie verknüpfen.
+- Anfragen aus dem Konto landen wie beim Link als **Entwurf** unter Aufträge und lösen dieselben Mails aus. Ein Neuladen nach dem Absenden erzeugt keine zweite Anfrage.
+- Neue Mailvorlagen `haendler_zugang` und `haendler_freigeschaltet`. Die Verknüpfung steht als Benutzer-Meta `lw16_haendler_kontakt`; keine Datenbankänderung.
+- Betriebsanleitung: neues Kapitel B.20. Tests: `tests/BetriebDealerAccountTest.php`.
+
+### Geändert
+- **Nachbestell-Link:** Die Seite sah im Block-Theme nicht nach dem Shop aus, sondern zeigte die Notbehelf-Kopfzeile von WordPress („… wird mit Stolz präsentiert von WordPress“) und einen fremden grünen Knopf. Sie rendert jetzt Kopf- und Fußzeile des Themes und nutzt dessen Farben, Felder und Knöpfe (`assets/css/haendler.css`, dasselbe wie im Konto). Die Einstellung „schlicht“ bleibt wie bisher.
+- Hat ein Händler ein Kundenkonto, führt sein Nachbestell-Link zur Anmeldung und dann zu **Nachbestellen**. Der Platzhalter `[Nachbestell-Link]` im Nachkauf-Mailvorschlag setzt bei ihm die Adresse des Kontos ein, statt einen neuen Link zu erzeugen (und damit den alten ungültig zu machen).
+
 ## [0.100.0] – 2026-11-17
 
 ### Neu: Besucher – Verlauf: an welchen Tagen und zu welchen Zeiten ist viel los?

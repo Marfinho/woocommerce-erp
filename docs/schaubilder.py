@@ -404,6 +404,14 @@ sb('vers-spickzettel', 'Eine Runde Versand',
    du('Lieferschein + Label', 'Gewicht ansehen!'),
    du('Versendet ✓', 'erst wenn das Paket wirklich weg ist'))
 
+sb('vers-haendlerkonto', 'Ein Händler bestellt im Kundenkonto',
+   du('Konto anlegen und einladen', 'Kundenakte → Kundenkonto im Shop'),
+   ext('Händler legt sein Passwort fest', 'Link in der Mail, 24 Stunden gültig'),
+   ext('Mein Konto → Nachbestellen', 'Mengen, Konditionen live, absenden'),
+   erp('Entwurf in „Aufträge“', 'wie beim Nachbestell-Link'),
+   du('Prüfen und bestätigen', 'Kapitel B.10'),
+   ok('Händler sieht den Stand', 'angefragt, bestätigt, berechnet, bezahlt'))
+
 # ---------------------------------------------------------------- Teil C
 sb('pers-warum', 'Wofür Zeit erfasst wird',
    du('Du schreibst Zeit auf', 'zwei Klicks mit der Uhr'),

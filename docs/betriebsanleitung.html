@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.100.0">
+<meta name="anleitung-stand" content="0.101.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.100.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.101.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.100.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.101.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -320,6 +320,7 @@ svg.sv{display:block;width:100%;height:auto}
 		<li><a href="#vers-bestand"><span class="nr">B.17</span> Bestand prüfen und korrigieren</a></li>
 		<li><a href="#vers-fehler"><span class="nr">B.18</span> Wenn etwas nicht geht</a></li>
 		<li><a href="#vers-spickzettel"><span class="nr">B.19</span> Spickzettel für den Packtisch</a></li>
+		<li><a href="#vers-haendlerkonto"><span class="nr">B.20</span> Händlerkonto: Nachbestellen unter „Mein Konto“</a></li>
 	</ol>
 	<p class="teilkopf"><a href="#teil-personal">Teil C – Personal</a> <span class="fuer">Für Personal &amp; Zeit</span></p>
 	<ol class="flach">
@@ -2306,7 +2307,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <p>Erst mit dem Klick auf Bestätigen entstehen der Lagerabgang und der offene Posten. Vorher ist es nur eine Anfrage. Damit kann kein Händler versehentlich deinen Bestand leerbuchen.</p>
 
-<p>Erzeugt wird die Karte in der Kundenakte (Kapitel B.11), Abschnitt <strong>Nachbestell-Link</strong>.</p>
+<p>Erzeugt wird die Karte in der Kundenakte (Kapitel B.11), Abschnitt <strong>Nachbestell-Link</strong>. Bequemer für Stammhändler ist ein Kundenkonto im Shop (<a href="#vers-haendlerkonto">Kapitel B.20</a>).</p>
 
 <div class="kasten achtung">
 	<span class="titel">Der Link wird genau einmal angezeigt</span>
@@ -2351,6 +2352,7 @@ svg.sv{display:block;width:100%;height:auto}
 <tr><td><strong>Preisliste</strong></td><td>Öffnet die Händlerpreisliste: Händlerpreise netto, Mengenrabatt-Staffel und Zahlungsziel des Kunden – druckbar und als PDF speicherbar.</td></tr>
 <tr><td><strong>Preisstufe und Rabatt</strong></td><td>Zeigt die Standardstaffel. <strong>Kondition festschreiben</strong> legt eine eigene Vereinbarung an. Sie gilt ab einem Datum; ältere Bestellungen bleiben unverändert.</td></tr>
 <tr><td><strong>Händlerprofil</strong></td><td>USt-IdNr., Rechnungs- und Lieferadresse, Lieferhinweise, Entscheider, Wareneingang, Bestellrhythmus, nächste erwartete Bestellung, Verpackung, Farben, Kommission vereinbart, Display, Kreditlimit. Über <strong>Profil bearbeiten</strong>. Überschreiten offene Posten das Kreditlimit, erscheint eine Warnung.</td></tr>
+<tr><td><strong>Kundenkonto im Shop</strong></td><td>Legt ein Kundenkonto an, in dem der Händler unter „Mein Konto → Nachbestellen“ bestellt und seine Aufträge sieht (<a href="#vers-haendlerkonto">Kapitel B.20</a>).</td></tr>
 <tr><td><strong>Nachbestell-Link</strong></td><td>Erzeugt den persönlichen Link und die Karte mit QR-Code (Kapitel B.10).</td></tr>
 <tr><td><strong>Bestellungen</strong></td><td>Alle zugeordneten Bestellungen. Auf der Bestellseite schlägt das ERP einen Kontakt mit gleicher E-Mail oder Firma vor – ein Klick ordnet zu, <strong>Zuordnung lösen</strong> hebt es auf.</td></tr>
 <tr><td><strong>Kommissionsbestand</strong></td><td>Ware, die beim Händler liegt. <strong>Ausliefern</strong> und <strong>Zurücknehmen</strong> verschieben nur zwischen Lager und Händler; <strong>Abrechnen</strong> verkauft, und zwar als <em>ein</em> offener Posten über die ganze Lieferung, damit die Rabattstaffel auf den Gesamtwert greift.</td></tr>
@@ -2738,6 +2740,56 @@ svg.sv{display:block;width:100%;height:auto}
 	Fehlbestand <strong>sofort</strong> korrigieren, nicht „nachher“.<br>
 	Nichts abhaken, was nicht wirklich im Karton liegt.<br>
 	Vor <strong>Label erzeugen</strong> das Gewicht anschauen – ab da ist das Paket frankiert.</p>
+</div>
+
+<h2 id="vers-haendlerkonto"><span class="nr">B.20</span> Händlerkonto: Nachbestellen unter „Mein Konto“</h2>
+<p><span class="weg">Verkauf → Kunden → Kontakte / B2B → Kontakt → Kundenkonto im Shop</span></p>
+<!-- schaubild:vers-haendlerkonto -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Ein Händler bestellt im Kundenkonto">
+<div class="sb-kopf">Schaubild · Ein Händler bestellt im Kundenkonto</div>
+<ol class="fluss c3">
+	<li class="du"><b>Konto anlegen und einladen</b><span>Kundenakte → Kundenkonto im Shop</span></li>
+	<li class="ext"><b>Händler legt sein Passwort fest</b><span>Link in der Mail, 24 Stunden gültig</span></li>
+	<li class="ext"><b>Mein Konto → Nachbestellen</b><span>Mengen, Konditionen live, absenden</span></li>
+	<li class="erp"><b>Entwurf in „Aufträge“</b><span>wie beim Nachbestell-Link</span></li>
+	<li class="du"><b>Prüfen und bestätigen</b><span>Kapitel B.10</span></li>
+	<li class="ok"><b>Händler sieht den Stand</b><span>angefragt, bestätigt, berechnet, bezahlt</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="ok">Ergebnis</span></p>
+</figure>
+<!-- /schaubild:vers-haendlerkonto -->
+
+<p>Ein Händler kann statt des Nachbestell-Links ein <strong>Kundenkonto im Shop</strong> bekommen. Angemeldet findet er unter <strong>Mein Konto</strong> den Reiter <strong>Nachbestellen</strong>: dieselbe Artikelliste wie beim Link, vorbelegt mit seiner letzten Bestellung, darunter live sein Bestellwert, seine Rabattstufe und was bis zur nächsten Stufe fehlt. Unter dem Formular stehen seine bisherigen <strong>Anfragen und Aufträge</strong> mit Positionen, Status und Wert. Alles im Design des Shops.</p>
+
+<ol class="schritte">
+	<li>Kundenakte des Händlers öffnen. Steht bei den Stammdaten keine E-Mail-Adresse, zuerst über <strong>Stammdaten ändern</strong> eintragen.</li>
+	<li>Im Abschnitt <strong>Kundenkonto im Shop</strong> auf <strong>Konto anlegen und einladen</strong> klicken und bestätigen.</li>
+	<li>Der Händler bekommt eine Mail mit seinem Benutzernamen und einem Link, mit dem er sein Passwort festlegt. Der Link gilt 24 Stunden; danach hilft <strong>Einladung erneut senden</strong> oder auf der Anmeldeseite „Passwort vergessen?“.</li>
+</ol>
+
+<p>Gibt es zu der Adresse schon ein Kundenkonto (weil der Händler privat im Shop bestellt hat), legt das ERP kein zweites an, sondern schaltet das vorhandene frei. Der Händler bekommt dann eine kurze Mail mit dem Weg zu <strong>Nachbestellen</strong>. Anschrift und Telefon aus der Kundenakte landen beim neuen Konto als Rechnungsadresse.</p>
+
+<p>Was der Händler abschickt, landet wie beim Link als <strong>Entwurf</strong> unter <span class="weg">Verkauf → Bestellungen → Aufträge</span>. Du prüfst und bestätigst wie in <a href="#vers-nachbestellung">Kapitel B.10</a>. Sein Status heißt im Konto <em>Angefragt, wird geprüft</em>, nach dem Bestätigen <em>Bestätigt</em>, dann <em>Rechnung gestellt</em> und <em>Bezahlt</em>.</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Knopf</th><th>Was passiert</th></tr></thead>
+<tbody>
+<tr><td><strong>Konto anlegen und einladen</strong></td><td>Legt das Kundenkonto an (oder schaltet ein vorhandenes frei), verknüpft es mit dem Kontakt und schickt die Einladung. In den Aktivitäten steht ein Vermerk.</td></tr>
+<tr><td><strong>Einladung erneut senden</strong></td><td>Neue Mail mit frischem Link zum Passwort-Festlegen.</td></tr>
+<tr><td><strong>Verknüpfung lösen</strong></td><td>Der Reiter <strong>Nachbestellen</strong> verschwindet. Das Kundenkonto selbst bleibt bestehen, mit allen privaten Bestellungen.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="kasten info">
+	<span class="titel">Und der alte Link?</span>
+	<p>Bereits verteilte Karten und Links bleiben gültig. Hat der Händler ein Kundenkonto, führt der Link ihn zur Anmeldung und danach direkt zu <strong>Nachbestellen</strong>. Der Platzhalter <code>[Nachbestell-Link]</code> im Nachkauf-Mailvorschlag (<a href="#vers-nachkauf">Kapitel B.14</a>) setzt bei solchen Händlern die Adresse des Kontos ein, statt einen neuen Link zu erzeugen.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Eigene Adresse für Händler</span>
+	<p>Mitarbeiterkonten (wer im Backend Beiträge, Bestellungen oder den Shop verwaltet) lassen sich nicht mit einem Händler verknüpfen. Steht in der Kundenakte deine eigene oder die Adresse eines Kollegen, meldet das ERP das und legt nichts an.</p>
 </div>
 </section>
 
@@ -5489,7 +5541,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.100.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.101.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

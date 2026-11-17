@@ -78,6 +78,15 @@ class ReorderPage {
 			exit;
 		}
 
+		// Hat der Händler ein Kundenkonto, bestellt er dort. Der alte Link
+		// bleibt gültig und führt zur Anmeldung, statt eine zweite,
+		// abweichende Bestellseite zu zeigen.
+		if ( DealerAccount::user_for_contact( (int) $result['row']['contact_id'] ) ) {
+			ReorderToken::touch( (int) $result['row']['id'] );
+			wp_safe_redirect( DealerAccount::endpoint_url() );
+			exit;
+		}
+
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 		if ( ! ReorderToken::within_rate_limit( (int) $result['row']['id'], $ip ) ) {
@@ -98,7 +107,7 @@ class ReorderPage {
 	}
 
 	/**
-	 * Anfrage entgegennehmen.
+	 * Anfrage über den Link entgegennehmen.
 	 *
 	 * @param array $result Token-Auflösung.
 	 */
@@ -108,13 +117,35 @@ class ReorderPage {
 			return;
 		}
 
-		$contact_id = (int) $result['row']['contact_id'];
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- oben geprüft.
+		$request = self::submit_request( $result['contact'], wp_unslash( $_POST ) );
 
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- oben geprüft.
-		$mengen = isset( $_POST['menge'] ) && is_array( $_POST['menge'] ) ? array_map( 'floatval', wp_unslash( $_POST['menge'] ) ) : array();
-		$farben = isset( $_POST['farbe'] ) && is_array( $_POST['farbe'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['farbe'] ) ) : array();
-		$note   = isset( $_POST['note'] ) ? sanitize_textarea_field( wp_unslash( $_POST['note'] ) ) : '';
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
+		if ( ! $request['ok'] ) {
+			$this->render_form( $result, $request['error'] );
+			return;
+		}
+
+		ReorderToken::touch( (int) $result['row']['id'] );
+		$this->layout( __( 'Anfrage eingegangen', 'lindenweg16' ), self::thanks_html( $request['items'] ) );
+	}
+
+	/**
+	 * Formulardaten prüfen und als Bestellentwurf anlegen.
+	 *
+	 * Gemeinsamer Weg für den Nachbestell-Link und das Kundenkonto. Der
+	 * Entwurf gehört immer zum übergebenen Kontakt, nie zu einem Wert aus
+	 * dem Formular.
+	 *
+	 * @param array $contact Kontakt.
+	 * @param array $post    Formulardaten (bereits wp_unslash).
+	 * @return array ok, error, order_id, items.
+	 */
+	public static function submit_request( array $contact, array $post ) {
+		$contact_id = (int) $contact['id'];
+
+		$mengen = isset( $post['menge'] ) && is_array( $post['menge'] ) ? array_map( 'floatval', $post['menge'] ) : array();
+		$farben = isset( $post['farbe'] ) && is_array( $post['farbe'] ) ? array_map( 'sanitize_key', $post['farbe'] ) : array();
+		$note   = isset( $post['note'] ) ? sanitize_textarea_field( (string) $post['note'] ) : '';
 
 		$items = array();
 
@@ -125,7 +156,7 @@ class ReorderPage {
 
 			$article = ArticleRepository::find( (int) $article_id );
 
-			// Nur verkäufliche Artikel – ein Token darf keine internen
+			// Nur verkäufliche Artikel – ein Händler darf keine internen
 			// Baugruppen bestellen.
 			if ( ! $article || ! $article['sellable'] ) {
 				continue;
@@ -149,13 +180,16 @@ class ReorderPage {
 		}
 
 		if ( ! $items ) {
-			$this->render_form( $result, __( 'Bitte mindestens eine Menge eintragen.', 'lindenweg16' ) );
-			return;
+			return array(
+				'ok'       => false,
+				'error'    => __( 'Bitte mindestens eine Menge eintragen.', 'lindenweg16' ),
+				'order_id' => 0,
+				'items'    => array(),
+			);
 		}
 
 		$discount = DiscountResolver::for_contact( $contact_id, $items, gmdate( 'Y-m-d' ) );
 
-		// Der Entwurf gehört zwingend zum Kontakt des Tokens.
 		$order_id = OrderOpsRepository::create_manual(
 			array(
 				'contact_id'           => $contact_id,
@@ -174,9 +208,14 @@ class ReorderPage {
 			$items
 		);
 
-		ReorderToken::touch( (int) $result['row']['id'] );
-		$this->notify( $result['contact'], $order_id, $items, $discount );
-		$this->render_thanks( $result['contact'], $items );
+		self::notify( $contact, $order_id, $items, $discount );
+
+		return array(
+			'ok'       => true,
+			'error'    => '',
+			'order_id' => (int) $order_id,
+			'items'    => $items,
+		);
 	}
 
 	/**
@@ -187,7 +226,7 @@ class ReorderPage {
 	 * @param array $items    Positionen.
 	 * @param array $discount Rabattauflösung.
 	 */
-	protected function notify( $contact, $order_id, array $items, array $discount ) {
+	protected static function notify( $contact, $order_id, array $items, array $discount ) {
 		$zeilen = array();
 
 		foreach ( $items as $item ) {
@@ -196,14 +235,14 @@ class ReorderPage {
 				'%s × %s%s',
 				number_format_i18n( $item['qty'], 0 ),
 				$article ? $article['sku'] . ' – ' . $article['name'] : '',
-				$this->color_suffix( $item )
+				self::color_suffix( $item )
 			);
 		}
 
 		// An den Betrieb: mit Wert und Rabattstufe.
 		$admin_text = sprintf(
 			/* translators: 1: Händler, 2: Positionen, 3: Wert. */
-			__( "Neue Anfrage über den Nachbestell-Link.\n\nHändler: %1\$s\n\n%2\$s\n\nBestellwert nach Staffel: %3\$s €\n\nDie Anfrage liegt als Entwurf unter Betrieb → Bestellungen und wartet auf deine Bestätigung.", 'lindenweg16' ),
+			__( "Neue Nachbestellung eines Händlers.\n\nHändler: %1\$s\n\n%2\$s\n\nBestellwert nach Staffel: %3\$s €\n\nDie Anfrage liegt als Entwurf unter Betrieb → Bestellungen und wartet auf deine Bestätigung.", 'lindenweg16' ),
 			$contact['company'],
 			implode( "\n", $zeilen ),
 			number_format_i18n( $discount['order_value_net_of_discount'], 2 )
@@ -248,15 +287,36 @@ class ReorderPage {
 	}
 
 	/**
-	 * Bestellformular.
+	 * Bestellformular über den Link.
 	 *
 	 * @param array  $result Token-Auflösung.
 	 * @param string $error  Fehlermeldung.
 	 */
 	protected function render_form( array $result, $error = '' ) {
-		$contact  = $result['contact'];
+		$contact = $result['contact'];
+		$body    = sprintf( '<p class="lw16-reorder__greeting">%s</p>', esc_html( sprintf( /* translators: %s: Firma. */ __( 'Guten Tag, %s', 'lindenweg16' ), $contact['company'] ) ) );
+
+		$this->layout(
+			__( 'Nachbestellung', 'lindenweg16' ),
+			$body . self::form_html( $contact, $error ),
+			self::staffel_config( $contact, self::catalog() )
+		);
+	}
+
+	/**
+	 * Das Bestellformular als HTML (escapt).
+	 *
+	 * Vorbelegt mit den bevorzugten Artikeln aus dem Profil, sonst mit der
+	 * letzten bestätigten Bestellung.
+	 *
+	 * @param array  $contact Kontakt.
+	 * @param string $error   Fehlermeldung.
+	 * @param string $field   Name des Absende-Felds.
+	 * @return string
+	 */
+	public static function form_html( array $contact, $error = '', $field = 'lw16_reorder_submit' ) {
 		$profile  = ContactRepository::profile( (int) $contact['id'] );
-		$last     = $this->last_order_items( (int) $contact['id'] );
+		$last     = self::last_order_items( (int) $contact['id'] );
 		$articles = self::catalog();
 
 		// Vorbelegung: bevorzugte Artikel aus dem Profil, sonst die letzte
@@ -278,15 +338,13 @@ class ReorderPage {
 
 		ob_start();
 
-		printf( '<p class="lw16-reorder__greeting">%s</p>', esc_html( sprintf( /* translators: %s: Firma. */ __( 'Guten Tag, %s', 'lindenweg16' ), $contact['company'] ) ) );
-
 		if ( $error ) {
 			printf( '<p class="lw16-reorder__error">%s</p>', esc_html( $error ) );
 		}
 
 		echo '<form method="post">';
 		wp_nonce_field( self::NONCE );
-		echo '<input type="hidden" name="lw16_reorder_submit" value="1" />';
+		printf( '<input type="hidden" name="%s" value="1" />', esc_attr( $field ) );
 
 		echo '<table class="lw16-reorder__table"><tbody>';
 
@@ -351,11 +409,11 @@ class ReorderPage {
 		echo '<div id="lw16-staffel" class="lw16-staffel"></div>';
 
 		printf(
-			'<p><label>%s<br /><textarea name="note" rows="3"></textarea></label></p>',
+			'<p class="lw16-reorder__note"><label for="lw16-reorder-note">%s</label><textarea id="lw16-reorder-note" name="note" rows="3"></textarea></p>',
 			esc_html__( 'Anmerkung', 'lindenweg16' )
 		);
 
-		printf( '<button type="submit" class="lw16-reorder__submit">%s</button>', esc_html__( 'Bestellung anfragen', 'lindenweg16' ) );
+		printf( '<button type="submit" class="lw16-reorder__submit button wp-element-button">%s</button>', esc_html__( 'Bestellung anfragen', 'lindenweg16' ) );
 		echo '</form>';
 
 		printf(
@@ -363,11 +421,7 @@ class ReorderPage {
 			esc_html__( 'Die Anfrage ist unverbindlich. Wir prüfen Verfügbarkeit und Konditionen und bestätigen Ihnen den Auftrag.', 'lindenweg16' )
 		);
 
-		$this->layout(
-			__( 'Nachbestellung', 'lindenweg16' ),
-			ob_get_clean(),
-			$this->staffel_config( $contact, $articles )
-		);
+		return (string) ob_get_clean();
 	}
 
 	/**
@@ -518,7 +572,7 @@ class ReorderPage {
 	 * @param array $articles Verkäufliche Artikel.
 	 * @return array
 	 */
-	protected function staffel_config( array $contact, array $articles ) {
+	public static function staffel_config( array $contact, array $articles ) {
 		$list = array();
 
 		foreach ( $articles as $article ) {
@@ -556,12 +610,12 @@ class ReorderPage {
 	}
 
 	/**
-	 * Bestätigungsseite.
+	 * Bestätigung nach dem Absenden (escapt).
 	 *
-	 * @param array $contact Kontakt.
-	 * @param array $items   Positionen.
+	 * @param array $items Positionen.
+	 * @return string
 	 */
-	protected function render_thanks( $contact, array $items ) {
+	public static function thanks_html( array $items ) {
 		ob_start();
 
 		printf( '<p>%s</p>', esc_html__( 'Vielen Dank, Ihre Anfrage ist eingegangen.', 'lindenweg16' ) );
@@ -573,7 +627,7 @@ class ReorderPage {
 				'<li>%s × %s%s</li>',
 				esc_html( number_format_i18n( $item['qty'], 0 ) ),
 				esc_html( $article ? $article['name'] : '' ),
-				esc_html( $this->color_suffix( $item ) )
+				esc_html( self::color_suffix( $item ) )
 			);
 		}
 
@@ -583,7 +637,7 @@ class ReorderPage {
 			esc_html__( 'Wir prüfen Verfügbarkeit und Konditionen und melden uns mit einer Bestätigung. Preise, Mengen und Liefertermin stehen erst damit fest.', 'lindenweg16' )
 		);
 
-		$this->layout( __( 'Anfrage eingegangen', 'lindenweg16' ), ob_get_clean() );
+		return (string) ob_get_clean();
 	}
 
 	/**
@@ -617,7 +671,7 @@ class ReorderPage {
 	 * @param array $item Position.
 	 * @return string Leer oder ' (Farbe)'.
 	 */
-	protected function color_suffix( array $item ) {
+	public static function color_suffix( array $item ) {
 		$farben = ColorRegistry::all();
 
 		if ( count( $farben ) < 2 ) {
@@ -639,7 +693,7 @@ class ReorderPage {
 	 * @param int $contact_id Kontakt.
 	 * @return array mengen => article_id => Menge, farben => article_id => Slug.
 	 */
-	protected function last_order_items( $contact_id ) {
+	protected static function last_order_items( $contact_id ) {
 		$orders = OrderOpsRepository::all( array( 'contact_id' => $contact_id, 'limit' => 20 ) );
 		$preset = array(
 			'mengen' => array(),
@@ -710,19 +764,64 @@ class ReorderPage {
 
 		add_filter( 'body_class', static function ( $classes ) {
 			$classes[] = 'lw16-reorder-body';
+			$classes[] = 'woocommerce';
 			return $classes;
 		} );
 
-		$this->enqueue_assets( $staffel );
+		self::enqueue_assets( $staffel );
+
+		$main = '<div class="lw16-haendler-page"><div class="lw16-haendler">'
+			. sprintf( '<h1 class="lw16-haendler__title">%s</h1>', esc_html( $title ) )
+			. $body
+			. '</div></div>';
+
+		if ( function_exists( 'wp_is_block_theme' ) && wp_is_block_theme() ) {
+			$this->layout_block_theme( $main );
+			return;
+		}
 
 		get_header();
-
-		echo '<div class="lw16-reorder-page"><div class="lw16-reorder">';
-		printf( '<h1 class="lw16-reorder__title">%s</h1>', esc_html( $title ) );
-		echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt.
-		echo '</div></div>';
-
+		echo $main; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt.
 		get_footer();
+	}
+
+	/**
+	 * Seitengerüst für Block-Themes.
+	 *
+	 * Block-Themes haben kein header.php; get_header() fiele auf die alte
+	 * Notbehelf-Kopfzeile von WordPress zurück („… wird mit Stolz
+	 * präsentiert von WordPress“). Stattdessen werden die Vorlagenteile
+	 * „header“ und „footer“ des Themes gerendert – und zwar vor wp_head(),
+	 * damit deren Block-Stile im Kopf der Seite landen, wie bei einer
+	 * normalen Seite.
+	 *
+	 * @param string $main Inhalt (escapt).
+	 */
+	protected function layout_block_theme( $main ) {
+		$header = do_blocks( '<!-- wp:template-part {"slug":"header","tagName":"header"} /-->' );
+		$footer = do_blocks( '<!-- wp:template-part {"slug":"footer","tagName":"footer"} /-->' );
+
+		?><!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo( 'charset' ); ?>" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="robots" content="noindex, nofollow, noarchive" />
+	<?php wp_head(); ?>
+</head>
+<body <?php body_class(); ?>>
+<?php wp_body_open(); ?>
+<div class="wp-site-blocks">
+<?php
+echo $header; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- gerenderte Theme-Blöcke.
+echo '<main class="wp-block-group">' . $main . '</main>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- vom Aufrufer escapt.
+echo $footer; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- gerenderte Theme-Blöcke.
+?>
+</div>
+<?php wp_footer(); ?>
+</body>
+</html>
+		<?php
 	}
 
 	/**
@@ -762,14 +861,17 @@ class ReorderPage {
 	/**
 	 * Stil und Skript für die eingebettete Darstellung anmelden.
 	 *
+	 * Der Stil übernimmt Farben, Schriften und Rundungen des Themes; das
+	 * Kundenkonto nutzt denselben, damit Link und Konto gleich aussehen.
+	 *
 	 * @param array $staffel Konfiguration der Live-Anzeige.
 	 */
-	protected function enqueue_assets( array $staffel ) {
+	public static function enqueue_assets( array $staffel ) {
 		wp_enqueue_style(
-			'lw16-reorder',
-			LW16_PLUGIN_URL . 'assets/css/betrieb-mobile.css',
+			'lw16-haendler',
+			LW16_PLUGIN_URL . 'assets/css/haendler.css',
 			array(),
-			Assets::version( 'assets/css/betrieb-mobile.css' )
+			Assets::version( 'assets/css/haendler.css' )
 		);
 
 		if ( ! $staffel ) {

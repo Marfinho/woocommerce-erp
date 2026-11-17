@@ -24,6 +24,7 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\CommissionBatch;
 use Lindenweg16\Modules\Betrieb\CommissionRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
+use Lindenweg16\Modules\Betrieb\DealerAccount;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
 use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
@@ -881,6 +882,11 @@ class Verkauf {
 			'callback'            => array( __CLASS__, 'contact_link' ),
 			'permission_callback' => $kontakte,
 		) );
+		register_rest_route( $ns, '/erp/kontakte/(?P<id>\d+)/konto', array(
+			'methods'             => 'POST',
+			'callback'            => array( __CLASS__, 'contact_account' ),
+			'permission_callback' => $kontakte,
+		) );
 
 		// Shop-Bestellungen: ERP-Recht und WordPress-Rolle wie beim Menüpunkt.
 		register_rest_route( $ns, '/erp/shop-bestellungen', array(
@@ -1310,6 +1316,7 @@ class Verkauf {
 				'commission' => $commission,
 				'activities' => $activities,
 				'link'       => $link,
+				'account'    => DealerAccount::state( $id ),
 				'unlinked'   => array(
 					'count' => count( $unlinked ),
 					'names' => array_slice( array_map( 'strval', $unlinked ), 0, 8 ),
@@ -1843,6 +1850,39 @@ class Verkauf {
 		$response->header( 'Cache-Control', 'no-store' );
 
 		return $response;
+	}
+
+	/**
+	 * Kundenkonto des Händlers: anlegen, erneut einladen oder lösen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public static function contact_account( WP_REST_Request $request ) {
+		$id = (int) $request['id'];
+
+		if ( ! ContactRepository::find( $id ) ) {
+			return self::fail( __( 'Diesen Kontakt gibt es nicht (mehr).', 'lindenweg16' ), 404 );
+		}
+
+		$in     = self::input( $request );
+		$action = isset( $in['action'] ) ? sanitize_key( (string) $in['action'] ) : '';
+
+		if ( 'einladen' === $action ) {
+			$result = DealerAccount::reinvite( $id );
+		} elseif ( 'loesen' === $action ) {
+			$result = DealerAccount::unlink( $id );
+		} elseif ( 'anlegen' === $action ) {
+			$result = DealerAccount::create_or_link( $id );
+		} else {
+			return self::fail( __( 'Unbekannte Aktion.', 'lindenweg16' ) );
+		}
+
+		if ( ! $result['ok'] ) {
+			return self::fail( $result['message'] );
+		}
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => $result['message'] ) );
 	}
 
 	/* ====================================================================

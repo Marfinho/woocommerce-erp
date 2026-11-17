@@ -140,6 +140,7 @@ class BetriebModule {
 		Lazy::rest( RestApi::class );
 		( new MobileCapture() )->register();
 		( new ReorderPage() )->register();
+		( new DealerAccount() )->register();
 		( new WooIntegration() )->register();
 		( new WooStockSync() )->register();
 		( new ForecastHooks() )->register();

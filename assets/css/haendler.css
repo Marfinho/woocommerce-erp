@@ -1,0 +1,344 @@
+/*
+ * Nachbestellen für Händler – im Kundenkonto und auf der Seite des
+ * Nachbestell-Links.
+ *
+ * Bringt keine eigenen Farben mit: Alles kommt aus den Farbrollen des Themes
+ * (WordPress-Presets), damit die Seite aussieht wie der Rest des Shops. Die
+ * Werte hinter dem Komma greifen nur, wenn ein Theme die Rolle nicht kennt.
+ */
+
+/* Eigene display-Angaben dürfen ein hidden-Element nicht sichtbar machen. */
+.lw16-haendler [hidden] {
+	display: none !important;
+}
+
+.lw16-haendler {
+	--lw16h-text: var(--wp--preset--color--text, currentColor);
+	--lw16h-muted: var(--wp--preset--color--text-muted, #6b6b6b);
+	--lw16h-line: var(--wp--preset--color--line, #dad7d3);
+	--lw16h-surface: var(--wp--preset--color--surface, #fff);
+	--lw16h-field: var(--wp--preset--color--surface-muted, #f0eeeb);
+	--lw16h-accent: var(--wp--preset--color--accent-2, #f3e6d6);
+	--lw16h-error: var(--wp--preset--color--error, #b3261e);
+	--lw16h-r-field: var(--wp--custom--radius--field, 10px);
+	--lw16h-r-image: var(--wp--custom--radius--image, 12px);
+	--lw16h-mono: var(--wp--preset--font-family--mono, ui-monospace, monospace);
+
+	display: grid;
+	gap: var(--wp--preset--spacing--40, 1.5rem);
+	color: var(--lw16h-text);
+}
+
+.lw16-haendler > * {
+	margin-block: 0;
+}
+
+.lw16-haendler__intro,
+.lw16-reorder__greeting {
+	max-width: 42rem;
+	margin: 0;
+}
+
+.lw16-reorder__greeting {
+	font-weight: 600;
+}
+
+/* Eigene Seite des Nachbestell-Links: Breite und Abstand wie eine Kontoseite. */
+.lw16-haendler-page {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 52rem;
+	margin-inline: auto;
+	padding: var(--wp--preset--spacing--50, 2rem) var(--wp--preset--spacing--40, 1.25rem) var(--wp--preset--spacing--70, 4rem);
+}
+
+.lw16-haendler__title {
+	margin: 0;
+}
+
+/* Formular */
+.lw16-haendler form {
+	display: grid;
+	gap: var(--wp--preset--spacing--30, 1rem);
+	margin: 0;
+}
+
+.lw16-haendler .lw16-reorder__table {
+	width: 100%;
+	margin: 0;
+	border: 0;
+	border-collapse: collapse;
+}
+
+.lw16-haendler .lw16-reorder__row {
+	border-bottom: 1px solid var(--lw16h-line);
+}
+
+.lw16-haendler .lw16-reorder__row:first-child {
+	border-top: 1px solid var(--lw16h-line);
+}
+
+.lw16-haendler .lw16-reorder__row td {
+	padding: 0.75rem 0.75rem 0.75rem 0;
+	border: 0;
+	background: none;
+	vertical-align: middle;
+}
+
+.lw16-haendler .lw16-reorder__row td:last-child {
+	padding-right: 0;
+}
+
+.lw16-haendler .lw16-reorder__thumb {
+	width: 4rem;
+}
+
+.lw16-haendler .lw16-reorder__thumb img {
+	display: block;
+	width: 3.5rem;
+	height: 3.5rem;
+	object-fit: cover;
+	border-radius: var(--lw16h-r-image);
+	background: var(--lw16h-field);
+}
+
+.lw16-haendler .lw16-reorder__name {
+	line-height: 1.35;
+}
+
+.lw16-haendler .lw16-reorder__name small {
+	color: var(--lw16h-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haendler .lw16-reorder__farbe {
+	width: 9rem;
+}
+
+.lw16-haendler .lw16-reorder__qty {
+	width: 6rem;
+	text-align: right;
+}
+
+.lw16-haendler .lw16-reorder__qty input,
+.lw16-haendler .lw16-reorder__farbe select,
+.lw16-haendler .lw16-reorder__note textarea {
+	box-sizing: border-box;
+	width: 100%;
+	margin: 0;
+	padding: 0.65em 0.8em;
+	border: 1px solid var(--lw16h-line);
+	border-radius: var(--lw16h-r-field);
+	background: var(--lw16h-surface);
+	color: var(--lw16h-text);
+	font: inherit;
+}
+
+.lw16-haendler .lw16-reorder__qty input {
+	text-align: center;
+	font-variant-numeric: tabular-nums;
+}
+
+/* Vorbelegte Zeile (letzte Bestellung): Menge hervorgehoben. */
+.lw16-haendler .lw16-reorder__qty input[data-preset] {
+	border-color: var(--lw16h-text);
+	font-weight: 600;
+}
+
+.lw16-haendler .lw16-reorder__note {
+	display: grid;
+	gap: 0.35rem;
+	margin: 0;
+}
+
+.lw16-haendler .lw16-reorder__note label {
+	font-weight: 600;
+}
+
+.lw16-haendler .lw16-reorder__note textarea {
+	min-height: 5.5rem;
+	resize: vertical;
+}
+
+.lw16-haendler .lw16-reorder__submit {
+	justify-self: start;
+	margin: 0;
+}
+
+.lw16-haendler .lw16-reorder__hint {
+	margin: 0;
+	color: var(--lw16h-muted);
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+}
+
+.lw16-haendler .lw16-reorder__error {
+	margin: 0;
+	padding: 0.85rem 1rem;
+	border-left: 3px solid var(--lw16h-error);
+	border-radius: var(--lw16h-r-field);
+	background: var(--lw16h-field);
+	color: var(--lw16h-text);
+}
+
+/* Konditionen live: Bestellwert, Rabattstufe, nächste Stufe */
+.lw16-haendler .lw16-staffel {
+	margin: 0;
+	border: 1px solid var(--lw16h-line);
+	border-radius: var(--lw16h-r-field);
+	overflow: hidden;
+}
+
+.lw16-haendler .lw16-staffel:empty {
+	display: none;
+}
+
+.lw16-haendler .lw16-staffel__row {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.7rem 1rem;
+	border: 0;
+	border-bottom: 1px solid var(--lw16h-line);
+	background: none;
+	font-size: inherit;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haendler .lw16-staffel__row:last-of-type {
+	border-bottom: 0;
+}
+
+.lw16-haendler .lw16-staffel__note {
+	margin: 0;
+	padding: 0 1rem 0.7rem;
+	color: var(--lw16h-muted);
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+}
+
+.lw16-haendler .lw16-staffel__next {
+	margin: 0;
+	padding: 0.8rem 1rem;
+	border-radius: 0;
+	background: var(--lw16h-accent);
+	color: var(--wp--preset--color--on-accent, var(--lw16h-text));
+	font-weight: 600;
+}
+
+/* Bisherige Anfragen und Aufträge */
+.lw16-haendler__anfragen {
+	display: grid;
+	gap: var(--wp--preset--spacing--30, 1rem);
+	scroll-margin-top: 7rem;
+}
+
+.lw16-haendler__anfragen h2 {
+	margin: 0;
+	font-size: var(--wp--preset--font-size--x-large, 1.5rem);
+}
+
+.lw16-haendler__tabelle {
+	width: 100%;
+	margin: 0 !important;
+}
+
+.lw16-haendler__tabelle td {
+	vertical-align: top;
+}
+
+/* Eine Position je Zeile, nie mitten in „10 × M-HMHR“ umbrechen. */
+.lw16-haendler__posliste {
+	display: grid;
+}
+
+.lw16-haendler__pos {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haendler__tabelle :is(th, td):nth-child(-n+2) {
+	white-space: nowrap;
+}
+
+.lw16-haendler__wert small {
+	display: block;
+	color: var(--lw16h-muted);
+}
+
+.lw16-haendler__wert {
+	text-align: right !important;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.lw16-haendler__status {
+	display: inline-block;
+	padding: 0.2em 0.7em;
+	border-radius: 999px;
+	background: var(--lw16h-field);
+	font-size: var(--wp--preset--font-size--small, 0.875rem);
+	white-space: nowrap;
+}
+
+.lw16-haendler__tabelle .is-draft .lw16-haendler__status {
+	background: var(--lw16h-accent);
+}
+
+/* Schmal: Farbe unter den Namen, Menge bleibt rechts. */
+@media (max-width: 600px) {
+	.lw16-haendler .lw16-reorder__table,
+	.lw16-haendler .lw16-reorder__table tbody {
+		display: block;
+	}
+
+	.lw16-haendler .lw16-reorder__row {
+		display: grid;
+		grid-template-columns: 3.25rem minmax(0, 1fr) 4.75rem;
+		grid-template-areas: "bild name menge" "bild farbe menge";
+		column-gap: 0.75rem;
+		align-items: center;
+		padding: 0.65rem 0;
+	}
+
+	.lw16-haendler .lw16-reorder__row td {
+		padding: 0;
+	}
+
+	.lw16-haendler .lw16-reorder__thumb {
+		grid-area: bild;
+		width: auto;
+	}
+
+	.lw16-haendler .lw16-reorder__thumb img {
+		width: 3.25rem;
+		height: 3.25rem;
+	}
+
+	.lw16-haendler .lw16-reorder__name {
+		grid-area: name;
+	}
+
+	.lw16-haendler .lw16-reorder__farbe {
+		grid-area: farbe;
+		width: auto;
+		padding-top: 0.4rem;
+	}
+
+	.lw16-haendler .lw16-reorder__qty {
+		grid-area: menge;
+		width: auto;
+	}
+
+	.lw16-haendler .lw16-reorder__submit {
+		justify-self: stretch;
+	}
+
+	.lw16-haendler__wert {
+		text-align: left !important;
+	}
+
+	.lw16-haendler__status {
+		align-self: flex-start;
+		white-space: normal;
+		border-radius: 0.8em;
+	}
+}

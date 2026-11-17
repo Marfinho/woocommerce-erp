@@ -278,8 +278,15 @@ class Nachkauf {
 		}
 
 		if ( false !== strpos( $body, '[Nachbestell-Link]' ) ) {
-			$token = $r['contact_id'] ? \Lindenweg16\Modules\Betrieb\ReorderToken::issue( (int) $r['contact_id'] ) : array();
-			$body  = str_replace( '[Nachbestell-Link]', ! empty( $token['url'] ) ? $token['url'] : home_url( '/' ), $body );
+			// Mit Kundenkonto führt der Link ins Konto; sonst ein neuer
+			// Nachbestell-Link (der den bisherigen ersetzt).
+			if ( $r['contact_id'] && \Lindenweg16\Modules\Betrieb\DealerAccount::user_for_contact( (int) $r['contact_id'] ) ) {
+				$url = \Lindenweg16\Modules\Betrieb\DealerAccount::endpoint_url();
+			} else {
+				$token = $r['contact_id'] ? \Lindenweg16\Modules\Betrieb\ReorderToken::issue( (int) $r['contact_id'] ) : array();
+				$url   = ! empty( $token['url'] ) ? $token['url'] : home_url( '/' );
+			}
+			$body = str_replace( '[Nachbestell-Link]', $url, $body );
 		}
 
 		if ( ! wp_mail( $to, $subject, $body ) ) {

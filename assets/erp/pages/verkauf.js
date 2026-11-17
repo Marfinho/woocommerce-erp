@@ -380,6 +380,7 @@
 
 			box.appendChild(h('div', { class: 'two vk-gap' }, stamm(d), konditionen(d)));
 			box.appendChild(profileCard(d));
+			box.appendChild(account(d));
 			box.appendChild(link(d));
 			box.appendChild(orders(d));
 			if (d.open.length) { box.appendChild(openItems(d)); }
@@ -561,8 +562,44 @@
 			return card;
 		}
 
+		function account(d) {
+			var a = d.account || { state: 'none' };
+			var card = h('div', { class: 'card vk-gap' }, h('h3', null, 'Kundenkonto im Shop'));
+			var actions = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' });
+
+			function run(btn, body, question) {
+				if (question && !window.confirm(question)) { return; }
+				btn.disabled = true;
+				post('/konto', body).then(function (res) { ui.toast(res.message); load(); }).catch(function (er) { btn.disabled = false; ui.toast(er.message, true); });
+			}
+
+			if (a.state === 'linked') {
+				card.appendChild(h('p', null, 'Angemeldet wird mit ' + a.email + (a.last_active ? ' · zuletzt aktiv ' + ymd(a.last_active) : ' · noch nicht angemeldet') + '.'));
+				card.appendChild(h('p', { class: 'muted' }, 'Unter „Mein Konto → Nachbestellen“ bestellt der Händler mit seinen Konditionen nach und sieht seine Anfragen und Aufträge. Anfragen landen wie bisher als Entwurf unter Bestellungen.'));
+				actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (e) { run(e.target, { action: 'einladen' }); } }, 'Einladung erneut senden'));
+				actions.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (e) {
+					run(e.target, { action: 'loesen' }, 'Verknüpfung lösen? Das Kundenkonto bleibt bestehen, nachbestellen kann der Händler darüber aber nicht mehr.');
+				} }, 'Verknüpfung lösen'));
+			} else {
+				card.appendChild(h('p', { class: 'muted' }, 'Mit einem Kundenkonto bestellt der Händler unter „Mein Konto → Nachbestellen“ nach – im Design des Shops, mit seinen Konditionen und einer Übersicht seiner Anfragen und Aufträge. Er bekommt eine Mail, mit der er sein Passwort festlegt. Gibt es zur Adresse schon ein Kundenkonto, wird es freigeschaltet.'));
+				if (!d.contact.email) {
+					card.appendChild(h('div', { class: 'notice warn' }, 'Dafür braucht der Kontakt eine E-Mail-Adresse – bitte unter „Stammdaten ändern“ eintragen.'));
+				}
+				actions.appendChild(h('button', { class: 'btn primary', type: 'button', disabled: !d.contact.email, onclick: function (e) {
+					run(e.target, { action: 'anlegen' }, 'Kundenkonto für ' + d.contact.email + ' anlegen und Einladung schicken?');
+				} }, 'Konto anlegen und einladen'));
+			}
+
+			card.appendChild(actions);
+			return card;
+		}
+
 		function link(d) {
 			var card = h('div', { class: 'card vk-gap' }, h('h3', null, 'Nachbestell-Link'));
+
+			if (d.account && d.account.state === 'linked') {
+				card.appendChild(h('p', { class: 'muted' }, 'Der Händler hat ein Kundenkonto: Ein gültiger Link führt ihn zur Anmeldung und dann zu „Nachbestellen“.'));
+			}
 
 			if (d.unlinked.count) {
 				card.appendChild(h('div', { class: 'notice warn' },

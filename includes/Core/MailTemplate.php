@@ -72,6 +72,18 @@ class MailTemplate {
 				'text'        => __( "Du möchtest benachrichtigt werden, sobald \"{produktname}\" wieder auf Lager ist.\n\nBitte bestätige das mit einem Klick:\n{bestaetigungslink}\n\nWarst du das nicht? Dann musst du nichts tun – ohne Bestätigung schreiben wir dir nicht, und die Anmeldung wird nach sieben Tagen gelöscht.", 'lindenweg16' ),
 				'platzhalter' => '{produktname}, {bestaetigungslink}',
 			),
+			'haendler_zugang'    => array(
+				'label'       => __( 'Händler: Kundenkonto angelegt (Passwort festlegen)', 'lindenweg16' ),
+				'betreff'     => __( 'Ihr Händlerzugang bei {firmenname}', 'lindenweg16' ),
+				'text'        => __( "Guten Tag,\n\nfür {firma} gibt es jetzt ein Kundenkonto in unserem Shop. Darin bestellen Sie nach, sehen Ihre Konditionen und alle bisherigen Anfragen und Aufträge.\n\nIhr Benutzername: {benutzername}\n\nBitte legen Sie zuerst Ihr Passwort fest:\n{passwort_link}\n\nDer Link gilt 24 Stunden. Danach fordern Sie auf der Anmeldeseite über „Passwort vergessen?“ einfach einen neuen an.\n\nNachbestellen geht ab dann hier:\n{nachbestellen_url}\n\nViele Grüße", 'lindenweg16' ),
+				'platzhalter' => '{firma}, {benutzername}, {passwort_link}, {nachbestellen_url}',
+			),
+			'haendler_freigeschaltet' => array(
+				'label'       => __( 'Händler: vorhandenes Kundenkonto freigeschaltet', 'lindenweg16' ),
+				'betreff'     => __( 'Nachbestellen jetzt in Ihrem Kundenkonto', 'lindenweg16' ),
+				'text'        => __( "Guten Tag,\n\nIhr Kundenkonto ({benutzername}) ist jetzt als Händlerkonto für {firma} freigeschaltet. Unter „Mein Konto“ finden Sie den neuen Bereich „Nachbestellen“ mit Ihren Konditionen und allen bisherigen Anfragen und Aufträgen:\n{nachbestellen_url}\n\nViele Grüße", 'lindenweg16' ),
+				'platzhalter' => '{firma}, {benutzername}, {nachbestellen_url}',
+			),
 			'mindestbestand'     => array(
 				'label'       => __( 'Mindestbestand unterschritten', 'lindenweg16' ),
 				'betreff'     => __( '[{firmenname}] Mindestbestand unterschritten: {produktname}', 'lindenweg16' ),
