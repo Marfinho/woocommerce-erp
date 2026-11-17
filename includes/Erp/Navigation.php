@@ -230,7 +230,7 @@ class Navigation {
 			self::item( 'loyalty', 'verkauf', __( 'Loyalty', 'lindenweg16' ), 'verkauf.loyalty', '', 'native', '', 'lw16-loyalty' ),
 			self::item( 'kasse', 'verkauf', __( 'Kasse', 'lindenweg16' ), 'verkauf.kasse', '', 'native' ),
 			self::item( 'marketing', 'verkauf', __( 'Marketing', 'lindenweg16' ), 'verkauf.marketing', '', 'native', '', 'lw16-marketing' ),
-			self::item( 'besucher', 'verkauf', __( 'Besucher jetzt', 'lindenweg16' ), 'verkauf.besucher', '', 'native' ),
+			self::item( 'besucher', 'verkauf', __( 'Besucher', 'lindenweg16' ), 'verkauf.besucher', '', 'native' ),
 			self::item( 'kurzlinks', 'verkauf', __( 'Kurzlinks', 'lindenweg16' ), 'verkauf.kurzlinks', '', 'native', '', 'lw16-kurzlinks' ),
 			self::item( 'affiliates', 'verkauf', __( 'Affiliates', 'lindenweg16' ), 'verkauf.affiliates', '', 'native' ),
 			self::item( 'angebote', 'verkauf', __( 'Angebote', 'lindenweg16' ), 'verkauf.angebote', '', 'native' ),

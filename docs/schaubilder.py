@@ -750,12 +750,13 @@ sb('adm-live', 'Was die Wand zeigt',
    erp('Aufgaben aus „Heute“', 'Wandnutzer: alle, ohne persönliche Mails'),
    warn('Verbindung weg?', 'der letzte Stand bleibt stehen'))
 
-sb('adm-live|Besucher jetzt', 'Wer ist gerade auf der Website – ohne Cookie',
+sb('adm-live|Besucher', 'Wer ist gerade auf der Website – ohne Cookie',
    ext('Besucher öffnet eine Seite', 'ohne Einwilligungsbanner, nichts wird im Browser gespeichert'),
    erp('Seite meldet sich alle 25 Sekunden', 'mit einer Zufallsnummer, die nur im Tab lebt'),
    erp('Server hält nur die Seite fest', 'Pfad, Titel, Bereich, Gerät – keine IP-Adresse, kein Browsername'),
-   du('„Besucher jetzt“ ansehen', 'Verkauf → Besucher jetzt, aktualisiert alle 10 Sekunden'),
+   du('„Besucher“ ansehen', 'Verkauf → Besucher, Reiter Jetzt aktualisiert alle 10 Sekunden'),
    warn('Tab zu oder 90 Sekunden still', 'die Seite verschwindet aus der Anzeige'),
+   erp('Reiter „Verlauf“', 'Aufrufe nach Tag, Wochentag und Uhrzeit: wann ist viel los?'),
    erp('Reiter „Wege“', 'zählt nur Schritte von Seite A nach B je Tag, ohne zu merken, wer es war'),
    erp('Produkte, Kampagnen, Suche, Fehlerseiten', 'weitere anonyme Tageszähler, 90 Tage'))
 

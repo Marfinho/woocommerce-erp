@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.100.0] – 2026-11-17
+
+### Neu: Besucher – Verlauf: an welchen Tagen und zu welchen Zeiten ist viel los?
+- Der Menüpunkt **Besucher jetzt** heißt jetzt **Besucher** (Verkauf → Marketing → Besucher); die Seite hat einen neuen Reiter **Verlauf** (7 Tage, 30 Tage, 90 Tage, 1 Jahr).
+- Der Verlauf zeigt: **Seitenaufrufe pro Tag** als Balken, **Wochentage** im Durchschnitt, **Tageszeiten** im Durchschnitt, eine **Wochentag-mal-Stunde-Übersicht** (dunkler = mehr los) sowie Kennzahlen: Aufrufe gesamt, Ø pro Tag, bester Tag, stärkster Wochentag, stärkste Stunde.
+- Die Auswertung liest den bestehenden anonymen Aufruf-Zähler (keine neue Datenerhebung) und rechnet von UTC auf die **Ortszeit der Website** um, Sommerzeit eingeschlossen. Durchschnitte nutzen nur abgeschlossene Tage ab dem ersten Tag mit Daten; der heutige Tag steht im Verlauf, fließt aber nicht in Durchschnitte ein.
+- Gezählt werden **Seitenaufrufe, keine Menschen**; angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“ zählen nicht.
+- Betriebsanleitung: Kapitel D.17, Abschnitt „Besucher“, um den Verlauf ergänzt. Tests: `tests/ErpVerlaufTest.php`.
+
 ## [0.99.7] – 2026-11-12
 
 ### Geändert

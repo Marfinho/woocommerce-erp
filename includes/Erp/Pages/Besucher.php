@@ -13,6 +13,7 @@ namespace Lindenweg16\Erp\Pages;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Erp\Flow;
+use Lindenweg16\Erp\History;
 use Lindenweg16\Erp\Insights;
 use Lindenweg16\Erp\Presence;
 use Lindenweg16\Erp\RestApi;
@@ -20,7 +21,7 @@ use WP_REST_Request;
 use WP_REST_Response;
 
 /**
- * Besucher jetzt in der neuen Oberfläche.
+ * Besucher in der neuen Oberfläche: jetzt, Verlauf, Wege und Einblicke.
  */
 class Besucher {
 
@@ -52,6 +53,16 @@ class Besucher {
 
 		register_rest_route(
 			RestApi::NAMESPACE_V1,
+			'/erp/besucher/verlauf',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'history' ),
+				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
+			)
+		);
+
+		register_rest_route(
+			RestApi::NAMESPACE_V1,
 			'/erp/besucher/einblicke',
 			array(
 				'methods'             => 'GET',
@@ -59,6 +70,16 @@ class Besucher {
 				'permission_callback' => $api->needs( array( 'verkauf.besucher' ) ),
 			)
 		);
+	}
+
+	/**
+	 * Verlauf: Aufrufe nach Tag, Wochentag und Tageszeit.
+	 *
+	 * @param WP_REST_Request $request Anfrage (tage).
+	 * @return WP_REST_Response
+	 */
+	public static function history( WP_REST_Request $request ) {
+		return new WP_REST_Response( History::snapshot( $request->get_param( 'tage' ) ) );
 	}
 
 	/**
