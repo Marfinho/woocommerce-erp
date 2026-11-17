@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.99.4">
+<meta name="anleitung-stand" content="0.100.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.99.4</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.100.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.99.4</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.100.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -4788,24 +4788,25 @@ svg.sv{display:block;width:100%;height:auto}
 <h3>Wandbildschirm und angemeldete Personen</h3>
 <p>Für den Bildschirm an der Wand gibt es einen eigenen Nutzer mit der Rolle <code>lw16_live</code>: Er sieht nur die Live-Seite und bleibt <strong>ein Jahr angemeldet</strong>, damit niemand den Bildschirm alle paar Tage neu anmelden muss. Der Wandbildschirm sieht <strong>alle Aufgaben, ohne persönliche Mails</strong>. Angemeldete Personen sehen im Live-Bildschirm nur die Aufgaben, die ihre Rechte hergeben.</p>
 
-<h3>Besucher jetzt</h3>
-<!-- schaubild:adm-live|Besucher jetzt -->
+<h3>Besucher</h3>
+<!-- schaubild:adm-live|Besucher -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Wer ist gerade auf der Website – ohne Cookie">
 <div class="sb-kopf">Schaubild · Wer ist gerade auf der Website – ohne Cookie</div>
 <ol class="fluss c4">
 	<li class="ext"><b>Besucher öffnet eine Seite</b><span>ohne Einwilligungsbanner, nichts wird im Browser gespeichert</span></li>
 	<li class="erp"><b>Seite meldet sich alle 25 Sekunden</b><span>mit einer Zufallsnummer, die nur im Tab lebt</span></li>
 	<li class="erp"><b>Server hält nur die Seite fest</b><span>Pfad, Titel, Bereich, Gerät – keine IP-Adresse, kein Browsername</span></li>
-	<li class="du"><b>„Besucher jetzt“ ansehen</b><span>Verkauf → Besucher jetzt, aktualisiert alle 10 Sekunden</span></li>
+	<li class="du"><b>„Besucher“ ansehen</b><span>Verkauf → Besucher, Reiter Jetzt aktualisiert alle 10 Sekunden</span></li>
 	<li class="warn"><b>Tab zu oder 90 Sekunden still</b><span>die Seite verschwindet aus der Anzeige</span></li>
+	<li class="erp"><b>Reiter „Verlauf“</b><span>Aufrufe nach Tag, Wochentag und Uhrzeit: wann ist viel los?</span></li>
 	<li class="erp"><b>Reiter „Wege“</b><span>zählt nur Schritte von Seite A nach B je Tag, ohne zu merken, wer es war</span></li>
 	<li class="erp"><b>Produkte, Kampagnen, Suche, Fehlerseiten</b><span>weitere anonyme Tageszähler, 90 Tage</span></li>
 </ol>
 <p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="ext">Außerhalb (Drucker, Bank, Post, Lieferant)</span> <span class="warn">Pflicht oder Ausnahme</span></p>
 </figure>
-<!-- /schaubild:adm-live|Besucher jetzt -->
+<!-- /schaubild:adm-live|Besucher -->
 
-<p><span class="weg">Verkauf → Marketing → Besucher jetzt</span></p>
+<p><span class="weg">Verkauf → Marketing → Besucher</span></p>
 <p>Die Seite zeigt, wie viele Seiten der Website <strong>gerade</strong> offen sind und wo: die beliebtesten Seiten mit Titel und Pfad, wie viele Personen im <strong>Warenkorb</strong> oder in der <strong>Kasse</strong> sind, Handy oder Rechner, seit wann eine Seite offen ist und woher der Besucher kam (nur der Name der Verweisseite, z. B. Suchmaschine oder Instagram). Die Zahlen aktualisieren sich alle 10 Sekunden; im Live-Bildschirm steht <strong>jetzt online</strong> auf der Karte Website. Voraussetzung: das Recht <em>Besucher jetzt</em>.</p>
 <p><strong>Reiter „Produkte“, „Kampagnen“, „Suche“ und „Fehlerseiten“:</strong> Vier Auswertungen, ebenfalls ohne Cookie und ohne Kennung – es sind Tageszähler, die nicht festhalten, wer es war (Aufbewahrung 90 Tage).</p>
 <ul>
@@ -4823,6 +4824,13 @@ svg.sv{display:block;width:100%;height:auto}
 <li><strong>Bei viel Besuch drosseln:</strong> Jede Meldung ist auf dem Server eine volle Anfrage mit eigener Datenbankverbindung. Erwartest du einen Ansturm, schalte unter <span class="weg">Verwaltung → Einstellungen → Plugin (Firma, DHL, …) → Besucherzählung (Live-Dashboard)</span> zuerst <em>„Offene Seiten melden sich alle 25 Sekunden“</em> aus: Dann meldet sich jede Seite nur noch einmal beim Öffnen, „Besucher jetzt“ zeigt eine Seite danach 90 Sekunden lang. Reicht das nicht, schalte auch <em>„Seitenaufrufe zählen“</em> aus; dann gibt es kein Skript mehr, und die Live-Zahlen bleiben stehen. Nach dem Ansturm beide Häkchen wieder setzen.</li>
 <li>Die Datenschutzerklärung der Website sollte die Anzeige kurz erwähnen (berechtigtes Interesse, keine Cookies, keine IP-Speicherung). Wer es rechtlich prüfen lassen will: Das Konzept entspricht den cookielosen Zählern gängiger Statistikdienste, nur ohne Weitergabe an Dritte.</li>
 </ul>
+<p><strong>Reiter „Verlauf“:</strong> Wann ist auf der Website viel los? Du siehst die <strong>Seitenaufrufe pro Tag</strong> (7 Tage, 30 Tage, 90 Tage oder ein Jahr), den <strong>Durchschnitt je Wochentag</strong>, den <strong>Durchschnitt je Stunde</strong> und eine Übersicht <strong>Wochentag mal Uhrzeit</strong>, in der dunklere Felder mehr Aufrufe bedeuten. Oben stehen Aufrufe gesamt, Ø pro Tag, bester Tag, stärkster Wochentag und stärkste Stunde. Damit lässt sich zum Beispiel entscheiden, wann ein Post, ein Newsletter oder eine Aktion online gehen sollte.</p>
+<ul>
+<li>Die Zahlen kommen aus dem bestehenden anonymen Aufruf-Zähler; für den Verlauf wird nichts zusätzlich erhoben. Die Uhrzeiten gelten in der <strong>Ortszeit der Website</strong>, Sommerzeit eingeschlossen.</li>
+<li>Gezählt werden <strong>Seitenaufrufe, keine Menschen</strong>; angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“ zählen nicht.</li>
+<li>Durchschnitte nutzen nur <strong>abgeschlossene Tage</strong> ab dem ersten Tag mit Daten. Der heutige Tag steht im Tagesverlauf, fließt aber nicht ein. In den ersten Wochen sind die Durchschnitte wenig belastbar: Ein einzelner starker Tag verschiebt sie noch.</li>
+</ul>
+
 <p><strong>Reiter „Wege“:</strong> Die Seite zeigt, wie sich Besucher durch die Website bewegen – im Zeitraum 7, 30 oder 90 Tage: die häufigsten Wege von Seite zu Seite, die Einstiegsseiten, die Herkunft aus fremden Seiten und für eine gewählte Seite, was <em>davor</em> und <em>danach</em> geschieht. Dazu steht, wie viele Aufrufe des Warenkorbs zur Kasse weitergingen. Auch das geht ohne Cookie: Gezählt wird je Tag nur „von Seite A nach Seite B: n Fälle“ aus der Verweisseite, die der Browser beim Öffnen ohnehin mitschickt. Es wird nicht gespeichert, welche Aufrufe zusammengehören; der ganze Weg einer Person lässt sich also nicht herauslesen.</p>
 <ul>
 <li>Nur <strong>ein Schritt</strong> wird gezählt, keine Ketten über drei oder mehr Seiten.</li>
@@ -5481,7 +5489,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.99.4</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.100.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

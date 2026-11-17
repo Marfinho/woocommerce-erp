@@ -1,6 +1,6 @@
 /*
- * ERP-Seite „Besucher jetzt“ (nativ): wie viele Personen gerade auf der Website
- * sind und auf welchen Seiten. Fragt alle 10 Sekunden nach. Die Zahlen kommen
+ * ERP-Seite „Besucher“ (nativ): wie viele Personen gerade auf der Website
+ * sind und auf welchen Seiten, wann viel los ist, wie sie sich bewegen. Fragt alle 10 Sekunden nach. Die Zahlen kommen
  * ohne Cookie und ohne IP-Adresse zustande (includes/Erp/Presence.php); gezählt
  * werden geöffnete Seiten, nicht Menschen. Klassisches ES5, Daten nur als Text.
  */
@@ -20,13 +20,14 @@
 
 	UI.pages['besucher'] = function (item, ui) {
 		var h = ui.h;
-		ui.pageHead('Besucher jetzt', 'Wer gerade auf der Website ist und wo – anonym, ohne Cookie und ohne Einwilligungsbanner.', ui.classicBtn(item));
+		ui.pageHead('Besucher', 'Wer gerade auf der Website ist, wann viel los ist und wie sich Besucher bewegen – anonym, ohne Cookie und ohne Einwilligungsbanner.', ui.classicBtn(item));
 
 		var tabs = h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px' });
 		var box = h('div');
 		var wege = h('div', { style: 'display:none' });
 		var ein = h('div', { style: 'display:none' });
-		var TABS = [['jetzt', 'Jetzt'], ['wege', 'Wege'], ['produkte', 'Produkte'], ['kampagnen', 'Kampagnen'], ['suche', 'Suche'], ['fehler', 'Fehlerseiten']];
+		var verl = h('div', { style: 'display:none' });
+		var TABS = [['jetzt', 'Jetzt'], ['verlauf', 'Verlauf'], ['wege', 'Wege'], ['produkte', 'Produkte'], ['kampagnen', 'Kampagnen'], ['suche', 'Suche'], ['fehler', 'Fehlerseiten']];
 		var btns = {};
 		var current = 'jetzt';
 		TABS.forEach(function (t) {
@@ -39,14 +40,16 @@
 		ui.view().appendChild(box);
 		ui.view().appendChild(wege);
 		ui.view().appendChild(ein);
+		ui.view().appendChild(verl);
 
 		function show(key) {
 			current = key;
 			box.style.display = key === 'jetzt' ? '' : 'none';
+			verl.style.display = key === 'verlauf' ? '' : 'none';
 			wege.style.display = key === 'wege' ? '' : 'none';
-			ein.style.display = key === 'jetzt' || key === 'wege' ? 'none' : '';
+			ein.style.display = key === 'jetzt' || key === 'wege' || key === 'verlauf' ? 'none' : '';
 			TABS.forEach(function (t) { btns[t[0]].className = 'pill' + (t[0] === key ? ' on' : ''); });
-			if (key === 'wege') { loadWege(); } else if (key !== 'jetzt') { loadEin(); }
+			if (key === 'wege') { loadWege(); } else if (key === 'verlauf') { loadVerlauf(); } else if (key !== 'jetzt') { loadEin(); }
 		}
 
 		var days = 30;
@@ -154,6 +157,114 @@
 			nie_gekauft: 'Im Warenkorb, aber nie gekauft: Versandkosten oder Kasse prüfen.',
 			warenkorb_abbruch: 'Wird oft in den Warenkorb gelegt, selten gekauft.'
 		};
+
+		var vdays = 30;
+		var WD = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+
+		function fmtDate(iso) {
+			var p = iso.split('-');
+			return p[2] + '.' + p[1] + '.' + p[0];
+		}
+		function num1(n) { return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 }).format(n); }
+
+		function bars(items, label, opts) {
+			var max = 1;
+			items.forEach(function (i) { if (i.v > max) { max = i.v; } });
+			var wrap = h('div', { style: 'display:flex;align-items:flex-end;gap:' + (opts.gap || 2) + 'px;height:' + (opts.height || 120) + 'px', role: 'img', 'aria-label': label });
+			items.forEach(function (i) {
+				wrap.appendChild(h('div', {
+					title: i.t,
+					style: 'flex:1;min-width:1px;border-radius:2px 2px 0 0;background:var(--accent);height:' + Math.max(i.v > 0 ? 2 : 0, Math.round(i.v / max * 100)) + '%' + (i.hot ? '' : ';opacity:.55')
+				}));
+			});
+			return wrap;
+		}
+
+		function paintVerlauf(d) {
+			verl.textContent = '';
+
+			var bar = h('div', { style: 'display:flex;gap:8px;margin-bottom:14px' });
+			[7, 30, 90, 365].forEach(function (n) {
+				var b = h('button', { class: 'pill' + (n === d.days ? ' on' : ''), type: 'button' }, n === 365 ? '1 Jahr' : n + ' Tage');
+				b.addEventListener('click', function () { vdays = n; loadVerlauf(); });
+				bar.appendChild(b);
+			});
+			verl.appendChild(bar);
+
+			function big(label, value, sub) {
+				return h('div', { class: 'card' },
+					h('div', { class: 'muted', style: 'font-size:12.5px' }, label),
+					h('div', { style: 'font-size:26px;font-weight:700;line-height:1.25' }, value),
+					sub ? h('div', { class: 'muted', style: 'font-size:12.5px' }, sub) : null);
+			}
+
+			var grid = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px' });
+			grid.appendChild(big('Seitenaufrufe', new Intl.NumberFormat('de-DE').format(d.total), 'in ' + d.days + ' Tagen, heute ' + d.today));
+			grid.appendChild(big('Ø pro Tag', d.complete_days ? num1(d.avg_day) : '–', d.complete_days ? 'aus ' + d.complete_days + ' abgeschlossenen Tagen' : 'noch kein abgeschlossener Tag'));
+			grid.appendChild(big('Bester Tag', d.best_day ? new Intl.NumberFormat('de-DE').format(d.best_day.views) : '–', d.best_day ? fmtDate(d.best_day.date) : null));
+			grid.appendChild(big('Stärkster Wochentag', d.best_weekday ? WD[d.best_weekday.w - 1] : '–', d.best_weekday ? 'Ø ' + num1(d.best_weekday.avg) + ' Aufrufe' : null));
+			grid.appendChild(big('Stärkste Stunde', d.best_hour ? d.best_hour.h + '–' + (d.best_hour.h + 1) + ' Uhr' : '–', d.best_hour ? 'Ø ' + num1(d.best_hour.avg) + ' Aufrufe je Tag' : null));
+			verl.appendChild(grid);
+
+			if (!d.total) {
+				verl.appendChild(h('div', { class: 'card' }, h('p', null, 'In diesem Zeitraum wurden noch keine Seitenaufrufe gezählt.'),
+					h('p', { class: 'muted' }, 'Angemeldete Personen, Suchmaschinen und Browser mit „Do Not Track“ zählen nicht.')));
+				return;
+			}
+
+			var dailyItems = d.daily.map(function (x) { return { v: x.views, t: fmtDate(x.date) + ': ' + x.views + ' Aufrufe', hot: !d.best_day || x.views >= d.best_day.views * 0.8 }; });
+			var first = d.daily[0].date, last = d.daily[d.daily.length - 1].date;
+			verl.appendChild(h('div', { class: 'card', style: 'margin-bottom:14px' }, h('h3', null, 'Aufrufe pro Tag'),
+				bars(dailyItems, 'Seitenaufrufe pro Tag', { gap: d.days > 90 ? 0 : 2, height: 130 }),
+				h('div', { class: 'muted', style: 'display:flex;justify-content:space-between;font-size:12.5px;margin-top:4px' }, h('span', null, fmtDate(first)), h('span', null, fmtDate(last))),
+				h('p', { class: 'muted', style: 'margin-top:6px' }, 'Hell hervorgehoben: Tage mit mindestens 80 % des besten Tages. Die Maus über einen Balken zeigt die Zahl.')));
+
+			var two = h('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px;margin-bottom:14px' });
+
+			var wdMax = 0;
+			d.weekdays.forEach(function (w) { if (w.avg > wdMax) { wdMax = w.avg; } });
+			var wdTable = h('table', { class: 'list' });
+			var wdBody = h('tbody');
+			d.weekdays.forEach(function (w) {
+				wdBody.appendChild(h('tr', null, h('td', null, WD[w.w - 1]),
+					h('td', { style: 'width:55%' }, h('div', { style: 'height:12px;border-radius:3px;background:var(--accent);width:' + (wdMax ? Math.round(w.avg / wdMax * 100) : 0) + '%;opacity:' + (w.avg === wdMax && wdMax > 0 ? 1 : 0.55) })),
+					h('td', { class: 'num' }, num1(w.avg))));
+			});
+			wdTable.appendChild(wdBody);
+			two.appendChild(h('div', { class: 'card' }, h('h3', null, 'Nach Wochentag'), wdTable,
+				h('p', { class: 'muted', style: 'margin-top:8px' }, 'Durchschnittliche Aufrufe pro Tag.')));
+
+			var hourItems = d.hours.map(function (x) { return { v: x.avg, t: x.h + '–' + (x.h + 1) + ' Uhr: Ø ' + num1(x.avg) + ' Aufrufe', hot: d.best_hour && x.avg >= d.best_hour.avg * 0.8 }; });
+			var ticks = h('div', { class: 'muted', style: 'display:flex;justify-content:space-between;font-size:12.5px;margin-top:4px' });
+			['0', '6', '12', '18', '24'].forEach(function (t) { ticks.appendChild(h('span', null, t + ' Uhr')); });
+			two.appendChild(h('div', { class: 'card' }, h('h3', null, 'Nach Tageszeit'), bars(hourItems, 'Aufrufe nach Tageszeit', { gap: 3, height: 150 }), ticks,
+				h('p', { class: 'muted', style: 'margin-top:8px' }, 'Durchschnittliche Aufrufe je Stunde und Tag.')));
+			verl.appendChild(two);
+
+			var heatMax = 0;
+			d.heat.forEach(function (row) { row.forEach(function (v) { if (v > heatMax) { heatMax = v; } }); });
+			var heat = h('div', { style: 'display:grid;grid-template-columns:5.5em repeat(24,minmax(0,1fr));gap:2px;font-size:11px' });
+			heat.appendChild(h('div'));
+			for (var hh = 0; hh < 24; hh++) { heat.appendChild(h('div', { class: 'muted', style: 'text-align:center' }, hh % 3 === 0 ? String(hh) : '')); }
+			d.heat.forEach(function (row, wi) {
+				heat.appendChild(h('div', { class: 'muted', style: 'align-self:center' }, WD[wi].slice(0, 2)));
+				row.forEach(function (v, hi) {
+					heat.appendChild(h('div', {
+						title: WD[wi] + ', ' + hi + '–' + (hi + 1) + ' Uhr: Ø ' + num1(v) + ' Aufrufe',
+						style: 'aspect-ratio:1;min-height:14px;border-radius:2px;background:var(--accent);opacity:' + (v > 0 && heatMax ? (0.12 + 0.88 * v / heatMax).toFixed(2) : '0.05')
+					}));
+				});
+			});
+			verl.appendChild(h('div', { class: 'card' }, h('h3', null, 'Wann ist viel los? Wochentag und Uhrzeit'), heat,
+				h('p', { class: 'muted', style: 'margin-top:8px' }, 'Je dunkler, desto mehr Aufrufe im Durchschnitt (Uhrzeit in deiner Ortszeit). Die Maus über ein Feld zeigt die Zahl. Gezählt sind Seitenaufrufe, nicht Menschen; Durchschnitte nutzen nur abgeschlossene Tage' + (d.first ? ' ab ' + fmtDate(d.first) : '') + '.')));
+		}
+
+		function loadVerlauf() {
+			return ui.api('besucher/verlauf?tage=' + vdays).then(paintVerlauf).catch(function (e) {
+				verl.textContent = '';
+				verl.appendChild(h('div', { class: 'notice warn' }, e.message || 'Nicht erreichbar.'));
+			});
+		}
 
 		function paintEin(d) {
 			ein.textContent = '';
