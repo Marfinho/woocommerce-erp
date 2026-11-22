@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.101.1] – 2026-11-22
+
+### Behoben
+- **Produktetikett drucken ergab „Ein kritischer Fehler“:** Beim Aufbereiten des Produktbilds (Bilder, die kein JPEG sind) rief das Etikett `wp_tempnam()` auf, das im Download nicht geladen war (`Call to undefined function wp_tempnam()`). Die Funktion wird jetzt bei Bedarf nachgeladen; fehlt sie trotzdem, erscheint das Etikett ohne Bild statt mit Fehlerseite. Dass es einmal klappte, lag am Bild: JPEG-Bilder brauchen die Umwandlung nicht.
+
 ## [0.101.0] – 2026-11-22
 
 ### Neu: Kommissionieren – ein eigener Schritt zwischen „bezahlt“ und „packen“
