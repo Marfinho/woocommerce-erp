@@ -104,7 +104,7 @@ class Nachkauf {
 		if ( function_exists( 'wc_get_orders' ) ) {
 			$orders = (array) wc_get_orders(
 				array(
-					'status'       => array( 'wc-completed', 'wc-processing' ),
+					'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 					'date_created' => '>' . ( time() - 3 * 365 * DAY_IN_SECONDS ),
 					'limit'        => 3000,
 					'return'       => 'objects',

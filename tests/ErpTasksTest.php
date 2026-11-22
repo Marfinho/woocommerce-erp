@@ -30,6 +30,12 @@ class ErpTasksTest extends TestCase {
 		$this->assertSame( array( 'melden', 'ruesten', 'montage', 'packen', 'wartung', 'bestellen', 'lieferung', 'rechnung', 'dauerbeleg', 'nachfassen', 'mail' ), array_column( $sorted, 'kind' ) );
 	}
 
+	public function test_kommissionieren_steht_vor_packen() {
+		$sorted = Tasks::sort( array( array( 'kind' => 'mail' ), array( 'kind' => 'packen' ), array( 'kind' => 'wartung' ), array( 'kind' => 'kommissionieren' ) ) );
+
+		$this->assertSame( array( 'kommissionieren', 'packen', 'wartung', 'mail' ), array_column( $sorted, 'kind' ) );
+	}
+
 	public function test_unbekannte_arten_kommen_zuletzt() {
 		$sorted = Tasks::sort( array( array( 'kind' => 'neu' ), array( 'kind' => 'mail' ) ) );
 

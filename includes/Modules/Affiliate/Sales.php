@@ -39,7 +39,7 @@ class Sales {
 
 		$args = array(
 			'type'    => 'shop_order',
-			'status'  => array( 'wc-processing', 'wc-completed' ),
+			'status'  => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed' ),
 			'orderby' => 'ID',
 			'order'   => 'ASC',
 			'limit'   => 200,

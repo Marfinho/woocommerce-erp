@@ -595,7 +595,7 @@ class Tools {
 
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT COUNT(*) AS bestellungen, COALESCE(SUM(total_sales),0) AS brutto, COALESCE(SUM(net_total),0) AS netto, COALESCE(SUM(num_items_sold),0) AS artikel FROM {$table} WHERE parent_id = 0 AND status IN ('wc-processing','wc-completed','wc-on-hold') AND date_created >= %s AND date_created <= %s", // phpcs:ignore WordPress.DB.PreparedSQL
+				"SELECT COUNT(*) AS bestellungen, COALESCE(SUM(total_sales),0) AS brutto, COALESCE(SUM(net_total),0) AS netto, COALESCE(SUM(num_items_sold),0) AS artikel FROM {$table} WHERE parent_id = 0 AND status IN ('wc-processing','wc-kommissioniert','wc-completed','wc-on-hold') AND date_created >= %s AND date_created <= %s", // phpcs:ignore WordPress.DB.PreparedSQL
 				$from . ' 00:00:00',
 				$to . ' 23:59:59'
 			),

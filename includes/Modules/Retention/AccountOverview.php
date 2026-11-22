@@ -308,7 +308,7 @@ class AccountOverview {
 		$open = wc_get_orders(
 			array(
 				'customer_id' => $user_id,
-				'status'      => array( 'wc-pending', 'wc-on-hold', 'wc-processing' ),
+				'status'      => array( 'wc-pending', 'wc-on-hold', 'wc-processing', 'wc-kommissioniert' ),
 				'limit'       => -1,
 				'return'      => 'ids',
 			)

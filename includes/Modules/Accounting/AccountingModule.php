@@ -180,7 +180,7 @@ class AccountingModule {
 
 		$orders = wc_get_orders(
 			array(
-				'status'       => array( 'processing', 'completed', 'on-hold' ),
+				'status'       => array( 'processing', 'kommissioniert', 'completed', 'on-hold' ),
 				'limit'        => 200,
 				'date_created' => '>' . ( time() - 30 * DAY_IN_SECONDS ),
 				'return'       => 'objects',

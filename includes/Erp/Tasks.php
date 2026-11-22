@@ -40,7 +40,8 @@ class Tasks {
 			'melden'    => 1,
 			'ruesten'   => 2,
 			'montage'   => 3,
-			'packen'    => 4,
+			'kommissionieren' => 4,
+			'packen'    => 4.5,
 			'wartung'   => 5,
 			'bestellen' => 6,
 			'lieferung' => 7,
@@ -174,12 +175,25 @@ class Tasks {
 		}
 
 		if ( ( self::$everything || Access::can( 'verkauf.versand' ) ) && function_exists( 'wc_orders_count' ) ) {
+			// Zwei Schritte, zwei Karten: erst die Ware holen und scannen, dann packen und versenden.
 			$n = (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' );
 
 			if ( $n > 0 ) {
 				$tasks[] = array(
+					'kind'  => 'kommissionieren',
+					'title' => self::count_text( $n, __( '%d Bestellung kommissionieren', 'lindenweg16' ), __( '%d Bestellungen kommissionieren', 'lindenweg16' ) ),
+					'sub'   => __( 'Ware holen und scannen', 'lindenweg16' ),
+					'cta'   => __( 'Zum Kommissionieren', 'lindenweg16' ),
+					'href'  => '#/seite/versand',
+				);
+			}
+
+			$n = (int) wc_orders_count( 'kommissioniert' );
+
+			if ( $n > 0 ) {
+				$tasks[] = array(
 					'kind'  => 'packen',
-					'title' => self::count_text( $n, __( '%d Bestellung versenden', 'lindenweg16' ), __( '%d Bestellungen versenden', 'lindenweg16' ) ),
+					'title' => self::count_text( $n, __( '%d Paket packen und versenden', 'lindenweg16' ), __( '%d Pakete packen und versenden', 'lindenweg16' ) ),
 					'sub'   => __( 'Packen, Label, Versendet', 'lindenweg16' ),
 					'cta'   => __( 'Zum Versand', 'lindenweg16' ),
 					'href'  => '#/seite/versand',

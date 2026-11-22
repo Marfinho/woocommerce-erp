@@ -1721,7 +1721,7 @@
 	}
 
 	function shipDone(o, d, reload, btn) {
-		if (!window.confirm('Als versendet melden? Dabei wird der Lagerabgang gebucht.')) { return; }
+		if (!window.confirm('Als versendet melden?')) { return; }
 		if (btn) { btn.disabled = true; }
 		api('versand/' + o.id + '/versendet', { method: 'POST' })
 			.then(function (r) { toast(r.message); reload(); })
@@ -1749,6 +1749,65 @@
 		}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id }, bulky, ' sperrig'), h('button', { class: 'btn primary', type: 'submit' }, 'Label erzeugen'));
 	}
 
+	// Kommissionieren: Positionen per Scan abgleichen; erst wenn alles da ist, geht „Kommissioniert“.
+	function pickPanel(o, reload) {
+		var card = h('div', { class: 'card' }, h('h3', null, 'Kommissionieren'),
+			h('p', { class: 'muted', style: 'margin:4px 0 10px' }, 'Artikelcode jeder Position scannen oder eintippen – ein Handscanner schreibt direkt ins Feld. Positionen ohne Code hakst du von Hand ab.'));
+		var out = h('div', { 'aria-live': 'polite', style: 'margin:8px 0' });
+		var camHost = h('div');
+		var input = h('input', { class: 'field scan-input', type: 'text', placeholder: 'Code scannen oder eintippen …', 'aria-label': 'Code', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
+		var list = h('div', { class: 'pick-list' });
+		var done = h('button', { class: 'bigbtn go', type: 'button', disabled: !o.picked, onclick: function (e) {
+			e.target.disabled = true;
+			api('versand/' + o.id + '/kommissioniert', { method: 'POST' })
+				.then(function (r) { toast(r.message); reload(); })
+				.catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+		} }, 'Kommissioniert ✓');
+
+		function paintList() {
+			list.textContent = '';
+			o.items.forEach(function (it) {
+				var full = it.scanned >= it.qty;
+				var line = h('div', { class: 'pick-line' + (full ? ' done' : '') },
+					h('span', { class: 'pick-qty' }, it.scanned + ' / ' + it.qty),
+					h('div', { class: 'pick-txt', style: 'flex:1;min-width:0' }, h('b', null, it.name), it.sku ? h('small', null, it.sku) : null));
+				if (full) { line.appendChild(h('span', { class: 'tag now' }, 'ok')); }
+				else if (!it.scannable) {
+					line.appendChild(h('button', { class: 'btn', type: 'button', onclick: function () { send({ item_id: it.id }); } }, 'Abhaken'));
+				}
+				list.appendChild(line);
+			});
+			done.disabled = !o.picked;
+		}
+
+		function send(body) {
+			return api('versand/' + o.id + '/scan', { method: 'POST', body: body }).then(function (r) {
+				r.items.forEach(function (n) { o.items.forEach(function (it) { if (it.id === n.id) { it.scanned = n.scanned; } }); });
+				o.picked = r.picked;
+				out.textContent = '';
+				out.appendChild(h('div', { class: 'notice' + (r.result === 'ok' ? '' : ' warn') }, r.message));
+				paintList();
+			}).catch(function (er) { toast(er.message, true); }).then(function () { input.value = ''; input.focus(); });
+		}
+
+		function scan(code) {
+			code = String(code || '').trim();
+			if (code) { send({ code: code }); }
+		}
+
+		card.appendChild(h('form', { class: 'scan-form', onsubmit: function (e) { e.preventDefault(); scan(input.value); } },
+			input,
+			h('button', { class: 'btn primary', type: 'submit' }, 'Prüfen'),
+			h('button', { class: 'btn', type: 'button', onclick: function () { startCamera(camHost, function (c) { scan(c); }); } }, 'Kamera')));
+		card.appendChild(camHost);
+		card.appendChild(out);
+		card.appendChild(list);
+		card.appendChild(h('div', { class: 'ship-actions', style: 'margin-top:12px' }, done));
+		paintList();
+		setTimeout(function () { input.focus(); }, 0);
+		return card;
+	}
+
 	function shipVoid(o, reload) {
 		return h('button', {
 			class: 'btn', type: 'button', style: 'color:var(--error)',
@@ -1760,10 +1819,10 @@
 		}, 'Stornieren');
 	}
 
-	var SHIP_COLS = [['pack', 'Zu packen'], ['send', 'Label da – zu versenden'], ['done', 'Heute versendet']];
+	var SHIP_COLS = [['pick', 'Zu kommissionieren'], ['pack', 'Zu packen'], ['send', 'Label da – zu versenden'], ['done', 'Heute versendet']];
 
 	function viewShipping(item) {
-		pageHead('Versand', 'Packen, Label, Versendet – beim Versenden geht der Bestand ab.', classicBtn(item));
+		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', classicBtn(item));
 		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
@@ -1775,7 +1834,9 @@
 		function card(o, d) {
 			var actions = h('div', { class: 'ship-actions' });
 
-			if (o.stage === 'pack') {
+			if (o.stage === 'pick') {
+				actions.appendChild(h('a', { class: 'btn primary', href: '#/bestellung/' + o.id }, 'Kommissionieren ▶'));
+			} else if (o.stage === 'pack') {
 				var form = shipLabelForm(o, d.dhl, d.label, load);
 				if (form) { actions.appendChild(form); }
 				if (!d.dhl.configured) {
@@ -1861,14 +1922,16 @@
 			));
 
 			var list = h('div', { class: 'card' }, h('h3', null, 'Packliste'));
-			o.items.forEach(function (it, i) {
+			if (o.stage === 'pick') { box.appendChild(pickPanel(o, load)); } else o.items.forEach(function (it, i) {
 				var cb = h('input', { type: 'checkbox', id: 'pk-' + i, style: 'width:22px;height:22px' });
 				list.appendChild(h('label', { class: 'chk', for: 'pk-' + i, style: 'display:flex;gap:12px;align-items:center;padding:10px 0;font-size:17px' }, cb, h('b', null, it.qty + '×'), ' ' + it.name, it.sku ? h('small', { class: 'muted' }, ' ' + it.sku) : null));
 			});
-			box.appendChild(list);
+			if (o.stage !== 'pick') { box.appendChild(list); }
 
 			var act = h('div', { class: 'card ship-actions' });
-			if (o.stage === 'pack') {
+			if (o.stage === 'pick') {
+				act = null;
+			} else if (o.stage === 'pack') {
 				var form = shipLabelForm(o, o.dhl, o.can_label, load);
 				if (form) { act.appendChild(form); }
 				if (!o.dhl.configured) { act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓')); }
@@ -1876,10 +1939,19 @@
 				act.appendChild(h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'));
 				act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓'));
 			} else {
-				act.appendChild(h('div', { class: 'notice' }, 'Versendet. Der Lagerabgang ist gebucht.'));
+				act.appendChild(h('div', { class: 'notice' }, 'Versendet.'));
 			}
-			act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
-			box.appendChild(act);
+			if (act) {
+				if (o.stage === 'pack') {
+					act.appendChild(h('button', { class: 'btn', type: 'button', onclick: function (e) {
+						if (!window.confirm('Kommissionieren zurücknehmen? Der Lagerabgang wird zurückgebucht.')) { return; }
+						e.target.disabled = true;
+						api('versand/' + o.id + '/zurueck', { method: 'POST' }).then(function (r) { toast(r.message); load(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+					} }, 'Zurücknehmen'));
+				}
+				act.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein'));
+				box.appendChild(act);
+			}
 
 			if (o.customer) {
 				var cu = o.customer;

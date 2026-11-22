@@ -258,12 +258,13 @@ sb('prod-spickzettel', 'Ein Tag in der Werkstatt',
    du('Abends', 'Uhr stoppen · Aufträge pausieren · Wochenwartung'))
 
 # ---------------------------------------------------------------- Teil B
-sb('vers-ablauf', 'Ein Paket in fünf Schritten',
+sb('vers-ablauf', 'Ein Paket in sechs Schritten',
    du('Pickliste erzeugen', 'sortiert nach Lagerplatz'),
-   du('Picken', 'Handy, ein Gang durchs Regal', ['Bestand wird gebucht']),
+   du('Picken', 'Handy, ein Gang durchs Regal'),
+   du('Kommissionieren', 'jede Position scannen, „Kommissioniert ✓“', ['Bestand wird gebucht']),
    du('Packen', 'Ware auf Bestellungen verteilen'),
    du('Lieferschein', 'PDF ohne Preise ins Paket'),
-   du('Label + Versendet ✓', 'DHL-Label, Lagerabgang, Rechnung'),
+   du('Label + Versendet ✓', 'DHL-Label, Rechnung'),
    ok('Paket in der Abholkiste', ''),
    hinweis='Nach Lagerplatz sortiert: einmal durchs Regal statt fünfmal.')
 
@@ -284,9 +285,17 @@ sb('vers-picken', 'Picken: Handy oder Computer',
    du('Liste öffnen', 'Handy: Reiter „Picken“'),
    du('Zum Platz gehen', 'Menge und Farbe nehmen'),
    du('Haken oder Position scannen', 'scannen ist sicherer'),
-   erp('Zeile erledigt', 'Lagerabgang gebucht'),
+   erp('Zeile erledigt', 'noch kein Lagerabgang'),
    warn('Ware nicht da?', 'mitnehmen, was da ist, sofort melden und korrigieren'),
    ok('„0 offen“', ''))
+
+sb('vers-kommissionieren', 'Kommissionieren: scannen, dann „Kommissioniert ✓“',
+   du('Karte öffnen', 'Verkauf → Bestellungen → Versand, Spalte „Zu kommissionieren“'),
+   du('Jede Position scannen', 'Artikelnummer oder EAN; Handscanner oder Kamera'),
+   erp('Zählt mit', 'Passt · gehört nicht zur Bestellung · zu viel'),
+   du('„Kommissioniert ✓“', 'geht erst, wenn alles gescannt ist'),
+   erp('Bucht den Lagerabgang', 'Status „Kommissioniert“, Karte wandert nach „Zu packen“'),
+   warn('Falsch kommissioniert?', '„Zurücknehmen“: Bestand kommt zurück (nicht mit Label)'))
 
 sb('vers-packen', 'Packen',
    du('Karton wählen', ''),

@@ -691,7 +691,7 @@ class DhlTracking {
 		$status = preg_replace( '/^wc-/', '', $status );
 
 		// Bezahlt und in Arbeit: Stufe „Bestellt".
-		if ( in_array( $status, array( 'processing', 'on-hold' ), true ) ) {
+		if ( in_array( $status, array( 'processing', 'kommissioniert', 'on-hold' ), true ) ) {
 			return 0;
 		}
 

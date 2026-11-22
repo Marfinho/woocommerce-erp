@@ -265,7 +265,7 @@ class CartTracking {
 				'date_created'  => '>=' . strtotime( $row->erstellt_am ),
 				'limit'         => 1,
 				'return'        => 'ids',
-				'status'        => array( 'pending', 'on-hold', 'processing', 'completed' ),
+				'status'        => array( 'pending', 'on-hold', 'processing', 'kommissioniert', 'completed' ),
 			)
 		);
 		return ! empty( $orders );

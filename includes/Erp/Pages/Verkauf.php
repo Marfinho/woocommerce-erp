@@ -667,7 +667,7 @@ class Verkauf {
 			return array( 'key' => 'part_refunded', 'label' => __( 'teilweise erstattet', 'lindenweg16' ) );
 		}
 
-		if ( $paid || in_array( $status, array( 'processing', 'completed' ), true ) ) {
+		if ( $paid || in_array( $status, array( 'processing', 'kommissioniert', 'completed' ), true ) ) {
 			return array( 'key' => 'paid', 'label' => __( 'bezahlt', 'lindenweg16' ) );
 		}
 
@@ -704,7 +704,7 @@ class Verkauf {
 	 * @return bool
 	 */
 	public static function awaits_shipping( $status ) {
-		return in_array( preg_replace( '/^wc-/', '', (string) $status ), array( 'processing', 'on-hold' ), true );
+		return in_array( preg_replace( '/^wc-/', '', (string) $status ), array( 'processing', 'kommissioniert', 'on-hold' ), true );
 	}
 
 	/**

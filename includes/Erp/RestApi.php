@@ -139,6 +139,36 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/scan',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_scan' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/kommissioniert',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_kommissioniert' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/zurueck',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_zurueck' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/(?P<id>\d+)/label',
 			array(
 				'methods'             => 'POST',
@@ -538,6 +568,42 @@ class RestApi {
 	 */
 	public function versand_versendet( WP_REST_Request $request ) {
 		$result = Screens::mark_shipped( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Eine Position scannen oder abhaken.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_scan( WP_REST_Request $request ) {
+		$result = Screens::scan_item( (int) $request['id'], sanitize_text_field( (string) $request->get_param( 'code' ) ), (int) $request->get_param( 'item_id' ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Als kommissioniert melden (Lagerabgang inklusive).
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_kommissioniert( WP_REST_Request $request ) {
+		$result = Screens::mark_picked( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Kommissionieren zurücknehmen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_zurueck( WP_REST_Request $request ) {
+		$result = Screens::unpick( (int) $request['id'] );
 
 		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
 	}
@@ -1243,7 +1309,7 @@ class RestApi {
 
 		$latest = array();
 
-		foreach ( wc_get_orders( array( 'limit' => 6, 'orderby' => 'date', 'order' => 'DESC', 'status' => array( 'wc-pending', 'wc-processing', 'wc-on-hold', 'wc-completed' ) ) ) as $order ) {
+		foreach ( wc_get_orders( array( 'limit' => 6, 'orderby' => 'date', 'order' => 'DESC', 'status' => array( 'wc-pending', 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-completed' ) ) ) as $order ) {
 			$created  = $order->get_date_created();
 			$latest[] = array(
 				'id'     => $order->get_id(),
@@ -1257,7 +1323,7 @@ class RestApi {
 		}
 
 		$data = array(
-			'processing' => (int) wc_orders_count( 'processing' ),
+			'processing' => (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'kommissioniert' ),
 			'on_hold'    => (int) wc_orders_count( 'on-hold' ) + (int) wc_orders_count( 'pending' ),
 			'latest'     => $latest,
 		);
@@ -1286,7 +1352,7 @@ class RestApi {
 		$month       = wc_get_orders(
 			array(
 				'limit'        => $limit,
-				'status'       => array( 'wc-processing', 'wc-completed', 'wc-on-hold' ),
+				'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed', 'wc-on-hold' ),
 				'date_created' => '>=' . $month_start,
 			)
 		);

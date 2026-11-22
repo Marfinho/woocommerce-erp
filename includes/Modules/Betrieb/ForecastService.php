@@ -653,7 +653,7 @@ class ForecastService {
 		do {
 			$orders = wc_get_orders(
 				array(
-					'status'       => array( 'wc-processing', 'wc-completed', 'wc-on-hold' ),
+					'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed', 'wc-on-hold' ),
 					'limit'        => 300,
 					'paged'        => $page,
 					'date_created' => $start . '...' . ( $cur_start - 1 ),

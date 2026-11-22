@@ -176,7 +176,7 @@ class Prognose {
 				'cap'     => $plan['capacity'],
 				'hands'   => $plan['hands'],
 				'events'  => $counts,
-				'orders'  => function_exists( 'wc_orders_count' ) ? (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' ) : 0,
+				'orders'  => function_exists( 'wc_orders_count' ) ? (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' ) + (int) wc_orders_count( 'kommissioniert' ) : 0,
 				'kpis'    => array_map(
 					static function ( $k ) {
 						return array( 'label' => $k['label'], 'status' => $k['status'] );

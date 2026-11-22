@@ -1075,7 +1075,7 @@ class Zahlen {
 
 			foreach ( (array) wc_get_orders(
 				array(
-					'status'       => array( 'wc-completed', 'wc-processing' ),
+					'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 					'date_created' => '>=' . strtotime( $since ),
 					'limit'        => -1,
 					'return'       => 'objects',
