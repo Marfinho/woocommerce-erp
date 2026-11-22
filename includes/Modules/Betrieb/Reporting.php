@@ -338,7 +338,7 @@ class Reporting {
 		$geladen = wc_get_orders(
 			array(
 				'limit'        => -1,
-				'status'       => array( 'completed', 'processing' ),
+				'status'       => array( 'completed', 'processing', 'kommissioniert' ),
 				'date_created' => '>=' . $von,
 				'return'       => 'objects',
 			)

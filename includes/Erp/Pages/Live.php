@@ -166,7 +166,7 @@ class Live {
 		$tz       = wp_timezone();
 		$today    = new \DateTimeImmutable( 'today', $tz );
 		$yday     = $today->modify( '-1 day' );
-		$statuses = array( 'wc-processing', 'wc-on-hold', 'wc-completed' );
+		$statuses = array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-completed' );
 		$orders   = (array) wc_get_orders(
 			array(
 				'status'       => $statuses,
@@ -216,7 +216,7 @@ class Live {
 			'orders'      => $count['today'],
 			'orders_yday' => $count['yday'],
 			'basket'      => $count['today'] ? round( $sum['today'] / $count['today'], 2 ) : null,
-			'to_ship'     => function_exists( 'wc_orders_count' ) ? (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' ) : 0,
+			'to_ship'     => function_exists( 'wc_orders_count' ) ? (int) wc_orders_count( 'processing' ) + (int) wc_orders_count( 'on-hold' ) + (int) wc_orders_count( 'kommissioniert' ) : 0,
 			'hours'       => array_map(
 				static function ( $v ) {
 					return round( $v, 2 );

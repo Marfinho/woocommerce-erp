@@ -791,7 +791,7 @@
 		function row(o) {
 			var who = o.customer || o.email || 'Gast';
 			var tags = h('div', { class: 'row-tags' },
-				h('span', { class: 'tag ' + (o.status === 'processing' || o.status === 'on-hold' ? 'later' : (o.status === 'completed' ? 'now' : '')) }, o.label),
+				h('span', { class: 'tag ' + (o.status === 'processing' || o.status === 'kommissioniert' || o.status === 'on-hold' ? 'later' : (o.status === 'completed' ? 'now' : '')) }, o.label),
 				h('span', { class: 'tag' + (o.pay === 'paid' ? ' now' : (o.pay === 'open' || o.pay === 'failed' ? ' later' : '')) }, o.paylabel));
 			var main = h('div', { class: 'row-main' },
 				h('b', null, '#' + o.number + ' · ' + who),

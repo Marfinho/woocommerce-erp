@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.100.0">
+<meta name="anleitung-stand" content="0.101.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.100.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.101.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.100.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.101.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -305,21 +305,22 @@ svg.sv{display:block;width:100%;height:auto}
 		<li><a href="#vers-anmelden"><span class="nr">B.2</span> Anmelden und den Weg finden</a></li>
 		<li><a href="#vers-pickliste"><span class="nr">B.3</span> Schritt 1: Pickliste erzeugen</a></li>
 		<li><a href="#vers-picken"><span class="nr">B.4</span> Schritt 2: Picken</a></li>
-		<li><a href="#vers-packen"><span class="nr">B.5</span> Schritt 3: Packen</a></li>
-		<li><a href="#vers-lieferschein"><span class="nr">B.6</span> Schritt 4: Lieferschein drucken</a></li>
-		<li><a href="#vers-label"><span class="nr">B.7</span> Schritt 5: Versandlabel und „Versendet“</a></li>
-		<li><a href="#vers-bestellungen"><span class="nr">B.8</span> Bestellungen: Shop-Bestellungen und Aufträge</a></li>
-		<li><a href="#vers-manuell"><span class="nr">B.9</span> Verkauf ohne Shop: Barverkauf und manuelle Aufträge</a></li>
-		<li><a href="#vers-nachbestellung"><span class="nr">B.10</span> Nachbestellungen von Händlern bestätigen</a></li>
-		<li><a href="#vers-kunden"><span class="nr">B.11</span> Kunden und Händler: die Kundenakte</a></li>
-		<li><a href="#vers-angebote"><span class="nr">B.12</span> Angebote schreiben und in Aufträge umwandeln</a></li>
-		<li><a href="#vers-reklamation"><span class="nr">B.13</span> Reklamationen und Retouren</a></li>
-		<li><a href="#vers-nachkauf"><span class="nr">B.14</span> Nachkauf: wer bald wieder bestellt</a></li>
-		<li><a href="#vers-affiliates"><span class="nr">B.15</span> Affiliates: Influencer mit eigenem Rabattcode</a></li>
-		<li><a href="#vers-plaetze"><span class="nr">B.16</span> Lagerplätze, Etiketten und Scannen</a></li>
-		<li><a href="#vers-bestand"><span class="nr">B.17</span> Bestand prüfen und korrigieren</a></li>
-		<li><a href="#vers-fehler"><span class="nr">B.18</span> Wenn etwas nicht geht</a></li>
-		<li><a href="#vers-spickzettel"><span class="nr">B.19</span> Spickzettel für den Packtisch</a></li>
+		<li><a href="#vers-kommissionieren"><span class="nr">B.5</span> Schritt 3: Kommissionieren</a></li>
+		<li><a href="#vers-packen"><span class="nr">B.6</span> Schritt 4: Packen</a></li>
+		<li><a href="#vers-lieferschein"><span class="nr">B.7</span> Schritt 5: Lieferschein drucken</a></li>
+		<li><a href="#vers-label"><span class="nr">B.8</span> Schritt 6: Versandlabel und „Versendet“</a></li>
+		<li><a href="#vers-bestellungen"><span class="nr">B.9</span> Bestellungen: Shop-Bestellungen und Aufträge</a></li>
+		<li><a href="#vers-manuell"><span class="nr">B.10</span> Verkauf ohne Shop: Barverkauf und manuelle Aufträge</a></li>
+		<li><a href="#vers-nachbestellung"><span class="nr">B.11</span> Nachbestellungen von Händlern bestätigen</a></li>
+		<li><a href="#vers-kunden"><span class="nr">B.12</span> Kunden und Händler: die Kundenakte</a></li>
+		<li><a href="#vers-angebote"><span class="nr">B.13</span> Angebote schreiben und in Aufträge umwandeln</a></li>
+		<li><a href="#vers-reklamation"><span class="nr">B.14</span> Reklamationen und Retouren</a></li>
+		<li><a href="#vers-nachkauf"><span class="nr">B.15</span> Nachkauf: wer bald wieder bestellt</a></li>
+		<li><a href="#vers-affiliates"><span class="nr">B.16</span> Affiliates: Influencer mit eigenem Rabattcode</a></li>
+		<li><a href="#vers-plaetze"><span class="nr">B.17</span> Lagerplätze, Etiketten und Scannen</a></li>
+		<li><a href="#vers-bestand"><span class="nr">B.18</span> Bestand prüfen und korrigieren</a></li>
+		<li><a href="#vers-fehler"><span class="nr">B.19</span> Wenn etwas nicht geht</a></li>
+		<li><a href="#vers-spickzettel"><span class="nr">B.20</span> Spickzettel für den Packtisch</a></li>
 	</ol>
 	<p class="teilkopf"><a href="#teil-personal">Teil C – Personal</a> <span class="fuer">Für Personal &amp; Zeit</span></p>
 	<ol class="flach">
@@ -425,7 +426,7 @@ svg.sv{display:block;width:100%;height:auto}
 <p>Das Plugin hat eine eigene Oberfläche: <strong>das ERP</strong>. Du erreichst sie unter der Adresse der Website mit <code>/erp</code> dahinter, zum Beispiel <code>lindenweg16.de/erp</code>, und meldest dich mit deinem WordPress-Konto an. Die klassischen Seiten im WordPress-Verwaltungsbereich (<code>wp-admin</code>) gibt es weiterhin, du brauchst sie aber im Alltag nicht. Auf fast jeder Seite führt der Knopf <strong>Klassische Ansicht</strong> dorthin, falls du doch einmal etwas dort suchen musst.</p>
 
 <figure>
-	<img src="bilder/heute.png" alt="Die Startseite Heute mit Seitenleiste links, Suchfeld und Zeit-Knopf oben, einer dunklen Karte „4 Bestellungen versenden“, Hinweiskarten und Kennzahlen">
+	<img src="bilder/heute.png" alt="Die Startseite Heute mit Seitenleiste links, Suchfeld und Zeit-Knopf oben, einer dunklen Karte „4 Bestellungen kommissionieren“, Hinweiskarten und Kennzahlen">
 	<figcaption>Die Startseite <strong>Heute</strong>. Links die Seitenleiste mit den Bereichen, oben die Suche und der Zeit-Knopf.</figcaption>
 </figure>
 
@@ -620,7 +621,7 @@ svg.sv{display:block;width:100%;height:auto}
 </figure>
 
 <ul>
-	<li><strong>Die dunkle Karte „Dein Nächstes“</strong> ist die wichtigste Aufgabe, die dir das ERP vorschlägt – zum Beispiel <em>Platte 2 rüsten</em>, <em>Platte 3 melden</em> oder <em>4 Bestellungen versenden</em>. Der große Knopf darunter führt direkt dorthin.</li>
+	<li><strong>Die dunkle Karte „Dein Nächstes“</strong> ist die wichtigste Aufgabe, die dir das ERP vorschlägt – zum Beispiel <em>Platte 2 rüsten</em>, <em>Platte 3 melden</em> oder <em>4 Bestellungen kommissionieren</em>. Der große Knopf darunter führt direkt dorthin.</li>
 	<li><strong>Die Hinweiskarten</strong> darunter haben links einen farbigen Streifen und je einen Knopf. Sie erscheinen nur, wenn etwas offen ist. Steht dort nichts, ist nichts zu tun.</li>
 	<li><strong>Die Kacheln</strong> rechts zeigen Bestellungen in Bearbeitung, Bestellungen, die auf Zahlung warten, Umsatz heute und im Monat und ob Artikel nicht lieferbar sind. Darunter stehen die letzten Bestellungen.</li>
 </ul>
@@ -630,14 +631,15 @@ svg.sv{display:block;width:100%;height:auto}
 <thead><tr><th>Karte</th><th>Was sie bedeutet</th><th>Was du tust</th></tr></thead>
 <tbody>
 <tr><td>Platte … rüsten / melden</td><td>Eine freigegebene Platte wartet auf dich, oder ein fertiger Druck wartet auf die Mengenmeldung</td><td>Kapitel A.3</td></tr>
-<tr><td>… Bestellungen versenden</td><td>Bestellungen sind bezahlt und warten auf Packen und Label</td><td>Teil B</td></tr>
+<tr><td>… Bestellungen kommissionieren</td><td>Bestellungen sind bezahlt, die Ware muss geholt und gescannt werden</td><td>Teil B, Schritt 3</td></tr>
+<tr><td>… Pakete packen und versenden</td><td>Bestellungen sind kommissioniert und warten auf Packen und Label</td><td>Teil B, Schritt 4 bis 6</td></tr>
 <tr><td>… Drucker brauchen Wartung</td><td>Eine Wartung ist fällig oder wurde noch nie erfasst</td><td>Kapitel A.10</td></tr>
 <tr><td>… Positionen nachbestellen</td><td>Filament oder ein Kleinteil reicht nicht mehr lange</td><td>Kapitel A.9, <span class="weg">Lager → Einkauf</span></td></tr>
 <tr><td>… Lieferungen überfällig</td><td>Bestelltes Material ist nicht pünktlich angekommen</td><td>Betriebsleitung, <span class="weg">Lager → Einkauf</span></td></tr>
-<tr><td>… Rechnungen überfällig</td><td>Ein Händler hat eine Rechnung nicht bezahlt</td><td>Betriebsleitung, Kundenakte (Kapitel B.11)</td></tr>
+<tr><td>… Rechnungen überfällig</td><td>Ein Händler hat eine Rechnung nicht bezahlt</td><td>Betriebsleitung, Kundenakte (Kapitel B.12)</td></tr>
 <tr><td>… Wiedervorlagen fällig</td><td>Bei einem Händler sollte jemand nachfassen</td><td>Betriebsleitung</td></tr>
 <tr><td>… ungelesene Mails</td><td>Im Posteingang liegt etwas</td><td>Kapitel D.25</td></tr>
-<tr><td>… Affiliate-Auszahlungen angefordert</td><td>Ein Ambassador möchte sein Guthaben ausgezahlt haben; die Karte nennt Namen und Summe (an der Wand nur die Anzahl)</td><td>Kapitel B.15, nur mit dem Recht <em>Affiliate-Provision auszahlen</em></td></tr>
+<tr><td>… Affiliate-Auszahlungen angefordert</td><td>Ein Ambassador möchte sein Guthaben ausgezahlt haben; die Karte nennt Namen und Summe (an der Wand nur die Anzahl)</td><td>Kapitel B.16, nur mit dem Recht <em>Affiliate-Provision auszahlen</em></td></tr>
 <tr><td>Rechnung zur Dauerbuchung hochladen</td><td>Ein Vertrag (Telefon, Software, Strom) wartet auf die Rechnung dieses Monats</td><td>Buchhaltung, Kapitel D.10</td></tr>
 </tbody>
 </table>
@@ -1527,7 +1529,7 @@ svg.sv{display:block;width:100%;height:auto}
 <tr><td><strong>Abgang</strong></td><td>Etwas verlässt das Lager ohne Verkauf, z.&nbsp;B. als Muster oder Ausschuss</td><td>Nur die Stückzahl – sie geht ab</td></tr>
 <tr><td><strong>Korrektur</strong></td><td>Die Zahl im ERP stimmt nicht mit dem Regal überein (Inventur)</td><td>Die <em>Differenz</em> mit Plus oder Minus und eine <strong>Begründung</strong> (Pflicht)</td></tr>
 <tr><td><strong>Umlagerung</strong></td><td>Die Ware wechselt den Platz; der Gesamtbestand bleibt gleich</td><td>Von Platz, nach Platz, Menge</td></tr>
-<tr><td><strong>Kommission</strong></td><td>Ware geht zu einem Händler in Kommission oder kommt zurück</td><td>Händler, Vorgang, Menge – siehe Kapitel B.11</td></tr>
+<tr><td><strong>Kommission</strong></td><td>Ware geht zu einem Händler in Kommission oder kommt zurück</td><td>Händler, Vorgang, Menge – siehe Kapitel B.12</td></tr>
 </tbody>
 </table>
 </div>
@@ -1563,7 +1565,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <figure class="handy">
 	<img src="bilder/m-lager.png" alt="Der Reiter Lager der Handy-Erfassung mit den Knöpfen Scannen für Lagerplatz und Artikel, Code eintippen, Vorgang, Farbe, Menge und Buchen">
-	<figcaption>Der Reiter <strong>Lager</strong>. Lagerplatz und Artikel kannst du auch scannen, statt sie zu suchen (<a href="#vers-plaetze">Kapitel B.16</a>).</figcaption>
+	<figcaption>Der Reiter <strong>Lager</strong>. Lagerplatz und Artikel kannst du auch scannen, statt sie zu suchen (<a href="#vers-plaetze">Kapitel B.17</a>).</figcaption>
 </figure>
 
 <h3>„Buchungen ohne eindeutige Farbe“</h3>
@@ -1882,14 +1884,15 @@ svg.sv{display:block;width:100%;height:auto}
 
 <h2 id="vers-ablauf"><span class="nr">B.1</span> Der Ablauf auf einer Seite</h2>
 <!-- schaubild:vers-ablauf -->
-<figure class="schaubild" role="group" aria-label="Schaubild: Ein Paket in fünf Schritten">
-<div class="sb-kopf">Schaubild · Ein Paket in fünf Schritten</div>
-<ol class="fluss c3">
+<figure class="schaubild" role="group" aria-label="Schaubild: Ein Paket in sechs Schritten">
+<div class="sb-kopf">Schaubild · Ein Paket in sechs Schritten</div>
+<ol class="fluss c4">
 	<li class="du"><b>Pickliste erzeugen</b><span>sortiert nach Lagerplatz</span></li>
-	<li class="du"><b>Picken</b><span>Handy, ein Gang durchs Regal</span><ul class="alt"><li>Bestand wird gebucht</li></ul></li>
+	<li class="du"><b>Picken</b><span>Handy, ein Gang durchs Regal</span></li>
+	<li class="du"><b>Kommissionieren</b><span>jede Position scannen, „Kommissioniert ✓“</span><ul class="alt"><li>Bestand wird gebucht</li></ul></li>
 	<li class="du"><b>Packen</b><span>Ware auf Bestellungen verteilen</span></li>
 	<li class="du"><b>Lieferschein</b><span>PDF ohne Preise ins Paket</span></li>
-	<li class="du"><b>Label + Versendet ✓</b><span>DHL-Label, Lagerabgang, Rechnung</span></li>
+	<li class="du"><b>Label + Versendet ✓</b><span>DHL-Label, Rechnung</span></li>
 	<li class="ok"><b>Paket in der Abholkiste</b></li>
 </ol>
 <p class="sb-leg"><span class="du">Das tust du</span> <span class="ok">Ergebnis</span></p>
@@ -1898,17 +1901,18 @@ svg.sv{display:block;width:100%;height:auto}
 <!-- /schaubild:vers-ablauf -->
 
 
-<p>Ein Paket entsteht immer in derselben Reihenfolge. Wenn du nur eine Sache aus dieser Anleitung behältst, dann diese fünf Schritte:</p>
+<p>Ein Paket entsteht immer in derselben Reihenfolge. Wenn du nur eine Sache aus dieser Anleitung behältst, dann diese sechs Schritte:</p>
 
 <div class="tabelle">
 <table>
 <thead><tr><th>#</th><th>Schritt</th><th>Wo</th><th>Ergebnis</th></tr></thead>
 <tbody>
 <tr><td>1</td><td>Pickliste erzeugen</td><td>Computer, <em>Verkauf → Bestellungen → Picklisten</em></td><td>Eine Liste, sortiert nach Lagerplatz</td></tr>
-<tr><td>2</td><td>Picken</td><td>Handy oder Computer, <em>Verkauf → Bestellungen → Picklisten</em></td><td>Ware auf dem Packtisch, Bestand gebucht</td></tr>
-<tr><td>3</td><td>Packen</td><td>Packtisch</td><td>Karton mit Ware und Beipackzettel</td></tr>
-<tr><td>4</td><td>Lieferschein drucken</td><td>Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>PDF, kommt ins Paket</td></tr>
-<tr><td>5</td><td>Versandlabel, <em>Versendet ✓</em></td><td>Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>Paket ist adressiert und frankiert; der Lagerabgang ist gebucht</td></tr>
+<tr><td>2</td><td>Picken</td><td>Handy oder Computer, <em>Verkauf → Bestellungen → Picklisten</em></td><td>Ware auf dem Packtisch</td></tr>
+<tr><td>3</td><td>Kommissionieren</td><td>Handy oder Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>Jede Position gescannt, Bestellung ist <em>Kommissioniert</em>; der Lagerabgang ist gebucht</td></tr>
+<tr><td>4</td><td>Packen</td><td>Packtisch</td><td>Karton mit Ware und Beipackzettel</td></tr>
+<tr><td>5</td><td>Lieferschein drucken</td><td>Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>PDF, kommt ins Paket</td></tr>
+<tr><td>6</td><td>Versandlabel, <em>Versendet ✓</em></td><td>Computer, <em>Verkauf → Bestellungen → Versand</em></td><td>Paket ist adressiert und frankiert, die Bestellung ist abgeschlossen</td></tr>
 </tbody>
 </table>
 </div>
@@ -2002,7 +2006,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<li class="du"><b>Liste öffnen</b><span>Handy: Reiter „Picken“</span></li>
 	<li class="du"><b>Zum Platz gehen</b><span>Menge und Farbe nehmen</span></li>
 	<li class="du"><b>Haken oder Position scannen</b><span>scannen ist sicherer</span></li>
-	<li class="erp"><b>Zeile erledigt</b><span>Lagerabgang gebucht</span></li>
+	<li class="erp"><b>Zeile erledigt</b><span>noch kein Lagerabgang</span></li>
 	<li class="warn"><b>Ware nicht da?</b><span>mitnehmen, was da ist, sofort melden und korrigieren</span></li>
 	<li class="ok"><b>„0 offen“</b></li>
 </ol>
@@ -2033,7 +2037,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<li>Tipp oben auf den Reiter <strong>Picken</strong>.</li>
 	<li>Unter der Überschrift steht der Code der Liste und wie viele Positionen noch offen sind, zum Beispiel <code>PL261020-01 · Bestellungen · 5 offen</code>.</li>
 	<li>Geh zum ersten Platz in der Liste. Nimm die angegebene Menge in der angegebenen Farbe heraus.</li>
-	<li>Tipp in der Zeile rechts auf den <strong>grünen Haken</strong>. Die Zeile ist damit erledigt und der Lagerabgang ist gebucht.</li>
+	<li>Tipp in der Zeile rechts auf den <strong>grünen Haken</strong>. Die Zeile ist damit erledigt. Der Lagerabgang wird erst beim Kommissionieren gebucht (Kapitel B.5).</li>
 	<li>Weiter zur nächsten Zeile, bis „0 offen“ dasteht.</li>
 </ol>
 
@@ -2053,7 +2057,49 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Wenn im Fach weniger liegt, als auf der Liste steht, nimm mit, was da ist, und sag es weiter. Der Bestand ist dann falsch und muss korrigiert werden – wie das geht, steht in Kapitel A.13. Wer stillschweigend weiterpickt, hinterlässt einen Fehler, der beim nächsten Mal wieder zuschlägt.</p>
 </div>
 
-<h2 id="vers-packen"><span class="nr">B.5</span> Schritt 3: Packen</h2>
+<h2 id="vers-kommissionieren"><span class="nr">B.5</span> Schritt 3: Kommissionieren</h2>
+<p><span class="weg">Verkauf → Bestellungen → Versand</span></p>
+<!-- schaubild:vers-kommissionieren -->
+<figure class="schaubild" role="group" aria-label="Schaubild: Kommissionieren: scannen, dann „Kommissioniert ✓“">
+<div class="sb-kopf">Schaubild · Kommissionieren: scannen, dann „Kommissioniert ✓“</div>
+<ol class="fluss c3">
+	<li class="du"><b>Karte öffnen</b><span>Verkauf → Bestellungen → Versand, Spalte „Zu kommissionieren“</span></li>
+	<li class="du"><b>Jede Position scannen</b><span>Artikelnummer oder EAN; Handscanner oder Kamera</span></li>
+	<li class="erp"><b>Zählt mit</b><span>Passt · gehört nicht zur Bestellung · zu viel</span></li>
+	<li class="du"><b>„Kommissioniert ✓“</b><span>geht erst, wenn alles gescannt ist</span></li>
+	<li class="erp"><b>Bucht den Lagerabgang</b><span>Status „Kommissioniert“, Karte wandert nach „Zu packen“</span></li>
+	<li class="warn"><b>Falsch kommissioniert?</b><span>„Zurücknehmen“: Bestand kommt zurück (nicht mit Label)</span></li>
+</ol>
+<p class="sb-leg"><span class="du">Das tust du</span> <span class="erp">Das macht das ERP</span> <span class="warn">Pflicht oder Ausnahme</span></p>
+</figure>
+<!-- /schaubild:vers-kommissionieren -->
+
+
+<p>Kommissionieren heißt: Du prüfst für <strong>eine</strong> Bestellung, dass wirklich alles da ist, was darauf steht. Jede Position wird gescannt. Erst wenn alles stimmt, meldest du die Bestellung als <strong>Kommissioniert</strong>. In diesem Moment geht der Bestand ab (der <strong>Lagerabgang</strong> wird gebucht) und die Bestellung bekommt im Shop den eigenen Status <em>Kommissioniert</em>.</p>
+
+<p>Auf der Startseite <em>Heute</em> gibt es dafür eine eigene Karte: <strong>N Bestellungen kommissionieren</strong>. Der Knopf darunter führt auf die Seite <em>Versand</em>. Dort steht die Bestellung in der Spalte <em>Zu kommissionieren</em>.</p>
+
+<ol class="schritte">
+	<li>Klick auf der Karte auf <strong>Kommissionieren ▶</strong> (oder auf den Namen der Bestellung). Es öffnet sich die Seite der Bestellung mit dem Kasten <em>Kommissionieren</em>.</li>
+	<li>Scanne den Artikelcode jeder Position, oder tippe ihn ins Feld und drücke Enter. Ein Handscanner schreibt direkt ins Feld; am Handy hilft der Knopf <strong>Kamera</strong>. Als Code gilt die <strong>Artikelnummer</strong> (SKU) oder die <strong>EAN</strong> des Shop-Produkts.</li>
+	<li>Bei jedem Scan zählt die Zeile hoch (<em>1 / 2</em>, <em>2 / 2</em>). Das ERP meldet, ob es <em>Passt</em>, ob der Code <em>nicht zur Bestellung gehört</em> oder ob von dieser Position schon <em>alles gescannt</em> ist (zu viel).</li>
+	<li>Hat eine Position keinen Code, steht an ihr der Knopf <strong>Abhaken</strong>. Positionen mit Code lassen sich nicht abhaken, sie müssen gescannt werden.</li>
+	<li>Ist jede Zeile voll, wird <strong>Kommissioniert ✓</strong> frei. Ein Klick, und die Karte wandert nach <em>Zu packen</em>.</li>
+</ol>
+
+<div class="kasten info">
+	<span class="titel">Der Zählstand gehört zur Bestellung</span>
+	<p>Was gescannt ist, wird an der Bestellung gespeichert. Du kannst die Seite schließen, das Handy wechseln oder am Packtisch weitermachen: Der Stand ist überall derselbe.</p>
+</div>
+
+<div class="kasten achtung">
+	<span class="titel">Falsch kommissioniert? Zurücknehmen</span>
+	<p>Eine kommissionierte Bestellung ohne Label hat auf ihrer Karte (und auf der Seite der Bestellung) den Knopf <strong>Zurücknehmen</strong>. Er bucht den Lagerabgang zurück und setzt die Bestellung auf <em>In Bearbeitung</em>, der Zählstand beginnt von vorn. Gibt es schon ein Label, muss es zuerst storniert werden. Wird eine kommissionierte Bestellung im Shop storniert oder erstattet, geht der Bestand wie bisher zurück (Kapitel D.27).</p>
+</div>
+
+<p>Kundinnen und Kunden bekommen beim Kommissionieren keine eigene E-Mail. Die Mails laufen wie bisher: Eingang beim Bestellen, „abgeschlossen“ bei <em>Versendet</em>.</p>
+
+<h2 id="vers-packen"><span class="nr">B.6</span> Schritt 4: Packen</h2>
 <!-- schaubild:vers-packen -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Packen">
 <div class="sb-kopf">Schaubild · Packen</div>
@@ -2080,7 +2126,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<li>Karton in der passenden Größe nehmen.</li>
 	<li>Ware der einen Bestellnummer hineinlegen und gegen die Liste prüfen: Menge und Farbe. Hak die Kästchen der Packliste ab.</li>
 	<li>Montageanleitung oder Beipackzettel dazulegen, wenn der Artikel einen hat.</li>
-	<li>Lieferschein drucken (Kapitel B.6) und mit hineinlegen.</li>
+	<li>Lieferschein drucken (Kapitel B.7) und mit hineinlegen.</li>
 	<li>Karton mit Füllmaterial auffüllen, sodass nichts wandert, und zukleben.</li>
 </ol>
 
@@ -2089,7 +2135,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Du musst nicht eintragen, dass du einen Karton verbraucht hast. Verbrauchsmaterial wird je Bestellung pauschal abgezogen. Wenn der Vorrat knapp wird, meldet sich das ERP von selbst auf <em>Heute</em> und im Beschaffungsalarm unter <span class="weg">Lager → Material</span>.</p>
 </div>
 
-<h2 id="vers-lieferschein"><span class="nr">B.6</span> Schritt 4: Lieferschein drucken</h2>
+<h2 id="vers-lieferschein"><span class="nr">B.7</span> Schritt 5: Lieferschein drucken</h2>
 
 <p><span class="weg">Verkauf → Bestellungen → Versand</span></p>
 <!-- schaubild:vers-lieferschein -->
@@ -2108,8 +2154,8 @@ svg.sv{display:block;width:100%;height:auto}
 
 
 <figure>
-	<img src="bilder/versand.png" alt="Die Seite Versand mit drei Spalten Zu packen, Label da zu versenden und Heute versendet; jede Bestellung als Karte mit Nummer, Name, Ort, Inhalt und den Knöpfen Versendet und Lieferschein">
-	<figcaption>Die Seite <strong>Versand</strong>: eine Karte je Bestellung, die älteste zuerst. Von links nach rechts wandert die Bestellung durch <em>Zu packen</em>, <em>Label da – zu versenden</em> und <em>Heute versendet</em>.</figcaption>
+	<img src="bilder/versand.png" alt="Die Seite Versand mit vier Spalten Zu kommissionieren, Zu packen, Label da zu versenden und Heute versendet; jede Bestellung als Karte mit Nummer, Name, Ort, Inhalt und den Knöpfen Versendet und Lieferschein">
+	<figcaption>Die Seite <strong>Versand</strong>: eine Karte je Bestellung, die älteste zuerst. Von links nach rechts wandert die Bestellung durch <em>Zu kommissionieren</em>, <em>Zu packen</em>, <em>Label da – zu versenden</em> und <em>Heute versendet</em>.</figcaption>
 </figure>
 
 <ol class="schritte">
@@ -2126,7 +2172,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Die <strong>Pickliste</strong> ist der Zettel fürs Lager: Artikel, Menge, Lagerplatz, keine Anschrift. Der <strong>Lieferschein</strong> liegt in der Kiste: Anschrift und Inhalt, keine Preise. Das <strong>Label</strong> klebt außen drauf – nur das kostet Geld.</p>
 </div>
 
-<h2 id="vers-label"><span class="nr">B.7</span> Schritt 5: Versandlabel und „Versendet“</h2>
+<h2 id="vers-label"><span class="nr">B.8</span> Schritt 6: Versandlabel und „Versendet“</h2>
 
 <p><span class="weg">Verkauf → Bestellungen → Versand</span></p>
 <!-- schaubild:vers-label -->
@@ -2172,7 +2218,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <h3>„Versendet ✓“</h3>
 
-<p>Wenn das Paket die Werkstatt verlässt, klickst du auf <strong>Versendet ✓</strong> und bestätigst die Rückfrage („Als versendet melden? Dabei wird der Lagerabgang gebucht.“). Die Bestellung wird abgeschlossen, <strong>der Lagerabgang wird gebucht</strong>, die Rechnung entsteht, und die Karte wandert nach <em>Heute versendet</em>.</p>
+<p>Wenn das Paket die Werkstatt verlässt, klickst du auf <strong>Versendet ✓</strong> und bestätigst die Rückfrage („Als versendet melden?“). Die Bestellung wird abgeschlossen, die Rechnung entsteht (der Lagerabgang ist schon beim Kommissionieren gebucht), und die Karte wandert nach <em>Heute versendet</em>.</p>
 
 <div class="kasten achtung">
 	<span class="titel">Ein Label ist Geld</span>
@@ -2194,7 +2240,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>… storniert das ERP von selbst die Rechnung samt Einnahmebuchung und bucht den Lagerabgang zurück (Kapitel D.27). Wenn die Ware schon beim Kunden ist, ist das nicht gewollt – dann sagt die Betriebsleitung, wie sie die Retoure bucht.</p>
 </div>
 
-<h2 id="vers-bestellungen"><span class="nr">B.8</span> Bestellungen: Shop-Bestellungen und Aufträge</h2>
+<h2 id="vers-bestellungen"><span class="nr">B.9</span> Bestellungen: Shop-Bestellungen und Aufträge</h2>
 <!-- schaubild:vers-bestellungen -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Zwei Listen, zwei Zwecke">
 <div class="sb-kopf">Schaubild · Zwei Listen, zwei Zwecke</div>
@@ -2221,7 +2267,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<figcaption>Alles, was im Shop bestellt wurde. Oben suchst du nach Nummer, Name oder E-Mail und filterst nach Status.</figcaption>
 </figure>
 
-<p>Über <strong>Ansehen</strong> öffnet sich die Bestellung im ERP: Adressen, Positionen, Summe, bisherige Erstattungen und Notizen; Status ändern, Notizen schreiben und Erstatten gibt es dort mit den passenden Rechten (Kapitel D.15). <strong>In WooCommerce öffnen</strong> führt weiter in den Shop. Bei offenen Bestellungen steht daneben <strong>Versand</strong> – das öffnet die Bestellung zum Packen (B.5). Bei abgeschlossenen steht <strong>Akte</strong>.</p>
+<p>Über <strong>Ansehen</strong> öffnet sich die Bestellung im ERP: Adressen, Positionen, Summe, bisherige Erstattungen und Notizen; Status ändern, Notizen schreiben und Erstatten gibt es dort mit den passenden Rechten (Kapitel D.15). <strong>In WooCommerce öffnen</strong> führt weiter in den Shop. Bei offenen Bestellungen steht daneben <strong>Versand</strong> – das öffnet die Bestellung zum Packen (B.6). Bei abgeschlossenen steht <strong>Akte</strong>.</p>
 
 <h3>Aufträge</h3>
 
@@ -2236,7 +2282,7 @@ svg.sv{display:block;width:100%;height:auto}
 <table>
 <thead><tr><th>Schild</th><th>Bedeutung</th></tr></thead>
 <tbody>
-<tr><td><strong>entwurf</strong></td><td>Eine Anfrage, noch nicht bestätigt. Erst mit <strong>Bestätigen</strong> entstehen Lagerabgang und offener Posten. Das betrifft Nachbestellungen von Händlern (B.10) und manuell erfasste Entwürfe.</td></tr>
+<tr><td><strong>entwurf</strong></td><td>Eine Anfrage, noch nicht bestätigt. Erst mit <strong>Bestätigen</strong> entstehen Lagerabgang und offener Posten. Das betrifft Nachbestellungen von Händlern (B.11) und manuell erfasste Entwürfe.</td></tr>
 <tr><td><strong>bestaetigt</strong></td><td>Gilt, der Lagerabgang ist gebucht</td></tr>
 <tr><td><strong>storniert</strong></td><td>Zurückgenommen</td></tr>
 <tr><td><strong>Rechnung bezahlt / offen / überfällig</strong></td><td>Wie weit die Rechnung ist. <em>Überfällig</em> ist orange und taucht auf <em>Heute</em> auf.</td></tr>
@@ -2249,7 +2295,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Die Minuten, die das Packen einer Bestellung dauert, landen in der Kennzahl „Ø Handlingzeit“ unter <span class="weg">Zahlen → Berichte</span>. Aus ihr wird sichtbar, welche Bestellart wirklich Arbeit macht – und daran hängt später der Preis. Eingetragen wird sie in der klassischen Ansicht der Bestellungen; eine grobe Schätzung ist besser als ein leeres Feld.</p>
 </div>
 
-<h2 id="vers-manuell"><span class="nr">B.9</span> Verkauf ohne Shop: Barverkauf und manuelle Aufträge</h2>
+<h2 id="vers-manuell"><span class="nr">B.10</span> Verkauf ohne Shop: Barverkauf und manuelle Aufträge</h2>
 <!-- schaubild:vers-manuell -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Verkauf ohne Shop">
 <div class="sb-kopf">Schaubild · Verkauf ohne Shop</div>
@@ -2279,7 +2325,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Eine manuelle Bestellung bucht genauso Ware aus dem Lager wie eine Shop-Bestellung. Erfasse deshalb nur, was wirklich über den Tisch gegangen ist – und nicht zur Übung.</p>
 </div>
 
-<h2 id="vers-nachbestellung"><span class="nr">B.10</span> Nachbestellungen von Händlern bestätigen</h2>
+<h2 id="vers-nachbestellung"><span class="nr">B.11</span> Nachbestellungen von Händlern bestätigen</h2>
 <!-- schaubild:vers-nachbestellung -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Eine Händler-Nachbestellung bestätigen">
 <div class="sb-kopf">Schaubild · Eine Händler-Nachbestellung bestätigen</div>
@@ -2306,14 +2352,14 @@ svg.sv{display:block;width:100%;height:auto}
 
 <p>Erst mit dem Klick auf Bestätigen entstehen der Lagerabgang und der offene Posten. Vorher ist es nur eine Anfrage. Damit kann kein Händler versehentlich deinen Bestand leerbuchen.</p>
 
-<p>Erzeugt wird die Karte in der Kundenakte (Kapitel B.11), Abschnitt <strong>Nachbestell-Link</strong>.</p>
+<p>Erzeugt wird die Karte in der Kundenakte (Kapitel B.12), Abschnitt <strong>Nachbestell-Link</strong>.</p>
 
 <div class="kasten achtung">
 	<span class="titel">Der Link wird genau einmal angezeigt</span>
 	<p>Gespeichert wird nur seine Prüfsumme, nicht der Link selbst. Druck die Karte also sofort aus oder gib die Adresse gleich weiter. Ist sie weg, erzeugst du einen neuen Link – der alte wird damit ungültig. Der Link ist für den Händler persönlich: ohne Anmeldung, nicht indexierbar, gedrosselt, und er zeigt weder Bestände noch Umsätze noch fremde Konditionen.</p>
 </div>
 
-<h2 id="vers-kunden"><span class="nr">B.11</span> Kunden und Händler: die Kundenakte</h2>
+<h2 id="vers-kunden"><span class="nr">B.12</span> Kunden und Händler: die Kundenakte</h2>
 
 <p><span class="weg">Verkauf → Kunden → Kontakte / B2B</span></p>
 <!-- schaubild:vers-kunden -->
@@ -2351,7 +2397,7 @@ svg.sv{display:block;width:100%;height:auto}
 <tr><td><strong>Preisliste</strong></td><td>Öffnet die Händlerpreisliste: Händlerpreise netto, Mengenrabatt-Staffel und Zahlungsziel des Kunden – druckbar und als PDF speicherbar.</td></tr>
 <tr><td><strong>Preisstufe und Rabatt</strong></td><td>Zeigt die Standardstaffel. <strong>Kondition festschreiben</strong> legt eine eigene Vereinbarung an. Sie gilt ab einem Datum; ältere Bestellungen bleiben unverändert.</td></tr>
 <tr><td><strong>Händlerprofil</strong></td><td>USt-IdNr., Rechnungs- und Lieferadresse, Lieferhinweise, Entscheider, Wareneingang, Bestellrhythmus, nächste erwartete Bestellung, Verpackung, Farben, Kommission vereinbart, Display, Kreditlimit. Über <strong>Profil bearbeiten</strong>. Überschreiten offene Posten das Kreditlimit, erscheint eine Warnung.</td></tr>
-<tr><td><strong>Nachbestell-Link</strong></td><td>Erzeugt den persönlichen Link und die Karte mit QR-Code (Kapitel B.10).</td></tr>
+<tr><td><strong>Nachbestell-Link</strong></td><td>Erzeugt den persönlichen Link und die Karte mit QR-Code (Kapitel B.11).</td></tr>
 <tr><td><strong>Bestellungen</strong></td><td>Alle zugeordneten Bestellungen. Auf der Bestellseite schlägt das ERP einen Kontakt mit gleicher E-Mail oder Firma vor – ein Klick ordnet zu, <strong>Zuordnung lösen</strong> hebt es auf.</td></tr>
 <tr><td><strong>Kommissionsbestand</strong></td><td>Ware, die beim Händler liegt. <strong>Ausliefern</strong> und <strong>Zurücknehmen</strong> verschieben nur zwischen Lager und Händler; <strong>Abrechnen</strong> verkauft, und zwar als <em>ein</em> offener Posten über die ganze Lieferung, damit die Rabattstaffel auf den Gesamtwert greift.</td></tr>
 <tr><td><strong>Aktivitäten</strong></td><td>Besuche, Anrufe, Mails, Muster. <strong>Aktivität erfassen</strong> verlangt ein Datum zum Nachfassen – eine Aktivität ohne Wiedervorlage versandet.</td></tr>
@@ -2371,9 +2417,9 @@ svg.sv{display:block;width:100%;height:auto}
 	<figcaption>Nach <strong>Neuen Link erzeugen</strong> erscheint der Link einmalig – mit Karte zum Drucken.</figcaption>
 </figure>
 
-<p>Neben den Aktivitäten zeigt die Akte eine Karte <strong>Angebote, Mahnungen, Reklamationen</strong> des Kontakts (je nach Recht). Die Schritte dahinter stehen in den Kapiteln B.12, D.12 und B.13; das Nachfassen bei Stammkunden in Kapitel B.14.</p>
+<p>Neben den Aktivitäten zeigt die Akte eine Karte <strong>Angebote, Mahnungen, Reklamationen</strong> des Kontakts (je nach Recht). Die Schritte dahinter stehen in den Kapiteln B.13, D.12 und B.14; das Nachfassen bei Stammkunden in Kapitel B.15.</p>
 
-<h2 id="vers-angebote"><span class="nr">B.12</span> Angebote schreiben und in Aufträge umwandeln</h2>
+<h2 id="vers-angebote"><span class="nr">B.13</span> Angebote schreiben und in Aufträge umwandeln</h2>
 <p><span class="weg">Verkauf → Angebote</span></p>
 <!-- schaubild:vers-angebote -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Vom Angebot zum Auftrag">
@@ -2398,19 +2444,19 @@ svg.sv{display:block;width:100%;height:auto}
 <ol class="schritte">
 <li><strong>Kontakt wählen.</strong> Das Angebot übernimmt Adresse und Rabatt der Kondition (D.7). Händler bekommen den Händlerpreis vorgeschlagen.</li>
 <li><strong>Positionen eintragen:</strong> Artikel aus dem Katalog oder freie Position, dazu Farbe, Menge, Preis und Rabatt je Zeile. Zusätzlich gibt es einen Gesamtrabatt und die Versandkosten. Ein leeres Rabatt- oder Versandfeld heißt 0.</li>
-<li><strong>PDF ansehen</strong> und <strong>per Mail senden</strong>. Der Versand steht mit Wiedervorlage in der Kundenakte (B.11), damit das Nachfassen nicht vergessen wird.</li>
+<li><strong>PDF ansehen</strong> und <strong>per Mail senden</strong>. Der Versand steht mit Wiedervorlage in der Kundenakte (B.12), damit das Nachfassen nicht vergessen wird.</li>
 <li><strong>Entscheidung festhalten:</strong> <em>Angenommen</em> oder <em>abgelehnt</em>. Mit <em>Kopie</em> startest du ein neues Angebot aus einem alten.</li>
 </ol>
 
 <h3>„Angenommen → Auftrag“</h3>
-<p>Nimmt der Kunde an, legst du mit einem Klick einen <strong>bestätigten Auftrag</strong> an. Zahlungsziel kommt aus der Kondition, der Lagerabgang wird gebucht, der Auftrag erscheint unter <span class="weg">Verkauf → Bestellungen → Aufträge</span> (B.8). Die Angebotsnummer hat den Nummernkreis <code>AN-JJJJ-0001</code>.</p>
+<p>Nimmt der Kunde an, legst du mit einem Klick einen <strong>bestätigten Auftrag</strong> an. Zahlungsziel kommt aus der Kondition, der Lagerabgang wird gebucht, der Auftrag erscheint unter <span class="weg">Verkauf → Bestellungen → Aufträge</span> (B.9). Die Angebotsnummer hat den Nummernkreis <code>AN-JJJJ-0001</code>.</p>
 
 <div class="kasten merke">
 	<span class="titel">Angebote, die auslaufen</span>
 	<p>Angebote kurz vor Ablauf stehen in der täglichen Übersichtsmail (D.14). In der Kundenakte zeigt eine Karte <strong>Angebote, Mahnungen, Reklamationen</strong> alles, was zu diesem Kontakt gehört.</p>
 </div>
 
-<h2 id="vers-reklamation"><span class="nr">B.13</span> Reklamationen und Retouren</h2>
+<h2 id="vers-reklamation"><span class="nr">B.14</span> Reklamationen und Retouren</h2>
 <p><span class="weg">Verkauf → Kunden → Reklamationen</span></p>
 <!-- schaubild:vers-reklamation -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Eine Reklamation durchlaufen">
@@ -2445,7 +2491,7 @@ svg.sv{display:block;width:100%;height:auto}
 <h3>Auswertung</h3>
 <p>Das ERP zählt die Gründe und die häufigsten Artikel. Das ist der Teil, der sich auszahlt: Taucht ein Artikel immer wieder auf, liegt es an Material, Druckprofil oder Verpackung (A.16). Fälle, die länger als 14 Tage offen sind, stehen in der täglichen Übersichtsmail.</p>
 
-<h2 id="vers-nachkauf"><span class="nr">B.14</span> Nachkauf: wer bald wieder bestellt</h2>
+<h2 id="vers-nachkauf"><span class="nr">B.15</span> Nachkauf: wer bald wieder bestellt</h2>
 <p><span class="weg">Verkauf → Kunden → Nachkauf</span></p>
 <!-- schaubild:vers-nachkauf -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Wer bald wieder bestellt">
@@ -2467,8 +2513,8 @@ svg.sv{display:block;width:100%;height:auto}
 
 <h3>Nachfassen mit einem Klick</h3>
 <ul>
-<li><strong>Mailvorschlag:</strong> Das ERP schreibt eine persönliche Mail. Bei Händlern steht ein frischer, persönlicher <strong>Nachbestell-Link</strong> darin (B.10).</li>
-<li><strong>Eintrag und Wiedervorlage</strong> landen in der Kundenakte (B.11).</li>
+<li><strong>Mailvorschlag:</strong> Das ERP schreibt eine persönliche Mail. Bei Händlern steht ein frischer, persönlicher <strong>Nachbestell-Link</strong> darin (B.11).</li>
+<li><strong>Eintrag und Wiedervorlage</strong> landen in der Kundenakte (B.12).</li>
 <li><strong>Ruhe:</strong> Kunden, die sich schon gemeldet haben, setzt du auf „Ruhe“, damit sie nicht erneut vorgeschlagen werden.</li>
 </ul>
 <p>Fällige Händler stehen auch im täglichen Überblick.</p>
@@ -2479,7 +2525,7 @@ svg.sv{display:block;width:100%;height:auto}
 </div>
 
 
-<h2 id="vers-affiliates"><span class="nr">B.15</span> Affiliates: Influencer mit eigenem Rabattcode</h2>
+<h2 id="vers-affiliates"><span class="nr">B.16</span> Affiliates: Influencer mit eigenem Rabattcode</h2>
 <p><span class="weg">Verkauf → Marketing → Affiliates</span></p>
 <!-- schaubild:vers-affiliates -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Vom Influencer zur Auszahlung">
@@ -2590,7 +2636,7 @@ svg.sv{display:block;width:100%;height:auto}
 	<p>Die Zahlungsangabe der Ambassadors (PayPal-Adresse oder IBAN) steht in der Anforderung. Gib sie nicht weiter und lösche die Mail, wenn du sie nicht mehr brauchst. Der Beleg hat keine Datei: Nimm die <strong>Rechnung oder Gutschrift des Influencers</strong> zum Beleg und bewahre sie auf. Ob der Influencer Gewerbetreibender ist und Umsatzsteuer ausweisen muss, klärst du mit deiner Steuerberatung, bevor die erste Provision fließt.</p>
 	</div>
 
-<h2 id="vers-plaetze"><span class="nr">B.16</span> Lagerplätze, Etiketten und Scannen</h2>
+<h2 id="vers-plaetze"><span class="nr">B.17</span> Lagerplätze, Etiketten und Scannen</h2>
 
 <p><span class="weg">Lager → Bestand → Lagerplätze &amp; Picklisten → Lagerplätze</span></p>
 <!-- schaubild:vers-plaetze -->
@@ -2653,7 +2699,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <p>Ein Lagerplatz zeigt dir, was dort liegt. Ein Artikel zeigt Bestand und springt auf die Buchung. Ein Kleinteil oder Artikel mit offener Bestellung zeigt darunter den Block <strong>Wareneingang</strong> mit der Menge und dem Knopf <strong>Eingegangen ✓</strong>.</p>
 
-<h2 id="vers-bestand"><span class="nr">B.17</span> Bestand prüfen und korrigieren</h2>
+<h2 id="vers-bestand"><span class="nr">B.18</span> Bestand prüfen und korrigieren</h2>
 
 <p><span class="weg">Lager → Bestand → Lager</span></p>
 <!-- schaubild:vers-bestand -->
@@ -2672,7 +2718,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 <p>Wenn beim Picken im Fach weniger lag als auf der Liste: Klick beim Artikel auf <strong>Buchen</strong>, wähle <strong>Korrektur</strong>, trag die Differenz ein – lagen 18 statt 20 Stück da, trägst du <code>-2</code> ein –, schreib eine <strong>Begründung</strong> (Pflicht: „Fach A-01-01 nachgezählt, zwei Stück fehlten“) und klick auf <strong>Buchen</strong>. Die Einzelheiten stehen in Kapitel A.13.</p>
 
-<h2 id="vers-fehler"><span class="nr">B.18</span> Wenn etwas nicht geht</h2>
+<h2 id="vers-fehler"><span class="nr">B.19</span> Wenn etwas nicht geht</h2>
 <!-- schaubild:vers-fehler -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Wenn am Packtisch etwas nicht geht">
 <div class="sb-kopf">Schaubild · Wenn am Packtisch etwas nicht geht</div>
@@ -2697,14 +2743,14 @@ svg.sv{display:block;width:100%;height:auto}
 <tr><td>Der Scan erkennt den Code nicht</td><td>Etikett verschmutzt, zu klein gedruckt oder es ist ein Strichcode</td><td>Code bei <em>Code eintippen</em> von Hand eingeben</td></tr>
 <tr><td>Zwei Picklisten mit derselben Ware</td><td>Der Erzeugen-Knopf wurde zweimal gedrückt</td><td>Nur eine abarbeiten, die andere liegenlassen und der Betriebsleitung melden</td></tr>
 <tr><td>Der Lieferschein-Knopf fehlt</td><td>Die Bestellung ist schon versendet</td><td>Den Lieferschein über die Bestellseite öffnen oder in WooCommerce</td></tr>
-<tr><td>Auf der Karte fehlt das Labelformular</td><td>Kein DHL-Zugang eingerichtet, oder dir fehlt das Recht <em>Versandetiketten erzeugen</em></td><td>Kapitel B.7; Person mit Vollzugriff fragen</td></tr>
+<tr><td>Auf der Karte fehlt das Labelformular</td><td>Kein DHL-Zugang eingerichtet, oder dir fehlt das Recht <em>Versandetiketten erzeugen</em></td><td>Kapitel B.8; Person mit Vollzugriff fragen</td></tr>
 <tr><td>„Ohne Shop-Bestellung“ steht bei einem Auftrag</td><td>Eine Bestellung wurde in WooCommerce gelöscht</td><td>Nicht selbst stornieren – der Betriebsleitung sagen</td></tr>
 <tr><td>Ein Platz oder Reiter fehlt</td><td>Dein Profil hat dafür kein Recht</td><td>Person mit Vollzugriff fragen</td></tr>
 </tbody>
 </table>
 </div>
 
-<h2 id="vers-spickzettel"><span class="nr">B.19</span> Spickzettel für den Packtisch</h2>
+<h2 id="vers-spickzettel"><span class="nr">B.20</span> Spickzettel für den Packtisch</h2>
 <!-- schaubild:vers-spickzettel -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Eine Runde Versand">
 <div class="sb-kopf">Schaubild · Eine Runde Versand</div>
@@ -3143,7 +3189,7 @@ svg.sv{display:block;width:100%;height:auto}
 <tbody>
 <tr><td><code>verkauf.affiliates</code>, <code>.auszahlen</code></td><td>Affiliates ansehen und anlegen; Auszahlungen festhalten (setzt <code>verkauf.affiliates</code> voraus; Auszahlen steht in keiner Vorlage)</td><td>B.15</td></tr>
 <tr><td><code>verkauf.shop_orders.status</code>, <code>.erstatten</code></td><td>Status ändern, Notizen, Erstatten (setzt <code>verkauf.shop_orders</code> voraus; Erstatten steht in keiner Vorlage)</td><td>D.15</td></tr>
-<tr><td><code>verkauf.angebote</code>, <code>verkauf.reklamationen</code>, <code>verkauf.nachkauf</code></td><td>Angebote, Reklamationen, Nachkauf</td><td>B.12, B.13, B.14</td></tr>
+<tr><td><code>verkauf.angebote</code>, <code>verkauf.reklamationen</code>, <code>verkauf.nachkauf</code></td><td>Angebote, Reklamationen, Nachkauf</td><td>B.13, B.14, B.15</td></tr>
 <tr><td><code>lager.inventur</code>, <code>lager.inventur.abschliessen</code>, <code>lager.bestellungen</code></td><td>Inventur zählen, Inventur abschließen, Bestellscheine an Lieferanten</td><td>A.14, A.15</td></tr>
 <tr><td><code>finanzen.bank</code>, <code>.mahnwesen</code>, <code>.steuer</code>, <code>.liquiditaet</code></td><td>Bankabgleich, Offene Posten, Steuer &amp; DATEV, Liquidität</td><td>D.11–D.14</td></tr>
 <tr><td><code>finanzen.stundenlohn</code>, <code>finanzen.rueckblick</code></td><td>Stundenlohn (braucht „Preise, Kosten und Löhne sehen“), Wochenrückblick</td><td>D.16</td></tr>
@@ -4473,7 +4519,7 @@ svg.sv{display:block;width:100%;height:auto}
 <p>Die Annahmen bleiben im Browser gespeichert; sie ändern nichts im ERP.</p>
 
 <h3>Der tägliche Überblick per Mail</h3>
-<p>Einmal am Tag, und <strong>nur wenn etwas zu tun ist</strong>, schickt das ERP eine Mail mit: fälligen Mahnstufen (D.12), Angeboten kurz vor Ablauf (B.12), offenen Urlaubsanträgen (C.9), unbestätigten Bestellscheinen (A.15), Reklamationen über 14 Tage (B.13), nicht zugeordneten Bankumsätzen, einem ablaufenden Vivid-Schlüssel oder fehlgeschlagenem Abruf sowie einem Engpass in der Liquidität. An/Aus und Empfänger stellst du in den Einstellungen der Liquiditätsseite ein.</p>
+<p>Einmal am Tag, und <strong>nur wenn etwas zu tun ist</strong>, schickt das ERP eine Mail mit: fälligen Mahnstufen (D.12), Angeboten kurz vor Ablauf (B.13), offenen Urlaubsanträgen (C.9), unbestätigten Bestellscheinen (A.15), Reklamationen über 14 Tage (B.14), nicht zugeordneten Bankumsätzen, einem ablaufenden Vivid-Schlüssel oder fehlgeschlagenem Abruf sowie einem Engpass in der Liquidität. An/Aus und Empfänger stellst du in den Einstellungen der Liquiditätsseite ein.</p>
 
 
 <h2 id="adm-kasse"><span class="nr">D.15</span> Kasse, Marketing, Events, Loyalty, Support</h2>
@@ -5489,7 +5535,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.100.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.101.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

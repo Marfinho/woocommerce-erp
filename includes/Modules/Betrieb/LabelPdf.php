@@ -157,6 +157,15 @@ class LabelPdf {
 
 		$editor->resize( 400, 400, false );
 		$editor->set_quality( 88 );
+		// wp_tempnam() liegt in wp-admin/includes/file.php und ist im Etiketten-Download nicht immer geladen.
+		if ( ! function_exists( 'wp_tempnam' ) && defined( 'ABSPATH' ) && file_exists( ABSPATH . 'wp-admin/includes/file.php' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			return null;
+		}
+
 		$tmp   = wp_tempnam( 'lw16-etikett' );
 		$saved = $editor->save( $tmp . '.jpg', 'image/jpeg' );
 		@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink

@@ -494,7 +494,7 @@ class SupportModule {
 
 		foreach ( $periods as $label => $since ) {
 			$orders = wc_get_orders( array(
-				'status'       => array( 'wc-completed', 'wc-processing' ),
+				'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 				'date_created' => '>=' . strtotime( $since ),
 				'limit'        => -1,
 				'return'       => 'objects',
@@ -573,7 +573,7 @@ class SupportModule {
 		}
 
 		$seit   = gmdate( 'Y-m-d H:i:s', time() - WEEK_IN_SECONDS );
-		$orders = wc_get_orders( array( 'status' => array( 'wc-completed', 'wc-processing' ), 'date_created' => '>=' . strtotime( $seit ), 'limit' => -1, 'return' => 'objects' ) );
+		$orders = wc_get_orders( array( 'status' => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ), 'date_created' => '>=' . strtotime( $seit ), 'limit' => -1, 'return' => 'objects' ) );
 		$anzahl = count( $orders );
 		$umsatz = 0;
 		foreach ( $orders as $o ) {

@@ -36,7 +36,11 @@ class WooIntegration {
 	 */
 	public function register() {
 		add_action( 'woocommerce_order_status_processing', array( $this, 'ensure_record' ), 20, 1 );
+		// Der Lagerabgang passiert beim Kommissionieren; „abgeschlossen“ bucht nur nach,
+		// wenn jemand im Shop ohne Kommissionieren abschließt (die Marke verhindert Doppelbuchung).
+		add_action( 'woocommerce_order_status_' . OrderPicking::STATUS, array( $this, 'book_stock' ), 30, 1 );
 		add_action( 'woocommerce_order_status_completed', array( $this, 'book_stock' ), 30, 1 );
+		( new OrderPicking() )->register();
 		add_action( 'woocommerce_order_status_cancelled', array( $this, 'reverse_stock' ), 30, 1 );
 		add_action( 'woocommerce_order_status_refunded', array( $this, 'reverse_stock' ), 30, 1 );
 
@@ -117,10 +121,12 @@ class WooIntegration {
 	 * Abschaltbar, weil eine versandte und dann stornierte Bestellung erst
 	 * mit der Retoure wieder im Lager liegt.
 	 *
-	 * @param int $order_id Bestellung.
+	 * @param int  $order_id Bestellung.
+	 * @param bool $force    Auch bei abgeschalteter Storno-Rückbuchung (das Zurücknehmen
+	 *                       des Kommissionierens ist keine Retoure, die Ware liegt noch da).
 	 */
-	public function reverse_stock( $order_id ) {
-		if ( ! StockOwnership::is_active() || ! (int) Settings::get( 'betrieb_storno_lager', 1 ) || ! function_exists( 'wc_get_order' ) ) {
+	public function reverse_stock( $order_id, $force = false ) {
+		if ( ! StockOwnership::is_active() || ( true !== $force && ! (int) Settings::get( 'betrieb_storno_lager', 1 ) ) || ! function_exists( 'wc_get_order' ) ) {
 			return;
 		}
 
@@ -140,6 +146,10 @@ class WooIntegration {
 				__( 'Bestellung %s (automatisch)', 'lindenweg16' ),
 				wc_get_order_status_name( $order->get_status() )
 			);
+
+			if ( true === $force ) {
+				$reason = __( 'Kommissionieren zurückgenommen', 'lindenweg16' );
+			}
 			$zurueck = 0;
 
 			foreach ( StockRepository::by_ref( 'wc_order', (int) $order_id ) as $movement ) {

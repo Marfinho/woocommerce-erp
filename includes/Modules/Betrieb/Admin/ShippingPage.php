@@ -37,7 +37,7 @@ class ShippingPage {
 	 * Welche Bestellungen die Ansicht zeigt.
 	 */
 	const FILTER = array(
-		'offen'     => array( 'wc-processing', 'wc-on-hold' ),
+		'offen'     => array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold' ),
 		'versendet' => array( 'wc-completed' ),
 	);
 

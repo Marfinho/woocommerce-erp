@@ -7,6 +7,23 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.101.1] – 2026-11-22
+
+### Behoben
+- **Produktetikett drucken ergab „Ein kritischer Fehler“:** Beim Aufbereiten des Produktbilds (Bilder, die kein JPEG sind) rief das Etikett `wp_tempnam()` auf, das im Download nicht geladen war (`Call to undefined function wp_tempnam()`). Die Funktion wird jetzt bei Bedarf nachgeladen; fehlt sie trotzdem, erscheint das Etikett ohne Bild statt mit Fehlerseite. Dass es einmal klappte, lag am Bild: JPEG-Bilder brauchen die Umwandlung nicht.
+
+## [0.101.0] – 2026-11-22
+
+### Neu: Kommissionieren – ein eigener Schritt zwischen „bezahlt“ und „packen“
+- Neuer Ablauf einer Shop-Bestellung: **bezahlt → Kommissioniert → Versendet**. „Kommissioniert“ ist ein eigener Bestellstatus im Shop (zwischen „In Bearbeitung“ und „Abgeschlossen“, ohne eigene Kundenmail).
+- **Scan-Pflicht:** Auf der Seite der Bestellung (Verkauf → Bestellungen → Versand) wird jede Position gescannt (Artikelnummer oder EAN des Shop-Produkts; Handscanner, Tastatur oder Kamera). Das ERP meldet „Passt“, „gehört nicht zur Bestellung“ und „zu viel“. Positionen ohne Code werden von Hand abgehakt. „Kommissioniert ✓“ geht erst, wenn alles gescannt ist. Der Zählstand liegt an der Bestellung, nicht im Browser.
+- **Der Lagerabgang wird beim Kommissionieren gebucht**, nicht mehr beim Versenden. „Versendet ✓“ schließt die Bestellung nur noch ab; eine noch nicht kommissionierte Bestellung lässt sich nicht als versendet melden. Schließt jemand im Shop ohne Kommissionieren ab, bucht der Abschluss wie bisher nach (die Marke gegen Doppelbuchung bleibt).
+- **Zurücknehmen:** Eine kommissionierte Bestellung ohne Label lässt sich zurücknehmen; der Lagerabgang wird zurückgebucht, die Bestellung steht wieder auf „In Bearbeitung“. Mit Label muss dieses zuerst storniert werden. Storno und Erstattung buchen den Bestand wie bisher zurück.
+- **Startseite „Heute“:** Statt einer Karte gibt es zwei: „N Bestellungen kommissionieren“ und „N Pakete packen und versenden“. Die Seite **Versand** hat vier Spalten (Zu kommissionieren, Zu packen, Label da – zu versenden, Heute versendet).
+- „Kommissioniert“ zählt in Umsatz, Buchhaltung, Prognose, Kundenkonto und den übrigen Auswertungen wie „In Bearbeitung“ (als bezahlt, noch nicht versendet).
+- Betriebsanleitung: neues Kapitel B.5 „Schritt 3: Kommissionieren“, Ablauf in Teil B jetzt in sechs Schritten. Tests: `tests/BetriebOrderPickingTest.php`.
+- **Übergang:** Bereits bezahlte, offene Bestellungen stehen nach dem Update in „Zu kommissionieren“ und werden einmal durchgeklickt.
+
 ## [0.100.0] – 2026-11-17
 
 ### Neu: Besucher – Verlauf: an welchen Tagen und zu welchen Zeiten ist viel los?

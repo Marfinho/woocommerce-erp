@@ -46,6 +46,20 @@ if ( ! function_exists( '_n' ) ) {
 	}
 }
 
+if ( ! function_exists( '_x' ) ) {
+	/**
+	 * Text mit Kontext, unverändert.
+	 *
+	 * @param string $text    Text.
+	 * @param string $context Kontext.
+	 * @param string $domain  Textdomain.
+	 * @return string
+	 */
+	function _x( $text, $context, $domain = 'default' ) { // phpcs:ignore
+		return $text;
+	}
+}
+
 if ( ! function_exists( 'number_format_i18n' ) ) {
 	/**
 	 * Zahl formatieren.
@@ -244,6 +258,7 @@ foreach ( array(
 	'DayPlan',
 	'ForecastService',
 	'CommissionBatch',
+	'OrderPicking',
 	'BomResolver',
 	'ComponentConsumption',
 	'CostCalculator',

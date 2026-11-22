@@ -2099,7 +2099,7 @@ class BuchAbschluss {
 
 		$orders = wc_get_orders(
 			array(
-				'status'       => array( 'processing', 'completed', 'on-hold' ),
+				'status'       => array( 'processing', 'kommissioniert', 'completed', 'on-hold' ),
 				'limit'        => self::FEE_SCAN_LIMIT,
 				'date_created' => $jahr . '-01-01...' . $jahr . '-12-31',
 				'return'       => 'objects',

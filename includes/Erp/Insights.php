@@ -361,7 +361,7 @@ class Insights {
 		}
 
 		$since = gmdate( 'Y-m-d', time() - ( (int) $days - 1 ) * DAY_IN_SECONDS );
-		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT l.product_id AS pid, COUNT(DISTINCT l.order_id) AS orders FROM {$lookup} l INNER JOIN {$stats} s ON s.order_id = l.order_id WHERE s.status IN ('wc-processing','wc-completed','wc-on-hold') AND l.date_created >= %s GROUP BY l.product_id", $since ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT l.product_id AS pid, COUNT(DISTINCT l.order_id) AS orders FROM {$lookup} l INNER JOIN {$stats} s ON s.order_id = l.order_id WHERE s.status IN ('wc-processing','wc-kommissioniert','wc-completed','wc-on-hold') AND l.date_created >= %s GROUP BY l.product_id", $since ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$out = array();
 		foreach ( (array) $rows as $r ) {

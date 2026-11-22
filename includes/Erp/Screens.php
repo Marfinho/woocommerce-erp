@@ -26,6 +26,7 @@ use Lindenweg16\Modules\Betrieb\Dhl\DhlProduct;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlShipping;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
+use Lindenweg16\Modules\Betrieb\OrderPicking;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Production\DhlTracking;
@@ -348,9 +349,9 @@ class Screens {
 	/**
 	 * Eine Bestellung als Karte des Versand-Workflows.
 	 *
-	 * Die Stufe ergibt sich aus den Tatsachen, nicht aus einem Merker: Ohne
-	 * Label ist die Bestellung zu packen, mit Label zu versenden, im Status
-	 * „abgeschlossen“ versendet. So kann der Stand nie von der Wirklichkeit
+	 * Die Stufe ergibt sich aus den Tatsachen, nicht aus einem Merker: Bezahlt
+	 * ist die Bestellung zu kommissionieren, kommissioniert ohne Label zu
+	 * packen, mit Label zu versenden, im Status „abgeschlossen“ versendet. So kann der Stand nie von der Wirklichkeit
 	 * abweichen, auch wenn jemand im Shop etwas anders macht.
 	 *
 	 * @param \WC_Order $order Bestellung.
@@ -371,13 +372,15 @@ class Screens {
 		$label = DhlLabelRepository::for_order( $id );
 		$row   = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id = %d', $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$done  = 'completed' === $order->get_status();
+		$picked = OrderPicking::STATUS === $order->get_status();
+		$stage = $done ? 'done' : ( $picked ? ( $label ? 'send' : 'pack' ) : 'pick' );
 
 		$entry = array(
 			'id'        => $id,
 			'number'    => $order->get_order_number(),
 			'ts'        => $order->get_date_created() ? $order->get_date_created()->getTimestamp() : 0,
 			'status'    => wc_get_order_status_name( $order->get_status() ),
-			'stage'     => $done ? 'done' : ( $label ? 'send' : 'pack' ),
+			'stage'     => $stage,
 			'name'      => $order->get_formatted_shipping_full_name() ? $order->get_formatted_shipping_full_name() : $order->get_formatted_billing_full_name(),
 			'place'     => trim( $order->get_shipping_postcode() . ' ' . $order->get_shipping_city() . ' ' . $land ),
 			'content'   => self::summarize_items( $lines ),
@@ -396,7 +399,7 @@ class Screens {
 				'weight'  => (int) $label->weight_g,
 				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
 			);
-		} elseif ( $dhl['configured'] && ! $done ) {
+		} elseif ( $dhl['configured'] && 'pack' === $stage ) {
 			$weight             = DhlShipping::weight_g( $order );
 			$entry['suggested'] = array(
 				'weight'  => (int) $weight,
@@ -423,7 +426,7 @@ class Screens {
 		$since  = ( new \DateTimeImmutable( 'today', wp_timezone() ) )->getTimestamp();
 
 		// Älteste zuerst: Wer am längsten wartet, steht oben.
-		foreach ( wc_get_orders( array( 'status' => array( 'wc-processing', 'wc-on-hold' ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ) as $order ) {
+		foreach ( wc_get_orders( array( 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-' . OrderPicking::STATUS ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ) as $order ) {
 			$orders[] = self::ship_entry( $order, $dhl );
 		}
 
@@ -451,16 +454,19 @@ class Screens {
 		$entry = self::ship_entry( $order, $dhl );
 		$items = array();
 
-		foreach ( $order->get_items() as $item ) {
-			$product = $item->get_product();
+		foreach ( OrderPicking::lines( $order ) as $line ) {
 			$items[] = array(
-				'name' => $item->get_name(),
-				'qty'  => (int) $item->get_quantity(),
-				'sku'  => $product ? (string) $product->get_sku() : '',
+				'id'        => $line['id'],
+				'name'      => $line['name'],
+				'qty'       => $line['qty'],
+				'sku'       => $line['sku'],
+				'scanned'   => $line['scanned'],
+				'scannable' => ! empty( $line['codes'] ),
 			);
 		}
 
 		$entry['items']   = $items;
+		$entry['picked']  = OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) );
 		$entry['address'] = array_values( array_filter( array_map( 'trim', explode( '<br/>', (string) $order->get_formatted_shipping_address( $order->get_formatted_billing_address() ) ) ) ) );
 		$entry['address'] = array_map( 'wp_strip_all_tags', $entry['address'] );
 		$entry['note']    = (string) $order->get_customer_note();
@@ -574,17 +580,150 @@ class Screens {
 			return array( 'ok' => true, 'message' => __( 'Schon als versendet gemeldet.', 'lindenweg16' ) );
 		}
 
-		if ( ! in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+		if ( in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diese Bestellung ist noch nicht kommissioniert. Erst die Ware scannen und „Kommissioniert“ melden.', 'lindenweg16' ) );
+		}
+
+		if ( OrderPicking::STATUS !== $order->get_status() ) {
 			return array( 'ok' => false, 'message' => __( 'Diese Bestellung ist nicht versandbereit (Status: ', 'lindenweg16' ) . wc_get_order_status_name( $order->get_status() ) . ').' );
 		}
 
+		// Der Lagerabgang ist beim Kommissionieren gebucht; die Marke verhindert eine zweite Buchung.
 		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->book_stock( (int) $order_id );
 
 		$order->update_status( 'completed', __( 'Versendet über das ERP.', 'lindenweg16' ) );
 
 		\Lindenweg16\Core\AuditLog::record( 'erp_versendet', 'order', (int) $order_id, array() );
 
-		return array( 'ok' => true, 'message' => __( 'Versendet. Der Lagerabgang ist gebucht.', 'lindenweg16' ) );
+		return array( 'ok' => true, 'message' => __( 'Versendet.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Eine Position der Bestellung scannen (oder, ohne Code, von Hand abhaken).
+	 *
+	 * @param int    $order_id Bestellung.
+	 * @param string $code     Gescannter Code; leer beim Abhaken.
+	 * @param int    $item_id  Positions-ID zum Abhaken einer Position ohne Code.
+	 * @return array {ok, result, message, items, picked}
+	 */
+	public static function scan_item( $order_id, $code, $item_id = 0 ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diese Bestellung wird nicht mehr kommissioniert.', 'lindenweg16' ) );
+		}
+
+		$lines = OrderPicking::lines( $order );
+		$scans = OrderPicking::scans( $order );
+
+		if ( (int) $item_id > 0 ) {
+			$res    = OrderPicking::confirm_manual( $lines, $scans, (int) $item_id );
+			$result = $res['ok'] ? 'ok' : 'unknown';
+			$msg    = $res['ok'] ? __( 'Abgehakt.', 'lindenweg16' ) : __( 'Diese Position hat einen Code und muss gescannt werden.', 'lindenweg16' );
+			$scans  = $res['scans'];
+		} else {
+			$res    = OrderPicking::apply_scan( $lines, $scans, $code );
+			$result = $res['result'];
+			$scans  = $res['scans'];
+			$msg    = array(
+				'ok'       => __( 'Passt.', 'lindenweg16' ),
+				'unknown'  => __( 'Dieser Code gehört nicht zur Bestellung.', 'lindenweg16' ),
+				'too_many' => __( 'Zu viel: Von dieser Position ist schon alles gescannt.', 'lindenweg16' ),
+			)[ $result ];
+		}
+
+		if ( 'ok' === $result ) {
+			OrderPicking::save_scans( $order, $scans );
+		}
+
+		$items = OrderPicking::lines( $order );
+
+		return array(
+			'ok'      => true,
+			'result'  => $result,
+			'message' => $msg,
+			'items'   => array_map(
+				static function ( $l ) {
+					return array( 'id' => $l['id'], 'scanned' => $l['scanned'] );
+				},
+				$items
+			),
+			'picked'  => OrderPicking::is_complete( $items, OrderPicking::scans( $order ) ),
+		);
+	}
+
+	/**
+	 * Als kommissioniert melden: Lagerabgang buchen, Status setzen.
+	 *
+	 * Nur, wenn jede Position gescannt (oder abgehakt) ist.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return array {ok, message}
+	 */
+	public static function mark_picked( $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( OrderPicking::STATUS === $order->get_status() ) {
+			return array( 'ok' => true, 'message' => __( 'Schon kommissioniert.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diese Bestellung lässt sich nicht kommissionieren (Status: ', 'lindenweg16' ) . wc_get_order_status_name( $order->get_status() ) . ').' );
+		}
+
+		if ( ! OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) ) ) {
+			return array( 'ok' => false, 'message' => __( 'Es fehlt noch Ware: Jede Position muss gescannt sein.', 'lindenweg16' ) );
+		}
+
+		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->book_stock( (int) $order_id );
+
+		$order->update_status( OrderPicking::STATUS, __( 'Kommissioniert über das ERP.', 'lindenweg16' ) );
+
+		\Lindenweg16\Core\AuditLog::record( 'erp_kommissioniert', 'order', (int) $order_id, array() );
+
+		return array( 'ok' => true, 'message' => __( 'Kommissioniert. Der Lagerabgang ist gebucht.', 'lindenweg16' ) );
+	}
+
+	/**
+	 * Kommissionieren zurücknehmen: Bestand zurück, Status wieder „in Bearbeitung“.
+	 *
+	 * Mit Label geht es nicht: erst das Label stornieren, sonst läge ein
+	 * frankiertes Paket zu einer Bestellung, die im Lager wieder offen ist.
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return array {ok, message}
+	 */
+	public static function unpick( $order_id ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( OrderPicking::STATUS !== $order->get_status() ) {
+			return array( 'ok' => false, 'message' => __( 'Nur eine kommissionierte Bestellung lässt sich zurücknehmen.', 'lindenweg16' ) );
+		}
+
+		if ( DhlLabelRepository::for_order( (int) $order_id ) ) {
+			return array( 'ok' => false, 'message' => __( 'Zu dieser Bestellung gibt es ein Label. Erst das Label stornieren, dann zurücknehmen.', 'lindenweg16' ) );
+		}
+
+		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->reverse_stock( (int) $order_id, true );
+
+		OrderPicking::save_scans( $order, array() );
+		$order->update_status( 'processing', __( 'Kommissionieren zurückgenommen über das ERP.', 'lindenweg16' ) );
+
+		\Lindenweg16\Core\AuditLog::record( 'erp_kommissionieren_zurueck', 'order', (int) $order_id, array() );
+
+		return array( 'ok' => true, 'message' => __( 'Zurückgenommen. Der Lagerabgang ist zurückgebucht.', 'lindenweg16' ) );
 	}
 
 	/**
