@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.101.0">
+<meta name="anleitung-stand" content="0.102.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.101.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.102.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.101.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.102.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2062,11 +2062,12 @@ svg.sv{display:block;width:100%;height:auto}
 <!-- schaubild:vers-kommissionieren -->
 <figure class="schaubild" role="group" aria-label="Schaubild: Kommissionieren: scannen, dann „Kommissioniert ✓“">
 <div class="sb-kopf">Schaubild · Kommissionieren: scannen, dann „Kommissioniert ✓“</div>
-<ol class="fluss c3">
+<ol class="fluss c4">
 	<li class="du"><b>Karte öffnen</b><span>Verkauf → Bestellungen → Versand, Spalte „Zu kommissionieren“</span></li>
 	<li class="du"><b>Jede Position scannen</b><span>Artikelnummer oder EAN; Handscanner oder Kamera</span></li>
 	<li class="erp"><b>Zählt mit</b><span>Passt · gehört nicht zur Bestellung · zu viel</span></li>
-	<li class="du"><b>„Kommissioniert ✓“</b><span>geht erst, wenn alles gescannt ist</span></li>
+	<li class="du"><b>Beileger abhaken</b><span>Danke-Zettel mit Freunde-Code, Anleitungen, Montageset</span></li>
+	<li class="du"><b>„Kommissioniert ✓“</b><span>geht erst, wenn alles gescannt und abgehakt ist</span></li>
 	<li class="erp"><b>Bucht den Lagerabgang</b><span>Status „Kommissioniert“, Karte wandert nach „Zu packen“</span></li>
 	<li class="warn"><b>Falsch kommissioniert?</b><span>„Zurücknehmen“: Bestand kommt zurück (nicht mit Label)</span></li>
 </ol>
@@ -2084,8 +2085,29 @@ svg.sv{display:block;width:100%;height:auto}
 	<li>Scanne den Artikelcode jeder Position, oder tippe ihn ins Feld und drücke Enter. Ein Handscanner schreibt direkt ins Feld; am Handy hilft der Knopf <strong>Kamera</strong>. Als Code gilt die <strong>Artikelnummer</strong> (SKU) oder die <strong>EAN</strong> des Shop-Produkts.</li>
 	<li>Bei jedem Scan zählt die Zeile hoch (<em>1 / 2</em>, <em>2 / 2</em>). Das ERP meldet, ob es <em>Passt</em>, ob der Code <em>nicht zur Bestellung gehört</em> oder ob von dieser Position schon <em>alles gescannt</em> ist (zu viel).</li>
 	<li>Hat eine Position keinen Code, steht an ihr der Knopf <strong>Abhaken</strong>. Positionen mit Code lassen sich nicht abhaken, sie müssen gescannt werden.</li>
-	<li>Ist jede Zeile voll, wird <strong>Kommissioniert ✓</strong> frei. Ein Klick, und die Karte wandert nach <em>Zu packen</em>.</li>
+	<li>Unter den Positionen steht der Kasten <strong>Beileger</strong>: Danke-Zettel, Anleitungen, Montageset. Hake jede Zeile ab, wenn das Teil im Karton liegt.</li>
+	<li>Ist jede Position gescannt und jede Pflicht-Zeile abgehakt, wird <strong>Kommissioniert ✓</strong> frei. Ein Klick, und die Karte wandert nach <em>Zu packen</em>.</li>
 </ol>
+
+<h3>Beileger: was in den Karton muss</h3>
+
+<p>Welche Beileger bei einer Bestellung erscheinen, hängt von den Positionen ab. In der Voreinstellung gilt:</p>
+
+<div class="tabelle">
+<table>
+<thead><tr><th>Beileger</th><th>Wann</th><th>Menge</th></tr></thead>
+<tbody>
+<tr><td>Danke-Zettel</td><td>immer</td><td>1× – mit dem <strong>Freunde-werben-Freunde-Code</strong> des Kunden direkt in der Zeile</td></tr>
+<tr><td>Anleitung Basismodul</td><td>ein Basismodul ist dabei</td><td>1×</td></tr>
+<tr><td>Montageset</td><td>ein Basismodul ist dabei</td><td>1× je Basismodul</td></tr>
+<tr><td>Anleitung Module</td><td>mindestens ein Modul ist dabei</td><td>1×, egal wie viele Module</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Bei Gast-Bestellungen steht statt des Codes der Hinweis, dass es keinen gibt: Gäste haben kein Konto und damit keinen Code.</p>
+
+<p>Einstellen kannst du das unter <span class="weg">Verkauf → Bestellungen → Versand</span> mit dem Knopf <strong>Beileger</strong> oben rechts. Pro Zeile legst du fest: den Namen, <em>wann</em> er dazugehört (immer, Basismodul dabei, Modul dabei oder eine Artikelnummer), ob er <em>einmal</em> oder <em>je Stück</em> zählt, ob er <strong>Pflicht</strong> ist (ohne Haken geht „Kommissioniert“ nicht) und ob der Freunde-Code mit angezeigt wird. Eine Änderung gilt sofort für alle. Dafür brauchst du das Recht <em>Beileger einstellen</em>; ansehen darf jeder mit Zugang zum Versand.</p>
 
 <div class="kasten info">
 	<span class="titel">Der Zählstand gehört zur Bestellung</span>
@@ -2181,7 +2203,7 @@ svg.sv{display:block;width:100%;height:auto}
 <ol class="fluss c4">
 	<li class="erp"><b>DHL eingerichtet?</b><span>ja: Formular · nein: nur „Versendet“</span></li>
 	<li class="du"><b>Produkt, Gewicht prüfen</b><span>Inland Paket, Europaket, Weltpaket</span></li>
-	<li class="du"><b>Label erzeugen</b><span>ab jetzt ist das Paket frankiert</span></li>
+	<li class="du"><b>Label erzeugen</b><span>ab jetzt ist das Paket frankiert · zwei Pakete: „Weiteres Label“</span></li>
 	<li class="ext"><b>DHL</b><span>Sendungsnummer geht in die Sendungsverfolgung des Kunden</span></li>
 	<li class="du"><b>Aufkleben, Paket weg</b></li>
 	<li class="du"><b>Versendet ✓</b><span>Rückfrage bestätigen</span></li>
@@ -2213,6 +2235,12 @@ svg.sv{display:block;width:100%;height:auto}
 	<li>Passt das Paket nicht aufs Band, den Haken bei <strong>sperrig</strong> setzen.</li>
 	<li><strong>Label erzeugen</strong> klicken. Das PDF öffnet sich über <strong>Label öffnen</strong> – ausdrucken, aufkleben, Paket in die Abholkiste.</li>
 </ol>
+
+<h3>Zwei Pakete zu einer Bestellung (zum Beispiel bei Sets)</h3>
+
+<p>Geht eine Bestellung in mehreren Paketen raus, erzeugst du für jedes ein eigenes Label. Auf der Karte (Spalte <em>Zu packen</em> bzw. <em>Label da</em>) steht unter dem ersten Label das Formular <strong>Weiteres Label erzeugen</strong>: Produkt wählen, das <strong>Gewicht dieses Pakets</strong> in Gramm eintragen (Pflicht, das Gewicht der ganzen Bestellung wäre falsch), erzeugen. Jedes Paket hat seine eigene Sendungsnummer, sein eigenes <em>Label öffnen</em> und sein eigenes <em>Stornieren</em>. <em>Versendet ✓</em> gilt für die ganze Bestellung.</p>
+
+<p>Im Kundenkonto erscheint die erste Sendungsnummer mit dem Verlauf, jede weitere darunter als Link zur Sendungsverfolgung der DHL: <em>Weitere Pakete dieser Bestellung</em>. Wird das erste Label storniert, rückt das nächste nach.</p>
 
 <p>Die Sendungsnummer geht im selben Moment in die Sendungsverfolgung: Der Kunde sieht sie in seinem Konto, ohne dass jemand sie abtippt. Auf der Karte steht sie in Schreibschrift mit dem Zustand der Sendung.</p>
 
@@ -2743,7 +2771,7 @@ svg.sv{display:block;width:100%;height:auto}
 <tr><td>Der Scan erkennt den Code nicht</td><td>Etikett verschmutzt, zu klein gedruckt oder es ist ein Strichcode</td><td>Code bei <em>Code eintippen</em> von Hand eingeben</td></tr>
 <tr><td>Zwei Picklisten mit derselben Ware</td><td>Der Erzeugen-Knopf wurde zweimal gedrückt</td><td>Nur eine abarbeiten, die andere liegenlassen und der Betriebsleitung melden</td></tr>
 <tr><td>Der Lieferschein-Knopf fehlt</td><td>Die Bestellung ist schon versendet</td><td>Den Lieferschein über die Bestellseite öffnen oder in WooCommerce</td></tr>
-<tr><td>Auf der Karte fehlt das Labelformular</td><td>Kein DHL-Zugang eingerichtet, oder dir fehlt das Recht <em>Versandetiketten erzeugen</em></td><td>Kapitel B.8; Person mit Vollzugriff fragen</td></tr>
+<tr><td>Auf der Karte fehlt das Labelformular</td><td>Kein DHL-Zugang eingerichtet, oder dir fehlt das Recht <em>Versandetiketten erzeugen</em> (für weitere Labels gilt dasselbe)</td><td>Kapitel B.8; Person mit Vollzugriff fragen</td></tr>
 <tr><td>„Ohne Shop-Bestellung“ steht bei einem Auftrag</td><td>Eine Bestellung wurde in WooCommerce gelöscht</td><td>Nicht selbst stornieren – der Betriebsleitung sagen</td></tr>
 <tr><td>Ein Platz oder Reiter fehlt</td><td>Dein Profil hat dafür kein Recht</td><td>Person mit Vollzugriff fragen</td></tr>
 </tbody>
@@ -5535,7 +5563,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.101.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.102.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

@@ -829,6 +829,17 @@ class DhlTracking {
 			</p>
 			<?php endif; ?>
 
+			<?php
+			$more = array_filter( array_map( 'strval', (array) $order->get_meta( '_lw16_dhl_weitere' ) ) );
+			if ( $more ) :
+				?>
+			<p class="lw16-tp-nr"><?php esc_html_e( 'Weitere Pakete dieser Bestellung:', 'lindenweg16' ); ?>
+				<?php foreach ( $more as $nr ) : ?>
+					<a href="<?php echo esc_url( add_query_arg( 'piececode', rawurlencode( $nr ), 'https://www.dhl.de/de/privatkunden/pakete-empfangen/verfolgen.html' ) ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $nr ); ?></a>
+				<?php endforeach; ?>
+			</p>
+			<?php endif; ?>
+
 			<?php if ( ! empty( $events ) ) : ?>
 			<div class="lw16-tp-details">
 				<h3><?php esc_html_e( 'Sendungsverlauf', 'lindenweg16' ); ?></h3>

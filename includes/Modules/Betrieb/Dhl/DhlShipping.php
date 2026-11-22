@@ -28,6 +28,11 @@ use Lindenweg16\Modules\Production\DhlTracking;
 class DhlShipping {
 
 	/**
+	 * Weitere Sendungsnummern (ab dem zweiten Paket) an der Bestellung.
+	 */
+	const META_MORE = '_lw16_dhl_weitere';
+
+	/**
 	 * Absender aus den Firmenstammdaten.
 	 *
 	 * @return array Anschrift in der Struktur der DHL.
@@ -251,8 +256,15 @@ class DhlShipping {
 			return self::fehler( __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
 		}
 
-		if ( DhlLabelRepository::for_order( $order_id ) ) {
-			return self::fehler( __( 'Für diese Bestellung gibt es schon ein Label. Erst stornieren, dann neu erzeugen.', 'lindenweg16' ) );
+		$weiteres = ! empty( $wunsch['weiteres'] );
+
+		if ( ! $weiteres && DhlLabelRepository::for_order( $order_id ) ) {
+			return self::fehler( __( 'Für diese Bestellung gibt es schon ein Label. Für ein zweites Paket „Weiteres Label“ wählen, sonst erst stornieren.', 'lindenweg16' ) );
+		}
+
+		// Ein weiteres Paket hat sein eigenes Gewicht: Das der ganzen Bestellung wäre falsch.
+		if ( $weiteres && ( ! isset( $wunsch['weight_g'] ) || (float) $wunsch['weight_g'] <= 0 ) ) {
+			return self::fehler( __( 'Für ein weiteres Label bitte das Gewicht dieses Pakets in Gramm angeben.', 'lindenweg16' ) );
 		}
 
 		$fehlende_zugaenge = DhlClient::missing_credentials();
@@ -299,7 +311,7 @@ class DhlShipping {
 			)
 		);
 
-		self::hand_over_tracking( (int) $order_id, $antwort['shipment_no'] );
+		self::sync_tracking( (int) $order_id );
 
 		// Druck-Warteschlange: erst jetzt, wo das Label wirklich erzeugt
 		// UND abgelegt ist – nie bei einem DHL- oder Ablagefehler.
@@ -351,6 +363,7 @@ class DhlShipping {
 		}
 
 		DhlLabelRepository::mark_voided( (int) $label->id );
+		self::sync_tracking( (int) $label->order_id );
 
 		AuditLog::record( 'dhl_label_storniert', 'order', (int) $label->order_id, array( 'sendung' => $label->shipment_no ) );
 
@@ -390,6 +403,56 @@ class DhlShipping {
 		$pfad  = DhlLabelRepository::path( $datei );
 
 		return false === file_put_contents( $pfad, $inhalt ) ? '' : $datei; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+	}
+
+	/**
+	 * Sendungsnummern einer Bestellung in die Sendungsverfolgung übernehmen.
+	 *
+	 * Die erste gültige Nummer steht in der Sendungsverfolgung (dort wird der
+	 * Verlauf abgerufen); jede weitere liegt an der Bestellung und erscheint
+	 * mit Link im Kundenkonto. Nach dem Stornieren rückt die nächste nach.
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	public static function sync_tracking( $order_id ) {
+		$numbers = array();
+
+		foreach ( DhlLabelRepository::all_for_order( $order_id ) as $label ) {
+			$numbers[] = (string) $label->shipment_no;
+		}
+
+		$split = self::split_numbers( $numbers );
+
+		if ( '' !== $split['primary'] ) {
+			self::hand_over_tracking( (int) $order_id, $split['primary'] );
+		}
+
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( $order ) {
+			if ( $split['more'] ) {
+				$order->update_meta_data( self::META_MORE, $split['more'] );
+			} else {
+				$order->delete_meta_data( self::META_MORE );
+			}
+
+			$order->save();
+		}
+	}
+
+	/**
+	 * Erste Nummer und die übrigen trennen – reine Regel.
+	 *
+	 * @param string[] $numbers Nummern der gültigen Labels, älteste zuerst.
+	 * @return array {primary, more}
+	 */
+	public static function split_numbers( array $numbers ) {
+		$numbers = array_values( array_unique( array_filter( array_map( 'trim', array_map( 'strval', $numbers ) ), 'strlen' ) ) );
+
+		return array(
+			'primary' => $numbers ? $numbers[0] : '',
+			'more'    => array_slice( $numbers, 1 ),
+		);
 	}
 
 	/**

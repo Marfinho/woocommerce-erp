@@ -76,6 +76,25 @@ class DhlLabelRepository {
 	}
 
 	/**
+	 * Alle gültigen Labels einer Bestellung, das älteste zuerst.
+	 *
+	 * Eine Bestellung kann in mehreren Paketen gehen (zum Beispiel ein Set).
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return object[]
+	 */
+	public static function all_for_order( $order_id ) {
+		global $wpdb;
+
+		return (array) $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . self::table() . ' WHERE order_id = %d AND storniert = 0 ORDER BY id ASC', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				(int) $order_id
+			)
+		);
+	}
+
+	/**
 	 * Gültiges Label einer Bestellung.
 	 *
 	 * @param int $order_id Bestellung.
