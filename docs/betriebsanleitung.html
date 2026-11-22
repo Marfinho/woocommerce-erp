@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.102.0">
+<meta name="anleitung-stand" content="0.103.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.102.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.103.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.102.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.103.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2105,7 +2105,12 @@ svg.sv{display:block;width:100%;height:auto}
 </table>
 </div>
 
-<p>Bei Gast-Bestellungen steht statt des Codes der Hinweis, dass es keinen gibt: Gäste haben kein Konto und damit keinen Code.</p>
+<p>Der Code besteht aus dem <strong>Vornamen und einer Zahl</strong>, zum Beispiel <em>Anna47</em>. Auch <strong>Gäste</strong> bekommen einen Code, gespeichert zu ihrer E-Mail-Adresse; bei der nächsten Bestellung bleibt er derselbe. Bestellt ein Freund mit dem Code eines Gastes, bleibt die Empfehlung offen. Sie wird dem Gast zugeordnet, sobald er sich mit derselben E-Mail-Adresse ein Konto anlegt, und läuft dann durch die normale Wartezeit. Hat der Käufer schon ein Konto (auch wenn er diesmal als Gast bestellt hat), gilt der Code seines Kontos. Nur wenn an der Bestellung keine E-Mail-Adresse steht, gibt es keinen Code.</p>
+
+<div class="kasten info">
+	<span class="titel">Alte Codes gelten weiter</span>
+	<p>Beim Umstellen auf Vorname plus Zahl bekamen alle vorhandenen Konten einen neuen Code. Der alte Code (acht Buchstaben und Ziffern) bleibt zusätzlich gültig: Schon verschickte Links und gedruckte Zettel funktionieren weiter. Auf neuen Zetteln steht der neue Code.</p>
+</div>
 
 <p>Einstellen kannst du das unter <span class="weg">Verkauf → Bestellungen → Versand</span> mit dem Knopf <strong>Beileger</strong> oben rechts. Pro Zeile legst du fest: den Namen, <em>wann</em> er dazugehört (immer, Basismodul dabei, Modul dabei oder eine Artikelnummer), ob er <em>einmal</em> oder <em>je Stück</em> zählt, ob er <strong>Pflicht</strong> ist (ohne Haken geht „Kommissioniert“ nicht) und ob der Freunde-Code mit angezeigt wird. Eine Änderung gilt sofort für alle. Dafür brauchst du das Recht <em>Beileger einstellen</em>; ansehen darf jeder mit Zugang zum Versand.</p>
 
@@ -5563,7 +5568,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.102.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.103.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

@@ -619,19 +619,17 @@ class Screens {
 	/**
 	 * Freunde-werben-Freunde-Code des Kunden – für den Danke-Zettel.
 	 *
-	 * Gäste haben keinen Code.
+	 * Gäste bekommen einen Code zu ihrer E-Mail-Adresse (Vorname plus Zahl).
 	 *
 	 * @param \WC_Order $order Bestellung.
 	 * @return string Code oder leer.
 	 */
 	protected static function friend_code( $order ) {
-		$user_id = (int) $order->get_customer_id();
-
-		if ( $user_id < 1 || ! class_exists( '\Lindenweg16\Modules\Loyalty\LoyaltyRepository' ) ) {
+		if ( ! class_exists( '\Lindenweg16\Modules\Loyalty\LoyaltyCodes' ) ) {
 			return '';
 		}
 
-		return (string) \Lindenweg16\Modules\Loyalty\LoyaltyRepository::get_or_create_code( $user_id );
+		return \Lindenweg16\Modules\Loyalty\LoyaltyCodes::code_for_order( $order );
 	}
 
 	/**

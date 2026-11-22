@@ -1814,7 +1814,7 @@
 				if (b.code) {
 					txt.appendChild(o.code
 						? h('small', null, 'Freunde-werben-Freunde-Code: ', h('b', { style: 'font-family:var(--font-mono);font-size:18px;letter-spacing:.06em' }, o.code))
-						: h('small', null, 'Gast-Bestellung: kein Freunde-werben-Freunde-Code'));
+						: h('small', null, 'Keine E-Mail-Adresse an der Bestellung: kein Freunde-werben-Freunde-Code'));
 				}
 				ins.appendChild(h('label', { class: 'pick-line' + (b.checked ? ' done' : ''), for: 'bl-' + b.id, style: 'cursor:pointer' }, cb, txt));
 			});

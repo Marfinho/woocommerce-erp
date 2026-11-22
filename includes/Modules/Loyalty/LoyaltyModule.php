@@ -46,7 +46,9 @@ class LoyaltyModule {
 		add_action( Scheduler::HOOK_DAILY_LOYALTY, array( $this, 'process_maturity' ) );
 
 		// Referral-Code bei Registrierung erzeugen.
-		add_action( 'user_register', array( LoyaltyRepository::class, 'get_or_create_code' ) );
+		add_action( 'user_register', array( LoyaltyCodes::class, 'on_user_register' ) );
+		// Einmalig: vorhandene Codes auf Vorname plus Zahl umstellen (alte Codes bleiben gültig).
+		add_action( 'admin_init', array( LoyaltyCodes::class, 'maybe_migrate' ) );
 
 		// Admin: Prüf-Warteschlange.
 		add_action( 'lw16_render_page_lw16_loyalty', array( $this, 'render_admin' ) );
@@ -81,7 +83,7 @@ class LoyaltyModule {
 			return; // Bereits gesetzt – nicht überschreiben.
 		}
 		$code = sanitize_text_field( wp_unslash( $_GET[ self::COOKIE ] ) ); // phpcs:ignore WordPress.Security.NonceVerification
-		if ( ! LoyaltyRepository::user_id_by_code( $code ) ) {
+		if ( ! LoyaltyRepository::code_exists( $code ) ) {
 			return; // Ungültiger Code.
 		}
 		$tage = (int) Settings::get( 'referral_cookie_tage', 30 );
@@ -179,15 +181,22 @@ class LoyaltyModule {
 			return null;
 		}
 		$referrer_id = LoyaltyRepository::user_id_by_code( $code );
-		if ( ! $referrer_id ) {
+		$guest       = $referrer_id ? null : LoyaltyCodes::guest_by_code( $code );
+		if ( ! $referrer_id && ! $guest ) {
 			return null;
+		}
+		// Ein Gast-Code, dessen Besitzer inzwischen ein Konto hat, gehört dem Konto.
+		if ( $guest && (int) $guest->claimed_user_id > 0 ) {
+			$referrer_id = (int) $guest->claimed_user_id;
+			$guest       = null;
 		}
 		$referred_id = (int) $order->get_customer_id();
 
 		// --- Harte Regeln: automatisch blocken (Selbstwerbung). ----------
-		$referrer      = get_userdata( $referrer_id );
+		$referrer      = $referrer_id ? get_userdata( $referrer_id ) : null;
 		$referred_mail = $order->get_billing_email();
-		if ( Calc::is_self_referral( $referrer_id, $referred_id, $referrer ? $referrer->user_email : '', (string) $referred_mail ) ) {
+		$referrer_mail = $referrer ? $referrer->user_email : ( $guest ? (string) $guest->email : '' );
+		if ( Calc::is_self_referral( $referrer_id, $referred_id, $referrer_mail, (string) $referred_mail ) ) {
 			return null;
 		}
 
@@ -202,7 +211,8 @@ class LoyaltyModule {
 
 		$referral_id = LoyaltyRepository::create_referral(
 			array(
-				'referrer_user_id' => $referrer_id,
+				'referrer_user_id'  => $referrer_id,
+				'referrer_guest_id' => $guest ? (int) $guest->id : null,
 				'referred_user_id' => $referred_id ? $referred_id : null,
 				'referred_order_id' => $order->get_id(),
 				'status'           => $status,
@@ -233,7 +243,7 @@ class LoyaltyModule {
 			return;
 		}
 		$code = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE ] ) );
-		if ( ! LoyaltyRepository::user_id_by_code( $code ) ) {
+		if ( ! LoyaltyRepository::code_exists( $code ) ) {
 			return;
 		}
 		$order->update_meta_data( '_lw16_ref_code', $code );

@@ -139,10 +139,13 @@ class Installer {
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
 	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 *
+	 * DB_VERSION 61: Tabelle guest_codes (Empfehlungscodes für Gäste, zur E-Mail-Adresse) und referrals um
+	 * referrer_guest_id (Werber ohne Konto), siehe Modules\Loyalty\LoyaltyCodes.
+	 *
 	 * DB_VERSION 60: warteliste um bestaetigt (Double-Opt-in, siehe Modules\Retention\Waitlist). Vorbelegung 1:
 	 * Anmeldungen von vor der Umstellung gelten als bestätigt, neue trägt das Formular ausdrücklich mit 0 ein.
 	 */
-	const DB_VERSION = '60';
+	const DB_VERSION = '61';
 
 	/**
 	 * Aktivierungsroutine.
@@ -473,6 +476,7 @@ class Installer {
 		$tables[] = "CREATE TABLE {$p}referrals (
 			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
 			referrer_user_id BIGINT UNSIGNED NOT NULL,
+			referrer_guest_id BIGINT UNSIGNED NULL,
 			referred_user_id BIGINT UNSIGNED NULL,
 			referred_order_id BIGINT UNSIGNED NULL,
 			status VARCHAR(20) NOT NULL DEFAULT 'pending',
@@ -482,9 +486,22 @@ class Installer {
 			completed_at DATETIME NULL,
 			PRIMARY KEY  (id),
 			KEY referrer_user_id (referrer_user_id),
+			KEY referrer_guest_id (referrer_guest_id),
 			KEY referred_user_id (referred_user_id),
 			KEY referred_order_id (referred_order_id),
 			KEY status (status)
+		) {$charset_collate};";
+
+		$tables[] = "CREATE TABLE {$p}guest_codes (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			email VARCHAR(190) NOT NULL,
+			code VARCHAR(40) NOT NULL,
+			first_name VARCHAR(60) NULL,
+			claimed_user_id BIGINT UNSIGNED NULL,
+			created_at DATETIME NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY email (email),
+			UNIQUE KEY code (code)
 		) {$charset_collate};";
 
 		$tables[] = "CREATE TABLE {$p}points_ledger (
