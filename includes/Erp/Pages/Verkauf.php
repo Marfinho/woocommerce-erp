@@ -1989,6 +1989,10 @@ class Verkauf {
 	 * @return string
 	 */
 	protected static function user_name( $user_id ) {
+		if ( (int) $user_id < 1 ) {
+			return __( 'Gast ohne Konto', 'lindenweg16' );
+		}
+
 		$user = get_userdata( (int) $user_id );
 
 		/* translators: %d: Nutzernummer. */

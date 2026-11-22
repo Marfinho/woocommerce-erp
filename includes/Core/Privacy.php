@@ -126,6 +126,17 @@ class Privacy {
 					'erstellt_am'   => __( 'Angemeldet am', 'lindenweg16' ),
 				),
 			),
+			'guest_codes'   => array(
+				'label'  => __( 'Empfehlungscode als Gast', 'lindenweg16' ),
+				'table'  => 'lw16_guest_codes',
+				'by'     => 'email',
+				'fields' => array(
+					'email'      => __( 'E-Mail', 'lindenweg16' ),
+					'code'       => __( 'Code', 'lindenweg16' ),
+					'first_name' => __( 'Vorname', 'lindenweg16' ),
+					'created_at' => __( 'Erstellt am', 'lindenweg16' ),
+				),
+			),
 			'referrals'     => array(
 				'label'  => __( 'Empfehlungen', 'lindenweg16' ),
 				'table'  => 'lw16_referrals',

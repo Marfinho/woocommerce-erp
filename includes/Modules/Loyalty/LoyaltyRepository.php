@@ -44,10 +44,7 @@ class LoyaltyRepository {
 		if ( $code ) {
 			return $code;
 		}
-		do {
-			$code   = strtoupper( wp_generate_password( 8, false ) );
-			$exists = self::user_id_by_code( $code );
-		} while ( $exists );
+		$code = LoyaltyCodes::build_for_user( $user_id );
 		update_user_meta( $user_id, self::META_CODE, $code );
 		return $code;
 	}
@@ -67,7 +64,31 @@ class LoyaltyRepository {
 				'fields'     => array( 'ID' ),
 			)
 		);
-		return $users ? (int) $users[0]->ID : 0;
+		if ( $users ) {
+			return (int) $users[0]->ID;
+		}
+
+		// Alte Codes eines Kontos (nach der Umstellung auf Vorname plus Zahl) gelten weiter.
+		$alt = get_users(
+			array(
+				'meta_key'   => LoyaltyCodes::META_ALT, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'meta_value' => $code, // phpcs:ignore WordPress.DB.SlowDBQuery
+				'number'     => 1,
+				'fields'     => array( 'ID' ),
+			)
+		);
+
+		return $alt ? (int) $alt[0]->ID : 0;
+	}
+
+	/**
+	 * Gibt es den Code – bei einem Konto oder bei einem Gast?
+	 *
+	 * @param string $code Code.
+	 * @return bool
+	 */
+	public static function code_exists( $code ) {
+		return self::user_id_by_code( $code ) > 0 || null !== LoyaltyCodes::guest_by_code( $code );
 	}
 
 	/* --------------------------------------------------------------------
@@ -151,7 +172,7 @@ class LoyaltyRepository {
 		// die Grenze deshalb ebenfalls lokal rechnen, sonst verschiebt sich
 		// die Reifung um den Zeitzonenversatz.
 		$grenze = gmdate( 'Y-m-d H:i:s', current_time( 'timestamp' ) - $wartezeit_tage * DAY_IN_SECONDS );
-		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'pending' AND created_at <= %s", $grenze ) ); // phpcs:ignore
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE status = 'pending' AND referrer_user_id > 0 AND created_at <= %s", $grenze ) ); // phpcs:ignore
 	}
 
 	/* --------------------------------------------------------------------

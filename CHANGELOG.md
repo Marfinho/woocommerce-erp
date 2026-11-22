@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.103.0] – 2026-11-22
+
+### Neu: Empfehlungscodes als Vorname plus Zahl, auch für Gäste
+- **Neues Format:** Der Freunde-werben-Freunde-Code besteht jetzt aus Vorname und Zahl (zum Beispiel `Anna47`) statt aus acht Buchstaben und Ziffern. Umlaute werden aufgelöst, die Zahl ist zweistellig und wird bei Belegung dreistellig oder länger.
+- **Vorhandene Codes werden einmalig umgestellt.** Der alte Code bleibt als zusätzlicher Code des Kontos gültig, schon verschickte Links und gedruckte Zettel funktionieren weiter.
+- **Gäste bekommen einen Code**, gespeichert zu ihrer E-Mail-Adresse (neue Tabelle `guest_codes`, DB-Version 61, in Auskunft und Löschung nach DSGVO aufgenommen). Hat der Käufer ein Konto, gilt dessen Code. Bestellt ein Freund mit dem Gast-Code, bleibt die Empfehlung offen; sie wird dem Gast zugeordnet, sobald er sich mit derselben E-Mail-Adresse ein Konto anlegt, und läuft dann durch die normale Wartezeit. Der Code des Gastes wird zum Code seines neuen Kontos.
+- Beim Kommissionieren steht der Code (Konto oder Gast) in der Danke-Zettel-Zeile.
+- Betriebsanleitung: Kapitel B.5 um Codes und Gäste ergänzt. Tests: `tests/LoyaltyCodesTest.php`.
+
 ## [0.102.0] – 2026-11-22
 
 ### Neu: Beileger beim Kommissionieren, Freunde-Code, zwei Pakete je Bestellung

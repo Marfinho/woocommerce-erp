@@ -211,6 +211,7 @@ if ( ! defined( 'LW16_VERSION' ) ) {
 }
 
 // Kernbausteine.
+require $lw16_root . '/includes/Modules/Loyalty/LoyaltyCodes.php';
 require $lw16_root . '/includes/Core/Assets.php';
 require $lw16_root . '/includes/Core/Calc.php';
 require $lw16_root . '/includes/Core/Lock.php';
