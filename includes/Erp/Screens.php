@@ -26,6 +26,7 @@ use Lindenweg16\Modules\Betrieb\Dhl\DhlProduct;
 use Lindenweg16\Modules\Betrieb\Dhl\DhlShipping;
 use Lindenweg16\Modules\Betrieb\MaintenanceRepository;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
+use Lindenweg16\Modules\Betrieb\OrderInserts;
 use Lindenweg16\Modules\Betrieb\OrderPicking;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;
@@ -392,6 +393,19 @@ class Screens {
 			'suggested' => null,
 		);
 
+		$entry['tracking_more'] = array_values( array_filter( array_map( 'strval', (array) $order->get_meta( DhlShipping::META_MORE ) ) ) );
+		$entry['labels']        = array();
+
+		foreach ( DhlLabelRepository::all_for_order( $id ) as $l ) {
+			$entry['labels'][] = array(
+				'id'      => (int) $l->id,
+				'number'  => (string) $l->shipment_no,
+				'product' => DhlProduct::label( $l->product ),
+				'weight'  => (int) $l->weight_g,
+				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $l->id ), 'lw16_betrieb_dhl_pdf_' . (int) $l->id ),
+			);
+		}
+
 		if ( $label ) {
 			$entry['label'] = array(
 				'id'      => (int) $label->id,
@@ -399,10 +413,12 @@ class Screens {
 				'weight'  => (int) $label->weight_g,
 				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $label->id ), 'lw16_betrieb_dhl_pdf_' . (int) $label->id ),
 			);
-		} elseif ( $dhl['configured'] && 'pack' === $stage ) {
+		}
+
+		if ( $dhl['configured'] && in_array( $stage, array( 'pack', 'send' ), true ) ) {
 			$weight             = DhlShipping::weight_g( $order );
 			$entry['suggested'] = array(
-				'weight'  => (int) $weight,
+				'weight'  => $label ? 0 : (int) $weight,
 				'product' => DhlProduct::for_destination( $land, $weight, 1 === (int) \Lindenweg16\Core\Settings::get( 'dhl_versand_warenpost', 0 ) ),
 			);
 		}
@@ -466,7 +482,9 @@ class Screens {
 		}
 
 		$entry['items']   = $items;
-		$entry['picked']  = OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) );
+		$entry['beilagen'] = OrderInserts::for_order( $order );
+		$entry['picked']   = OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) ) && ! OrderInserts::missing( $entry['beilagen'], OrderInserts::checked( $order ) );
+		$entry['code']     = self::friend_code( $order );
 		$entry['address'] = array_values( array_filter( array_map( 'trim', explode( '<br/>', (string) $order->get_formatted_shipping_address( $order->get_formatted_billing_address() ) ) ) ) );
 		$entry['address'] = array_map( 'wp_strip_all_tags', $entry['address'] );
 		$entry['note']    = (string) $order->get_customer_note();
@@ -599,6 +617,58 @@ class Screens {
 	}
 
 	/**
+	 * Freunde-werben-Freunde-Code des Kunden – für den Danke-Zettel.
+	 *
+	 * Gäste haben keinen Code.
+	 *
+	 * @param \WC_Order $order Bestellung.
+	 * @return string Code oder leer.
+	 */
+	protected static function friend_code( $order ) {
+		$user_id = (int) $order->get_customer_id();
+
+		if ( $user_id < 1 || ! class_exists( '\Lindenweg16\Modules\Loyalty\LoyaltyRepository' ) ) {
+			return '';
+		}
+
+		return (string) \Lindenweg16\Modules\Loyalty\LoyaltyRepository::get_or_create_code( $user_id );
+	}
+
+	/**
+	 * Einen Beileger abhaken oder den Haken lösen.
+	 *
+	 * @param int    $order_id Bestellung.
+	 * @param string $id       Regel-ID.
+	 * @param bool   $checked  Abgehakt?
+	 * @return array {ok, message, beilagen, picked}
+	 */
+	public static function tick_insert( $order_id, $id, $checked ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		if ( ! in_array( $order->get_status(), array( 'processing', 'on-hold' ), true ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diese Bestellung wird nicht mehr kommissioniert.', 'lindenweg16' ) );
+		}
+
+		if ( ! OrderInserts::tick( $order, (string) $id, (bool) $checked ) ) {
+			return array( 'ok' => false, 'message' => __( 'Diesen Beileger gibt es bei dieser Bestellung nicht.', 'lindenweg16' ) );
+		}
+
+		$order   = wc_get_order( (int) $order_id );
+		$inserts = OrderInserts::for_order( $order );
+
+		return array(
+			'ok'       => true,
+			'message'  => '',
+			'beilagen' => $inserts,
+			'picked'   => OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) ) && ! OrderInserts::missing( $inserts, OrderInserts::checked( $order ) ),
+		);
+	}
+
+	/**
 	 * Eine Position der Bestellung scannen (oder, ohne Code, von Hand abhaken).
 	 *
 	 * @param int    $order_id Bestellung.
@@ -652,7 +722,7 @@ class Screens {
 				},
 				$items
 			),
-			'picked'  => OrderPicking::is_complete( $items, OrderPicking::scans( $order ) ),
+			'picked'  => OrderPicking::is_complete( $items, OrderPicking::scans( $order ) ) && ! OrderInserts::missing( OrderInserts::for_order( $order ), OrderInserts::checked( $order ) ),
 		);
 	}
 
@@ -681,6 +751,13 @@ class Screens {
 
 		if ( ! OrderPicking::is_complete( OrderPicking::lines( $order ), OrderPicking::scans( $order ) ) ) {
 			return array( 'ok' => false, 'message' => __( 'Es fehlt noch Ware: Jede Position muss gescannt sein.', 'lindenweg16' ) );
+		}
+
+		$fehlt = OrderInserts::missing( OrderInserts::for_order( $order ), OrderInserts::checked( $order ) );
+
+		if ( $fehlt ) {
+			/* translators: %s: Liste der Beileger. */
+			return array( 'ok' => false, 'message' => sprintf( __( 'Es fehlen noch Beileger: %s.', 'lindenweg16' ), implode( ', ', $fehlt ) ) );
 		}
 
 		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->book_stock( (int) $order_id );
@@ -719,6 +796,8 @@ class Screens {
 		( new \Lindenweg16\Modules\Betrieb\WooIntegration() )->reverse_stock( (int) $order_id, true );
 
 		OrderPicking::save_scans( $order, array() );
+		$order->delete_meta_data( OrderInserts::META_CHECKED );
+		$order->save();
 		$order->update_status( 'processing', __( 'Kommissionieren zurückgenommen über das ERP.', 'lindenweg16' ) );
 
 		\Lindenweg16\Core\AuditLog::record( 'erp_kommissionieren_zurueck', 'order', (int) $order_id, array() );

@@ -1728,35 +1728,51 @@
 			.catch(function (er) { if (btn) { btn.disabled = false; } toast(er.message, true); });
 	}
 
-	function shipLabelForm(o, dhl, canLabel, reload) {
+	// Labels einer Bestellung: je Paket „Label öffnen“ und „Stornieren“ (eine Bestellung kann in mehreren Paketen gehen).
+	function shipLabels(o, canLabel, reload) {
+		var box = h('div', { class: 'ship-labels', style: 'display:grid;gap:6px;width:100%' });
+		(o.labels || []).forEach(function (l, i) {
+			var line = h('div', { class: 'label-area' },
+				h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, l.number),
+				h('small', { class: 'muted' }, l.product + (l.weight ? ' · ' + l.weight + ' g' : '')),
+				h('a', { class: 'btn', href: l.pdf, target: '_blank', rel: 'noopener' }, 'Label ' + (o.labels.length > 1 ? (i + 1) + ' ' : '') + 'öffnen'));
+			if (canLabel) { line.appendChild(shipVoid({ label: l }, reload)); }
+			box.appendChild(line);
+		});
+		return box;
+	}
+
+	function shipLabelForm(o, dhl, canLabel, reload, extra) {
 		if (!dhl.configured) { return null; }
 		if (!canLabel) { return h('small', { class: 'muted' }, 'Label erzeugen darfst du nicht.'); }
 		if (!o.suggested) { return null; }
 
 		var product = h('select', { class: 'field', 'aria-label': 'Produkt' }, dhl.products.map(function (p) { return h('option', { value: p.id, selected: p.id === o.suggested.product }, p.label); }));
-		var weight = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: String(o.suggested.weight || ''), 'aria-label': 'Gewicht in Gramm', style: 'max-width:110px' });
-		var bulky = h('input', { type: 'checkbox', id: 'bulky-' + o.id });
+		var weight = h('input', { class: 'field', type: 'number', min: '1', step: '1', value: extra ? '' : String(o.suggested.weight || ''), placeholder: extra ? 'Gewicht' : '', 'aria-label': 'Gewicht in Gramm', style: 'max-width:110px' });
+		var bulky = h('input', { type: 'checkbox', id: 'bulky-' + o.id + (extra ? '-2' : '') });
 
 		return h('form', {
 			class: 'label-area', onsubmit: function (e) {
 				e.preventDefault();
 				var btn = e.target.querySelector('button[type=submit]');
 				btn.disabled = true;
-				api('versand/' + o.id + '/label', { method: 'POST', body: { product: product.value, weight_g: parseFloat(weight.value) || 0, bulky: bulky.checked } })
+				if (extra && !(parseFloat(weight.value) > 0)) { btn.disabled = false; toast('Bitte das Gewicht dieses Pakets in Gramm angeben.', true); return; }
+				api('versand/' + o.id + '/label', { method: 'POST', body: { product: product.value, weight_g: parseFloat(weight.value) || 0, bulky: bulky.checked, weiteres: !!extra } })
 					.then(function (r) { toast(r.message); reload(); })
 					.catch(function (er) { btn.disabled = false; toast(er.message, true); });
 			}
-		}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id }, bulky, ' sperrig'), h('button', { class: 'btn primary', type: 'submit' }, 'Label erzeugen'));
+		}, product, weight, h('small', null, 'g'), h('label', { class: 'chk', for: 'bulky-' + o.id + (extra ? '-2' : '') }, bulky, ' sperrig'), h('button', { class: 'btn' + (extra ? '' : ' primary'), type: 'submit' }, extra ? 'Weiteres Label erzeugen' : 'Label erzeugen'));
 	}
 
 	// Kommissionieren: Positionen per Scan abgleichen; erst wenn alles da ist, geht „Kommissioniert“.
 	function pickPanel(o, reload) {
 		var card = h('div', { class: 'card' }, h('h3', null, 'Kommissionieren'),
-			h('p', { class: 'muted', style: 'margin:4px 0 10px' }, 'Artikelcode jeder Position scannen oder eintippen – ein Handscanner schreibt direkt ins Feld. Positionen ohne Code hakst du von Hand ab.'));
+			h('p', { class: 'muted', style: 'margin:4px 0 10px' }, 'Artikelcode jeder Position scannen oder eintippen – ein Handscanner schreibt direkt ins Feld. Positionen ohne Code hakst du von Hand ab. Danach die Beileger abhaken.'));
 		var out = h('div', { 'aria-live': 'polite', style: 'margin:8px 0' });
 		var camHost = h('div');
 		var input = h('input', { class: 'field scan-input', type: 'text', placeholder: 'Code scannen oder eintippen …', 'aria-label': 'Code', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false' });
 		var list = h('div', { class: 'pick-list' });
+		var ins = h('div', { class: 'pick-list', style: 'margin-top:12px' });
 		var done = h('button', { class: 'bigbtn go', type: 'button', disabled: !o.picked, onclick: function (e) {
 			e.target.disabled = true;
 			api('versand/' + o.id + '/kommissioniert', { method: 'POST' })
@@ -1778,6 +1794,30 @@
 				list.appendChild(line);
 			});
 			done.disabled = !o.picked;
+		}
+
+		// Beileger: Pflicht-Zeilen müssen abgehakt sein, sonst geht „Kommissioniert“ nicht.
+		function paintIns() {
+			ins.textContent = '';
+			if (!(o.beilagen || []).length) { return; }
+			ins.appendChild(h('h4', { style: 'margin:0 0 6px' }, 'Beileger'));
+			o.beilagen.forEach(function (b) {
+				var cb = h('input', { type: 'checkbox', checked: !!b.checked, id: 'bl-' + b.id, style: 'width:22px;height:22px' });
+				cb.onchange = function () {
+					cb.disabled = true;
+					api('versand/' + o.id + '/beilage', { method: 'POST', body: { id_beilage: b.id, checked: cb.checked } })
+						.then(function (r) { o.beilagen = r.beilagen; o.picked = r.picked; paintIns(); done.disabled = !o.picked; })
+						.catch(function (er) { cb.disabled = false; cb.checked = !cb.checked; toast(er.message, true); });
+				};
+				var txt = h('div', { class: 'pick-txt', style: 'flex:1;min-width:0' },
+					h('b', null, (b.qty > 1 ? b.qty + '× ' : '') + b.name + (b.required ? '' : ' (freiwillig)')));
+				if (b.code) {
+					txt.appendChild(o.code
+						? h('small', null, 'Freunde-werben-Freunde-Code: ', h('b', { style: 'font-family:var(--font-mono);font-size:18px;letter-spacing:.06em' }, o.code))
+						: h('small', null, 'Gast-Bestellung: kein Freunde-werben-Freunde-Code'));
+				}
+				ins.appendChild(h('label', { class: 'pick-line' + (b.checked ? ' done' : ''), for: 'bl-' + b.id, style: 'cursor:pointer' }, cb, txt));
+			});
 		}
 
 		function send(body) {
@@ -1802,8 +1842,10 @@
 		card.appendChild(camHost);
 		card.appendChild(out);
 		card.appendChild(list);
+		card.appendChild(ins);
 		card.appendChild(h('div', { class: 'ship-actions', style: 'margin-top:12px' }, done));
 		paintList();
+		paintIns();
 		setTimeout(function () { input.focus(); }, 0);
 		return card;
 	}
@@ -1822,7 +1864,8 @@
 	var SHIP_COLS = [['pick', 'Zu kommissionieren'], ['pack', 'Zu packen'], ['send', 'Label da – zu versenden'], ['done', 'Heute versendet']];
 
 	function viewShipping(item) {
-		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', classicBtn(item));
+		var beilBtn = h('button', { class: 'btn', type: 'button', onclick: function () { if (UI.beilagenEditor) { UI.beilagenEditor(UI, load); } } }, 'Beileger');
+		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', h('div', { class: 'label-area' }, beilBtn, classicBtn(item)));
 		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
@@ -1844,8 +1887,9 @@
 				}
 			} else if (o.stage === 'send') {
 				actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
-				actions.appendChild(h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'));
-				if (d.label) { actions.appendChild(shipVoid(o, load)); }
+				actions.appendChild(shipLabels(o, d.label, load));
+				var more = shipLabelForm(o, d.dhl, d.label, load, true);
+				if (more) { actions.appendChild(more); }
 			}
 
 			if (o.stage !== 'done') { actions.appendChild(h('a', { class: 'btn', href: o.slip, target: '_blank', rel: 'noopener' }, 'Lieferschein')); }
@@ -1856,7 +1900,7 @@
 					h('small', null, o.place + (o.ts ? ' · ' + new Date(o.ts * 1000).toLocaleDateString('de-DE') : '')),
 					h('small', null, o.content)
 				),
-				o.tracking ? h('div', { class: 'ship-track' }, h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, o.tracking), o.tstatus ? h('small', { class: 'muted' }, ' ' + o.tstatus) : null) : null,
+				o.tracking ? h('div', { class: 'ship-track' }, h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, [o.tracking].concat(o.tracking_more || []).join(' · ')), o.tstatus ? h('small', { class: 'muted' }, ' ' + o.tstatus) : null) : null,
 				actions
 			);
 		}
@@ -1936,7 +1980,9 @@
 				if (form) { act.appendChild(form); }
 				if (!o.dhl.configured) { act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓')); }
 			} else if (o.stage === 'send') {
-				act.appendChild(h('a', { class: 'btn', href: o.label.pdf, target: '_blank', rel: 'noopener' }, 'Label öffnen'));
+				act.appendChild(shipLabels(o, o.can_label, load));
+				var more2 = shipLabelForm(o, o.dhl, o.can_label, load, true);
+				if (more2) { act.appendChild(more2); }
 				act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓'));
 			} else {
 				act.appendChild(h('div', { class: 'notice' }, 'Versendet.'));

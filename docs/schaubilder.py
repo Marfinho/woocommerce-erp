@@ -293,7 +293,8 @@ sb('vers-kommissionieren', 'Kommissionieren: scannen, dann „Kommissioniert ✓
    du('Karte öffnen', 'Verkauf → Bestellungen → Versand, Spalte „Zu kommissionieren“'),
    du('Jede Position scannen', 'Artikelnummer oder EAN; Handscanner oder Kamera'),
    erp('Zählt mit', 'Passt · gehört nicht zur Bestellung · zu viel'),
-   du('„Kommissioniert ✓“', 'geht erst, wenn alles gescannt ist'),
+   du('Beileger abhaken', 'Danke-Zettel mit Freunde-Code, Anleitungen, Montageset'),
+   du('„Kommissioniert ✓“', 'geht erst, wenn alles gescannt und abgehakt ist'),
    erp('Bucht den Lagerabgang', 'Status „Kommissioniert“, Karte wandert nach „Zu packen“'),
    warn('Falsch kommissioniert?', '„Zurücknehmen“: Bestand kommt zurück (nicht mit Label)'))
 
@@ -314,7 +315,7 @@ sb('vers-lieferschein', 'Lieferschein',
 sb('vers-label', 'Label erzeugen und „Versendet“',
    erp('DHL eingerichtet?', 'ja: Formular · nein: nur „Versendet“'),
    du('Produkt, Gewicht prüfen', 'Inland Paket, Europaket, Weltpaket'),
-   du('Label erzeugen', 'ab jetzt ist das Paket frankiert'),
+   du('Label erzeugen', 'ab jetzt ist das Paket frankiert · zwei Pakete: „Weiteres Label“'),
    ext('DHL', 'Sendungsnummer geht in die Sendungsverfolgung des Kunden'),
    du('Aufkleben, Paket weg', ''),
    du('Versendet ✓', 'Rückfrage bestätigen'),

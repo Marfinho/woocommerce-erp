@@ -149,6 +149,33 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/beilage',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_beilage' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/beilagen',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'beilagen' ),
+					'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'beilagen_speichern' ),
+					'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.beilagen' ) ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/(?P<id>\d+)/kommissioniert',
 			array(
 				'methods'             => 'POST',
@@ -585,6 +612,53 @@ class RestApi {
 	}
 
 	/**
+	 * Einen Beileger abhaken.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_beilage( WP_REST_Request $request ) {
+		$result = Screens::tick_insert( (int) $request['id'], sanitize_key( (string) $request->get_param( 'id_beilage' ) ), (bool) $request->get_param( 'checked' ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Regeln für Beileger lesen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function beilagen() {
+		return new WP_REST_Response(
+			array(
+				'rules'      => \Lindenweg16\Modules\Betrieb\OrderInserts::rules(),
+				'conditions' => \Lindenweg16\Modules\Betrieb\OrderInserts::conditions(),
+				'can_edit'   => Access::can( 'verkauf.versand.beilagen' ),
+			)
+		);
+	}
+
+	/**
+	 * Regeln für Beileger speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function beilagen_speichern( WP_REST_Request $request ) {
+		$raw = $request->get_param( 'rules' );
+
+		if ( ! is_array( $raw ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Es kamen keine Regeln an.', 'lindenweg16' ) ), 422 );
+		}
+
+		$rules = \Lindenweg16\Modules\Betrieb\OrderInserts::save( $raw );
+
+		\Lindenweg16\Core\AuditLog::record( 'erp_beilagen_geaendert', 'settings', 0, array( 'anzahl' => count( $rules ) ) );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Gespeichert. Die Regeln gelten ab sofort.', 'lindenweg16' ), 'rules' => $rules ) );
+	}
+
+	/**
 	 * Als kommissioniert melden (Lagerabgang inklusive).
 	 *
 	 * @param WP_REST_Request $request Anfrage.
@@ -621,6 +695,7 @@ class RestApi {
 				'product'  => sanitize_text_field( (string) $request->get_param( 'product' ) ),
 				'weight_g' => (float) $request->get_param( 'weight_g' ),
 				'bulky'    => (bool) $request->get_param( 'bulky' ),
+				'weiteres' => (bool) $request->get_param( 'weiteres' ),
 			)
 		);
 

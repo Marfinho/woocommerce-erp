@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.102.0] – 2026-11-22
+
+### Neu: Beileger beim Kommissionieren, Freunde-Code, zwei Pakete je Bestellung
+- **Beileger:** Beim Kommissionieren erscheint der Kasten „Beileger“ mit Pflicht-Haken. Voreinstellung: Danke-Zettel immer; Anleitung Basismodul und Montageset (je Basismodul), sobald ein Basismodul dabei ist; Anleitung Module einmal, egal wie viele Module. „Kommissioniert ✓“ geht erst, wenn alle Pflicht-Beileger abgehakt sind.
+- **Einstellbar:** Auf der Seite Versand öffnet der Knopf „Beileger“ den Editor: Name, Bedingung (immer, Basismodul, Modul, Artikelnummer), einmal oder je Stück, Pflicht, Freunde-Code anzeigen. Neues Recht „Beileger einstellen“ (`verkauf.versand.beilagen`).
+- **Freunde-werben-Freunde-Code** des Kunden steht in der Zeile des Danke-Zettels (Gast-Bestellungen: Hinweis statt Code).
+- **Mehrere Labels je Bestellung:** „Weiteres Label erzeugen“ mit eigenem Gewicht, eigene Sendungsnummer, eigenes Öffnen und Stornieren je Paket. Die erste Nummer läuft in der Sendungsverfolgung, weitere erscheinen im Kundenkonto als Link „Weitere Pakete dieser Bestellung“.
+- Betriebsanleitung: Kapitel B.5 um Beileger und B.8 um zwei Pakete ergänzt. Tests: `tests/BetriebOrderInsertsTest.php`.
+
 ## [0.101.1] – 2026-11-22
 
 ### Behoben
