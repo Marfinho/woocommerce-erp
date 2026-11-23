@@ -139,13 +139,16 @@ class Installer {
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
 	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 *
+	 * DB_VERSION 62: shipping_labels um kosten_netto und kosten_info (berechnetes Porto je Label, siehe
+	 * Modules\Betrieb\Dhl\DhlCost).
+	 *
 	 * DB_VERSION 61: Tabelle guest_codes (Empfehlungscodes für Gäste, zur E-Mail-Adresse) und referrals um
 	 * referrer_guest_id (Werber ohne Konto), siehe Modules\Loyalty\LoyaltyCodes.
 	 *
 	 * DB_VERSION 60: warteliste um bestaetigt (Double-Opt-in, siehe Modules\Retention\Waitlist). Vorbelegung 1:
 	 * Anmeldungen von vor der Umstellung gelten als bestätigt, neue trägt das Formular ausdrücklich mit 0 ein.
 	 */
-	const DB_VERSION = '61';
+	const DB_VERSION = '62';
 
 	/**
 	 * Aktivierungsroutine.
@@ -572,6 +575,8 @@ class Installer {
 			filename VARCHAR(191) NOT NULL,
 			weight_g INT UNSIGNED NOT NULL DEFAULT 0,
 			storniert TINYINT(1) NOT NULL DEFAULT 0,
+			kosten_netto DECIMAL(10,2) NULL,
+			kosten_info VARCHAR(255) NULL,
 			erstellt_am DATETIME NOT NULL,
 			storniert_am DATETIME NULL,
 			PRIMARY KEY  (id),

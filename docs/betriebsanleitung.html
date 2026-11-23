@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="anleitung-stand" content="0.103.0">
+<meta name="anleitung-stand" content="0.104.0">
 <title>Betriebsanleitung · Lindenweg16 ERP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -255,10 +255,10 @@ svg.sv{display:block;width:100%;height:auto}
 <div class="seite">
 
 <header class="kopf" id="einstieg">
-	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.103.0</span></div>
+	<div class="marke">Lindenweg16 ERP · Version <span data-stand>0.104.0</span></div>
 	<h1>Betriebsanleitung</h1>
 	<p class="unter">Eine Anleitung in vier Teilen – je einer für eine Aufgabe. Lies den Teil, der zu deiner Arbeit passt; die anderen musst du nicht gelesen haben.</p>
-	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.103.0</span>.</div>
+	<div class="meta">Jedes Kapitel beginnt mit einem <strong>Schaubild</strong>: was passiert, auf einen Blick. Darunter steht, wie es im Einzelnen funktioniert. Die Bildschirmfotos zeigen die Oberfläche unter /erp in einer Testinstallation mit Beispieldaten (Namen, Zahlen und Adressen sind erfunden); einzelne Seiten sehen heute etwas anders aus. Neuere Kapitel kommen ohne Fotos aus. Stand: Plugin-Version <span data-stand>0.104.0</span>.</div>
 	<nav class="wegweiser">
 		<a href="#einstieg" class="hier">Einstieg</a>
 		<a href="#teil-produktion">A · Produktion</a>
@@ -2244,6 +2244,17 @@ svg.sv{display:block;width:100%;height:auto}
 <h3>Zwei Pakete zu einer Bestellung (zum Beispiel bei Sets)</h3>
 
 <p>Geht eine Bestellung in mehreren Paketen raus, erzeugst du für jedes ein eigenes Label. Auf der Karte (Spalte <em>Zu packen</em> bzw. <em>Label da</em>) steht unter dem ersten Label das Formular <strong>Weiteres Label erzeugen</strong>: Produkt wählen, das <strong>Gewicht dieses Pakets</strong> in Gramm eintragen (Pflicht, das Gewicht der ganzen Bestellung wäre falsch), erzeugen. Jedes Paket hat seine eigene Sendungsnummer, sein eigenes <em>Label öffnen</em> und sein eigenes <em>Stornieren</em>. <em>Versendet ✓</em> gilt für die ganze Bestellung.</p>
+
+<h3>Porto je Label (netto)</h3>
+
+<p>Die DHL nennt beim Erzeugen eines Labels <strong>keinen Preis</strong>; er steht erst auf der Monatsrechnung. Das ERP rechnet ihn deshalb aus Ihren Vertragspreisen nach und zeigt ihn an der Karte: <em>Porto ca. 5,38 € netto</em>. Bei mehreren Paketen steht zusätzlich die Summe. Die Summe landet auch in der Betriebsakte der Bestellung im Feld <em>tatsächliche Versandkosten</em>; wird ein Label storniert, rechnet das ERP neu. Sehen und einstellen darf das nur, wer das Recht <em>Preise, Kosten und Löhne sehen</em> hat.</p>
+
+<p>Eingerechnet sind die Preisstufe nach Gewicht (DHL Paket im Inland, DHL Europaket nach Zone des Ziellandes), Sperrgut, der Maut- und CO₂-Zuschlag, der Peakzuschlag in den eingetragenen Monaten, der Peak-in-Peak-Zuschlag im eingetragenen Zeitraum und der prozentuale Energiezuschlag. Voreingestellt sind die Preise aus Ihrem Vertrag (Anlage 1 und Länderpreisliste P01). Ändern können Sie sie unter <span class="weg">Verkauf → Bestellungen → Versand → Versandpreise</span>. Den aktuellen Satz des <strong>Energiezuschlags</strong> trägt man dort selbst ein; er steht unter dhl.de/energiezuschlag. Solange dort 0 steht, fehlt er in der Rechnung.</p>
+
+<div class="kasten info">
+	<span class="titel">Eine Schätzung, keine Rechnung</span>
+	<p>Maßgeblich ist immer die Monatsrechnung der DHL. Nicht enthalten sind die Monatspauschale (Tarif S: 9,95 € im Monat), Nachnahme und andere gebuchte Services, Rücksendeentgelte und Korrekturentgelte (zum Beispiel für falsch angegebenes Gewicht). Für Länder, die nicht in Ihrer Europaket-Preisliste stehen, und für Warenpost zeigt die Karte kein Porto.</p>
+</div>
 
 <p>Im Kundenkonto erscheint die erste Sendungsnummer mit dem Verlauf, jede weitere darunter als Link zur Sendungsverfolgung der DHL: <em>Weitere Pakete dieser Bestellung</em>. Wird das erste Label storniert, rückt das nächste nach.</p>
 
@@ -5568,7 +5579,7 @@ svg.sv{display:block;width:100%;height:auto}
 
 </section>
 
-<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.103.0</span> ·
+<p class="fuss">Lindenweg16 ERP · Betriebsanleitung · Stand: Plugin-Version <span data-stand>0.104.0</span> ·
 <a href="#einstieg">Einstieg</a> ·
 <a href="#teil-produktion">Produktion</a> ·
 <a href="#teil-versand">Versand</a> ·

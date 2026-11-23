@@ -393,6 +393,7 @@ class Screens {
 			'suggested' => null,
 		);
 
+		$see_cost               = Access::can( 'finanzen.kosten' );
 		$entry['tracking_more'] = array_values( array_filter( array_map( 'strval', (array) $order->get_meta( DhlShipping::META_MORE ) ) ) );
 		$entry['labels']        = array();
 
@@ -403,8 +404,13 @@ class Screens {
 				'product' => DhlProduct::label( $l->product ),
 				'weight'  => (int) $l->weight_g,
 				'pdf'     => Shell::nonce_url( admin_url( 'admin-post.php?action=lw16_betrieb_dhl_pdf&label=' . (int) $l->id ), 'lw16_betrieb_dhl_pdf_' . (int) $l->id ),
+				// Porto nur mit dem Recht, Preise und Kosten zu sehen.
+				'cost'    => $see_cost && null !== $l->kosten_netto ? (float) $l->kosten_netto : null,
+				'cost_note' => $see_cost ? (string) $l->kosten_info : '',
 			);
 		}
+
+		$entry['cost_total'] = $see_cost ? DhlLabelRepository::cost_for_order( $id ) : null;
 
 		if ( $label ) {
 			$entry['label'] = array(

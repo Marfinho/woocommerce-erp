@@ -1735,10 +1735,14 @@
 			var line = h('div', { class: 'label-area' },
 				h('span', { style: 'font-family:var(--font-mono);font-size:13px' }, l.number),
 				h('small', { class: 'muted' }, l.product + (l.weight ? ' · ' + l.weight + ' g' : '')),
+				l.cost !== null && l.cost !== undefined ? h('small', { title: l.cost_note || '', style: 'font-weight:600' }, 'Porto ca. ' + money(l.cost, 'EUR') + ' netto') : (l.cost_note ? h('small', { class: 'muted', title: l.cost_note }, 'Porto: ' + l.cost_note) : null),
 				h('a', { class: 'btn', href: l.pdf, target: '_blank', rel: 'noopener' }, 'Label ' + (o.labels.length > 1 ? (i + 1) + ' ' : '') + 'öffnen'));
 			if (canLabel) { line.appendChild(shipVoid({ label: l }, reload)); }
 			box.appendChild(line);
 		});
+		if ((o.labels || []).length > 1 && o.cost_total !== null && o.cost_total !== undefined) {
+			box.appendChild(h('small', { style: 'font-weight:600' }, 'Porto gesamt ca. ' + money(o.cost_total, 'EUR') + ' netto'));
+		}
 		return box;
 	}
 
@@ -1865,13 +1869,14 @@
 
 	function viewShipping(item) {
 		var beilBtn = h('button', { class: 'btn', type: 'button', onclick: function () { if (UI.beilagenEditor) { UI.beilagenEditor(UI, load); } } }, 'Beileger');
+		var priceBtn = can('finanzen.kosten') ? h('button', { class: 'btn', type: 'button', onclick: function () { if (UI.versandpreise) { UI.versandpreise(UI, load); } } }, 'Versandpreise') : null;
 		var testBtn = h('button', { class: 'btn', type: 'button', onclick: function (e) {
 			e.target.disabled = true;
 			api('versand/dhl-test', { method: 'POST' })
 				.then(function (r) { e.target.disabled = false; toast(r.message); })
 				.catch(function (er) { e.target.disabled = false; toast(er.message, true); });
 		} }, 'DHL-Zugang prüfen');
-		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', h('div', { class: 'label-area' }, testBtn, beilBtn, classicBtn(item)));
+		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', h('div', { class: 'label-area' }, testBtn, priceBtn, beilBtn, classicBtn(item)));
 		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);

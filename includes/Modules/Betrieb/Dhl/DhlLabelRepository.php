@@ -68,11 +68,33 @@ class DhlLabelRepository {
 				'filename'       => (string) $daten['filename'],
 				'weight_g'       => isset( $daten['weight_g'] ) ? (int) $daten['weight_g'] : 0,
 				'storniert'      => 0,
+				'kosten_netto'   => isset( $daten['kosten_netto'] ) ? $daten['kosten_netto'] : null,
+				'kosten_info'    => isset( $daten['kosten_info'] ) ? (string) $daten['kosten_info'] : null,
 				'erstellt_am'    => current_time( 'mysql' ),
 			)
 		);
 
 		return (int) $wpdb->insert_id;
+	}
+
+	/**
+	 * Berechnetes Porto aller gültigen Labels einer Bestellung (netto).
+	 *
+	 * @param int $order_id Bestellung.
+	 * @return float|null Null, wenn kein Label ein Porto hat.
+	 */
+	public static function cost_for_order( $order_id ) {
+		$sum   = 0.0;
+		$known = false;
+
+		foreach ( self::all_for_order( $order_id ) as $label ) {
+			if ( null !== $label->kosten_netto ) {
+				$sum  += (float) $label->kosten_netto;
+				$known = true;
+			}
+		}
+
+		return $known ? round( $sum, 2 ) : null;
 	}
 
 	/**
