@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.103.3] – 2026-11-23
+
+### Behoben
+- **Versandkarte: Produktauswahl ragte über die Karte hinaus.** Im Labelformular („DHL Europaket“, Gewicht, „Label erzeugen“) richtete sich die Zeile nach dem längsten Produktnamen statt nach der Breite der Karte. Das Feld ist jetzt nie breiter als die Karte und nimmt eine eigene Zeile ein.
+
 ## [0.103.2] – 2026-11-23
 
 ### Behoben

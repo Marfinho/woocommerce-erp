@@ -475,6 +475,9 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .ship-actions { display: grid; gap: 8px; justify-items: start; }
 .label-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .label-area .field { min-height: 40px; width: auto; }
+/* Labelformular auf der Versandkarte: nie breiter als die Karte, das Produktfeld kürzt lange Namen. */
+.ship-actions > .label-area { justify-self: stretch; max-width: 100%; }
+.ship-actions .label-area select.field { min-width: 0; max-width: 100%; flex: 1 1 100%; text-overflow: ellipsis; }
 .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
 @media (max-width: 760px) {
 	.row-card, .row-card.ship { grid-template-columns: 1fr; }
