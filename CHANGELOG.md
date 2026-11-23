@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.103.1] – 2026-11-23
+
+### Behoben
+- **„DHL-Zugang prüfen“ auch auf der neuen Versandseite im ERP** (Verkauf → Bestellungen → Versand, oben neben „Beileger“). Bisher gab es den Knopf nur in der Klassischen Ansicht im wp-admin, die Anleitung (D.4) beschrieb ihn aber an der ERP-Seite. Er meldet sich nur bei der DHL an, erzeugt kein Label und kostet nichts; das Ergebnis erscheint als Meldung.
+
 ## [0.103.0] – 2026-11-22
 
 ### Neu: Empfehlungscodes als Vorname plus Zahl, auch für Gäste

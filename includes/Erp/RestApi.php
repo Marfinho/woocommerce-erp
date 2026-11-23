@@ -149,6 +149,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/dhl-test',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_dhl_test' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/(?P<id>\d+)/beilage',
 			array(
 				'methods'             => 'POST',
@@ -609,6 +619,17 @@ class RestApi {
 		$result = Screens::scan_item( (int) $request['id'], sanitize_text_field( (string) $request->get_param( 'code' ) ), (int) $request->get_param( 'item_id' ) );
 
 		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * DHL-Zugang prüfen: meldet sich nur an, erzeugt kein Label und kostet nichts.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function versand_dhl_test() {
+		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlClient::test();
+
+		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
 	}
 
 	/**
