@@ -1780,7 +1780,8 @@ class Verwaltung {
 						$input = is_scalar( $raw ) ? (string) $raw : '';
 
 						if ( '' !== $input ) {
-							$clean[ $key ] = sanitize_text_field( $input );
+							// Unverändert speichern: sanitize_text_field() würde Passwörter mit „<…>“ oder „%ab“ still verändern.
+							$clean[ $key ] = \Lindenweg16\Core\Settings::clean_secret( $input );
 						}
 
 						continue;

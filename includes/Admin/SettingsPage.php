@@ -359,7 +359,7 @@ class SettingsPage {
 					$eingabe = isset( $_POST[ $key ] ) ? (string) wp_unslash( $_POST[ $key ] ) : '';
 
 					if ( '' !== $eingabe ) {
-						$clean[ $key ] = sanitize_text_field( $eingabe );
+						$clean[ $key ] = Settings::clean_secret( $eingabe );
 					}
 				} elseif ( 'textarea' === $type ) {
 					$clean[ $key ] = isset( $_POST[ $key ] ) ? sanitize_textarea_field( wp_unslash( $_POST[ $key ] ) ) : '';
