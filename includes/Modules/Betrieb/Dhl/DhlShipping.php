@@ -300,6 +300,10 @@ class DhlShipping {
 
 		$shipment = $auftrag['shipments'][0];
 
+		// Porto aus den Vertragspreisen nachrechnen: Die DHL nennt beim Label keinen Preis.
+		$land    = $order->get_shipping_country() ? $order->get_shipping_country() : $order->get_billing_country();
+		$porto   = DhlCost::estimate( DhlCost::config(), (string) $shipment['product'], (string) $land, (float) $shipment['details']['weight']['value'], ! empty( $wunsch['bulky'] ), current_time( 'Y-m-d' ) );
+
 		$label_id = DhlLabelRepository::create(
 			array(
 				'order_id'       => (int) $order_id,
@@ -308,10 +312,13 @@ class DhlShipping {
 				'billing_number' => $shipment['billingNumber'],
 				'filename'       => $datei,
 				'weight_g'       => (int) $shipment['details']['weight']['value'],
+				'kosten_netto'   => $porto['ok'] ? $porto['net'] : null,
+				'kosten_info'    => $porto['ok'] ? DhlCost::describe( $porto['parts'] ) : $porto['message'],
 			)
 		);
 
 		self::sync_tracking( (int) $order_id );
+		self::sync_cost( (int) $order_id );
 
 		// Druck-Warteschlange: erst jetzt, wo das Label wirklich erzeugt
 		// UND abgelegt ist – nie bei einem DHL- oder Ablagefehler.
@@ -364,6 +371,7 @@ class DhlShipping {
 
 		DhlLabelRepository::mark_voided( (int) $label->id );
 		self::sync_tracking( (int) $label->order_id );
+		self::sync_cost( (int) $label->order_id );
 
 		AuditLog::record( 'dhl_label_storniert', 'order', (int) $label->order_id, array( 'sendung' => $label->shipment_no ) );
 
@@ -438,6 +446,41 @@ class DhlShipping {
 
 			$order->save();
 		}
+	}
+
+	/**
+	 * Porto der gültigen Labels in die Betriebsakte der Bestellung eintragen.
+	 *
+	 * Das Feld „tatsächliche Versandkosten“ der Betriebsakte bekommt die
+	 * berechnete Summe (netto). Ohne Preise bleibt ein von Hand eingetragener
+	 * Wert unberührt.
+	 *
+	 * @param int $order_id Bestellung.
+	 */
+	public static function sync_cost( $order_id ) {
+		global $wpdb;
+
+		$sum = DhlLabelRepository::cost_for_order( $order_id );
+		$row = \Lindenweg16\Modules\Betrieb\OrderOpsRepository::find_by_order( $order_id );
+
+		if ( ! $row ) {
+			return;
+		}
+
+		// Alle Labels storniert: den eingetragenen Wert leeren, sonst bliebe der alte Betrag stehen.
+		if ( null === $sum && $row['shipping_cost_actual'] > 0 && ! DhlLabelRepository::all_for_order( $order_id ) ) {
+			$sum = 0.0;
+		}
+
+		if ( null === $sum ) {
+			return;
+		}
+
+		$wpdb->update(
+			\Lindenweg16\Modules\Betrieb\OrderOpsRepository::table(),
+			array( 'shipping_cost_actual' => $sum > 0 ? $sum : null ),
+			array( 'id' => (int) $row['id'] )
+		);
 	}
 
 	/**

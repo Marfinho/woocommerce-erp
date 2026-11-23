@@ -149,6 +149,23 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/preise',
+			array(
+				array(
+					'methods'             => 'GET',
+					'callback'            => array( $this, 'versand_preise' ),
+					'permission_callback' => $this->needs( array( 'verkauf.versand', 'finanzen.kosten' ) ),
+				),
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'versand_preise_speichern' ),
+					'permission_callback' => $this->needs( array( 'verkauf.versand', 'finanzen.kosten' ) ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/dhl-test',
 			array(
 				'methods'             => 'POST',
@@ -619,6 +636,40 @@ class RestApi {
 		$result = Screens::scan_item( (int) $request['id'], sanitize_text_field( (string) $request->get_param( 'code' ) ), (int) $request->get_param( 'item_id' ) );
 
 		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
+	 * Versandpreise (Vertragspreise und Zuschläge) lesen.
+	 *
+	 * @return WP_REST_Response
+	 */
+	public function versand_preise() {
+		return new WP_REST_Response(
+			array(
+				'prices' => \Lindenweg16\Modules\Betrieb\Dhl\DhlCost::config(),
+				'zones'  => \Lindenweg16\Modules\Betrieb\Dhl\DhlCost::zones(),
+			)
+		);
+	}
+
+	/**
+	 * Versandpreise speichern.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_preise_speichern( WP_REST_Request $request ) {
+		$raw = $request->get_param( 'prices' );
+
+		if ( ! is_array( $raw ) ) {
+			return new WP_REST_Response( array( 'ok' => false, 'message' => __( 'Es kamen keine Preise an.', 'lindenweg16' ) ), 422 );
+		}
+
+		$prices = \Lindenweg16\Modules\Betrieb\Dhl\DhlCost::save( $raw );
+
+		\Lindenweg16\Core\AuditLog::record( 'erp_versandpreise_geaendert', 'settings', 0, array() );
+
+		return new WP_REST_Response( array( 'ok' => true, 'message' => __( 'Gespeichert. Die Preise gelten für neue Labels.', 'lindenweg16' ), 'prices' => $prices ) );
 	}
 
 	/**

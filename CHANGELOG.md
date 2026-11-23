@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.104.0] – 2026-11-23
+
+### Neu: Porto je DHL-Label (netto), aus den Vertragspreisen nachgerechnet
+- Die DHL nennt beim Label keinen Preis. Das ERP rechnet ihn jetzt aus Ihren Vertragspreisen nach und zeigt **„Porto ca. X € netto“** an der Versandkarte, bei mehreren Paketen auch die Summe. Die Summe steht außerdem im Feld „tatsächliche Versandkosten“ der Betriebsakte und wird beim Stornieren eines Labels neu gerechnet.
+- Voreingestellt sind die Preise aus Vertrag und Preisliste P01 (EKP 6394652951): DHL Paket nach Gewichtsstufe, DHL Europaket nach Zone (Zone 1 bis 3 mit Länderliste), Sperrgut, Maut- und CO₂-Zuschlag, Peakzuschlag (November und Dezember). Peak-in-Peak (Zeitraum) und Energiezuschlag (Prozent) trägt man selbst ein.
+- Neuer Dialog **Versandpreise** auf der Seite Versand (nur mit dem Recht „Preise, Kosten und Löhne sehen“); die Preise sind einstellbar, weil sie sich ändern.
+- Neue Spalten `kosten_netto` und `kosten_info` an `shipping_labels` (DB-Version 62). Für Labels, die es schon gibt, gibt es kein Porto.
+- Betriebsanleitung: Kapitel B.8 um „Porto je Label“ ergänzt. Tests: `tests/BetriebDhlCostTest.php`.
+
 ## [0.103.2] – 2026-11-23
 
 ### Behoben
