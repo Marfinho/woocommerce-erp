@@ -1865,7 +1865,13 @@
 
 	function viewShipping(item) {
 		var beilBtn = h('button', { class: 'btn', type: 'button', onclick: function () { if (UI.beilagenEditor) { UI.beilagenEditor(UI, load); } } }, 'Beileger');
-		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', h('div', { class: 'label-area' }, beilBtn, classicBtn(item)));
+		var testBtn = h('button', { class: 'btn', type: 'button', onclick: function (e) {
+			e.target.disabled = true;
+			api('versand/dhl-test', { method: 'POST' })
+				.then(function (r) { e.target.disabled = false; toast(r.message); })
+				.catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+		} }, 'DHL-Zugang prüfen');
+		pageHead('Versand', 'Kommissionieren, Packen, Label, Versendet – beim Kommissionieren geht der Bestand ab.', h('div', { class: 'label-area' }, testBtn, beilBtn, classicBtn(item)));
 		el.view.classList.add('broad');
 		var box = h('div');
 		el.view.appendChild(box);
