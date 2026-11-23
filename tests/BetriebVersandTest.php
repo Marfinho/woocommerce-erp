@@ -33,7 +33,7 @@ class BetriebVersandTest extends TestCase {
 	 * Der Standardfilter zeigt, was raus muss.
 	 */
 	public function test_standard_zeigt_offene_bestellungen() {
-		$this->assertSame( array( 'wc-processing', 'wc-on-hold' ), ShippingPage::statuses_for( 'offen' ) );
+		$this->assertSame( array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold' ), ShippingPage::statuses_for( 'offen' ), 'Kommissioniert ist bezahlt, aber noch nicht versendet: gehört zu „offen“.' );
 	}
 
 	/**

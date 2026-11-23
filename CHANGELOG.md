@@ -7,6 +7,12 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.104.1] – 2026-11-23
+
+### Behoben
+- **Zurücksetzen kannte die neue Tabelle der Gast-Codes nicht** (`guest_codes`, seit 0.103.0). Sie gehört jetzt zum Bereich „Kundenbindung und Support“ und wird dort zusammen mit den Empfehlungen geleert. Der Test `ResetToolTest` meldete das (CI).
+- Der Test `BetriebVersandTest` kannte den Status „Kommissioniert“ im Filter „offen“ der klassischen Versandseite noch nicht. Der Filter war richtig, der Test veraltet.
+
 ## [0.104.0] – 2026-11-23
 
 ### Neu: Porto je DHL-Label (netto), aus den Vertragspreisen nachgerechnet

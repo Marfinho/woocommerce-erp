@@ -130,6 +130,8 @@ class ResetTool {
 				'tables' => array(
 					'points_ledger',
 					'referrals',
+					// Empfehlungscodes von Gästen gehören zu den Empfehlungen: beide zusammen leeren.
+					'guest_codes',
 					'wishlist',
 					'warteliste',
 					'cart_tracking',
