@@ -185,6 +185,24 @@ class Settings {
 	}
 
 	/**
+	 * Ein Passwort oder Geheimnis für die Ablage bereinigen – reine Regel.
+	 *
+	 * Anders als `sanitize_text_field()` bleibt das Passwort, wie es eingegeben
+	 * wurde: Dieses entfernt unter anderem alles zwischen `<` und `>` sowie
+	 * Muster wie `%ab` und kürzt Leerzeichen. Ein Passwort mit solchen Zeichen
+	 * (die Anmeldung der DHL verlangt Sonderzeichen) wäre danach still verändert
+	 * und die Anmeldung scheiterte mit „Invalid user credentials“. Entfernt
+	 * werden nur Steuerzeichen, zum Beispiel ein Zeilenumbruch aus der
+	 * Zwischenablage.
+	 *
+	 * @param string $value Eingabe.
+	 * @return string
+	 */
+	public static function clean_secret( $value ) {
+		return (string) preg_replace( '/[\x00-\x1F\x7F]/', '', (string) $value );
+	}
+
+	/**
 	 * Alle Einstellungen als Array.
 	 *
 	 * @return array

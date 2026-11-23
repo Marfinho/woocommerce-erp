@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.103.2] – 2026-11-23
+
+### Behoben
+- **Passwörter und Schlüssel in den Einstellungen wurden still verändert.** Beim Speichern lief jedes Passwortfeld (DHL-Passwort, API-Secrets, SMTP und weitere) durch `sanitize_text_field()`. Das entfernt alles zwischen `<` und `>`, Muster wie `%ab` und kürzt Leerzeichen. Ein Passwort mit solchen Zeichen kam verändert an; bei der DHL erschien „Invalid user credentials“, obwohl das Passwort stimmte. Jetzt bleibt das Passwort, wie es eingegeben wurde; entfernt werden nur Steuerzeichen (zum Beispiel ein Zeilenumbruch aus der Zwischenablage). **Nach dem Update das betroffene Passwort einmal neu eingeben und speichern.**
+
 ## [0.103.1] – 2026-11-23
 
 ### Behoben
