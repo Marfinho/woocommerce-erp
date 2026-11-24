@@ -7,6 +7,11 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.1] – 2026-11-24
+
+### Behoben
+- **Versandkarte: Das Produktfeld im Labelformular ragte noch immer über die Karte** (0.103.3 hatte nur das Feld selbst begrenzt). Ursache war die Spalte des Rasters um die Knöpfe: Sie richtete sich nach dem breitesten Inhalt statt nach der Breite der Karte. Sie ist jetzt auf die Kartenbreite festgelegt.
+
 ## [0.105.0] – 2026-11-24
 
 ### Neu: Abgelehnte Stornierung zeigt den Grund der DHL, „Im ERP ausblenden“

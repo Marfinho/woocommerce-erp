@@ -472,7 +472,7 @@ table.list td.num, table.list th.num { text-align: right; font-variant-numeric: 
 .row-tags { display: flex; gap: 6px; flex-wrap: wrap; }
 .row-card.ship { grid-template-columns: minmax(0, 1.2fr) minmax(130px, .8fr) auto; }
 .ship-track { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
-.ship-actions { display: grid; gap: 8px; justify-items: start; }
+.ship-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; justify-items: start; }
 .label-area { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .label-area .field { min-height: 40px; width: auto; }
 .chk { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
