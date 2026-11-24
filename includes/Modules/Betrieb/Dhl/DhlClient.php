@@ -328,7 +328,12 @@ class DhlClient {
 		$body = json_decode( wp_remote_retrieve_body( $antwort ), true );
 
 		$ok        = $code >= 200 && $code < 300;
-		$meldungen = is_array( $body ) ? DhlResponse::messages( $body, isset( $body['items'][0] ) ? (array) $body['items'][0] : array() ) : array();
+		$meldungen = is_array( $body ) ? DhlResponse::void_reasons( $body ) : array();
+
+		// Eine Antwort mit Erfolgsstatus, die nichts storniert hat („0 von 1 Sendung“), ist trotzdem ein Fehlschlag.
+		if ( $ok && is_array( $body ) && isset( $body['items'][0]['sstatus']['statusCode'] ) && (int) $body['items'][0]['sstatus']['statusCode'] >= 300 ) {
+			$ok = false;
+		}
 
 		if ( ! $ok ) {
 			$hinweis = DhlResponse::http_hint( $code );
@@ -336,6 +341,13 @@ class DhlClient {
 			if ( '' !== $hinweis ) {
 				$meldungen[] = $hinweis;
 			}
+
+			// Der Rohtext hilft bei der Ursache; Zugangsdaten stehen nie darin.
+			\Lindenweg16\Core\Log::attention(
+				'versand',
+				'DHL hat die Stornierung abgelehnt (HTTP ' . $code . '): ' . mb_substr( (string) wp_remote_retrieve_body( $antwort ), 0, 700 ),
+				array( 'sendung' => (string) $shipment_no )
+			);
 		}
 
 		return array(

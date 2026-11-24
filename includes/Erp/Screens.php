@@ -673,6 +673,36 @@ class Screens {
 	}
 
 	/**
+	 * Sendungsnummer eines außerhalb des ERP gekauften Labels eintragen.
+	 *
+	 * Wer sein Label nicht über die Schnittstelle erzeugt (zum Beispiel bei wenigen
+	 * Paketen am Tag, um die Monatspauschale zu vermeiden), trägt die Nummer hier von
+	 * Hand ein. Sie geht in die Sendungsverfolgung, der Kunde sieht sie im Konto.
+	 *
+	 * @param int    $order_id Bestellung.
+	 * @param string $number   Sendungsnummer.
+	 * @return array {ok, message}
+	 */
+	public static function set_tracking( $order_id, $number ) {
+		$order = function_exists( 'wc_get_order' ) ? wc_get_order( (int) $order_id ) : null;
+
+		if ( ! $order ) {
+			return array( 'ok' => false, 'message' => __( 'Bestellung nicht gefunden.', 'lindenweg16' ) );
+		}
+
+		$number = preg_replace( '/\s+/', '', (string) $number );
+
+		if ( ! preg_match( '/^[0-9A-Za-z]{8,40}$/', $number ) ) {
+			return array( 'ok' => false, 'message' => __( 'Das sieht nicht wie eine Sendungsnummer aus (8 bis 40 Buchstaben und Ziffern, ohne Leerzeichen).', 'lindenweg16' ) );
+		}
+
+		DhlShipping::hand_over_tracking( (int) $order_id, $number );
+		\Lindenweg16\Core\AuditLog::record( 'erp_sendungsnummer_manuell', 'order', (int) $order_id, array( 'sendung' => $number ) );
+
+		return array( 'ok' => true, 'message' => __( 'Sendungsnummer eingetragen. Der Kunde sieht sie im Konto.', 'lindenweg16' ) );
+	}
+
+	/**
 	 * Eine Position der Bestellung scannen (oder, ohne Code, von Hand abhaken).
 	 *
 	 * @param int    $order_id Bestellung.

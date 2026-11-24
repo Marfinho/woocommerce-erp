@@ -1854,13 +1854,41 @@
 		return card;
 	}
 
+	// Label woanders gekauft (zum Beispiel im Portal): Sendungsnummer von Hand eintragen.
+	function shipManualNumber(o, reload) {
+		var input = h('input', { class: 'field', type: 'text', placeholder: 'Sendungsnummer', 'aria-label': 'Sendungsnummer eines anderswo gekauften Labels', autocomplete: 'off', style: 'max-width:240px' });
+		return h('form', { class: 'label-area', onsubmit: function (e) {
+			e.preventDefault();
+			var btn = e.target.querySelector('button[type=submit]');
+			btn.disabled = true;
+			api('versand/' + o.id + '/sendungsnummer', { method: 'POST', body: { nummer: input.value } })
+				.then(function (r) { toast(r.message); reload(); })
+				.catch(function (er) { btn.disabled = false; toast(er.message, true); });
+		} }, h('small', { class: 'muted', style: 'width:100%' }, 'Label woanders gekauft? Nummer eintragen, der Kunde sieht sie im Konto:'), input, h('button', { class: 'btn', type: 'submit' }, 'Eintragen'));
+	}
+
 	function shipVoid(o, reload) {
 		return h('button', {
 			class: 'btn', type: 'button', style: 'color:var(--error)',
 			onclick: function (e) {
 				if (!window.confirm('Label stornieren? Die Frankierung wird dann nicht berechnet.')) { return; }
-				e.target.disabled = true;
-				api('versand/label/' + o.label.id + '/storno', { method: 'POST' }).then(function (r) { toast(r.message); reload(); }).catch(function (er) { e.target.disabled = false; toast(er.message, true); });
+				var btn = e.target;
+				btn.disabled = true;
+				api('versand/label/' + o.label.id + '/storno', { method: 'POST' }).then(function (r) { toast(r.message); reload(); }).catch(function (er) {
+					btn.disabled = false;
+					toast(er.message, true);
+					// Bei der DHL nicht stornierbar: das Label nur im ERP ausblenden, damit ein neues entstehen kann.
+					if (!btn.parentNode.querySelector('.hide-label')) {
+						btn.parentNode.insertBefore(h('button', {
+							class: 'btn hide-label', type: 'button',
+							onclick: function (e2) {
+								if (!window.confirm('Label nur im ERP ausblenden? Bei der DHL bleibt es gültig und wird dort NICHT storniert. Nur ausblenden, wenn das Paket nicht mit diesem Label verschickt wird oder schon ein neues Label entsteht.')) { return; }
+								e2.target.disabled = true;
+								api('versand/label/' + o.label.id + '/ausblenden', { method: 'POST' }).then(function (r) { toast(r.message); reload(); }).catch(function (er2) { e2.target.disabled = false; toast(er2.message, true); });
+							}
+						}, 'Im ERP ausblenden'), btn.nextSibling);
+					}
+				});
 			}
 		}, 'Stornieren');
 	}
@@ -1893,9 +1921,8 @@
 			} else if (o.stage === 'pack') {
 				var form = shipLabelForm(o, d.dhl, d.label, load);
 				if (form) { actions.appendChild(form); }
-				if (!d.dhl.configured) {
-					actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
-				}
+				actions.appendChild(shipManualNumber(o, load));
+				actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
 			} else if (o.stage === 'send') {
 				actions.appendChild(h('button', { class: 'btn primary', type: 'button', onclick: function (e) { shipDone(o, d, load, e.target); } }, 'Versendet ✓'));
 				actions.appendChild(shipLabels(o, d.label, load));
@@ -1989,7 +2016,8 @@
 			} else if (o.stage === 'pack') {
 				var form = shipLabelForm(o, o.dhl, o.can_label, load);
 				if (form) { act.appendChild(form); }
-				if (!o.dhl.configured) { act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓')); }
+				act.appendChild(shipManualNumber(o, load));
+				act.appendChild(h('button', { class: 'bigbtn go', type: 'button', onclick: function (e) { shipDone(o, null, function () { load(); }, e.target); } }, 'Versendet ✓'));
 			} else if (o.stage === 'send') {
 				act.appendChild(shipLabels(o, o.can_label, load));
 				var more2 = shipLabelForm(o, o.dhl, o.can_label, load, true);
