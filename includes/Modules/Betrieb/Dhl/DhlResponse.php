@@ -152,6 +152,44 @@ class DhlResponse {
 	}
 
 	/**
+	 * Gründe einer abgelehnten Stornierung – reine Regel.
+	 *
+	 * Die Antwort auf „Label stornieren“ trägt den Grund an wechselnden
+	 * Stellen: im Kopf, im Status der einzelnen Sendung oder flach im Rumpf.
+	 * Anders als bei einem Label zählt hier auch eine Sendungsmeldung mit
+	 * Status unter 300: Wurde nichts storniert, ist jede Meldung der Sendung
+	 * mehr wert als „kein Grund genannt“. Ein bloßes „ok“ ist keine Meldung.
+	 *
+	 * @param array $body Antwortrumpf.
+	 * @return array
+	 */
+	public static function void_reasons( array $body ) {
+		$item   = isset( $body['items'][0] ) && is_array( $body['items'][0] ) ? $body['items'][0] : array();
+		$reasons = self::messages( $body, $item );
+
+		if ( isset( $item['sstatus'] ) && is_array( $item['sstatus'] ) ) {
+			foreach ( array( 'detail', 'title', 'message' ) as $field ) {
+				if ( isset( $item['sstatus'][ $field ] ) && is_string( $item['sstatus'][ $field ] ) ) {
+					$text = trim( $item['sstatus'][ $field ] );
+
+					if ( '' !== $text && 'ok' !== strtolower( $text ) ) {
+						$reasons[] = $text;
+					}
+				}
+			}
+		}
+
+		$reasons = array_filter(
+			$reasons,
+			static function ( $text ) {
+				return '' !== trim( (string) $text ) && 'ok' !== strtolower( trim( (string) $text ) );
+			}
+		);
+
+		return array_values( array_unique( $reasons ) );
+	}
+
+	/**
 	 * Meldungen aus einem Fehlerrumpf ohne Sendungsstruktur.
 	 *
 	 * Die Schnittstelle und das Gateway davor antworten im Fehlerfall

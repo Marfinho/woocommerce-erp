@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.0] – 2026-11-24
+
+### Neu: Abgelehnte Stornierung zeigt den Grund der DHL, „Im ERP ausblenden“
+- **Der Grund der DHL steht im Wortlaut** auf der Karte, wenn eine Stornierung abgelehnt wird (bisher nur eine allgemeine Meldung zu „Adresse, Gewicht oder Abrechnungsnummer“). Ein Hinweis nennt die übliche Ursache: Nach dem Tagesabschluss der DHL oder nach der Abholung lässt sich ein Label oft nicht mehr stornieren. Die Antwort der DHL (gekürzt, ohne Zugangsdaten) steht außerdem im Ereignisprotokoll.
+- **Neuer Knopf „Im ERP ausblenden“** neben „Stornieren“ (erscheint nach einer abgelehnten Stornierung, mit Rückfrage; Recht „Versandetiketten erzeugen“). Das Label verschwindet aus der Karte, damit ein neues entstehen kann; bei der DHL bleibt es gültig. Porto und Sendungsverfolgung rechnen danach ohne dieses Label, der Vorgang steht im Protokoll.
+- **Label woanders gekauft:** In der Spalte „Zu packen“ gibt es ein Feld **Sendungsnummer eintragen** (Karte und Seite der Bestellung). Die Nummer geht in die Sendungsverfolgung, der Kunde sieht sie im Konto. **„Versendet ✓“ steht jetzt immer in „Zu packen“**, auch wenn ein DHL-Zugang eingerichtet ist. Wer Labels nur bei Bedarf über die Schnittstelle erzeugt, braucht dafür kein ERP-Label.
+- Eine Antwort der DHL mit Erfolgsstatus, die nichts storniert hat („0 von 1 Sendung“), gilt jetzt als Fehlschlag.
+- Betriebsanleitung: Kapitel B.8 um „Stornieren geht nicht immer“ ergänzt. Tests: `tests/BetriebDhlVoidTest.php`.
+
 ## [0.104.1] – 2026-11-23
 
 ### Behoben

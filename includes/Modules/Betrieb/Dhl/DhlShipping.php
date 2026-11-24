@@ -362,11 +362,11 @@ class DhlShipping {
 		$antwort = DhlClient::void( $label->shipment_no, (string) Settings::get( 'dhl_versand_profil', 'STANDARD_GRUPPENPROFIL' ) );
 
 		if ( ! $antwort['ok'] ) {
-			return self::fehler(
-				$antwort['messages']
-					? implode( ' ', $antwort['messages'] )
-					: __( 'Die DHL hat die Stornierung abgelehnt. Eine bereits abgeholte Sendung lässt sich nicht mehr zurücknehmen.', 'lindenweg16' )
-			);
+			$grund = $antwort['messages']
+				? implode( ' ', $antwort['messages'] )
+				: __( 'Die DHL hat die Stornierung abgelehnt.', 'lindenweg16' );
+
+			return self::fehler( $grund . ' ' . __( 'Nach dem Tagesabschluss der DHL oder nach der Abholung lässt sich ein Label oft nicht mehr stornieren. Dann bleibt „Im ERP ausblenden“: Das Label verschwindet hier, bleibt bei der DHL aber gültig.', 'lindenweg16' ) );
 		}
 
 		DhlLabelRepository::mark_voided( (int) $label->id );
@@ -378,6 +378,36 @@ class DhlShipping {
 		return array(
 			'ok'      => true,
 			'message' => __( 'Label storniert. Die Frankierung wird nicht berechnet.', 'lindenweg16' ),
+		);
+	}
+
+	/**
+	 * Label nur im ERP ausblenden – bei der DHL bleibt es gültig.
+	 *
+	 * Für Labels, die sich bei der DHL nicht mehr stornieren lassen (nach dem
+	 * Tagesabschluss, nach der Abholung), damit ein neues entstehen kann. Wie
+	 * ein storniertes Label zählt es danach nicht mehr für Porto und
+	 * Sendungsverfolgung; es steht im Protokoll.
+	 *
+	 * @param int $label_id Label.
+	 * @return array {ok, message}
+	 */
+	public static function hide_label( $label_id ) {
+		$label = DhlLabelRepository::find( $label_id );
+
+		if ( ! $label || $label->storniert ) {
+			return self::fehler( __( 'Kein Label zum Ausblenden.', 'lindenweg16' ) );
+		}
+
+		DhlLabelRepository::mark_voided( (int) $label->id );
+		self::sync_tracking( (int) $label->order_id );
+		self::sync_cost( (int) $label->order_id );
+
+		AuditLog::record( 'dhl_label_ausgeblendet', 'order', (int) $label->order_id, array( 'sendung' => $label->shipment_no, 'hinweis' => 'bei der DHL nicht storniert' ) );
+
+		return array(
+			'ok'      => true,
+			'message' => __( 'Das Label ist im ERP ausgeblendet. Bei der DHL bleibt es gültig und ist dort nicht storniert.', 'lindenweg16' ),
 		);
 	}
 
@@ -508,7 +538,7 @@ class DhlShipping {
 	 * @param int    $order_id    Bestellung.
 	 * @param string $shipment_no Sendungsnummer.
 	 */
-	protected static function hand_over_tracking( $order_id, $shipment_no ) {
+	public static function hand_over_tracking( $order_id, $shipment_no ) {
 		global $wpdb;
 
 		$table = DhlTracking::table();

@@ -176,6 +176,16 @@ class RestApi {
 
 		register_rest_route(
 			self::NAMESPACE_V1,
+			'/erp/versand/(?P<id>\d+)/sendungsnummer',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_sendungsnummer' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
 			'/erp/versand/(?P<id>\d+)/beilage',
 			array(
 				'methods'             => 'POST',
@@ -238,6 +248,16 @@ class RestApi {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'versand_kontakt' ),
 				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.kontakte' ) ),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE_V1,
+			'/erp/versand/label/(?P<id>\d+)/ausblenden',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'versand_ausblenden' ),
+				'permission_callback' => $this->needs( array( 'verkauf.versand', 'verkauf.versand.etikett' ) ),
 			)
 		);
 
@@ -684,6 +704,18 @@ class RestApi {
 	}
 
 	/**
+	 * Sendungsnummer eines anderswo gekauften Labels eintragen.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_sendungsnummer( WP_REST_Request $request ) {
+		$result = Screens::set_tracking( (int) $request['id'], sanitize_text_field( (string) $request->get_param( 'nummer' ) ) );
+
+		return new WP_REST_Response( $result, $result['ok'] ? 200 : 422 );
+	}
+
+	/**
 	 * Einen Beileger abhaken.
 	 *
 	 * @param WP_REST_Request $request Anfrage.
@@ -772,6 +804,18 @@ class RestApi {
 		);
 
 		return new WP_REST_Response( $result, $result['ok'] ? 201 : 422 );
+	}
+
+	/**
+	 * DHL-Label nur im ERP ausblenden.
+	 *
+	 * @param WP_REST_Request $request Anfrage.
+	 * @return WP_REST_Response
+	 */
+	public function versand_ausblenden( WP_REST_Request $request ) {
+		$result = \Lindenweg16\Modules\Betrieb\Dhl\DhlShipping::hide_label( (int) $request['id'] );
+
+		return new WP_REST_Response( $result, ! empty( $result['ok'] ) ? 200 : 422 );
 	}
 
 	/**
