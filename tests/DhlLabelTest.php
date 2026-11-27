@@ -413,11 +413,14 @@ class DhlLabelTest extends TestCase {
 
 	/**
 	 * Der Dateiname trägt Bestellung und Sendungsnummer – eine Datei im
-	 * Verzeichnis lässt sich so auch ohne Datenbank zuordnen.
+	 * Verzeichnis lässt sich so auch ohne Datenbank zuordnen. Dazu kommt ein
+	 * Zufallsanteil: Die Sendungsnummer kennt auch der Kunde, und unter nginx
+	 * schützt keine .htaccess den Ordner.
 	 */
 	public function test_dateiname_traegt_bestellung_und_sendung() {
-		$this->assertSame( 'dhl-label-412-00340434161094042557.pdf', DhlLabelRepository::filename( 412, '00340434161094042557' ) );
-		$this->assertSame( 'dhl-label-412-003404.pdf', DhlLabelRepository::filename( 412, '00 34/04..' ), 'Kein Pfad, kein Punkt, kein Schrägstrich im Namen.' );
+		$this->assertMatchesRegularExpression( '/^dhl-label-412-00340434161094042557-[a-f0-9]{12}\.pdf$/', DhlLabelRepository::filename( 412, '00340434161094042557' ) );
+		$this->assertMatchesRegularExpression( '/^dhl-label-412-003404-[a-f0-9]{12}\.pdf$/', DhlLabelRepository::filename( 412, '00 34/04..' ), 'Kein Pfad, kein Punkt, kein Schrägstrich im Namen.' );
+		$this->assertNotSame( DhlLabelRepository::filename( 412, '1' ), DhlLabelRepository::filename( 412, '1' ), 'Nicht erratbar.' );
 	}
 
 	/**

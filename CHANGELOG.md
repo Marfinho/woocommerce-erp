@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.4] – 2026-11-27
+
+### Sicherheit
+Ergebnis eines Penetrationstests gegen eine Testinstallation (WordPress, WooCommerce, alle 468 REST-Handler und 173 Formular-/AJAX-Aktionen mit den Rollen anonym, Kunde, Abonnent, Mitarbeiter mit einem einzelnen ERP-Recht und Admin; SQL-Injection, XSS, XXE, Uploads, Token und Dateiablagen).
+- **Live-Anzeige ohne Anmeldung abrufbar:** `/erp/live` antwortete jedem anonymen Besucher. WordPress ruft eine `permission_callback` mit der Anfrage als erstem Argument auf; `LiveViewer::can_open( $user_id )` machte daraus die Benutzer-ID 1, also den ersten Administrator. Die Blöcke selbst prüften danach erneut, sodass anonym keine Zahlen herauskamen – die Rechteprüfung war trotzdem ausgehebelt. Neue Hilfe `Access::user_id()` nimmt nur echte Zahlen an; `Access` und `LiveViewer` nutzen sie.
+- **Claude-Zugang gab Geheimnisse heraus:** Die Sperre für Passwörter prüfte nur, ob die Abfrage `user_pass` oder `session_tokens` beim Namen nennt. `SELECT * FROM wp_users` lieferte trotzdem die Passwort-Hashes, `meta_key LIKE 'sess%'` die Sitzungen und `wp_options` die DHL-Zugangsdaten im Klartext – auch mit einem reinen Lese-Schlüssel. Neu: `Mcp\Redactor` maskiert jede Antwort von „datenbank_abfrage“, „rest_lesen“ und „rest_schreiben“ („[gesperrt]“): Felder, Spalten, Optionen und Metadaten, die nach Passwort, Secret, Token oder API-Key heißen, Passwort-Hashes am Wertformat, serialisierte und JSON-Werte Feld für Feld.
+- **Dateiablagen:** Picklisten hießen `pickliste-<Nr>-<Bestellung>.pdf`, DHL-Labels `dhl-label-<Bestellung>-<Sendungsnummer>.pdf`. Gesperrt war der Ordner nur per `.htaccess`, die nginx nicht liest; dort ließen sich die Dateien mit erratenen Namen laden. Beide tragen jetzt einen Zufallsanteil (bestehende Dateien behalten ihren Namen). Die `.htaccess` gilt jetzt für Apache 2.4 und 2.2 und wird beim Update erneuert (DB-Version 64).
+- Tests: `tests/SicherheitTest.php`.
+
 ## [0.105.3] – 2026-11-27
 
 ### Behoben

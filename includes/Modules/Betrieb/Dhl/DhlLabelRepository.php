@@ -46,7 +46,9 @@ class DhlLabelRepository {
 	public static function filename( $order_id, $shipment_no ) {
 		$nummer = preg_replace( '/[^0-9A-Za-z]/', '', (string) $shipment_no );
 
-		return sprintf( 'dhl-label-%d-%s.pdf', (int) $order_id, $nummer );
+		// Zufallsanteil: Die Sendungsnummer kennt auch der Kunde, und der Ordner ist
+		// nur unter Apache per .htaccess gesperrt.
+		return sprintf( 'dhl-label-%d-%s-%s.pdf', (int) $order_id, $nummer, bin2hex( random_bytes( 6 ) ) );
 	}
 
 	/**

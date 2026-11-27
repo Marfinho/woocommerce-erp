@@ -62,7 +62,7 @@ class LiveViewer {
 	 * @return bool
 	 */
 	public static function is_viewer( $user_id = 0 ) {
-		$user = $user_id ? get_userdata( (int) $user_id ) : wp_get_current_user();
+		$user = get_userdata( Access::user_id( $user_id ) );
 
 		return $user && $user->exists() && in_array( self::ROLE, (array) $user->roles, true );
 	}

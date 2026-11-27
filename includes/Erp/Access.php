@@ -30,13 +30,36 @@ class Access {
 	const META = 'lw16_erp_perms';
 
 	/**
+	 * Benutzer-ID aus einem Parameter; 0 oder leer heißt „angemeldete Person“.
+	 *
+	 * Nur Zahlen zählen. WordPress ruft eine permission_callback mit der
+	 * Anfrage (WP_REST_Request) als erstem Argument auf; `(int) $request`
+	 * ergab 1 – die ID des ersten Administrators. Wer eine Prüfung mit
+	 * `$user_id = 0` als permission_callback eintrug, gab so jedem
+	 * Besucher dessen Rechte.
+	 *
+	 * @param mixed $user_id Benutzer-ID.
+	 * @return int
+	 */
+	public static function user_id( $user_id ) {
+		if ( is_int( $user_id ) || ( is_string( $user_id ) && ctype_digit( $user_id ) ) ) {
+			$user_id = (int) $user_id;
+			if ( $user_id > 0 ) {
+				return $user_id;
+			}
+		}
+
+		return get_current_user_id();
+	}
+
+	/**
 	 * Hat die Person Vollzugriff?
 	 *
 	 * @param int $user_id Nutzer; 0 = angemeldeter.
 	 * @return bool
 	 */
 	public static function is_full( $user_id = 0 ) {
-		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+		$user_id = self::user_id( $user_id );
 
 		return $user_id > 0 && user_can( $user_id, LW16_CAPABILITY );
 	}
@@ -52,7 +75,7 @@ class Access {
 	 * @return string[]
 	 */
 	public static function keys( $user_id = 0 ) {
-		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+		$user_id = self::user_id( $user_id );
 
 		if ( $user_id < 1 ) {
 			return array();
@@ -99,7 +122,7 @@ class Access {
 	 * @return bool
 	 */
 	public static function can( $key, $user_id = 0 ) {
-		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+		$user_id = self::user_id( $user_id );
 
 		if ( ! Permissions::exists( $key ) || $user_id < 1 ) {
 			return false;
@@ -119,7 +142,7 @@ class Access {
 	 * @return bool
 	 */
 	public static function has_any( $user_id = 0 ) {
-		$user_id = $user_id ? (int) $user_id : get_current_user_id();
+		$user_id = self::user_id( $user_id );
 
 		return $user_id > 0 && ( self::is_full( $user_id ) || array() !== self::keys( $user_id ) );
 	}

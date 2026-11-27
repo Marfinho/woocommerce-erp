@@ -222,7 +222,9 @@ class PickListGenerator {
 		$pdf->text( __( 'Datum/Uhrzeit: ________________________', 'lindenweg16' ), 11 );
 		$pdf->set_color( Pdf::COLOR_TINTE );
 
-		$filename = 'pickliste-' . $pickliste_id . '-' . $order->get_order_number() . '.pdf';
+		// Zufallsanteil: Der Ordner ist nur unter Apache per .htaccess gesperrt.
+		// Ein erratbarer Name gäbe sonst Kundennamen und Positionen preis.
+		$filename = 'pickliste-' . $pickliste_id . '-' . $order->get_order_number() . '-' . wp_generate_password( 12, false ) . '.pdf';
 		$path     = trailingslashit( Installer::docs_dir() ) . $filename;
 		$pdf->save( $path );
 

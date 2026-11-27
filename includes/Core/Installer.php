@@ -139,6 +139,9 @@ class Installer {
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
 	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 *
+	 * DB_VERSION 64: keine neue Tabelle. Die .htaccess der Ablagen wird auf eine Fassung für
+	 * Apache 2.4 und 2.2 umgestellt (siehe HTACCESS).
+	 *
 	 * DB_VERSION 63: keine neue Tabelle. Optionen, die der Shop bei jedem Seitenaufruf liest
 	 * (siehe FRONTEND_OPTIONS), werden automatisch geladen und fehlende angelegt – vorher kostete
 	 * jede davon eine eigene Datenbankabfrage je Seite.
@@ -152,7 +155,19 @@ class Installer {
 	 * DB_VERSION 60: warteliste um bestaetigt (Double-Opt-in, siehe Modules\Retention\Waitlist). Vorbelegung 1:
 	 * Anmeldungen von vor der Umstellung gelten als bestätigt, neue trägt das Formular ausdrücklich mit 0 ein.
 	 */
-	const DB_VERSION = '63';
+	const DB_VERSION = '64';
+
+	/**
+	 * Sperre für die Ablagen (Belege, Rechnungen, Labels, Modelle, Mail-Anhänge),
+	 * gültig für Apache 2.4 und 2.2. Andere Server (nginx) lesen sie nicht –
+	 * dort schützen die zufälligen Dateinamen und eine Regel im Server selbst.
+	 */
+	const HTACCESS = "# Lindenweg16: kein direkter Zugriff\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\n\tOrder deny,allow\n\tDeny from all\n</IfModule>\n";
+
+	/**
+	 * Frühere Fassung der Sperre (nur Apache 2.2).
+	 */
+	const HTACCESS_OLD = "Order deny,allow\nDeny from all\n";
 
 	/**
 	 * Optionen, die bei jedem Seitenaufruf im Shop gelesen werden, mit ihrem
@@ -313,10 +328,11 @@ class Installer {
 				wp_mkdir_p( $dir );
 			}
 
-			// Apache: direkter Zugriff verbieten.
+			// Apache: direkter Zugriff verbieten. Die alte Fassung kannte nur die
+			// Syntax von Apache 2.2; sie wird ersetzt.
 			$htaccess = trailingslashit( $dir ) . '.htaccess';
-			if ( ! file_exists( $htaccess ) ) {
-				file_put_contents( $htaccess, "Order deny,allow\nDeny from all\n" ); // phpcs:ignore
+			if ( ! file_exists( $htaccess ) || self::HTACCESS_OLD === (string) file_get_contents( $htaccess ) ) { // phpcs:ignore
+				file_put_contents( $htaccess, self::HTACCESS ); // phpcs:ignore
 			}
 
 			// Verzeichnislisting verhindern.

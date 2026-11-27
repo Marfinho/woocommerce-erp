@@ -919,7 +919,7 @@ class Tools {
 		$response = rest_do_request( $request );
 		$server   = rest_get_server();
 		$data     = $server->response_to_data( $response, false );
-		$out      = array( 'status' => $response->get_status(), 'daten' => $data );
+		$out      = array( 'status' => $response->get_status(), 'daten' => Redactor::scrub( $data ) );
 
 		$headers = $response->get_headers();
 		foreach ( array( 'X-WP-Total' => 'gesamt', 'X-WP-TotalPages' => 'seiten' ) as $h => $label ) {
@@ -1019,7 +1019,9 @@ class Tools {
 		return array(
 			'zeilen'        => $more ? $max : count( $rows ),
 			'abgeschnitten' => $more,
-			'daten'         => array_slice( $rows, 0, $max ),
+			// SqlGuard prüft nur die Frage; was die Antwort an Geheimnissen
+			// enthält (SELECT * FROM wp_users …), maskiert der Redactor.
+			'daten'         => Redactor::rows( array_slice( $rows, 0, $max ) ),
 		);
 	}
 
