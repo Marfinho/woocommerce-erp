@@ -27,40 +27,6 @@ class PrintQueueTest extends TestCase {
 	 * Lock / Lease
 	 * -------------------------------------------------------------- */
 
-	/**
-	 * Ein Lock ohne Zeitstempel gilt als abgelaufen – so verhindert ein
-	 * fehlerhafter Datensatz nicht dauerhaft die Freigabe.
-	 */
-	public function test_lock_ohne_zeitstempel_ist_abgelaufen() {
-		$this->assertTrue( PrintJobRepository::is_lock_expired( null, time() ) );
-		$this->assertTrue( PrintJobRepository::is_lock_expired( '', time() ) );
-	}
-
-	/**
-	 * Innerhalb der Lease-Zeit gilt der Lock als gültig.
-	 */
-	public function test_lock_innerhalb_der_frist_gilt() {
-		$now       = time();
-		$locked_at = gmdate( 'Y-m-d H:i:s', $now - 5 * 60 );
-
-		$this->assertFalse( PrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
-	}
-
-	/**
-	 * Nach zehn Minuten ohne Aktivität gilt der Job als verwaist – ein
-	 * abgestürzter Raspberry Pi darf den Job nicht dauerhaft blockieren.
-	 */
-	public function test_lock_nach_zehn_minuten_ist_abgelaufen() {
-		$now       = time();
-		$locked_at = gmdate( 'Y-m-d H:i:s', $now - 11 * 60 );
-
-		$this->assertTrue( PrintJobRepository::is_lock_expired( $locked_at, $now, 10 ) );
-
-		// Exakt an der Grenze (9:59) noch gültig, an der Grenze +1s abgelaufen.
-		$this->assertFalse( PrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 599 ), $now, 10 ) );
-		$this->assertTrue( PrintJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 601 ), $now, 10 ) );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Long-Poll-Grenzen
 	 * -------------------------------------------------------------- */
@@ -99,16 +65,6 @@ class PrintQueueTest extends TestCase {
 	/* ----------------------------------------------------------------
 	 * Zustandsübergänge
 	 * -------------------------------------------------------------- */
-
-	/**
-	 * Nur ein wartender Job darf geclaimt werden.
-	 */
-	public function test_nur_queued_darf_geclaimt_werden() {
-		$this->assertTrue( PrintJobRepository::can_claim( 'queued' ) );
-		foreach ( array( 'claimed', 'printing', 'printed', 'failed', 'cancelled' ) as $status ) {
-			$this->assertFalse( PrintJobRepository::can_claim( $status ), $status );
-		}
-	}
 
 	/**
 	 * complete() ist idempotent gedacht: printed ist als Ausgangsstatus

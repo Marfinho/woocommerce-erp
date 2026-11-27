@@ -625,30 +625,6 @@ class POSModule {
 	}
 
 	/**
-	 * Verkaufspreis eines Shop-Produkts.
-	 *
-	 * @param int $wc_product_id WooCommerce-Produkt.
-	 * @return string Preis mit Punkt als Dezimaltrenner oder leer.
-	 */
-	protected static function product_price( $wc_product_id ) {
-		$wc_product_id = (int) $wc_product_id;
-
-		if ( ! $wc_product_id || ! function_exists( 'wc_get_product' ) ) {
-			return '';
-		}
-
-		$product = wc_get_product( $wc_product_id );
-
-		if ( ! $product ) {
-			return '';
-		}
-
-		$preis = $product->get_price();
-
-		return '' === $preis || null === $preis ? '' : number_format( (float) $preis, 2, '.', '' );
-	}
-
-	/**
 	 * Kürzel für eine Kachel ohne Produktbild.
 	 *
 	 * Reine Zeichenkettenlogik: die Anfangsbuchstaben der ersten beiden

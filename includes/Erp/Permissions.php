@@ -97,7 +97,6 @@ class Permissions {
 
 		$page  = self::SCOPE_PAGE;
 		$cap   = self::SCOPE_CAP;
-		$later = self::SCOPE_PHASE2;
 
 		return array(
 			// Verkauf.

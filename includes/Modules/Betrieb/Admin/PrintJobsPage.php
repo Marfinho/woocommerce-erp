@@ -13,7 +13,6 @@ use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
-use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintJobRepository;

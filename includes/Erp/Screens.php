@@ -16,7 +16,6 @@ namespace Lindenweg16\Erp;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Modules\Betrieb\Admin\BambuPrintersPage;
-use Lindenweg16\Modules\Betrieb\Admin\ShippingPage;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;

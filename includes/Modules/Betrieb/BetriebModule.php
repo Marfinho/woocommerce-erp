@@ -267,108 +267,6 @@ class BetriebModule {
 	}
 
 	/**
-	 * Dashboard, solange die Kennzahlen noch nicht implementiert sind
-	 * (Meilenstein 10). Zeigt den Installationsstand, damit die Seite nicht
-	 * leer wirkt und ein Fehler beim Anlegen der Tabellen sofort auffällt.
-	 */
-	protected function render_dashboard_stub() {
-		global $wpdb;
-
-		echo '<div class="wrap lw16-wrap"><h1>' . esc_html__( 'Betrieb', 'lindenweg16' ) . '</h1>';
-		echo '<p>' . esc_html__( 'Das Fundament steht: Tabellen, Rechte, Einstellungen und Protokoll. Die Kennzahlen folgen in Meilenstein 10.', 'lindenweg16' ) . '</p>';
-
-		$missing = array();
-		foreach ( self::table_names() as $table ) {
-			$full = $wpdb->prefix . 'lw16_' . $table;
-			if ( $full !== $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $full ) ) ) {
-				$missing[] = $table;
-			}
-		}
-
-		if ( $missing ) {
-			echo '<div class="notice notice-error"><p>';
-			printf(
-				/* translators: %s: Liste fehlender Tabellen. */
-				esc_html__( 'Fehlende Tabellen: %s. Plugin einmal deaktivieren und wieder aktivieren.', 'lindenweg16' ),
-				esc_html( implode( ', ', $missing ) )
-			);
-			echo '</p></div>';
-		} else {
-			echo '<div class="notice notice-success inline"><p>' . esc_html(
-				sprintf(
-					/* translators: %d: Anzahl Tabellen. */
-					__( 'Alle %d Tabellen des Moduls sind angelegt.', 'lindenweg16' ),
-					count( self::table_names() )
-				)
-			) . '</p></div>';
-		}
-
-		$settings = CalcSettings::for_date();
-		echo '<h2>' . esc_html__( 'Aktuelle Kalkulationsannahmen', 'lindenweg16' ) . '</h2>';
-		echo '<table class="widefat striped" style="max-width:640px"><tbody>';
-		foreach ( CalcSettings::labels() as $key => $label ) {
-			printf(
-				'<tr><td>%s</td><td style="text-align:right">%s</td></tr>',
-				esc_html( $label ),
-				esc_html( number_format_i18n( isset( $settings[ $key ] ) ? $settings[ $key ] : 0, 4 ) )
-			);
-		}
-		echo '</tbody></table>';
-
-		$this->render_machine_rate();
-
-		printf(
-			'<p><a class="button" href="%s">%s</a></p>',
-			esc_url( admin_url( 'admin.php?page=lw16-betrieb-einstellungen' ) ),
-			esc_html__( 'Annahmen bearbeiten', 'lindenweg16' )
-		);
-		echo '</div>';
-	}
-
-	/**
-	 * Maschinenstundensatz mit seiner Herkunft ausweisen.
-	 *
-	 * Der Satz ist eine Rechengröße, kein gepflegter Wert – deshalb wird
-	 * offengelegt, aus welchen Geräten und Annahmen er entsteht.
-	 */
-	protected function render_machine_rate() {
-		$breakdown = MachineRate::current_breakdown();
-
-		echo '<h2>' . esc_html__( 'Maschinenstundensatz (berechnet)', 'lindenweg16' ) . '</h2>';
-
-		if ( 0 === $breakdown['printer_count'] ) {
-			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Noch keine Geräte erfasst. Ohne Anschaffungskosten fehlt die Abschreibung – der Satz ist damit zu niedrig. Geräte werden in Meilenstein 3 erfasst.', 'lindenweg16' ) . '</p></div>';
-		}
-
-		printf(
-			'<p><strong>%s €/h</strong> %s</p>',
-			esc_html( number_format_i18n( $breakdown['rate'], 4 ) ),
-			esc_html(
-				sprintf(
-					/* translators: %d: Anzahl berücksichtigter Geräte. */
-					_n( 'Mittelwert über %d produzierendes Gerät.', 'Mittelwert über %d produzierende Geräte.', (int) $breakdown['printer_count'], 'lindenweg16' ),
-					(int) $breakdown['printer_count']
-				)
-			)
-		);
-
-		if ( $breakdown['per_printer'] ) {
-			echo '<table class="widefat striped" style="max-width:640px"><thead><tr>';
-			echo '<th>' . esc_html__( 'Gerät', 'lindenweg16' ) . '</th>';
-			echo '<th style="text-align:right">' . esc_html__( 'Satz €/h', 'lindenweg16' ) . '</th>';
-			echo '</tr></thead><tbody>';
-			foreach ( $breakdown['per_printer'] as $code => $rate ) {
-				printf(
-					'<tr><td>%s</td><td style="text-align:right">%s</td></tr>',
-					esc_html( $code ),
-					esc_html( number_format_i18n( $rate, 4 ) )
-				);
-			}
-			echo '</tbody></table>';
-		}
-	}
-
-	/**
 	 * Platzhalter für Seiten, die erst in einem späteren Meilenstein
 	 * Inhalt bekommen. Bewusst benannt statt leer.
 	 *
@@ -391,20 +289,5 @@ class BetriebModule {
 			esc_html_e( 'Diese Seite wird in einem späteren Meilenstein umgesetzt.', 'lindenweg16' );
 		}
 		echo '</p></div></div>';
-	}
-
-	/**
-	 * Kurznamen aller Tabellen des Moduls (ohne Präfix lw16_).
-	 *
-	 * @return string[]
-	 */
-	public static function table_names() {
-		$names = array();
-		foreach ( Schema::tables( 'LW16PREFIX', '' ) as $sql ) {
-			if ( preg_match( '/CREATE TABLE LW16PREFIX(\w+)/', $sql, $m ) ) {
-				$names[] = $m[1];
-			}
-		}
-		return $names;
 	}
 }

@@ -68,18 +68,6 @@ class DhlProduct {
 	}
 
 	/**
-	 * Braucht diese Sendung eine Zollinhaltserklärung?
-	 *
-	 * @param string $country Zielland.
-	 * @return bool
-	 */
-	public static function needs_customs( $country ) {
-		$country = strtoupper( trim( (string) $country ) );
-
-		return '' !== $country && ! self::is_eu( $country );
-	}
-
-	/**
 	 * Vorschlag für das Produkt anhand Ziel und Gewicht.
 	 *
 	 * Ein Vorschlag, keine Festlegung: Die Versandliste zeigt ihn im

@@ -81,13 +81,4 @@ class Schema {
 
 		return $t;
 	}
-
-	/**
-	 * Namen der Tabellen ohne Präfix – für die Installationsprüfung.
-	 *
-	 * @return array
-	 */
-	public static function table_names() {
-		return array( 'config_parts', 'config_blocks' );
-	}
 }

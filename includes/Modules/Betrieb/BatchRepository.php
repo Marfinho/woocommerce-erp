@@ -204,34 +204,4 @@ class BatchRepository {
 
 		return true;
 	}
-
-	/**
-	 * Prüfung einer Charge festhalten.
-	 *
-	 * @param int    $id          Charge.
-	 * @param bool   $inspected   Geprüft.
-	 * @param string $disposition Verbleib.
-	 * @param string $note        Bemerkung.
-	 * @return bool
-	 */
-	public static function set_inspection( $id, $inspected, $disposition = '', $note = '' ) {
-		global $wpdb;
-
-		$before = self::find( $id );
-		if ( ! $before ) {
-			return false;
-		}
-
-		$data = array(
-			'inspected'   => $inspected ? 1 : 0,
-			'disposition' => $disposition ? sanitize_text_field( $disposition ) : null,
-			'note'        => $note ? sanitize_textarea_field( $note ) : null,
-			'updated_at'  => current_time( 'mysql', true ),
-		);
-
-		$wpdb->update( self::table(), $data, array( 'id' => (int) $id ) );
-		BetriebAudit::record( 'update', 'batches', (int) $id, $before, $data );
-
-		return true;
-	}
 }

@@ -30,11 +30,6 @@ class DhlCost {
 	const SETTING = 'dhl_preise';
 
 	/**
-	 * Höchstgewicht der Preisstufen in kg.
-	 */
-	const MAX_KG = 31.5;
-
-	/**
 	 * Länder je Zone des Europakets (Länderpreisliste P01).
 	 *
 	 * @return array Zone => Ländercodes.

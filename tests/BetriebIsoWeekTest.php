@@ -93,19 +93,6 @@ class BetriebIsoWeekTest extends TestCase {
 	}
 
 	/**
-	 * Eine Wochenfolge läuft korrekt über den Jahreswechsel – auch über ein
-	 * Jahr mit 53 Wochen.
-	 */
-	public function test_folge_ueber_den_jahreswechsel() {
-		$weeks = IsoWeek::sequence( 2026, 52, 4 );
-
-		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 52 ), $weeks[0] );
-		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 53 ), $weeks[1], '2026 hat eine 53. Woche.' );
-		$this->assertSame( array( 'iso_year' => 2027, 'iso_week' => 1 ), $weeks[2] );
-		$this->assertSame( array( 'iso_year' => 2027, 'iso_week' => 2 ), $weeks[3] );
-	}
-
-	/**
 	 * Rückwärts über die Jahresgrenze: Eine Woche vor KW 1/2027 ist
 	 * KW 53/2026 – nicht KW 0 und nicht wieder KW 1.
 	 */
@@ -132,13 +119,14 @@ class BetriebIsoWeekTest extends TestCase {
 	}
 
 	/**
-	 * Vorwärts verhält sich shift() wie die Folge.
+	 * Vorwärts über den Jahreswechsel – auch über ein Jahr mit 53 Wochen
+	 * und eines mit 52.
 	 */
-	public function test_vorwaerts_entspricht_der_folge() {
-		$folge = IsoWeek::sequence( 2026, 52, 3 );
-
-		$this->assertSame( $folge[1], IsoWeek::shift( 2026, 52, 1 ) );
-		$this->assertSame( $folge[2], IsoWeek::shift( 2026, 52, 2 ) );
+	public function test_vorwaerts_ueber_den_jahreswechsel() {
+		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 53 ), IsoWeek::shift( 2026, 52, 1 ), '2026 hat eine 53. Woche.' );
+		$this->assertSame( array( 'iso_year' => 2027, 'iso_week' => 1 ), IsoWeek::shift( 2026, 52, 2 ) );
+		$this->assertSame( array( 'iso_year' => 2027, 'iso_week' => 2 ), IsoWeek::shift( 2026, 52, 3 ) );
+		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 1 ), IsoWeek::shift( 2025, 52, 1 ) );
 	}
 
 	/**
@@ -146,15 +134,5 @@ class BetriebIsoWeekTest extends TestCase {
 	 */
 	public function test_verschiebung_um_null() {
 		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 35 ), IsoWeek::shift( 2026, 35, 0 ) );
-	}
-
-	/**
-	 * In einem Jahr mit 52 Wochen springt die Folge direkt weiter.
-	 */
-	public function test_folge_bei_52_wochen() {
-		$weeks = IsoWeek::sequence( 2025, 52, 2 );
-
-		$this->assertSame( array( 'iso_year' => 2025, 'iso_week' => 52 ), $weeks[0] );
-		$this->assertSame( array( 'iso_year' => 2026, 'iso_week' => 1 ), $weeks[1] );
 	}
 }

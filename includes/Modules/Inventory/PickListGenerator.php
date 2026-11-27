@@ -10,7 +10,6 @@ namespace Lindenweg16\Modules\Inventory;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Installer;
-use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
 
 class PickListGenerator {

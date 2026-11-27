@@ -36,22 +36,6 @@ class BetriebPurchaseTest extends TestCase {
 	}
 
 	/**
-	 * Der erwartete Termin folgt aus Bestelldatum und Lieferzeit.
-	 */
-	public function test_liefertermin_folgt_aus_der_lieferzeit() {
-		$this->assertSame( '2026-08-25', Purchase::expected_date( '2026-08-20', 5 ) );
-		$this->assertSame( '2026-09-01', Purchase::expected_date( '2026-08-20', 12 ) );
-		$this->assertSame( '2026-08-20', Purchase::expected_date( '2026-08-20', 0 ) );
-	}
-
-	/**
-	 * Ohne Datum wird nichts erfunden.
-	 */
-	public function test_ohne_bestelldatum_kein_termin() {
-		$this->assertSame( '', Purchase::expected_date( '', 5 ) );
-	}
-
-	/**
 	 * Überfälligkeit zählt nur, solange etwas unterwegs ist.
 	 */
 	public function test_ueberfaelligkeit_zaehlt_nur_bei_offenen() {

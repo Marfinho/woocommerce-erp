@@ -24,37 +24,6 @@ class BambuTest extends TestCase {
 	 * Lock / Lease
 	 * -------------------------------------------------------------- */
 
-	/**
-	 * Ein Lock ohne Zeitstempel gilt als abgelaufen.
-	 */
-	public function test_lock_ohne_zeitstempel_ist_abgelaufen() {
-		$this->assertTrue( BambuJobRepository::is_lock_expired( null, time() ) );
-		$this->assertTrue( BambuJobRepository::is_lock_expired( '', time() ) );
-	}
-
-	/**
-	 * Innerhalb der Lease-Zeit gilt der Lock als gültig.
-	 */
-	public function test_lock_innerhalb_der_frist_gilt() {
-		$now       = time();
-		$locked_at = gmdate( 'Y-m-d H:i:s', $now - 30 * 60 );
-
-		$this->assertFalse( BambuJobRepository::is_lock_expired( $locked_at, $now, 180 ) );
-	}
-
-	/**
-	 * Nach drei Stunden ohne Aktivität gilt der Job als verwaist – ein
-	 * abgestürzter Bridge-Prozess darf einen mehrstündigen Druck nicht
-	 * dauerhaft blockieren, aber auch nicht mitten im Druck als verwaist
-	 * gelten (die Bridge erneuert das Lease bei jeder Fortschrittsmeldung).
-	 */
-	public function test_lock_nach_drei_stunden_ist_abgelaufen() {
-		$now = time();
-
-		$this->assertTrue( BambuJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 181 * 60 ), $now, 180 ) );
-		$this->assertFalse( BambuJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 179 * 60 ), $now, 180 ) );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Long-Poll-Grenzen
 	 * -------------------------------------------------------------- */
@@ -94,26 +63,6 @@ class BambuTest extends TestCase {
 	/* ----------------------------------------------------------------
 	 * Zustandsübergänge
 	 * -------------------------------------------------------------- */
-
-	/**
-	 * Nur ein wartender Job darf geclaimt werden.
-	 */
-	public function test_nur_queued_darf_geclaimt_werden() {
-		$this->assertTrue( BambuJobRepository::can_claim( 'queued' ) );
-		foreach ( array( 'claimed', 'uploading', 'printing', 'completed', 'failed', 'cancelled' ) as $status ) {
-			$this->assertFalse( BambuJobRepository::can_claim( $status ), $status );
-		}
-	}
-
-	/**
-	 * Der Upload darf nur nach dem Claim starten – oder wiederholt werden.
-	 */
-	public function test_upload_nur_nach_claim() {
-		$this->assertTrue( BambuJobRepository::can_start_uploading( 'claimed' ) );
-		$this->assertTrue( BambuJobRepository::can_start_uploading( 'uploading' ) );
-		$this->assertFalse( BambuJobRepository::can_start_uploading( 'queued' ) );
-		$this->assertFalse( BambuJobRepository::can_start_uploading( 'printing' ) );
-	}
 
 	/**
 	 * complete() ist idempotent gedacht: completed ist als Ausgangsstatus

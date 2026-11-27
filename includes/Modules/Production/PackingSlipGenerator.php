@@ -16,7 +16,6 @@ namespace Lindenweg16\Modules\Production;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Installer;
-use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\Pdf;
 use Lindenweg16\Modules\Inventory\Repository;
 

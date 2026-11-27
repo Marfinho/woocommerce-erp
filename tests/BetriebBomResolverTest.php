@@ -202,14 +202,4 @@ class BetriebBomResolverTest extends TestCase {
 
 		$this->assertFalse( BomResolver::would_create_cycle( 1, 2, $ctx ) );
 	}
-
-	/**
-	 * Alle beteiligten Artikel-IDs für die Chargen-Rückverfolgung.
-	 */
-	public function test_beteiligte_artikel_ids() {
-		$ids = BomResolver::article_ids( 100, $this->ctx() );
-
-		sort( $ids );
-		$this->assertSame( array( 100, 101, 102 ), $ids );
-	}
 }

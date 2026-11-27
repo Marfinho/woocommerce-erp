@@ -13,7 +13,6 @@ use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Throttle;
 use Lindenweg16\Modules\Inventory\Repository;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
-use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 

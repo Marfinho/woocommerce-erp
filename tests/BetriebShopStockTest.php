@@ -58,19 +58,6 @@ class BetriebShopStockTest extends TestCase {
 	}
 
 	/**
-	 * Varianten bekommen die Menge ihrer Farbe; ohne Farbe gilt die Standardfarbe.
-	 */
-	public function test_mengen_je_variante() {
-		$qty = ShopStock::per_variation(
-			array( 101 => 'anthrazit', 102 => 'kupfer', 103 => '', 104 => 'unbekannt' ),
-			array( 'anthrazit' => 7, 'kupfer' => 0 ),
-			'anthrazit'
-		);
-
-		$this->assertSame( array( 101 => 7, 102 => 0, 103 => 7, 104 => 0 ), $qty );
-	}
-
-	/**
 	 * Ein einfaches Produkt zählt alle Farben zusammen.
 	 */
 	public function test_einfaches_produkt_summiert_farben() {

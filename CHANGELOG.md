@@ -7,6 +7,14 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.2] – 2026-11-27
+
+### Entfernt
+- **Toter Code aufgeräumt** (keine Änderung im Verhalten). Per Syntaxbaum-Analyse über das ganze Plugin gesucht und jede Fundstelle einzeln gegengeprüft, auch gegen dynamisch zusammengesetzte Rückrufe (`'handle_' . $what`, `'action_' . $action`, Kassen-Routen) und Aufrufe aus JavaScript:
+  - Nirgends mehr aufgerufene Methoden: `HashChain::prepare_insert`, `Pdf::text_right`/`content_width`, `Roles::current_user_can_manage`, `BambuDruck::plate_status_text`, `Workflow::file_is_on_printer`, `BatchRepository::set_inspection`, `BetriebAudit::for_record`, `BetriebModule::render_dashboard_stub`/`render_machine_rate`/`table_names`, `Configurator\Schema::table_names`, `Kpi::manual_metrics`, `MachineRate::fleet_average`, `StockOwnership::article_map`, `Traceability::forward_from_lot`/`backward_from_order`, `EventFields::komoot_stil_optionen`, `Inventory\Repository::get_pickliste_by_order`/`update_pickliste_pos`, `POSModule::product_price`.
+  - Methoden, die nur noch Tests aufriefen, samt dieser Tests: in `Calc` (`modul_kosten`, `preis_aus_marge`, `set_preis`, `marge_prozent`, `cascade_deductions`, `waitlist_should_notify`, `cart_should_track`), `BambuDruck` (`filter_by_group`, `is_3mf_name`, `parts_total`, `clean_margin`, `is_nestable`), die Statusprüfungen `can_claim`/`can_start_*`/`is_lock_expired` der drei Job-Warteschlangen (der Betrieb prüft das in den SQL-Bedingungen), `Rules::suggest_code`, `BomResolver::article_ids`, `DhlProduct::needs_customs`, `IsoWeek::sequence`, `LaborCost::by_work_order`, `Purchase::expected_date`, `ShopStock::per_variation`, `Configurator\Layout::first_free_position`/`is_free`. Tests, die nebenbei lebenden Code prüften, sind gekürzt statt gelöscht; der Jahreswechsel-Test für `IsoWeek` läuft jetzt über `shift()`.
+  - Unbenutzte Konstanten (`BambuDruck::MAX_PARTS`, `DhlCost::MAX_KG`, `RasterPacker::FINE_ROTATIONS`, `KampagnenReport::META_SOURCE_TYPE`), 31 unbenutzte `use`-Importe, sechs berechnete, aber nie verwendete Variablen und die JavaScript-Funktion `scannerAvailable` (Mobilansicht).
+
 ## [0.105.1] – 2026-11-24
 
 ### Behoben

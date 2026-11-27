@@ -42,7 +42,6 @@ use Lindenweg16\Modules\Betrieb\PriceTierRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrinterRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
-use Lindenweg16\Modules\Betrieb\Stopwatch;
 use Lindenweg16\Modules\Betrieb\StockOwnership;
 use Lindenweg16\Modules\Betrieb\WooStockSync;
 use Lindenweg16\Modules\Betrieb\TimeRepository;

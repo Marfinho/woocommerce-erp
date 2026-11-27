@@ -80,62 +80,6 @@ class Calc {
 	}
 
 	/**
-	 * Modulkosten inkl. Ausschuss-Puffer.
-	 *
-	 * @param array $args Kostenbestandteile und Sätze.
-	 * @return float Auf 2 Nachkommastellen gerundet.
-	 */
-	public static function modul_kosten( array $args ) {
-		$filament_kosten = ( (float) $args['filament_gramm'] / 1000 ) * (float) $args['filamentpreis_pro_kg'];
-		$drucker_kosten  = (float) $args['drucker_kosten_h'] * (float) $args['druckzeit_stunden'];
-		$arbeit_kosten   = ( (float) $args['arbeitszeit_minuten'] / 60 ) * (float) $args['stundenlohn'];
-
-		$zwischensumme = $filament_kosten + $drucker_kosten + $arbeit_kosten
-			+ (float) $args['verpackung_euro'] + (float) $args['zusatzmaterial_euro'];
-
-		$kosten = $zwischensumme * ( 1 + (float) $args['ausschuss_prozent'] / 100 );
-		return round( $kosten, 2 );
-	}
-
-	/**
-	 * Vorgeschlagener Preis aus Kosten und Zielmarge, gerundet auf ganze Euro.
-	 *
-	 * @param float $kosten             Kosten.
-	 * @param float $zielmarge_prozent  Zielmarge in Prozent.
-	 * @return float
-	 */
-	public static function preis_aus_marge( $kosten, $zielmarge_prozent ) {
-		$zielmarge = (float) $zielmarge_prozent / 100;
-		$preis     = $zielmarge < 1 ? (float) $kosten / ( 1 - $zielmarge ) : (float) $kosten;
-		return round( $preis );
-	}
-
-	/**
-	 * Set-Preis aus Einzelsumme und Rabatt, gerundet auf ganze Euro.
-	 *
-	 * @param float $einzelsumme    Summe der Modulpreise.
-	 * @param float $rabatt_prozent Rabatt in Prozent.
-	 * @return float
-	 */
-	public static function set_preis( $einzelsumme, $rabatt_prozent ) {
-		return round( (float) $einzelsumme * ( 1 - (float) $rabatt_prozent / 100 ) );
-	}
-
-	/**
-	 * Tatsächliche Marge in Prozent.
-	 *
-	 * @param float $kosten Kosten.
-	 * @param float $preis  Verkaufspreis.
-	 * @return float
-	 */
-	public static function marge_prozent( $kosten, $preis ) {
-		if ( (float) $preis <= 0 ) {
-			return 0.0;
-		}
-		return round( ( (float) $preis - (float) $kosten ) / (float) $preis * 100, 2 );
-	}
-
-	/**
 	 * Rechnungsnummer nach Konvention bilden.
 	 *
 	 * @param string $modus      jahr|durchlaufend.
@@ -244,43 +188,6 @@ class Calc {
 	}
 
 	/**
-	 * Kaskadierte Bestandsabzüge für ein Set berechnen.
-	 * Gibt ein Array von [ produkt_id => abzug_menge ] zurück.
-	 *
-	 * @param float $menge       Verkaufte Menge.
-	 * @param array $stueckliste Array von [ 'modul_id' => int, 'menge' => float ].
-	 * @param array $rezepturen  Map modul_id => [ [ 'rohmaterial_id' => int, 'menge' => float ], ... ].
-	 * @return array produkt_id => total_abzug (negative Werte).
-	 */
-	public static function cascade_deductions( $menge, array $stueckliste, array $rezepturen ) {
-		$result = array();
-		$menge  = abs( (float) $menge );
-
-		foreach ( $stueckliste as $pos ) {
-			$modul_id    = (int) $pos['modul_id'];
-			$modul_menge = $menge * (float) $pos['menge'];
-
-			if ( ! isset( $result[ $modul_id ] ) ) {
-				$result[ $modul_id ] = 0.0;
-			}
-			$result[ $modul_id ] -= $modul_menge;
-
-			if ( isset( $rezepturen[ $modul_id ] ) ) {
-				foreach ( $rezepturen[ $modul_id ] as $rez ) {
-					$roh_id    = (int) $rez['rohmaterial_id'];
-					$roh_menge = $modul_menge * (float) $rez['menge'];
-					if ( ! isset( $result[ $roh_id ] ) ) {
-						$result[ $roh_id ] = 0.0;
-					}
-					$result[ $roh_id ] -= $roh_menge;
-				}
-			}
-		}
-
-		return $result;
-	}
-
-	/**
 	 * Prüfen, ob ein Review-Bonus vergeben werden darf.
 	 *
 	 * @param string $post_type      Post-Type des Kommentar-Ziels.
@@ -301,37 +208,6 @@ class Calc {
 			return false;
 		}
 		if ( $already_awarded ) {
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * Prüfen, ob eine Wartelisten-Benachrichtigung gesendet werden soll.
-	 *
-	 * @param bool $already_notified Ob bereits benachrichtigt wurde.
-	 * @return bool
-	 */
-	public static function waitlist_should_notify( $already_notified ) {
-		return ! $already_notified;
-	}
-
-	/**
-	 * Prüfen, ob ein Warenkorb getrackt werden darf (nur mit bekannter E-Mail).
-	 *
-	 * @param string $email      Kunden-E-Mail.
-	 * @param bool   $cart_empty Ob der Warenkorb leer ist.
-	 * @param bool   $is_admin   Ob es ein Admin-Request ist.
-	 * @return bool
-	 */
-	public static function cart_should_track( $email, $cart_empty, $is_admin ) {
-		if ( $is_admin ) {
-			return false;
-		}
-		if ( $cart_empty ) {
-			return false;
-		}
-		if ( ! $email || ! filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
 			return false;
 		}
 		return true;

@@ -10,7 +10,6 @@ namespace Lindenweg16\Modules\Inventory;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
-use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\MailTemplate;
 
 /**

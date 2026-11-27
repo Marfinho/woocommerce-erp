@@ -99,26 +99,6 @@ class BetriebAudit {
 	}
 
 	/**
-	 * Einträge zu einem Datensatz, neueste zuerst.
-	 *
-	 * @param string $table     Kurzname der Tabelle.
-	 * @param int    $record_id Datensatz-ID.
-	 * @return array
-	 */
-	public static function for_record( $table, $record_id ) {
-		global $wpdb;
-		$t = self::table();
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$t} WHERE objekt_typ = %s AND objekt_id = %d ORDER BY id DESC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				sanitize_key( $table ),
-				(int) $record_id
-			),
-			ARRAY_A
-		);
-	}
-
-	/**
 	 * Interne Felder aus dem Abbild entfernen, damit das Protokoll lesbar
 	 * bleibt und keine Hashes doppelt gespeichert werden.
 	 *

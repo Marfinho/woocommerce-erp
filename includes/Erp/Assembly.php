@@ -24,9 +24,7 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
-use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
-use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 

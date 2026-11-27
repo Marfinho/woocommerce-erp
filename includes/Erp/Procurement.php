@@ -20,7 +20,6 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ProcurementAlert;
-use Lindenweg16\Modules\Betrieb\Purchase;
 use Lindenweg16\Modules\Betrieb\PurchaseRepository;
 use Lindenweg16\Modules\Betrieb\SupplyRepository;
 

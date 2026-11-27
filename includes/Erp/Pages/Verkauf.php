@@ -29,7 +29,6 @@ use Lindenweg16\Modules\Betrieb\DiscountResolver;
 use Lindenweg16\Modules\Betrieb\OrderOpsRepository;
 use Lindenweg16\Modules\Betrieb\ReorderPage;
 use Lindenweg16\Modules\Betrieb\ReorderToken;
-use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\Reporting;
 use Lindenweg16\Modules\Loyalty\LoyaltyRepository;

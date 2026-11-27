@@ -168,15 +168,6 @@ class Roles {
 	}
 
 	/**
-	 * Prüft, ob der aktuelle Nutzer Zugriff auf das Plugin hat.
-	 *
-	 * @return bool
-	 */
-	public static function current_user_can_manage() {
-		return current_user_can( LW16_CAPABILITY );
-	}
-
-	/**
 	 * Alle Nutzer-IDs mit manage_lw16-Capability (für Benachrichtigungen).
 	 *
 	 * @return int[]

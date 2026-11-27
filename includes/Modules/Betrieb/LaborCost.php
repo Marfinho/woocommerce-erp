@@ -148,35 +148,6 @@ class LaborCost {
 	}
 
 	/**
-	 * Lohnkosten je Fertigungsauftrag.
-	 *
-	 * @param array $entries Zeitbuchungen mit work_order_id.
-	 * @param array $rows    Lohnzeilen.
-	 * @return array work_order_id => {cost, hours, hours_unpriced, rate}
-	 */
-	public static function by_work_order( array $entries, array $rows ) {
-		$grouped = array();
-
-		foreach ( $entries as $entry ) {
-			$entry = (array) $entry;
-			$order = isset( $entry['work_order_id'] ) ? (int) $entry['work_order_id'] : 0;
-
-			if ( ! $order ) {
-				continue;
-			}
-
-			$grouped[ $order ][] = $entry;
-		}
-
-		$out = array();
-		foreach ( $grouped as $order => $rows_of_order ) {
-			$out[ $order ] = self::total( $rows_of_order, $rows );
-		}
-
-		return $out;
-	}
-
-	/**
 	 * Der tatsächliche Mischsatz gegen den kalkulatorischen Stundensatz.
 	 *
 	 * Das ist die Zahl, die entscheidet, ob die Kalkulation noch stimmt.

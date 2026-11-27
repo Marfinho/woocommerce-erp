@@ -91,24 +91,6 @@ class BomResolver {
 	}
 
 	/**
-	 * Alle Artikel-IDs, die in der Stückliste vorkommen (inklusive Wurzel).
-	 *
-	 * @param int   $article_id Wurzel.
-	 * @param array $ctx        Kontext.
-	 * @return int[]
-	 */
-	public static function article_ids( $article_id, array $ctx ) {
-		$ids    = array( (int) $article_id );
-		$result = self::resolve( $article_id, $ctx );
-		foreach ( $result['lines'] as $line ) {
-			if ( 'artikel' === $line['child_type'] ) {
-				$ids[] = (int) $line['child_id'];
-			}
-		}
-		return array_values( array_unique( $ids ) );
-	}
-
-	/**
 	 * Rekursiver Abstieg.
 	 *
 	 * @param int   $article_id Aktueller Artikel.

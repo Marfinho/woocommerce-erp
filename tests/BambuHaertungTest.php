@@ -76,8 +76,6 @@ class BambuHaertungTest extends TestCase {
 		$this->assertContains( 'unklar', BambuJobRepository::ACTIVE_STATUSES );
 		$this->assertTrue( BambuJobRepository::can_complete( 'unklar' ) );
 		$this->assertTrue( BambuJobRepository::can_fail( 'unklar' ) );
-		$this->assertTrue( BambuJobRepository::can_start_printing( 'unklar' ) );
-		$this->assertFalse( BambuJobRepository::can_claim( 'unklar' ) );
 	}
 
 	/**

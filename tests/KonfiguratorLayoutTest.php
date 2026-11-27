@@ -274,36 +274,6 @@ class KonfiguratorLayoutTest extends TestCase {
 	}
 
 	/**
-	 * Die erste freie Stelle liegt unten – aber nicht im Sperrbereich.
-	 */
-	public function test_erste_freie_position() {
-		$blocks = $this->kontext()['blocks'][1];
-
-		$this->assertSame( 0.0, Layout::first_free_position( 40, 600, array(), $blocks ) );
-
-		// 80 mm passen nicht mehr zwischen Unterkante und Verschraubung
-		// bei 40 mm, also geht es erst oberhalb weiter.
-		$this->assertSame( 90.0, Layout::first_free_position( 80, 600, array(), $blocks ) );
-	}
-
-	/**
-	 * Belegte Plätze werden übersprungen.
-	 */
-	public function test_erste_freie_position_hinter_einem_modul() {
-		$blocks  = $this->kontext()['blocks'][1];
-		$belegt  = array( array( 'pos' => 90.0, 'height' => 80.0 ) );
-
-		$this->assertSame( 170.0, Layout::first_free_position( 80, 600, $belegt, $blocks ) );
-	}
-
-	/**
-	 * Passt gar nichts mehr, sagt die Suche das auch.
-	 */
-	public function test_kein_platz_mehr() {
-		$this->assertNull( Layout::first_free_position( 700, 600, array(), array() ) );
-	}
-
-	/**
 	 * Millimeterangaben bleiben lesbar.
 	 */
 	public function test_millimeter_werden_knapp_geschrieben() {

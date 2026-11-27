@@ -238,7 +238,6 @@ class MailTemplate {
 		}
 
 		$firma     = esc_html( (string) Settings::get( 'firma_name' ) );
-		$farbe     = self::sanitize_color( Settings::get( 'ci_farbe', '#8B6914' ) );
 		$footer_txt = esc_html( (string) Settings::get( 'email_footer', '' ) );
 		$strasse   = esc_html( (string) Settings::get( 'firma_strasse', '' ) );
 		$plz_ort   = esc_html( (string) Settings::get( 'firma_plz_ort', '' ) );

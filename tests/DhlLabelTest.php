@@ -65,17 +65,6 @@ class DhlLabelTest extends TestCase {
 		$this->assertSame( 'V01PAK', DhlProduct::for_destination( '', 500 ) );
 	}
 
-	/**
-	 * Die Schweiz ist kein EU-Land – dort braucht es Zollpapiere.
-	 */
-	public function test_zoll_ausserhalb_der_eu() {
-		$this->assertFalse( DhlProduct::needs_customs( 'DE' ) );
-		$this->assertFalse( DhlProduct::needs_customs( 'FR' ) );
-		$this->assertTrue( DhlProduct::needs_customs( 'CH' ) );
-		$this->assertTrue( DhlProduct::needs_customs( 'GB' ) );
-		$this->assertFalse( DhlProduct::needs_customs( '' ), 'Ohne Land wird nichts behauptet.' );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Abrechnungsnummer
 	 * -------------------------------------------------------------- */

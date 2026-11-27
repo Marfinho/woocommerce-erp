@@ -117,12 +117,6 @@ class AffiliateTest extends TestCase {
 		$this->assertSame( 0.0, Rules::rate_from_discount( 20, 25 ) );
 	}
 
-	public function test_codevorschlag_aus_dem_namen() {
-		$this->assertSame( 'ANNA', Rules::suggest_code( 'Anna Müller' ) );
-		$this->assertSame( 'MUELLER', Rules::suggest_code( 'Müller Rides' ) );
-		$this->assertSame( '', Rules::suggest_code( 'Al' ) );
-	}
-
 	public function test_provision_und_bemessungsgrundlage() {
 		$this->assertSame( 10.0, Rules::commission( 100, 10 ) );
 		$this->assertSame( 8.33, Rules::commission( 83.33, 10 ) );

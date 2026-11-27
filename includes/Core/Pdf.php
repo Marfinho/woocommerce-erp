@@ -281,15 +281,6 @@ class Pdf {
 	}
 
 	/**
-	 * Rechtsbündig fließend ausgeben.
-	 */
-	public function text_right( $text, $size = 11, $bold = false ) {
-		$this->ensure_space( $size + 4 );
-		$this->text_xy_right( $text, $this->page_w - $this->margin, $this->y, $size, $bold );
-		$this->y += $size + 4;
-	}
-
-	/**
 	 * Zwei Spalten (links/rechts).
 	 */
 	public function row( $left, $right, $size = 11, $bold = false ) {
@@ -457,13 +448,6 @@ class Pdf {
 	 */
 	public function set_y( $y ) {
 		$this->y = $y;
-	}
-
-	/**
-	 * Nutzbare Inhaltsbreite (zwischen den Rändern).
-	 */
-	public function content_width() {
-		return $this->page_w - 2 * $this->margin;
 	}
 
 	/**

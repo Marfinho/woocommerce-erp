@@ -68,28 +68,6 @@ class BambuJobRepository {
 	 * ------------------------------------------------------------- */
 
 	/**
-	 * Ist ein Lock (locked_at) abgelaufen?
-	 *
-	 * @param string|null $locked_at MySQL-Datetime (GMT) oder leer.
-	 * @param int         $now       Aktueller Unix-Zeitstempel (GMT).
-	 * @param int         $timeout_minutes Lease-Dauer in Minuten.
-	 * @return bool
-	 */
-	public static function is_lock_expired( $locked_at, $now, $timeout_minutes = self::LOCK_TIMEOUT_MINUTES ) {
-		if ( empty( $locked_at ) ) {
-			return true;
-		}
-
-		$locked = strtotime( $locked_at . ' UTC' );
-
-		if ( ! $locked ) {
-			return true;
-		}
-
-		return ( (int) $now - $locked ) > ( (int) $timeout_minutes * 60 );
-	}
-
-	/**
 	 * Wartezeit eines Long-Poll-Requests serverseitig begrenzen.
 	 *
 	 * @param mixed $requested Angeforderte Sekunden.
@@ -165,36 +143,6 @@ class BambuJobRepository {
 		}
 
 		return $status;
-	}
-
-	/**
-	 * Darf ein Job aus dem gegebenen Ausgangsstatus geclaimt werden?
-	 *
-	 * @param string $status Aktueller Status.
-	 * @return bool
-	 */
-	public static function can_claim( $status ) {
-		return 'queued' === (string) $status;
-	}
-
-	/**
-	 * Darf aus dem gegebenen Status nach "uploading" gewechselt werden?
-	 *
-	 * @param string $status Aktueller Status.
-	 * @return bool
-	 */
-	public static function can_start_uploading( $status ) {
-		return in_array( (string) $status, array( 'claimed', 'uploading' ), true );
-	}
-
-	/**
-	 * Darf aus dem gegebenen Status nach "printing" gewechselt werden?
-	 *
-	 * @param string $status Aktueller Status.
-	 * @return bool
-	 */
-	public static function can_start_printing( $status ) {
-		return in_array( (string) $status, self::ACTIVE_STATUSES, true );
 	}
 
 	/**

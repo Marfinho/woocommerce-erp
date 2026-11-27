@@ -174,23 +174,6 @@ class MachineRate {
 	}
 
 	/**
-	 * Mittelwert über die produzierende Flotte.
-	 *
-	 * Ohne erfasste Geräte gibt es keine Abschreibung – dann bleiben nur die
-	 * laufenden Kosten übrig. Das ist absichtlich sichtbar zu niedrig; die
-	 * Oberfläche weist über printer_count darauf hin, statt einen erfundenen
-	 * Wert zu zeigen.
-	 *
-	 * @param array $printers Datensätze aus lw16_printers.
-	 * @param array $settings Annahmen.
-	 * @return float Euro je Betriebsstunde.
-	 */
-	public static function fleet_average( array $printers, array $settings ) {
-		$result = self::fleet_breakdown( $printers, $settings );
-		return $result['rate'];
-	}
-
-	/**
 	 * Flottensatz inklusive Zählung der berücksichtigten Geräte.
 	 *
 	 * @param array $printers Geräte.

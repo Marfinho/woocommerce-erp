@@ -26,7 +26,6 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Erp\RestApi;
 use Lindenweg16\Modules\Accounting\AccountingModule;
-use Lindenweg16\Modules\Accounting\BelegRepository;
 use Lindenweg16\Modules\Accounting\BuchungRepository;
 use Lindenweg16\Modules\Accounting\DauerbuchungRepository;
 use Lindenweg16\Modules\Accounting\InvoiceGenerator;

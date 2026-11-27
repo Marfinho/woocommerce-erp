@@ -76,27 +76,6 @@ class IsoWeek {
 	}
 
 	/**
-	 * Eine Folge von Wochen ab einem Startpunkt.
-	 *
-	 * @param int $iso_year Startjahr.
-	 * @param int $iso_week Startwoche.
-	 * @param int $count    Anzahl.
-	 * @return array Liste aus {iso_year, iso_week}.
-	 */
-	public static function sequence( $iso_year, $iso_week, $count ) {
-		$weeks = array();
-		$year  = (int) $iso_year;
-		$week  = (int) $iso_week;
-
-		for ( $i = 0; $i < (int) $count; $i++ ) {
-			$current = self::shift( $year, $week, $i );
-			$weeks[] = $current;
-		}
-
-		return $weeks;
-	}
-
-	/**
 	 * Eine Woche vor- oder zurückschieben.
 	 *
 	 * Nötig, weil eine einfache Subtraktion an der Jahresgrenze scheitert:

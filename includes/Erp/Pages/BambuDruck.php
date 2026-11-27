@@ -31,8 +31,6 @@ use Lindenweg16\Modules\Betrieb\Bambu\BambuJobRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuPrinterRepository;
 use Lindenweg16\Modules\Betrieb\Bambu\BambuService;
 use Lindenweg16\Modules\Betrieb\Nesting\MeshOutline;
-use Lindenweg16\Modules\Betrieb\Nesting\PlateJobRepository;
-use Lindenweg16\Modules\Betrieb\Nesting\PlateService;
 use Lindenweg16\Modules\Betrieb\Nesting\Polygon;
 use Lindenweg16\Modules\Betrieb\Nesting\Silhouette;
 use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
@@ -47,12 +45,6 @@ use WP_REST_Response;
  * Routen und Regeln der Bambu-Druckaufträge, Platten und Slicing-Profile.
  */
 class BambuDruck {
-
-	/**
-	 * Wie viele Teile höchstens auf einmal angeordnet werden (Schutz vor
-	 * Tippfehlern wie 5000 statt 50; jedes Teil kostet Rechenzeit).
-	 */
-	const MAX_PARTS = 200;
 
 	/**
 	 * Größte erlaubte Profildatei (OrcaSlicer-Profile sind wenige KB groß).
@@ -247,30 +239,6 @@ class BambuDruck {
 	}
 
 	/**
-	 * Aufträge nach Gruppe filtern (leer = alle).
-	 *
-	 * @param array  $jobs  Zeilen mit Schlüssel „group“.
-	 * @param string $group Gruppe.
-	 * @return array
-	 */
-	public static function filter_by_group( array $jobs, $group ) {
-		$group = (string) $group;
-
-		if ( '' === $group ) {
-			return array_values( $jobs );
-		}
-
-		return array_values(
-			array_filter(
-				$jobs,
-				static function ( $job ) use ( $group ) {
-					return isset( $job['group'] ) && $group === $job['group'];
-				}
-			)
-		);
-	}
-
-	/**
 	 * Anzahl je Gruppe.
 	 *
 	 * @param array $jobs Zeilen mit Schlüssel „group“.
@@ -301,16 +269,6 @@ class BambuDruck {
 		}
 
 		return max( 0, min( 255, (int) $raw ) );
-	}
-
-	/**
-	 * Endet der Dateiname auf .3mf?
-	 *
-	 * @param string $name Dateiname.
-	 * @return bool
-	 */
-	public static function is_3mf_name( $name ) {
-		return '3mf' === strtolower( pathinfo( (string) $name, PATHINFO_EXTENSION ) );
 	}
 
 	/**
@@ -357,77 +315,6 @@ class BambuDruck {
 		}
 
 		return $out;
-	}
-
-	/**
-	 * Teile insgesamt.
-	 *
-	 * @param array $items Ergebnis von plate_items().
-	 * @return int
-	 */
-	public static function parts_total( array $items ) {
-		$total = 0;
-		foreach ( $items as $item ) {
-			$total += (int) $item['qty'];
-		}
-
-		return $total;
-	}
-
-	/**
-	 * Sicherheitsabstand: Komma erlaubt; unlesbar oder ≤ 0 heißt Vorgabe
-	 * (wie auf der alten Seite), höchstens 50 mm.
-	 *
-	 * @param mixed $raw Eingabe.
-	 * @return float
-	 */
-	public static function clean_margin( $raw ) {
-		$default = (float) PlateService::DEFAULT_MARGIN_MM;
-
-		if ( null === $raw || ! is_scalar( $raw ) || '' === trim( (string) $raw ) ) {
-			return $default;
-		}
-
-		$value = str_replace( ',', '.', trim( (string) $raw ) );
-
-		if ( ! is_numeric( $value ) || (float) $value <= 0 ) {
-			return $default;
-		}
-
-		return min( 50.0, round( (float) $value, 1 ) );
-	}
-
-	/**
-	 * Darf der Artikel angeordnet werden? Nur gedruckte Artikel mit aktiver
-	 * Revision, deren Datei eine ungeslicte Projekt-3MF ist.
-	 *
-	 * @param array      $article  Artikel.
-	 * @param array|null $revision Aktive Revision.
-	 * @return bool
-	 */
-	public static function is_nestable( array $article, $revision ) {
-		if ( ! isset( $article['sourcing_type'] ) || 'druck' !== $article['sourcing_type'] ) {
-			return false;
-		}
-
-		return is_array( $revision ) && ! empty( $revision['model_file'] ) && isset( $revision['model_kind'] ) && 'modell' === $revision['model_kind'];
-	}
-
-	/**
-	 * Klartext zum Plattenstatus.
-	 *
-	 * @param string $status Status.
-	 * @return string
-	 */
-	public static function plate_status_text( $status ) {
-		$labels = array(
-			'entworfen'      => __( 'Angeordnet, noch nicht geslict', 'lindenweg16' ),
-			'wird_geslict'   => __( 'Wird geslict', 'lindenweg16' ),
-			'geslict'        => __( 'Geslict', 'lindenweg16' ),
-			'fehlgeschlagen' => __( 'Slicen fehlgeschlagen', 'lindenweg16' ),
-		);
-
-		return isset( $labels[ $status ] ) ? $labels[ $status ] : (string) $status;
 	}
 
 	/**

@@ -78,29 +78,6 @@ class Purchase {
 	}
 
 	/**
-	 * Voraussichtlicher Liefertermin aus Bestelldatum und Lieferzeit.
-	 *
-	 * @param string $ordered_on Bestelldatum (Y-m-d).
-	 * @param int    $lead_days  Lieferzeit in Tagen.
-	 * @return string
-	 */
-	public static function expected_date( $ordered_on, $lead_days ) {
-		// Erst die Form prüfen: strtotime('') liefert den heutigen Tag statt
-		// false, und aus einer fehlenden Angabe würde sonst ein Termin.
-		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $ordered_on ) ) {
-			return '';
-		}
-
-		$zeit = strtotime( (string) $ordered_on . ' 12:00:00 UTC' );
-
-		if ( ! $zeit ) {
-			return '';
-		}
-
-		return gmdate( 'Y-m-d', $zeit + max( 0, (int) $lead_days ) * DAY_IN_SECONDS );
-	}
-
-	/**
 	 * Wie viele Tage eine Bestellung überfällig ist.
 	 *
 	 * Negativ heisst: noch nicht fällig. Ohne erwarteten Termin gibt es

@@ -366,17 +366,6 @@ class Repository {
 		) );
 	}
 
-	public static function update_pickliste_pos( $id, array $data ) {
-		global $wpdb;
-		$wpdb->update( self::table( 'pickliste_pos' ), $data, array( 'id' => (int) $id ) );
-	}
-
-	public static function get_pickliste_by_order( $order_id ) {
-		global $wpdb;
-		$t = self::table( 'pickliste' );
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE order_id = %d ORDER BY id DESC LIMIT 1", $order_id ) ); // phpcs:ignore
-	}
-
 	public static function get_unpicked_order_ids() {
 		global $wpdb;
 		$t = self::table( 'pickliste' );

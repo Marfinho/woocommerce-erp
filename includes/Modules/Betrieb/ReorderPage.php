@@ -15,7 +15,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Assets;
 
-use Lindenweg16\Core\MailTemplate;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Core\Settings;
 

@@ -126,24 +126,6 @@ class BetriebLaborCostTest extends TestCase {
 	}
 
 	/**
-	 * Kosten je Auftrag – Buchungen ohne Auftrag zählen nicht mit.
-	 */
-	public function test_kosten_je_auftrag() {
-		$je = LaborCost::by_work_order(
-			array(
-				array( 'created_by' => 7, 'entry_date' => '2026-08-03', 'hours' => 2.0, 'work_order_id' => 5 ),
-				array( 'created_by' => 9, 'entry_date' => '2026-08-03', 'hours' => 1.0, 'work_order_id' => 5 ),
-				array( 'created_by' => 7, 'entry_date' => '2026-08-03', 'hours' => 8.0, 'work_order_id' => 0 ),
-			),
-			$this->loehne()
-		);
-
-		$this->assertSame( array( 5 ), array_keys( $je ) );
-		$this->assertSame( 53.0, $je[5]['cost'] );
-		$this->assertSame( 3.0, $je[5]['hours'] );
-	}
-
-	/**
 	 * Der Vergleich mit dem kalkulatorischen Satz stuft die Abweichung ein.
 	 */
 	public function test_vergleich_stuft_die_abweichung_ein() {

@@ -829,19 +829,6 @@ class Workflow {
 	}
 
 	/**
-	 * Hat der Drucker die Datei dieser Platte geladen?
-	 *
-	 * @param array  $run     Platte.
-	 * @param object $printer Bambu-Drucker.
-	 * @return bool
-	 */
-	protected static function file_is_on_printer( array $run, $printer ) {
-		$plate = PlateJobRepository::find( (int) $run['plate_job_id'] );
-
-		return $plate && RunFlow::file_matches( (string) $printer->current_file, (string) $plate->file_name );
-	}
-
-	/**
 	 * Stand von Slicen und Warteschlange einer Platte (siehe RunFlow::queue_state()).
 	 *
 	 * @param array       $run   Platte.

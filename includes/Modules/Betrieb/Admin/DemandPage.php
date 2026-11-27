@@ -19,7 +19,6 @@ use Lindenweg16\Modules\Betrieb\ProductionPlan;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\PicklistRepository;
-use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\WorkOrderRepository;
 
 /**

@@ -48,7 +48,7 @@ class ErpBambuDruckTest extends TestCase {
 		}
 	}
 
-	public function test_filter_und_zaehlung_nach_gruppe() {
+	public function test_zaehlung_nach_gruppe() {
 		$jobs = array(
 			array( 'id' => 1, 'group' => 'wartend' ),
 			array( 'id' => 2, 'group' => 'laeuft' ),
@@ -57,9 +57,6 @@ class ErpBambuDruckTest extends TestCase {
 			array( 'id' => 5, 'group' => 'fehler' ),
 		);
 
-		$this->assertCount( 5, BambuDruck::filter_by_group( $jobs, '' ) );
-		$this->assertSame( array( 3, 4 ), array_column( BambuDruck::filter_by_group( $jobs, 'fertig' ), 'id' ) );
-		$this->assertSame( array(), BambuDruck::filter_by_group( $jobs, 'storniert' ) );
 		$this->assertSame( array( 'wartend' => 1, 'laeuft' => 1, 'fertig' => 2, 'fehler' => 1, 'storniert' => 0 ), BambuDruck::group_counts( $jobs ) );
 	}
 
@@ -74,19 +71,14 @@ class ErpBambuDruckTest extends TestCase {
 		$this->assertSame( 255, BambuDruck::clean_tray( '9999' ) );
 	}
 
-	public function test_dateiendung_3mf_und_uploadgrenze() {
-		$this->assertTrue( BambuDruck::is_3mf_name( 'Teil.gcode.3mf' ) );
-		$this->assertTrue( BambuDruck::is_3mf_name( 'TEIL.3MF' ) );
-		$this->assertFalse( BambuDruck::is_3mf_name( 'teil.stl' ) );
-		$this->assertFalse( BambuDruck::is_3mf_name( '3mf' ) );
-
+	public function test_uploadgrenze() {
 		$max = BambuService::MAX_FILE_BYTES;
 		$this->assertSame( $max, BambuDruck::max_upload( 0 ) );
 		$this->assertSame( 8388608, BambuDruck::max_upload( 8388608 ), 'Das Serverlimit gilt, wenn es kleiner ist' );
 		$this->assertSame( $max, BambuDruck::max_upload( $max * 4 ) );
 	}
 
-	public function test_plattenmengen_werden_bereinigt_und_zusammengezaehlt() {
+	public function test_plattenmengen_werden_bereinigt() {
 		$items = BambuDruck::plate_items(
 			array(
 				array( 'article_id' => '7', 'qty' => '3' ),
@@ -101,30 +93,7 @@ class ErpBambuDruckTest extends TestCase {
 		);
 
 		$this->assertSame( array( array( 'article_id' => 7, 'qty' => 5 ) ), $items );
-		$this->assertSame( 5, BambuDruck::parts_total( $items ) );
 		$this->assertSame( array(), BambuDruck::plate_items( 'x' ) );
-		$this->assertSame( 0, BambuDruck::parts_total( array() ) );
-	}
-
-	public function test_sicherheitsabstand_mit_komma_vorgabe_und_obergrenze() {
-		$this->assertSame( 5.0, BambuDruck::clean_margin( null ) );
-		$this->assertSame( 5.0, BambuDruck::clean_margin( '' ) );
-		$this->assertSame( 5.0, BambuDruck::clean_margin( 'viel' ) );
-		$this->assertSame( 5.0, BambuDruck::clean_margin( '0' ) );
-		$this->assertSame( 5.0, BambuDruck::clean_margin( '-2' ) );
-		$this->assertSame( 3.5, BambuDruck::clean_margin( '3,5' ) );
-		$this->assertSame( 8.0, BambuDruck::clean_margin( 8 ) );
-		$this->assertSame( 50.0, BambuDruck::clean_margin( '500' ) );
-	}
-
-	public function test_nur_gedruckte_artikel_mit_ungeslicter_projektdatei_lassen_sich_anordnen() {
-		$druck = array( 'sourcing_type' => 'druck' );
-
-		$this->assertTrue( BambuDruck::is_nestable( $druck, array( 'model_file' => 'a.3mf', 'model_kind' => 'modell' ) ) );
-		$this->assertFalse( BambuDruck::is_nestable( $druck, array( 'model_file' => 'a.3mf', 'model_kind' => 'druckdatei' ) ), 'Geslicte Datei hat keine Geometrie mehr' );
-		$this->assertFalse( BambuDruck::is_nestable( $druck, array( 'model_file' => '', 'model_kind' => 'modell' ) ) );
-		$this->assertFalse( BambuDruck::is_nestable( $druck, null ) );
-		$this->assertFalse( BambuDruck::is_nestable( array( 'sourcing_type' => 'zukauf' ), array( 'model_file' => 'a.3mf', 'model_kind' => 'modell' ) ) );
 	}
 
 	public function test_hinweis_zum_letzten_slicing_lauf() {

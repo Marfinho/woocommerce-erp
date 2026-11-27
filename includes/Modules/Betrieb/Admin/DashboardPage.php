@@ -12,7 +12,6 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BetriebModule;
-use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
 use Lindenweg16\Modules\Betrieb\DemandPlanner;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
@@ -215,7 +214,6 @@ class DashboardPage {
 	protected static function render_week( array $iso ) {
 		$bounds   = IsoWeek::bounds( $iso['iso_year'], $iso['iso_week'] );
 		$hours    = TimeRepository::hours_in_week( $iso['iso_year'], $iso['iso_week'] );
-		$settings = CalcSettings::for_date();
 
 		printf(
 			'<h2>%s</h2>',

@@ -1412,7 +1412,6 @@ class InventoryModule {
 	protected function render_historie() {
 		$produkte   = Repository::get_products();
 		$produkt_id = isset( $_GET['produkt_id'] ) ? (int) $_GET['produkt_id'] : 0; // phpcs:ignore WordPress.Security.NonceVerification
-		$base       = admin_url( 'admin.php?page=lw16-lager&view=historie' );
 		?>
 		<h2><?php esc_html_e( 'Bestandsverlauf', 'lindenweg16' ); ?></h2>
 		<form method="get" style="margin-bottom:16px">

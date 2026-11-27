@@ -88,19 +88,6 @@ class EventFields {
 	}
 
 	/**
-	 * Stile als Schlüssel => Beschriftung, für Auswahlfelder.
-	 *
-	 * @return array
-	 */
-	public static function komoot_stil_optionen() {
-		$out = array();
-		foreach ( self::komoot_stile() as $key => $stil ) {
-			$out[ $key ] = $stil['label'];
-		}
-		return $out;
-	}
-
-	/**
 	 * Höhe der Einbettung für einen Stil.
 	 *
 	 * @param string $stil Schlüssel.

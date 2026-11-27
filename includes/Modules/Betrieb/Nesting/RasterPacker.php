@@ -51,12 +51,6 @@ class RasterPacker {
 	const DEFAULT_ROTATIONS = array( 0, 90, 180, 270 );
 
 	/**
-	 * Feinere Drehschritte (45°) für Teile, die schräg besser nisten. Nicht
-	 * Standard; über den Filter lw16_plate_rotations einschaltbar.
-	 */
-	const FINE_ROTATIONS = array( 0, 90, 180, 270, 45, 135, 225, 315 );
-
-	/**
 	 * Bauteile auf einem oder mehreren Betten anordnen.
 	 *
 	 * @param array $parts           Liste {key, sil} – sil = Silhouette (siehe Silhouette).

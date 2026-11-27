@@ -16,7 +16,6 @@ defined( 'ABSPATH' ) || exit;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\BatchRepository;
-use Lindenweg16\Modules\Betrieb\CalcSettings;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CapacityPlanner;
 use Lindenweg16\Modules\Betrieb\ColorRegistry;
@@ -24,8 +23,6 @@ use Lindenweg16\Modules\Betrieb\CommissionBatch;
 use Lindenweg16\Modules\Betrieb\CommissionRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\DeviceLabel;
-use Lindenweg16\Modules\Betrieb\DiscountResolver;
-use Lindenweg16\Modules\Betrieb\FilamentRepository;
 use Lindenweg16\Modules\Betrieb\IsoWeek;
 use Lindenweg16\Modules\Betrieb\Kpi;
 use Lindenweg16\Modules\Betrieb\KpiGoalRepository;
@@ -39,11 +36,8 @@ use Lindenweg16\Modules\Betrieb\PrintJobRepository;
 use Lindenweg16\Modules\Betrieb\ReorderPage;
 use Lindenweg16\Modules\Betrieb\ReorderToken;
 use Lindenweg16\Modules\Betrieb\Reporting;
-use Lindenweg16\Modules\Betrieb\RevisionRepository;
-use Lindenweg16\Modules\Betrieb\StockLedger;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 use Lindenweg16\Modules\Betrieb\Stopwatch;
-use Lindenweg16\Modules\Betrieb\TimeCategoryGuess;
 use Lindenweg16\Modules\Betrieb\TimeRepository;
 use Lindenweg16\Modules\Betrieb\TimerState;
 use Lindenweg16\Modules\Betrieb\TrendChart;
@@ -295,7 +289,6 @@ class SimplePages {
 	 * @param array $commission Kommissionsbestand des Händlers.
 	 */
 	protected function commission_form( $contact_id, array $commission ) {
-		$articles = ArticleRepository::all_by_id();
 		$farben   = ColorRegistry::all();
 
 		// Was draussen liegt, zuerst – als article_id|color => Menge.

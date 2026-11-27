@@ -20,8 +20,6 @@ use Lindenweg16\Modules\Betrieb\ArticleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;
 use Lindenweg16\Modules\Betrieb\CostCalculator;
 use Lindenweg16\Modules\Betrieb\RevisionRepository;
-use Lindenweg16\Modules\Betrieb\StockLedger;
-use Lindenweg16\Modules\Betrieb\LabelSheet;
 use Lindenweg16\Modules\Betrieb\StockRepository;
 
 /**

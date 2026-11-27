@@ -452,10 +452,6 @@
 		return null;
 	}
 
-	function scannerAvailable() {
-		return null === scannerProblem();
-	}
-
 	function closeCamera() {
 		if ( scanLoop ) {
 			window.clearInterval( scanLoop );

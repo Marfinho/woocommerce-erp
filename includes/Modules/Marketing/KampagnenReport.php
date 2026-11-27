@@ -28,11 +28,6 @@ class KampagnenReport {
 	const META_UTM_CAMPAIGN = '_wc_order_attribution_utm_campaign';
 
 	/**
-	 * Meta-Schlüssel der Herkunftsart (utm, referral, organic …).
-	 */
-	const META_SOURCE_TYPE = '_wc_order_attribution_source_type';
-
-	/**
 	 * Auswertungszeitraum einer Kostenstelle.
 	 *
 	 * Der Umsatz darf über das Kampagnenende hinaus zählen: Wer am Marktstand

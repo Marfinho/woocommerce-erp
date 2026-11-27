@@ -223,31 +223,6 @@ class Rules {
 	}
 
 	/**
-	 * Vorschlag für einen Code aus dem Namen: „Anna Müller“ wird „ANNAMUELLER“ bzw. gekürzt „ANNA“.
-	 *
-	 * @param string $name Name oder Profilname.
-	 * @return string Leer, wenn nichts Brauchbares übrig bleibt.
-	 */
-	public static function suggest_code( $name ) {
-		$name = strtr(
-			(string) $name,
-			array(
-				'ä' => 'ae',
-				'ö' => 'oe',
-				'ü' => 'ue',
-				'Ä' => 'AE',
-				'Ö' => 'OE',
-				'Ü' => 'UE',
-				'ß' => 'ss',
-			)
-		);
-		$word = preg_split( '/\s+/', trim( $name ) );
-		$word = strtoupper( preg_replace( '/[^A-Za-z0-9]/', '', (string) $word[0] ) );
-
-		return strlen( $word ) >= 3 ? substr( $word, 0, 16 ) : '';
-	}
-
-	/**
 	 * Provision aus Bemessungsgrundlage und Satz.
 	 *
 	 * @param float $base    Bemessungsgrundlage in Euro.

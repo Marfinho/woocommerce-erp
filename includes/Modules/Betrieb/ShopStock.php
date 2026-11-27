@@ -83,28 +83,6 @@ class ShopStock {
 	}
 
 	/**
-	 * Mengen je Variante des Shop-Produkts.
-	 *
-	 * Eine Variante ohne Farbe gilt als Standardfarbe. Eine Farbe, die das
-	 * Lager nicht kennt, hat keinen Bestand.
-	 *
-	 * @param array  $variations Variante => Farbe (Slug, leer = Standardfarbe).
-	 * @param array  $available  color => verfügbare Stück.
-	 * @param string $default    Standardfarbe.
-	 * @return array Variante => Stück.
-	 */
-	public static function per_variation( array $variations, array $available, $default ) {
-		$out = array();
-
-		foreach ( $variations as $id => $color ) {
-			$color       = '' === (string) $color ? (string) $default : (string) $color;
-			$out[ $id ] = isset( $available[ $color ] ) ? (int) $available[ $color ] : 0;
-		}
-
-		return $out;
-	}
-
-	/**
 	 * Menge eines einfachen Produkts: alle Farben zusammen.
 	 *
 	 * Ungeklärte Bewegungen zählen mit – die Ware fehlt oder liegt dort

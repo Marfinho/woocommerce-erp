@@ -140,20 +140,6 @@ class Kpi {
 	}
 
 	/**
-	 * Manuelle Kennzahlen, die nicht aus den Daten kommen.
-	 *
-	 * @return array
-	 */
-	public static function manual_metrics() {
-		return array(
-			'kosten_je_neukunde' => __( 'Kosten je Neukunde (€)', 'lindenweg16' ),
-			'roas'               => __( 'ROAS bezahlte Werbung', 'lindenweg16' ),
-			'organischer_traffic' => __( 'Organischer Traffic', 'lindenweg16' ),
-			'db_ist'             => __( 'Deckungsbeitrag Ist (€)', 'lindenweg16' ),
-		);
-	}
-
-	/**
 	 * Eine Kennzahl bewerten – reine Logik.
 	 *
 	 * @param string     $key   Kennzahl.

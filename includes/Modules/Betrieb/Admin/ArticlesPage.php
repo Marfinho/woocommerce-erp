@@ -17,7 +17,6 @@ use Lindenweg16\Modules\Betrieb\Nesting\SlicingProfileRepository;
 use Lindenweg16\Modules\Betrieb\PriceSync;
 use Lindenweg16\Modules\Betrieb\BinRepository;
 use Lindenweg16\Modules\Betrieb\BomRepository;
-use Lindenweg16\Modules\Betrieb\BomResolver;
 use Lindenweg16\Modules\Betrieb\BundleCalculator;
 use Lindenweg16\Modules\Betrieb\BundleRepository;
 use Lindenweg16\Modules\Betrieb\CalculationContext;

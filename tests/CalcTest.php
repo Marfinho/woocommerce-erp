@@ -117,70 +117,9 @@ class CalcTest extends TestCase {
 		$this->assertEqualsWithDelta( 0.02, Calc::drucker_kosten_pro_stunde( 500, 0, 0.02, 0, 0 ), 0.0001 );
 	}
 
-	public function test_modul_kosten_with_scrap_buffer() {
-		$args = array(
-			'filament_gramm'      => 50,
-			'filamentpreis_pro_kg' => 20,   // 50 g -> 1,00 €.
-			'drucker_kosten_h'    => 0.1725,
-			'druckzeit_stunden'   => 2,     // 0,345 €.
-			'arbeitszeit_minuten' => 15,
-			'stundenlohn'         => 16,    // 0,25 h * 16 = 4,00 €.
-			'verpackung_euro'     => 0.5,
-			'zusatzmaterial_euro' => 0.25,
-			'ausschuss_prozent'   => 5,
-		);
-		// Zwischensumme = 1 + 0,345 + 4 + 0,5 + 0,25 = 6,095; ×1,05 = 6,39975 -> 6,40.
-		$this->assertSame( 6.4, Calc::modul_kosten( $args ) );
-	}
-
-	public function test_preis_aus_marge_rounds_to_full_euro() {
-		// 6,40 / (1 - 0,5) = 12,80 -> 13.
-		$this->assertSame( 13.0, Calc::preis_aus_marge( 6.4, 50 ) );
-	}
-
-	public function test_set_preis_applies_discount_and_rounds() {
-		// (13 + 13) * (1 - 0,1) = 23,4 -> 23.
-		$this->assertSame( 23.0, Calc::set_preis( 26, 10 ) );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Marge / „Preis übernehmen"-Konsistenz
 	 * -------------------------------------------------------------- */
-
-	public function test_marge_prozent() {
-		// Kosten 6,40, Preis 13 -> (13-6,4)/13 = 50,77 %.
-		$this->assertSame( 50.77, Calc::marge_prozent( 6.4, 13 ) );
-	}
-
-	public function test_marge_prozent_zero_price() {
-		$this->assertSame( 0.0, Calc::marge_prozent( 5, 0 ) );
-	}
-
-	public function test_preis_uebernehmen_matches_referral_margin() {
-		// Der beim „Preis übernehmen" gesetzte Preis und die daraus
-		// berechnete Marge müssen konsistent sein: die Marge, die ins
-		// Referral-Programm geschrieben wird, ist marge_prozent(kosten, preis).
-		$kosten = Calc::modul_kosten(
-			array(
-				'filament_gramm'      => 50,
-				'filamentpreis_pro_kg' => 20,
-				'drucker_kosten_h'    => 0.1725,
-				'druckzeit_stunden'   => 2,
-				'arbeitszeit_minuten' => 15,
-				'stundenlohn'         => 16,
-				'verpackung_euro'     => 0.5,
-				'zusatzmaterial_euro' => 0.25,
-				'ausschuss_prozent'   => 5,
-			)
-		);
-		$preis = Calc::preis_aus_marge( $kosten, 50 );
-		$marge = Calc::marge_prozent( $kosten, $preis );
-		// Reward mit genau dieser Marge muss stabil reproduzierbar sein.
-		$reward = Calc::referral_reward( $preis, $marge, 5 );
-		$this->assertGreaterThan( 0, $reward );
-		// Gegenprobe: Reward = Preis × Marge% × 5%.
-		$this->assertSame( round( $preis * ( $marge / 100 ) * 0.05, 2 ), $reward );
-	}
 
 	/* ----------------------------------------------------------------
 	 * EÜR / Rücklage
@@ -222,52 +161,6 @@ class CalcTest extends TestCase {
 	 * Lagerabzug bei Sets/Stücklisten (Kaskade)
 	 * -------------------------------------------------------------- */
 
-	public function test_cascade_deductions_set_to_modules() {
-		$stueckliste = array(
-			array( 'modul_id' => 10, 'menge' => 1 ),
-			array( 'modul_id' => 20, 'menge' => 2 ),
-		);
-		$rezepturen = array();
-		$result = Calc::cascade_deductions( 3, $stueckliste, $rezepturen );
-		$this->assertSame( -3.0, $result[10] );
-		$this->assertSame( -6.0, $result[20] );
-	}
-
-	public function test_cascade_deductions_modules_to_raw_materials() {
-		$stueckliste = array(
-			array( 'modul_id' => 10, 'menge' => 1 ),
-		);
-		$rezepturen = array(
-			10 => array(
-				array( 'rohmaterial_id' => 100, 'menge' => 0.5 ),
-				array( 'rohmaterial_id' => 200, 'menge' => 0.1 ),
-			),
-		);
-		$result = Calc::cascade_deductions( 2, $stueckliste, $rezepturen );
-		// Modul 10: -2.
-		$this->assertSame( -2.0, $result[10] );
-		// Rohmaterial 100: 2 × 0.5 = -1.0.
-		$this->assertSame( -1.0, $result[100] );
-		// Rohmaterial 200: 2 × 0.1 = -0.2.
-		$this->assertEqualsWithDelta( -0.2, $result[200], 0.0001 );
-	}
-
-	public function test_cascade_deductions_full_chain() {
-		// Set enthält 2× Modul A; Modul A braucht 50g Rohmaterial R.
-		$stueckliste = array(
-			array( 'modul_id' => 5, 'menge' => 2 ),
-		);
-		$rezepturen = array(
-			5 => array(
-				array( 'rohmaterial_id' => 50, 'menge' => 50 ),
-			),
-		);
-		// Verkauf von 1 Set.
-		$result = Calc::cascade_deductions( 1, $stueckliste, $rezepturen );
-		$this->assertSame( -2.0, $result[5] );
-		$this->assertSame( -100.0, $result[50] );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Bewertungs-Punkte nur bei echter Bewertung
 	 * -------------------------------------------------------------- */
@@ -296,35 +189,7 @@ class CalcTest extends TestCase {
 	 * Warteliste: nur einmal benachrichtigen
 	 * -------------------------------------------------------------- */
 
-	public function test_waitlist_should_notify_first_time() {
-		$this->assertTrue( Calc::waitlist_should_notify( false ) );
-	}
-
-	public function test_waitlist_should_not_notify_again() {
-		$this->assertFalse( Calc::waitlist_should_notify( true ) );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Warenkorb-Tracking nur mit bekannter E-Mail
 	 * -------------------------------------------------------------- */
-
-	public function test_cart_should_track_with_email() {
-		$this->assertTrue( Calc::cart_should_track( 'test@example.com', false, false ) );
-	}
-
-	public function test_cart_should_not_track_without_email() {
-		$this->assertFalse( Calc::cart_should_track( '', false, false ) );
-	}
-
-	public function test_cart_should_not_track_invalid_email() {
-		$this->assertFalse( Calc::cart_should_track( 'not-an-email', false, false ) );
-	}
-
-	public function test_cart_should_not_track_empty_cart() {
-		$this->assertFalse( Calc::cart_should_track( 'test@example.com', true, false ) );
-	}
-
-	public function test_cart_should_not_track_admin_request() {
-		$this->assertFalse( Calc::cart_should_track( 'test@example.com', false, true ) );
-	}
 }

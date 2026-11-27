@@ -10,7 +10,6 @@ namespace Lindenweg16\Modules\Accounting;
 defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
-use Lindenweg16\Core\AuditLog;
 use Lindenweg16\Modules\Marketing\KampagnenRepository;
 
 /**
@@ -1344,8 +1343,6 @@ class AccountingModule {
 	protected function render_anlagen() {
 		echo '<h2>' . esc_html__( 'Anlagenbuchhaltung', 'lindenweg16' ) . '</h2>';
 
-		// AfA buchen.
-		$afa_url = wp_nonce_url( admin_url( 'admin-post.php?action=lw16_book_afa' ), 'lw16_book_afa' );
 		echo '<p>' . esc_html__( 'Anlagevermögen gesamt:', 'lindenweg16' ) . ' <strong>' . esc_html( self::euro( AnlagenRepository::summe_buchwerte() ) ) . '</strong></p>';
 
 		// Neue Anlage erfassen.

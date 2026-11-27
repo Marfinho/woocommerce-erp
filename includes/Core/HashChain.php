@@ -51,24 +51,6 @@ class HashChain {
 	}
 
 	/**
-	 * Hash und Vorgänger-Hash für ein INSERT vorbereiten.
-	 *
-	 * @param string $table_key Kurzname (z. B. 'belege').
-	 * @param array  $data      Datensatz (ohne hash/vorheriger_hash).
-	 * @return array Array mit 'hash' und 'vorheriger_hash'.
-	 */
-	public static function prepare_insert( $table_key, array $data ) {
-		global $wpdb;
-		$table_full = $wpdb->prefix . 'lw16_' . $table_key;
-		$prev       = self::get_last_hash( $table_full );
-		$hash       = self::compute( $table_key, $data, $prev );
-		return array(
-			'hash'             => $hash,
-			'vorheriger_hash'  => $prev,
-		);
-	}
-
-	/**
 	 * Einen verketteten Datensatz anlegen.
 	 *
 	 * Lesen des Vorgängerhashs und Einfügen gehören zusammen. Liefen sie

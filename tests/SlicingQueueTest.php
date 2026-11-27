@@ -33,24 +33,6 @@ class SlicingQueueTest extends TestCase {
 	 * Lock / Lease
 	 * -------------------------------------------------------------- */
 
-	/**
-	 * Ein Lock ohne Zeitstempel gilt als abgelaufen.
-	 */
-	public function test_lock_ohne_zeitstempel_ist_abgelaufen() {
-		$this->assertTrue( SlicingJobRepository::is_lock_expired( null, time() ) );
-		$this->assertTrue( SlicingJobRepository::is_lock_expired( '', time() ) );
-	}
-
-	/**
-	 * Innerhalb der Lease-Zeit gilt der Lock als gültig, danach als
-	 * abgelaufen.
-	 */
-	public function test_lock_schwelle() {
-		$now = time();
-		$this->assertFalse( SlicingJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 10 * 60 ), $now, 30 ) );
-		$this->assertTrue( SlicingJobRepository::is_lock_expired( gmdate( 'Y-m-d H:i:s', $now - 31 * 60 ), $now, 30 ) );
-	}
-
 	/* ----------------------------------------------------------------
 	 * Long-Poll-Grenzen
 	 * -------------------------------------------------------------- */
@@ -81,16 +63,6 @@ class SlicingQueueTest extends TestCase {
 	/* ----------------------------------------------------------------
 	 * Zustandsübergänge
 	 * -------------------------------------------------------------- */
-
-	/**
-	 * Nur ein wartender Auftrag darf geclaimt werden.
-	 */
-	public function test_nur_queued_darf_geclaimt_werden() {
-		$this->assertTrue( SlicingJobRepository::can_claim( 'queued' ) );
-		foreach ( array( 'claimed', 'slicing', 'completed', 'failed', 'cancelled' ) as $status ) {
-			$this->assertFalse( SlicingJobRepository::can_claim( $status ), $status );
-		}
-	}
 
 	/**
 	 * complete() ist idempotent gedacht: completed ist als Ausgangsstatus

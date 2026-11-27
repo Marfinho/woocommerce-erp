@@ -15,7 +15,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\ArticleRepository;
-use Lindenweg16\Modules\Betrieb\ComponentRepository;
 use Lindenweg16\Modules\Betrieb\ContactRepository;
 use Lindenweg16\Modules\Betrieb\LegacyMigration;
 use Lindenweg16\Modules\Betrieb\FilamentRepository;

@@ -11,7 +11,6 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Admin\MenuGroups;
 use Lindenweg16\Modules\ArView\Options;
-use Lindenweg16\Modules\ArView\ProductMeta;
 use Lindenweg16\Modules\ArView\Stats;
 use Lindenweg16\Modules\ArView\Viewer;
 
