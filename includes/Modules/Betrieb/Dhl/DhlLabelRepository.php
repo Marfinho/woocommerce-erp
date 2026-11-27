@@ -84,10 +84,46 @@ class DhlLabelRepository {
 	 * @return float|null Null, wenn kein Label ein Porto hat.
 	 */
 	public static function cost_for_order( $order_id ) {
+		return self::cost_of( self::all_for_order( $order_id ) );
+	}
+
+	/**
+	 * Gültige Labels vieler Bestellungen mit einer Abfrage, älteste zuerst.
+	 *
+	 * @param int[] $order_ids Bestellungen.
+	 * @return array order_id => Labels wie all_for_order(); Bestellungen ohne Label fehlen.
+	 */
+	public static function all_for_orders( array $order_ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $order_ids ) ) ) );
+		if ( ! $ids ) {
+			return array();
+		}
+
+		$rows = (array) $wpdb->get_results(
+			'SELECT * FROM ' . self::table() . ' WHERE order_id IN (' . implode( ',', $ids ) . ') AND storniert = 0 ORDER BY id ASC' // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- nur Ganzzahlen
+		);
+
+		$out = array();
+		foreach ( $rows as $row ) {
+			$out[ (int) $row->order_id ][] = $row;
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Porto einer Liste von Labels (netto).
+	 *
+	 * @param array $labels Labels einer Bestellung.
+	 * @return float|null Null, wenn von keinem Label das Porto bekannt ist.
+	 */
+	public static function cost_of( array $labels ) {
 		$sum   = 0.0;
 		$known = false;
 
-		foreach ( self::all_for_order( $order_id ) as $label ) {
+		foreach ( $labels as $label ) {
 			if ( null !== $label->kosten_netto ) {
 				$sum  += (float) $label->kosten_netto;
 				$known = true;

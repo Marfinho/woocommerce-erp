@@ -162,7 +162,10 @@ class Plugin {
 	 */
 	public function maybe_flush_rewrite() {
 		if ( get_option( 'lw16_flush_rewrite' ) ) {
-			delete_option( 'lw16_flush_rewrite' );
+			// Auf 0 setzen statt löschen: Eine fehlende Option kostet bei
+			// jedem Seitenaufruf eine Datenbankabfrage, eine vorhandene
+			// kommt mit den übrigen automatisch geladenen Optionen.
+			update_option( 'lw16_flush_rewrite', 0, true );
 			flush_rewrite_rules();
 		}
 	}

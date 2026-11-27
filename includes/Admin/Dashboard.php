@@ -137,12 +137,14 @@ class Dashboard {
 		$umsatz_jahr  = EuerCalculator::einnahmen( $jahr_from, $jahr_to );
 
 		$offene = wc_get_orders( array(
+			'type'   => 'shop_order',
 			'status' => array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-pending' ),
 			'limit'  => -1,
 			'return' => 'ids',
 		) );
 
 		$heute = wc_get_orders( array(
+			'type'         => 'shop_order',
 			'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-pending', 'wc-completed' ),
 			'date_created' => gmdate( 'Y-m-d' ) . '...' . gmdate( 'Y-m-d' ),
 			'limit'        => -1,
@@ -231,6 +233,7 @@ class Dashboard {
 	 */
 	protected function render_recent_orders() {
 		$orders = wc_get_orders( array(
+			'type'    => 'shop_order',
 			'limit'   => 5,
 			'orderby' => 'date',
 			'order'   => 'DESC',

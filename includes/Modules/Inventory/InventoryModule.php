@@ -1140,6 +1140,7 @@ class InventoryModule {
 
 	protected function render_retouren() {
 		$orders = wc_get_orders( array(
+			'type'   => 'shop_order',
 			'status' => array( 'wc-completed' ),
 			'limit'  => 50,
 			'return' => 'objects',

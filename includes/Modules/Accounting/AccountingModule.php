@@ -179,6 +179,7 @@ class AccountingModule {
 
 		$orders = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => array( 'processing', 'kommissioniert', 'completed', 'on-hold' ),
 				'limit'        => 200,
 				'date_created' => '>' . ( time() - 30 * DAY_IN_SECONDS ),
@@ -213,8 +214,10 @@ class AccountingModule {
 
 		if ( is_array( $args ) && isset( $args['order_id'] ) ) {
 			$order_id = (int) $args['order_id'];
-		} elseif ( is_object( $args ) && isset( $args->id ) ) {
-			$order_id = (int) $args->id;
+		} elseif ( is_object( $args ) && method_exists( $args, 'get_id' ) ) {
+			// WooCommerce übergibt die Bestellung; $order->id ist seit 3.0
+			// veraltet und schrieb bei jeder Notiz eine Warnung ins Log.
+			$order_id = (int) $args->get_id();
 		}
 
 		if ( $order_id ) {

@@ -7,6 +7,20 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.3] – 2026-11-27
+
+### Behoben
+- **Fünf ERP-Seiten brachen ab, sobald es eine Erstattung gab:** Dashboard, Tagesplan, Rückblick, Nachkauf und EÜR meldeten „Call to undefined method OrderRefund::…“ (gemessen mit HPOS und mit der alten Bestellablage; über alle ERP-Schnittstellen waren es 15 Abbrüche). Ursache: `wc_get_orders()` liefert ohne `'type'` auch Erstattungen mit, und die tragen in WooCommerce den Status „abgeschlossen“. Alle Bestellabfragen nennen jetzt `'type' => 'shop_order'` (außer dem Zurücksetzen, das bewusst alles löscht). Auswertungen ohne Abbruch zählten Erstattungen bisher still als Bestellungen mit (z. B. die Bestellzahl im Rückblick), das ist damit ebenfalls behoben. Ein Test (`tests/OrderQueryTypeTest.php`) meldet künftig jede Bestellabfrage ohne Typ.
+- Jede Bestellnotiz schrieb eine WooCommerce-Warnung ins Log („Order properties should not be accessed directly“), weil die Gebührenerfassung `$order->id` las.
+
+### Geändert
+- **Weniger Datenbankabfragen**, gemessen in einer Testinstallation mit 300 Bestellungen; die Antworten sind vor und nach der Änderung identisch:
+  - Versandkarte (`/erp/versand`): Labels und Sendungsdaten aller Karten mit je einer Abfrage statt vier je Bestellung (542 → 40 Abfragen).
+  - Aufträge: Die Shop-Bestellungen einer Liste werden gesammelt geladen statt Zeile für Zeile (136 → 22), das wirkt in allen Listen über `OrderOpsRepository::all()`.
+  - Mahnwesen (90 → 18) und „Fehlende Rechnungen“ (112 → 13): Zuordnungen mit einer Abfrage für alle Bestellungen.
+  - Kennzahlen-Verlauf: Die Kalkulationswerte-Historie wird je Aufruf einmal gelesen statt je Woche (281 → 200).
+- **Shopseiten:** Optionen, die das Plugin bei jedem Seitenaufruf liest (Prognose, Vorverkauf, AR-Ansicht, Partnerkonto, Merker für Adressregeln und für die Hintergrundjobs), werden jetzt mit den übrigen Optionen automatisch geladen statt einzeln abgefragt; die Eventtypen für den Veranstaltungs-Block lädt nur noch der Block-Editor. Das Plugin selbst stellt auf einer Shopseite damit 0–5 statt 6–10 Abfragen. Bestehende Installationen stellt das Update um (DB-Version 63).
+
 ## [0.105.2] – 2026-11-27
 
 ### Entfernt

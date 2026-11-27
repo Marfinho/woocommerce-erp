@@ -125,6 +125,7 @@ class OrderMailsBox {
 
 		$orders = wc_get_orders(
 			array(
+				'type'          => 'shop_order',
 				'billing_email' => $email,
 				'limit'         => 5,
 				'orderby'       => 'date',

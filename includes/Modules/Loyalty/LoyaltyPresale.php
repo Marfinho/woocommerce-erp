@@ -87,7 +87,7 @@ class LoyaltyPresale {
 
 		$presale['id'] = $id;
 		$list[]        = $presale;
-		update_option( self::OPTION, $list, false );
+		update_option( self::OPTION, $list, true );
 		self::$cache          = null;
 		self::$blocking_cache = array();
 		return $id;
@@ -112,7 +112,7 @@ class LoyaltyPresale {
 		if ( count( $keep ) === count( $list ) ) {
 			return false;
 		}
-		update_option( self::OPTION, $keep, false );
+		update_option( self::OPTION, $keep, true );
 		self::$cache          = null;
 		self::$blocking_cache = array();
 		return true;

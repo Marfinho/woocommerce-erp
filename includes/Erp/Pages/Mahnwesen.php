@@ -485,6 +485,7 @@ class Mahnwesen {
 
 		return (array) wc_get_orders(
 			array(
+				'type'   => 'shop_order',
 				'status' => array( 'wc-on-hold', 'wc-pending' ),
 				'limit'  => 300,
 				'return' => 'objects',
@@ -524,9 +525,19 @@ class Mahnwesen {
 		}
 
 		if ( (int) $s['shop_mahnen'] ) {
-			foreach ( self::shop_orders() as $order ) {
+			$shop = self::shop_orders();
+			$ops  = OrderOpsRepository::find_by_orders(
+				array_map(
+					static function ( $order ) {
+						return $order->get_id();
+					},
+					$shop
+				)
+			);
+
+			foreach ( $shop as $order ) {
 				// Gehört die Bestellung zu einem Auftrag mit offener Rechnung, steht sie dort schon.
-				$op = OrderOpsRepository::find_by_order( (int) $order->get_id() );
+				$op = $ops[ (int) $order->get_id() ] ?? null;
 				if ( $op && in_array( $op['invoice_status'], array( 'offen', 'berechnet' ), true ) && $op['invoice_date'] ) {
 					continue;
 				}

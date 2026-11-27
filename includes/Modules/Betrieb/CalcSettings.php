@@ -74,6 +74,13 @@ class CalcSettings {
 	}
 
 	/**
+	 * Alle Zeilen der Historie, je Aufruf einmal gelesen (siehe for_date()).
+	 *
+	 * @var array|null
+	 */
+	private static $rows = null;
+
+	/**
 	 * Tabellenname.
 	 *
 	 * @return string
@@ -130,16 +137,27 @@ class CalcSettings {
 		if ( '' === $stichtag ) {
 			$stichtag = gmdate( 'Y-m-d' );
 		}
-		$table = self::table();
-		$rows  = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT setting_key, value_decimal, valid_from FROM {$table} WHERE valid_from <= %s ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$stichtag
-			),
-			ARRAY_A
+
+		// Die Historie ist klein, wird aber in Auswertungen je Woche und
+		// Monat abgefragt: einmal je Aufruf lesen, dann in PHP filtern.
+		if ( null === self::$rows ) {
+			$table      = self::table();
+			self::$rows = (array) $wpdb->get_results(
+				"SELECT setting_key, value_decimal, valid_from FROM {$table} ORDER BY id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				ARRAY_A
+			);
+		}
+
+		$rows = array_values(
+			array_filter(
+				self::$rows,
+				static function ( $row ) use ( $stichtag ) {
+					return (string) $row['valid_from'] <= (string) $stichtag;
+				}
+			)
 		);
 
-		return self::resolve( $rows ? $rows : array(), $stichtag );
+		return self::resolve( $rows, $stichtag );
 	}
 
 	/**
@@ -197,9 +215,11 @@ class CalcSettings {
 
 		if ( $before ) {
 			$ok = false !== $wpdb->update( $table, $data, array( 'id' => (int) $before['id'] ) );
+			self::$rows = null;
 			BetriebAudit::record( 'update', 'calc_settings', (int) $before['id'], $before, $data, $note );
 		} else {
 			$ok = false !== $wpdb->insert( $table, $data );
+			self::$rows = null;
 			BetriebAudit::record( 'create', 'calc_settings', (int) $wpdb->insert_id, null, $data, $note );
 		}
 
@@ -251,6 +271,7 @@ class CalcSettings {
 				)
 			);
 		}
+		self::$rows = null;
 	}
 
 	/**

@@ -307,6 +307,7 @@ class AccountOverview {
 	protected static function render_stats( $user_id ) {
 		$open = wc_get_orders(
 			array(
+				'type'        => 'shop_order',
 				'customer_id' => $user_id,
 				'status'      => array( 'wc-pending', 'wc-on-hold', 'wc-processing', 'wc-kommissioniert' ),
 				'limit'       => -1,
@@ -336,6 +337,7 @@ class AccountOverview {
 	protected static function render_last_order( $user_id ) {
 		$orders = wc_get_orders(
 			array(
+				'type'        => 'shop_order',
 				'customer_id' => $user_id,
 				'limit'       => 1,
 				'orderby'     => 'date',

@@ -783,6 +783,7 @@ class Bank {
 		if ( function_exists( 'wc_get_orders' ) ) {
 			$orders = wc_get_orders(
 				array(
+					'type'   => 'shop_order',
 					'status' => array( 'wc-on-hold', 'wc-pending' ),
 					'limit'  => 200,
 					'return' => 'objects',

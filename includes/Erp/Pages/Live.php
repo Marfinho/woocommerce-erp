@@ -169,6 +169,7 @@ class Live {
 		$statuses = array( 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-completed' );
 		$orders   = (array) wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => $statuses,
 				'date_created' => $yday->getTimestamp() . '...' . ( $today->getTimestamp() + DAY_IN_SECONDS ),
 				'limit'        => -1,

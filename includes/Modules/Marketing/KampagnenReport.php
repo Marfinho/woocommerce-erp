@@ -123,6 +123,7 @@ class KampagnenReport {
 
 		$orders = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 				'date_created' => $zeitraum['von'] . '...' . $zeitraum['bis'],
 				'limit'        => -1,

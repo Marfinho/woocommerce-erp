@@ -81,7 +81,13 @@ class OrderOpsRepository {
 		$sql      = "SELECT * FROM {$table} WHERE " . implode( ' AND ', $where ) . ' ORDER BY id DESC LIMIT %d';
 		$params[] = isset( $args['limit'] ) ? (int) $args['limit'] : 200;
 
-		return $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( $sql, $params ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL
+
+		// Fast jede Liste zeigt danach Wert oder Datum aus WooCommerce
+		// (order_value(), order_date()): einmal gesammelt laden statt je Zeile.
+		self::prime_wc_orders( $rows );
+
+		return $rows;
 	}
 
 	/**
@@ -112,6 +118,28 @@ class OrderOpsRepository {
 			$wpdb->prepare( "SELECT * FROM {$table} WHERE wc_order_id = %d", (int) $wc_order_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
+	}
+
+	/**
+	 * Aufträge zu vielen Shop-Bestellungen mit einer Abfrage.
+	 *
+	 * @param int[] $wc_order_ids Shop-Bestellungen.
+	 * @return array wc_order_id => Auftrag wie find_by_order(); ohne Auftrag fehlt der Eintrag.
+	 */
+	public static function find_by_orders( array $wc_order_ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $wc_order_ids ) ) ) );
+		if ( ! $ids ) {
+			return array();
+		}
+
+		$out = array();
+		foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . self::table() . ' WHERE wc_order_id IN (' . implode( ',', $ids ) . ')', ARRAY_A ) as $row ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- nur Ganzzahlen
+			$out[ (int) $row['wc_order_id'] ] = $row;
+		}
+
+		return $out;
 	}
 
 	/**
@@ -395,7 +423,45 @@ class OrderOpsRepository {
 	protected static $wc_cache = array();
 
 	/**
-	 * WooCommerce-Bestellung einmalig laden.
+	 * Die WooCommerce-Bestellungen einer ganzen Liste mit einer Abfrage
+	 * vorladen, statt sie Zeile für Zeile einzeln zu holen.
+	 *
+	 * @param array $orders Aufträge (Zeilen mit wc_order_id).
+	 * @return void
+	 */
+	public static function prime_wc_orders( array $orders ) {
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return;
+		}
+
+		$ids = array();
+		foreach ( $orders as $order ) {
+			$id = isset( $order['wc_order_id'] ) ? (int) $order['wc_order_id'] : 0;
+			if ( $id && ! array_key_exists( $id, self::$wc_cache ) ) {
+				$ids[ $id ] = $id;
+			}
+		}
+
+		if ( ! $ids ) {
+			return;
+		}
+
+		foreach ( array_chunk( array_values( $ids ), 200 ) as $chunk ) {
+			foreach ( (array) wc_get_orders( array( 'type' => 'shop_order', 'post__in' => $chunk, 'limit' => -1 ) ) as $wc ) {
+				self::$wc_cache[ $wc->get_id() ] = $wc;
+			}
+		}
+
+		// Nicht gefunden (gelöscht): nicht noch einmal einzeln nachfragen.
+		foreach ( $ids as $id ) {
+			if ( ! array_key_exists( $id, self::$wc_cache ) ) {
+				self::$wc_cache[ $id ] = null;
+			}
+		}
+	}
+
+	/**
+	 * WooCommerce-Bestellung zu einer ID, je Aufruf nur einmal geladen.
 	 *
 	 * @param int $wc_order_id Bestellung.
 	 * @return \WC_Order|null

@@ -68,8 +68,23 @@ class EventsBlock {
 			true
 		);
 
-		// Die Eventtypen kommen aus der Taxonomie, nicht aus einer festen
-		// Liste: Wer einen Typ anlegt, findet ihn im Editor wieder.
+		// Die Eventtypen braucht nur der Editor: erst dort aus der
+		// Datenbank lesen, nicht bei jedem Seitenaufruf im Shop.
+		add_action( 'enqueue_block_editor_assets', array( __CLASS__, 'editor_data' ) );
+
+		register_block_type(
+			LW16_PLUGIN_DIR . 'assets/blocks/events',
+			array( 'render_callback' => array( __CLASS__, 'render' ) )
+		);
+	}
+
+	/**
+	 * Daten für das Editor-Skript (Eventtypen, Intervall).
+	 *
+	 * Die Eventtypen kommen aus der Taxonomie, nicht aus einer festen
+	 * Liste: Wer einen Typ anlegt, findet ihn im Editor wieder.
+	 */
+	public static function editor_data() {
 		wp_localize_script(
 			self::HANDLE,
 			'LW16EventsBlock',
@@ -81,11 +96,6 @@ class EventsBlock {
 					'standard' => EventsWidget::INTERVALL_STANDARD,
 				),
 			)
-		);
-
-		register_block_type(
-			LW16_PLUGIN_DIR . 'assets/blocks/events',
-			array( 'render_callback' => array( __CLASS__, 'render' ) )
 		);
 	}
 

@@ -171,6 +171,7 @@ class GlobalSearch {
 		}
 
 		$orders = wc_get_orders( array(
+			'type'  => 'shop_order',
 			'limit' => 5,
 			's'     => $q,
 			'return' => 'objects',

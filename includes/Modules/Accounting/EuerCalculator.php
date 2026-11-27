@@ -38,6 +38,7 @@ class EuerCalculator {
 
 		$orders = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => array( 'wc-completed' ),
 				'date_created' => $from . '...' . $to,
 				'limit'        => -1,

@@ -212,7 +212,7 @@ class SupportModule {
 		}
 
 		// Bestellungen des Kunden für die Zuordnung.
-		$orders = wc_get_orders( array( 'customer_id' => $user_id, 'limit' => 20, 'return' => 'objects' ) );
+		$orders = wc_get_orders( array( 'type' => 'shop_order', 'customer_id' => $user_id, 'limit' => 20, 'return' => 'objects' ) );
 
 		echo '<h3>' . esc_html__( 'Problem melden', 'lindenweg16' ) . '</h3>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
@@ -494,6 +494,7 @@ class SupportModule {
 
 		foreach ( $periods as $label => $since ) {
 			$orders = wc_get_orders( array(
+				'type'         => 'shop_order',
 				'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 				'date_created' => '>=' . strtotime( $since ),
 				'limit'        => -1,
@@ -531,7 +532,7 @@ class SupportModule {
 		}
 
 		$orders = wc_get_orders(
-			array( 'status' => array( 'wc-completed' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'objects' )
+			array( 'type' => 'shop_order', 'status' => array( 'wc-completed' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'objects' )
 		);
 		$agg = array();
 		foreach ( $orders as $order ) {
@@ -573,7 +574,7 @@ class SupportModule {
 		}
 
 		$seit   = gmdate( 'Y-m-d H:i:s', time() - WEEK_IN_SECONDS );
-		$orders = wc_get_orders( array( 'status' => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ), 'date_created' => '>=' . strtotime( $seit ), 'limit' => -1, 'return' => 'objects' ) );
+		$orders = wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ), 'date_created' => '>=' . strtotime( $seit ), 'limit' => -1, 'return' => 'objects' ) );
 		$anzahl = count( $orders );
 		$umsatz = 0;
 		foreach ( $orders as $o ) {

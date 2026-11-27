@@ -347,6 +347,30 @@ class Screens {
 	}
 
 	/**
+	 * Labels und Sendungsdaten vieler Bestellungen vorab laden.
+	 *
+	 * @param int[] $ids Bestellungen.
+	 * @return array {labels: order_id => Labels, tracking: order_id => Zeile}
+	 */
+	protected static function ship_prefetch( array $ids ) {
+		global $wpdb;
+
+		$ids      = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+		$tracking = array();
+
+		if ( $ids ) {
+			foreach ( (array) $wpdb->get_results( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id IN (' . implode( ',', $ids ) . ')' ) as $row ) { // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- nur Ganzzahlen
+				$tracking[ (int) $row->order_id ] = $row;
+			}
+		}
+
+		return array(
+			'labels'   => DhlLabelRepository::all_for_orders( $ids ),
+			'tracking' => $tracking,
+		);
+	}
+
+	/**
 	 * Eine Bestellung als Karte des Versand-Workflows.
 	 *
 	 * Die Stufe ergibt sich aus den Tatsachen, nicht aus einem Merker: Bezahlt
@@ -354,11 +378,15 @@ class Screens {
 	 * packen, mit Label zu versenden, im Status „abgeschlossen“ versendet. So kann der Stand nie von der Wirklichkeit
 	 * abweichen, auch wenn jemand im Shop etwas anders macht.
 	 *
-	 * @param \WC_Order $order Bestellung.
-	 * @param array     $dhl   Angaben aus dhl_info().
+	 * Für eine ganze Liste lädt shipping() Labels und Sendungsdaten vorab mit
+	 * je einer Abfrage ($pre); ohne $pre liest die Karte sie selbst.
+	 *
+	 * @param \WC_Order  $order Bestellung.
+	 * @param array      $dhl   Angaben aus dhl_info().
+	 * @param array|null $pre   Vorab geladen: labels (order_id => Labels), tracking (order_id => Zeile).
 	 * @return array
 	 */
-	protected static function ship_entry( $order, array $dhl ) {
+	protected static function ship_entry( $order, array $dhl, $pre = null ) {
 		global $wpdb;
 
 		$id    = $order->get_id();
@@ -369,8 +397,15 @@ class Screens {
 		}
 
 		$land  = $order->get_shipping_country() ? $order->get_shipping_country() : $order->get_billing_country();
-		$label = DhlLabelRepository::for_order( $id );
-		$row   = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id = %d', $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		if ( is_array( $pre ) ) {
+			$labels = $pre['labels'][ $id ] ?? array();
+			$row    = $pre['tracking'][ $id ] ?? null;
+		} else {
+			$labels = DhlLabelRepository::all_for_order( $id );
+			$row    = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . DhlTracking::table() . ' WHERE order_id = %d', $id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		}
+		// Das jüngste gültige Label (wie DhlLabelRepository::for_order()).
+		$label = $labels ? end( $labels ) : null;
 		$done  = 'completed' === $order->get_status();
 		$picked = OrderPicking::STATUS === $order->get_status();
 		$stage = $done ? 'done' : ( $picked ? ( $label ? 'send' : 'pack' ) : 'pick' );
@@ -396,7 +431,7 @@ class Screens {
 		$entry['tracking_more'] = array_values( array_filter( array_map( 'strval', (array) $order->get_meta( DhlShipping::META_MORE ) ) ) );
 		$entry['labels']        = array();
 
-		foreach ( DhlLabelRepository::all_for_order( $id ) as $l ) {
+		foreach ( $labels as $l ) {
 			$entry['labels'][] = array(
 				'id'      => (int) $l->id,
 				'number'  => (string) $l->shipment_no,
@@ -409,7 +444,7 @@ class Screens {
 			);
 		}
 
-		$entry['cost_total'] = $see_cost ? DhlLabelRepository::cost_for_order( $id ) : null;
+		$entry['cost_total'] = $see_cost ? DhlLabelRepository::cost_of( $labels ) : null;
 
 		if ( $label ) {
 			$entry['label'] = array(
@@ -447,12 +482,19 @@ class Screens {
 		$since  = ( new \DateTimeImmutable( 'today', wp_timezone() ) )->getTimestamp();
 
 		// Älteste zuerst: Wer am längsten wartet, steht oben.
-		foreach ( wc_get_orders( array( 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-' . OrderPicking::STATUS ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ) as $order ) {
-			$orders[] = self::ship_entry( $order, $dhl );
-		}
+		$list = array_merge(
+			wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-' . OrderPicking::STATUS ), 'limit' => 100, 'orderby' => 'date', 'order' => 'ASC' ) ),
+			wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'wc-completed' ), 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC', 'date_completed' => '>=' . $since ) )
+		);
 
-		foreach ( wc_get_orders( array( 'status' => array( 'wc-completed' ), 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC', 'date_completed' => '>=' . $since ) ) as $order ) {
-			$orders[] = self::ship_entry( $order, $dhl );
+		// Labels und Sendungsdaten aller Karten mit je einer Abfrage statt
+		// mehrerer je Bestellung.
+		$pre = self::ship_prefetch( array_map( static function ( $order ) {
+			return $order->get_id();
+		}, $list ) );
+
+		foreach ( $list as $order ) {
+			$orders[] = self::ship_entry( $order, $dhl, $pre );
 		}
 
 		return array( 'orders' => $orders, 'dhl' => $dhl );
@@ -556,7 +598,7 @@ class Screens {
 		$count = 0;
 
 		if ( '' !== $email && function_exists( 'wc_get_orders' ) ) {
-			$count = count( wc_get_orders( array( 'billing_email' => $email, 'limit' => 100, 'return' => 'ids', 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-completed' ) ) ) );
+			$count = count( wc_get_orders( array( 'type' => 'shop_order', 'billing_email' => $email, 'limit' => 100, 'return' => 'ids', 'status' => array( 'wc-processing', 'wc-on-hold', 'wc-completed' ) ) ) );
 		}
 
 		$company = (string) $order->get_billing_company();

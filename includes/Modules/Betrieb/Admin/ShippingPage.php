@@ -212,6 +212,7 @@ class ShippingPage {
 
 		$orders = wc_get_orders(
 			array(
+				'type'    => 'shop_order',
 				'status'  => self::statuses_for( $filter ),
 				'limit'   => 100,
 				'orderby' => 'date',

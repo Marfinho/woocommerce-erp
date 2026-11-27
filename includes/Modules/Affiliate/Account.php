@@ -42,7 +42,7 @@ class Account {
 		add_rewrite_endpoint( self::ENDPOINT, EP_ROOT | EP_PAGES );
 
 		if ( '1' !== get_option( 'lw16_affiliate_endpoint' ) ) {
-			update_option( 'lw16_affiliate_endpoint', '1', false );
+			update_option( 'lw16_affiliate_endpoint', '1', true );
 			flush_rewrite_rules( false );
 		}
 	}

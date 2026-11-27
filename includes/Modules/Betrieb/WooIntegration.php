@@ -351,6 +351,7 @@ class WooIntegration {
 		do {
 			$batch = wc_get_orders(
 				array(
+					'type'   => 'shop_order',
 					'status' => array( 'processing', 'on-hold' ),
 					'limit'  => 200,
 					'paged'  => $page,

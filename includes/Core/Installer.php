@@ -139,6 +139,10 @@ class Installer {
 	 * DB_VERSION 59: Tabelle article_images (Fotos je Artikel für die Galerie der Shop-Variante, siehe
 	 * Modules\Betrieb\ArticleImages); articles um shop_short und shop_description (Texte der Shop-Variante).
 	 *
+	 * DB_VERSION 63: keine neue Tabelle. Optionen, die der Shop bei jedem Seitenaufruf liest
+	 * (siehe FRONTEND_OPTIONS), werden automatisch geladen und fehlende angelegt – vorher kostete
+	 * jede davon eine eigene Datenbankabfrage je Seite.
+	 *
 	 * DB_VERSION 62: shipping_labels um kosten_netto und kosten_info (berechnetes Porto je Label, siehe
 	 * Modules\Betrieb\Dhl\DhlCost).
 	 *
@@ -148,7 +152,19 @@ class Installer {
 	 * DB_VERSION 60: warteliste um bestaetigt (Double-Opt-in, siehe Modules\Retention\Waitlist). Vorbelegung 1:
 	 * Anmeldungen von vor der Umstellung gelten als bestätigt, neue trägt das Formular ausdrücklich mit 0 ein.
 	 */
-	const DB_VERSION = '62';
+	const DB_VERSION = '63';
+
+	/**
+	 * Optionen, die bei jedem Seitenaufruf im Shop gelesen werden, mit ihrem
+	 * Leerwert. Sie müssen vorhanden und automatisch geladen sein.
+	 */
+	const FRONTEND_OPTIONS = array(
+		'lw16_prognose'           => array(),
+		'lw16_loyalty_presales'   => array(),
+		'lw16_arview'             => array(),
+		'lw16_affiliate_endpoint' => '',
+		'lw16_flush_rewrite'      => 0,
+	);
 
 	/**
 	 * Aktivierungsroutine.
@@ -174,7 +190,7 @@ class Installer {
 		update_option( 'lw16_flush_rewrite', 1 );
 
 		// Hintergrundjobs beim naechsten Aufruf sofort neu einplanen.
-		delete_transient( Scheduler::TRANSIENT_CHECKED );
+		Scheduler::reset_check();
 	}
 
 	/**
@@ -187,7 +203,7 @@ class Installer {
 				as_unschedule_all_actions( $hook );
 			}
 		}
-		delete_transient( Scheduler::TRANSIENT_CHECKED );
+		Scheduler::reset_check();
 		flush_rewrite_rules();
 	}
 
@@ -207,12 +223,29 @@ class Installer {
 
 			// Neue Hintergrundjobs (z. B. der Mailabruf) sofort einplanen, nicht erst
 			// nach Ablauf des Stunden-Merkers in Scheduler::ensure_recurring().
-			delete_transient( Scheduler::TRANSIENT_CHECKED );
+			Scheduler::reset_check();
 
 			// Ein Update laeuft ohne Aktivierung durch. Ohne diesen Merker
 			// blieben Rewrite-Regeln, die erst in der neuen Fassung dazukommen,
 			// unbekannt – die Adressen liefen dann dauerhaft auf 404.
 			update_option( 'lw16_flush_rewrite', 1 );
+
+			self::autoload_frontend_options();
+		}
+	}
+
+	/**
+	 * Optionen aus FRONTEND_OPTIONS anlegen bzw. auf automatisches Laden
+	 * umstellen. Eine fehlende oder nicht automatisch geladene Option fragt
+	 * WordPress bei jedem Lesen einzeln aus der Datenbank ab.
+	 */
+	public static function autoload_frontend_options() {
+		foreach ( self::FRONTEND_OPTIONS as $name => $empty ) {
+			if ( null === get_option( $name, null ) ) {
+				add_option( $name, $empty, '', true );
+			} elseif ( function_exists( 'wp_set_option_autoload' ) ) {
+				wp_set_option_autoload( $name, true );
+			}
 		}
 	}
 

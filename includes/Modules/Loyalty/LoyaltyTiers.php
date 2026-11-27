@@ -81,6 +81,7 @@ class LoyaltyTiers {
 
 		$orders = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'customer_id'  => $user_id,
 				'status'       => array( 'wc-completed' ),
 				'date_created' => '>' . ( time() - YEAR_IN_SECONDS ),

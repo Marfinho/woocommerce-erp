@@ -68,7 +68,7 @@ class Rueckblick {
 			if ( ! function_exists( 'wc_get_orders' ) ) {
 				return 0;
 			}
-			return count( (array) wc_get_orders( array( 'status' => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'ids' ) ) );
+			return count( (array) wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'ids' ) ) );
 		};
 
 		$best = $now['products'];

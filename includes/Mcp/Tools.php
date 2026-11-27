@@ -644,6 +644,7 @@ class Tools {
 		}
 
 		$query = array(
+			'type'    => 'shop_order',
 			'limit'   => max( 1, min( 100, isset( $args['limit'] ) ? (int) $args['limit'] : 25 ) ),
 			'orderby' => 'date',
 			'order'   => 'DESC',

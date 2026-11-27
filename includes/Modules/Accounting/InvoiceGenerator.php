@@ -353,6 +353,25 @@ class InvoiceGenerator {
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE order_id = %d', $order_id ) ); // phpcs:ignore
 	}
 
+	/**
+	 * Welche der Bestellungen haben schon eine Rechnung? Eine Abfrage für alle.
+	 *
+	 * @param int[] $order_ids Bestellungen.
+	 * @return array order_id => true
+	 */
+	public static function order_ids_with_invoice( array $order_ids ) {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $order_ids ) ) ) );
+		if ( ! $ids ) {
+			return array();
+		}
+
+		$found = $wpdb->get_col( 'SELECT order_id FROM ' . self::table() . ' WHERE order_id IN (' . implode( ',', $ids ) . ')' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- nur Ganzzahlen
+
+		return array_fill_keys( array_map( 'intval', $found ), true );
+	}
+
 	public static function get( $id ) {
 		global $wpdb;
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::table() . ' WHERE id = %d', $id ) ); // phpcs:ignore

@@ -17,8 +17,11 @@ class Scheduler {
 
 	const GROUP = 'lindenweg16';
 
-	// Merker "wiederkehrende Jobs zuletzt geprueft", siehe ensure_recurring().
-	const TRANSIENT_CHECKED = 'lw16_recurring_checked';
+	// Zeitpunkt der letzten Pruefung der wiederkehrenden Jobs, siehe
+	// ensure_recurring(). Eine automatisch geladene Option statt eines
+	// Transients: Den Transient las WordPress bei jedem Seitenaufruf
+	// einzeln aus der Datenbank.
+	const OPTION_CHECKED = 'lw16_recurring_checked_at';
 
 	// Wiederkehrende Jobs (Hook-Name => Intervall in Sekunden).
 	const HOOK_DAILY_LOYALTY   = 'lw16_daily_loyalty_check';
@@ -179,6 +182,14 @@ class Scheduler {
 	}
 
 	/**
+	 * Die naechste Seite soll die wiederkehrenden Jobs sofort pruefen
+	 * (nach Aktivierung, Deaktivierung und Update).
+	 */
+	public static function reset_check() {
+		update_option( self::OPTION_CHECKED, 0, true );
+	}
+
+	/**
 	 * Wiederkehrende Jobs sicherstellen. Wird bei jedem Boot aufgerufen –
 	 * as_schedule_recurring_action ist idempotent bei gesetztem unique-Flag.
 	 */
@@ -191,12 +202,12 @@ class Scheduler {
 		// Hook eine eigene Datenbankabfrage - 14 Abfragen auf jeder Seite,
 		// im Shop wie im Backend, nur um festzustellen, dass alles schon
 		// eingeplant ist. Einmal je Stunde reicht; Aktivierung und
-		// Deaktivierung loeschen den Merker, damit die Jobs danach sofort
+		// Deaktivierung setzen den Merker zurueck, damit die Jobs danach sofort
 		// wieder eingeplant werden (siehe Installer).
-		if ( get_transient( self::TRANSIENT_CHECKED ) ) {
+		if ( (int) get_option( self::OPTION_CHECKED, 0 ) > time() - HOUR_IN_SECONDS ) {
 			return;
 		}
-		set_transient( self::TRANSIENT_CHECKED, 1, HOUR_IN_SECONDS );
+		update_option( self::OPTION_CHECKED, time(), true );
 
 		$now = time();
 

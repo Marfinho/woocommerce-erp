@@ -865,6 +865,7 @@ class BuchBuchungen {
 		if ( function_exists( 'wc_get_orders' ) ) {
 			$orders = wc_get_orders(
 				array(
+					'type'    => 'shop_order',
 					'status'  => array( 'completed' ),
 					'limit'   => 100,
 					'orderby' => 'date',
@@ -872,8 +873,17 @@ class BuchBuchungen {
 				)
 			);
 
+			$billed = InvoiceGenerator::order_ids_with_invoice(
+				array_map(
+					static function ( $o ) {
+						return $o->get_id();
+					},
+					(array) $orders
+				)
+			);
+
 			foreach ( (array) $orders as $o ) {
-				if ( InvoiceGenerator::get_by_order( (int) $o->get_id() ) ) {
+				if ( isset( $billed[ (int) $o->get_id() ] ) ) {
 					continue;
 				}
 				$out[] = array(

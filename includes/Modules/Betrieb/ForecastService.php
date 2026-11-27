@@ -111,7 +111,7 @@ class ForecastService {
 	 * @param array $in Eingabe.
 	 */
 	public static function save_settings( array $in ) {
-		update_option( self::OPTION, self::sanitize_settings( $in ), false );
+		update_option( self::OPTION, self::sanitize_settings( $in ), true );
 		self::flush();
 	}
 
@@ -653,6 +653,7 @@ class ForecastService {
 		do {
 			$orders = wc_get_orders(
 				array(
+					'type'         => 'shop_order',
 					'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed', 'wc-on-hold' ),
 					'limit'        => 300,
 					'paged'        => $page,

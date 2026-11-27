@@ -1500,7 +1500,7 @@ class RestApi {
 
 		$latest = array();
 
-		foreach ( wc_get_orders( array( 'limit' => 6, 'orderby' => 'date', 'order' => 'DESC', 'status' => array( 'wc-pending', 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-completed' ) ) ) as $order ) {
+		foreach ( wc_get_orders( array( 'type' => 'shop_order', 'limit' => 6, 'orderby' => 'date', 'order' => 'DESC', 'status' => array( 'wc-pending', 'wc-processing', 'wc-kommissioniert', 'wc-on-hold', 'wc-completed' ) ) ) as $order ) {
 			$created  = $order->get_date_created();
 			$latest[] = array(
 				'id'     => $order->get_id(),
@@ -1542,6 +1542,7 @@ class RestApi {
 		$month_start = ( new \DateTimeImmutable( 'first day of this month midnight', $tz ) )->getTimestamp();
 		$month       = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'limit'        => $limit,
 				'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed', 'wc-on-hold' ),
 				'date_created' => '>=' . $month_start,

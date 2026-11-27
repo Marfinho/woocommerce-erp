@@ -104,6 +104,7 @@ class Forecast {
 
 		$orders = wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => array( 'wc-processing', 'wc-kommissioniert', 'wc-completed', 'wc-on-hold' ),
 				'limit'        => 2000,
 				'date_created' => '>=' . ( time() - (int) $weeks * WEEK_IN_SECONDS ),

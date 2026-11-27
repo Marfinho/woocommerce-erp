@@ -374,6 +374,7 @@ class LoyaltyTriggers {
 		foreach ( $users as $user_id ) {
 			$first = wc_get_orders(
 				array(
+					'type'        => 'shop_order',
 					'customer_id' => $user_id,
 					'status'      => array( 'wc-completed' ),
 					'orderby'     => 'date',

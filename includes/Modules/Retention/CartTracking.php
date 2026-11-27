@@ -261,6 +261,7 @@ class CartTracking {
 		}
 		$orders = wc_get_orders(
 			array(
+				'type'          => 'shop_order',
 				'billing_email' => $row->email,
 				'date_created'  => '>=' . strtotime( $row->erstellt_am ),
 				'limit'         => 1,

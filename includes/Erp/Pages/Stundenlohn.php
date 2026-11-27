@@ -100,7 +100,7 @@ class Stundenlohn {
 
 		// Shop-Bestellungen (abgeschlossen) im Zeitraum.
 		if ( function_exists( 'wc_get_orders' ) ) {
-			foreach ( (array) wc_get_orders( array( 'status' => array( 'wc-completed' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'objects' ) ) as $order ) {
+			foreach ( (array) wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'wc-completed' ), 'date_created' => $from . '...' . $to, 'limit' => -1, 'return' => 'objects' ) ) as $order ) {
 				$op      = OrderOpsRepository::find_by_order( (int) $order->get_id() );
 				$channel = $op && '' !== (string) $op['channel'] ? (string) $op['channel'] : 'Shop';
 				$key     = 'w' . (int) $order->get_id();

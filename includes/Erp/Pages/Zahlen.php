@@ -601,6 +601,7 @@ class Zahlen {
 		$out    = array();
 		$orders = wc_get_orders(
 			array(
+				'type'    => 'shop_order',
 				'limit'   => 5,
 				'orderby' => 'date',
 				'order'   => 'DESC',
@@ -1032,6 +1033,7 @@ class Zahlen {
 
 		foreach ( (array) wc_get_orders(
 			array(
+				'type'         => 'shop_order',
 				'status'       => array( 'wc-completed' ),
 				'date_created' => $von . '...' . $bis,
 				'limit'        => -1,
@@ -1075,6 +1077,7 @@ class Zahlen {
 
 			foreach ( (array) wc_get_orders(
 				array(
+					'type'         => 'shop_order',
 					'status'       => array( 'wc-completed', 'wc-processing', 'wc-kommissioniert' ),
 					'date_created' => '>=' . strtotime( $since ),
 					'limit'        => -1,
