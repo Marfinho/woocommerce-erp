@@ -9,6 +9,7 @@ namespace Lindenweg16\Modules\Betrieb;
 
 defined( 'ABSPATH' ) || exit;
 
+use Lindenweg16\Core\Csv;
 use Lindenweg16\Core\Pdf;
 use Lindenweg16\Core\Roles;
 use Lindenweg16\Modules\Betrieb\PrintQueue\PrintQueueService;
@@ -368,7 +369,8 @@ class Exporter {
 		fwrite( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 
 		foreach ( $rows as $row ) {
-			fputcsv( $out, $row, ';' );
+			// Zellen gegen Formel-Einschleusung absichern (siehe Core\Csv).
+			fputcsv( $out, array_map( array( Csv::class, 'guard' ), (array) $row ), ';' );
 		}
 
 		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions

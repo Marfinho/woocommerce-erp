@@ -355,8 +355,11 @@ class Steuer {
 		$out = array();
 
 		foreach ( array_values( $cells ) as $i => $cell ) {
-			$cell  = (string) $cell;
-			$out[] = ( in_array( $i, $text, true ) || ( ! $text && ! is_numeric( $cell ) && '' !== $cell ) ) ? '"' . str_replace( '"', '""', $cell ) . '"' : $cell;
+			$cell    = (string) $cell;
+			$is_text = in_array( $i, $text, true ) || ( ! $text && ! is_numeric( $cell ) && '' !== $cell );
+			// Textfelder (z. B. Buchungstext mit Händlername) gegen Formel-Einschleusung.
+			$safe    = $is_text ? \Lindenweg16\Core\Csv::guard( $cell ) : $cell;
+			$out[]   = $is_text ? '"' . str_replace( '"', '""', $safe ) . '"' : $safe;
 		}
 
 		return implode( ';', $out );

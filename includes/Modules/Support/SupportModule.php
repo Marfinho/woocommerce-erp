@@ -109,7 +109,9 @@ class SupportModule {
 			}
 			fputcsv( $fh, array_keys( $rows[0] ) );
 			foreach ( $rows as $row ) {
-				fputcsv( $fh, $row );
+				// Formel-Einschleusung: Belege tragen z. B. Absendernamen aus
+				// importierten E-Rechnungen (siehe Core\Csv).
+				fputcsv( $fh, array_map( array( \Lindenweg16\Core\Csv::class, 'guard' ), (array) $row ) );
 			}
 			fclose( $fh ); // phpcs:ignore
 			$files[] = $path;

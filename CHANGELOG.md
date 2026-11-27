@@ -7,6 +7,15 @@ steht in `lindenweg16.php` (`Version` und `LW16_VERSION`).
 Frühere Versionen sind hier nicht nachgetragen; der Stand davor steht in der Git-Historie
 und im Abschnitt „Umsetzungsstand“ der README.
 
+## [0.105.5] – 2026-11-27
+
+### Sicherheit
+Zweite Runde des Penetrationstests (auch gegen den Live-Shop, nur lesende Anfragen von außen).
+- **Formel-Einschleusung in CSV-Exporten (CSV injection, CWE-1236):** Fünf Exporte schrieben Zellen ungeschützt – der Buchhaltungs-Export (Belege, Rechnungen, Buchungen, Audit, EÜR, Kassenbuch), die Kennzahlen- und Lager-Exporte (`Zahlen::csv`), der DATEV-Export, der Betriebs-Export und der Daten-Export des Support-Moduls. Wer eine E-Rechnung mit einem Firmennamen wie `=HYPERLINK(...)` oder `=cmd|...` schickt, hätte beim Öffnen des Exports in Excel oder Calc Code auf dem Rechner der Buchhaltung ausführen können. Andere Exporte (Lohn, Marketing, Event-Teilnehmer) schützten davor schon. Neuer gemeinsamer Helfer `Core\Csv::guard` stellt Zellen, die mit `=` `+` `-` `@` Tab oder Zeilenende beginnen und keine Zahl sind, ein Hochkomma voran; echte negative Beträge bleiben unverändert. Ein Test (`tests/CsvFormelTest.php`) wacht künftig über jeden CSV-Export.
+
+### Hinweise aus dem Test (kein Fehler)
+- Öffentlich lesbar auf dem Live-Shop: `CHANGELOG.md`, `README.md`, `composer.json` und `docs/betriebsanleitung.html` des Plugins sowie die Benutzerliste unter `/wp-json/wp/v2/users` (Standardverhalten von WordPress). Nichts davon enthält Zugangsdaten. Wer das nicht möchte, kann die Dateien und die REST-Benutzerliste serverseitig sperren.
+
 ## [0.105.4] – 2026-11-27
 
 ### Sicherheit

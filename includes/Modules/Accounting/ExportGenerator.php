@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 
 use Lindenweg16\Core\Settings;
 use Lindenweg16\Core\AuditLog;
+use Lindenweg16\Core\Csv;
 
 /**
  * Erzeugt den strukturierten Datenexport für die Betriebsprüfung.
@@ -100,6 +101,9 @@ class ExportGenerator {
 			$line = array();
 			foreach ( $fields as $f ) {
 				$val    = isset( $row[ $f ] ) ? (string) $row[ $f ] : '';
+				// Formel-Einschleusung: z. B. ein Händlername aus einer importierten
+				// E-Rechnung, der mit = + - @ beginnt (siehe Core\Csv).
+				$val    = Csv::guard( $val );
 				$val    = str_replace( self::ENCLOSURE, self::ENCLOSURE . self::ENCLOSURE, $val );
 				$line[] = self::ENCLOSURE . $val . self::ENCLOSURE;
 			}

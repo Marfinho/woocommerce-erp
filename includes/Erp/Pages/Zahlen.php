@@ -316,7 +316,9 @@ class Zahlen {
 		fwrite( $out, "\xEF\xBB\xBF" ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 
 		foreach ( $rows as $row ) {
-			fputcsv( $out, $row, ';' );
+			// Jede Zelle gegen Formel-Einschleusung absichern, bevor fputcsv
+			// sie schreibt (Produktnamen, Notizen, Herkunft aus den Daten).
+			fputcsv( $out, array_map( array( \Lindenweg16\Core\Csv::class, 'guard' ), (array) $row ), ';' ); // Csv::guard
 		}
 
 		rewind( $out );
